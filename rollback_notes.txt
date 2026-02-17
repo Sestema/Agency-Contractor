@@ -1,0 +1,3 @@
+Rollback reason: Requested restore to state before Syncfusion editor changes in MainWindow.
+Backup created: C:\Users\kacha\Desktop\2_backup.zip
+Rollback scope: MainWindow.xaml, MainWindow.xaml.cs restored to previous layout.

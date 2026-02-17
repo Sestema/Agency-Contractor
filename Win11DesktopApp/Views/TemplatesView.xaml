@@ -1,0 +1,210 @@
+<UserControl x:Class="Win11DesktopApp.Views.TemplatesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:views="clr-namespace:Win11DesktopApp.Views"
+             xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <Button Command="{Binding GoBackCommand}" 
+                        Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
+                        FontSize="20" HorizontalAlignment="Left"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource ForegroundBrush}"/>
+                
+                <TextBlock Text="{Binding Title}" 
+                           FontSize="24" FontWeight="SemiBold" 
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource ForegroundBrush}"/>
+            </Grid>
+
+            <!-- List -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Templates}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="15" Margin="0,0,0,10">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Icon based on format -->
+                                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="4" Background="#EEE" Margin="0,0,15,0">
+                                        <TextBlock Text="{Binding Format}" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold" Foreground="#666"/>
+                                    </Border>
+                                    
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource ForegroundBrush}"/>
+                                        <TextBlock Text="{Binding UpdatedAt, StringFormat=Оновлено: {0:g}}" FontSize="12" Foreground="#888"/>
+                                    </StackPanel>
+
+                                    <!-- Actions -->
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Button Content="{DynamicResource TplBtnDelete}" 
+                                                Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}" 
+                                                Margin="0,0,10,0" Padding="10,5"
+                                                Background="#DC3545" Foreground="White" BorderThickness="0"/>
+                                        <Button Content="{DynamicResource TplBtnEdit}" 
+                                                Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}" 
+                                                Padding="10,5"
+                                                Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Add Button -->
+            <Button Grid.Row="2" Command="{Binding AddTemplateCommand}" 
+                    Content="{DynamicResource BtnAddTemplate}"
+                    Height="45" Margin="0,20,0,0"
+                    Background="{DynamicResource AccentBrush}" Foreground="White" 
+                    FontSize="16" FontWeight="SemiBold" BorderThickness="0"
+                    HorizontalAlignment="Right" Padding="20,0"/>
+        </Grid>
+
+        <!-- Modal Dialog Overlay — Add Template -->
+        <Grid Visibility="{Binding IsAddDialogOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#66000000">
+                 <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAddDialogCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <ContentControl Content="{Binding AddTemplateVm}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ContentControl.Resources>
+                    <DataTemplate DataType="{x:Type vm:AddTemplateViewModel}" xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels">
+                        <views:AddTemplateView/>
+                    </DataTemplate>
+                </ContentControl.Resources>
+            </ContentControl>
+        </Grid>
+
+        <!-- Tags Panel Overlay — shows when editing template -->
+        <Grid Visibility="{Binding IsTagsPanelOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#66000000">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseTagsPanelCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" 
+                    Width="650" MaxHeight="600"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Padding="24">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Title -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="{DynamicResource TplTagsTitle}" FontSize="18" FontWeight="SemiBold" 
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                        <Button Content="✕" Width="30" Height="30" HorizontalAlignment="Right" 
+                                Command="{Binding CloseTagsPanelCommand}"
+                                Background="Transparent" BorderThickness="0" FontSize="16"/>
+                    </Grid>
+
+                    <!-- Info -->
+                    <TextBlock Grid.Row="1" TextWrapping="Wrap" Foreground="#888" Margin="0,0,0,15"
+                               Text="{DynamicResource TplTagsDesc}"/>
+
+                    <!-- Tags list -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                        <ItemsControl ItemsSource="{Binding AvailableTags}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="6" 
+                                            Padding="10,6" Margin="0,0,0,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Category badge -->
+                                            <Border Grid.Column="0" CornerRadius="3" Padding="6,2" Margin="0,0,10,0"
+                                                    VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#E3F2FD"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Category}" Value="Employee">
+                                                                <Setter Property="Background" Value="#E8F5E9"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Category}" Value="Agency">
+                                                                <Setter Property="Background" Value="#FFF3E0"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#555"/>
+                                            </Border>
+
+                                            <!-- Tag info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock FontWeight="SemiBold" FontSize="13" 
+                                                           Foreground="{DynamicResource ForegroundBrush}">
+                                                    <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Description}" FontSize="11" Foreground="#888"/>
+                                            </StackPanel>
+
+                                            <!-- Copy button -->
+                                            <Button Grid.Column="2" Content="{DynamicResource TplCopyTag}" 
+                                                    Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="8,3" FontSize="11"
+                                                    Background="{DynamicResource AccentBrush}" Foreground="White" 
+                                                    BorderThickness="0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Open file button -->
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <Button Content="{DynamicResource TplOpenEditor}" 
+                                Command="{Binding OpenTemplateFileCommand}"
+                                Padding="16,8" FontSize="14" FontWeight="SemiBold"
+                                Background="{DynamicResource AccentBrush}" Foreground="White" 
+                                BorderThickness="0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,298 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="AppTitle">Agency Contractor</sys:String>
+    <sys:String x:Key="BtnEmployees">Zaměstnanci</sys:String>
+    <sys:String x:Key="BtnTemplates">Šablony</sys:String>
+    <sys:String x:Key="BtnProblems">Problémy</sys:String>
+    <sys:String x:Key="BtnFinances">Finance</sys:String>
+    <sys:String x:Key="BtnArchive">Archiv</sys:String>
+    
+    <sys:String x:Key="SettingsTitle">Nastavení</sys:String>
+    <sys:String x:Key="LangLabel">Jazyk</sys:String>
+    <sys:String x:Key="ThemeLabel">Motiv</sys:String>
+    
+    <sys:String x:Key="ThemeLight">Světlý (Win 11)</sys:String>
+    <sys:String x:Key="ThemeDarkWord">Tmavý (Word)</sys:String>
+    <sys:String x:Key="ThemeDark2">Tmavý #2</sys:String>
+    <sys:String x:Key="ThemeCustom">Vlastní #3</sys:String>
+
+    <!-- New Strings -->
+    <sys:String x:Key="DrawerTitle">Firmy</sys:String>
+    <sys:String x:Key="BtnAddNewCompany">Přidat novou firmu</sys:String>
+    <sys:String x:Key="HeaderAddCompany">Přidání nové firmy</sys:String>
+    <sys:String x:Key="TabEmployer">Zaměstnavatel</sys:String>
+    <sys:String x:Key="TabAgency">Agentura</sys:String>
+    <sys:String x:Key="LabelCompanyName">Název firmy</sys:String>
+    <sys:String x:Key="LabelICO">IČO</sys:String>
+    <sys:String x:Key="LabelAddress">Adresy</sys:String>
+    <sys:String x:Key="LabelStreet">Ulice</sys:String>
+    <sys:String x:Key="LabelNumber">Číslo</sys:String>
+    <sys:String x:Key="LabelCity">Město</sys:String>
+    <sys:String x:Key="LabelZip">PSČ</sys:String>
+    <sys:String x:Key="BtnAddAddress">+ Přidat adresu</sys:String>
+    <sys:String x:Key="LabelPositions">Pozice</sys:String>
+    <sys:String x:Key="LabelPosTitle">Název pozice</sys:String>
+    <sys:String x:Key="LabelPosNumber">Číslo</sys:String>
+    <sys:String x:Key="LabelSalary">Mzda (měsíční)</sys:String>
+    <sys:String x:Key="LabelHourly">Mzda (hodinová)</sys:String>
+    <sys:String x:Key="BtnAddPosition">+ Přidat pozici</sys:String>
+    <sys:String x:Key="LabelFullAddress">Celá adresa</sys:String>
+    <sys:String x:Key="BtnCancel">Zrušit</sys:String>
+    <sys:String x:Key="BtnSave">Uložit firmu</sys:String>
+    <sys:String x:Key="LabelRootFolder">Kořenová složka</sys:String>
+    <sys:String x:Key="BtnSelectFolder">Vybrat složku</sys:String>
+    <sys:String x:Key="MsgSelectCompany">Vyberte firmu...</sys:String>
+
+    <!-- Templates Module -->
+    <sys:String x:Key="TitleTemplates">Šablony: {0}</sys:String>
+    <sys:String x:Key="MsgSelectFirmForTemplates">Vyberte prosím firmu pro práci se šablonami.</sys:String>
+    <sys:String x:Key="BtnAddTemplate">Přidat šablonu</sys:String>
+    <sys:String x:Key="HeaderAddTemplate">Přidat novou šablonu</sys:String>
+    <sys:String x:Key="LabelTemplateName">Název šablony</sys:String>
+    <sys:String x:Key="LabelFormat">Formát</sys:String>
+    <sys:String x:Key="LabelDescription">Popis</sys:String>
+    <sys:String x:Key="BtnUploadFile">Nahrát soubor šablony</sys:String>
+    <sys:String x:Key="MsgFileUploaded">Soubor nahrán: {0}</sys:String>
+    <sys:String x:Key="BtnSaveTemplate">Uložit šablonu</sys:String>
+
+    <sys:String x:Key="MsgConfirmDeleteTemplate">Opravdu chcete smazat šablonu '{0}'?</sys:String>
+    <sys:String x:Key="TitleConfirmDelete">Potvrzení smazání</sys:String>
+    <sys:String x:Key="MsgTemplateDeleted">Šablona byla úspěšně smazána.</sys:String>
+    <sys:String x:Key="TitleSuccess">Úspěch</sys:String>
+    <sys:String x:Key="TitleError">Chyba</sys:String>
+    <sys:String x:Key="MsgErrorDeleteTemplate">Chyba při mazání šablony: {0}</sys:String>
+
+    <!-- Employees Module -->
+    <sys:String x:Key="MsgSelectFirmForEmployees">Vyberte prosím firmu pro práci se zaměstnanci.</sys:String>
+    <sys:String x:Key="TitleEmployees">{0}</sys:String>
+    <sys:String x:Key="BtnAddEmployee">Přidat zaměstnance</sys:String>
+    <sys:String x:Key="HeaderAddEmployee">Přidání zaměstnance</sys:String>
+    <sys:String x:Key="StepDocuments">Krok 1. Dokumenty</sys:String>
+    <sys:String x:Key="StepCropPhoto">Krok 2. Oříznutí fotky</sys:String>
+    <sys:String x:Key="StepPassportData">Krok 3. Údaje z pasu</sys:String>
+    <sys:String x:Key="StepInsuranceData">Krok 4. Údaje o pojištění</sys:String>
+    <sys:String x:Key="StepVisaData">Krok 5. Údaje o vízu</sys:String>
+    <sys:String x:Key="StepAddresses">Krok 6. Adresy, pozice, smlouva</sys:String>
+    <sys:String x:Key="StepAdditional">Krok 7. Další údaje</sys:String>
+    <sys:String x:Key="BtnUploadPassport">Nahrát pas</sys:String>
+    <sys:String x:Key="BtnUploadVisa">Nahrát vízum</sys:String>
+    <sys:String x:Key="BtnUploadInsurance">Nahrát pojištění</sys:String>
+    <sys:String x:Key="BtnApplyCrop">Oříznout fotku</sys:String>
+    <sys:String x:Key="BtnBack">Zpět</sys:String>
+    <sys:String x:Key="BtnNext">Další</sys:String>
+    <sys:String x:Key="BtnSaveEmployee">Uložit zaměstnance</sys:String>
+    <sys:String x:Key="LabelAddressLocal">Adresa bydliště (v zemi)</sys:String>
+    <sys:String x:Key="LabelAddressAbroad">Adresa bydliště v zahraničí</sys:String>
+    <sys:String x:Key="LabelWorkAddress">Adresa výkonu práce</sys:String>
+    <sys:String x:Key="LabelPosition">Pozice</sys:String>
+    <sys:String x:Key="LabelContractType">Typ smlouvy</sys:String>
+    <sys:String x:Key="TitleEmployeesGeneric">Zaměstnanci</sys:String>
+    <sys:String x:Key="EmployeesSearchPlaceholder">Hledat podle jména, pasu, víza, pojištění</sys:String>
+    <sys:String x:Key="MsgEmployeesSelectCompany">Vyberte prosím firmu pro zobrazení zaměstnanců.</sys:String>
+    <sys:String x:Key="BtnSelectCompany">Vybrat firmu</sys:String>
+    <sys:String x:Key="MsgDeleteEmployee">Smazat zaměstnance?</sys:String>
+    <sys:String x:Key="BtnDelete">Smazat</sys:String>
+    <sys:String x:Key="MsgEmployeesRootMissing">Není nastavena kořenová složka. Nastavte ji v Nastavení.</sys:String>
+    <sys:String x:Key="MsgEmployeesFolderMissing">Složka zaměstnanců nebyla nalezena.</sys:String>
+    <sys:String x:Key="MsgEmployeesEmpty">Tato firma zatím nemá žádné zaměstnance.</sys:String>
+    <sys:String x:Key="MsgEmployeesLoadError">Chyba při načítání zaměstnanců.</sys:String>
+    <sys:String x:Key="MsgEmployeesSearchEmpty">Zaměstnanci nebyli nalezeni.</sys:String>
+
+    <!-- EmployeesView -->
+    <sys:String x:Key="EmpBtnSelect">Vybrat</sys:String>
+    <sys:String x:Key="EmpStatTotal">Celkem</sys:String>
+    <sys:String x:Key="EmpStatActive">Aktivních</sys:String>
+    <sys:String x:Key="EmpStatProblems">Problémy s dok.</sys:String>
+    <sys:String x:Key="EmpStatNewMonth">Nových tento měs.</sys:String>
+    <sys:String x:Key="EmpSortLabel">Řadit:</sys:String>
+    <sys:String x:Key="EmpSortName">Jméno</sys:String>
+    <sys:String x:Key="EmpSortDate">Datum nástupu</sys:String>
+    <sys:String x:Key="EmpSortStatus">Stav</sys:String>
+    <sys:String x:Key="EmpSortProblems">Problémy</sys:String>
+    <sys:String x:Key="EmpSelectAll">Vybrat vše</sys:String>
+    <sys:String x:Key="EmpGenerate">Generovat</sys:String>
+    <sys:String x:Key="EmpBadgePassport">Pas</sys:String>
+    <sys:String x:Key="EmpBadgeVisa">Vízum</sys:String>
+    <sys:String x:Key="EmpBadgeInsurance">Pojištění</sys:String>
+    <sys:String x:Key="EmpBtnOpen">Otevřít</sys:String>
+    <sys:String x:Key="EmpBtnEdit">Upravit</sys:String>
+    <sys:String x:Key="EmpBtnFolder">Složka</sys:String>
+    <sys:String x:Key="EmpBtnDelete">Smazat</sys:String>
+    <sys:String x:Key="EmpBatchTitle">Hromadná generace dokumentů</sys:String>
+    <sys:String x:Key="EmpTooltipExport">Export do Excelu</sys:String>
+    <sys:String x:Key="EmpTooltipSelect">Vybrat více</sys:String>
+    <sys:String x:Key="EmpTooltipFolder">Otevřít složku zaměstnance</sys:String>
+    <sys:String x:Key="EmpTooltipDelete">Smazat zaměstnance</sys:String>
+
+    <!-- EmployeeDetailsView -->
+    <sys:String x:Key="DetNoPhoto">Bez fotky</sys:String>
+    <sys:String x:Key="DetBtnGenerate">Generovat dokument</sys:String>
+    <sys:String x:Key="DetBtnOpenFolder">Otevřít složku</sys:String>
+    <sys:String x:Key="DetBtnArchive">Do archivu</sys:String>
+    <sys:String x:Key="DetLabelStatus">Stav</sys:String>
+    <sys:String x:Key="DetTabDocs">Dokumenty</sys:String>
+    <sys:String x:Key="DetTabProfile">Dotazník</sys:String>
+    <sys:String x:Key="DetTabHistory">Historie</sys:String>
+    <sys:String x:Key="DetDocsTitle">Dokumenty zaměstnance</sys:String>
+    <sys:String x:Key="DetDocPassport">Pas</sys:String>
+    <sys:String x:Key="DetDocVisa">Vízum</sys:String>
+    <sys:String x:Key="DetDocInsurance">Pojištění</sys:String>
+    <sys:String x:Key="DetDocPhoto">Foto</sys:String>
+    <sys:String x:Key="DetBtnReplace">Nahradit</sys:String>
+    <sys:String x:Key="DetBtnOpenFile">Otevřít</sys:String>
+    <sys:String x:Key="DetBtnExtend">Prodl.</sys:String>
+    <sys:String x:Key="DetBtnEditProfile">Upravit dotazník</sys:String>
+    <sys:String x:Key="DetBtnSave">Uložit</sys:String>
+    <sys:String x:Key="DetBtnCancel">Zrušit</sys:String>
+    <sys:String x:Key="DetSecPersonal">Osobní údaje</sys:String>
+    <sys:String x:Key="DetFieldFirstName">Jméno</sys:String>
+    <sys:String x:Key="DetFieldLastName">Příjmení</sys:String>
+    <sys:String x:Key="DetFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="DetSecPassport">Pasové údaje</sys:String>
+    <sys:String x:Key="DetFieldPassportNum">Číslo pasu</sys:String>
+    <sys:String x:Key="DetFieldBirthCity">Město narození</sys:String>
+    <sys:String x:Key="DetFieldBirthCountry">Země narození</sys:String>
+    <sys:String x:Key="DetFieldExpiry">Datum expirace</sys:String>
+    <sys:String x:Key="DetSecVisa">Vízum</sys:String>
+    <sys:String x:Key="DetFieldVisaNum">Číslo víza</sys:String>
+    <sys:String x:Key="DetFieldVisaType">Typ víza</sys:String>
+    <sys:String x:Key="DetSecInsurance">Pojištění</sys:String>
+    <sys:String x:Key="DetFieldInsCompany">Pojišťovna</sys:String>
+    <sys:String x:Key="DetFieldInsNum">Číslo pojištění</sys:String>
+    <sys:String x:Key="DetSecAddrLocal">Adresa (v zemi)</sys:String>
+    <sys:String x:Key="DetFieldStreet">Ulice</sys:String>
+    <sys:String x:Key="DetFieldHouseNum">Číslo domu</sys:String>
+    <sys:String x:Key="DetFieldCity">Město</sys:String>
+    <sys:String x:Key="DetFieldZip">PSČ</sys:String>
+    <sys:String x:Key="DetSecAddrAbroad">Adresa v zahraničí</sys:String>
+    <sys:String x:Key="DetSecWork">Práce</sys:String>
+    <sys:String x:Key="DetFieldPosition">Pozice</sys:String>
+    <sys:String x:Key="DetFieldSalary">Mzda (hrubá)</sys:String>
+    <sys:String x:Key="DetFieldHourly">Hodinová mzda</sys:String>
+    <sys:String x:Key="DetFieldWorkAddr">Adresa pracoviště</sys:String>
+    <sys:String x:Key="DetSecContacts">Kontakty a data</sys:String>
+    <sys:String x:Key="DetFieldPhone">Telefon</sys:String>
+    <sys:String x:Key="DetFieldStartDate">Datum nástupu</sys:String>
+    <sys:String x:Key="DetFieldSignDate">Datum podpisu smlouvy</sys:String>
+    <sys:String x:Key="DetHistoryTitle">Historie změn</sys:String>
+    <sys:String x:Key="DetHistoryEmpty">Historie je prázdná</sys:String>
+    <sys:String x:Key="DetHistoryEmptyMsg">Změny v dotazníku zaměstnance budou zobrazeny zde.</sys:String>
+    <sys:String x:Key="DetGenTitle">Výběr šablony pro generaci</sys:String>
+    <sys:String x:Key="DetGenDesc">Vyberte šablonu. Dokument bude generován s vyplněnými údaji zaměstnance a uložen do jeho složky.</sys:String>
+    <sys:String x:Key="DetArchiveTitle">Přesunout do archivu</sys:String>
+    <sys:String x:Key="DetArchiveDesc">Zaměstnanec bude přesunut do archivu. Jeho složka a údaje budou zachovány.</sys:String>
+    <sys:String x:Key="DetArchiveDateLabel">Datum ukončení spolupráce (dd.mm.rrrr):</sys:String>
+    <sys:String x:Key="DetExtendDateLabel">Nové datum expirace (dd.mm.rrrr):</sys:String>
+    <sys:String x:Key="DetTooltipClose">Zavřít</sys:String>
+    <sys:String x:Key="DetTooltipExtendVisa">Prodloužit datum víza</sys:String>
+    <sys:String x:Key="DetTooltipExtendIns">Prodloužit datum pojištění</sys:String>
+
+    <!-- MainPage -->
+    <sys:String x:Key="MainSelectCompany">Vyberte firmu pro práci</sys:String>
+    <sys:String x:Key="MainSelected">Vybráno: </sys:String>
+    <sys:String x:Key="MainTooltipEdit">Upravit firmu</sys:String>
+    <sys:String x:Key="MainTooltipDblClick">Dvojklik — upravit</sys:String>
+
+    <!-- ProblemsView -->
+    <sys:String x:Key="ProbStatExpired">Prošlé / Kritické</sys:String>
+    <sys:String x:Key="ProbStatWarning">Brzy vyprší</sys:String>
+    <sys:String x:Key="ProbStatTotal">Celkem problémů</sys:String>
+    <sys:String x:Key="ProbAllOk">Všechny dokumenty jsou v pořádku!</sys:String>
+    <sys:String x:Key="ProbAllOkDesc">Žádné prošlé nebo brzy expirující dokumenty.</sys:String>
+
+    <!-- ArchiveView -->
+    <sys:String x:Key="ArchiveTitle">Archiv zaměstnanců</sys:String>
+    <sys:String x:Key="ArchiveSearch">Hledat v archivu</sys:String>
+    <sys:String x:Key="ArchiveStarted">Nástup: </sys:String>
+    <sys:String x:Key="ArchiveEnded">Ukončil: </sys:String>
+    <sys:String x:Key="ArchiveRestore">Obnovit</sys:String>
+    <sys:String x:Key="ArchiveOpenFolder">Otevřít složku</sys:String>
+    <sys:String x:Key="ArchiveEmpty">Archiv je prázdný</sys:String>
+    <sys:String x:Key="ArchiveEmptyDesc">Zde se zobrazí zaměstnanci, kteří ukončili spolupráci.</sys:String>
+    <sys:String x:Key="ArchiveRestoreTitle">Obnovit zaměstnance</sys:String>
+    <sys:String x:Key="ArchiveFirm">Firma</sys:String>
+    <sys:String x:Key="ArchiveStartDate">Datum nástupu</sys:String>
+    <sys:String x:Key="ArchiveSignDate">Datum podpisu smlouvy</sys:String>
+    <sys:String x:Key="ArchivePosition">Pozice</sys:String>
+    <sys:String x:Key="ArchiveWorkPlace">Místo výkonu práce</sys:String>
+    <sys:String x:Key="ArchiveRestoreBtn">Obnovit do firmy</sys:String>
+
+    <!-- AddEmployeeWizard -->
+    <sys:String x:Key="WizFirstName">Jméno</sys:String>
+    <sys:String x:Key="WizLastName">Příjmení</sys:String>
+    <sys:String x:Key="WizBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="WizPassportNum">Číslo pasu nebo ID</sys:String>
+    <sys:String x:Key="WizBirthCity">Město narození</sys:String>
+    <sys:String x:Key="WizBirthCountry">Země narození</sys:String>
+    <sys:String x:Key="WizPassportExpiry">Datum expirace dokumentu</sys:String>
+    <sys:String x:Key="WizInsCompany">Pojišťovna (zkratka)</sys:String>
+    <sys:String x:Key="WizInsNumber">Číslo pojištění</sys:String>
+    <sys:String x:Key="WizInsExpiry">Datum expirace pojištění</sys:String>
+    <sys:String x:Key="WizVisaNum">Číslo víza</sys:String>
+    <sys:String x:Key="WizVisaType">Typ víza</sys:String>
+    <sys:String x:Key="WizVisaExpiry">Datum expirace víza</sys:String>
+    <sys:String x:Key="WizStreet">Ulice</sys:String>
+    <sys:String x:Key="WizNumber">Číslo</sys:String>
+    <sys:String x:Key="WizCity">Město</sys:String>
+    <sys:String x:Key="WizZip">PSČ</sys:String>
+    <sys:String x:Key="WizPosNumber">Číslo pozice</sys:String>
+    <sys:String x:Key="WizSalaryMonth">Měsíční mzda (hrubá)</sys:String>
+    <sys:String x:Key="WizSalaryHour">Hodinová mzda</sys:String>
+    <sys:String x:Key="WizPhone">Telefonní číslo</sys:String>
+    <sys:String x:Key="WizStartDate">Datum nástupu do práce</sys:String>
+    <sys:String x:Key="WizSignDate">Datum podpisu smlouvy</sys:String>
+
+    <!-- Editors (shared) -->
+    <sys:String x:Key="EditorBold">Tučné (Ctrl+B)</sys:String>
+    <sys:String x:Key="EditorItalic">Kurzíva (Ctrl+I)</sys:String>
+    <sys:String x:Key="EditorUnderline">Podtržené (Ctrl+U)</sys:String>
+    <sys:String x:Key="EditorFontSize">Velikost písma</sys:String>
+    <sys:String x:Key="EditorAlignLeft">Zarovnat doleva</sys:String>
+    <sys:String x:Key="EditorAlignCenter">Zarovnat na střed</sys:String>
+    <sys:String x:Key="EditorAlignRight">Zarovnat doprava</sys:String>
+    <sys:String x:Key="EditorTagCatalog">Katalog tagů</sys:String>
+    <sys:String x:Key="EditorSearchTags">Hledat tagy...</sys:String>
+    <sys:String x:Key="EditorInsert">Vl.</sys:String>
+    <sys:String x:Key="EditorCopyTag">Kopírovat tag</sys:String>
+
+    <!-- XlsxEditor -->
+    <sys:String x:Key="XlsxBack">Zpět</sys:String>
+    <sys:String x:Key="XlsxSave">Uložit</sys:String>
+    <sys:String x:Key="XlsxCancel">Zrušit</sys:String>
+    <sys:String x:Key="XlsxTagHint">Stiskněte Vl. pro vložení tagu do vybrané buňky</sys:String>
+    <sys:String x:Key="XlsxCell">Buňka: </sys:String>
+    <sys:String x:Key="XlsxInsertTag">Vložit tag do vybrané buňky</sys:String>
+    <sys:String x:Key="XlsxMergeMaster">Sloučená (hlavní)</sys:String>
+    <sys:String x:Key="XlsxMergePart">Sloučená (část)</sys:String>
+    <sys:String x:Key="XlsxTag">Tag</sys:String>
+
+    <!-- TemplatesView -->
+    <sys:String x:Key="TplBtnDelete">Smazat</sys:String>
+    <sys:String x:Key="TplBtnEdit">Upravit</sys:String>
+    <sys:String x:Key="TplUpdated">Aktualizováno: </sys:String>
+    <sys:String x:Key="TplTagsTitle">Dostupné tagy pro šablonu</sys:String>
+    <sys:String x:Key="TplTagsDesc">Stiskněte Kopírovat pro zkopírování tagu do schránky. Poté vložte tag do dokumentu ve Wordu/Excelu.</sys:String>
+    <sys:String x:Key="TplCopyTag">Kopírovat</sys:String>
+    <sys:String x:Key="TplOpenEditor">Otevřít šablonu v editoru</sys:String>
+
+    <!-- SettingsPage -->
+    <sys:String x:Key="SettingsAppVersion">Verze aplikace</sys:String>
+    <sys:String x:Key="SettingsLangHint">Vyberte jazyk rozhraní</sys:String>
+    <sys:String x:Key="SettingsThemeHint">Zvolte vizuální motiv</sys:String>
+    <sys:String x:Key="SettingsFolderHint">Cesta ke kořenové datové složce</sys:String>
+
+    <!-- AddCompanyView tooltips -->
+    <sys:String x:Key="CompanyTooltipDeleteAddr">Smazat adresu</sys:String>
+    <sys:String x:Key="CompanyTooltipDeletePos">Smazat pozici</sys:String>
+    <sys:String x:Key="CompanyTooltipDeleteCompany">Smazat firmu</sys:String>
+
+    <!-- AddTemplateView -->
+    <sys:String x:Key="TplFileNotNeeded">Soubor není potřeba — použijte vestavěný editor</sys:String>
+
+    <!-- PDF Editor -->
+    <sys:String x:Key="PdfClickToPlace">Stiskněte Vl. u tagu a klikněte na PDF pro umístění</sys:String>
+    <sys:String x:Key="PdfPlaceTag">Umístit na PDF</sys:String>
+    <sys:String x:Key="PdfPlacedTags">Umístěné tagy</sys:String>
+    <sys:String x:Key="PdfTagMarker">Značka tagu</sys:String>
+</ResourceDictionary>

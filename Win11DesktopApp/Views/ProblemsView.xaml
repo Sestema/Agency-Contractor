@@ -1,0 +1,155 @@
+<UserControl x:Class="Win11DesktopApp.Views.ProblemsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <conv:ExpirySeverityColorConverter x:Key="SeverityColor"/>
+        <conv:ExpirySeverityBackgroundConverter x:Key="SeverityBg"/>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource WindowBackgroundBrush}" Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding GoBackCommand}" Height="36" Padding="12,0" Margin="0,0,10,0"
+                        Background="{DynamicResource ContentBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,6,0"/>
+                        <TextBlock Text="{DynamicResource BtnBack}" FontSize="14"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="22" 
+                           Foreground="#D32F2F" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" 
+                           VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- STATS -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+            <Border Background="#FFEBEE" CornerRadius="8" Padding="16,10" Margin="0,0,10,0" MinWidth="150"
+                    BorderBrush="#FFCDD2" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding ExpiredCount}" FontSize="28" FontWeight="Bold" Foreground="#C62828"/>
+                    <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="11" Foreground="#C62828"/>
+                </StackPanel>
+            </Border>
+            <Border Background="#FFF3E0" CornerRadius="8" Padding="16,10" Margin="0,0,10,0" MinWidth="150"
+                    BorderBrush="#FFE0B2" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding WarningCount}" FontSize="28" FontWeight="Bold" Foreground="#EF6C00"/>
+                    <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="11" Foreground="#EF6C00"/>
+                </StackPanel>
+            </Border>
+            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="16,10" MinWidth="150"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding TotalProblems}" FontSize="28" FontWeight="Bold" 
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                    <TextBlock Text="{DynamicResource ProbStatTotal}" FontSize="11" Foreground="#888"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- PROBLEMS LIST -->
+        <Grid Grid.Row="2">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding HasProblems, Converter={StaticResource BoolToVis}}">
+                <ItemsControl ItemsSource="{Binding Problems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" 
+                                    Padding="0" Margin="0,0,0,8"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.06"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="5"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Severity color strip -->
+                                    <Border Grid.Column="0" CornerRadius="8,0,0,8"
+                                            Background="{Binding Severity, Converter={StaticResource SeverityColor}}"/>
+
+                                    <Grid Grid.Column="1" Margin="16,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Icon -->
+                                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22" 
+                                                Margin="0,0,14,0" VerticalAlignment="Center"
+                                                Background="{Binding Severity, Converter={StaticResource SeverityBg}}">
+                                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="{Binding Severity, Converter={StaticResource SeverityColor}}"/>
+                                        </Border>
+
+                                        <!-- Info -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontSize="15" FontWeight="SemiBold" 
+                                                       Foreground="{DynamicResource ForegroundBrush}">
+                                                <Run Text="{Binding EmployeeName, Mode=OneWay}"/>
+                                                <Run Text=" — " Foreground="#999"/>
+                                                <Run Text="{Binding DocumentType, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <TextBlock FontSize="11" Foreground="#999" Margin="0,2,0,0">
+                                                <Run Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="10"/>
+                                                <Run Text=" "/>
+                                                <Run Text="{Binding FirmName, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
+                                                           Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding ExpiryDateStr}" FontSize="12" Foreground="#666" Margin="0,0,16,0"/>
+                                                <Border CornerRadius="10" Padding="8,2"
+                                                        Background="{Binding Severity, Converter={StaticResource SeverityBg}}">
+                                                    <TextBlock FontSize="11" FontWeight="SemiBold"
+                                                               Text="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}}"
+                                                               Foreground="{Binding Severity, Converter={StaticResource SeverityColor}}"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Empty state -->
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="8" Padding="30"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    Visibility="{Binding HasProblems, Converter={StaticResource InverseBoolToVis}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="42" 
+                               HorizontalAlignment="Center" Foreground="#2E7D32"/>
+                    <TextBlock Text="{DynamicResource ProbAllOk}" FontSize="16" FontWeight="SemiBold"
+                               Margin="0,12,0,4" TextAlignment="Center" Foreground="#2E7D32"/>
+                    <TextBlock Text="{DynamicResource ProbAllOkDesc}" 
+                               FontSize="13" TextAlignment="Center" Foreground="#888"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

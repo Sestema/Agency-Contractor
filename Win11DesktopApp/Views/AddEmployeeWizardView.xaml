@@ -1,0 +1,204 @@
+<UserControl x:Class="Win11DesktopApp.Views.AddEmployeeWizardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="900">
+    <UserControl.Resources>
+        <conv:StepEqualsToVisibilityConverter x:Key="StepVis"/>
+    </UserControl.Resources>
+    <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="8" Padding="20" Width="900" Height="700">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="{DynamicResource HeaderAddEmployee}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+            <ScrollViewer Grid.Row="1">
+                <Grid>
+                    <StackPanel Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=0}">
+                        <TextBlock Text="{DynamicResource StepDocuments}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Command="{Binding UploadPassportCommand}" Content="{DynamicResource BtnUploadPassport}" Width="200" Height="35"/>
+                            <TextBlock Text="{Binding PassportPreviewPath}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Command="{Binding UploadVisaCommand}" Content="{DynamicResource BtnUploadVisa}" Width="200" Height="35"/>
+                            <TextBlock Text="{Binding VisaPreviewPath}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding UploadInsuranceCommand}" Content="{DynamicResource BtnUploadInsurance}" Width="200" Height="35"/>
+                            <TextBlock Text="{Binding InsurancePreviewPath}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=1}">
+                        <TextBlock Text="{DynamicResource StepCropPhoto}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Canvas x:Name="CropCanvas" Width="600" Height="350" Background="#EEE">
+                                <Image x:Name="PassportImage" Width="600" Height="350" Stretch="Uniform" Source="{Binding PassportPreviewPath}"/>
+                                <Rectangle x:Name="CropRect" Stroke="#0078d4" StrokeThickness="2" Fill="#400078d4"/>
+                            </Canvas>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <Button Command="{Binding ApplyCropCommand}" Content="{DynamicResource BtnApplyCrop}" Width="200" Height="35"/>
+                                <TextBlock Text="{Binding CroppedPhotoPath}" Margin="0,10,0,0" Width="200" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <Grid Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=2}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource StepPassportData}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="{DynamicResource WizFirstName}"/>
+                            <TextBox Text="{Binding Data.FirstName, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizLastName}"/>
+                            <TextBox Text="{Binding Data.LastName, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizBirthDate}"/>
+                            <TextBox Text="{Binding Data.BirthDate, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizPassportNum}"/>
+                            <TextBox Text="{Binding Data.PassportNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizBirthCity}"/>
+                            <TextBox Text="{Binding Data.PassportCity, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizBirthCountry}"/>
+                            <TextBox Text="{Binding Data.PassportCountry, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizPassportExpiry}"/>
+                            <TextBox Text="{Binding Data.PassportExpiry, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <Image Grid.Column="1" Source="{Binding PassportPreviewPath}" Stretch="Uniform"/>
+                    </Grid>
+
+                    <Grid Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=3}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource StepInsuranceData}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="{DynamicResource WizInsCompany}"/>
+                            <TextBox Text="{Binding Data.InsuranceCompanyShort, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizInsNumber}"/>
+                            <TextBox Text="{Binding Data.InsuranceNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizInsExpiry}"/>
+                            <TextBox Text="{Binding Data.InsuranceExpiry, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <Image Grid.Column="1" Source="{Binding InsurancePreviewPath}" Stretch="Uniform"/>
+                    </Grid>
+
+                    <Grid Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=4}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource StepVisaData}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="{DynamicResource WizVisaNum}"/>
+                            <TextBox Text="{Binding Data.VisaNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizVisaType}"/>
+                            <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="{DynamicResource WizVisaExpiry}"/>
+                            <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <Image Grid.Column="1" Source="{Binding VisaPreviewPath}" Stretch="Uniform"/>
+                    </Grid>
+
+                    <StackPanel Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=5}">
+                        <TextBlock Text="{DynamicResource StepAddresses}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <TextBlock Text="{DynamicResource LabelAddressLocal}"/>
+                        <TextBlock Text="{DynamicResource WizStreet}"/>
+                        <TextBox Text="{Binding Data.AddressLocal.Street, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizNumber}"/>
+                        <TextBox Text="{Binding Data.AddressLocal.Number, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizCity}"/>
+                        <TextBox Text="{Binding Data.AddressLocal.City, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizZip}"/>
+                        <TextBox Text="{Binding Data.AddressLocal.Zip, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="{DynamicResource LabelAddressAbroad}" Margin="0,10,0,0"/>
+                        <TextBlock Text="{DynamicResource WizStreet}"/>
+                        <TextBox Text="{Binding Data.AddressAbroad.Street, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizNumber}"/>
+                        <TextBox Text="{Binding Data.AddressAbroad.Number, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizCity}"/>
+                        <TextBox Text="{Binding Data.AddressAbroad.City, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizZip}"/>
+                        <TextBox Text="{Binding Data.AddressAbroad.Zip, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <TextBlock Text="{DynamicResource LabelWorkAddress}" Margin="0,10,0,0"/>
+                        <ComboBox ItemsSource="{Binding CompanyAddresses}" SelectedItem="{Binding SelectedWorkAddress}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding Street}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding Number}"/>
+                                        <Run Text=", "/>
+                                        <Run Text="{Binding City}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding ZipCode}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Text="{DynamicResource LabelPosition}" Margin="0,10,0,0"/>
+                        <ComboBox ItemsSource="{Binding CompanyPositions}" SelectedItem="{Binding SelectedPosition}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding Title}"/>
+                                        <Run Text=" ("/>
+                                        <Run Text="{Binding PositionNumber}"/>
+                                        <Run Text=")"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Text="{DynamicResource WizPosNumber}"/>
+                        <TextBlock Text="{Binding SelectedPosition.PositionNumber}"/>
+                        <TextBlock Text="{DynamicResource WizSalaryMonth}"/>
+                        <TextBlock Text="{Binding SelectedPosition.MonthlySalaryBrutto}"/>
+                        <TextBlock Text="{DynamicResource WizSalaryHour}"/>
+                        <TextBlock Text="{Binding SelectedPosition.HourlySalary}"/>
+
+                        <TextBlock Text="{DynamicResource LabelContractType}" Margin="0,10,0,0"/>
+                        <ComboBox SelectedItem="{Binding ContractType}">
+                            <sys:String>HPP</sys:String>
+                            <sys:String>DPP</sys:String>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=6}">
+                        <TextBlock Text="{DynamicResource StepAdditional}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <TextBlock Text="{DynamicResource WizPhone}"/>
+                        <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizStartDate}"/>
+                        <TextBox Text="{Binding Data.StartDate, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{DynamicResource WizSignDate}"/>
+                        <TextBox Text="{Binding Data.ContractSignDate, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Command="{Binding SaveCommand}" Content="{DynamicResource BtnSaveEmployee}" Width="200" Height="35" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button Command="{Binding BackCommand}" Content="{DynamicResource BtnBack}" Width="100" Height="35" Margin="0,0,10,0"/>
+                <Button Command="{Binding NextCommand}" Content="{DynamicResource BtnNext}" Width="100" Height="35" Margin="0,0,10,0"/>
+                <Button Command="{Binding CancelCommand}" Content="{DynamicResource BtnCancel}" Width="100" Height="35"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

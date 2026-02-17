@@ -1,0 +1,295 @@
+<UserControl x:Class="Win11DesktopApp.Views.TemplateEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000">
+    <UserControl.Resources>
+        <Style x:Key="ToolbarBtn" TargetType="Button">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="ToolbarSeparator" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="Margin" Value="6,4"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Toolbar -->
+            <RowDefinition Height="*"/>     <!-- Editor + Tags -->
+            <RowDefinition Height="Auto"/>  <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding GoBackCommand}" 
+                        Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
+                        FontSize="18" Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,12,0"
+                        VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Title}" 
+                           FontSize="20" FontWeight="SemiBold" 
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- TOOLBAR -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" 
+                CornerRadius="6" Padding="8,4" Margin="0,0,0,8"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+            <StackPanel Orientation="Horizontal">
+                <!-- Bold -->
+                <Button Style="{StaticResource ToolbarBtn}" 
+                        Command="EditingCommands.ToggleBold" 
+                        CommandTarget="{Binding ElementName=Editor}"
+                        ToolTip="{DynamicResource EditorBold}">
+                    <TextBlock Text="B" FontWeight="Bold" FontSize="14" 
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+                <!-- Italic -->
+                <Button Style="{StaticResource ToolbarBtn}" 
+                        Command="EditingCommands.ToggleItalic" 
+                        CommandTarget="{Binding ElementName=Editor}"
+                        ToolTip="{DynamicResource EditorItalic}">
+                    <TextBlock Text="I" FontStyle="Italic" FontSize="14" 
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+                <!-- Underline -->
+                <Button Style="{StaticResource ToolbarBtn}" 
+                        Command="EditingCommands.ToggleUnderline" 
+                        CommandTarget="{Binding ElementName=Editor}"
+                        ToolTip="{DynamicResource EditorUnderline}">
+                    <TextBlock FontSize="14" Foreground="{DynamicResource ForegroundBrush}">
+                        <Underline>U</Underline>
+                    </TextBlock>
+                </Button>
+
+                <Border Style="{StaticResource ToolbarSeparator}"/>
+
+                <!-- Font Size -->
+                <ComboBox x:Name="FontSizeCombo" Width="60" Height="28" Margin="2,0"
+                          VerticalContentAlignment="Center" FontSize="12"
+                          SelectionChanged="FontSizeCombo_SelectionChanged"
+                          ToolTip="{DynamicResource EditorFontSize}">
+                    <ComboBoxItem Content="8"/>
+                    <ComboBoxItem Content="9"/>
+                    <ComboBoxItem Content="10"/>
+                    <ComboBoxItem Content="11"/>
+                    <ComboBoxItem Content="12" IsSelected="True"/>
+                    <ComboBoxItem Content="14"/>
+                    <ComboBoxItem Content="16"/>
+                    <ComboBoxItem Content="18"/>
+                    <ComboBoxItem Content="20"/>
+                    <ComboBoxItem Content="24"/>
+                    <ComboBoxItem Content="28"/>
+                    <ComboBoxItem Content="36"/>
+                </ComboBox>
+
+                <Border Style="{StaticResource ToolbarSeparator}"/>
+
+                <!-- Align Left -->
+                <Button Style="{StaticResource ToolbarBtn}" 
+                        Command="EditingCommands.AlignLeft" 
+                        CommandTarget="{Binding ElementName=Editor}"
+                        ToolTip="{DynamicResource EditorAlignLeft}">
+                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+                <!-- Align Center -->
+                <Button Style="{StaticResource ToolbarBtn}" 
+                        Command="EditingCommands.AlignCenter" 
+                        CommandTarget="{Binding ElementName=Editor}"
+                        ToolTip="{DynamicResource EditorAlignCenter}">
+                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+                <!-- Align Right -->
+                <Button Style="{StaticResource ToolbarBtn}" 
+                        Command="EditingCommands.AlignRight" 
+                        CommandTarget="{Binding ElementName=Editor}"
+                        ToolTip="{DynamicResource EditorAlignRight}">
+                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- MAIN: Editor + Tags -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="7*" MinWidth="300"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="3*" MinWidth="220"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- RichTextBox Editor -->
+            <Border Grid.Column="0" CornerRadius="6" 
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    Background="White">
+                <RichTextBox x:Name="Editor" 
+                             AcceptsTab="True" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto"
+                             Padding="12" FontSize="12" FontFamily="Segoe UI"
+                             BorderThickness="0"
+                             SpellCheck.IsEnabled="False"/>
+            </Border>
+
+            <!-- GridSplitter -->
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" 
+                          VerticalAlignment="Stretch" Background="Transparent" 
+                          Cursor="SizeWE" ShowsPreview="True"/>
+
+            <!-- Tags Catalog -->
+            <Border Grid.Column="2" CornerRadius="6" 
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    Background="{DynamicResource ContentBackgroundBrush}" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Tags header + search -->
+                    <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" 
+                            Padding="12,8" CornerRadius="6,6,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="14"
+                                       Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,8"/>
+                            <Grid>
+                                <TextBox Text="{Binding TagSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="6,4" FontSize="11"
+                                         Background="White" BorderBrush="#CCC" BorderThickness="1"
+                                         VerticalContentAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="11" Foreground="#AAA"
+                                           IsHitTestVisible="False" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TagSearchQuery}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding TagSearchQuery}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tags list with expanders -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,4">
+                        <ItemsControl ItemsSource="{Binding FilteredTagGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Expander IsExpanded="True" Margin="0,0,0,4">
+                                        <Expander.Header>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                        </Expander.Header>
+                                        <ItemsControl ItemsSource="{Binding Tags}" Margin="0,4,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource CardBackgroundBrush}" 
+                                                            CornerRadius="4" Padding="8,5" Margin="0,0,0,3">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- Tag name -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                                       FontSize="11" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       TextTrimming="CharacterEllipsis">
+                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
+                                                            </TextBlock>
+
+                                                            <!-- Insert button -->
+                                                            <Button Grid.Row="0" Grid.Column="1" Content="{DynamicResource EditorInsert}"
+                                                                    Command="{Binding DataContext.InsertTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Padding="6,1" FontSize="10" Margin="4,0,2,0"
+                                                                    Background="{DynamicResource AccentBrush}" 
+                                                                    Foreground="White" BorderThickness="0"
+                                                                    VerticalAlignment="Center" Cursor="Hand"/>
+
+                                                            <!-- Copy button -->
+                                                            <Button Grid.Row="0" Grid.Column="2" Content="&#xE8C8;"
+                                                                    FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                                    Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Width="24" Height="22"
+                                                                    Background="Transparent" BorderThickness="0"
+                                                                    Foreground="{DynamicResource ForegroundBrush}"
+                                                                    VerticalAlignment="Center" Cursor="Hand"
+                                                                    ToolTip="{DynamicResource EditorCopyTag}"/>
+
+                                                            <!-- Description -->
+                                                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                                                       Text="{Binding Description}" 
+                                                                       FontSize="10" Foreground="#888"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Expander>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- FOOTER -->
+        <Grid Grid.Row="3" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" 
+                       VerticalAlignment="Center" FontSize="12"
+                       Foreground="{DynamicResource AccentBrush}"/>
+
+            <Button Grid.Column="1" Content="{DynamicResource BtnCancel}" 
+                    Command="{Binding GoBackCommand}"
+                    Padding="16,8" Margin="0,0,8,0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    Foreground="{DynamicResource ForegroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
+
+            <Button Grid.Column="2" Content="{DynamicResource DetBtnSave}" 
+                    Command="{Binding SaveCommand}"
+                    Padding="16,8"
+                    Background="{DynamicResource AccentBrush}" Foreground="White" 
+                    BorderThickness="0" FontWeight="SemiBold"/>
+        </Grid>
+    </Grid>
+</UserControl>

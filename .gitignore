@@ -1,0 +1,23 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.vs/
+.vs/
+
+## NuGet
+packages/
+*.nupkg
+
+## WebView2
+**/EBWebView/
+
+## IDE
+.idea/
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store

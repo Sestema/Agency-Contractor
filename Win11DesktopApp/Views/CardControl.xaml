@@ -1,0 +1,77 @@
+<UserControl x:Class="Win11DesktopApp.Views.CardControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="150" d:DesignWidth="150">
+    <UserControl.Resources>
+        <conv:IntToVisibilityConverter x:Key="IntToVis"/>
+    </UserControl.Resources>
+    <Grid>
+    <Button Command="{Binding Command, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            BorderThickness="0" Background="Transparent" Padding="0">
+        <Button.Template>
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="CardBorder" 
+                        Background="{DynamicResource CardBackgroundBrush}" 
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Width="150" Height="150">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.1"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="2*"/>
+                            <RowDefinition Height="1*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Path Grid.Row="0" 
+                              Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              Fill="{DynamicResource ForegroundBrush}"
+                              Stretch="Uniform"
+                              Width="48" Height="48"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Margin="0,10,0,0"/>
+                        
+                        <TextBlock Grid.Row="1" 
+                                   Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Top"
+                                   Margin="0,10,0,0"/>
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                        <Setter TargetName="CardBorder" Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect BlurRadius="15" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.15"/>
+                            </Setter.Value>
+                        </Setter>
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="CardBorder" Property="Opacity" Value="0.5"/>
+                        <Setter TargetName="CardBorder" Property="Background" Value="#F0F0F0"/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Button.Template>
+    </Button>
+    <!-- Badge -->
+    <Border CornerRadius="11" Background="#D32F2F" MinWidth="22" Height="22" 
+            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0"
+            Padding="4,0" IsHitTestVisible="False"
+            Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
+        <TextBlock Text="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                   Foreground="White" FontSize="11" FontWeight="Bold"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,298 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="AppTitle">Agency Contractor</sys:String>
+    <sys:String x:Key="BtnEmployees">Employees</sys:String>
+    <sys:String x:Key="BtnTemplates">Templates</sys:String>
+    <sys:String x:Key="BtnProblems">Problems</sys:String>
+    <sys:String x:Key="BtnFinances">Finances</sys:String>
+    <sys:String x:Key="BtnArchive">Archive</sys:String>
+    
+    <sys:String x:Key="SettingsTitle">Settings</sys:String>
+    <sys:String x:Key="LangLabel">Language</sys:String>
+    <sys:String x:Key="ThemeLabel">Theme</sys:String>
+    
+    <sys:String x:Key="ThemeLight">Light (Win 11)</sys:String>
+    <sys:String x:Key="ThemeDarkWord">Dark (Word)</sys:String>
+    <sys:String x:Key="ThemeDark2">Dark #2</sys:String>
+    <sys:String x:Key="ThemeCustom">Custom #3</sys:String>
+
+    <!-- New Strings -->
+    <sys:String x:Key="DrawerTitle">Companies</sys:String>
+    <sys:String x:Key="BtnAddNewCompany">Add New Company</sys:String>
+    <sys:String x:Key="HeaderAddCompany">Add New Company</sys:String>
+    <sys:String x:Key="TabEmployer">Employer Company</sys:String>
+    <sys:String x:Key="TabAgency">Agency</sys:String>
+    <sys:String x:Key="LabelCompanyName">Company Name</sys:String>
+    <sys:String x:Key="LabelICO">ICO</sys:String>
+    <sys:String x:Key="LabelAddress">Addresses</sys:String>
+    <sys:String x:Key="LabelStreet">Street</sys:String>
+    <sys:String x:Key="LabelNumber">Number</sys:String>
+    <sys:String x:Key="LabelCity">City</sys:String>
+    <sys:String x:Key="LabelZip">Zip Code</sys:String>
+    <sys:String x:Key="BtnAddAddress">+ Add Address</sys:String>
+    <sys:String x:Key="LabelPositions">Positions</sys:String>
+    <sys:String x:Key="LabelPosTitle">Position Title</sys:String>
+    <sys:String x:Key="LabelPosNumber">Number</sys:String>
+    <sys:String x:Key="LabelSalary">Monthly Salary</sys:String>
+    <sys:String x:Key="LabelHourly">Hourly Salary</sys:String>
+    <sys:String x:Key="BtnAddPosition">+ Add Position</sys:String>
+    <sys:String x:Key="LabelFullAddress">Full Address</sys:String>
+    <sys:String x:Key="BtnCancel">Cancel</sys:String>
+    <sys:String x:Key="BtnSave">Save Company</sys:String>
+    <sys:String x:Key="LabelRootFolder">Root Folder</sys:String>
+    <sys:String x:Key="BtnSelectFolder">Select Folder</sys:String>
+    <sys:String x:Key="MsgSelectCompany">Select Company...</sys:String>
+
+    <!-- Templates Module -->
+    <sys:String x:Key="TitleTemplates">Templates: {0}</sys:String>
+    <sys:String x:Key="MsgSelectFirmForTemplates">Please select a company to work with templates.</sys:String>
+    <sys:String x:Key="BtnAddTemplate">Add Template</sys:String>
+    <sys:String x:Key="HeaderAddTemplate">Add New Template</sys:String>
+    <sys:String x:Key="LabelTemplateName">Template Name</sys:String>
+    <sys:String x:Key="LabelFormat">Format</sys:String>
+    <sys:String x:Key="LabelDescription">Description</sys:String>
+    <sys:String x:Key="BtnUploadFile">Upload Template File</sys:String>
+    <sys:String x:Key="MsgFileUploaded">File uploaded: {0}</sys:String>
+    <sys:String x:Key="BtnSaveTemplate">Save Template</sys:String>
+
+    <sys:String x:Key="MsgConfirmDeleteTemplate">Are you sure you want to delete the template '{0}'?</sys:String>
+    <sys:String x:Key="TitleConfirmDelete">Confirm Deletion</sys:String>
+    <sys:String x:Key="MsgTemplateDeleted">Template successfully deleted.</sys:String>
+    <sys:String x:Key="TitleSuccess">Success</sys:String>
+    <sys:String x:Key="TitleError">Error</sys:String>
+    <sys:String x:Key="MsgErrorDeleteTemplate">Error deleting template: {0}</sys:String>
+
+    <!-- Employees Module -->
+    <sys:String x:Key="MsgSelectFirmForEmployees">Please select a company to work with employees.</sys:String>
+    <sys:String x:Key="TitleEmployees">{0}</sys:String>
+    <sys:String x:Key="BtnAddEmployee">Add Employee</sys:String>
+    <sys:String x:Key="HeaderAddEmployee">Add Employee</sys:String>
+    <sys:String x:Key="StepDocuments">Step 1. Documents</sys:String>
+    <sys:String x:Key="StepCropPhoto">Step 2. Crop Photo</sys:String>
+    <sys:String x:Key="StepPassportData">Step 3. Passport Data</sys:String>
+    <sys:String x:Key="StepInsuranceData">Step 4. Insurance Data</sys:String>
+    <sys:String x:Key="StepVisaData">Step 5. Visa Data</sys:String>
+    <sys:String x:Key="StepAddresses">Step 6. Addresses, Position, Contract</sys:String>
+    <sys:String x:Key="StepAdditional">Step 7. Additional Data</sys:String>
+    <sys:String x:Key="BtnUploadPassport">Upload Passport</sys:String>
+    <sys:String x:Key="BtnUploadVisa">Upload Visa</sys:String>
+    <sys:String x:Key="BtnUploadInsurance">Upload Insurance</sys:String>
+    <sys:String x:Key="BtnApplyCrop">Crop Photo</sys:String>
+    <sys:String x:Key="BtnBack">Back</sys:String>
+    <sys:String x:Key="BtnNext">Next</sys:String>
+    <sys:String x:Key="BtnSaveEmployee">Save Employee</sys:String>
+    <sys:String x:Key="LabelAddressLocal">Local Address</sys:String>
+    <sys:String x:Key="LabelAddressAbroad">Abroad Address</sys:String>
+    <sys:String x:Key="LabelWorkAddress">Work Address</sys:String>
+    <sys:String x:Key="LabelPosition">Position</sys:String>
+    <sys:String x:Key="LabelContractType">Contract Type</sys:String>
+    <sys:String x:Key="TitleEmployeesGeneric">Employees</sys:String>
+    <sys:String x:Key="EmployeesSearchPlaceholder">Search by name, passport, visa, insurance</sys:String>
+    <sys:String x:Key="MsgEmployeesSelectCompany">Please select a company to view employees.</sys:String>
+    <sys:String x:Key="BtnSelectCompany">Select company</sys:String>
+    <sys:String x:Key="MsgDeleteEmployee">Delete employee?</sys:String>
+    <sys:String x:Key="BtnDelete">Delete</sys:String>
+    <sys:String x:Key="MsgEmployeesRootMissing">Root folder is not set. Please configure it in Settings.</sys:String>
+    <sys:String x:Key="MsgEmployeesFolderMissing">Employees folder not found.</sys:String>
+    <sys:String x:Key="MsgEmployeesEmpty">This company has no employees yet.</sys:String>
+    <sys:String x:Key="MsgEmployeesLoadError">Failed to load employees.</sys:String>
+    <sys:String x:Key="MsgEmployeesSearchEmpty">No employees found.</sys:String>
+
+    <!-- EmployeesView -->
+    <sys:String x:Key="EmpBtnSelect">Select</sys:String>
+    <sys:String x:Key="EmpStatTotal">Total</sys:String>
+    <sys:String x:Key="EmpStatActive">Active</sys:String>
+    <sys:String x:Key="EmpStatProblems">Doc. problems</sys:String>
+    <sys:String x:Key="EmpStatNewMonth">New this month</sys:String>
+    <sys:String x:Key="EmpSortLabel">Sort by:</sys:String>
+    <sys:String x:Key="EmpSortName">Name</sys:String>
+    <sys:String x:Key="EmpSortDate">Start date</sys:String>
+    <sys:String x:Key="EmpSortStatus">Status</sys:String>
+    <sys:String x:Key="EmpSortProblems">Problems</sys:String>
+    <sys:String x:Key="EmpSelectAll">Select all</sys:String>
+    <sys:String x:Key="EmpGenerate">Generate</sys:String>
+    <sys:String x:Key="EmpBadgePassport">Passport</sys:String>
+    <sys:String x:Key="EmpBadgeVisa">Visa</sys:String>
+    <sys:String x:Key="EmpBadgeInsurance">Insurance</sys:String>
+    <sys:String x:Key="EmpBtnOpen">Open</sys:String>
+    <sys:String x:Key="EmpBtnEdit">Edit</sys:String>
+    <sys:String x:Key="EmpBtnFolder">Folder</sys:String>
+    <sys:String x:Key="EmpBtnDelete">Delete</sys:String>
+    <sys:String x:Key="EmpBatchTitle">Batch document generation</sys:String>
+    <sys:String x:Key="EmpTooltipExport">Export to Excel</sys:String>
+    <sys:String x:Key="EmpTooltipSelect">Select multiple</sys:String>
+    <sys:String x:Key="EmpTooltipFolder">Open employee folder</sys:String>
+    <sys:String x:Key="EmpTooltipDelete">Delete employee</sys:String>
+
+    <!-- EmployeeDetailsView -->
+    <sys:String x:Key="DetNoPhoto">No photo</sys:String>
+    <sys:String x:Key="DetBtnGenerate">Generate document</sys:String>
+    <sys:String x:Key="DetBtnOpenFolder">Open folder</sys:String>
+    <sys:String x:Key="DetBtnArchive">To archive</sys:String>
+    <sys:String x:Key="DetLabelStatus">Status</sys:String>
+    <sys:String x:Key="DetTabDocs">Documents</sys:String>
+    <sys:String x:Key="DetTabProfile">Profile</sys:String>
+    <sys:String x:Key="DetTabHistory">History</sys:String>
+    <sys:String x:Key="DetDocsTitle">Employee documents</sys:String>
+    <sys:String x:Key="DetDocPassport">Passport</sys:String>
+    <sys:String x:Key="DetDocVisa">Visa</sys:String>
+    <sys:String x:Key="DetDocInsurance">Insurance</sys:String>
+    <sys:String x:Key="DetDocPhoto">Photo</sys:String>
+    <sys:String x:Key="DetBtnReplace">Replace</sys:String>
+    <sys:String x:Key="DetBtnOpenFile">Open</sys:String>
+    <sys:String x:Key="DetBtnExtend">Extend</sys:String>
+    <sys:String x:Key="DetBtnEditProfile">Edit profile</sys:String>
+    <sys:String x:Key="DetBtnSave">Save</sys:String>
+    <sys:String x:Key="DetBtnCancel">Cancel</sys:String>
+    <sys:String x:Key="DetSecPersonal">Personal data</sys:String>
+    <sys:String x:Key="DetFieldFirstName">First name</sys:String>
+    <sys:String x:Key="DetFieldLastName">Last name</sys:String>
+    <sys:String x:Key="DetFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="DetSecPassport">Passport data</sys:String>
+    <sys:String x:Key="DetFieldPassportNum">Passport number</sys:String>
+    <sys:String x:Key="DetFieldBirthCity">City of birth</sys:String>
+    <sys:String x:Key="DetFieldBirthCountry">Country of birth</sys:String>
+    <sys:String x:Key="DetFieldExpiry">Expiry date</sys:String>
+    <sys:String x:Key="DetSecVisa">Visa</sys:String>
+    <sys:String x:Key="DetFieldVisaNum">Visa number</sys:String>
+    <sys:String x:Key="DetFieldVisaType">Visa type</sys:String>
+    <sys:String x:Key="DetSecInsurance">Insurance</sys:String>
+    <sys:String x:Key="DetFieldInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="DetFieldInsNum">Insurance number</sys:String>
+    <sys:String x:Key="DetSecAddrLocal">Address (local)</sys:String>
+    <sys:String x:Key="DetFieldStreet">Street</sys:String>
+    <sys:String x:Key="DetFieldHouseNum">House number</sys:String>
+    <sys:String x:Key="DetFieldCity">City</sys:String>
+    <sys:String x:Key="DetFieldZip">Zip code</sys:String>
+    <sys:String x:Key="DetSecAddrAbroad">Address abroad</sys:String>
+    <sys:String x:Key="DetSecWork">Work</sys:String>
+    <sys:String x:Key="DetFieldPosition">Position</sys:String>
+    <sys:String x:Key="DetFieldSalary">Salary (gross)</sys:String>
+    <sys:String x:Key="DetFieldHourly">Hourly salary</sys:String>
+    <sys:String x:Key="DetFieldWorkAddr">Work address</sys:String>
+    <sys:String x:Key="DetSecContacts">Contacts and dates</sys:String>
+    <sys:String x:Key="DetFieldPhone">Phone</sys:String>
+    <sys:String x:Key="DetFieldStartDate">Start date</sys:String>
+    <sys:String x:Key="DetFieldSignDate">Contract sign date</sys:String>
+    <sys:String x:Key="DetHistoryTitle">Change history</sys:String>
+    <sys:String x:Key="DetHistoryEmpty">History is empty</sys:String>
+    <sys:String x:Key="DetHistoryEmptyMsg">Changes to employee profile will be displayed here.</sys:String>
+    <sys:String x:Key="DetGenTitle">Select template for generation</sys:String>
+    <sys:String x:Key="DetGenDesc">Select a template. The document will be generated with filled employee data and saved to their folder.</sys:String>
+    <sys:String x:Key="DetArchiveTitle">Move to archive</sys:String>
+    <sys:String x:Key="DetArchiveDesc">The employee will be moved to the archive. Their folder and data will be preserved.</sys:String>
+    <sys:String x:Key="DetArchiveDateLabel">End of cooperation date (dd.mm.yyyy):</sys:String>
+    <sys:String x:Key="DetExtendDateLabel">New expiry date (dd.mm.yyyy):</sys:String>
+    <sys:String x:Key="DetTooltipClose">Close</sys:String>
+    <sys:String x:Key="DetTooltipExtendVisa">Extend visa date</sys:String>
+    <sys:String x:Key="DetTooltipExtendIns">Extend insurance date</sys:String>
+
+    <!-- MainPage -->
+    <sys:String x:Key="MainSelectCompany">Select a company to work with</sys:String>
+    <sys:String x:Key="MainSelected">Selected: </sys:String>
+    <sys:String x:Key="MainTooltipEdit">Edit company</sys:String>
+    <sys:String x:Key="MainTooltipDblClick">Double click to edit</sys:String>
+
+    <!-- ProblemsView -->
+    <sys:String x:Key="ProbStatExpired">Expired / Critical</sys:String>
+    <sys:String x:Key="ProbStatWarning">Expiring soon</sys:String>
+    <sys:String x:Key="ProbStatTotal">Total problems</sys:String>
+    <sys:String x:Key="ProbAllOk">All documents are in order!</sys:String>
+    <sys:String x:Key="ProbAllOkDesc">No expired or soon expiring documents.</sys:String>
+
+    <!-- ArchiveView -->
+    <sys:String x:Key="ArchiveTitle">Employee archive</sys:String>
+    <sys:String x:Key="ArchiveSearch">Search in archive</sys:String>
+    <sys:String x:Key="ArchiveStarted">Started: </sys:String>
+    <sys:String x:Key="ArchiveEnded">Ended: </sys:String>
+    <sys:String x:Key="ArchiveRestore">Restore</sys:String>
+    <sys:String x:Key="ArchiveOpenFolder">Open folder</sys:String>
+    <sys:String x:Key="ArchiveEmpty">Archive is empty</sys:String>
+    <sys:String x:Key="ArchiveEmptyDesc">Employees who ended cooperation will appear here.</sys:String>
+    <sys:String x:Key="ArchiveRestoreTitle">Restore employee</sys:String>
+    <sys:String x:Key="ArchiveFirm">Company</sys:String>
+    <sys:String x:Key="ArchiveStartDate">Start date</sys:String>
+    <sys:String x:Key="ArchiveSignDate">Contract sign date</sys:String>
+    <sys:String x:Key="ArchivePosition">Position</sys:String>
+    <sys:String x:Key="ArchiveWorkPlace">Work place</sys:String>
+    <sys:String x:Key="ArchiveRestoreBtn">Restore to company</sys:String>
+
+    <!-- AddEmployeeWizard -->
+    <sys:String x:Key="WizFirstName">First name</sys:String>
+    <sys:String x:Key="WizLastName">Last name</sys:String>
+    <sys:String x:Key="WizBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="WizPassportNum">Passport or ID number</sys:String>
+    <sys:String x:Key="WizBirthCity">City of birth</sys:String>
+    <sys:String x:Key="WizBirthCountry">Country of birth</sys:String>
+    <sys:String x:Key="WizPassportExpiry">Document expiry date</sys:String>
+    <sys:String x:Key="WizInsCompany">Insurance company (short)</sys:String>
+    <sys:String x:Key="WizInsNumber">Insurance number</sys:String>
+    <sys:String x:Key="WizInsExpiry">Insurance expiry date</sys:String>
+    <sys:String x:Key="WizVisaNum">Visa number</sys:String>
+    <sys:String x:Key="WizVisaType">Visa type</sys:String>
+    <sys:String x:Key="WizVisaExpiry">Visa expiry date</sys:String>
+    <sys:String x:Key="WizStreet">Street</sys:String>
+    <sys:String x:Key="WizNumber">Number</sys:String>
+    <sys:String x:Key="WizCity">City</sys:String>
+    <sys:String x:Key="WizZip">Zip code</sys:String>
+    <sys:String x:Key="WizPosNumber">Position number</sys:String>
+    <sys:String x:Key="WizSalaryMonth">Monthly salary (gross)</sys:String>
+    <sys:String x:Key="WizSalaryHour">Hourly salary</sys:String>
+    <sys:String x:Key="WizPhone">Phone number</sys:String>
+    <sys:String x:Key="WizStartDate">Employment start date</sys:String>
+    <sys:String x:Key="WizSignDate">Contract sign date</sys:String>
+
+    <!-- Editors (shared) -->
+    <sys:String x:Key="EditorBold">Bold (Ctrl+B)</sys:String>
+    <sys:String x:Key="EditorItalic">Italic (Ctrl+I)</sys:String>
+    <sys:String x:Key="EditorUnderline">Underline (Ctrl+U)</sys:String>
+    <sys:String x:Key="EditorFontSize">Font size</sys:String>
+    <sys:String x:Key="EditorAlignLeft">Align left</sys:String>
+    <sys:String x:Key="EditorAlignCenter">Align center</sys:String>
+    <sys:String x:Key="EditorAlignRight">Align right</sys:String>
+    <sys:String x:Key="EditorTagCatalog">Tag catalog</sys:String>
+    <sys:String x:Key="EditorSearchTags">Search tags...</sys:String>
+    <sys:String x:Key="EditorInsert">Ins.</sys:String>
+    <sys:String x:Key="EditorCopyTag">Copy tag</sys:String>
+
+    <!-- XlsxEditor -->
+    <sys:String x:Key="XlsxBack">Back</sys:String>
+    <sys:String x:Key="XlsxSave">Save</sys:String>
+    <sys:String x:Key="XlsxCancel">Cancel</sys:String>
+    <sys:String x:Key="XlsxTagHint">Press Ins. to insert a tag into the selected cell</sys:String>
+    <sys:String x:Key="XlsxCell">Cell: </sys:String>
+    <sys:String x:Key="XlsxInsertTag">Insert tag into selected cell</sys:String>
+    <sys:String x:Key="XlsxMergeMaster">Merged (master)</sys:String>
+    <sys:String x:Key="XlsxMergePart">Merged (part)</sys:String>
+    <sys:String x:Key="XlsxTag">Tag</sys:String>
+
+    <!-- TemplatesView -->
+    <sys:String x:Key="TplBtnDelete">Delete</sys:String>
+    <sys:String x:Key="TplBtnEdit">Edit</sys:String>
+    <sys:String x:Key="TplUpdated">Updated: </sys:String>
+    <sys:String x:Key="TplTagsTitle">Available tags for template</sys:String>
+    <sys:String x:Key="TplTagsDesc">Press Copy to copy a tag to clipboard. Then paste the tag into the document in Word/Excel.</sys:String>
+    <sys:String x:Key="TplCopyTag">Copy</sys:String>
+    <sys:String x:Key="TplOpenEditor">Open template in editor</sys:String>
+
+    <!-- SettingsPage -->
+    <sys:String x:Key="SettingsAppVersion">App version</sys:String>
+    <sys:String x:Key="SettingsLangHint">Select interface language</sys:String>
+    <sys:String x:Key="SettingsThemeHint">Choose your visual theme</sys:String>
+    <sys:String x:Key="SettingsFolderHint">Path to the root data folder</sys:String>
+
+    <!-- AddCompanyView tooltips -->
+    <sys:String x:Key="CompanyTooltipDeleteAddr">Delete address</sys:String>
+    <sys:String x:Key="CompanyTooltipDeletePos">Delete position</sys:String>
+    <sys:String x:Key="CompanyTooltipDeleteCompany">Delete company</sys:String>
+
+    <!-- AddTemplateView -->
+    <sys:String x:Key="TplFileNotNeeded">File not needed — use the built-in editor</sys:String>
+
+    <!-- PDF Editor -->
+    <sys:String x:Key="PdfClickToPlace">Press Ins. next to a tag, then click on PDF to place it</sys:String>
+    <sys:String x:Key="PdfPlaceTag">Place on PDF</sys:String>
+    <sys:String x:Key="PdfPlacedTags">Placed tags</sys:String>
+    <sys:String x:Key="PdfTagMarker">Tag marker</sys:String>
+</ResourceDictionary>
