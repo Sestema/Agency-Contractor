@@ -10,12 +10,15 @@ namespace Win11DesktopApp.Services
     {
         public Mat LoadImage(string path)
         {
-            return Cv2.ImRead(path, ImreadModes.Color);
+            var bytes = File.ReadAllBytes(path);
+            return Cv2.ImDecode(bytes, ImreadModes.Color);
         }
 
         public void SaveImage(Mat image, string outputPath)
         {
-            Cv2.ImWrite(outputPath, image);
+            var ext = Path.GetExtension(outputPath).ToLowerInvariant();
+            Cv2.ImEncode(string.IsNullOrEmpty(ext) ? ".jpg" : ext, image, out var buf);
+            File.WriteAllBytes(outputPath, buf);
         }
 
         public Mat AdjustBrightnessContrast(Mat src, int brightness, int contrast)

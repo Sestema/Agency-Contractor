@@ -145,8 +145,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                     <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
                                                Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Data.PositionTag}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Data.PositionTag, Mode=OneWay}"/>
+                                        <Run Text=" (CZ-ISCO: "/><Run Text="{Binding Data.PositionNumber, Mode=OneWay}"/><Run Text=")"/>
+                                    </TextBlock>
                                 </StackPanel>
 
                                 <!-- Contract type (hidden for passport_only) -->
@@ -1136,7 +1139,23 @@
                                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                                                 <StackPanel>
                                                     <TextBlock Text="{DynamicResource DetFieldPosition}" Style="{StaticResource FieldLabel}"/>
-                                                    <TextBox Text="{Binding Data.PositionTag, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <!-- Read-only: show position text -->
+                                                    <TextBox Text="{Binding Data.PositionTag, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}"
+                                                             Visibility="{Binding IsEditMode, Converter={StaticResource InverseBoolToVis}}" IsReadOnly="True"/>
+                                                    <!-- Edit mode: ComboBox to pick from company positions -->
+                                                    <ComboBox ItemsSource="{Binding CompanyPositions}" SelectedItem="{Binding SelectedPosition}"
+                                                              Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"
+                                                              Padding="8,6" Margin="0,0,0,8" FontSize="13" IsEditable="False">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock>
+                                                                    <Run Text="{Binding Title}"/> (<Run Text="{Binding PositionNumber}"/>)
+                                                                </TextBlock>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                    <TextBlock Text="{DynamicResource DetFieldPosNumber}" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBox Text="{Binding Data.PositionNumber}" Style="{StaticResource FieldInput}" IsReadOnly="True"/>
                                                     <TextBlock Text="{DynamicResource DetFieldSalary}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.MonthlySalaryBrutto, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldHourly}" Style="{StaticResource FieldLabel}"/>

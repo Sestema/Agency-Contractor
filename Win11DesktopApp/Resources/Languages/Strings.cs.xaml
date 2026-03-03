@@ -237,6 +237,7 @@
     <sys:String x:Key="DetSecAddrAbroad">Adresa v zahraničí</sys:String>
     <sys:String x:Key="DetSecWork">Práce</sys:String>
     <sys:String x:Key="DetFieldPosition">Pozice</sys:String>
+    <sys:String x:Key="DetFieldPosNumber">CZ-ISCO kód</sys:String>
     <sys:String x:Key="DetFieldSalary">Mzda (hrubá)</sys:String>
     <sys:String x:Key="DetFieldHourly">Hodinová mzda</sys:String>
     <sys:String x:Key="DetFieldWorkAddr">Adresa pracoviště</sys:String>

@@ -237,6 +237,7 @@
     <sys:String x:Key="DetSecAddrAbroad">Адрес за рубежом</sys:String>
     <sys:String x:Key="DetSecWork">Работа</sys:String>
     <sys:String x:Key="DetFieldPosition">Позиция</sys:String>
+    <sys:String x:Key="DetFieldPosNumber">CZ-ISCO код</sys:String>
     <sys:String x:Key="DetFieldSalary">Зарплата (брутто)</sys:String>
     <sys:String x:Key="DetFieldHourly">Почасовая зарплата</sys:String>
     <sys:String x:Key="DetFieldWorkAddr">Адрес работы</sys:String>

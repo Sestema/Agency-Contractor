@@ -240,6 +240,7 @@
     <sys:String x:Key="DetSecAddrAbroad">Address abroad</sys:String>
     <sys:String x:Key="DetSecWork">Work</sys:String>
     <sys:String x:Key="DetFieldPosition">Position</sys:String>
+    <sys:String x:Key="DetFieldPosNumber">CZ-ISCO code</sys:String>
     <sys:String x:Key="DetFieldSalary">Salary (gross)</sys:String>
     <sys:String x:Key="DetFieldHourly">Hourly salary</sys:String>
     <sys:String x:Key="DetFieldWorkAddr">Work address</sys:String>

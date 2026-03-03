@@ -178,12 +178,12 @@ namespace Win11DesktopApp.Services
 
             data.Files.Passport = SaveDocument(passport, employeeFolder, $"{data.FirstName} {data.LastName} - Pass");
             data.Files.Visa = SaveDocument(visa, employeeFolder, $"{data.FirstName} {data.LastName} - Viza");
-            data.Files.Insurance = SaveDocument(insurance, employeeFolder, $"{data.FirstName} {data.LastName} - {data.InsuranceCompanyShort}");
 
-            if (workPermit != null)
-                data.Files.WorkPermit = SaveDocument(workPermit, employeeFolder, $"{data.FirstName} {data.LastName} - Povolení k práci");
-            if (passportPage2 != null)
-                data.Files.PassportPage2 = SaveDocument(passportPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Pass Page2");
+            var insName = string.IsNullOrWhiteSpace(data.InsuranceCompanyShort) ? "Insurance" : data.InsuranceCompanyShort;
+            data.Files.Insurance = SaveDocument(insurance, employeeFolder, $"{data.FirstName} {data.LastName} - {insName}");
+
+            data.Files.WorkPermit = SaveDocument(workPermit, employeeFolder, $"{data.FirstName} {data.LastName} - Povolení k práci");
+            data.Files.PassportPage2 = SaveDocument(passportPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Pass Page2");
 
             if (!string.IsNullOrEmpty(photoPath))
             {
@@ -568,28 +568,24 @@ namespace Win11DesktopApp.Services
             return outputPath;
         }
 
-        private string SaveDocument(EmployeeDocumentTemp doc, string employeeFolder, string baseName)
+        private string SaveDocument(EmployeeDocumentTemp? doc, string employeeFolder, string baseName)
         {
+            if (doc == null) return string.Empty;
+
             if (doc.IsPdf)
             {
+                if (string.IsNullOrEmpty(doc.PdfPath))
+                    return string.Empty;
                 var pdfPath = Path.Combine(employeeFolder, $"{baseName}.pdf");
-                if (!string.IsNullOrEmpty(doc.PdfPath))
-                {
-                    File.Copy(doc.PdfPath, pdfPath, true);
-                    return Path.GetFileName(pdfPath);
-                }
-                LoggingService.LogWarning("SaveDocument", $"PDF path is empty for '{baseName}'");
-                return string.Empty;
+                File.Copy(doc.PdfPath, pdfPath, true);
+                return Path.GetFileName(pdfPath);
             }
 
+            if (string.IsNullOrEmpty(doc.ImagePath))
+                return string.Empty;
             var jpgPath = Path.Combine(employeeFolder, $"{baseName}.jpg");
-            if (!string.IsNullOrEmpty(doc.ImagePath))
-            {
-                File.Copy(doc.ImagePath, jpgPath, true);
-                return Path.GetFileName(jpgPath);
-            }
-            LoggingService.LogWarning("SaveDocument", $"Image path is empty for '{baseName}'");
-            return string.Empty;
+            File.Copy(doc.ImagePath, jpgPath, true);
+            return Path.GetFileName(jpgPath);
         }
 
         private void ConvertImageToJpg(string inputPath, string outputPath)
@@ -929,10 +925,15 @@ namespace Win11DesktopApp.Services
                 {
                     LoggingService.LogWarning("RestoreFromArchive",
                         $"Archive folder still exists after restore, scheduling cleanup: {archiveEmployeeFolder}");
-                    Task.Run(async () =>
+                    _ = Task.Run(async () =>
                     {
-                        await Task.Delay(2000);
+                        await Task.Delay(5000);
                         TryDeleteDirectory(archiveEmployeeFolder);
+                        if (Directory.Exists(archiveEmployeeFolder))
+                        {
+                            await Task.Delay(10000);
+                            TryDeleteDirectory(archiveEmployeeFolder);
+                        }
                     });
                 }
 
@@ -1035,10 +1036,15 @@ namespace Win11DesktopApp.Services
                 {
                     LoggingService.LogWarning("ArchiveEmployee",
                         $"Employee folder still exists after archive, scheduling cleanup: {employeeFolder}");
-                    Task.Run(async () =>
+                    _ = Task.Run(async () =>
                     {
-                        await Task.Delay(2000);
+                        await Task.Delay(5000);
                         TryDeleteDirectory(employeeFolder);
+                        if (Directory.Exists(employeeFolder))
+                        {
+                            await Task.Delay(10000);
+                            TryDeleteDirectory(employeeFolder);
+                        }
                     });
                 }
 
@@ -1212,15 +1218,24 @@ namespace Win11DesktopApp.Services
         {
             if (!Directory.Exists(dir)) return;
 
-            // Release any lingering file handles from WPF image caching
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            Thread.Sleep(100);
+            Thread.Sleep(300);
 
             if (TryBulkDelete(dir)) return;
 
             TryDeleteFilesIndividually(dir);
+
+            if (Directory.Exists(dir))
+            {
+                bool isOneDrive = dir.IndexOf("OneDrive", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (isOneDrive)
+                {
+                    LoggingService.LogWarning("TryDeleteDirectory",
+                        $"OneDrive is blocking deletion of '{dir}'. The folder may be removed after sync completes.");
+                }
+            }
         }
 
         private static bool TryBulkDelete(string dir)
@@ -1231,14 +1246,18 @@ namespace Win11DesktopApp.Services
                 {
                     if (!Directory.Exists(dir)) return true;
                     foreach (var file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                    {
                         File.SetAttributes(file, FileAttributes.Normal);
+                        try { using var _ = File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None); }
+                        catch { }
+                    }
                     Directory.Delete(dir, true);
                     return true;
                 }
                 catch (Exception ex)
                 {
                     LoggingService.LogWarning("EmployeeService.TryBulkDelete", $"Attempt {attempt + 1} failed: {ex.Message}");
-                    Thread.Sleep(300 * (attempt + 1));
+                    Thread.Sleep(500 * (attempt + 1));
                 }
             }
             return false;

@@ -499,6 +499,26 @@ namespace Win11DesktopApp.ViewModels
         // Available statuses for ComboBox
         public List<string> AvailableStatuses { get; } = new(StatusHelper.AllKeys);
 
+        // Company positions for ComboBox
+        public ObservableCollection<Position> CompanyPositions { get; } = new();
+
+        private Position? _selectedPosition;
+        public Position? SelectedPosition
+        {
+            get => _selectedPosition;
+            set
+            {
+                if (SetProperty(ref _selectedPosition, value) && value != null)
+                {
+                    Data.PositionTag = value.Title;
+                    Data.PositionNumber = value.PositionNumber;
+                    Data.MonthlySalaryBrutto = value.MonthlySalaryBrutto;
+                    Data.HourlySalary = value.HourlySalary;
+                    OnPropertyChanged(nameof(Data));
+                }
+            }
+        }
+
         // Profile completion
         public int ProfileCompletionPercent => CalcProfileCompletion();
 
@@ -552,6 +572,7 @@ namespace Win11DesktopApp.ViewModels
             Data = _employeeService.LoadEmployeeData(employeeFolder) ?? new EmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
             RefreshDocuments();
+            LoadCompanyPositions();
 
             CloseCommand = new RelayCommand(o => RequestClose?.Invoke());
             ShowDocumentsCommand = new RelayCommand(o => TabIndex = 0);
@@ -1044,6 +1065,30 @@ namespace Win11DesktopApp.ViewModels
             VisaIsPdf = IsPdf(VisaFilePath);
             InsuranceIsPdf = IsPdf(InsuranceFilePath);
             WorkPermitIsPdf = IsPdf(WorkPermitFilePath);
+        }
+
+        private void LoadCompanyPositions()
+        {
+            try
+            {
+                var company = App.CompanyService.Companies.FirstOrDefault(c => c.Name == _firmName);
+                if (company == null) return;
+
+                CompanyPositions.Clear();
+                foreach (var pos in company.Positions)
+                    CompanyPositions.Add(pos);
+
+                if (!string.IsNullOrEmpty(Data.PositionTag))
+                {
+                    _selectedPosition = CompanyPositions.FirstOrDefault(p => p.Title == Data.PositionTag)
+                                     ?? CompanyPositions.FirstOrDefault(p => p.PositionNumber == Data.PositionNumber);
+                    OnPropertyChanged(nameof(SelectedPosition));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadCompanyPositions error: {ex.Message}");
+            }
         }
 
         private string BuildPath(string fileName)
