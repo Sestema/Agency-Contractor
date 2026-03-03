@@ -22,5 +22,9 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+## Build output
+publish/
+Releases/
+
 ## Secrets
 activator.key

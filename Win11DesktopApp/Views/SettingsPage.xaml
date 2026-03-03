@@ -231,6 +231,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Title -->
@@ -1200,8 +1201,68 @@
                 </StackPanel>
             </Border>
 
-            <!-- Copyright Card -->
+            <!-- Update Card -->
             <Border Grid.Row="12" Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
+                    Effect="{DynamicResource CardShadow}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Border Width="36" Height="36" CornerRadius="8" Background="#E3F2FD"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                       Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource SettingsUpdateTitle}" Margin="14,0,0,0"
+                                   FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{DynamicResource SettingsUpdateDesc}"
+                               FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,12"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Command="{Binding CheckForUpdatesCommand}" Cursor="Hand"
+                                Padding="14,8" Background="#1976D2" Foreground="White" BorderThickness="0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#1565C0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <TextBlock Text="{DynamicResource SettingsUpdateBtn}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="White"/>
+                        </Button>
+                        <Button Command="{Binding InstallUpdateCommand}" Cursor="Hand"
+                                Padding="14,8" Background="#4CAF50" Foreground="White" BorderThickness="0" Margin="8,0,0,0"
+                                Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#388E3C"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <TextBlock Text="{DynamicResource SettingsInstallBtn}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="White"/>
+                        </Button>
+                        <TextBlock Text="{Binding UpdateStatus}" FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Copyright Card -->
+            <Border Grid.Row="13" Background="{DynamicResource CardBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                     CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
                     Effect="{DynamicResource CardShadow}">
@@ -1226,7 +1287,7 @@
             </Border>
 
             <!-- License Status Card -->
-            <Border Grid.Row="13" Background="{DynamicResource CardBackgroundBrush}"
+            <Border Grid.Row="14" Background="{DynamicResource CardBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                     CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
                     Effect="{DynamicResource CardShadow}">

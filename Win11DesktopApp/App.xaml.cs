@@ -1,5 +1,6 @@
 using System.Windows;
 using PdfSharp.Fonts;
+using Velopack;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
@@ -28,6 +29,8 @@ namespace Win11DesktopApp
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            VelopackApp.Build().Run();
+
             base.OnStartup(e);
 
             GlobalFontSettings.FontResolver = new PdfFontResolver();

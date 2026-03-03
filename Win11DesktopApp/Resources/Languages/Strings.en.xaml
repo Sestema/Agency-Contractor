@@ -901,6 +901,15 @@
     <sys:String x:Key="LicenseActiveUntil">Active until</sys:String>
     <sys:String x:Key="LicenseDaysLeft">days</sys:String>
     <sys:String x:Key="LicenseCheckError">Verification error</sys:String>
+    <sys:String x:Key="SettingsUpdateTitle">Application update</sys:String>
+    <sys:String x:Key="SettingsUpdateDesc">Check for a new version</sys:String>
+    <sys:String x:Key="SettingsUpdateBtn">Check for updates</sys:String>
+    <sys:String x:Key="SettingsInstallBtn">Install</sys:String>
+    <sys:String x:Key="UpdateChecking">Checking...</sys:String>
+    <sys:String x:Key="UpdateAvailable">New version available</sys:String>
+    <sys:String x:Key="UpdateLatest">You have the latest version</sys:String>
+    <sys:String x:Key="UpdateDownloading">Downloading...</sys:String>
+    <sys:String x:Key="UpdateError">Update error</sys:String>
     <sys:String x:Key="WizDocLabel">Document</sys:String>
     <sys:String x:Key="WizKeepAspect">Keep aspect ratio</sys:String>
     <sys:String x:Key="WizRotateLeft">Rotate left</sys:String>

@@ -898,6 +898,15 @@
     <sys:String x:Key="LicenseActiveUntil">Активна до</sys:String>
     <sys:String x:Key="LicenseDaysLeft">дн.</sys:String>
     <sys:String x:Key="LicenseCheckError">Ошибка проверки</sys:String>
+    <sys:String x:Key="SettingsUpdateTitle">Обновление приложения</sys:String>
+    <sys:String x:Key="SettingsUpdateDesc">Проверить наличие новой версии</sys:String>
+    <sys:String x:Key="SettingsUpdateBtn">Проверить обновления</sys:String>
+    <sys:String x:Key="SettingsInstallBtn">Установить</sys:String>
+    <sys:String x:Key="UpdateChecking">Проверка...</sys:String>
+    <sys:String x:Key="UpdateAvailable">Доступна новая версия</sys:String>
+    <sys:String x:Key="UpdateLatest">У вас последняя версия</sys:String>
+    <sys:String x:Key="UpdateDownloading">Загрузка...</sys:String>
+    <sys:String x:Key="UpdateError">Ошибка обновления</sys:String>
     <sys:String x:Key="WizDocLabel">Документ</sys:String>
     <sys:String x:Key="WizKeepAspect">Сохранять пропорции</sys:String>
     <sys:String x:Key="WizRotateLeft">Повернуть влево</sys:String>

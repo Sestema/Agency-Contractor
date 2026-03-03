@@ -100,7 +100,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="v0.1.04" FontSize="11" Foreground="#BBB" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Text="v0.1.05" FontSize="11" Foreground="#BBB" VerticalAlignment="Center"/>
 
                 <Button Grid.Column="1" x:Name="BtnContinue" Content="Продовжити ▸" Click="BtnContinue_Click"
                         FontSize="13" Padding="20,8" Cursor="Hand" IsEnabled="False"

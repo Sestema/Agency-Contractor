@@ -898,6 +898,15 @@
     <sys:String x:Key="LicenseActiveUntil">Aktivní do</sys:String>
     <sys:String x:Key="LicenseDaysLeft">dní</sys:String>
     <sys:String x:Key="LicenseCheckError">Chyba ověření</sys:String>
+    <sys:String x:Key="SettingsUpdateTitle">Aktualizace aplikace</sys:String>
+    <sys:String x:Key="SettingsUpdateDesc">Zkontrolovat dostupnost nové verze</sys:String>
+    <sys:String x:Key="SettingsUpdateBtn">Zkontrolovat aktualizace</sys:String>
+    <sys:String x:Key="SettingsInstallBtn">Instalovat</sys:String>
+    <sys:String x:Key="UpdateChecking">Kontrola...</sys:String>
+    <sys:String x:Key="UpdateAvailable">K dispozici nová verze</sys:String>
+    <sys:String x:Key="UpdateLatest">Máte nejnovější verzi</sys:String>
+    <sys:String x:Key="UpdateDownloading">Stahování...</sys:String>
+    <sys:String x:Key="UpdateError">Chyba aktualizace</sys:String>
     <sys:String x:Key="WizDocLabel">Dokument</sys:String>
     <sys:String x:Key="WizKeepAspect">Zachovat poměr stran</sys:String>
     <sys:String x:Key="WizRotateLeft">Otočit doleva</sys:String>

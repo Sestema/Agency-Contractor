@@ -66,6 +66,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ChangeDocLanguageCommand { get; }
         public ICommand TestGeminiCommand { get; }
         public ICommand OpenGeminiSiteCommand { get; }
+        public ICommand CheckForUpdatesCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -76,6 +77,29 @@ namespace Win11DesktopApp.ViewModels
 
         public ObservableCollection<CompanyVisibilityItem> CompanyVisibilityItems { get; } = new();
 
+        private string _updateStatus = "";
+        public string UpdateStatus
+        {
+            get => _updateStatus;
+            set => SetProperty(ref _updateStatus, value);
+        }
+
+        private bool _isUpdateChecking;
+        public bool IsUpdateChecking
+        {
+            get => _isUpdateChecking;
+            set => SetProperty(ref _isUpdateChecking, value);
+        }
+
+        private bool _isUpdateAvailable;
+        public bool IsUpdateAvailable
+        {
+            get => _isUpdateAvailable;
+            set => SetProperty(ref _isUpdateAvailable, value);
+        }
+
+        private Velopack.UpdateInfo? _pendingUpdate;
+        public ICommand InstallUpdateCommand { get; }
 
         public string RootFolderPath
         {
@@ -316,6 +340,46 @@ namespace Win11DesktopApp.ViewModels
             {
                 try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://aistudio.google.com/apikey") { UseShellExecute = true }); }
                 catch (Exception ex) { LoggingService.LogWarning("Settings.OpenGeminiSite", ex.Message); }
+            });
+
+            CheckForUpdatesCommand = new RelayCommand(async o =>
+            {
+                IsUpdateChecking = true;
+                IsUpdateAvailable = false;
+                UpdateStatus = Res("UpdateChecking");
+                try
+                {
+                    var update = await Services.UpdateService.CheckForUpdatesAsync();
+                    if (update != null)
+                    {
+                        _pendingUpdate = update;
+                        IsUpdateAvailable = true;
+                        UpdateStatus = $"{Res("UpdateAvailable")} v{update.TargetFullRelease.Version}";
+                    }
+                    else
+                    {
+                        UpdateStatus = Res("UpdateLatest");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    UpdateStatus = $"{Res("UpdateError")}: {ex.Message}";
+                }
+                IsUpdateChecking = false;
+            });
+
+            InstallUpdateCommand = new RelayCommand(async o =>
+            {
+                if (_pendingUpdate == null) return;
+                IsUpdateChecking = true;
+                UpdateStatus = Res("UpdateDownloading");
+                var success = await Services.UpdateService.DownloadAndApplyAsync(
+                    _pendingUpdate, progress => UpdateStatus = $"{Res("UpdateDownloading")} {progress}%");
+                if (!success)
+                {
+                    UpdateStatus = Res("UpdateError");
+                    IsUpdateChecking = false;
+                }
             });
         }
 
