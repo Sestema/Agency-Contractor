@@ -13,7 +13,7 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.05";
+        public const string CurrentAppVersion = "0.1.06";
         private string _settingsPath;
         private string _backupPath;
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { WriteIndented = true };
