@@ -795,7 +795,10 @@ namespace Win11DesktopApp.Services
                             try
                             {
                                 var resaveJson = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                                File.WriteAllText(Path.Combine(folder, "employee.json"), resaveJson, System.Text.Encoding.UTF8);
+                                var resavePath = Path.Combine(folder, "employee.json");
+                                var resaveTmp = resavePath + ".tmp";
+                                File.WriteAllText(resaveTmp, resaveJson, System.Text.Encoding.UTF8);
+                                File.Move(resaveTmp, resavePath, true);
                             }
                             catch (Exception ex2) { LoggingService.LogWarning("GetArchivedEmployees.Dedup", ex2.Message); }
                         }
@@ -909,7 +912,9 @@ namespace Win11DesktopApp.Services
 
                 var newJson = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                 var restoredJsonPath = Path.Combine(destFolder, "employee.json");
-                File.WriteAllText(restoredJsonPath, newJson, System.Text.Encoding.UTF8);
+                var restoredTmp = restoredJsonPath + ".tmp";
+                File.WriteAllText(restoredTmp, newJson, System.Text.Encoding.UTF8);
+                File.Move(restoredTmp, restoredJsonPath, true);
 
                 var written = File.ReadAllText(restoredJsonPath, System.Text.Encoding.UTF8);
                 var verify = JsonSerializer.Deserialize<EmployeeData>(written);
@@ -1000,7 +1005,9 @@ namespace Win11DesktopApp.Services
                         data.ArchivedFromFirm = firmName;
                         data.Status = "Dismissed";
                         var newJson = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                        File.WriteAllText(jsonPath, newJson, System.Text.Encoding.UTF8);
+                        var archTmp = jsonPath + ".tmp";
+                        File.WriteAllText(archTmp, newJson, System.Text.Encoding.UTF8);
+                        File.Move(archTmp, jsonPath, true);
                     }
                 }
 
@@ -1015,7 +1022,11 @@ namespace Win11DesktopApp.Services
                     LoggingService.LogError("ArchiveEmployee",
                         new IOException($"Copy to archive failed for {employeeFolder}"));
                     if (originalJson != null)
-                        File.WriteAllText(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    {
+                        var rollbackTmp = jsonPath + ".tmp";
+                        File.WriteAllText(rollbackTmp, originalJson, System.Text.Encoding.UTF8);
+                        File.Move(rollbackTmp, jsonPath, true);
+                    }
                     return string.Empty;
                 }
 
@@ -1026,7 +1037,11 @@ namespace Win11DesktopApp.Services
                     LoggingService.LogError("ArchiveEmployee",
                         new InvalidOperationException($"Archive verification failed for {destFolder}"));
                     if (originalJson != null)
-                        File.WriteAllText(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    {
+                        var rollbackTmp2 = jsonPath + ".tmp";
+                        File.WriteAllText(rollbackTmp2, originalJson, System.Text.Encoding.UTF8);
+                        File.Move(rollbackTmp2, jsonPath, true);
+                    }
                     TryDeleteDirectory(destFolder);
                     return string.Empty;
                 }

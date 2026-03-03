@@ -140,7 +140,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var doc = new PdfDocument();
+                using var doc = new PdfDocument();
                 doc.Info.Title = $"{Data.FirstName} {Data.LastName}";
                 var page = doc.AddPage();
                 page.Size = PdfSharp.PageSize.A4;
@@ -240,7 +240,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     try
                     {
-                        var img = XImage.FromFile(PhotoFilePath);
+                        using var img = XImage.FromFile(PhotoFilePath);
                         gfx.DrawImage(img, photoX, photoY, photoDia, photoDia);
 
                         var mask = new XGraphicsPath();

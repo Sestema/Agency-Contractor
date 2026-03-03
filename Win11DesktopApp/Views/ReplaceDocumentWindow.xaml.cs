@@ -164,14 +164,24 @@ namespace Win11DesktopApp.Views
                 return;
             }
 
-            var editor = new ImageEditorWindow(_selectedFilePath);
-            editor.Owner = this;
-            editor.ShowDialog();
-
-            if (editor.Saved && !string.IsNullOrEmpty(editor.ResultPath) && File.Exists(editor.ResultPath))
+            try
             {
-                _selectedFilePath = editor.ResultPath;
-                LoadImage(_selectedFilePath);
+                var editor = new ImageEditorWindow(_selectedFilePath);
+                if (editor.LoadFailed) return;
+                editor.Owner = this;
+                editor.ShowDialog();
+
+                if (editor.Saved && !string.IsNullOrEmpty(editor.ResultPath) && File.Exists(editor.ResultPath))
+                {
+                    _selectedFilePath = editor.ResultPath;
+                    LoadImage(_selectedFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"{Res("ReplDocLoadError")}\n{ex.Message}",
+                    Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

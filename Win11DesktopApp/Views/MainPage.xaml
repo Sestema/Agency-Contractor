@@ -12,6 +12,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <CubicEase x:Key="DrawerEase" EasingMode="EaseOut"/>
         <conv:NameToColorConverter x:Key="NameToColor"/>
+        <conv:FirstCharConverter x:Key="FirstCharConverter"/>
         <conv:HexToBrushConverter x:Key="HexToBrush"/>
         <conv:IconKeyToGeometryConverter x:Key="IconKeyToGeometry"/>
         <conv:ResourceKeyConverter x:Key="ResKey"/>
@@ -454,7 +455,7 @@
                                     <!-- Avatar circle with first letter -->
                                     <Border Grid.Column="0" Width="42" Height="42" CornerRadius="21" 
                                             Background="{Binding Name, Converter={StaticResource NameToColor}}" Margin="0,0,14,0">
-                                        <TextBlock Text="{Binding Name[0]}" FontSize="{DynamicResource FS18}" FontWeight="Bold" 
+                                        <TextBlock Text="{Binding Name, Converter={StaticResource FirstCharConverter}, FallbackValue=''}" FontSize="{DynamicResource FS18}" FontWeight="Bold" 
                                                    Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
 

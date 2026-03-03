@@ -36,20 +36,55 @@ namespace Win11DesktopApp.Views
 
         public bool Saved { get; private set; }
         public string? ResultPath { get; private set; }
+        public bool LoadFailed { get; private set; }
 
         public ImageEditorWindow(string imagePath)
         {
             InitializeComponent();
             _originalPath = imagePath;
-            _originalMat = _service.LoadImage(imagePath);
-            _currentMat = _originalMat.Clone();
-            BuildPreviewMat();
+
+            try
+            {
+                _originalMat = LoadWithRetry(imagePath);
+                _currentMat = _originalMat.Clone();
+                BuildPreviewMat();
+            }
+            catch (Exception ex)
+            {
+                LoadFailed = true;
+                _originalMat = new Mat(100, 100, MatType.CV_8UC3, new Scalar(255, 255, 255));
+                _currentMat = _originalMat.Clone();
+                Loaded += (_, _) =>
+                {
+                    MessageBox.Show(
+                        $"Не вдалося відкрити файл:\n{ex.Message}",
+                        "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Close();
+                };
+                return;
+            }
 
             _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
             _debounceTimer.Tick += DebounceTimer_Tick;
 
             Loaded += OnLoaded;
             SizeChanged += (_, _) => { if (_isLoaded) ScheduleRefresh(); };
+        }
+
+        private Mat LoadWithRetry(string path, int maxAttempts = 3)
+        {
+            for (int i = 1; i <= maxAttempts; i++)
+            {
+                try
+                {
+                    return _service.LoadImage(path);
+                }
+                catch when (i < maxAttempts)
+                {
+                    Thread.Sleep(500 * i);
+                }
+            }
+            return _service.LoadImage(path);
         }
 
         private void BuildPreviewMat()

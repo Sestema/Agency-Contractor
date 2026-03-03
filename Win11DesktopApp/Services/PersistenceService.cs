@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 using System.Text.Json;
 using Win11DesktopApp.Helpers;
@@ -64,12 +65,12 @@ namespace Win11DesktopApp.Services
         /// <summary>
         /// Save the full database (companies + settings) as encrypted database.json.
         /// </summary>
-        public void SaveDatabase(IEnumerable<EmployerCompany> companies)
+        public async Task SaveDatabaseAsync(IEnumerable<EmployerCompany> companies)
         {
             var dbPath = _folderService.DatabaseFilePath;
             if (string.IsNullOrEmpty(dbPath)) return;
 
-            _saveLock.Wait();
+            await _saveLock.WaitAsync();
             try
             {
                 var db = new DatabaseRoot
@@ -493,6 +494,11 @@ namespace Win11DesktopApp.Services
                     _appSettingsService.Settings.SelectedCompanyId = db.Settings.SelectedCompanyId;
             }
             return db.Companies ?? new List<EmployerCompany>();
+        }
+
+        public void SaveDatabase(IEnumerable<EmployerCompany> companies)
+        {
+            SaveDatabaseAsync(companies).GetAwaiter().GetResult();
         }
 
         /// <summary>

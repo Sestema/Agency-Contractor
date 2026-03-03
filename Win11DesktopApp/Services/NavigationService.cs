@@ -19,6 +19,9 @@ namespace Win11DesktopApp.Services
 
         public void NavigateTo(ViewModelBase viewModel)
         {
+            if (_currentView is ICleanable cleanable)
+                cleanable.Cleanup();
+
             CurrentView = viewModel;
         }
     }

@@ -5,6 +5,11 @@ using System.Windows;
 
 namespace Win11DesktopApp.ViewModels
 {
+    public interface ICleanable
+    {
+        void Cleanup();
+    }
+
     public class ViewModelBase : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;

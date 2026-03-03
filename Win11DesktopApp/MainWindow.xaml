@@ -77,7 +77,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid ClipToBounds="True">
+    <Grid ClipToBounds="False">
         <ContentControl x:Name="PageHost" Content="{Binding CurrentView, NotifyOnTargetUpdated=True}" ClipToBounds="False"
                         RenderTransformOrigin="0.5,0.5">
             <ContentControl.RenderTransform>

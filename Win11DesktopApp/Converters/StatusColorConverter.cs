@@ -224,6 +224,18 @@ namespace Win11DesktopApp.Converters
             => throw new NotImplementedException();
     }
 
+    public class FirstCharConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var s = value as string;
+            return string.IsNullOrEmpty(s) ? "" : s[0].ToString();
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
     public class HexToBrushConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

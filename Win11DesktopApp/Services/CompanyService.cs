@@ -117,6 +117,7 @@ namespace Win11DesktopApp.Services
             _tagCatalogService.AddTagsForCompany(employer, agency);
             _folderService.EnsureCompanyStructure(employer.Name);
             _persistenceService.SaveCompanies(_companies);
+            VisibilityChanged?.Invoke();
         }
 
         public void UpdateCompany(EmployerCompany company, string oldName)
@@ -138,6 +139,7 @@ namespace Win11DesktopApp.Services
 
                 _persistenceService.SaveCompanies(_companies);
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
+                VisibilityChanged?.Invoke();
             }
             catch (Exception ex)
             {
@@ -154,6 +156,7 @@ namespace Win11DesktopApp.Services
                 if (_selectedCompany == company) SelectedCompany = null;
                 _companies.Remove(company);
                 _persistenceService.SaveCompanies(_companies);
+                VisibilityChanged?.Invoke();
                 return true;
             }
             catch (Exception ex)

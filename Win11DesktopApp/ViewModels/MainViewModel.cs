@@ -42,7 +42,7 @@ namespace Win11DesktopApp.ViewModels
         }
     }
 
-    public class MainViewModel : ViewModelBase
+    public class MainViewModel : ViewModelBase, ICleanable
     {
         public ICommand GoToSettingsCommand { get; }
         public ICommand ToggleDrawerCommand { get; }
@@ -179,10 +179,7 @@ namespace Win11DesktopApp.ViewModels
 
             RefreshVisibleCompanies();
             if (App.CompanyService != null)
-                App.CompanyService.VisibilityChanged += () =>
-                {
-                    App.Current?.Dispatcher.Invoke(RefreshVisibleCompanies);
-                };
+                App.CompanyService.VisibilityChanged += OnVisibilityChanged;
 
             BuildMenuCards();
 
@@ -237,8 +234,6 @@ namespace Win11DesktopApp.ViewModels
                 NavigateToResult(item);
             });
 
-            CheckRootFolder();
-
             if (App.CompanyService != null)
                 App.CompanyService.SelectedCompanyChanged += OnSelectedCompanyChanged;
 
@@ -252,10 +247,18 @@ namespace Win11DesktopApp.ViewModels
             RefreshProblemsCount();
         }
 
+        private void OnVisibilityChanged()
+        {
+            App.Current?.Dispatcher?.Invoke(RefreshVisibleCompanies);
+        }
+
         public void Cleanup()
         {
             if (App.CompanyService != null)
+            {
                 App.CompanyService.SelectedCompanyChanged -= OnSelectedCompanyChanged;
+                App.CompanyService.VisibilityChanged -= OnVisibilityChanged;
+            }
             _searchDebounce?.Dispose();
             _searchCts?.Cancel();
             _searchCts?.Dispose();
@@ -371,13 +374,6 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private static void CheckRootFolder()
-        {
-            if (string.IsNullOrEmpty(App.AppSettingsService?.Settings?.RootFolderPath))
-            {
-            }
-        }
-
         private void DebounceSearch()
         {
             _searchDebounce?.Dispose();
@@ -395,10 +391,11 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                _searchCts?.Cancel();
-                _searchCts?.Dispose();
+                var oldCts = _searchCts;
                 _searchCts = new CancellationTokenSource();
                 var ct = _searchCts.Token;
+                oldCts?.Cancel();
+                oldCts?.Dispose();
                 var query = _searchQuery.Trim();
                 if (query.Length < 2) { IsSearchOpen = false; return; }
 

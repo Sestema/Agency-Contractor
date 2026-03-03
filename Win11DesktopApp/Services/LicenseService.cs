@@ -159,13 +159,16 @@ namespace Win11DesktopApp.Services
                 {
                     using var searcher = new ManagementObjectSearcher(
                         "SELECT SerialNumber FROM Win32_DiskDrive WHERE MediaType='Fixed hard disk media'");
-                    foreach (var obj in searcher.Get())
+                    foreach (ManagementObject obj in searcher.Get())
                     {
-                        var sn = obj["SerialNumber"]?.ToString()?.Trim();
-                        if (!string.IsNullOrEmpty(sn))
+                        using (obj)
                         {
-                            diskSerial = sn;
-                            break;
+                            var sn = obj["SerialNumber"]?.ToString()?.Trim();
+                            if (!string.IsNullOrEmpty(sn))
+                            {
+                                diskSerial = sn;
+                                break;
+                            }
                         }
                     }
                 }
@@ -176,13 +179,16 @@ namespace Win11DesktopApp.Services
                     try
                     {
                         using var searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_DiskDrive");
-                        foreach (var obj in searcher.Get())
+                        foreach (ManagementObject obj in searcher.Get())
                         {
-                            var sn = obj["SerialNumber"]?.ToString()?.Trim();
-                            if (!string.IsNullOrEmpty(sn))
+                            using (obj)
                             {
-                                diskSerial = sn;
-                                break;
+                                var sn = obj["SerialNumber"]?.ToString()?.Trim();
+                                if (!string.IsNullOrEmpty(sn))
+                                {
+                                    diskSerial = sn;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -192,10 +198,13 @@ namespace Win11DesktopApp.Services
                 try
                 {
                     using var searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor");
-                    foreach (var obj in searcher.Get())
+                    foreach (ManagementObject obj in searcher.Get())
                     {
-                        cpuId = obj["ProcessorId"]?.ToString()?.Trim() ?? "";
-                        break;
+                        using (obj)
+                        {
+                            cpuId = obj["ProcessorId"]?.ToString()?.Trim() ?? "";
+                            break;
+                        }
                     }
                 }
                 catch { }

@@ -668,7 +668,18 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            var editor = new ImageEditorWindow(currentPath);
+            ImageEditorWindow editor;
+            try
+            {
+                editor = new ImageEditorWindow(currentPath);
+                if (editor.LoadFailed) return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Не вдалося відкрити редактор:\n{ex.Message}",
+                    Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             editor.Owner = Application.Current.MainWindow;
             editor.ShowDialog();
 

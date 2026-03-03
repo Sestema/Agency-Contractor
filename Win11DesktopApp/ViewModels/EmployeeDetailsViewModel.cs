@@ -710,40 +710,47 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            var oldDate = _extendType == "visa" ? Data.VisaExpiry : Data.InsuranceExpiry;
-            var fieldName = _extendType == "visa" ? Res("DetExtendFieldVisa") : Res("DetExtendFieldIns");
-            var actionName = _extendType == "visa" ? Res("HistoryExtendVisa") : Res("HistoryExtendIns");
-
-            if (_extendType == "visa")
-                Data.VisaExpiry = NewExpiryDate;
-            else if (_extendType == "insurance")
-                Data.InsuranceExpiry = NewExpiryDate;
-
-            if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
+            try
             {
-                await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+                var oldDate = _extendType == "visa" ? Data.VisaExpiry : Data.InsuranceExpiry;
+                var fieldName = _extendType == "visa" ? Res("DetExtendFieldVisa") : Res("DetExtendFieldIns");
+                var actionName = _extendType == "visa" ? Res("HistoryExtendVisa") : Res("HistoryExtendIns");
+
+                if (_extendType == "visa")
+                    Data.VisaExpiry = NewExpiryDate;
+                else if (_extendType == "insurance")
+                    Data.InsuranceExpiry = NewExpiryDate;
+
+                if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
                 {
-                    EventType = "DocumentExtended",
-                    Action = actionName,
-                    Field = fieldName,
-                    OldValue = oldDate,
-                    NewValue = NewExpiryDate,
-                    Description = $"{fieldName}: {oldDate} → {NewExpiryDate}"
-                });
+                    await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+                    {
+                        EventType = "DocumentExtended",
+                        Action = actionName,
+                        Field = fieldName,
+                        OldValue = oldDate,
+                        NewValue = NewExpiryDate,
+                        Description = $"{fieldName}: {oldDate} → {NewExpiryDate}"
+                    });
 
-                App.ActivityLogService?.Log(_extendType == "visa" ? "VisaExtended" : "InsuranceExtended",
-                    "Document", _firmName, FullName,
-                    $"{fieldName}: {oldDate} → {NewExpiryDate}",
-                    oldDate, NewExpiryDate, employeeFolder: _employeeFolder);
+                    App.ActivityLogService?.Log(_extendType == "visa" ? "VisaExtended" : "InsuranceExtended",
+                        "Document", _firmName, FullName,
+                        $"{fieldName}: {oldDate} → {NewExpiryDate}",
+                        oldDate, NewExpiryDate, employeeFolder: _employeeFolder);
 
-                IsExtendDialogOpen = false;
-                OnPropertyChanged(nameof(Data));
-                DataChanged?.Invoke();
-                StatusMessage = string.Empty;
+                    IsExtendDialogOpen = false;
+                    OnPropertyChanged(nameof(Data));
+                    DataChanged?.Invoke();
+                    StatusMessage = string.Empty;
+                }
+                else
+                {
+                    StatusMessage = Res("MsgSaveFail");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                StatusMessage = Res("MsgSaveFail");
+                StatusMessage = ex.Message;
             }
         }
 
@@ -813,22 +820,29 @@ namespace Win11DesktopApp.ViewModels
 
         private async void SaveProfile()
         {
-            var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
-
-            if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
+            try
             {
-                if (oldData != null)
+                var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
+
+                if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
                 {
-                    await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
-                    LogProfileChanges(oldData, Data);
-                }
+                    if (oldData != null)
+                    {
+                        await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+                        LogProfileChanges(oldData, Data);
+                    }
 
-                IsEditMode = false;
-                DataChanged?.Invoke();
+                    IsEditMode = false;
+                    DataChanged?.Invoke();
+                }
+                else
+                {
+                    StatusMessage = Res("MsgProfileSaveFail");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                StatusMessage = Res("MsgProfileSaveFail");
+                StatusMessage = ex.Message;
             }
         }
 
@@ -846,18 +860,17 @@ namespace Win11DesktopApp.ViewModels
 
         private async void ReplaceDocument(string type)
         {
-            if (type == "photo")
-            {
-                await ReplacePhotoSimple();
-                return;
-            }
-
-            var window = new Views.ReplaceDocumentWindow(type, Data);
-            window.Owner = Application.Current.MainWindow;
-            if (window.ShowDialog() != true || !window.Saved) return;
-
             try
             {
+                if (type == "photo")
+                {
+                    await ReplacePhotoSimple();
+                    return;
+                }
+
+                var window = new Views.ReplaceDocumentWindow(type, Data);
+                window.Owner = Application.Current?.MainWindow;
+                if (window.ShowDialog() != true || !window.Saved) return;
                 SaveReplacedDocumentFile(type, window.ResultFilePath);
                 var changes = ApplyNewFieldValues(window.NewValues);
                 _employeeService.SaveEmployeeData(_employeeFolder, Data);
