@@ -20,9 +20,18 @@ namespace Win11DesktopApp.Services
     public static class LicenseService
     {
         private static readonly string LicenseFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AgencyContractor");
         private static readonly string LicensePath = Path.Combine(LicenseFolder, ".license");
+        private static readonly string BackupPath = Path.Combine(LicenseFolder, ".license.bak");
+
+        private static readonly string OldLicenseFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "AgencyContractor");
+        private static readonly string OldLicensePath = Path.Combine(OldLicenseFolder, ".license");
+
+        private static string? _cachedMachineId;
+        private static bool _migrationDone;
 
         public static bool IsLicenseValid()
         {
@@ -35,23 +44,21 @@ namespace Win11DesktopApp.Services
 
                 if (!VerifySignature(info)) return false;
 
-                // Unlimited license
-                if (info.Plan == "unlimited") 
+                if (info.Plan == "unlimited")
                 {
-                    UpdateLastChecked(info);
+                    UpdateLastCheckedIfNeeded(info);
                     return true;
                 }
 
                 if (!DateTime.TryParse(info.ExpiresOn, out var expires)) return false;
                 if (DateTime.Now > expires) return false;
 
-                // Anti-rollback: if current date < last checked date, suspicious
                 if (DateTime.TryParse(info.LastChecked, out var lastChecked))
                 {
-                    if (DateTime.Now.AddDays(1) < lastChecked) return false;
+                    if (DateTime.Now.AddDays(7) < lastChecked) return false;
                 }
 
-                UpdateLastChecked(info);
+                UpdateLastCheckedIfNeeded(info);
                 return true;
             }
             catch
@@ -139,43 +146,83 @@ namespace Win11DesktopApp.Services
 
         public static string GetMachineId()
         {
+            if (_cachedMachineId != null)
+                return _cachedMachineId;
+
             try
             {
                 var sb = new StringBuilder();
+                string diskSerial = "";
+                string cpuId = "";
 
-                using (var searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_DiskDrive"))
+                try
                 {
+                    using var searcher = new ManagementObjectSearcher(
+                        "SELECT SerialNumber FROM Win32_DiskDrive WHERE MediaType='Fixed hard disk media'");
                     foreach (var obj in searcher.Get())
                     {
-                        sb.Append(obj["SerialNumber"]?.ToString()?.Trim() ?? "");
+                        var sn = obj["SerialNumber"]?.ToString()?.Trim();
+                        if (!string.IsNullOrEmpty(sn))
+                        {
+                            diskSerial = sn;
+                            break;
+                        }
+                    }
+                }
+                catch { }
+
+                if (string.IsNullOrEmpty(diskSerial))
+                {
+                    try
+                    {
+                        using var searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_DiskDrive");
+                        foreach (var obj in searcher.Get())
+                        {
+                            var sn = obj["SerialNumber"]?.ToString()?.Trim();
+                            if (!string.IsNullOrEmpty(sn))
+                            {
+                                diskSerial = sn;
+                                break;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                try
+                {
+                    using var searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor");
+                    foreach (var obj in searcher.Get())
+                    {
+                        cpuId = obj["ProcessorId"]?.ToString()?.Trim() ?? "";
                         break;
                     }
                 }
+                catch { }
 
-                using (var searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor"))
+                sb.Append(diskSerial);
+                sb.Append(cpuId);
+
+                if (sb.Length == 0)
                 {
-                    foreach (var obj in searcher.Get())
-                    {
-                        sb.Append(obj["ProcessorId"]?.ToString()?.Trim() ?? "");
-                        break;
-                    }
+                    sb.Append(Environment.MachineName);
+                    sb.Append("-fallback-v2");
                 }
-
-                sb.Append(Environment.MachineName);
 
                 using var sha = SHA256.Create();
                 var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
-                return Convert.ToBase64String(hash).Substring(0, 16);
+                _cachedMachineId = Convert.ToBase64String(hash).Substring(0, 16);
+                return _cachedMachineId;
             }
             catch
             {
-                return Environment.MachineName + "-fallback";
+                _cachedMachineId = Environment.MachineName + "-fallback";
+                return _cachedMachineId;
             }
         }
 
         private static bool ValidateActivatorKey(string keyContent)
         {
-            // The activator key must start with a specific marker
             return keyContent.StartsWith("ACK-") && keyContent.Length >= 40;
         }
 
@@ -189,63 +236,108 @@ namespace Win11DesktopApp.Services
 
         private static bool VerifySignature(LicenseInfo info)
         {
-            // We can't verify without the original key, but we stored the signature
-            // at activation time. We verify the data hasn't been tampered with by
-            // re-reading the stored license and checking structural integrity.
             if (string.IsNullOrEmpty(info.Signature)) return false;
             if (string.IsNullOrEmpty(info.MachineId)) return false;
             if (string.IsNullOrEmpty(info.ActivatedOn)) return false;
             if (string.IsNullOrEmpty(info.ExpiresOn)) return false;
-
-            // Verify the stored file hash matches
-            var storedPath = LicensePath;
-            if (!File.Exists(storedPath)) return false;
-
-            try
-            {
-                var rawBytes = File.ReadAllBytes(storedPath);
-                var decrypted = ProtectedData.Unprotect(rawBytes, GetEntropy(), DataProtectionScope.CurrentUser);
-                var json = Encoding.UTF8.GetString(decrypted);
-                var stored = JsonSerializer.Deserialize<LicenseInfo>(json);
-                if (stored == null) return false;
-                return stored.Signature == info.Signature
-                    && stored.MachineId == info.MachineId
-                    && stored.ExpiresOn == info.ExpiresOn
-                    && stored.Plan == info.Plan;
-            }
-            catch { return false; }
+            return true;
         }
 
-        private static void UpdateLastChecked(LicenseInfo info)
+        private static void UpdateLastCheckedIfNeeded(LicenseInfo info)
         {
             try
             {
+                if (DateTime.TryParse(info.LastChecked, out var last))
+                {
+                    if ((DateTime.Now - last).TotalHours < 12)
+                        return;
+                }
+
                 info.LastChecked = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 SaveLicense(info);
             }
-            catch { /* non-critical */ }
+            catch { }
         }
 
         private static void SaveLicense(LicenseInfo info)
         {
             Directory.CreateDirectory(LicenseFolder);
             var json = JsonSerializer.Serialize(info);
+
             var encrypted = ProtectedData.Protect(
                 Encoding.UTF8.GetBytes(json), GetEntropy(), DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(LicensePath, encrypted);
+
+            var tempPath = LicensePath + ".tmp";
+            File.WriteAllBytes(tempPath, encrypted);
+
+            if (File.Exists(LicensePath))
+            {
+                try { File.Copy(LicensePath, BackupPath, true); } catch { }
+            }
+
+            File.Move(tempPath, LicensePath, true);
         }
 
         private static LicenseInfo? LoadLicense()
         {
-            if (!File.Exists(LicensePath)) return null;
+            MigrateFromOldLocation();
+
+            var result = TryLoadFromPath(LicensePath);
+            if (result != null) return result;
+
+            result = TryLoadFromPath(BackupPath);
+            if (result != null)
+            {
+                try { File.Copy(BackupPath, LicensePath, true); } catch { }
+            }
+            return result;
+        }
+
+        private static void MigrateFromOldLocation()
+        {
+            if (_migrationDone) return;
+            _migrationDone = true;
+
             try
             {
-                var rawBytes = File.ReadAllBytes(LicensePath);
+                if (File.Exists(LicensePath)) return;
+
+                if (File.Exists(OldLicensePath))
+                {
+                    Directory.CreateDirectory(LicenseFolder);
+                    File.Copy(OldLicensePath, LicensePath, true);
+
+                    var oldBackup = Path.Combine(OldLicenseFolder, ".license.bak");
+                    if (File.Exists(oldBackup))
+                        File.Copy(oldBackup, BackupPath, true);
+                }
+            }
+            catch { }
+        }
+
+        private static LicenseInfo? TryLoadFromPath(string path)
+        {
+            if (!File.Exists(path)) return null;
+
+            var rawBytes = File.ReadAllBytes(path);
+
+            try
+            {
                 var decrypted = ProtectedData.Unprotect(rawBytes, GetEntropy(), DataProtectionScope.CurrentUser);
                 var json = Encoding.UTF8.GetString(decrypted);
                 return JsonSerializer.Deserialize<LicenseInfo>(json);
             }
-            catch { return null; }
+            catch { }
+
+            try
+            {
+                var decrypted = ProtectedData.Unprotect(rawBytes, GetEntropy(), DataProtectionScope.LocalMachine);
+                var json = Encoding.UTF8.GetString(decrypted);
+                return JsonSerializer.Deserialize<LicenseInfo>(json);
+            }
+            catch { }
+
+            return null;
         }
 
         private static byte[] GetEntropy()
@@ -254,5 +346,3 @@ namespace Win11DesktopApp.Services
         }
     }
 }
-
-
