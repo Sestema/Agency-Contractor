@@ -84,14 +84,22 @@ namespace Win11DesktopApp.ViewModels
         private int _totalCount;
         public int TotalCount { get => _totalCount; set => SetProperty(ref _totalCount, value); }
 
-        private int _activeCount;
-        public int ActiveCount { get => _activeCount; set => SetProperty(ref _activeCount, value); }
-
         private int _problemsCount;
         public int ProblemsCount { get => _problemsCount; set => SetProperty(ref _problemsCount, value); }
 
         private int _newThisMonth;
         public int NewThisMonth { get => _newThisMonth; set => SetProperty(ref _newThisMonth, value); }
+
+        private string _statFilter = "all";
+        public string StatFilter
+        {
+            get => _statFilter;
+            set
+            {
+                if (SetProperty(ref _statFilter, value))
+                    ApplyFilter();
+            }
+        }
 
         // Selection mode
         private bool _isSelectionMode;
@@ -131,14 +139,14 @@ namespace Win11DesktopApp.ViewModels
         }
 
         // Sorting
-        private string _sortField = "Name";
+        private string _sortField = App.AppSettingsService?.Settings?.EmployeeSortField ?? "Name";
         public string SortField
         {
             get => _sortField;
             set => SetProperty(ref _sortField, value);
         }
 
-        private bool _sortAscending = true;
+        private bool _sortAscending = App.AppSettingsService?.Settings?.EmployeeSortAscending ?? true;
         public bool SortAscending
         {
             get => _sortAscending;
@@ -163,6 +171,51 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CloseBatchGenerateCommand { get; }
         public ICommand BatchGenerateFromTemplateCommand { get; }
         public ICommand SortByCommand { get; }
+        public ICommand SetViewModeCommand { get; }
+        public ICommand FilterByStatCommand { get; }
+
+        private string _viewMode = App.AppSettingsService?.Settings?.EmployeeViewMode ?? "List";
+        public string ViewMode
+        {
+            get => _viewMode;
+            set
+            {
+                if (SetProperty(ref _viewMode, value))
+                {
+                    OnPropertyChanged(nameof(IsTableView));
+                    OnPropertyChanged(nameof(IsListView));
+                    OnPropertyChanged(nameof(IsTilesView));
+                    OnPropertyChanged(nameof(IsIconsView));
+                    if (App.AppSettingsService != null)
+                    {
+                        App.AppSettingsService.Settings.EmployeeViewMode = value;
+                        App.AppSettingsService.SaveSettings();
+                    }
+                }
+            }
+        }
+
+        public bool IsTableView => ViewMode == "Table";
+        public bool IsListView => ViewMode == "List";
+        public bool IsTilesView => ViewMode == "Tiles";
+        public bool IsIconsView => ViewMode == "Icons";
+
+        private double _zoomLevel = App.AppSettingsService?.Settings?.EmployeeZoomLevel ?? 1.0;
+        public double ZoomLevel
+        {
+            get => _zoomLevel;
+            set
+            {
+                if (SetProperty(ref _zoomLevel, value))
+                {
+                    if (App.AppSettingsService != null)
+                    {
+                        App.AppSettingsService.Settings.EmployeeZoomLevel = value;
+                        App.AppSettingsService.SaveSettings();
+                    }
+                }
+            }
+        }
 
         private bool _isAddEmployeeDialogOpen;
         public bool IsAddEmployeeDialogOpen
@@ -212,21 +265,29 @@ namespace Win11DesktopApp.ViewModels
             _employeeService = employeeService ?? App.EmployeeService;
             IsCompanySelected = _company != null;
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
             AddEmployeeCommand = new RelayCommand(o =>
             {
-                if (_company == null) return;
-                AddEmployeeVm = new AddEmployeeWizardViewModel(_company);
-                AddEmployeeVm.RequestClose += () =>
+                try
                 {
-                    IsAddEmployeeDialogOpen = false;
-                    LoadEmployees();
-                };
-                IsAddEmployeeDialogOpen = true;
+                    if (_company == null) return;
+                    CleanupAddEmployeeVm();
+                    AddEmployeeVm = new AddEmployeeWizardViewModel(_company);
+                    AddEmployeeVm.RequestClose += OnAddEmployeeClose;
+                    IsAddEmployeeDialogOpen = true;
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show(ex.ToString(), "AddEmployee Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
             });
 
-            CloseAddEmployeeDialogCommand = new RelayCommand(o => IsAddEmployeeDialogOpen = false);
-            SelectCompanyCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            CloseAddEmployeeDialogCommand = new RelayCommand(o =>
+            {
+                IsAddEmployeeDialogOpen = false;
+                CleanupAddEmployeeVm();
+            });
+            SelectCompanyCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as EmployeeModels.EmployeeSummary), o => o is EmployeeModels.EmployeeSummary);
             EditEmployeeCommand = new RelayCommand(o => EditEmployee(o as EmployeeModels.EmployeeSummary), o => o is EmployeeModels.EmployeeSummary);
             DeleteEmployeeCommand = new RelayCommand(o => AskDeleteEmployee(o as EmployeeModels.EmployeeSummary), o => o is EmployeeModels.EmployeeSummary);
@@ -238,7 +299,7 @@ namespace Win11DesktopApp.ViewModels
                 if (o is EmployeeModels.EmployeeSummary emp && !string.IsNullOrEmpty(emp.EmployeeFolder))
                 {
                     try { Process.Start(new ProcessStartInfo { FileName = emp.EmployeeFolder, UseShellExecute = true }); }
-                    catch { }
+                    catch (Exception ex) { LoggingService.LogWarning("EmployeesViewModel.OpenFolder", ex.Message); }
                 }
             }, o => o is EmployeeModels.EmployeeSummary);
 
@@ -281,8 +342,17 @@ namespace Win11DesktopApp.ViewModels
                     SortField = field;
                     SortAscending = true;
                 }
+                if (App.AppSettingsService != null)
+                {
+                    App.AppSettingsService.Settings.EmployeeSortField = SortField;
+                    App.AppSettingsService.Settings.EmployeeSortAscending = SortAscending;
+                    App.AppSettingsService.SaveSettings();
+                }
                 ApplyFilter();
             });
+
+            SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
+            FilterByStatCommand = new RelayCommand(o => StatFilter = o as string ?? "all");
 
             LoadEmployees();
         }
@@ -307,6 +377,9 @@ namespace Win11DesktopApp.ViewModels
             RefreshStats();
             Debug.WriteLine($"EmployeesViewModel.LoadEmployees: {Employees.Count} items");
         }
+
+        private static string DocRes(string key) =>
+            App.DocumentLocalizationService?.Get(key) ?? Res(key);
 
         private string? GetString(string key)
         {
@@ -337,13 +410,20 @@ namespace Win11DesktopApp.ViewModels
             var query = SearchQuery?.Trim().ToLower() ?? string.Empty;
             List<EmployeeModels.EmployeeSummary> list;
 
+            IEnumerable<EmployeeModels.EmployeeSummary> source = _allEmployees;
+
+            if (_statFilter == "problems")
+                source = source.Where(e => HasExpiringDocs(e));
+            else if (_statFilter == "new")
+                source = source.Where(e => IsThisMonth(e.StartDate));
+
             if (string.IsNullOrEmpty(query))
             {
-                list = new List<EmployeeModels.EmployeeSummary>(_allEmployees);
+                list = source.ToList();
             }
             else
             {
-                list = _allEmployees.Where(e =>
+                list = source.Where(e =>
                     (!string.IsNullOrEmpty(e.FullName) && e.FullName.ToLower().Contains(query)) ||
                     (!string.IsNullOrEmpty(e.PassportNumber) && e.PassportNumber.ToLower().Contains(query)) ||
                     (!string.IsNullOrEmpty(e.VisaNumber) && e.VisaNumber.ToLower().Contains(query)) ||
@@ -382,21 +462,48 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private void CleanupDetailsVm()
+        {
+            if (EmployeeDetailsVm != null)
+            {
+                EmployeeDetailsVm.RequestClose -= OnDetailsClose;
+                EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+            }
+        }
+
+        private void OnAddEmployeeClose()
+        {
+            IsAddEmployeeDialogOpen = false;
+            CleanupAddEmployeeVm();
+            LoadEmployees();
+        }
+
+        private void CleanupAddEmployeeVm()
+        {
+            if (AddEmployeeVm != null)
+                AddEmployeeVm.RequestClose -= OnAddEmployeeClose;
+        }
+
+        private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
+        private void OnDetailsDataChanged() => LoadEmployees();
+
         private void OpenEmployee(EmployeeModels.EmployeeSummary? employee)
         {
             if (employee == null || _company == null) return;
+            CleanupDetailsVm();
             EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService);
-            EmployeeDetailsVm.RequestClose += () => IsEmployeeDetailsOpen = false;
-            EmployeeDetailsVm.DataChanged += () => LoadEmployees();
+            EmployeeDetailsVm.RequestClose += OnDetailsClose;
+            EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
         }
 
         private void EditEmployee(EmployeeModels.EmployeeSummary? employee)
         {
             if (employee == null || _company == null) return;
+            CleanupDetailsVm();
             EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService);
-            EmployeeDetailsVm.RequestClose += () => IsEmployeeDetailsOpen = false;
-            EmployeeDetailsVm.DataChanged += () => LoadEmployees();
+            EmployeeDetailsVm.RequestClose += OnDetailsClose;
+            EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             EmployeeDetailsVm.IsEditMode = true;
             EmployeeDetailsVm.TabIndex = 1;
             IsEmployeeDetailsOpen = true;
@@ -412,6 +519,7 @@ namespace Win11DesktopApp.ViewModels
         private void ConfirmDelete()
         {
             if (EmployeeToDelete == null) return;
+            Debug.WriteLine($"EmployeesViewModel.ConfirmDelete: Deleting employee '{EmployeeToDelete.FullName}' from folder '{EmployeeToDelete.EmployeeFolder}'");
             _employeeService.DeleteEmployee(EmployeeToDelete.EmployeeFolder);
             IsDeleteConfirmOpen = false;
             EmployeeToDelete = null;
@@ -421,7 +529,6 @@ namespace Win11DesktopApp.ViewModels
         private void RefreshStats()
         {
             TotalCount = _allEmployees.Count;
-            ActiveCount = _allEmployees.Count(e => string.IsNullOrEmpty(e.Status) || e.Status == "Активний");
             ProblemsCount = _allEmployees.Count(e => HasExpiringDocs(e));
             NewThisMonth = _allEmployees.Count(e => IsThisMonth(e.StartDate));
         }
@@ -454,20 +561,21 @@ namespace Win11DesktopApp.ViewModels
             if (_company == null) return;
             try
             {
+                IsLoading = true;
                 var dialog = new SaveFileDialog
                 {
                     Filter = "Excel|*.xlsx",
-                    FileName = $"Працівники_{_company.Name}_{DateTime.Now:yyyyMMdd}.xlsx"
+                    FileName = $"{DocRes("ExportEmployees")}_{_company.Name}_{DateTime.Now:yyyyMMdd}.xlsx"
                 };
                 if (dialog.ShowDialog() != true) return;
 
                 using var workbook = new XLWorkbook();
-                var ws = workbook.Worksheets.Add("Працівники");
+                var ws = workbook.Worksheets.Add(DocRes("ExportEmployees"));
 
-                string[] headers = { "Ім'я", "Прізвище", "Посада", "Телефон", "Email",
-                    "Паспорт №", "Паспорт до", "Віза №", "Віза до",
-                    "Страховка №", "Страховка до", "Тип контракту",
-                    "Дата початку", "Статус" };
+                string[] headers = { DocRes("ExportColFirstName"), DocRes("ExportColLastName"), DocRes("ExportColPosition"), DocRes("ExportColPhone"), "Email",
+                    DocRes("ExportColPassportNum"), DocRes("ExportColPassportExp"), DocRes("ExportColVisaNum"), DocRes("ExportColVisaExp"),
+                    DocRes("ExportColInsNum"), DocRes("ExportColInsExp"), DocRes("ExportColContractType"),
+                    DocRes("ExportColStartDate"), DocRes("ExportColStatus") };
 
                 for (int i = 0; i < headers.Length; i++)
                     ws.Cell(1, i + 1).Value = headers[i];
@@ -507,12 +615,17 @@ namespace Win11DesktopApp.ViewModels
 
                 ws.Columns().AdjustToContents();
                 workbook.SaveAs(dialog.FileName);
-
+                App.ActivityLogService?.Log("ExportExcel", "Export", _company?.Name ?? "", "",
+                    $"Експортовано список працівників {_company?.Name} → Excel");
                 Process.Start(new ProcessStartInfo { FileName = dialog.FileName, UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Помилка експорту: {ex.Message}";
+                StatusMessage = string.Format(Res("MsgExportError"), ex.Message);
+            }
+            finally
+            {
+                IsLoading = false;
             }
         }
 
@@ -537,8 +650,8 @@ namespace Win11DesktopApp.ViewModels
             var selected = Employees.Where(e => e.IsSelected).ToList();
             if (selected.Count == 0) return;
 
-            BatchStatusMessage = $"Обрано працівників: {selected.Count}";
-            var templates = App.TemplateService.GetTemplates(_company.Name);
+            BatchStatusMessage = string.Format(Res("MsgSelectedCount"), selected.Count);
+            var templates = App.TemplateService?.GetTemplates(_company.Name) ?? new List<TemplateEntry>();
             BatchTemplates = new ObservableCollection<TemplateEntry>(templates);
             IsBatchGenerateOpen = true;
         }
@@ -546,8 +659,10 @@ namespace Win11DesktopApp.ViewModels
         private void BatchGenerate(TemplateEntry? template)
         {
             if (template == null || _company == null) return;
+            if (App.DocumentGenerationService == null) return;
             try
             {
+                IsLoading = true;
                 var selected = Employees.Where(e => e.IsSelected).ToList();
                 int success = 0;
                 int fail = 0;
@@ -559,38 +674,42 @@ namespace Win11DesktopApp.ViewModels
                         var data = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
                         if (data == null) { fail++; continue; }
 
-                        var templateFullPath = App.TemplateService.GetTemplateFullPath(_company.Name, template.FilePath);
-                        if (!File.Exists(templateFullPath)) { fail++; continue; }
+                        var templateFullPath = App.TemplateService?.GetTemplateFullPath(_company.Name, template.FilePath) ?? string.Empty;
+                        var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
+                        var rtfPath = Path.Combine(templateFolder, "content.rtf");
+                        bool hasTemplateFile = File.Exists(templateFullPath);
+                        bool hasRtfContent = File.Exists(rtfPath);
 
-                        var tagValues = App.TagCatalogService.GetTagValueMapForEmployee(_company.Name, data);
+                        if (!hasTemplateFile && !hasRtfContent) { fail++; continue; }
+
+                        var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_company.Name, data)
+                            ?? new Dictionary<string, string>();
                         var format = template.Format?.ToUpper() ?? Path.GetExtension(templateFullPath).TrimStart('.').ToUpper();
 
                         string SanitizeFn(string n) => string.Join("_", n.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
 
-                        if (format == "DOCX")
+                        if (format == "DOCX" || hasRtfContent)
                         {
-                            var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
-                            var rtfPath = Path.Combine(templateFolder, "content.rtf");
-                            if (File.Exists(rtfPath))
-                            {
-                                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.rtf");
-                                var outPath = Path.Combine(emp.EmployeeFolder, outName);
-                                App.DocumentGenerationService.GenerateFromRtf(rtfPath, outPath, tagValues);
-                            }
-                            else
+                            if (hasRtfContent)
                             {
                                 var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
                                 var outPath = Path.Combine(emp.EmployeeFolder, outName);
-                                App.DocumentGenerationService.GenerateDocx(templateFullPath, outPath, tagValues);
+                                App.DocumentGenerationService?.GenerateDocxFromRtf(rtfPath, outPath, tagValues);
+                            }
+                            else if (hasTemplateFile)
+                            {
+                                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
+                                var outPath = Path.Combine(emp.EmployeeFolder, outName);
+                                App.DocumentGenerationService?.GenerateDocx(templateFullPath, outPath, tagValues);
                             }
                         }
-                        else if (format == "XLSX")
+                        else if (format == "XLSX" && hasTemplateFile)
                         {
                             var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.xlsx");
                             var outPath = Path.Combine(emp.EmployeeFolder, outName);
-                            App.DocumentGenerationService.GenerateXlsx(templateFullPath, outPath, tagValues);
+                            App.DocumentGenerationService?.GenerateXlsx(templateFullPath, outPath, tagValues);
                         }
-                        else if (format == "PDF")
+                        else if (format == "PDF" && hasTemplateFile)
                         {
                             var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.pdf");
                             var outPath = Path.Combine(emp.EmployeeFolder, outName);
@@ -599,14 +718,18 @@ namespace Win11DesktopApp.ViewModels
 
                         success++;
                     }
-                    catch { fail++; }
+                    catch (Exception ex) { LoggingService.LogError("EmployeesViewModel.BatchGenerate", ex); fail++; }
                 }
 
-                BatchStatusMessage = $"Згенеровано: {success}, помилок: {fail}";
+                BatchStatusMessage = string.Format(Res("MsgBatchResult"), success, fail);
             }
             catch (Exception ex)
             {
-                BatchStatusMessage = $"Помилка: {ex.Message}";
+                BatchStatusMessage = string.Format(Res("MsgErrorFmt"), ex.Message);
+            }
+            finally
+            {
+                IsLoading = false;
             }
         }
     }

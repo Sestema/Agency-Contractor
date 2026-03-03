@@ -27,8 +27,9 @@ namespace Win11DesktopApp.ViewModels
         public int MasterCol { get; set; }
     }
 
-    public class XlsxEditorViewModel : ViewModelBase
+    public class XlsxEditorViewModel : ViewModelBase, IDisposable
     {
+        private bool _disposed;
         private readonly string _firmName;
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
@@ -44,7 +45,20 @@ namespace Win11DesktopApp.ViewModels
         /// <summary>Merge info for the currently displayed sheet.</summary>
         public Dictionary<(int row, int col), MergeInfo> CurrentMergeInfo => _currentMergeInfo;
 
-        public string Title => $"Редактор XLSX: {_template.Name}";
+        private static new string Res(string key)
+        {
+            try { return Application.Current.FindResource(key) as string ?? key; }
+            catch { return key; }
+        }
+
+        private static string ResF(string key, params object[] args)
+        {
+            var fmt = Res(key);
+            try { return string.Format(fmt, args); }
+            catch { return fmt; }
+        }
+
+        public string Title => ResF("XlsxEditorTitle", _template.Name);
 
         // Sheet tabs
         private ObservableCollection<string> _sheetNames = new();
@@ -148,7 +162,8 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var allTags = App.TagCatalogService.GetAllTagDefinitions();
-                TagGroups = TagGroupViewModel.BuildTagGroups(allTags);
+                var groups = TagGroupViewModel.BuildTagGroups(allTags);
+                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService.Settings.HiddenTags);
             }
             catch
             {
@@ -244,7 +259,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!File.Exists(_xlsxFilePath))
                 {
-                    StatusMessage = "Файл шаблону не знайдено.";
+                    StatusMessage = Res("XlsxFileNotFound");
                     return;
                 }
 
@@ -264,7 +279,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Помилка завантаження: {ex.Message}";
+                StatusMessage = ResF("XlsxLoadError", ex.Message);
             }
         }
 
@@ -364,9 +379,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void NavigateBack()
         {
-            _workbook?.Dispose();
-            _workbook = null;
-            App.NavigationService.NavigateTo(new TemplatesViewModel(App.CompanyService.SelectedCompany));
+            Dispose();
+            App.NavigationService?.NavigateTo(new TemplatesViewModel(App.CompanyService?.SelectedCompany));
         }
 
         private void Save()
@@ -375,7 +389,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (_workbook == null)
                 {
-                    StatusMessage = "Немає відкритого файлу.";
+                    StatusMessage = Res("XlsxNoOpenFile");
                     return;
                 }
 
@@ -403,11 +417,13 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 _workbook.Save();
-                StatusMessage = "Шаблон збережено успішно!";
+                StatusMessage = Res("XlsxSaved");
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Помилка збереження: {ex.Message}";
+                StatusMessage = ResF("XlsxSaveError", ex.Message);
+                LoggingService.LogError("XlsxEditor.Save", ex);
+                MessageBox.Show(ResF("XlsxSaveError", ex.Message), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -420,7 +436,7 @@ namespace Win11DesktopApp.ViewModels
                 var (row, col) = RequestGetSelectedCell?.Invoke() ?? (-1, -1);
                 if (row < 0 || col < 0 || CurrentData == null)
                 {
-                    StatusMessage = "Оберіть комірку у таблиці для вставки тегу.";
+                    StatusMessage = Res("XlsxSelectCell");
                     return;
                 }
 
@@ -449,11 +465,11 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(CellValue));
 
                 RequestRefreshGrid?.Invoke();
-                StatusMessage = $"Тег {tagText} вставлено в комірку {addr}";
+                StatusMessage = ResF("XlsxTagInserted", tagText, addr);
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Помилка вставки: {ex.Message}";
+                StatusMessage = ResF("XlsxInsertError", ex.Message);
             }
         }
 
@@ -461,8 +477,9 @@ namespace Win11DesktopApp.ViewModels
         {
             if (param is TagEntry tag)
             {
-                Clipboard.SetText($"${{{tag.Tag}}}");
-                StatusMessage = $"Тег ${{{tag.Tag}}} скопійовано в буфер обміну";
+                var tagText = $"${{{tag.Tag}}}";
+                Clipboard.SetText(tagText);
+                StatusMessage = ResF("XlsxTagCopied", tagText);
             }
         }
 
@@ -486,6 +503,14 @@ namespace Win11DesktopApp.ViewModels
                 index = index * 26 + (c - 'A' + 1);
             }
             return index - 1; // 0-based
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _workbook?.Dispose();
+            _workbook = null;
         }
     }
 }

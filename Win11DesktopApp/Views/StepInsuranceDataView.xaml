@@ -1,0 +1,54 @@
+<UserControl x:Class="Win11DesktopApp.Views.StepInsuranceDataView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:Win11DesktopApp.Views">
+    <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=3}"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
+            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="260"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" Style="{StaticResource ThinScroll}" Margin="0,0,8,0"
+                          PreviewMouseWheel="InnerScrollViewer_PreviewMouseWheel">
+                <StackPanel>
+                    <StackPanel Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Width="36" Height="36">
+                                <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                           Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource StepInsuranceData}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Command="{Binding AIScanDocumentCommand}" Style="{StaticResource AccentBtn}"
+                                    Padding="12,6" Margin="0,0,8,0"
+                                    Visibility="{Binding IsAIScanning, Converter={StaticResource InverseBoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{DynamicResource AIScanBtn}" FontSize="{DynamicResource FS13}"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding AIScanStatus}" FontSize="{DynamicResource FS12}" 
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"
+                                       Visibility="{Binding AIScanStatus, Converter={StaticResource StringToVis}}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Text="{DynamicResource WizInsCompany}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.InsuranceCompanyShort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizInsNumber}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.InsuranceNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizInsExpiry}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.InsuranceExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                </StackPanel>
+            </ScrollViewer>
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="{DynamicResource CardBorderBrush}" Cursor="SizeWE"
+                          Margin="2,0"/>
+            <views:DocumentPreviewPanel Grid.Column="2" Margin="8,0,0,0"/>
+        </Grid>
+    </Border>
+</UserControl>

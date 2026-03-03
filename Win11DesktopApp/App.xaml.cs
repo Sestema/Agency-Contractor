@@ -1,4 +1,6 @@
 using System.Windows;
+using PdfSharp.Fonts;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
@@ -17,26 +19,79 @@ namespace Win11DesktopApp
         public static PersistenceService PersistenceService { get; private set; } = null!;
         public static EmployeeService EmployeeService { get; private set; } = null!;
         public static DocumentGenerationService DocumentGenerationService { get; private set; } = null!;
+        public static DocumentLocalizationService DocumentLocalizationService { get; private set; } = null!;
+
+        public static FinanceService FinanceService { get; private set; } = null!;
+        public static ActivityLogService ActivityLogService { get; private set; } = null!;
+        public static CandidateService CandidateService { get; private set; } = null!;
+        public static GeminiApiService GeminiApiService { get; private set; } = null!;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            GlobalFontSettings.FontResolver = new PdfFontResolver();
+
+            DispatcherUnhandledException += (s, args) =>
+            {
+                LoggingService.LogError("App.UnhandledException", args.Exception);
+                ErrorHandler.Report("App.UnhandledException", args.Exception, ErrorSeverity.Critical, showUser: true);
+                args.Handled = true;
+            };
 
             NavigationService = new NavigationService();
             ThemeService = new ThemeService();
             LanguageService = new LanguageService();
             AppSettingsService = new AppSettingsService();
             FolderService = new FolderService(AppSettingsService);
+
+            if (!string.IsNullOrEmpty(FolderService.RootPath))
+                LoggingService.Initialize(FolderService.RootPath);
+
             PersistenceService = new PersistenceService(AppSettingsService, FolderService);
             TagCatalogService = new TagCatalogService();
             CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
             TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
             EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService);
+            FinanceService = new FinanceService(FolderService);
+            ActivityLogService = new ActivityLogService(FolderService);
+            CandidateService = new CandidateService(FolderService);
+            GeminiApiService = new GeminiApiService();
+            if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiApiKey))
+                GeminiApiService.SetApiKey(AppSettingsService.Settings.GeminiApiKey);
+            if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiModel))
+                GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
             DocumentGenerationService = new DocumentGenerationService();
+            DocumentLocalizationService = new DocumentLocalizationService();
 
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
                 LanguageService.SetLanguage(AppSettingsService.Settings.LanguageCode);
+            }
+
+            if (!string.IsNullOrEmpty(AppSettingsService.Settings.DocumentLanguage))
+            {
+                DocumentLocalizationService.LoadLanguage(AppSettingsService.Settings.DocumentLanguage);
+            }
+            else if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
+            {
+                DocumentLocalizationService.LoadLanguage(AppSettingsService.Settings.LanguageCode);
+            }
+
+            if (!string.IsNullOrEmpty(AppSettingsService.Settings.ThemeName))
+            {
+                ThemeService.SetTheme(AppSettingsService.Settings.ThemeName);
+            }
+
+            // License check
+            if (!LicenseService.IsLicenseValid())
+            {
+                var licenseWindow = new Views.LicenseWindow();
+                if (licenseWindow.ShowDialog() != true || !licenseWindow.IsActivated)
+                {
+                    Shutdown();
+                    return;
+                }
             }
 
             NavigationService.NavigateTo(new MainViewModel());

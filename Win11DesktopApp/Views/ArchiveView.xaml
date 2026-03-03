@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             xmlns:h="clr-namespace:Win11DesktopApp.Helpers"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
@@ -22,7 +23,7 @@
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
-        <Grid Margin="20">
+        <Grid Margin="32,20,32,32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -41,18 +42,18 @@
                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                             Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,6,0"/>
-                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="14"/>
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}"/>
                         </StackPanel>
                     </Button>
-                    <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="22" 
+                    <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}" 
                                Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource ArchiveTitle}" FontSize="24" FontWeight="SemiBold" 
+                    <TextBlock Text="{DynamicResource ArchiveTitle}" FontSize="{DynamicResource FS24}" FontWeight="SemiBold" 
                                VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Margin="20,0,0,0">
-                    <TextBlock Text="{DynamicResource ArchiveSearch}" Foreground="#888" FontSize="12" Margin="2,0,0,2"/>
+                    <TextBlock Text="{DynamicResource ArchiveSearch}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="{DynamicResource FS12}" Margin="2,0,0,2"/>
                     <TextBox Height="38" VerticalContentAlignment="Center"
                              Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
@@ -60,14 +61,22 @@
 
             <!-- ===== ARCHIVE LIST ===== -->
             <Grid Grid.Row="1">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                <ScrollViewer Style="{StaticResource ThinScroll}"
                               Visibility="{Binding HasArchived, Converter={StaticResource BoolToVis}}">
-                    <ItemsControl ItemsSource="{Binding ArchivedEmployees}">
+                    <ItemsControl ItemsSource="{Binding ArchivedEmployees}" Margin="24,8,24,8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" 
-                                        Padding="16" Margin="0,0,0,10"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                        Padding="16" Margin="0,4,0,10"
+                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        h:StaggerAnimation.Enable="True">
+                                    <Border.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                            <TranslateTransform Y="0"/>
+                                        </TransformGroup>
+                                    </Border.RenderTransform>
                                     <Border.Effect>
                                         <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.08"/>
                                     </Border.Effect>
@@ -80,15 +89,15 @@
 
                                         <!-- Avatar -->
                                         <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" 
-                                                Background="#F5F5F5" VerticalAlignment="Top" Margin="0,0,14,0"
-                                                BorderBrush="#E0E0E0" BorderThickness="2">
+                                                Background="{DynamicResource ContentBackgroundBrush}" VerticalAlignment="Top" Margin="0,0,14,0"
+                                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="2">
                                             <Border.Clip>
                                                 <EllipseGeometry Center="28,28" RadiusX="28" RadiusY="28"/>
                                             </Border.Clip>
                                             <Grid>
-                                                <Image Source="{Binding PhotoPath}" Stretch="UniformToFill" 
+                                                <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" 
                                                        Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
-                                                <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                                                <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                                            Foreground="#BDBDBD"
                                                            Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
@@ -97,49 +106,49 @@
 
                                         <!-- Info -->
                                         <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                            <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="16" 
+                                            <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS16}" 
                                                        Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,2"/>
-                                            <TextBlock Text="{Binding PositionTitle}" FontSize="12" Foreground="#888" Margin="0,0,0,6"/>
+                                            <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,6"/>
 
                                             <WrapPanel Margin="0,0,0,6">
                                                 <!-- Start date -->
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                               Foreground="#4CAF50" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock FontSize="12" Foreground="#666">
-                                                        <Run Text="Наступив: "/>
-                                                        <Run Text="{Binding StartDate, Mode=OneWay}" FontWeight="SemiBold"/>
-                                                    </TextBlock>
+                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
+                                                               Foreground="{DynamicResource SuccessBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{DynamicResource ArchiveStarted}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                        <TextBlock Text="{Binding StartDate, Mode=OneWay}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                                 <!-- End date -->
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                               Foreground="#F44336" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock FontSize="12" Foreground="#666">
-                                                        <Run Text="Закінчив: "/>
-                                                        <Run Text="{Binding EndDate, Mode=OneWay}" FontWeight="SemiBold"/>
-                                                    </TextBlock>
+                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
+                                                               Foreground="{DynamicResource ErrorBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{DynamicResource ArchiveEnded}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                        <TextBlock Text="{Binding EndDate, Mode=OneWay}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </WrapPanel>
 
                                             <WrapPanel>
                                                 <!-- Firm -->
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                               Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding FirmName}" FontSize="12" Foreground="#666"/>
+                                                    <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                 </StackPanel>
                                                 <!-- Phone -->
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                               Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Phone}" FontSize="12" Foreground="#666"/>
+                                                    <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Phone}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                 </StackPanel>
                                                 <!-- Email -->
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                               Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Email}" FontSize="12" Foreground="#666"/>
+                                                    <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Email}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                 </StackPanel>
                                             </WrapPanel>
                                         </StackPanel>
@@ -151,20 +160,42 @@
                                                     CommandParameter="{Binding}"
                                                     Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource ArchiveRestore}" FontSize="12"/>
+                                                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource ArchiveRestore}" FontSize="{DynamicResource FS12}"/>
                                                 </StackPanel>
                                             </Button>
                                             <Button Style="{StaticResource CardActionBtn}"
                                                     Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}" ToolTip="{DynamicResource ArchiveOpenFolder}">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource EmpBtnFolder}" FontSize="12"/>
+                                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource EmpBtnFolder}" FontSize="{DynamicResource FS12}"/>
                                                 </StackPanel>
                                             </Button>
                                         </StackPanel>
                                     </Grid>
+                                    <Border.Triggers>
+                                        <EventTrigger RoutedEvent="MouseEnter">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1.015" Duration="0:0:0.15">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1.015" Duration="0:0:0.15">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                        <EventTrigger RoutedEvent="MouseLeave">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Border.Triggers>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -176,12 +207,12 @@
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         Visibility="{Binding HasArchived, Converter={StaticResource InverseBoolToVis}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="42" 
-                                   HorizontalAlignment="Center" Foreground="#999"/>
-                        <TextBlock Text="{DynamicResource ArchiveEmpty}" FontSize="16" FontWeight="SemiBold"
-                                   Margin="0,12,0,4" TextAlignment="Center" Foreground="#888"/>
+                        <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS42}" 
+                                   HorizontalAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource ArchiveEmpty}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                   Margin="0,12,0,4" TextAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         <TextBlock Text="{DynamicResource ArchiveEmptyDesc}"
-                                   FontSize="13" TextAlignment="Center" Foreground="#AAA"/>
+                                   FontSize="{DynamicResource FS13}" TextAlignment="Center" Foreground="{DynamicResource TertiaryForegroundBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -189,7 +220,24 @@
 
         <!-- ===== RESTORE DIALOG ===== -->
         <Grid Visibility="{Binding IsRestoreDialogOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#66000000">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsRestoreDialogOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CancelRestoreCommand}"/>
                 </Border.InputBindings>
@@ -203,53 +251,53 @@
                 <StackPanel>
                     <!-- Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="22" 
+                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}" 
                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource ArchiveRestoreTitle}" FontSize="18" FontWeight="SemiBold" 
+                            <TextBlock Text="{DynamicResource ArchiveRestoreTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
                                        Foreground="{DynamicResource ForegroundBrush}"/>
-                            <TextBlock Text="{Binding EmployeeToRestore.FullName}" FontSize="13" Foreground="#888"/>
+                            <TextBlock Text="{Binding EmployeeToRestore.FullName}" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         </StackPanel>
                     </StackPanel>
 
                     <!-- Form -->
-                    <TextBlock Text="{DynamicResource ArchiveFirm}" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource ArchiveFirm}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <ComboBox ItemsSource="{Binding AvailableCompanies}" 
                               SelectedItem="{Binding SelectedCompany}"
                               DisplayMemberPath="Name"
-                              Padding="8,6" Margin="0,0,0,12" FontSize="13"/>
+                              Padding="8,6" Margin="0,0,0,12" FontSize="{DynamicResource FS13}"/>
 
-                    <TextBlock Text="{DynamicResource ArchiveStartDate}" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource ArchiveStartDate}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox Text="{Binding NewStartDate, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="8,6" Margin="0,0,0,12" FontSize="13"/>
+                             Padding="8,6" Margin="0,0,0,12" FontSize="{DynamicResource FS13}"/>
 
-                    <TextBlock Text="{DynamicResource ArchiveSignDate}" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource ArchiveSignDate}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox Text="{Binding NewContractSignDate, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="8,6" Margin="0,0,0,12" FontSize="13"/>
+                             Padding="8,6" Margin="0,0,0,12" FontSize="{DynamicResource FS13}"/>
 
-                    <TextBlock Text="{DynamicResource ArchivePosition}" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource ArchivePosition}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <ComboBox ItemsSource="{Binding CompanyPositions}"
                               SelectedItem="{Binding SelectedPosition}"
-                              Padding="8,6" Margin="0,0,0,12" FontSize="13">
+                              Padding="8,6" Margin="0,0,0,12" FontSize="{DynamicResource FS13}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                                    <TextBlock Text=" — " Foreground="#888"/>
-                                    <TextBlock Foreground="#888">
-                                        <Run Text="{Binding MonthlySalaryBrutto, StringFormat={}{0:N0} zł/міс, Mode=OneWay}"/>
+                                    <TextBlock Text=" — " Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                        <Run Text="{Binding MonthlySalaryBrutto, StringFormat={}{0:N0} Kč/міс, Mode=OneWay}"/>
                                         <Run Text=" | "/>
-                                        <Run Text="{Binding HourlySalary, StringFormat={}{0:N2} zł/год, Mode=OneWay}"/>
+                                        <Run Text="{Binding HourlySalary, StringFormat={}{0:N2} Kč/год, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
 
-                    <TextBlock Text="{DynamicResource ArchiveWorkPlace}" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource ArchiveWorkPlace}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <ComboBox ItemsSource="{Binding CompanyAddresses}"
                               SelectedItem="{Binding SelectedAddress}"
-                              Padding="8,6" Margin="0,0,0,16" FontSize="13">
+                              Padding="8,6" Margin="0,0,0,16" FontSize="{DynamicResource FS13}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock>
@@ -266,7 +314,7 @@
                     </ComboBox>
 
                     <!-- Status message -->
-                    <TextBlock Text="{Binding RestoreStatus}" Foreground="#D32F2F" FontSize="12" 
+                    <TextBlock Text="{Binding RestoreStatus}" Foreground="{DynamicResource ErrorBrush}" FontSize="{DynamicResource FS12}" 
                                Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                     <!-- Buttons -->
@@ -275,14 +323,14 @@
                                 Background="{DynamicResource ContentBackgroundBrush}" 
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                 Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="13"/>
+                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}"/>
                         </Button>
                         <Button Command="{Binding ConfirmRestoreCommand}" Padding="16,8"
                                 Background="{DynamicResource AccentBrush}" Foreground="White" 
                                 BorderThickness="0" FontWeight="SemiBold" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource ArchiveRestoreBtn}" FontSize="13"/>
+                                <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource ArchiveRestoreBtn}" FontSize="{DynamicResource FS13}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

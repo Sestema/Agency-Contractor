@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Docnet.Core;
 using Docnet.Core.Models;
+using PdfSharp.Pdf.IO;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 
@@ -43,6 +44,16 @@ namespace Win11DesktopApp.ViewModels
             get => Model.FontSize;
             set { Model.FontSize = value; OnPropertyChanged(nameof(FontSize)); }
         }
+        public string FontFamily
+        {
+            get => Model.FontFamily;
+            set { Model.FontFamily = value; OnPropertyChanged(nameof(FontFamily)); }
+        }
+        public double MaxWidth
+        {
+            get => Model.MaxWidth;
+            set { Model.MaxWidth = value; OnPropertyChanged(nameof(MaxWidth)); }
+        }
 
         private bool _isSelected;
         public bool IsSelected
@@ -65,7 +76,20 @@ namespace Win11DesktopApp.ViewModels
 
         private List<BitmapSource> _pageImages = new();
 
-        public string Title => $"PDF: {_template.Name}";
+        private static new string Res(string key)
+        {
+            try { return Application.Current.FindResource(key) as string ?? key; }
+            catch { return key; }
+        }
+
+        private static string ResF(string key, params object[] args)
+        {
+            var fmt = Res(key);
+            try { return string.Format(fmt, args); }
+            catch { return fmt; }
+        }
+
+        public string Title => ResF("PdfEditorTitle", _template.Name);
 
         private int _pageCount;
         public int PageCount
@@ -107,16 +131,32 @@ namespace Win11DesktopApp.ViewModels
             _allPlacements.Where(p => p.Page == _currentPageIndex);
 
         private PdfPlacementViewModel? _selectedPlacement;
+        private bool _isLoadingSelection;
         public PdfPlacementViewModel? SelectedPlacement
         {
             get => _selectedPlacement;
             set
             {
                 if (_selectedPlacement != null) _selectedPlacement.IsSelected = false;
-                SetProperty(ref _selectedPlacement, value);
-                if (value != null) value.IsSelected = true;
+                if (SetProperty(ref _selectedPlacement, value))
+                {
+                    if (value != null)
+                    {
+                        value.IsSelected = true;
+                        _isLoadingSelection = true;
+                        NewTagFontSize = value.FontSize;
+                        NewTagFontFamily = value.FontFamily;
+                        NewTagMaxWidth = value.MaxWidth;
+                        _isLoadingSelection = false;
+                    }
+                    OnPropertyChanged(nameof(IsEditingPlacement));
+                    OnPropertyChanged(nameof(EditingTagLabel));
+                }
             }
         }
+
+        public bool IsEditingPlacement => _selectedPlacement != null;
+        public string EditingTagLabel => _selectedPlacement != null ? $"${{{_selectedPlacement.Tag}}}" : "";
 
         public ObservableCollection<TagGroupViewModel> TagGroups { get; }
 
@@ -138,8 +178,120 @@ namespace Win11DesktopApp.ViewModels
         public double NewTagFontSize
         {
             get => _newTagFontSize;
-            set => SetProperty(ref _newTagFontSize, value);
+            set
+            {
+                if (SetProperty(ref _newTagFontSize, value) && !_isLoadingSelection && _selectedPlacement != null)
+                    _selectedPlacement.FontSize = value;
+            }
         }
+
+        private string _newTagFontFamily = "Arial";
+        public string NewTagFontFamily
+        {
+            get => _newTagFontFamily;
+            set
+            {
+                if (SetProperty(ref _newTagFontFamily, value) && !_isLoadingSelection && _selectedPlacement != null)
+                    _selectedPlacement.FontFamily = value;
+            }
+        }
+
+        private double _newTagMaxWidth;
+        public double NewTagMaxWidth
+        {
+            get => _newTagMaxWidth;
+            set
+            {
+                if (SetProperty(ref _newTagMaxWidth, value) && !_isLoadingSelection && _selectedPlacement != null)
+                    _selectedPlacement.MaxWidth = value;
+            }
+        }
+
+        public List<string> AvailableFonts { get; } = new() { "Arial", "Times New Roman", "Courier New", "Verdana", "Calibri", "Tahoma" };
+
+        private double _zoomLevel = 1.0;
+        public double ZoomLevel
+        {
+            get => _zoomLevel;
+            set
+            {
+                var clamped = Math.Clamp(value, 0.25, 4.0);
+                if (SetProperty(ref _zoomLevel, clamped))
+                {
+                    OnPropertyChanged(nameof(ZoomPercent));
+                    RequestRenderOverlays?.Invoke();
+                }
+            }
+        }
+
+        public string ZoomPercent => $"{(int)(ZoomLevel * 100)}%";
+
+        public ICommand ZoomInCommand { get; }
+        public ICommand ZoomOutCommand { get; }
+        public ICommand ZoomResetCommand { get; }
+        public ICommand DeselectCommand { get; }
+
+        private bool _showGrid;
+        public bool ShowGrid
+        {
+            get => _showGrid;
+            set { if (SetProperty(ref _showGrid, value)) RequestRenderOverlays?.Invoke(); }
+        }
+
+        private bool _snapToGrid = true;
+        public bool SnapToGrid
+        {
+            get => _snapToGrid;
+            set => SetProperty(ref _snapToGrid, value);
+        }
+
+        private double _gridSpacingPt = 12;
+        public double GridSpacingPt
+        {
+            get => _gridSpacingPt;
+            set { if (SetProperty(ref _gridSpacingPt, value)) RequestRenderOverlays?.Invoke(); }
+        }
+
+        private string _coordinateText = string.Empty;
+        public string CoordinateText
+        {
+            get => _coordinateText;
+            set => SetProperty(ref _coordinateText, value);
+        }
+
+        public void NudgeSelected(double dxPercent, double dyPercent)
+        {
+            if (_selectedPlacement == null) return;
+            _selectedPlacement.X = Math.Clamp(_selectedPlacement.X + dxPercent, 0, 1);
+            _selectedPlacement.Y = Math.Clamp(_selectedPlacement.Y + dyPercent, 0, 1);
+            UpdateCoordinateText(_selectedPlacement);
+            RequestRenderOverlays?.Invoke();
+        }
+
+        public double SnapYPercent(double yPercent)
+        {
+            if (!_snapToGrid || _pdfPageHeight <= 0 || _gridSpacingPt <= 0) return yPercent;
+            double yPt = yPercent * _pdfPageHeight;
+            double snapped = Math.Round(yPt / _gridSpacingPt) * _gridSpacingPt;
+            return Math.Clamp(snapped / _pdfPageHeight, 0, 1);
+        }
+
+        public double SnapXPercent(double xPercent)
+        {
+            if (!_snapToGrid || _pdfPageWidth <= 0 || _gridSpacingPt <= 0) return xPercent;
+            double xPt = xPercent * _pdfPageWidth;
+            double snapped = Math.Round(xPt / _gridSpacingPt) * _gridSpacingPt;
+            return Math.Clamp(snapped / _pdfPageWidth, 0, 1);
+        }
+
+        public void UpdateCoordinateText(PdfPlacementViewModel p)
+        {
+            double xPt = Math.Round(p.X * _pdfPageWidth, 1);
+            double yPt = Math.Round(p.Y * _pdfPageHeight, 1);
+            CoordinateText = $"X: {xPt}pt  Y: {yPt}pt";
+        }
+
+        public void ClearCoordinateText() => CoordinateText = string.Empty;
 
         private double _pdfPageWidth;
         public double PdfPageWidth
@@ -186,7 +338,8 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var allTags = App.TagCatalogService.GetAllTagDefinitions();
-                TagGroups = TagGroupViewModel.BuildTagGroups(allTags);
+                var groups = TagGroupViewModel.BuildTagGroups(allTags);
+                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService.Settings.HiddenTags);
             }
             catch
             {
@@ -206,6 +359,10 @@ namespace Win11DesktopApp.ViewModels
             PlaceTagCommand = new RelayCommand(o => OnPlaceTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             RemovePlacementCommand = new RelayCommand(o => RemovePlacement(o));
+            ZoomInCommand = new RelayCommand(_ => ZoomLevel += 0.25);
+            ZoomOutCommand = new RelayCommand(_ => ZoomLevel -= 0.25);
+            ZoomResetCommand = new RelayCommand(_ => ZoomLevel = 1.0);
+            DeselectCommand = new RelayCommand(_ => SelectedPlacement = null);
 
             LoadPdf();
             LoadTagMap();
@@ -217,7 +374,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!File.Exists(_pdfFilePath))
                 {
-                    StatusMessage = "PDF file not found.";
+                    StatusMessage = Res("PdfFileNotFound");
                     return;
                 }
 
@@ -225,7 +382,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = ResF("EditorErrFmt", ex.Message);
             }
         }
 
@@ -233,7 +390,26 @@ namespace Win11DesktopApp.ViewModels
         {
             _pageImages.Clear();
 
-            using var docReader = DocLib.Instance.GetDocReader(_pdfFilePath, new PageDimensions(1.5));
+            // Read real PDF page dimensions in points via PdfSharp
+            try
+            {
+                using var pdfDoc = PdfReader.Open(_pdfFilePath, PdfDocumentOpenMode.Import);
+                if (pdfDoc.PageCount > 0)
+                {
+                    var firstPage = pdfDoc.Pages[0];
+                    PdfPageWidth = firstPage.Width.Point;
+                    PdfPageHeight = firstPage.Height.Point;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PdfEditor", $"Could not read page dimensions, using A4 defaults. {ex.Message}");
+                PdfPageWidth = 595.28;
+                PdfPageHeight = 841.89;
+            }
+
+            // Render page images with Docnet at higher quality (2.0x scale)
+            using var docReader = DocLib.Instance.GetDocReader(_pdfFilePath, new PageDimensions(2));
             PageCount = docReader.GetPageCount();
 
             for (int i = 0; i < PageCount; i++)
@@ -252,12 +428,6 @@ namespace Win11DesktopApp.ViewModels
                     rawBytes, stride);
                 bmp.Freeze();
                 _pageImages.Add(bmp);
-
-                if (i == 0)
-                {
-                    PdfPageWidth = width;
-                    PdfPageHeight = height;
-                }
             }
 
             if (PageCount > 0)
@@ -270,7 +440,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (File.Exists(_tagMapPath))
                 {
-                    var json = File.ReadAllText(_tagMapPath);
+                    var json = File.ReadAllText(_tagMapPath, System.Text.Encoding.UTF8);
                     var map = JsonSerializer.Deserialize<PdfTagMap>(json);
                     if (map?.Placements != null)
                     {
@@ -280,7 +450,7 @@ namespace Win11DesktopApp.ViewModels
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogError("PdfEditorViewModel.LoadExistingTags", ex); }
         }
 
         private void OnPlaceTag(object? param)
@@ -301,6 +471,8 @@ namespace Win11DesktopApp.ViewModels
                 X = xPercent,
                 Y = yPercent,
                 FontSize = NewTagFontSize,
+                FontFamily = NewTagFontFamily,
+                MaxWidth = NewTagMaxWidth,
                 PdfPageWidth = PdfPageWidth,
                 PdfPageHeight = PdfPageHeight
             };
@@ -309,7 +481,7 @@ namespace Win11DesktopApp.ViewModels
             AllPlacements.Add(vm);
             SelectedPlacement = vm;
             OnPropertyChanged(nameof(CurrentPagePlacements));
-            StatusMessage = $"${{{tag.Tag}}} placed on page {_currentPageIndex + 1}";
+            StatusMessage = ResF("PdfTagPlaced", $"${{{tag.Tag}}}", _currentPageIndex + 1);
         }
 
         /// <summary>
@@ -330,7 +502,7 @@ namespace Win11DesktopApp.ViewModels
                 if (SelectedPlacement == p) SelectedPlacement = null;
                 OnPropertyChanged(nameof(CurrentPagePlacements));
                 RequestRenderOverlays?.Invoke();
-                StatusMessage = $"${{{p.Tag}}} removed";
+                StatusMessage = ResF("PdfTagRemoved", $"${{{p.Tag}}}");
             }
         }
 
@@ -338,8 +510,9 @@ namespace Win11DesktopApp.ViewModels
         {
             if (param is TagEntry tag)
             {
-                Clipboard.SetText($"${{{tag.Tag}}}");
-                StatusMessage = $"${{{tag.Tag}}} copied";
+                var tagText = $"${{{tag.Tag}}}";
+                Clipboard.SetText(tagText);
+                StatusMessage = ResF("PdfTagCopied", tagText);
             }
         }
 
@@ -353,12 +526,12 @@ namespace Win11DesktopApp.ViewModels
                 };
 
                 var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_tagMapPath, json);
-                StatusMessage = "Saved!";
+                File.WriteAllText(_tagMapPath, json, System.Text.Encoding.UTF8);
+                StatusMessage = Res("EditorSaved");
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = ResF("EditorErrFmt", ex.Message);
             }
         }
 

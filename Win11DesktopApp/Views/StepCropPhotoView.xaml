@@ -1,0 +1,163 @@
+<UserControl x:Class="Win11DesktopApp.Views.StepCropPhotoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=1}"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
+            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <Border Background="{DynamicResource PurpleLightBrush}" CornerRadius="8" Width="36" Height="36">
+                    <TextBlock Text="&#xE91B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                               Foreground="{DynamicResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{DynamicResource StepCropPhoto}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
+                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="220"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Canvas area -->
+                <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="10" 
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                        ClipToBounds="True">
+                    <Canvas x:Name="CropCanvas" Width="600" Height="380" Background="Transparent" Cursor="Cross">
+                        <Image x:Name="CropImage" Width="600" Height="380" Stretch="Uniform" 
+                               Source="{Binding CurrentCropImagePath, Converter={StaticResource ImagePathConverter}}"/>
+                        <Rectangle x:Name="CropRect" Stroke="#0078D4" StrokeThickness="2" 
+                                   Fill="#300078D4" StrokeDashArray="4 2"/>
+                    </Canvas>
+                </Border>
+
+                <!-- Right panel: controls -->
+                <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <!-- Document selector -->
+                    <TextBlock Text="{DynamicResource WizDocLabel}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding CropTargets}" SelectedItem="{Binding SelectedCropTarget}" 
+                              Style="{StaticResource WizCombo}" Margin="0,0,0,10"/>
+
+                    <!-- Aspect ratio -->
+                    <CheckBox Content="{DynamicResource WizKeepAspect}" IsChecked="{Binding KeepAspectRatio}" 
+                              Margin="0,0,0,6" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                    <ComboBox x:Name="AspectCombo" SelectedValuePath="Tag" SelectedValue="{Binding CropAspectRatio}" 
+                              Style="{StaticResource WizCombo}" Margin="0,0,0,10">
+                        <ComboBoxItem Content="1:1" Tag="1"/>
+                        <ComboBoxItem Content="4:3" Tag="1.3333"/>
+                        <ComboBoxItem Content="3:4" Tag="0.75"/>
+                    </ComboBox>
+
+                    <!-- Rotate buttons -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Button Command="{Binding RotateLeftCommand}" Cursor="Hand" ToolTip="{DynamicResource WizRotateLeft}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="8" 
+                                            Width="44" Height="38" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                        <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                                   Foreground="{DynamicResource ForegroundBrush}" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <Button Command="{Binding RotateRightCommand}" Cursor="Hand" Margin="6,0,0,0" ToolTip="{DynamicResource WizRotateRight}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="8" 
+                                            Width="44" Height="38" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                        <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                                   Foreground="{DynamicResource ForegroundBrush}" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Enhance button (not for Фото mode) -->
+                    <Button Command="{Binding EnhanceDocumentCommand}" Cursor="Hand" Margin="0,0,0,12"
+                            Visibility="{Binding IsCropPhotoMode, Converter={StaticResource InverseBoolToVis}}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{DynamicResource SuccessBrush}" CornerRadius="8" Padding="16,10">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="&#xE771;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource WizEnhanceBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="White"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Hint for Фото mode -->
+                    <TextBlock Text="{DynamicResource WizCropInstruction}" TextWrapping="Wrap" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"
+                               Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
+
+                    <!-- Apply crop button (only in Фото mode) -->
+                    <Button Command="{Binding ApplyCropCommand}" Cursor="Hand" Margin="0,0,0,12"
+                            Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" CornerRadius="8" Padding="16,10">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#667EEA" Offset="0"/>
+                                            <GradientStop Color="#764BA2" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource BtnApplyCrop}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                   Foreground="White" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Preview label + photo (only in Фото mode) -->
+                    <TextBlock Text="{DynamicResource WizPreviewLabel}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,6"
+                               Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
+
+                    <Border CornerRadius="10" Width="180" Height="180" Background="{DynamicResource ContentBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            ClipToBounds="True"
+                            Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}">
+                        <Image Source="{Binding CroppedPhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -104,7 +104,7 @@ namespace Win11DesktopApp.Services
                     var existingJson = File.ReadAllText(indexFile);
                     index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(existingJson) ?? new List<TemplateIndexEntry>();
                 }
-                catch { }
+                catch (Exception ex) { LoggingService.LogError("TemplateService.AddTemplate", ex); }
             }
 
             // Relative path for storage (uses the current templates folder name)
@@ -179,7 +179,7 @@ namespace Win11DesktopApp.Services
                     var existingJson = File.ReadAllText(indexFile);
                     index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(existingJson) ?? new List<TemplateIndexEntry>();
                 }
-                catch { }
+                catch (Exception ex) { LoggingService.LogError("TemplateService.AddTemplateFromRtf", ex); }
             }
 
             var templatesFolderName = Path.GetFileName(templatesRoot);
@@ -275,15 +275,7 @@ namespace Win11DesktopApp.Services
 
         public void LogTemplateError(string message)
         {
-            try
-            {
-                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                var appFolder = Path.Combine(appData, "AgencyContractor");
-                Directory.CreateDirectory(appFolder);
-                var logPath = Path.Combine(appFolder, LogFileName);
-                File.AppendAllText(logPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
-            }
-            catch { }
+            LoggingService.LogError("TemplateService", message);
         }
 
         public string GetTemplateFullPath(string firmName, string relativePath)
@@ -318,6 +310,51 @@ namespace Win11DesktopApp.Services
             var outputPath = Path.Combine(templateDirectory, $"generated_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
             File.WriteAllText(outputPath, result);
             return outputPath;
+        }
+
+        public void RenameTemplate(string firmName, TemplateEntry template, string newName)
+        {
+            if (string.IsNullOrEmpty(_folderService.RootPath) || template == null || string.IsNullOrWhiteSpace(newName)) return;
+
+            var companyFolder = _folderService.GetCompanyFolder(firmName);
+            var templatesRoot = _folderService.GetTemplatesFolder(firmName);
+            var indexFile = Path.Combine(templatesRoot, "index.json");
+
+            if (File.Exists(indexFile))
+            {
+                var json = File.ReadAllText(indexFile);
+                var index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(json) ?? new List<TemplateIndexEntry>();
+                var item = index.FirstOrDefault(x => x.Path == template.FilePath);
+                if (item != null)
+                {
+                    item.Name = newName;
+                    item.Updated = DateTime.Now;
+                    var newJson = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(indexFile, newJson);
+                }
+            }
+
+            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var templateDirectory = Path.GetDirectoryName(fullPath);
+            if (templateDirectory != null)
+            {
+                var metadataPath = Path.Combine(templateDirectory, "metadata.json");
+                if (File.Exists(metadataPath))
+                {
+                    var json = File.ReadAllText(metadataPath);
+                    var meta = JsonSerializer.Deserialize<TemplateMetadata>(json);
+                    if (meta != null)
+                    {
+                        meta.Name = newName;
+                        meta.UpdatedAt = DateTime.Now;
+                        var newJson = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
+                        File.WriteAllText(metadataPath, newJson);
+                    }
+                }
+            }
+
+            template.Name = newName;
+            template.UpdatedAt = DateTime.Now;
         }
 
         public void DeleteTemplate(string firmName, TemplateEntry template)
@@ -435,7 +472,7 @@ namespace Win11DesktopApp.Services
                             File.WriteAllText(metadataPath, newJson);
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { LoggingService.LogError("TemplateService.SaveTagPositions.Metadata", ex); }
                 }
 
                 // Update Index timestamp
@@ -455,7 +492,7 @@ namespace Win11DesktopApp.Services
                             File.WriteAllText(indexFile, newJson);
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { LoggingService.LogError("TemplateService.SaveTagPositions.Index", ex); }
                 }
             }
         }

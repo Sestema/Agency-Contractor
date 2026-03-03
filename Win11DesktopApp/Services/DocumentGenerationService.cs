@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
@@ -12,12 +13,17 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
+using System.Windows;
 using Win11DesktopApp.Models;
+using AlternativeFormatImportPartType = DocumentFormat.OpenXml.Packaging.AlternativeFormatImportPartType;
 
 namespace Win11DesktopApp.Services
 {
     public class DocumentGenerationService
     {
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
+
         /// <summary>
         /// Generates a DOCX document from a template by replacing all ${TAG} placeholders with values.
         /// Preserves all formatting, styles, tables, images — only tag text is replaced.
@@ -25,7 +31,7 @@ namespace Win11DesktopApp.Services
         public string GenerateDocx(string templatePath, string outputPath, Dictionary<string, string> tagValues)
         {
             if (!File.Exists(templatePath))
-                throw new FileNotFoundException("Шаблон не знайдено.", templatePath);
+                throw new FileNotFoundException(Res("MsgTemplateMissing"), templatePath);
 
             File.Copy(templatePath, outputPath, true);
 
@@ -76,7 +82,7 @@ namespace Win11DesktopApp.Services
 
             // Build full concatenated text
             var fullText = string.Concat(segments.Select(s => s.OriginalText));
-            var tagPattern = new Regex(@"\$\{([^}]+)\}");
+            var tagPattern = new Regex(@"\$\{([^}]+)\}", RegexOptions.None, TimeSpan.FromSeconds(5));
             if (!tagPattern.IsMatch(fullText)) return;
 
             // Map each character position in fullText → segment index + position within segment
@@ -182,30 +188,134 @@ namespace Win11DesktopApp.Services
             if (!File.Exists(rtfTemplatePath))
                 throw new FileNotFoundException("RTF шаблон не знайдено.", rtfTemplatePath);
 
-            var rtfContent = File.ReadAllText(rtfTemplatePath);
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var ansiEncoding = Encoding.GetEncoding(1252);
+
+            var rtfContent = File.ReadAllText(rtfTemplatePath, ansiEncoding);
 
             foreach (var kvp in tagValues)
             {
-                // In RTF, literal { and } are escaped as \{ and \}
                 var rtfTag = "$\\{" + kvp.Key + "\\}";
                 var safeValue = EscapeRtf(kvp.Value ?? string.Empty);
                 rtfContent = rtfContent.Replace(rtfTag, safeValue);
             }
 
-            File.WriteAllText(outputPath, rtfContent);
+            File.WriteAllText(outputPath, rtfContent, ansiEncoding);
             return outputPath;
         }
 
         /// <summary>
-        /// Escapes special RTF characters in a text value.
+        /// Generates a DOCX from an RTF template by replacing tags and embedding
+        /// the result as an AltChunk in a DOCX container. Word renders the RTF
+        /// natively, so all formatting (alignment, fonts, spacing) is preserved.
+        /// </summary>
+        public string GenerateDocxFromRtf(string rtfTemplatePath, string outputPath, Dictionary<string, string> tagValues)
+        {
+            if (!File.Exists(rtfTemplatePath))
+                throw new FileNotFoundException("RTF шаблон не знайдено.", rtfTemplatePath);
+
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var ansiEncoding = Encoding.GetEncoding(1252);
+
+            var rtfContent = File.ReadAllText(rtfTemplatePath, ansiEncoding);
+
+            rtfContent = ReplaceRtfTags(rtfContent, tagValues);
+
+            var docxPath = outputPath;
+            if (!docxPath.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
+                docxPath = Path.ChangeExtension(docxPath, ".docx");
+
+            using (var doc = WordprocessingDocument.Create(docxPath, WordprocessingDocumentType.Document))
+            {
+                var mainPart = doc.AddMainDocumentPart();
+                mainPart.Document = new Document(new Body());
+
+                var sectionProps = new SectionProperties(
+                    new PageMargin
+                    {
+                        Top = 720,
+                        Right = (UInt32Value)720U,
+                        Bottom = 720,
+                        Left = (UInt32Value)720U,
+                        Header = (UInt32Value)720U,
+                        Footer = (UInt32Value)720U
+                    });
+                mainPart.Document.Body!.Append(sectionProps);
+
+                var chunk = mainPart.AddAlternativeFormatImportPart(
+                    AlternativeFormatImportPartType.Rtf, "altChunkRtf1");
+
+                using (var ms = new MemoryStream(ansiEncoding.GetBytes(rtfContent)))
+                {
+                    chunk.FeedData(ms);
+                }
+
+                var altChunk = new AltChunk { Id = "altChunkRtf1" };
+                mainPart.Document.Body!.Append(altChunk);
+                mainPart.Document.Save();
+            }
+
+            return docxPath;
+        }
+
+        /// <summary>
+        /// Performs RTF-aware tag replacement. Handles cases where the editor may have
+        /// inserted formatting codes within the tag text (e.g. underscores escaped as \_).
+        /// Also performs a secondary pass using regex for tags split across RTF groups.
+        /// </summary>
+        private string ReplaceRtfTags(string rtfContent, Dictionary<string, string> tagValues)
+        {
+            foreach (var kvp in tagValues)
+            {
+                var safeValue = EscapeRtf(kvp.Value ?? string.Empty);
+
+                var simpleTag = "$\\{" + kvp.Key + "\\}";
+                rtfContent = rtfContent.Replace(simpleTag, safeValue);
+
+                if (kvp.Key.Contains('_'))
+                {
+                    var escapedUnderscoreTag = "$\\{" + kvp.Key.Replace("_", "\\_") + "\\}";
+                    rtfContent = rtfContent.Replace(escapedUnderscoreTag, safeValue);
+                }
+            }
+
+            var splitPattern = new Regex(@"\$\\\{([^}\\]*(?:\\.[^}\\]*)*?)\\\}", RegexOptions.None, TimeSpan.FromSeconds(5));
+            rtfContent = splitPattern.Replace(rtfContent, match =>
+            {
+                var rawTag = match.Groups[1].Value;
+                var cleanTag = rawTag
+                    .Replace("\\_", "_")
+                    .Replace("\\-", "-");
+                cleanTag = Regex.Replace(cleanTag, @"\{[^}]*\}", "", RegexOptions.None, TimeSpan.FromSeconds(5));
+                cleanTag = Regex.Replace(cleanTag, @"\\[a-z]+\d*\s?", "", RegexOptions.None, TimeSpan.FromSeconds(5));
+                cleanTag = cleanTag.Trim();
+
+                if (tagValues.TryGetValue(cleanTag, out var val))
+                    return EscapeRtf(val ?? string.Empty);
+
+                return match.Value;
+            });
+
+            return rtfContent;
+        }
+
+        /// <summary>
+        /// Escapes special RTF characters and converts non-ASCII characters
+        /// (Czech, Ukrainian, etc.) to RTF Unicode escape sequences (\uNNNN?).
         /// </summary>
         private static string EscapeRtf(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
-            return text
-                .Replace("\\", "\\\\")
-                .Replace("{", "\\{")
-                .Replace("}", "\\}");
+            var sb = new StringBuilder(text.Length * 2);
+            foreach (var ch in text)
+            {
+                if (ch == '\\') sb.Append("\\\\");
+                else if (ch == '{') sb.Append("\\{");
+                else if (ch == '}') sb.Append("\\}");
+                else if (ch > 127) sb.Append($"\\u{(int)ch}?");
+                else sb.Append(ch);
+            }
+            return sb.ToString();
         }
 
         /// <summary>
@@ -219,7 +329,7 @@ namespace Win11DesktopApp.Services
 
             File.Copy(templatePath, outputPath, true);
 
-            var tagPattern = new Regex(@"\$\{([^}]+)\}");
+            var tagPattern = new Regex(@"\$\{([^}]+)\}", RegexOptions.None, TimeSpan.FromSeconds(5));
 
             using (var workbook = new XLWorkbook(outputPath))
             {
@@ -280,14 +390,22 @@ namespace Win11DesktopApp.Services
             }
 
             // Open source PDF
-            var sourceDoc = PdfReader.Open(templatePath, PdfDocumentOpenMode.Import);
-            var outputDoc = new PdfDocument();
+            using var sourceDoc = PdfReader.Open(templatePath, PdfDocumentOpenMode.Import);
+            using var outputDoc = new PdfDocument();
 
             // Copy all pages
             for (int i = 0; i < sourceDoc.PageCount; i++)
             {
                 outputDoc.AddPage(sourceDoc.Pages[i]);
             }
+
+            // Top-left string format so that (x, y) is the top-left corner of the text,
+            // matching exactly where the user placed the tag marker in the editor.
+            var topLeftFormat = new XStringFormat
+            {
+                Alignment = XStringAlignment.Near,
+                LineAlignment = XLineAlignment.Near
+            };
 
             // Draw tag values on each page
             foreach (var placement in tagMap.Placements)
@@ -302,17 +420,30 @@ namespace Win11DesktopApp.Services
                 using var gfx = XGraphics.FromPdfPage(page);
 
                 var fontSize = placement.FontSize > 0 ? placement.FontSize : 10;
-                var font = new XFont("Arial", fontSize);
+                var fontFamily = !string.IsNullOrEmpty(placement.FontFamily) ? placement.FontFamily : "Arial";
+                var font = new XFont(fontFamily, fontSize);
 
-                // Convert percentage coordinates to PDF points
                 var x = placement.X * page.Width.Point;
                 var y = placement.Y * page.Height.Point;
 
-                gfx.DrawString(value, font, XBrushes.Black, new XPoint(x, y));
+                if (placement.MaxWidth > 0)
+                {
+                    var maxW = placement.MaxWidth;
+                    var rect = new XRect(x, y, maxW, page.Height.Point - y);
+                    var wrapFormat = new XStringFormat
+                    {
+                        Alignment = XStringAlignment.Near,
+                        LineAlignment = XLineAlignment.Near
+                    };
+                    gfx.DrawString(value, font, XBrushes.Black, rect, wrapFormat);
+                }
+                else
+                {
+                    gfx.DrawString(value, font, XBrushes.Black, new XPoint(x, y), topLeftFormat);
+                }
             }
 
             outputDoc.Save(outputPath);
-            sourceDoc.Dispose();
 
             return outputPath;
         }

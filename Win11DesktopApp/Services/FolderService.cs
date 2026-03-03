@@ -26,9 +26,11 @@ namespace Win11DesktopApp.Services
         public string RootPath => _appSettingsService.Settings.RootFolderPath;
 
         /// <summary>
-        /// Current language code from settings.
+        /// Language code for folder names: prefers DocumentLanguage, falls back to LanguageCode.
         /// </summary>
-        public string LangCode => _appSettingsService.Settings.LanguageCode ?? "uk";
+        public string LangCode => !string.IsNullOrEmpty(_appSettingsService.Settings.DocumentLanguage)
+            ? _appSettingsService.Settings.DocumentLanguage
+            : _appSettingsService.Settings.LanguageCode ?? "uk";
 
         // ============ PATH CONSTRUCTION ============
 
@@ -62,6 +64,17 @@ namespace Win11DesktopApp.Services
             var companyFolder = GetCompanyFolder(companyName);
             if (string.IsNullOrEmpty(companyFolder)) return string.Empty;
             return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(LangCode), FolderNames.AllTemplatesFolderNames);
+        }
+
+        /// <summary>
+        /// Get the payment folder path: {Root}/{CompanyName}/{Виплата|Payment}
+        /// Uses fallback search if the preferred locale folder doesn't exist.
+        /// </summary>
+        public string GetPaymentFolder(string companyName)
+        {
+            var companyFolder = GetCompanyFolder(companyName);
+            if (string.IsNullOrEmpty(companyFolder)) return string.Empty;
+            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(LangCode), FolderNames.AllPaymentFolderNames);
         }
 
         /// <summary>
@@ -114,6 +127,7 @@ namespace Win11DesktopApp.Services
         /// {Root}/{CompanyName}/
         /// {Root}/{CompanyName}/{Працівники|Employees}/
         /// {Root}/{CompanyName}/{Шаблони|Templates}/
+        /// If subfolders already exist under a different language name, they are renamed.
         /// </summary>
         public void EnsureCompanyStructure(string companyName)
         {
@@ -122,8 +136,11 @@ namespace Win11DesktopApp.Services
             {
                 var companyFolder = GetCompanyFolder(companyName);
                 Directory.CreateDirectory(companyFolder);
-                Directory.CreateDirectory(Path.Combine(companyFolder, FolderNames.GetEmployeesFolder(LangCode)));
-                Directory.CreateDirectory(Path.Combine(companyFolder, FolderNames.GetTemplatesFolder(LangCode)));
+
+                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetEmployeesFolder(LangCode), FolderNames.AllEmployeesFolderNames);
+                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(LangCode), FolderNames.AllTemplatesFolderNames);
+                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(LangCode), FolderNames.AllPaymentFolderNames);
+
                 Debug.WriteLine($"FolderService.EnsureCompanyStructure: {companyFolder}");
             }
             catch (Exception ex)
@@ -164,13 +181,18 @@ namespace Win11DesktopApp.Services
         /// <summary>
         /// Ensures the archive folder exists.
         /// </summary>
+        public string GetCandidatesFolder()
+        {
+            if (string.IsNullOrEmpty(RootPath)) return string.Empty;
+            return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetCandidatesFolder(LangCode), FolderNames.AllCandidatesFolderNames);
+        }
+
         public void EnsureArchiveFolder()
         {
             if (string.IsNullOrEmpty(RootPath)) return;
             try
             {
-                var archiveFolder = GetArchiveFolder();
-                Directory.CreateDirectory(archiveFolder);
+                EnsureLocalizedSubfolder(RootPath, FolderNames.GetArchiveFolder(LangCode), FolderNames.AllArchiveFolderNames);
             }
             catch (Exception ex)
             {
@@ -201,12 +223,10 @@ namespace Win11DesktopApp.Services
         /// </summary>
         private string FindOrCreateLocalizedSubfolder(string parentFolder, string preferredName, string[] allNames)
         {
-            // 1. Try the preferred name first
             var preferredPath = Path.Combine(parentFolder, preferredName);
             if (Directory.Exists(preferredPath))
                 return preferredPath;
 
-            // 2. Fallback: try all known names
             foreach (var name in allNames)
             {
                 var fallbackPath = Path.Combine(parentFolder, name);
@@ -214,8 +234,39 @@ namespace Win11DesktopApp.Services
                     return fallbackPath;
             }
 
-            // 3. Nothing found — return preferred name path (caller will create it)
             return preferredPath;
+        }
+
+        /// <summary>
+        /// Ensures a localized subfolder exists. If it already exists under a different
+        /// language name, renames it to the preferred name instead of creating a duplicate.
+        /// </summary>
+        private void EnsureLocalizedSubfolder(string parentFolder, string preferredName, string[] allNames)
+        {
+            var preferredPath = Path.Combine(parentFolder, preferredName);
+            if (Directory.Exists(preferredPath))
+                return;
+
+            foreach (var name in allNames)
+            {
+                if (name == preferredName) continue;
+                var existingPath = Path.Combine(parentFolder, name);
+                if (Directory.Exists(existingPath))
+                {
+                    try
+                    {
+                        Directory.Move(existingPath, preferredPath);
+                        Debug.WriteLine($"FolderService: Renamed '{existingPath}' -> '{preferredPath}'");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"FolderService: Rename failed ({ex.Message}), keeping existing folder.");
+                    }
+                    return;
+                }
+            }
+
+            Directory.CreateDirectory(preferredPath);
         }
 
         /// <summary>

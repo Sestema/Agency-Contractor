@@ -8,9 +8,11 @@
         xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
         mc:Ignorable="d"
         Title="{DynamicResource AppTitle}" Height="600" Width="900"
+        MinWidth="750" MinHeight="480"
         Background="{DynamicResource WindowBackgroundBrush}"
         Icon="pack://application:,,,/Resources/app_icon.ico"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        x:Name="RootWindow">
     
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:MainViewModel}">
@@ -24,6 +26,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:EmployeesViewModel}">
             <views:EmployeesView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:EmployeeDetailsViewModel}">
+            <views:EmployeeDetailsView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:TemplateEditorViewModel}">
             <views:TemplateEditorView/>
@@ -40,9 +45,214 @@
         <DataTemplate DataType="{x:Type vm:PdfEditorViewModel}">
             <views:PdfEditorView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ReportViewModel}">
+            <views:ReportView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:FinanceTablesViewModel}">
+            <views:FinanceTablesView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AdvanceTableViewModel}">
+            <views:AdvanceTableView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:TablesMenuViewModel}">
+            <views:TablesMenuView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PaymentSignViewModel}">
+            <views:PaymentSignView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SalaryViewModel}">
+            <views:SalaryView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ActivityLogViewModel}">
+            <views:ActivityLogView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CandidatesViewModel}">
+            <views:CandidatesView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AIChatViewModel}">
+            <views:AIChatView/>
+        </DataTemplate>
     </Window.Resources>
 
-    <Grid>
-        <ContentControl Content="{Binding CurrentView}"/>
+    <Grid ClipToBounds="True">
+        <ContentControl x:Name="PageHost" Content="{Binding CurrentView, NotifyOnTargetUpdated=True}" ClipToBounds="False"
+                        RenderTransformOrigin="0.5,0.5">
+            <ContentControl.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="PageScale" ScaleX="1" ScaleY="1"/>
+                    <TranslateTransform x:Name="PageSlide" Y="0"/>
+                </TransformGroup>
+            </ContentControl.RenderTransform>
+            <ContentControl.LayoutTransform>
+                <ScaleTransform
+                    ScaleX="{Binding ScaleFactor, ElementName=RootWindow}"
+                    ScaleY="{Binding ScaleFactor, ElementName=RootWindow}"/>
+            </ContentControl.LayoutTransform>
+            <ContentControl.Style>
+                <Style TargetType="ContentControl">
+                    <Style.Triggers>
+                        <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                     From="0" To="1" Duration="0:0:0.28">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuarticEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                     From="0.97" To="1" Duration="0:0:0.32">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuarticEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                     From="0.97" To="1" Duration="0:0:0.32">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuarticEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                     From="18" To="0" Duration="0:0:0.32">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuarticEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ContentControl.Style>
+        </ContentControl>
+
+        <!-- Toast notifications overlay -->
+        <ItemsControl ItemsSource="{Binding Toasts, Source={x:Static local:ToastServiceLocator.Instance}}"
+                      VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                      Margin="0,0,24,24" Panel.ZIndex="9999"
+                      IsHitTestVisible="False">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border x:Name="ToastBorder" Margin="0,6,0,0"
+                            CornerRadius="10" MinWidth="260" MaxWidth="420"
+                            HorizontalAlignment="Right"
+                            Effect="{DynamicResource CardShadow}"
+                            RenderTransformOrigin="0.5,1" ClipToBounds="True">
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <TranslateTransform Y="0"/>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal" Margin="14,10,18,10">
+                                <TextBlock x:Name="ToastIcon" Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="{Binding Message}" FontSize="13" TextWrapping="Wrap"
+                                           MaxWidth="340" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                            </StackPanel>
+                            <Border x:Name="ProgressTrack" Grid.Row="1" Height="3"
+                                    HorizontalAlignment="Stretch" Opacity="0.35">
+                                <Border x:Name="ProgressBar" Height="3" CornerRadius="0,0,0,1.5"
+                                        HorizontalAlignment="Left" Width="420"
+                                        RenderTransformOrigin="0,0.5">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
+                                    </Border.RenderTransform>
+                                </Border>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <DataTemplate.Triggers>
+                        <!-- Severity colors -->
+                        <DataTrigger Binding="{Binding Severity}" Value="Info">
+                            <Setter TargetName="ToastBorder" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderThickness" Value="1"/>
+                            <Setter TargetName="ToastIcon" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="ProgressBar" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Severity}" Value="Success">
+                            <Setter TargetName="ToastBorder" Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderThickness" Value="1"/>
+                            <Setter TargetName="ToastIcon" Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                            <Setter TargetName="ProgressBar" Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                            <Setter TargetName="ToastBorder" Property="Background" Value="{DynamicResource WarningLightBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderThickness" Value="1"/>
+                            <Setter TargetName="ToastIcon" Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                            <Setter TargetName="ProgressBar" Property="Background" Value="{DynamicResource WarningBrush}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Severity}" Value="Error">
+                            <Setter TargetName="ToastBorder" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+                            <Setter TargetName="ToastBorder" Property="BorderThickness" Value="1"/>
+                            <Setter TargetName="ToastIcon" Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                            <Setter TargetName="ProgressBar" Property="Background" Value="{DynamicResource ErrorBrush}"/>
+                        </DataTrigger>
+                        <!-- Enter animation: slide up + fade in + progress countdown -->
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="ToastBorder"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     From="0" To="1" Duration="0:0:0.3">
+                                        <DoubleAnimation.EasingFunction><QuarticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="ToastBorder"
+                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.Y)"
+                                                     From="40" To="0" Duration="0:0:0.35">
+                                        <DoubleAnimation.EasingFunction><QuarticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="ToastBorder"
+                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(ScaleTransform.ScaleY)"
+                                                     From="0.85" To="1" Duration="0:0:0.3">
+                                        <DoubleAnimation.EasingFunction><QuarticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetName="ProgressScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     From="1" To="0" Duration="0:0:4"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <!-- Exit animation: fade + slide down -->
+                        <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ToastBorder"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="ToastBorder"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(TranslateTransform.Y)"
+                                                         To="30" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </Window>

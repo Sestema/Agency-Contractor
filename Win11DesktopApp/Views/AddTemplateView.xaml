@@ -12,8 +12,8 @@
             <Setter Property="Padding" Value="10,8"/>
             <Setter Property="Margin" Value="0,0,0,15"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
-            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -28,7 +28,7 @@
             </Setter>
         </Style>
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#555555"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
             <Setter Property="Margin" Value="0,0,0,5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
@@ -47,7 +47,7 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <TextBlock Text="{DynamicResource HeaderAddTemplate}" FontSize="24" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource ForegroundBrush}"/>
+            <TextBlock Text="{DynamicResource HeaderAddTemplate}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Margin="0,0,0,20" Foreground="{DynamicResource ForegroundBrush}"/>
             
             <!-- Form -->
             <StackPanel Grid.Row="1">
@@ -74,7 +74,7 @@
                 
                 <!-- DOCX info: file not needed -->
                 <TextBlock Text="{DynamicResource TplFileNotNeeded}" 
-                           FontSize="12" FontWeight="Normal" Foreground="{DynamicResource AccentBrush}" 
+                           FontSize="{DynamicResource FS12}" FontWeight="Normal" Foreground="{DynamicResource AccentBrush}" 
                            Margin="0,0,0,15"
                            Visibility="{Binding IsDocxFormat, Converter={StaticResource BoolToVis}}"/>
 
@@ -86,7 +86,7 @@
             
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                <Button Command="{Binding CancelCommand}" Content="{DynamicResource BtnCancel}" Width="100" Height="35" Margin="0,0,10,0" Background="Transparent" BorderBrush="#CCCCCC" BorderThickness="1"/>
+                <Button Command="{Binding CancelCommand}" Content="{DynamicResource BtnCancel}" Width="100" Height="35" Margin="0,0,10,0" Background="Transparent" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"/>
                 <Button Command="{Binding SaveCommand}" Content="{DynamicResource BtnSaveTemplate}" Width="150" Height="35" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0"/>
             </StackPanel>
         </Grid>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -16,8 +17,9 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<TemplateEntry> Templates
         {
             get => _templates;
-            set => SetProperty(ref _templates, value);
+            set { SetProperty(ref _templates, value); OnPropertyChanged(nameof(HasTemplates)); }
         }
+        public bool HasTemplates => Templates.Count > 0;
 
         private string _firmName;
         public string Title => string.Format(GetString("TitleTemplates") ?? "Шаблони: {0}", _firmName);
@@ -42,6 +44,25 @@ namespace Win11DesktopApp.ViewModels
 
         public ICommand CloseAddDialogCommand { get; }
         public ICommand EditTemplateCommand { get; }
+        public ICommand RenameTemplateCommand { get; }
+        public ICommand ConfirmRenameCommand { get; }
+        public ICommand CancelRenameCommand { get; }
+
+        private bool _isRenameDialogOpen;
+        public bool IsRenameDialogOpen
+        {
+            get => _isRenameDialogOpen;
+            set => SetProperty(ref _isRenameDialogOpen, value);
+        }
+
+        private string _renameText = string.Empty;
+        public string RenameText
+        {
+            get => _renameText;
+            set => SetProperty(ref _renameText, value);
+        }
+
+        private TemplateEntry? _renamingTemplate;
 
         // Tags panel
         private bool _isTagsPanelOpen;
@@ -78,16 +99,13 @@ namespace Win11DesktopApp.ViewModels
                 LoadTemplates();
             }
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
 
             AddTemplateCommand = new RelayCommand(o =>
             {
+                CleanupAddTemplateVm();
                 AddTemplateVm = new AddTemplateViewModel(_firmName);
-                AddTemplateVm.RequestClose += () =>
-                {
-                    IsAddDialogOpen = false;
-                    LoadTemplates();
-                };
+                AddTemplateVm.RequestClose += OnAddTemplateClose;
                 IsAddDialogOpen = true;
             });
 
@@ -101,32 +119,31 @@ namespace Win11DesktopApp.ViewModels
                     if (format == "DOCX")
                     {
                         // DOCX may not have a source file — editor handles this gracefully
-                        App.NavigationService.NavigateTo(new TemplateEditorViewModel(_firmName, template));
+                        App.NavigationService?.NavigateTo(new TemplateEditorViewModel(_firmName, template));
                     }
                     else if (format == "XLSX")
                     {
                         if (!File.Exists(fullPath))
                         {
-                            MessageBox.Show("Файл шаблону не знайдено.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show(GetString("MsgTemplateNotFound") ?? "Template not found.", GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
-                        // Navigate to built-in XLSX editor (DataGrid)
-                        App.NavigationService.NavigateTo(new XlsxEditorViewModel(_firmName, template));
+                        App.NavigationService?.NavigateTo(new XlsxEditorViewModel(_firmName, template));
                     }
                     else if (format == "PDF")
                     {
                         if (!File.Exists(fullPath))
                         {
-                            MessageBox.Show("Файл шаблону не знайдено.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show(GetString("MsgTemplateNotFound") ?? "Template not found.", GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
-                        App.NavigationService.NavigateTo(new PdfEditorViewModel(_firmName, template));
+                        App.NavigationService?.NavigateTo(new PdfEditorViewModel(_firmName, template));
                     }
                     else
                     {
                         if (!File.Exists(fullPath))
                         {
-                            MessageBox.Show("Файл шаблону не знайдено.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show(GetString("MsgTemplateNotFound") ?? "Template not found.", GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
                         _pendingTemplateFilePath = fullPath;
@@ -152,18 +169,66 @@ namespace Win11DesktopApp.ViewModels
                     {
                         try
                         {
+                            var tName = template.Name;
                             _templateService.DeleteTemplate(_firmName, template);
                             Templates.Remove(template);
+                            App.ActivityLogService?.Log("TemplateDeleted", "Template", _firmName, "",
+                                $"Видалено шаблон «{tName}» з {_firmName}");
                         }
                         catch (System.Exception ex)
                         {
-                            MessageBox.Show($"Помилка видалення: {ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show(string.Format(GetString("MsgDeleteError") ?? "Delete error: {0}", ex.Message), GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                     }
                 }
             });
 
-            CloseAddDialogCommand = new RelayCommand(o => IsAddDialogOpen = false);
+            CloseAddDialogCommand = new RelayCommand(o =>
+            {
+                IsAddDialogOpen = false;
+                CleanupAddTemplateVm();
+            });
+
+            RenameTemplateCommand = new RelayCommand(o =>
+            {
+                if (o is TemplateEntry template)
+                {
+                    _renamingTemplate = template;
+                    RenameText = template.Name;
+                    IsRenameDialogOpen = true;
+                }
+            });
+
+            ConfirmRenameCommand = new RelayCommand(o =>
+            {
+                if (_renamingTemplate == null || string.IsNullOrWhiteSpace(RenameText)) return;
+                var newName = RenameText.Trim();
+                if (newName == _renamingTemplate.Name)
+                {
+                    IsRenameDialogOpen = false;
+                    return;
+                }
+                try
+                {
+                    var oldName = _renamingTemplate.Name;
+                    _templateService.RenameTemplate(_firmName, _renamingTemplate, newName);
+                    App.ActivityLogService?.Log("TemplateRenamed", "Template", _firmName, "",
+                        $"Перейменовано шаблон «{oldName}» → «{newName}» ({_firmName})",
+                        oldName, newName);
+                    LoadTemplates();
+                    IsRenameDialogOpen = false;
+                }
+                catch (System.Exception ex)
+                {
+                    MessageBox.Show(string.Format(GetString("MsgRenameError") ?? "Rename error: {0}", ex.Message), GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
+
+            CancelRenameCommand = new RelayCommand(o =>
+            {
+                IsRenameDialogOpen = false;
+                _renamingTemplate = null;
+            });
 
             CloseTagsPanelCommand = new RelayCommand(o => IsTagsPanelOpen = false);
 
@@ -188,9 +253,22 @@ namespace Win11DesktopApp.ViewModels
                 }
                 catch (System.Exception ex)
                 {
-                    MessageBox.Show($"Не вдалося відкрити файл: {ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(string.Format(GetString("MsgOpenFileError") ?? "Could not open file: {0}", ex.Message), GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             });
+        }
+
+        private void OnAddTemplateClose()
+        {
+            IsAddDialogOpen = false;
+            CleanupAddTemplateVm();
+            LoadTemplates();
+        }
+
+        private void CleanupAddTemplateVm()
+        {
+            if (AddTemplateVm != null)
+                AddTemplateVm.RequestClose -= OnAddTemplateClose;
         }
 
         private void LoadTemplates()
@@ -201,7 +279,13 @@ namespace Win11DesktopApp.ViewModels
 
         private void LoadAvailableTags()
         {
-            var tags = App.TagCatalogService.GetAllTagDefinitions();
+            var tags = App.TagCatalogService?.GetAllTagDefinitions() ?? new List<TagEntry>();
+            var hiddenTags = App.AppSettingsService?.Settings?.HiddenTags;
+            if (hiddenTags != null && hiddenTags.Count > 0)
+            {
+                var hidden = new HashSet<string>(hiddenTags);
+                tags = tags.Where(t => !hidden.Contains(t.Tag)).ToList();
+            }
             AvailableTags = new ObservableCollection<TagEntry>(tags);
         }
 

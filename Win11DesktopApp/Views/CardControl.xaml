@@ -5,73 +5,224 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
              mc:Ignorable="d" 
-             d:DesignHeight="150" d:DesignWidth="150">
+             d:DesignHeight="180" d:DesignWidth="170">
     <UserControl.Resources>
         <conv:IntToVisibilityConverter x:Key="IntToVis"/>
+        <CubicEase x:Key="SmoothEase" EasingMode="EaseOut"/>
+        <BackEase x:Key="BounceBack" EasingMode="EaseOut" Amplitude="0.3"/>
     </UserControl.Resources>
     <Grid>
-    <Button Command="{Binding Command, RelativeSource={RelativeSource AncestorType=UserControl}}"
-            BorderThickness="0" Background="Transparent" Padding="0">
-        <Button.Template>
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="CardBorder" 
-                        Background="{DynamicResource CardBackgroundBrush}" 
-                        BorderBrush="{DynamicResource CardBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Width="150" Height="150">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.1"/>
-                    </Border.Effect>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="2*"/>
-                            <RowDefinition Height="1*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <Path Grid.Row="0" 
-                              Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                              Fill="{DynamicResource ForegroundBrush}"
-                              Stretch="Uniform"
-                              Width="48" Height="48"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"
-                              Margin="0,10,0,0"/>
-                        
-                        <TextBlock Grid.Row="1" 
-                                   Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                   Foreground="{DynamicResource ForegroundBrush}"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" 
-                                   VerticalAlignment="Top"
-                                   Margin="0,10,0,0"/>
-                    </Grid>
-                </Border>
-                <ControlTemplate.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True">
-                        <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                        <Setter TargetName="CardBorder" Property="Effect">
-                            <Setter.Value>
-                                <DropShadowEffect BlurRadius="15" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.15"/>
-                            </Setter.Value>
-                        </Setter>
-                    </Trigger>
-                    <Trigger Property="IsEnabled" Value="False">
-                        <Setter TargetName="CardBorder" Property="Opacity" Value="0.5"/>
-                        <Setter TargetName="CardBorder" Property="Background" Value="#F0F0F0"/>
-                    </Trigger>
-                </ControlTemplate.Triggers>
-            </ControlTemplate>
-        </Button.Template>
-    </Button>
-    <!-- Badge -->
-    <Border CornerRadius="11" Background="#D32F2F" MinWidth="22" Height="22" 
-            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0"
-            Padding="4,0" IsHitTestVisible="False"
-            Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
-        <TextBlock Text="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                   Foreground="White" FontSize="11" FontWeight="Bold"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    </Border>
+        <Button Command="{Binding Command, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                BorderThickness="0" Background="Transparent" Padding="0" Cursor="Hand">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="CardBorder" 
+                            Background="{DynamicResource CardBackgroundBrush}" 
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Width="160" Height="170"
+                            RenderTransformOrigin="0.5,0.5"
+                            SnapsToDevicePixels="True">
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+                                <TranslateTransform x:Name="CardTranslate" Y="0"/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                        <Border.Effect>
+                            <DropShadowEffect x:Name="CardShadow" BlurRadius="12" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.08"/>
+                        </Border.Effect>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Gradient icon circle -->
+                            <Border x:Name="IconCircle" Grid.Row="0" 
+                                    Width="64" Height="64" CornerRadius="18"
+                                    HorizontalAlignment="Center" Margin="0,4,0,0"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                                <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      Fill="White"
+                                      Stretch="Uniform"
+                                      Width="30" Height="30"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- Title -->
+                            <TextBlock x:Name="TitleText" Grid.Row="2" 
+                                       Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       FontSize="{DynamicResource FS14}"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Bottom"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,2"/>
+                        </Grid>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <!-- Hover: lift + scale + deeper shadow + icon pulse -->
+                        <EventTrigger RoutedEvent="MouseEnter">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <!-- Card lifts up -->
+                                    <DoubleAnimation Storyboard.TargetName="CardTranslate"
+                                                     Storyboard.TargetProperty="Y"
+                                                     To="-6" Duration="0:0:0.25"
+                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                    <!-- Card scales slightly -->
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1.04" Duration="0:0:0.25"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1.04" Duration="0:0:0.25"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <!-- Deeper shadow -->
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="BlurRadius"
+                                                     To="28" Duration="0:0:0.25"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="ShadowDepth"
+                                                     To="8" Duration="0:0:0.25"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.18" Duration="0:0:0.25"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <!-- Icon breathes -->
+                                    <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1.1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                    <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1.1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+
+                        <!-- Mouse Leave: smooth return -->
+                        <EventTrigger RoutedEvent="MouseLeave">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="CardTranslate"
+                                                     Storyboard.TargetProperty="Y"
+                                                     To="0" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="BlurRadius"
+                                                     To="12" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="ShadowDepth"
+                                                     To="3" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.08" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+
+                        <!-- Press: subtle press-in -->
+                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="0.96" Duration="0:0:0.1"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="0.96" Duration="0:0:0.1"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardTranslate"
+                                                     Storyboard.TargetProperty="Y"
+                                                     To="0" Duration="0:0:0.1"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="BlurRadius"
+                                                     To="6" Duration="0:0:0.1"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="ShadowDepth"
+                                                     To="1" Duration="0:0:0.1"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+
+                        <!-- Release: bounce back up -->
+                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1.04" Duration="0:0:0.2"
+                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1.04" Duration="0:0:0.2"
+                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardTranslate"
+                                                     Storyboard.TargetProperty="Y"
+                                                     To="-6" Duration="0:0:0.2"
+                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="BlurRadius"
+                                                     To="28" Duration="0:0:0.2"/>
+                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
+                                                     Storyboard.TargetProperty="ShadowDepth"
+                                                     To="8" Duration="0:0:0.2"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="CardBorder" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
+        <!-- Badge -->
+        <Border CornerRadius="12" Background="{DynamicResource ErrorBrush}" MinWidth="24" Height="24" 
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0"
+                Padding="6,0" IsHitTestVisible="False"
+                Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#EF4444" Opacity="0.4"/>
+            </Border.Effect>
+            <TextBlock Text="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                       Foreground="White" FontSize="{DynamicResource FS11}" FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
     </Grid>
 </UserControl>

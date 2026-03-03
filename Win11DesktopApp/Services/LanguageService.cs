@@ -1,32 +1,81 @@
 using System;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows;
+using System.Windows.Markup;
 
 namespace Win11DesktopApp.Services
 {
     public class LanguageService
     {
-        public static void SetLanguage(string langCode)
+        private static bool _languageMetadataOverridden;
+        private static ResourceDictionary? _activeLangDict;
+
+        public static ResourceDictionary LoadDictionary(string langCode)
         {
-            var dictName = $"Resources/Languages/Strings.{langCode}.xaml";
-            var newDict = new ResourceDictionary { Source = new Uri(dictName, UriKind.Relative) };
+            var xamlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                "Resources", "Languages", $"Strings.{langCode}.xaml");
 
-            var oldDict = Application.Current.Resources.MergedDictionaries
-                .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Resources/Languages/Strings."));
-
-            if (oldDict != null)
+            if (File.Exists(xamlPath))
             {
-                Application.Current.Resources.MergedDictionaries.Remove(oldDict);
+                using var stream = File.OpenRead(xamlPath);
+                return (ResourceDictionary)XamlReader.Load(stream);
             }
 
-            Application.Current.Resources.MergedDictionaries.Add(newDict);
-            
-            // Save settings if AppSettingsService is available (it might be null during very early startup)
+            return new ResourceDictionary
+            {
+                Source = new Uri($"Resources/Languages/Strings.{langCode}.xaml", UriKind.Relative)
+            };
+        }
+
+        public static void SetLanguage(string langCode)
+        {
+            var newDict = LoadDictionary(langCode);
+            var merged = Application.Current.Resources.MergedDictionaries;
+
+            if (_activeLangDict != null && merged.Contains(_activeLangDict))
+            {
+                merged.Remove(_activeLangDict);
+            }
+            else
+            {
+                var oldDict = merged.FirstOrDefault(d =>
+                    d.Source?.OriginalString.Contains("Resources/Languages/Strings.") == true);
+                if (oldDict != null)
+                    merged.Remove(oldDict);
+            }
+
+            merged.Add(newDict);
+            _activeLangDict = newDict;
+
+            var culture = langCode switch
+            {
+                "uk" => new CultureInfo("uk-UA"),
+                "cs" => new CultureInfo("cs-CZ"),
+                "ru" => new CultureInfo("ru-RU"),
+                _ => new CultureInfo("en-US")
+            };
+
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
+
+            if (!_languageMetadataOverridden)
+            {
+                FrameworkElement.LanguageProperty.OverrideMetadata(
+                    typeof(FrameworkElement),
+                    new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(culture.IetfLanguageTag)));
+                _languageMetadataOverridden = true;
+            }
+
             if (App.AppSettingsService != null && App.AppSettingsService.Settings.LanguageCode != langCode)
             {
                 App.AppSettingsService.Settings.LanguageCode = langCode;
                 App.AppSettingsService.SaveSettings();
             }
+
+            App.DocumentLocalizationService?.SyncWithUiLanguage(langCode);
         }
     }
 }

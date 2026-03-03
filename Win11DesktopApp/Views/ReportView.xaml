@@ -1,0 +1,982 @@
+<UserControl x:Class="Win11DesktopApp.Views.ReportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:oxy="http://oxyplot.org/wpf"
+             xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+             xmlns:views="clr-namespace:Win11DesktopApp.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1000">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style x:Key="ToggleBtn" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="20,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ToggleBtnActive" TargetType="Button" BasedOn="{StaticResource ToggleBtn}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                Background="{DynamicResource AccentBrush}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <Style x:Key="ExpanderHeaderStyle" TargetType="Expander">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="ExpiryText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding PassportExpiryStatus}" Value="expired">
+                    <Setter Property="Foreground" Value="#D32F2F"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PassportExpiryStatus}" Value="warning">
+                    <Setter Property="Foreground" Value="#F57F17"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PassportExpiryStatus}" Value="ok">
+                    <Setter Property="Foreground" Value="#2E7D32"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+        <ScrollViewer x:Name="MainScrollViewer" Style="{StaticResource ThinScroll}"
+                      PreviewMouseWheel="MainScrollViewer_PreviewMouseWheel">
+            <StackPanel Margin="32,20,32,32" MaxWidth="1100">
+
+                <!-- ===== HEADER ===== -->
+                <Grid Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0" Command="{Binding GoBackCommand}"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="8,6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}" Margin="8,0,0,0"
+                                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Width="44" Height="44">
+                            <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
+                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource ReportTitle}" FontSize="{DynamicResource FS26}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- Export Settings button -->
+                    <Button Grid.Column="2" Command="{Binding ShowExportDialogCommand}" Cursor="Hand" VerticalAlignment="Center">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="#4CAF50" CornerRadius="8" Padding="16,10">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource ReportConfigExport}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                                   Foreground="White" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <!-- ===== FILTERS CARD ===== -->
+                <Border Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                        CornerRadius="12" Padding="24,20" Margin="0,0,0,20"
+                        Effect="{DynamicResource CardShadow}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Border Background="#E3F2FD" CornerRadius="8" Width="32" Height="32">
+                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ReportFilters}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        </StackPanel>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Border Background="#E8F5E9" CornerRadius="6" Width="22" Height="22" Margin="0,0,6,0">
+                                        <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
+                                                   Foreground="#2E7D32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportEmployers}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <CheckBox Content="{DynamicResource ReportAllEmployers}"
+                                          IsChecked="{Binding AllCompaniesSelected}"
+                                          Foreground="{DynamicResource ForegroundBrush}"
+                                          FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding CompanyFilters}" Margin="16,0,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding CompanyName}"
+                                                      IsChecked="{Binding IsChecked}"
+                                                      Foreground="{DynamicResource ForegroundBrush}"
+                                                      Margin="0,2"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Border Background="#F3E5F5" CornerRadius="6" Width="22" Height="22" Margin="0,0,6,0">
+                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
+                                                   Foreground="#7B1FA2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportAgencies}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <CheckBox Content="{DynamicResource ReportAllAgencies}"
+                                          IsChecked="{Binding AllAgenciesSelected}"
+                                          Foreground="{DynamicResource ForegroundBrush}"
+                                          FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding AgencyFilters}" Margin="16,0,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding CompanyName}"
+                                                      IsChecked="{Binding IsChecked}"
+                                                      Foreground="{DynamicResource ForegroundBrush}"
+                                                      Margin="0,2"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Margin="24,0,0,0" VerticalAlignment="Top">
+                                <TextBlock Text="{DynamicResource ReportDateFrom}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
+                                           Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6" Margin="0,0,0,6"/>
+                                <DatePicker SelectedDate="{Binding DateFrom}" Width="150"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Top">
+                                <TextBlock Text="{DynamicResource ReportDateTo}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
+                                           Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6" Margin="0,0,0,6"/>
+                                <DatePicker SelectedDate="{Binding DateTo}" Width="150"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="4" Command="{Binding GenerateReportCommand}" 
+                                    Cursor="Hand" VerticalAlignment="Bottom" Margin="16,0,0,0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="20,10">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="{DynamicResource ReportGenerate}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                           Foreground="White" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ===== VIEW TOGGLE ===== -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                    <Button Command="{Binding SwitchToSummaryCommand}" Margin="0,0,6,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToggleBtn}">
+                                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSummaryView}" Value="True">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border CornerRadius="8" Padding="20,8"
+                                                            Background="{DynamicResource AccentBrush}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{DynamicResource ReportViewSummary}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding SwitchToEmployeesCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToggleBtn}">
+                                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEmployeesView}" Value="True">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border CornerRadius="8" Padding="20,8"
+                                                            Background="{DynamicResource AccentBrush}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{DynamicResource ReportViewEmployees}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- ╔══════════════════════════════════════════╗ -->
+                <!-- ║           SUMMARY VIEW                   ║ -->
+                <!-- ╚══════════════════════════════════════════╝ -->
+                <StackPanel Visibility="{Binding IsSummaryView, Converter={StaticResource BoolToVis}}">
+
+                    <!-- ===== STATISTICS CARDS ===== -->
+                    <WrapPanel Orientation="Horizontal" Margin="0,0,0,20">
+                        <!-- Total employees -->
+                        <Border Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="12" Padding="20,16" Margin="0,0,12,12" MinWidth="150"
+                                Effect="{DynamicResource CardShadow}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="#E3F2FD" CornerRadius="6" Width="28" Height="28">
+                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                   Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportTotalEmployees}" FontSize="{DynamicResource FS12}"
+                                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding TotalEmployees}" FontSize="{DynamicResource FS28}" FontWeight="Bold"
+                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Active -->
+                        <Border Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="12" Padding="20,16" Margin="0,0,12,12" MinWidth="150"
+                                Effect="{DynamicResource CardShadow}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="#E8F5E9" CornerRadius="6" Width="28" Height="28">
+                                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                   Foreground="#2E7D32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportActiveEmployees}" FontSize="{DynamicResource FS12}"
+                                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ActiveEmployees}" FontSize="{DynamicResource FS28}" FontWeight="Bold"
+                                           Foreground="#2E7D32"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- New in period -->
+                        <Border Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="12" Padding="20,16" Margin="0,0,12,12" MinWidth="150"
+                                Effect="{DynamicResource CardShadow}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="#E0F7FA" CornerRadius="6" Width="28" Height="28">
+                                        <TextBlock Text="&#xE8FA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                   Foreground="#00838F" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportNewInPeriod}" FontSize="{DynamicResource FS12}"
+                                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding NewInPeriod}" FontSize="{DynamicResource FS28}" FontWeight="Bold"
+                                           Foreground="#00838F"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Dismissed (archived in period) -->
+                        <Border Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="12" Padding="20,16" Margin="0,0,12,12" MinWidth="150"
+                                Effect="{DynamicResource CardShadow}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="#FCE4EC" CornerRadius="6" Width="28" Height="28">
+                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                   Foreground="#AD1457" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportDismissedInPeriod}" FontSize="{DynamicResource FS12}"
+                                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding EndedInPeriod}" FontSize="{DynamicResource FS28}" FontWeight="Bold"
+                                           Foreground="#AD1457"/>
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+
+                    <!-- ===== FIRM DETAILS TABLE ===== -->
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="24,20" Margin="0,0,0,20"
+                            Effect="{DynamicResource CardShadow}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <Border Background="#E8F5E9" CornerRadius="8" Width="32" Height="32">
+                                    <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="#2E7D32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{DynamicResource ReportByFirm}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            </StackPanel>
+
+                            <DataGrid ItemsSource="{Binding FirmDetails}" AutoGenerateColumns="False"
+                                      IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                      BorderThickness="0" Background="Transparent"
+                                      RowBackground="{DynamicResource CardBackgroundBrush}"
+                                      AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
+                                      HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
+                                      Foreground="{DynamicResource ForegroundBrush}">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Padding" Value="12,8"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Padding" Value="12,8"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="DataGridCell">
+                                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                                        <ContentPresenter VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </DataGrid.CellStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColFirm}" Binding="{Binding FirmName}" Width="*"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColTotal}" Binding="{Binding TotalEmployees}" Width="100"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColActive}" Binding="{Binding ActiveEmployees}" Width="100"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColNoPermit}" Binding="{Binding PassportOnlyCount}" Width="120"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColArchived}" Binding="{Binding ArchivedEmployees}" Width="120"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <!-- ВСЬОГО summary row -->
+                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="0,0,8,8" Padding="0" Margin="0,0,0,0"
+                                    Opacity="0.9">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="120"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{DynamicResource ReportTotal}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                               Foreground="White" Padding="12,8" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding SummaryTotal}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                               Foreground="White" Padding="12,8" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SummaryActive}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                               Foreground="White" Padding="12,8" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding SummaryPassportOnly}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                               Foreground="White" Padding="12,8" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding SummaryArchived}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                               Foreground="White" Padding="12,8" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== AGENCY STATISTICS TABLE ===== -->
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="24,20" Margin="0,0,0,20"
+                            Effect="{DynamicResource CardShadow}"
+                            Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <Border Background="#F3E5F5" CornerRadius="8" Width="32" Height="32">
+                                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="#7B1FA2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{DynamicResource ReportAgencyStats}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                <Border Background="#F3E5F5" CornerRadius="10" Padding="10,3" Margin="12,0,0,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AgencyDetails.Count}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                               Foreground="#7B1FA2"/>
+                                </Border>
+                            </StackPanel>
+
+                            <DataGrid ItemsSource="{Binding AgencyDetails}" AutoGenerateColumns="False"
+                                      IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                      BorderThickness="0" Background="Transparent"
+                                      RowBackground="{DynamicResource CardBackgroundBrush}"
+                                      AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
+                                      HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
+                                      Foreground="{DynamicResource ForegroundBrush}">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="#7B1FA2"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Padding" Value="12,8"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Padding" Value="12,8"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="DataGridCell">
+                                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                                        <ContentPresenter VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </DataGrid.CellStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColAgency}" Binding="{Binding AgencyName}" Width="*"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColFirmCount}" Binding="{Binding FirmCount}" Width="120"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColTotal}" Binding="{Binding TotalEmployees}" Width="140"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColActive}" Binding="{Binding ActiveEmployees}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ===== ARCHIVE CHART (Expander, collapsed) ===== -->
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="24,20" Margin="0,0,0,20"
+                            Effect="{DynamicResource CardShadow}"
+                            Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
+                        <Expander IsExpanded="False" Style="{StaticResource ExpanderHeaderStyle}">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Background="#FFF3E0" CornerRadius="8" Width="32" Height="32">
+                                        <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                   Foreground="#E65100" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportArchiveChart}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            <oxy:PlotView Model="{Binding ArchiveChartModel}" Height="280"
+                                          Background="Transparent" Margin="0,12,0,0"/>
+                        </Expander>
+                    </Border>
+
+                    <!-- ===== ARCHIVE HISTORY (Expander, collapsed) ===== -->
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="24,20" Margin="0,0,0,20"
+                            Effect="{DynamicResource CardShadow}"
+                            Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
+                        <Expander IsExpanded="False" Style="{StaticResource ExpanderHeaderStyle}">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Background="#F3E5F5" CornerRadius="8" Width="32" Height="32">
+                                        <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                                   Foreground="#7B1FA2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource ReportArchiveLog}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    <Border Background="#F3E5F5" CornerRadius="10" Padding="10,3" Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ArchiveHistory.Count}" FontSize="{DynamicResource FS12}" FontWeight="Bold"
+                                                   Foreground="#7B1FA2"/>
+                                    </Border>
+                                </StackPanel>
+                            </Expander.Header>
+
+                            <DataGrid ItemsSource="{Binding ArchiveHistory}" AutoGenerateColumns="False"
+                                      IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                      BorderThickness="0" Background="Transparent" MaxHeight="300"
+                                      RowBackground="{DynamicResource CardBackgroundBrush}"
+                                      AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
+                                      HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
+                                      Foreground="{DynamicResource ForegroundBrush}" Margin="0,12,0,0">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="#7B1FA2"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Padding" Value="12,8"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Padding" Value="12,6"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="DataGridCell">
+                                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                                        <ContentPresenter VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </DataGrid.CellStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColEmployee}" Binding="{Binding EmployeeName}" Width="*"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColFirm}" Binding="{Binding FirmName}" Width="180"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColAction}" Binding="{Binding Action}" Width="100"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColDate}" Binding="{Binding Date}" Width="110"/>
+                                    <DataGridTextColumn Header="{DynamicResource ReportColTimestamp}" Binding="{Binding Timestamp}" Width="160"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Expander>
+                    </Border>
+
+                </StackPanel>
+
+                <!-- ╔══════════════════════════════════════════╗ -->
+                <!-- ║          EMPLOYEES VIEW                  ║ -->
+                <!-- ╚══════════════════════════════════════════╝ -->
+                <StackPanel Visibility="{Binding IsEmployeesView, Converter={StaticResource BoolToVis}}">
+
+                    <!-- Search bar -->
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="16,12" Margin="0,0,0,20"
+                            Effect="{DynamicResource CardShadow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                       Foreground="{DynamicResource ForegroundBrush}" Opacity="0.4"
+                                       VerticalAlignment="Center" Margin="8,0,12,0"/>
+                            <TextBox Grid.Column="1" Text="{Binding EmployeeSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="{DynamicResource FS14}" BorderThickness="0" Background="Transparent"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"
+                                       Opacity="0.5" VerticalAlignment="Center" Margin="12,0,8,0">
+                                <Run Text="{Binding EmployeeGroups.Count, Mode=OneWay}"/>
+                                <Run Text=" "/>
+                                <Run Text="{DynamicResource ReportFirmsCount}"/>
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+
+                    <!-- Employee groups by firm -->
+                    <ItemsControl ItemsSource="{Binding EmployeeGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource CardBackgroundBrush}"
+                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                        CornerRadius="12" Padding="20,16" Margin="0,0,0,16"
+                                        Effect="{DynamicResource CardShadow}">
+                                    <Expander IsExpanded="True">
+                                        <Expander.Header>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Background="#E8F5E9" CornerRadius="8" Width="28" Height="28">
+                                                    <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                               Foreground="#2E7D32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           VerticalAlignment="Center" Margin="10,0,0,0">
+                                                    <Run Text="{Binding FirmName, Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <Border Background="#E3F2FD" CornerRadius="10" Padding="10,3" Margin="10,0,0,0"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="#1565C0">
+                                                        <Run Text="{Binding EmployeeCount, Mode=OneWay}"/>
+                                                        <Run Text=" "/>
+                                                        <Run Text="{DynamicResource ReportEmpCount}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                            </StackPanel>
+                                        </Expander.Header>
+
+                                        <DataGrid ItemsSource="{Binding Employees}" AutoGenerateColumns="False"
+                                                  IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                                  BorderThickness="0" Background="Transparent"
+                                                  RowBackground="{DynamicResource CardBackgroundBrush}"
+                                                  AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
+                                                  HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
+                                                  Foreground="{DynamicResource ForegroundBrush}" Margin="0,12,0,0">
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="Padding" Value="10,6"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="FontSize" Value="11"/>
+                                                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                                    <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+                                            <DataGrid.RowStyle>
+                                                <Style TargetType="DataGridRow">
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                    <EventSetter Event="MouseDoubleClick" Handler="EmployeeRow_DoubleClick"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsArchived}" Value="True">
+                                                            <Setter Property="Background" Value="#FFCDD2"/>
+                                                            <Setter Property="Foreground" Value="#B71C1C"/>
+                                                            <Setter Property="FontStyle" Value="Italic"/>
+                                                        </DataTrigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGrid.RowStyle>
+                                            <DataGrid.CellStyle>
+                                                <Style TargetType="DataGridCell">
+                                                    <Setter Property="Padding" Value="10,6"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="DataGridCell">
+                                                                <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                                                    <ContentPresenter VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </DataGrid.CellStyle>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColName}" Binding="{Binding FullName}" Width="*"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColType}" Binding="{Binding EmployeeType}" Width="180"/>
+                                                <DataGridTemplateColumn Header="{DynamicResource ReportColPassportExp}" Width="100">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding PassportExpiry}" Padding="2,0" VerticalAlignment="Center" FontSize="{DynamicResource FS12}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding PassportExpiryStatus}" Value="expired">
+                                                                                <Setter Property="Foreground" Value="#D32F2F"/>
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding PassportExpiryStatus}" Value="warning">
+                                                                                <Setter Property="Foreground" Value="#F57F17"/>
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding PassportExpiryStatus}" Value="ok">
+                                                                                <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTemplateColumn Header="{DynamicResource ReportColVisaExp}" Width="100">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding VisaExpiry}" Padding="2,0" VerticalAlignment="Center" FontSize="{DynamicResource FS12}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding VisaExpiryStatus}" Value="expired">
+                                                                                <Setter Property="Foreground" Value="#D32F2F"/>
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding VisaExpiryStatus}" Value="warning">
+                                                                                <Setter Property="Foreground" Value="#F57F17"/>
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding VisaExpiryStatus}" Value="ok">
+                                                                                <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTemplateColumn Header="{DynamicResource ReportColInsExp}" Width="100">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding InsuranceExpiry}" Padding="2,0" VerticalAlignment="Center" FontSize="{DynamicResource FS12}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding InsuranceExpiryStatus}" Value="expired">
+                                                                                <Setter Property="Foreground" Value="#D32F2F"/>
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding InsuranceExpiryStatus}" Value="warning">
+                                                                                <Setter Property="Foreground" Value="#F57F17"/>
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding InsuranceExpiryStatus}" Value="ok">
+                                                                                <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColStartDate}" Binding="{Binding StartDate}" Width="90"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColEndDate}" Binding="{Binding EndDate}" Width="90"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColPhone}" Binding="{Binding Phone}" Width="110"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColPosition}" Binding="{Binding Position}" Width="110"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Expander>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </StackPanel>
+
+                <!-- Status bar -->
+                <TextBlock Text="{Binding StatusMessage}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}"
+                           Opacity="0.4" HorizontalAlignment="Right" Margin="0,0,0,8"/>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ===== EMPLOYEE DETAILS OVERLAY ===== -->
+        <Grid Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEmployeeDetailsOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Border Background="#66000000">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <ContentControl Content="{Binding EmployeeDetailsVm}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ContentControl.Resources>
+                    <DataTemplate DataType="{x:Type vm:EmployeeDetailsViewModel}">
+                        <views:EmployeeDetailsView/>
+                    </DataTemplate>
+                </ContentControl.Resources>
+            </ContentControl>
+        </Grid>
+
+        <!-- ===== EXPORT CONFIGURATION DIALOG OVERLAY ===== -->
+        <Grid Visibility="{Binding IsExportDialogOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#80000000" />
+            <Border Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    CornerRadius="16" Padding="32,28" Width="420"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Effect="{DynamicResource CardShadow}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                        <Border Background="#E3F2FD" CornerRadius="8" Width="36" Height="36">
+                            <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                       Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource ReportExportTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{DynamicResource ReportExportDesc}" FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7"
+                               TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                    <!-- Format selector -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="{DynamicResource ReportExportFormat}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <RadioButton Content="Excel (.xlsx)" IsChecked="{Binding ExportAsXlsx}"
+                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                     VerticalAlignment="Center" Margin="0,0,20,0" GroupName="ExportFormat"/>
+                        <RadioButton Content="PDF (.pdf)" IsChecked="{Binding ExportAsPdf}"
+                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                     VerticalAlignment="Center" GroupName="ExportFormat"/>
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding ExportSheets}" Margin="0,0,0,24">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected}" Margin="0,6"
+                                          Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS14}">
+                                    <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap"/>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding CancelExportCommand}" Cursor="Hand" Margin="0,0,10,0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="8"
+                                            Padding="20,10" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                        <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <Button Command="{Binding ConfirmExportCommand}" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="#4CAF50" CornerRadius="8" Padding="20,10">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{DynamicResource ReportExportBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                       Foreground="White"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

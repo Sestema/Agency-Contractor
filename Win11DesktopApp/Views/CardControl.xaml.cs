@@ -47,5 +47,15 @@ namespace Win11DesktopApp.Views
             get { return (int)GetValue(BadgeCountProperty); }
             set { SetValue(BadgeCountProperty, value); }
         }
+
+        public static readonly DependencyProperty IconGradientProperty =
+            DependencyProperty.Register("IconGradient", typeof(Brush), typeof(CardControl),
+                new PropertyMetadata(new SolidColorBrush(Color.FromRgb(0, 120, 212))));
+
+        public Brush IconGradient
+        {
+            get { return (Brush)GetValue(IconGradientProperty); }
+            set { SetValue(IconGradientProperty, value); }
+        }
     }
 }

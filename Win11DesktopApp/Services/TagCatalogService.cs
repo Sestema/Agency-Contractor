@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using Win11DesktopApp.Converters;
 using Win11DesktopApp.Models;
 using EmployeeModels = Win11DesktopApp.EmployeeModels;
 
@@ -9,30 +11,45 @@ namespace Win11DesktopApp.Services
     {
         private List<TagEntry> _tags = new List<TagEntry>();
 
+        private static string Res(string key)
+        {
+            try { return Application.Current.FindResource(key) as string ?? key; }
+            catch { return key; }
+        }
+
+        private static string ResF(string key, params object[] args)
+        {
+            var fmt = Res(key);
+            try { return string.Format(fmt, args); }
+            catch { return fmt; }
+        }
+
         public void AddTagsForCompany(EmployerCompany employer, AgencyCompany agency)
         {
             AddTagsForEmployerOnly(employer);
 
-            // Agency Tags
-            AddTag("AGENCY_Name", "Agency", employer.Name, "Назва агентства", agency.Name);
-            AddTag("AGENCY_ICO", "Agency", employer.Name, "ІЧО агентства", agency.ICO);
-            AddTag("AGENCY_FullAddress", "Agency", employer.Name, "Повна адреса агентства", agency.FullAddress);
+            AddTag("AGENCY_Name", "Agency", employer.Name, Res("TagDescAgencyName"), agency.Name);
+            AddTag("AGENCY_ICO", "Agency", employer.Name, Res("TagDescAgencyICO"), agency.ICO);
+            AddTag("AGENCY_FullAddress", "Agency", employer.Name, Res("TagDescAgencyAddress"), agency.FullAddress);
         }
 
         public void AddTagsForEmployerOnly(EmployerCompany employer)
         {
-            AddTag("COMPANY_Name", "Company", employer.Name, "Назва фірми", employer.Name);
-            AddTag("COMPANY_ICO", "Company", employer.Name, "ІЧО фірми", employer.ICO);
+            AddTag("COMPANY_Name", "Company", employer.Name, Res("TagDescCompanyName"), employer.Name);
+            AddTag("COMPANY_ICO", "Company", employer.Name, Res("TagDescCompanyICO"), employer.ICO);
+            AddTag("COMPANY_WeeklyWorkHours", "Company", employer.Name, Res("TagDescCompanyWeeklyHours"), employer.WeeklyWorkHours.ToString());
+            AddTag("COMPANY_DailyWorkHours", "Company", employer.Name, Res("TagDescCompanyDailyHours"), employer.DailyWorkHours.ToString());
+            AddTag("COMPANY_ShiftCount", "Company", employer.Name, Res("TagDescCompanyShiftCount"), employer.ShiftCount.ToString());
 
             for (int i = 0; i < employer.Addresses.Count; i++)
             {
                 var addr = employer.Addresses[i];
                 var idx = i + 1;
-                AddTag($"COMPANY_ADDR{idx}_Street", "Company", employer.Name, $"Адреса {idx} - Вулиця", addr.Street);
-                AddTag($"COMPANY_ADDR{idx}_Number", "Company", employer.Name, $"Адреса {idx} - Номер", addr.Number);
-                AddTag($"COMPANY_ADDR{idx}_City", "Company", employer.Name, $"Адреса {idx} - Місто", addr.City);
-                AddTag($"COMPANY_ADDR{idx}_Zip", "Company", employer.Name, $"Адреса {idx} - Індекс", addr.ZipCode);
-                AddTag($"COMPANY_ADDR{idx}_Full", "Company", employer.Name, $"Адреса {idx} - Повна",
+                AddTag($"COMPANY_ADDR{idx}_Street", "Company", employer.Name, ResF("TagDescCompanyAddrStreet", idx), addr.Street);
+                AddTag($"COMPANY_ADDR{idx}_Number", "Company", employer.Name, ResF("TagDescCompanyAddrNumber", idx), addr.Number);
+                AddTag($"COMPANY_ADDR{idx}_City", "Company", employer.Name, ResF("TagDescCompanyAddrCity", idx), addr.City);
+                AddTag($"COMPANY_ADDR{idx}_Zip", "Company", employer.Name, ResF("TagDescCompanyAddrZip", idx), addr.ZipCode);
+                AddTag($"COMPANY_ADDR{idx}_Full", "Company", employer.Name, ResF("TagDescCompanyAddrFull", idx),
                     $"{addr.Street} {addr.Number}, {addr.City} {addr.ZipCode}");
             }
 
@@ -40,70 +57,71 @@ namespace Win11DesktopApp.Services
             {
                 var pos = employer.Positions[i];
                 var idx = i + 1;
-                AddTag($"COMPANY_POS{idx}_Title", "Company", employer.Name, $"Позиція {idx} - Назва", pos.Title);
-                AddTag($"COMPANY_POS{idx}_Number", "Company", employer.Name, $"Позиція {idx} - Номер", pos.PositionNumber);
-                AddTag($"COMPANY_POS{idx}_SalaryBrutto", "Company", employer.Name, $"Позиція {idx} - Зарплата (брутто)", pos.MonthlySalaryBrutto.ToString());
-                AddTag($"COMPANY_POS{idx}_HourlySalary", "Company", employer.Name, $"Позиція {idx} - Годинна зарплата", pos.HourlySalary.ToString());
+                AddTag($"COMPANY_POS{idx}_Title", "Company", employer.Name, ResF("TagDescCompanyPosTitle", idx), pos.Title);
+                AddTag($"COMPANY_POS{idx}_Number", "Company", employer.Name, ResF("TagDescCompanyPosNumber", idx), pos.PositionNumber);
+                AddTag($"COMPANY_POS{idx}_SalaryBrutto", "Company", employer.Name, ResF("TagDescCompanyPosSalary", idx), pos.MonthlySalaryBrutto.ToString());
+                AddTag($"COMPANY_POS{idx}_HourlySalary", "Company", employer.Name, ResF("TagDescCompanyPosHourly", idx), pos.HourlySalary.ToString());
             }
         }
 
         public void AddTagsForEmployee(string companyName, EmployeeModels.EmployeeData data)
         {
-            // Personal
-            AddTag("EMPLOYEE_FirstName", "Employee", companyName, "Ім'я працівника", data.FirstName);
-            AddTag("EMPLOYEE_LastName", "Employee", companyName, "Прізвище працівника", data.LastName);
-            AddTag("EMPLOYEE_FullName", "Employee", companyName, "Повне ім'я працівника", $"{data.FirstName} {data.LastName}");
-            AddTag("EMPLOYEE_BirthDate", "Employee", companyName, "Дата народження", data.BirthDate);
+            AddTag("EMPLOYEE_FirstName", "Employee", companyName, Res("TagDescEmpFirstName"), data.FirstName);
+            AddTag("EMPLOYEE_LastName", "Employee", companyName, Res("TagDescEmpLastName"), data.LastName);
+            AddTag("EMPLOYEE_FullName", "Employee", companyName, Res("TagDescEmpFullName"), $"{data.FirstName} {data.LastName}");
+            AddTag("EMPLOYEE_BirthDate", "Employee", companyName, Res("TagDescEmpBirthDate"), data.BirthDate);
 
-            // Passport
-            AddTag("EMPLOYEE_PassportNumber", "Employee", companyName, "Номер паспорту", data.PassportNumber);
-            AddTag("EMPLOYEE_PassportCity", "Employee", companyName, "Місто народження", data.PassportCity);
-            AddTag("EMPLOYEE_PassportCountry", "Employee", companyName, "Країна народження", data.PassportCountry);
-            AddTag("EMPLOYEE_PassportExpiry", "Employee", companyName, "Дата закінчення паспорту", data.PassportExpiry);
+            AddTag("EMPLOYEE_PassportNumber", "Employee", companyName, Res("TagDescEmpPassportNumber"), data.PassportNumber);
+            AddTag("EMPLOYEE_PassportCity", "Employee", companyName, Res("TagDescEmpPassportCity"), data.PassportCity);
+            AddTag("EMPLOYEE_PassportCountry", "Employee", companyName, Res("TagDescEmpPassportCountry"), data.PassportCountry);
+            AddTag("EMPLOYEE_PassportExpiry", "Employee", companyName, Res("TagDescEmpPassportExpiry"), data.PassportExpiry);
 
-            // Visa
-            AddTag("EMPLOYEE_VisaNumber", "Employee", companyName, "Номер візи", data.VisaNumber);
-            AddTag("EMPLOYEE_VisaType", "Employee", companyName, "Тип візи", data.VisaType);
-            AddTag("EMPLOYEE_VisaExpiry", "Employee", companyName, "Дата закінчення візи", data.VisaExpiry);
+            AddTag("EMPLOYEE_VisaNumber", "Employee", companyName, Res("TagDescEmpVisaNumber"), data.VisaNumber);
+            AddTag("EMPLOYEE_VisaType", "Employee", companyName, Res("TagDescEmpVisaType"), data.VisaType);
+            AddTag("EMPLOYEE_VisaExpiry", "Employee", companyName, Res("TagDescEmpVisaExpiry"), data.VisaExpiry);
 
-            // Insurance
-            AddTag("EMPLOYEE_InsuranceCompany", "Employee", companyName, "Страхова компанія", data.InsuranceCompanyShort);
-            AddTag("EMPLOYEE_InsuranceNumber", "Employee", companyName, "Номер страховки", data.InsuranceNumber);
-            AddTag("EMPLOYEE_InsuranceExpiry", "Employee", companyName, "Дата закінчення страховки", data.InsuranceExpiry);
+            AddTag("EMPLOYEE_InsuranceCompany", "Employee", companyName, Res("TagDescEmpInsCompany"), data.InsuranceCompanyShort);
+            AddTag("EMPLOYEE_InsuranceNumber", "Employee", companyName, Res("TagDescEmpInsNumber"), data.InsuranceNumber);
+            AddTag("EMPLOYEE_InsuranceExpiry", "Employee", companyName, Res("TagDescEmpInsExpiry"), data.InsuranceExpiry);
 
-            // Local address
-            AddTag("EMPLOYEE_LocalAddress_Street", "Employee", companyName, "Місцева адреса - Вулиця", data.AddressLocal.Street);
-            AddTag("EMPLOYEE_LocalAddress_Number", "Employee", companyName, "Місцева адреса - Номер", data.AddressLocal.Number);
-            AddTag("EMPLOYEE_LocalAddress_City", "Employee", companyName, "Місцева адреса - Місто", data.AddressLocal.City);
-            AddTag("EMPLOYEE_LocalAddress_Zip", "Employee", companyName, "Місцева адреса - Індекс", data.AddressLocal.Zip);
-            AddTag("EMPLOYEE_LocalAddress_Full", "Employee", companyName, "Місцева адреса - Повна",
-                $"{data.AddressLocal.Street} {data.AddressLocal.Number}, {data.AddressLocal.City} {data.AddressLocal.Zip}");
+            AddTag("EMPLOYEE_WorkPermitName", "Employee", companyName, Res("TagDescEmpWpName"), data.WorkPermitName);
+            AddTag("EMPLOYEE_WorkPermitNumber", "Employee", companyName, Res("TagDescEmpWpNumber"), data.WorkPermitNumber);
+            AddTag("EMPLOYEE_WorkPermitType", "Employee", companyName, Res("TagDescEmpWpType"), data.WorkPermitType);
+            AddTag("EMPLOYEE_WorkPermitIssueDate", "Employee", companyName, Res("TagDescEmpWpIssueDate"), data.WorkPermitIssueDate);
+            AddTag("EMPLOYEE_WorkPermitExpiry", "Employee", companyName, Res("TagDescEmpWpExpiry"), data.WorkPermitExpiry);
+            AddTag("EMPLOYEE_WorkPermitAuthority", "Employee", companyName, Res("TagDescEmpWpAuthority"), data.WorkPermitAuthority);
+            AddTag("EMPLOYEE_EmployeeType", "Employee", companyName, Res("TagDescEmpType"), data.EmployeeType);
 
-            // Abroad address
-            AddTag("EMPLOYEE_AbroadAddress_Street", "Employee", companyName, "Закордонна адреса - Вулиця", data.AddressAbroad.Street);
-            AddTag("EMPLOYEE_AbroadAddress_Number", "Employee", companyName, "Закордонна адреса - Номер", data.AddressAbroad.Number);
-            AddTag("EMPLOYEE_AbroadAddress_City", "Employee", companyName, "Закордонна адреса - Місто", data.AddressAbroad.City);
-            AddTag("EMPLOYEE_AbroadAddress_Zip", "Employee", companyName, "Закордонна адреса - Індекс", data.AddressAbroad.Zip);
-            AddTag("EMPLOYEE_AbroadAddress_Full", "Employee", companyName, "Закордонна адреса - Повна",
-                $"{data.AddressAbroad.Street} {data.AddressAbroad.Number}, {data.AddressAbroad.City} {data.AddressAbroad.Zip}");
+            var localAddr = data.AddressLocal ?? new EmployeeModels.EmployeeAddress();
+            AddTag("EMPLOYEE_LocalAddress_Street", "Employee", companyName, Res("TagDescEmpLocalStreet"), localAddr.Street);
+            AddTag("EMPLOYEE_LocalAddress_Number", "Employee", companyName, Res("TagDescEmpLocalNumber"), localAddr.Number);
+            AddTag("EMPLOYEE_LocalAddress_City", "Employee", companyName, Res("TagDescEmpLocalCity"), localAddr.City);
+            AddTag("EMPLOYEE_LocalAddress_Zip", "Employee", companyName, Res("TagDescEmpLocalZip"), localAddr.Zip);
+            AddTag("EMPLOYEE_LocalAddress_Full", "Employee", companyName, Res("TagDescEmpLocalFull"),
+                $"{localAddr.Street} {localAddr.Number}, {localAddr.City} {localAddr.Zip}");
 
-            // Work info
-            AddTag("EMPLOYEE_WorkAddress", "Employee", companyName, "Адреса роботи", data.WorkAddressTag);
-            AddTag("EMPLOYEE_Position", "Employee", companyName, "Позиція", data.PositionTag);
-            AddTag("EMPLOYEE_PositionNumber", "Employee", companyName, "Номер позиції", data.PositionNumber);
-            AddTag("EMPLOYEE_SalaryBrutto", "Employee", companyName, "Місячна зарплата (брутто)", data.MonthlySalaryBrutto.ToString());
-            AddTag("EMPLOYEE_HourlySalary", "Employee", companyName, "Годинна зарплата", data.HourlySalary.ToString());
-            AddTag("EMPLOYEE_ContractType", "Employee", companyName, "Тип договору", data.ContractType);
-            AddTag("EMPLOYEE_Department", "Employee", companyName, "Відділ", data.Department);
+            var abroadAddr = data.AddressAbroad ?? new EmployeeModels.EmployeeAddress();
+            AddTag("EMPLOYEE_AbroadAddress_Street", "Employee", companyName, Res("TagDescEmpAbroadStreet"), abroadAddr.Street);
+            AddTag("EMPLOYEE_AbroadAddress_Number", "Employee", companyName, Res("TagDescEmpAbroadNumber"), abroadAddr.Number);
+            AddTag("EMPLOYEE_AbroadAddress_City", "Employee", companyName, Res("TagDescEmpAbroadCity"), abroadAddr.City);
+            AddTag("EMPLOYEE_AbroadAddress_Zip", "Employee", companyName, Res("TagDescEmpAbroadZip"), abroadAddr.Zip);
+            AddTag("EMPLOYEE_AbroadAddress_Full", "Employee", companyName, Res("TagDescEmpAbroadFull"),
+                $"{abroadAddr.Street} {abroadAddr.Number}, {abroadAddr.City} {abroadAddr.Zip}");
 
-            // Contact
-            AddTag("EMPLOYEE_Phone", "Employee", companyName, "Телефон", data.Phone);
-            AddTag("EMPLOYEE_Email", "Employee", companyName, "Email", data.Email);
-            AddTag("EMPLOYEE_Status", "Employee", companyName, "Статус", data.Status);
+            AddTag("EMPLOYEE_WorkAddress", "Employee", companyName, Res("TagDescEmpWorkAddress"), data.WorkAddressTag);
+            AddTag("EMPLOYEE_Position", "Employee", companyName, Res("TagDescEmpPosition"), data.PositionTag);
+            AddTag("EMPLOYEE_PositionNumber", "Employee", companyName, Res("TagDescEmpPosNumber"), data.PositionNumber);
+            AddTag("EMPLOYEE_SalaryBrutto", "Employee", companyName, Res("TagDescEmpSalary"), data.MonthlySalaryBrutto.ToString());
+            AddTag("EMPLOYEE_HourlySalary", "Employee", companyName, Res("TagDescEmpHourly"), data.HourlySalary.ToString());
+            AddTag("EMPLOYEE_ContractType", "Employee", companyName, Res("TagDescEmpContractType"), data.ContractType);
+            AddTag("EMPLOYEE_Department", "Employee", companyName, Res("TagDescEmpDepartment"), data.Department);
 
-            // Dates
-            AddTag("EMPLOYEE_StartDate", "Employee", companyName, "Дата наступу на роботу", data.StartDate);
-            AddTag("EMPLOYEE_ContractSignDate", "Employee", companyName, "Дата підписання договору", data.ContractSignDate);
+            AddTag("EMPLOYEE_Phone", "Employee", companyName, Res("TagDescEmpPhone"), data.Phone);
+            AddTag("EMPLOYEE_Email", "Employee", companyName, Res("TagDescEmpEmail"), data.Email);
+            AddTag("EMPLOYEE_Status", "Employee", companyName, Res("TagDescEmpStatus"), StatusHelper.GetDisplayText(data.Status));
+
+            AddTag("EMPLOYEE_StartDate", "Employee", companyName, Res("TagDescEmpStartDate"), data.StartDate);
+            AddTag("EMPLOYEE_ContractSignDate", "Employee", companyName, Res("TagDescEmpSignDate"), data.ContractSignDate);
         }
 
         /// <summary>
@@ -134,16 +152,25 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_InsuranceCompany"] = employeeData.InsuranceCompanyShort;
             map["EMPLOYEE_InsuranceNumber"] = employeeData.InsuranceNumber;
             map["EMPLOYEE_InsuranceExpiry"] = employeeData.InsuranceExpiry;
-            map["EMPLOYEE_LocalAddress_Street"] = employeeData.AddressLocal.Street;
-            map["EMPLOYEE_LocalAddress_Number"] = employeeData.AddressLocal.Number;
-            map["EMPLOYEE_LocalAddress_City"] = employeeData.AddressLocal.City;
-            map["EMPLOYEE_LocalAddress_Zip"] = employeeData.AddressLocal.Zip;
-            map["EMPLOYEE_LocalAddress_Full"] = $"{employeeData.AddressLocal.Street} {employeeData.AddressLocal.Number}, {employeeData.AddressLocal.City} {employeeData.AddressLocal.Zip}";
-            map["EMPLOYEE_AbroadAddress_Street"] = employeeData.AddressAbroad.Street;
-            map["EMPLOYEE_AbroadAddress_Number"] = employeeData.AddressAbroad.Number;
-            map["EMPLOYEE_AbroadAddress_City"] = employeeData.AddressAbroad.City;
-            map["EMPLOYEE_AbroadAddress_Zip"] = employeeData.AddressAbroad.Zip;
-            map["EMPLOYEE_AbroadAddress_Full"] = $"{employeeData.AddressAbroad.Street} {employeeData.AddressAbroad.Number}, {employeeData.AddressAbroad.City} {employeeData.AddressAbroad.Zip}";
+            map["EMPLOYEE_WorkPermitName"] = employeeData.WorkPermitName;
+            map["EMPLOYEE_WorkPermitNumber"] = employeeData.WorkPermitNumber;
+            map["EMPLOYEE_WorkPermitType"] = employeeData.WorkPermitType;
+            map["EMPLOYEE_WorkPermitIssueDate"] = employeeData.WorkPermitIssueDate;
+            map["EMPLOYEE_WorkPermitExpiry"] = employeeData.WorkPermitExpiry;
+            map["EMPLOYEE_WorkPermitAuthority"] = employeeData.WorkPermitAuthority;
+            map["EMPLOYEE_EmployeeType"] = employeeData.EmployeeType;
+            var local = employeeData.AddressLocal ?? new EmployeeModels.EmployeeAddress();
+            map["EMPLOYEE_LocalAddress_Street"] = local.Street;
+            map["EMPLOYEE_LocalAddress_Number"] = local.Number;
+            map["EMPLOYEE_LocalAddress_City"] = local.City;
+            map["EMPLOYEE_LocalAddress_Zip"] = local.Zip;
+            map["EMPLOYEE_LocalAddress_Full"] = $"{local.Street} {local.Number}, {local.City} {local.Zip}";
+            var abroad = employeeData.AddressAbroad ?? new EmployeeModels.EmployeeAddress();
+            map["EMPLOYEE_AbroadAddress_Street"] = abroad.Street;
+            map["EMPLOYEE_AbroadAddress_Number"] = abroad.Number;
+            map["EMPLOYEE_AbroadAddress_City"] = abroad.City;
+            map["EMPLOYEE_AbroadAddress_Zip"] = abroad.Zip;
+            map["EMPLOYEE_AbroadAddress_Full"] = $"{abroad.Street} {abroad.Number}, {abroad.City} {abroad.Zip}";
             map["EMPLOYEE_WorkAddress"] = employeeData.WorkAddressTag;
             map["EMPLOYEE_Position"] = employeeData.PositionTag;
             map["EMPLOYEE_PositionNumber"] = employeeData.PositionNumber;
@@ -153,7 +180,7 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_Department"] = employeeData.Department;
             map["EMPLOYEE_Phone"] = employeeData.Phone;
             map["EMPLOYEE_Email"] = employeeData.Email;
-            map["EMPLOYEE_Status"] = employeeData.Status;
+            map["EMPLOYEE_Status"] = StatusHelper.GetDisplayText(employeeData.Status);
             map["EMPLOYEE_StartDate"] = employeeData.StartDate;
             map["EMPLOYEE_ContractSignDate"] = employeeData.ContractSignDate;
 
@@ -192,74 +219,134 @@ namespace Win11DesktopApp.Services
         public List<TagEntry> GetTagsByCompany(string companyName) => _tags.Where(t => t.CompanyName == companyName).ToList();
         public List<TagEntry> GetTagsByCategory(string category) => _tags.Where(t => t.Category == category).ToList();
 
+        private static readonly Dictionary<string, string> CompanyTagResKeys = new()
+        {
+            { "COMPANY_Name", "TagDescCompanyName" },
+            { "COMPANY_ICO", "TagDescCompanyICO" },
+            { "COMPANY_WeeklyWorkHours", "TagDescCompanyWeeklyHours" },
+            { "COMPANY_DailyWorkHours", "TagDescCompanyDailyHours" },
+            { "COMPANY_ShiftCount", "TagDescCompanyShiftCount" },
+        };
+
+        private static string ResolveCompanyTagDescription(string tagName)
+        {
+            if (CompanyTagResKeys.TryGetValue(tagName, out var resKey))
+                return Res(resKey);
+
+            if (tagName.StartsWith("COMPANY_ADDR"))
+            {
+                var rest = tagName.Substring("COMPANY_ADDR".Length);
+                var sep = rest.IndexOf('_');
+                if (sep > 0)
+                {
+                    var idx = rest.Substring(0, sep);
+                    var field = rest.Substring(sep + 1);
+                    return field switch
+                    {
+                        "Street" => ResF("TagDescCompanyAddrStreet", idx),
+                        "Number" => ResF("TagDescCompanyAddrNumber", idx),
+                        "City" => ResF("TagDescCompanyAddrCity", idx),
+                        "Zip" => ResF("TagDescCompanyAddrZip", idx),
+                        "Full" => ResF("TagDescCompanyAddrFull", idx),
+                        _ => tagName
+                    };
+                }
+            }
+
+            if (tagName.StartsWith("COMPANY_POS"))
+            {
+                var rest = tagName.Substring("COMPANY_POS".Length);
+                var sep = rest.IndexOf('_');
+                if (sep > 0)
+                {
+                    var idx = rest.Substring(0, sep);
+                    var field = rest.Substring(sep + 1);
+                    return field switch
+                    {
+                        "Title" => ResF("TagDescCompanyPosTitle", idx),
+                        "Number" => ResF("TagDescCompanyPosNumber", idx),
+                        "SalaryBrutto" => ResF("TagDescCompanyPosSalary", idx),
+                        "HourlySalary" => ResF("TagDescCompanyPosHourly", idx),
+                        _ => tagName
+                    };
+                }
+            }
+
+            return tagName;
+        }
+
         /// <summary>
         /// Returns all tag definitions (without employee-specific values) for UI display.
         /// </summary>
         public List<TagEntry> GetAllTagDefinitions()
         {
-            // Return unique tags by Tag name (company + employee placeholder tags)
-            var companyTags = _tags.Where(t => t.Category != "Employee").ToList();
+            var companyTags = _tags
+                .Where(t => t.Category != "Employee")
+                .GroupBy(t => t.Tag)
+                .Select(g => g.First())
+                .ToList();
+            foreach (var tag in companyTags)
+                tag.Description = ResolveCompanyTagDescription(tag.Tag);
 
-            // Add employee placeholder tag definitions with subcategories
             var employeeTags = new List<TagEntry>
             {
-                // Особисті дані
-                new() { Tag = "EMPLOYEE_FirstName", Category = "Employee.Personal", Description = "Ім'я працівника" },
-                new() { Tag = "EMPLOYEE_LastName", Category = "Employee.Personal", Description = "Прізвище працівника" },
-                new() { Tag = "EMPLOYEE_FullName", Category = "Employee.Personal", Description = "Повне ім'я працівника" },
-                new() { Tag = "EMPLOYEE_BirthDate", Category = "Employee.Personal", Description = "Дата народження" },
-                new() { Tag = "EMPLOYEE_Phone", Category = "Employee.Personal", Description = "Телефон" },
-                new() { Tag = "EMPLOYEE_Email", Category = "Employee.Personal", Description = "Email" },
-                new() { Tag = "EMPLOYEE_Status", Category = "Employee.Personal", Description = "Статус" },
+                new() { Tag = "EMPLOYEE_FirstName", Category = "Employee.Personal", Description = Res("TagDescEmpFirstName") },
+                new() { Tag = "EMPLOYEE_LastName", Category = "Employee.Personal", Description = Res("TagDescEmpLastName") },
+                new() { Tag = "EMPLOYEE_FullName", Category = "Employee.Personal", Description = Res("TagDescEmpFullName") },
+                new() { Tag = "EMPLOYEE_BirthDate", Category = "Employee.Personal", Description = Res("TagDescEmpBirthDate") },
+                new() { Tag = "EMPLOYEE_Phone", Category = "Employee.Personal", Description = Res("TagDescEmpPhone") },
+                new() { Tag = "EMPLOYEE_Email", Category = "Employee.Personal", Description = Res("TagDescEmpEmail") },
+                new() { Tag = "EMPLOYEE_Status", Category = "Employee.Personal", Description = Res("TagDescEmpStatus") },
 
-                // Паспорт
-                new() { Tag = "EMPLOYEE_PassportNumber", Category = "Employee.Passport", Description = "Номер паспорту" },
-                new() { Tag = "EMPLOYEE_PassportCity", Category = "Employee.Passport", Description = "Місто народження" },
-                new() { Tag = "EMPLOYEE_PassportCountry", Category = "Employee.Passport", Description = "Країна народження" },
-                new() { Tag = "EMPLOYEE_PassportExpiry", Category = "Employee.Passport", Description = "Дата закінчення паспорту" },
+                new() { Tag = "EMPLOYEE_PassportNumber", Category = "Employee.Passport", Description = Res("TagDescEmpPassportNumber") },
+                new() { Tag = "EMPLOYEE_PassportCity", Category = "Employee.Passport", Description = Res("TagDescEmpPassportCity") },
+                new() { Tag = "EMPLOYEE_PassportCountry", Category = "Employee.Passport", Description = Res("TagDescEmpPassportCountry") },
+                new() { Tag = "EMPLOYEE_PassportExpiry", Category = "Employee.Passport", Description = Res("TagDescEmpPassportExpiry") },
 
-                // Віза
-                new() { Tag = "EMPLOYEE_VisaNumber", Category = "Employee.Visa", Description = "Номер візи" },
-                new() { Tag = "EMPLOYEE_VisaType", Category = "Employee.Visa", Description = "Тип візи" },
-                new() { Tag = "EMPLOYEE_VisaExpiry", Category = "Employee.Visa", Description = "Дата закінчення візи" },
+                new() { Tag = "EMPLOYEE_VisaNumber", Category = "Employee.Visa", Description = Res("TagDescEmpVisaNumber") },
+                new() { Tag = "EMPLOYEE_VisaType", Category = "Employee.Visa", Description = Res("TagDescEmpVisaType") },
+                new() { Tag = "EMPLOYEE_VisaExpiry", Category = "Employee.Visa", Description = Res("TagDescEmpVisaExpiry") },
 
-                // Страховка
-                new() { Tag = "EMPLOYEE_InsuranceCompany", Category = "Employee.Insurance", Description = "Страхова компанія" },
-                new() { Tag = "EMPLOYEE_InsuranceNumber", Category = "Employee.Insurance", Description = "Номер страховки" },
-                new() { Tag = "EMPLOYEE_InsuranceExpiry", Category = "Employee.Insurance", Description = "Дата закінчення страховки" },
+                new() { Tag = "EMPLOYEE_InsuranceCompany", Category = "Employee.Insurance", Description = Res("TagDescEmpInsCompany") },
+                new() { Tag = "EMPLOYEE_InsuranceNumber", Category = "Employee.Insurance", Description = Res("TagDescEmpInsNumber") },
+                new() { Tag = "EMPLOYEE_InsuranceExpiry", Category = "Employee.Insurance", Description = Res("TagDescEmpInsExpiry") },
 
-                // Адреса проживання
-                new() { Tag = "EMPLOYEE_LocalAddress_Street", Category = "Employee.LocalAddress", Description = "Вулиця" },
-                new() { Tag = "EMPLOYEE_LocalAddress_Number", Category = "Employee.LocalAddress", Description = "Номер" },
-                new() { Tag = "EMPLOYEE_LocalAddress_City", Category = "Employee.LocalAddress", Description = "Місто" },
-                new() { Tag = "EMPLOYEE_LocalAddress_Zip", Category = "Employee.LocalAddress", Description = "Індекс" },
-                new() { Tag = "EMPLOYEE_LocalAddress_Full", Category = "Employee.LocalAddress", Description = "Повна адреса" },
+                new() { Tag = "EMPLOYEE_WorkPermitName", Category = "Employee.WorkPermit", Description = Res("TagDescEmpWpName") },
+                new() { Tag = "EMPLOYEE_WorkPermitNumber", Category = "Employee.WorkPermit", Description = Res("TagDescEmpWpNumber") },
+                new() { Tag = "EMPLOYEE_WorkPermitType", Category = "Employee.WorkPermit", Description = Res("TagDescEmpWpType") },
+                new() { Tag = "EMPLOYEE_WorkPermitIssueDate", Category = "Employee.WorkPermit", Description = Res("TagDescEmpWpIssueDate") },
+                new() { Tag = "EMPLOYEE_WorkPermitExpiry", Category = "Employee.WorkPermit", Description = Res("TagDescEmpWpExpiry") },
+                new() { Tag = "EMPLOYEE_WorkPermitAuthority", Category = "Employee.WorkPermit", Description = Res("TagDescEmpWpAuthority") },
+                new() { Tag = "EMPLOYEE_EmployeeType", Category = "Employee", Description = Res("TagDescEmpType") },
 
-                // Адреса за кордоном
-                new() { Tag = "EMPLOYEE_AbroadAddress_Street", Category = "Employee.AbroadAddress", Description = "Вулиця" },
-                new() { Tag = "EMPLOYEE_AbroadAddress_Number", Category = "Employee.AbroadAddress", Description = "Номер" },
-                new() { Tag = "EMPLOYEE_AbroadAddress_City", Category = "Employee.AbroadAddress", Description = "Місто" },
-                new() { Tag = "EMPLOYEE_AbroadAddress_Zip", Category = "Employee.AbroadAddress", Description = "Індекс" },
-                new() { Tag = "EMPLOYEE_AbroadAddress_Full", Category = "Employee.AbroadAddress", Description = "Повна адреса" },
+                new() { Tag = "EMPLOYEE_LocalAddress_Street", Category = "Employee.LocalAddress", Description = Res("TagDescEmpLocalStreet") },
+                new() { Tag = "EMPLOYEE_LocalAddress_Number", Category = "Employee.LocalAddress", Description = Res("TagDescEmpLocalNumber") },
+                new() { Tag = "EMPLOYEE_LocalAddress_City", Category = "Employee.LocalAddress", Description = Res("TagDescEmpLocalCity") },
+                new() { Tag = "EMPLOYEE_LocalAddress_Zip", Category = "Employee.LocalAddress", Description = Res("TagDescEmpLocalZip") },
+                new() { Tag = "EMPLOYEE_LocalAddress_Full", Category = "Employee.LocalAddress", Description = Res("TagDescEmpLocalFull") },
 
-                // Робота
-                new() { Tag = "EMPLOYEE_WorkAddress", Category = "Employee.Work", Description = "Адреса роботи" },
-                new() { Tag = "EMPLOYEE_Position", Category = "Employee.Work", Description = "Позиція" },
-                new() { Tag = "EMPLOYEE_PositionNumber", Category = "Employee.Work", Description = "Номер позиції" },
-                new() { Tag = "EMPLOYEE_SalaryBrutto", Category = "Employee.Work", Description = "Місячна зарплата (брутто)" },
-                new() { Tag = "EMPLOYEE_HourlySalary", Category = "Employee.Work", Description = "Годинна зарплата" },
-                new() { Tag = "EMPLOYEE_ContractType", Category = "Employee.Work", Description = "Тип договору" },
-                new() { Tag = "EMPLOYEE_Department", Category = "Employee.Work", Description = "Відділ" },
-                new() { Tag = "EMPLOYEE_StartDate", Category = "Employee.Work", Description = "Дата наступу на роботу" },
-                new() { Tag = "EMPLOYEE_ContractSignDate", Category = "Employee.Work", Description = "Дата підписання договору" },
+                new() { Tag = "EMPLOYEE_AbroadAddress_Street", Category = "Employee.AbroadAddress", Description = Res("TagDescEmpAbroadStreet") },
+                new() { Tag = "EMPLOYEE_AbroadAddress_Number", Category = "Employee.AbroadAddress", Description = Res("TagDescEmpAbroadNumber") },
+                new() { Tag = "EMPLOYEE_AbroadAddress_City", Category = "Employee.AbroadAddress", Description = Res("TagDescEmpAbroadCity") },
+                new() { Tag = "EMPLOYEE_AbroadAddress_Zip", Category = "Employee.AbroadAddress", Description = Res("TagDescEmpAbroadZip") },
+                new() { Tag = "EMPLOYEE_AbroadAddress_Full", Category = "Employee.AbroadAddress", Description = Res("TagDescEmpAbroadFull") },
+
+                new() { Tag = "EMPLOYEE_WorkAddress", Category = "Employee.Work", Description = Res("TagDescEmpWorkAddress") },
+                new() { Tag = "EMPLOYEE_Position", Category = "Employee.Work", Description = Res("TagDescEmpPosition") },
+                new() { Tag = "EMPLOYEE_PositionNumber", Category = "Employee.Work", Description = Res("TagDescEmpPosNumber") },
+                new() { Tag = "EMPLOYEE_SalaryBrutto", Category = "Employee.Work", Description = Res("TagDescEmpSalary") },
+                new() { Tag = "EMPLOYEE_HourlySalary", Category = "Employee.Work", Description = Res("TagDescEmpHourly") },
+                new() { Tag = "EMPLOYEE_ContractType", Category = "Employee.Work", Description = Res("TagDescEmpContractType") },
+                new() { Tag = "EMPLOYEE_Department", Category = "Employee.Work", Description = Res("TagDescEmpDepartment") },
+                new() { Tag = "EMPLOYEE_StartDate", Category = "Employee.Work", Description = Res("TagDescEmpStartDate") },
+                new() { Tag = "EMPLOYEE_ContractSignDate", Category = "Employee.Work", Description = Res("TagDescEmpSignDate") },
             };
 
-            // Add agency placeholder tag definitions
             var agencyTags = new List<TagEntry>
             {
-                new() { Tag = "AGENCY_Name", Category = "Agency", Description = "Назва агентства" },
-                new() { Tag = "AGENCY_ICO", Category = "Agency", Description = "ІЧО агентства" },
-                new() { Tag = "AGENCY_FullAddress", Category = "Agency", Description = "Повна адреса агентства" },
+                new() { Tag = "AGENCY_Name", Category = "Agency", Description = Res("TagDescAgencyName") },
+                new() { Tag = "AGENCY_ICO", Category = "Agency", Description = Res("TagDescAgencyICO") },
+                new() { Tag = "AGENCY_FullAddress", Category = "Agency", Description = Res("TagDescAgencyAddress") },
             };
 
             var result = new List<TagEntry>();

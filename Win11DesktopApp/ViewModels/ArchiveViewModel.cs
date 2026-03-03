@@ -63,7 +63,7 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _employeeToRestore, value);
         }
 
-        public ObservableCollection<EmployerCompany> AvailableCompanies => App.CompanyService.Companies;
+        public ObservableCollection<EmployerCompany> AvailableCompanies => App.CompanyService?.Companies ?? new ObservableCollection<EmployerCompany>();
 
         private EmployerCompany? _selectedCompany;
         public EmployerCompany? SelectedCompany
@@ -130,14 +130,14 @@ namespace Win11DesktopApp.ViewModels
         {
             _employeeService = App.EmployeeService;
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
 
             OpenEmployeeFolderCommand = new RelayCommand(o =>
             {
                 if (o is ArchivedEmployeeSummary emp && !string.IsNullOrEmpty(emp.EmployeeFolder))
                 {
                     try { Process.Start(new ProcessStartInfo { FileName = emp.EmployeeFolder, UseShellExecute = true }); }
-                    catch { }
+                    catch (Exception ex) { LoggingService.LogWarning("ArchiveViewModel.OpenFolder", ex.Message); }
                 }
             });
 
@@ -210,23 +210,23 @@ namespace Win11DesktopApp.ViewModels
             HasArchived = ArchivedEmployees.Count > 0;
         }
 
-        private void ConfirmRestore()
+        private async void ConfirmRestore()
         {
             if (EmployeeToRestore == null)
             {
-                RestoreStatus = "Не обрано працівника.";
+                RestoreStatus = Res("MsgNoEmployeeSelected");
                 return;
             }
 
             if (SelectedCompany == null)
             {
-                RestoreStatus = "Оберіть фірму.";
+                RestoreStatus = Res("MsgSelectFirmRestore");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(NewStartDate))
             {
-                RestoreStatus = "Вкажіть дату наступу.";
+                RestoreStatus = Res("MsgEnterStartDate");
                 return;
             }
 
@@ -237,7 +237,7 @@ namespace Win11DesktopApp.ViewModels
                     ? $"{SelectedAddress.Street} {SelectedAddress.Number}, {SelectedAddress.City} {SelectedAddress.ZipCode}".Trim()
                     : string.Empty;
 
-                var result = _employeeService.RestoreFromArchive(
+                var result = await _employeeService.RestoreFromArchive(
                     EmployeeToRestore.EmployeeFolder,
                     SelectedCompany.Name,
                     NewStartDate,
@@ -248,17 +248,31 @@ namespace Win11DesktopApp.ViewModels
 
                 if (!string.IsNullOrEmpty(result))
                 {
+                    await _employeeService.AddHistoryEntry(result, new EmployeeModels.EmployeeHistoryEntry
+                    {
+                        EventType = "Restored",
+                        Action = Res("HistoryActionRestored"),
+                        Field = SelectedCompany.Name,
+                        Description = string.Format(Res("HistoryDescRestored"), EmployeeToRestore.FullName, SelectedCompany.Name)
+                    });
+
+                    App.ActivityLogService?.Log("EmployeeRestored", "Archive", SelectedCompany.Name,
+                        EmployeeToRestore.FullName,
+                        $"Відновлено {EmployeeToRestore.FullName} до {SelectedCompany.Name}, дата початку: {NewStartDate}",
+                        EmployeeToRestore.FirmName, SelectedCompany.Name,
+                        employeeFolder: EmployeeToRestore.EmployeeFolder);
+
                     IsRestoreDialogOpen = false;
                     LoadArchive();
                 }
                 else
                 {
-                    RestoreStatus = "Помилка при відновленні.";
+                    RestoreStatus = Res("MsgRestoreError");
                 }
             }
             catch (Exception ex)
             {
-                RestoreStatus = $"Помилка: {ex.Message}";
+                RestoreStatus = string.Format(Res("MsgErrorFmt"), ex.Message);
             }
         }
     }

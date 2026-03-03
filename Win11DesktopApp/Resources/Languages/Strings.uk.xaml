@@ -5,17 +5,45 @@
     <sys:String x:Key="BtnEmployees">Працівники</sys:String>
     <sys:String x:Key="BtnTemplates">Шаблони</sys:String>
     <sys:String x:Key="BtnProblems">Проблеми</sys:String>
-    <sys:String x:Key="BtnFinances">Фінанси</sys:String>
+    <sys:String x:Key="BtnFinances">Фінанси та Таблиці</sys:String>
     <sys:String x:Key="BtnArchive">Архів</sys:String>
-    
+    <sys:String x:Key="BtnActivityLog">Історія дій</sys:String>
+    <sys:String x:Key="ActLogEmpty">Поки що немає записів</sys:String>
+    <sys:String x:Key="ActLogClearFilter">Скинути фільтр</sys:String>
+    <sys:String x:Key="ActLogCatEmployee">Працівник</sys:String>
+    <sys:String x:Key="ActLogCatSalary">Зарплата</sys:String>
+    <sys:String x:Key="ActLogCatAdvance">Аванс</sys:String>
+    <sys:String x:Key="ActLogCatArchive">Архів</sys:String>
+    <sys:String x:Key="ActLogCatDocument">Документ</sys:String>
+    <sys:String x:Key="ActLogCatExport">Експорт</sys:String>
+    <sys:String x:Key="ActLogCatCompany">Фірма</sys:String>
+    <sys:String x:Key="ActLogCatTemplate">Шаблон</sys:String>
+    <sys:String x:Key="ActLogCatSettings">Налаштування</sys:String>
+    <sys:String x:Key="ActLogCatCandidate">Кандидат</sys:String>
+    <sys:String x:Key="ActLogColDate">Дата</sys:String>
+    <sys:String x:Key="ActLogColDescription">Опис</sys:String>
+    <sys:String x:Key="ActLogColCategory">Категорія</sys:String>
+    <sys:String x:Key="ActLogColFirm">Фірма</sys:String>
+    <sys:String x:Key="ActLogColEmployee">Працівник</sys:String>
+    <sys:String x:Key="ActLogColOld">Було</sys:String>
+    <sys:String x:Key="ActLogColNew">Стало</sys:String>
+    <sys:String x:Key="ActLogDateFrom">Від</sys:String>
+    <sys:String x:Key="ActLogDateTo">До</sys:String>
+    <sys:String x:Key="ActLogAllFirms">Всі фірми</sys:String>
+    <sys:String x:Key="ActLogExport">Експорт</sys:String>
+    <sys:String x:Key="ActLogClearAll">Очистити</sys:String>
+    <sys:String x:Key="ActLogClearConfirm">Ви дійсно хочете очистити всю історію дій?</sys:String>
+    <sys:String x:Key="ActLogExported">Історію дій експортовано</sys:String>
+    <sys:String x:Key="ActLogCleared">Історію дій очищено</sys:String>
+
     <sys:String x:Key="SettingsTitle">Налаштування</sys:String>
     <sys:String x:Key="LangLabel">Мова</sys:String>
     <sys:String x:Key="ThemeLabel">Тема</sys:String>
     
-    <sys:String x:Key="ThemeLight">Світла (Win 11)</sys:String>
-    <sys:String x:Key="ThemeDarkWord">Темна (Word)</sys:String>
-    <sys:String x:Key="ThemeDark2">Темна №2</sys:String>
-    <sys:String x:Key="ThemeCustom">Кастомна №3</sys:String>
+    <sys:String x:Key="ThemeLight">Світла</sys:String>
+    <sys:String x:Key="ThemeDarkWord">Темна</sys:String>
+    <sys:String x:Key="ThemeDark2">Нічна</sys:String>
+    <sys:String x:Key="ThemeCustom">Тепла</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Фірми</sys:String>
@@ -37,9 +65,14 @@
     <sys:String x:Key="LabelSalary">Зарплата (місяць)</sys:String>
     <sys:String x:Key="LabelHourly">Зарплата (година)</sys:String>
     <sys:String x:Key="BtnAddPosition">+ Додати позицію</sys:String>
+    <sys:String x:Key="LabelWorkHours">Робочі години</sys:String>
+    <sys:String x:Key="LabelWorkHoursAndShifts">Робочі години та зміни</sys:String>
+    <sys:String x:Key="LabelWeeklyHours">Тиждень</sys:String>
+    <sys:String x:Key="LabelDailyHours">День</sys:String>
+    <sys:String x:Key="LabelShiftCount">Кількість змін</sys:String>
     <sys:String x:Key="LabelFullAddress">Повна адреса</sys:String>
     <sys:String x:Key="BtnCancel">Скасувати</sys:String>
-    <sys:String x:Key="BtnSave">Зберегти фірму</sys:String>
+    <sys:String x:Key="BtnSave">Зберегти</sys:String>
     <sys:String x:Key="LabelRootFolder">Коренева папка</sys:String>
     <sys:String x:Key="BtnSelectFolder">Вибрати папку</sys:String>
     <sys:String x:Key="MsgSelectCompany">Виберіть фірму...</sys:String>
@@ -61,6 +94,7 @@
     <sys:String x:Key="MsgTemplateDeleted">Шаблон успішно видалено.</sys:String>
     <sys:String x:Key="TitleSuccess">Успіх</sys:String>
     <sys:String x:Key="TitleError">Помилка</sys:String>
+    <sys:String x:Key="MsgUnexpectedError">Виникла непередбачена помилка:</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Помилка видалення шаблону: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -71,11 +105,13 @@
     <sys:String x:Key="StepDocuments">Етап 1. Документи</sys:String>
     <sys:String x:Key="StepCropPhoto">Етап 2. Обрізка фото</sys:String>
     <sys:String x:Key="StepPassportData">Етап 3. Дані з паспорту</sys:String>
+    <sys:String x:Key="StepPassportPage2Data">Дані з паспорту (стор. 2)</sys:String>
     <sys:String x:Key="StepInsuranceData">Етап 4. Дані страховки</sys:String>
     <sys:String x:Key="StepVisaData">Етап 5. Дані візи</sys:String>
     <sys:String x:Key="StepAddresses">Етап 6. Адреси, позиція, договір</sys:String>
     <sys:String x:Key="StepAdditional">Етап 7. Додаткові дані</sys:String>
-    <sys:String x:Key="BtnUploadPassport">Завантажити паспорт</sys:String>
+    <sys:String x:Key="BtnUploadPassport">Завантажити Документ 1</sys:String>
+    <sys:String x:Key="BtnUploadPassportPage2">Завантажити Документ 2</sys:String>
     <sys:String x:Key="BtnUploadVisa">Завантажити візу</sys:String>
     <sys:String x:Key="BtnUploadInsurance">Завантажити страховку</sys:String>
     <sys:String x:Key="BtnApplyCrop">Обрізати фото</sys:String>
@@ -110,6 +146,10 @@
     <sys:String x:Key="EmpSortDate">Дата наступу</sys:String>
     <sys:String x:Key="EmpSortStatus">Статус</sys:String>
     <sys:String x:Key="EmpSortProblems">Проблеми</sys:String>
+    <sys:String x:Key="ViewTable">Таблиця</sys:String>
+    <sys:String x:Key="ViewList">Список</sys:String>
+    <sys:String x:Key="ViewTiles">Плитки</sys:String>
+    <sys:String x:Key="ViewIcons">Піктограми</sys:String>
     <sys:String x:Key="EmpSelectAll">Обрати всіх</sys:String>
     <sys:String x:Key="EmpGenerate">Згенерувати</sys:String>
     <sys:String x:Key="EmpBadgePassport">Паспорт</sys:String>
@@ -129,6 +169,8 @@
     <sys:String x:Key="DetNoPhoto">Немає фото</sys:String>
     <sys:String x:Key="DetBtnGenerate">Згенерувати документ</sys:String>
     <sys:String x:Key="DetBtnOpenFolder">Відкрити папку</sys:String>
+    <sys:String x:Key="DetBtnExportPdf">Експорт анкети PDF</sys:String>
+    <sys:String x:Key="DetProfileCompletion">Заповнення: </sys:String>
     <sys:String x:Key="DetBtnArchive">В архів</sys:String>
     <sys:String x:Key="DetLabelStatus">Статус</sys:String>
     <sys:String x:Key="DetTabDocs">Документи</sys:String>
@@ -138,10 +180,39 @@
     <sys:String x:Key="DetDocPassport">Паспорт</sys:String>
     <sys:String x:Key="DetDocVisa">Віза</sys:String>
     <sys:String x:Key="DetDocInsurance">Страховка</sys:String>
+    <sys:String x:Key="DetDocWorkPermit">Дозвіл на роботу</sys:String>
+    <sys:String x:Key="DetFieldWpNumber">Номер дозволу</sys:String>
+    <sys:String x:Key="DetFieldWpType">Тип дозволу</sys:String>
+    <sys:String x:Key="DetFieldWpIssueDate">Дата видачі</sys:String>
+    <sys:String x:Key="DetFieldWpAuthority">Орган видачі</sys:String>
     <sys:String x:Key="DetDocPhoto">Фото</sys:String>
     <sys:String x:Key="DetBtnReplace">Замінити</sys:String>
     <sys:String x:Key="DetBtnOpenFile">Відкрити</sys:String>
     <sys:String x:Key="DetBtnExtend">Подовж.</sys:String>
+    <sys:String x:Key="DetBtnRenewPermit">Оновити дозвіл</sys:String>
+    <sys:String x:Key="DetCustomDocsTitle">Власні підписані документи</sys:String>
+    <sys:String x:Key="DetBtnAddCustomDoc">Додати документ</sys:String>
+    <sys:String x:Key="DetAddCustomDocTitle">Додати підписаний документ</sys:String>
+    <sys:String x:Key="DetCustomDocFieldName">Назва документа</sys:String>
+    <sys:String x:Key="DetCustomDocFieldSignDate">Дата підписання</sys:String>
+    <sys:String x:Key="DetCustomDocFieldExpiry">Дата закінчення (необов'язково)</sys:String>
+    <sys:String x:Key="DetCustomDocFieldFile">Файл (JPG / PNG / HEIC / PDF)</sys:String>
+    <sys:String x:Key="DetBtnBrowseFile">Вибрати...</sys:String>
+    <sys:String x:Key="DetCustomDocNoFile">Файл не вибрано</sys:String>
+    <sys:String x:Key="DetCustomDocSigned">Підписано:</sys:String>
+    <sys:String x:Key="DetCustomDocExpires">Дійсний до:</sys:String>
+    <sys:String x:Key="DetCustomDocNoExpiry">Без закінчення</sys:String>
+    <sys:String x:Key="DetBtnDeleteDoc">Видалити</sys:String>
+    <sys:String x:Key="DetBtnOpenCustomDocFolder">Відкрити папку</sys:String>
+    <sys:String x:Key="DetBtnHideDoc">Сховати</sys:String>
+    <sys:String x:Key="DetBtnShowDoc">Показати</sys:String>
+    <sys:String x:Key="DetHiddenDocsSection">Приховані документи</sys:String>
+    <sys:String x:Key="DetCustomDocEmpty">Власних документів ще немає.</sys:String>
+    <sys:String x:Key="MsgCustomDocNameRequired">Введіть назву документа.</sys:String>
+    <sys:String x:Key="MsgCustomDocSignDateRequired">Введіть дату підписання.</sys:String>
+    <sys:String x:Key="MsgCustomDocFileMissing">Виберіть файл.</sys:String>
+    <sys:String x:Key="MsgCustomDocSaved">Документ збережено.</sys:String>
+    <sys:String x:Key="DetRenewWpTitle">Оновлення дозволу на роботу</sys:String>
     <sys:String x:Key="DetBtnEditProfile">Редагувати анкету</sys:String>
     <sys:String x:Key="DetBtnSave">Зберегти</sys:String>
     <sys:String x:Key="DetBtnCancel">Скасувати</sys:String>
@@ -157,6 +228,7 @@
     <sys:String x:Key="DetSecVisa">Віза</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Номер візи</sys:String>
     <sys:String x:Key="DetFieldVisaType">Тип візи</sys:String>
+    <sys:String x:Key="DetFieldWorkPermitName">Назва дозволу на роботу</sys:String>
     <sys:String x:Key="DetSecInsurance">Страховка</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Страхова компанія</sys:String>
     <sys:String x:Key="DetFieldInsNum">Номер страховки</sys:String>
@@ -173,11 +245,20 @@
     <sys:String x:Key="DetFieldWorkAddr">Адреса роботи</sys:String>
     <sys:String x:Key="DetSecContacts">Контакти та дати</sys:String>
     <sys:String x:Key="DetFieldPhone">Телефон</sys:String>
+    <sys:String x:Key="DetFieldEmail">Електронна пошта</sys:String>
+    <sys:String x:Key="DetFieldContractType">Тип договору</sys:String>
     <sys:String x:Key="DetFieldStartDate">Дата наступу</sys:String>
     <sys:String x:Key="DetFieldSignDate">Дата підписання договору</sys:String>
     <sys:String x:Key="DetHistoryTitle">Історія змін</sys:String>
     <sys:String x:Key="DetHistoryEmpty">Історія порожня</sys:String>
     <sys:String x:Key="DetHistoryEmptyMsg">Зміни в анкеті працівника будуть відображатись тут.</sys:String>
+    <sys:String x:Key="DetTabSalary">Зарплата</sys:String>
+    <sys:String x:Key="DetSalaryTitle">Історія виплат</sys:String>
+    <sys:String x:Key="DetSalaryTotalNet">Загальна виплата</sys:String>
+    <sys:String x:Key="DetSalaryTotalHours">Загальні години</sys:String>
+    <sys:String x:Key="DetSalaryMonthCount">Місяців</sys:String>
+    <sys:String x:Key="DetSalaryEmpty">Виплат ще немає</sys:String>
+    <sys:String x:Key="DetSalaryEmptyMsg">Коли працівника позначать як виплаченого, інформація з'явиться тут.</sys:String>
     <sys:String x:Key="DetGenTitle">Вибір шаблону для генерації</sys:String>
     <sys:String x:Key="DetGenDesc">Оберіть шаблон. Документ буде згенеровано з заповненими даними працівника та збережено у його папку.</sys:String>
     <sys:String x:Key="DetArchiveTitle">Перемістити в архів</sys:String>
@@ -193,6 +274,8 @@
     <sys:String x:Key="MainSelected">Обрано: </sys:String>
     <sys:String x:Key="MainTooltipEdit">Редагувати фірму</sys:String>
     <sys:String x:Key="MainTooltipDblClick">Подвійний клік — редагувати</sys:String>
+    <sys:String x:Key="CompanyMoveUp">Перемістити вгору</sys:String>
+    <sys:String x:Key="CompanyMoveDown">Перемістити вниз</sys:String>
 
     <!-- ProblemsView -->
     <sys:String x:Key="ProbStatExpired">Прострочено / Критично</sys:String>
@@ -200,6 +283,36 @@
     <sys:String x:Key="ProbStatTotal">Всього проблем</sys:String>
     <sys:String x:Key="ProbAllOk">Всі документи в порядку!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">Немає прострочених або документів що скоро закінчуються.</sys:String>
+    <sys:String x:Key="ProbTitle">Проблеми — всі фірми</sys:String>
+    <sys:String x:Key="ProbExportPdf">Експорт PDF</sys:String>
+    <sys:String x:Key="ProbIgnored">Ігноровано</sys:String>
+    <sys:String x:Key="ProbIgnoredTitle">Ігноровані проблеми</sys:String>
+    <sys:String x:Key="ProbUntil">до </sys:String>
+    <sys:String x:Key="ProbRestoreTooltip">Повернути проблему</sys:String>
+    <sys:String x:Key="ProbRestore">Відновити</sys:String>
+    <sys:String x:Key="ProbIssueCount">Проблем: </sys:String>
+    <sys:String x:Key="ProbOpenTooltip">Відкрити працівника</sys:String>
+    <sys:String x:Key="ProbOpen">Відкрити</sys:String>
+    <sys:String x:Key="ProbIgnoreTooltip">Ігнорувати на вибраний термін</sys:String>
+    <sys:String x:Key="ProbIgnore">Ігнорувати</sys:String>
+    <sys:String x:Key="ProbIgnoreForDays">Ігнорувати на {0} днів</sys:String>
+    <sys:String x:Key="ProbDocPassport">Паспорт</sys:String>
+    <sys:String x:Key="ProbDocVisa">Віза</sys:String>
+    <sys:String x:Key="ProbDocInsurance">Страховка</sys:String>
+    <sys:String x:Key="ProbDocWorkPermit">Дозвіл на роботу</sys:String>
+    <sys:String x:Key="ProbPdfTitle">Проблеми — звіт</sys:String>
+    <sys:String x:Key="ProbPdfDate">Дата: {0}</sys:String>
+    <sys:String x:Key="ProbPdfExpired">Прострочено</sys:String>
+    <sys:String x:Key="ProbPdfWarning">Попередження</sys:String>
+    <sys:String x:Key="ProbPdfTotal">Всього</sys:String>
+    <sys:String x:Key="ProbPdfIgnored">Ігноровано</sys:String>
+    <sys:String x:Key="ProbPdfIgnoredSection">Ігноровані проблеми ({0})</sys:String>
+    <sys:String x:Key="ProbPdfSaveTitle">Зберегти звіт про проблеми</sys:String>
+    <sys:String x:Key="ProbPdfExportError">Помилка експорту: {0}</sys:String>
+    <sys:String x:Key="ProbPdfError">Помилка</sys:String>
+    <sys:String x:Key="ProbDaysExpired">прострочено {0} дн.</sys:String>
+    <sys:String x:Key="ProbDaysToday">закінчується сьогодні</sys:String>
+    <sys:String x:Key="ProbDaysLeft">через {0} дн.</sys:String>
 
     <!-- ArchiveView -->
     <sys:String x:Key="ArchiveTitle">Архів працівників</sys:String>
@@ -232,6 +345,7 @@
     <sys:String x:Key="WizVisaNum">Номер візи</sys:String>
     <sys:String x:Key="WizVisaType">Тип візи</sys:String>
     <sys:String x:Key="WizVisaExpiry">Дата закінчення візи</sys:String>
+    <sys:String x:Key="WizWorkPermitName">Назва дозволу на роботу</sys:String>
     <sys:String x:Key="WizStreet">Вулиця</sys:String>
     <sys:String x:Key="WizNumber">Номер</sys:String>
     <sys:String x:Key="WizCity">Місто</sys:String>
@@ -248,6 +362,16 @@
     <sys:String x:Key="EditorItalic">Курсив (Ctrl+I)</sys:String>
     <sys:String x:Key="EditorUnderline">Підкреслений (Ctrl+U)</sys:String>
     <sys:String x:Key="EditorFontSize">Розмір шрифту</sys:String>
+    <sys:String x:Key="EditorFontFamily">Шрифт</sys:String>
+    <sys:String x:Key="EditorMaxWidth">Макс. ширина</sys:String>
+    <sys:String x:Key="PdfZoomIn">Збільшити</sys:String>
+    <sys:String x:Key="PdfZoomOut">Зменшити</sys:String>
+    <sys:String x:Key="PdfZoomReset">Скинути зум</sys:String>
+    <sys:String x:Key="PdfShowGrid">Сітка</sys:String>
+    <sys:String x:Key="PdfSnapGrid">Прив'язка</sys:String>
+    <sys:String x:Key="PdfEditing">Редагування</sys:String>
+    <sys:String x:Key="PdfDeselect">Зняти виділення</sys:String>
+    <sys:String x:Key="PdfGridStep">Крок</sys:String>
     <sys:String x:Key="EditorAlignLeft">По лівому краю</sys:String>
     <sys:String x:Key="EditorAlignCenter">По центру</sys:String>
     <sys:String x:Key="EditorAlignRight">По правому краю</sys:String>
@@ -255,6 +379,8 @@
     <sys:String x:Key="EditorSearchTags">Пошук тегів...</sys:String>
     <sys:String x:Key="EditorInsert">Вст.</sys:String>
     <sys:String x:Key="EditorCopyTag">Копіювати тег</sys:String>
+
+    <!-- DOCX Upload -->
 
     <!-- XlsxEditor -->
     <sys:String x:Key="XlsxBack">Назад</sys:String>
@@ -270,16 +396,32 @@
     <!-- TemplatesView -->
     <sys:String x:Key="TplBtnDelete">Видалити</sys:String>
     <sys:String x:Key="TplBtnEdit">Редагувати</sys:String>
+    <sys:String x:Key="TplBtnRename">Перейменувати</sys:String>
+    <sys:String x:Key="TplRenameTitle">Перейменувати шаблон</sys:String>
+    <sys:String x:Key="TplRenamePrompt">Нова назва шаблону:</sys:String>
+    <sys:String x:Key="TplRenameBtn">Перейменувати</sys:String>
     <sys:String x:Key="TplUpdated">Оновлено: </sys:String>
     <sys:String x:Key="TplTagsTitle">Доступні теги для шаблону</sys:String>
     <sys:String x:Key="TplTagsDesc">Натисніть кнопку «Копіювати» щоб скопіювати тег у буфер обміну. Потім вставте тег у документ у Word/Excel.</sys:String>
     <sys:String x:Key="TplCopyTag">Копіювати</sys:String>
     <sys:String x:Key="TplOpenEditor">Відкрити шаблон у редакторі</sys:String>
+    <sys:String x:Key="TplTemplateCount">шаблонів</sys:String>
 
     <!-- SettingsPage -->
     <sys:String x:Key="SettingsAppVersion">Версія програми</sys:String>
     <sys:String x:Key="SettingsLangHint">Оберіть мову інтерфейсу</sys:String>
+    <sys:String x:Key="SettingsDocLangTitle">Мова документів</sys:String>
+    <sys:String x:Key="SettingsDocLangHint">Мова для генерованих документів (PDF, Excel)</sys:String>
+    <sys:String x:Key="DocLangSameAsUI">Як інтерфейс</sys:String>
     <sys:String x:Key="SettingsThemeHint">Оберіть тему оформлення</sys:String>
+    <sys:String x:Key="SettingsInterfaceSize">Розмір інтерфейсу</sys:String>
+    <sys:String x:Key="SettingsInterfaceSizeHint">Масштаб елементів інтерфейсу</sys:String>
+    <sys:String x:Key="SettingsTextSize">Розмір тексту</sys:String>
+    <sys:String x:Key="SettingsTextSizeHint">Розмір шрифтів у програмі</sys:String>
+    <sys:String x:Key="SizeSmall">Малий</sys:String>
+    <sys:String x:Key="SizeMedium">Середній</sys:String>
+    <sys:String x:Key="SizeLarge">Великий</sys:String>
+    <sys:String x:Key="SizeExtraLarge">Дуже великий</sys:String>
     <sys:String x:Key="SettingsFolderHint">Шлях до кореневої папки з даними</sys:String>
 
     <!-- AddCompanyView tooltips -->
@@ -290,9 +432,738 @@
     <!-- AddTemplateView -->
     <sys:String x:Key="TplFileNotNeeded">Файл не потрібен — використовуйте вбудований редактор</sys:String>
 
+    <!-- Report -->
+    <sys:String x:Key="BtnReport">Звіт</sys:String>
+    <sys:String x:Key="ReportTitle">Звіт</sys:String>
+    <sys:String x:Key="ReportFilters">Фільтри</sys:String>
+    <sys:String x:Key="ReportFirms">Фірми</sys:String>
+    <sys:String x:Key="ReportAllFirms">Всі фірми</sys:String>
+    <sys:String x:Key="ReportDateFrom">Від</sys:String>
+    <sys:String x:Key="ReportDateTo">До</sys:String>
+    <sys:String x:Key="ReportGenerate">Показати</sys:String>
+    <sys:String x:Key="ReportExport">Експорт в Excel</sys:String>
+    <sys:String x:Key="ReportTotalEmployees">Працювало за період</sys:String>
+    <sys:String x:Key="ReportActiveEmployees">Активні зараз</sys:String>
+    <sys:String x:Key="ReportExpiredDocs">Прострочені</sys:String>
+    <sys:String x:Key="ReportExpiringSoon">Скоро закінчуються</sys:String>
+    <sys:String x:Key="ReportDocuments">Документи</sys:String>
+    <sys:String x:Key="ReportArchived">Архів</sys:String>
+    <sys:String x:Key="ReportByFirm">Деталі по фірмах</sys:String>
+    <sys:String x:Key="ReportProblems">Працівники з проблемами</sys:String>
+    <sys:String x:Key="ReportColFirm">Фірма</sys:String>
+    <sys:String x:Key="ReportColTotal">Всього</sys:String>
+    <sys:String x:Key="ReportColActive">Активні</sys:String>
+    <sys:String x:Key="ReportColNoPermit">Без Дозволу</sys:String>
+    <sys:String x:Key="ReportColExpired">Прострочені</sys:String>
+    <sys:String x:Key="ReportColExpiring">Скоро зак.</sys:String>
+    <sys:String x:Key="ReportColDocs">Документи</sys:String>
+    <sys:String x:Key="ReportColArchived">Закінчили</sys:String>
+    <sys:String x:Key="ReportViewSummary">Зведення</sys:String>
+    <sys:String x:Key="ReportViewEmployees">Працівники</sys:String>
+    <sys:String x:Key="ReportConfigExport">Налаштувати експорт</sys:String>
+    <sys:String x:Key="ReportExportTitle">Налаштування експорту</sys:String>
+    <sys:String x:Key="ReportExportDesc">Оберіть які листи включити в Excel файл:</sys:String>
+    <sys:String x:Key="ReportExportFormat">Формат:</sys:String>
+    <sys:String x:Key="ReportExportBtn">Експортувати</sys:String>
+    <sys:String x:Key="ReportExportSheetFirms">Зведення по фірмах</sys:String>
+    <sys:String x:Key="ReportExportSheetAgencies">Статистика по агенціях</sys:String>
+    <sys:String x:Key="ReportExportSheetEmployees">Список працівників</sys:String>
+    <sys:String x:Key="ReportExportSheetArchive">Журнал архіву</sys:String>
+    <sys:String x:Key="ReportTotal">ВСЬОГО</sys:String>
+    <sys:String x:Key="ReportArchiveChart">Динаміка архіву по місяцях</sys:String>
+    <sys:String x:Key="ReportArchiveLog">Журнал архіву</sys:String>
+    <sys:String x:Key="ReportAgencyStats">Статистика по агенціях</sys:String>
+    <sys:String x:Key="ReportColAgency">Агенція</sys:String>
+    <sys:String x:Key="ReportColFirmCount">Кількість фірм</sys:String>
+    <sys:String x:Key="ReportFirmsCount">фірм</sys:String>
+    <sys:String x:Key="ReportEmpCount">працівників</sys:String>
+    <sys:String x:Key="ReportColName">Ім'я</sys:String>
+    <sys:String x:Key="ReportColType">Тип</sys:String>
+    <sys:String x:Key="ReportColPassportExp">Паспорт до</sys:String>
+    <sys:String x:Key="ReportColVisaExp">Віза до</sys:String>
+    <sys:String x:Key="ReportColInsExp">Страх. до</sys:String>
+    <sys:String x:Key="ReportColStartDate">Наступ</sys:String>
+    <sys:String x:Key="ReportColEndDate">Закінч.</sys:String>
+    <sys:String x:Key="ReportColPhone">Телефон</sys:String>
+    <sys:String x:Key="ReportColPosition">Позиція</sys:String>
+    <sys:String x:Key="ReportColEmployee">Працівник</sys:String>
+    <sys:String x:Key="ReportColAction">Дія</sys:String>
+    <sys:String x:Key="ReportColDate">Дата</sys:String>
+    <sys:String x:Key="ReportColTimestamp">Час операції</sys:String>
+    <sys:String x:Key="ReportNewInPeriod">Нових за період</sys:String>
+    <sys:String x:Key="ReportDismissedInPeriod">Закінчили за період</sys:String>
+    <sys:String x:Key="ReportEmployers">Роботодавці</sys:String>
+    <sys:String x:Key="ReportAllEmployers">Всі роботодавці</sys:String>
+    <sys:String x:Key="ReportAgencies">Агенції</sys:String>
+    <sys:String x:Key="ReportAllAgencies">Всі агенції</sys:String>
+    <sys:String x:Key="ReportChartArchived">Архівовано</sys:String>
+    <sys:String x:Key="ReportChartRestored">Відновлено</sys:String>
+    <sys:String x:Key="ReportStatusFmt">{0} фірм, {1} працювало, {2} нових, {3} закінчили</sys:String>
+    <sys:String x:Key="ReportSheetSummary">Зведення</sys:String>
+    <sys:String x:Key="ReportSheetAgencies">Агенції</sys:String>
+    <sys:String x:Key="ReportSheetEmployees">Працівники</sys:String>
+    <sys:String x:Key="ReportSheetArchive">Журнал архіву</sys:String>
+    <sys:String x:Key="ReportColArchivedPeriod">Закінчили за період</sys:String>
+    <sys:String x:Key="ReportNewPeriodLabel">Нових за період:</sys:String>
+    <sys:String x:Key="ReportDismissedPeriodLabel">Закінчили за період:</sys:String>
+    <sys:String x:Key="ReportRestoredPeriodLabel">Відновлено за період:</sys:String>
+    <sys:String x:Key="ReportColAgencyName">Агенція</sys:String>
+    <sys:String x:Key="ReportColFirmCountExcel">Кількість фірм</sys:String>
+    <sys:String x:Key="ReportColTotalEmp">Всього працівників</sys:String>
+    <sys:String x:Key="ReportEmpCountFmt">{0} ({1} працівників)</sys:String>
+    <sys:String x:Key="ReportColPassportExpFull">Паспорт до</sys:String>
+    <sys:String x:Key="ReportColVisaExpFull">Віза до</sys:String>
+    <sys:String x:Key="ReportColInsExpFull">Страховка до</sys:String>
+    <sys:String x:Key="ReportColStartDateFull">Дата наступу</sys:String>
+    <sys:String x:Key="ReportColEndDateFull">Дата закінчення</sys:String>
+    <sys:String x:Key="ReportActionArchived">Архівовано</sys:String>
+    <sys:String x:Key="ReportActionRestored">Відновлено</sys:String>
+    <sys:String x:Key="ReportNoSheets">Не обрано жодного листа для експорту.</sys:String>
+    <sys:String x:Key="ReportNoSheetsTitle">Увага</sys:String>
+    <sys:String x:Key="ReportExported">Експортовано!</sys:String>
+    <sys:String x:Key="ReportExportedPdf">Експортовано PDF!</sys:String>
+    <sys:String x:Key="ReportExportError">Помилка експорту: {0}</sys:String>
+    <sys:String x:Key="ReportExportErrorTitle">Помилка</sys:String>
+    <sys:String x:Key="ReportPdfTitle">Звіт</sys:String>
+    <sys:String x:Key="ReportPdfPeriod">Період: {0} — {1}</sys:String>
+    <sys:String x:Key="ReportPdfStatsFmt">Працювало: {0}  |  Активних: {1}  |  Нових: {2}  |  Закінчили: {3}</sys:String>
+    <sys:String x:Key="ReportPdfAgencySection">Статистика по агенціях</sys:String>
+
+    <!-- Employee Statuses -->
+    <sys:String x:Key="StatusActive">Активний</sys:String>
+    <sys:String x:Key="StatusOnLeave">У відпустці</sys:String>
+    <sys:String x:Key="StatusDismissed">Звільнений</sys:String>
+    <sys:String x:Key="StatusAwaitingDocs">Очікує документи</sys:String>
+
     <!-- PDF Editor -->
     <sys:String x:Key="PdfClickToPlace">Натисніть «Вст.» біля тегу, потім клікніть на PDF щоб розмістити</sys:String>
     <sys:String x:Key="PdfPlaceTag">Розмістити на PDF</sys:String>
     <sys:String x:Key="PdfPlacedTags">Розміщені теги</sys:String>
     <sys:String x:Key="PdfTagMarker">Позначка тегу</sys:String>
+
+
+    <sys:String x:Key="ImgEditorTitle">Редактор документа</sys:String>
+    <sys:String x:Key="ImgEditorCrop">Обрізати</sys:String>
+    <sys:String x:Key="ImgEditorRotateL">Поворот ← 90°</sys:String>
+    <sys:String x:Key="ImgEditorRotateR">Поворот → 90°</sys:String>
+    <sys:String x:Key="ImgEditorSharpen">Різкість</sys:String>
+    <sys:String x:Key="ImgEditorReset">Скинути</sys:String>
+    <sys:String x:Key="ImgEditorSave">Зберегти</sys:String>
+    <sys:String x:Key="ImgEditorAdjust">Налаштування</sys:String>
+    <sys:String x:Key="ImgEditorBrightness">Яскравість</sys:String>
+    <sys:String x:Key="ImgEditorContrast">Контраст</sys:String>
+    <sys:String x:Key="ImgEditorDeskew">Вирівнювання</sys:String>
+    <sys:String x:Key="ImgEditorDrawCrop">Намалюйте область для обрізки на фото.</sys:String>
+    <sys:String x:Key="ImgEditorCropped">Обрізано!</sys:String>
+    <sys:String x:Key="ImgEditorSharpened">Різкість збільшено!</sys:String>
+    <sys:String x:Key="ImgEditorResetDone">Відновлено оригінал.</sys:String>
+    <sys:String x:Key="ImgEditorAutoEnhance">Авто</sys:String>
+    <sys:String x:Key="ImgEditorAutoEnhanceDone">Авто-покращення застосовано!</sys:String>
+    <sys:String x:Key="ImgEditorPerspective">Перспектива</sys:String>
+    <sys:String x:Key="ImgEditorPerspectiveDone">Перспективу виправлено!</sys:String>
+    <sys:String x:Key="ImgEditorPerspectiveNotFound">Контур документа не знайдено. Спробуйте зробити фото з більшим контрастом.</sys:String>
+    <sys:String x:Key="ImgEditorGamma">Гамма</sys:String>
+    <sys:String x:Key="ImgEditorDenoise">Шумоподавлення</sys:String>
+
+    <sys:String x:Key="AIStatusNotLoaded">AI не завантажений</sys:String>
+    <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
+    <sys:String x:Key="AIScanWorking">AI аналізує документ...</sys:String>
+    <sys:String x:Key="AIScanNoData">AI не зміг розпізнати дані</sys:String>
+    <sys:String x:Key="AIScanDone">Заповнено {0} полів</sys:String>
+    <sys:String x:Key="AIStatusReady">AI готовий до роботи</sys:String>
+
+    <sys:String x:Key="EmpTypeVisa">Іноземець (віза)</sys:String>
+    <sys:String x:Key="EmpTypeEuCitizen">Громадянин ЄС</sys:String>
+    <sys:String x:Key="EmpTypeWorkPermit">Іноземець (віза + дозвіл)</sys:String>
+    <sys:String x:Key="EmpTypePassportOnly">Тільки паспорт</sys:String>
+    <sys:String x:Key="EuDocTypeLabel">Тип документа ЄС:</sys:String>
+    <sys:String x:Key="EuDocTypePassport">Паспорт ЄС</sys:String>
+    <sys:String x:Key="EuDocTypeIdCard">ID-карта</sys:String>
+    <sys:String x:Key="BtnUploadWorkPermit">Дозвіл на роботу</sys:String>
+    <sys:String x:Key="DragDropInvalidFormat">Непідтримуваний формат файлу. Допустимі: JPG, PNG, HEIC, PDF.</sys:String>
+    <sys:String x:Key="GlobalSearchPlaceholder">Пошук по працівниках, шаблонах, архіву...</sys:String>
+    <sys:String x:Key="GlobalSearchNoResults">Нічого не знайдено</sys:String>
+    <sys:String x:Key="SearchCatEmployees">Працівники</sys:String>
+    <sys:String x:Key="SearchCatTemplates">Шаблони</sys:String>
+    <sys:String x:Key="SearchCatArchive">Архів</sys:String>
+    <sys:String x:Key="SearchCatCandidates">Кандидати</sys:String>
+    <sys:String x:Key="SearchCatCompanies">Фірми</sys:String>
+    <sys:String x:Key="DashboardTitle">Панель керування</sys:String>
+    <sys:String x:Key="DashWidgetEmployees">Працівники</sys:String>
+    <sys:String x:Key="DashWidgetProblems">Проблеми з документами</sys:String>
+    <sys:String x:Key="DashWidgetActivity">Остання активність</sys:String>
+    <sys:String x:Key="DashWidgetFinance">Фінанси за місяць</sys:String>
+    <sys:String x:Key="DashWidgetQuickActions">Швидкі дії</sys:String>
+    <sys:String x:Key="DashNoCompany">Оберіть фірму для перегляду</sys:String>
+    <sys:String x:Key="DashActionAddEmployee">Додати працівника</sys:String>
+    <sys:String x:Key="DashActionGenerate">Генерувати документ</sys:String>
+    <sys:String x:Key="DashExpiringSoon">Закінчуються найближчим часом</sys:String>
+    <sys:String x:Key="DashThisMonth">цього місяця</sys:String>
+    <sys:String x:Key="DashNoChange">без змін</sys:String>
+    <sys:String x:Key="DashExpired">прострочено</sys:String>
+    <sys:String x:Key="DashAllGood">Все добре</sys:String>
+    <sys:String x:Key="DashAvailable">доступно</sys:String>
+    <sys:String x:Key="DashSevExpired">Прострочено</sys:String>
+    <sys:String x:Key="DashSevDays">дн.</sys:String>
+    <sys:String x:Key="DashAllOk">Все документи в порядку!</sys:String>
+    <sys:String x:Key="DashNoActivity">Немає активності</sys:String>
+    <sys:String x:Key="DashLoading">Завантаження...</sys:String>
+    <sys:String x:Key="DashTimeNow">щойно</sys:String>
+    <sys:String x:Key="DashTimeMin">хв. тому</sys:String>
+    <sys:String x:Key="DashTimeHours">год. тому</sys:String>
+    <sys:String x:Key="DashTimeYesterday">вчора</sys:String>
+    <sys:String x:Key="DashTimeDays">дн. тому</sys:String>
+    <sys:String x:Key="DashActAdded">Додано працівника</sys:String>
+    <sys:String x:Key="DashActArchived">Архівовано</sys:String>
+    <sys:String x:Key="DashActRestored">Відновлено</sys:String>
+    <sys:String x:Key="DashActDocGen">Документ згенеровано</sys:String>
+    <sys:String x:Key="DashActTemplateAdd">Шаблон додано</sys:String>
+    <sys:String x:Key="DashActExport">Експорт в Excel</sys:String>
+    <sys:String x:Key="DashActBatchExport">Пакетний експорт</sys:String>
+    <sys:String x:Key="DashWidgetSalary">Зарплати</sys:String>
+    <sys:String x:Key="DashSalaryWorkers">працівників</sys:String>
+    <sys:String x:Key="DashSalaryAdvances">Аванси</sys:String>
+    <sys:String x:Key="DashSalaryTotal">Загалом</sys:String>
+    <sys:String x:Key="DashSalaryPaid">Виплачено</sys:String>
+    <sys:String x:Key="DashSalaryEmpty">Зарплатних відомостей ще немає</sys:String>
+    <sys:String x:Key="DashSalaryEmptyMsg">Створіть місяць у фінансах, щоб побачити зведення тут.</sys:String>
+    <sys:String x:Key="DashSalaryUnpaid">очікують виплати</sys:String>
+    <sys:String x:Key="DashSalaryNet">До виплати</sys:String>
+    <sys:String x:Key="DashSalaryExpenses">Витрати фірми</sys:String>
+    <sys:String x:Key="DashSalaryGrandTotal">Загальна виплата</sys:String>
+    <sys:String x:Key="StepWorkPermitData">Дані дозволу на роботу</sys:String>
+    <sys:String x:Key="WizWorkPermitNumber">Номер дозволу</sys:String>
+    <sys:String x:Key="WizWorkPermitType">Тип дозволу</sys:String>
+    <sys:String x:Key="WizWorkPermitIssueDate">Дата видачі</sys:String>
+    <sys:String x:Key="WizWorkPermitExpiry">Термін дії дозволу</sys:String>
+    <sys:String x:Key="WizWorkPermitAuthority">Орган що видав</sys:String>
+
+    <!-- Finance & Tables -->
+    <sys:String x:Key="FinTabTitle">Фінанси та Таблиці</sys:String>
+    <sys:String x:Key="FinTabFinances">Фінанси</sys:String>
+    <sys:String x:Key="FinTabTables">Таблиці</sys:String>
+    <sys:String x:Key="FinTabFinancesDesc">Фінансова звітність та облік</sys:String>
+    <sys:String x:Key="FinTabTablesDesc">Генерація таблиць для друку</sys:String>
+    <sys:String x:Key="AdvTableTitle">Авансова відомість</sys:String>
+    <sys:String x:Key="AdvTableDesc">Генерація PDF таблиці з актуальним списком працівників для видачі авансів</sys:String>
+    <sys:String x:Key="AdvTableSelectFirms">Оберіть фірми:</sys:String>
+    <sys:String x:Key="AdvTableSelectAll">Обрати всі</sys:String>
+    <sys:String x:Key="AdvTableGenerate">Згенерувати PDF</sys:String>
+    <sys:String x:Key="AdvTableNoFirms">Оберіть хоча б одну фірму</sys:String>
+    <sys:String x:Key="AdvTableSuccess">PDF успішно збережено</sys:String>
+    <sys:String x:Key="AdvTableColName">Ім'я Прізвище</sys:String>
+    <sys:String x:Key="AdvTableColDate">Дата</sys:String>
+    <sys:String x:Key="AdvTableColAmount">Сума</sys:String>
+    <sys:String x:Key="AdvTableColSign">Підпис</sys:String>
+    <sys:String x:Key="AdvTablePdfTitle">Авансова відомість</sys:String>
+
+    <!-- Tables Menu -->
+    <sys:String x:Key="TablesMenuTitle">Таблиці</sys:String>
+    <sys:String x:Key="TablesAdvance">Авансова відомість</sys:String>
+    <sys:String x:Key="TablesAdvanceDesc">Таблиця для видачі авансів працівникам</sys:String>
+    <sys:String x:Key="TablesPayment">Виплата на підписи</sys:String>
+    <sys:String x:Key="TablesPaymentDesc">Лист підписів за отримання зарплати</sys:String>
+
+    <!-- Tag Catalog Groups -->
+    <sys:String x:Key="TagGrpCompany">Фірма</sys:String>
+    <sys:String x:Key="TagGrpAgency">Агентство</sys:String>
+    <sys:String x:Key="TagGrpEmpPersonal">Працівник — Особисті дані</sys:String>
+    <sys:String x:Key="TagGrpEmpPassport">Працівник — Паспорт</sys:String>
+    <sys:String x:Key="TagGrpEmpVisa">Працівник — Віза</sys:String>
+    <sys:String x:Key="TagGrpEmpInsurance">Працівник — Страховка</sys:String>
+    <sys:String x:Key="TagGrpEmpWorkPermit">Працівник — Дозвіл на роботу</sys:String>
+    <sys:String x:Key="TagGrpEmpLocalAddr">Працівник — Адреса проживання</sys:String>
+    <sys:String x:Key="TagGrpEmpAbroadAddr">Працівник — Адреса за кордоном</sys:String>
+    <sys:String x:Key="TagGrpEmpWork">Працівник — Робота</sys:String>
+    <sys:String x:Key="TagGrpEmployee">Працівник</sys:String>
+
+    <!-- Tag Catalog Descriptions – Company -->
+    <sys:String x:Key="TagDescCompanyName">Назва фірми</sys:String>
+    <sys:String x:Key="TagDescCompanyICO">ІЧО фірми</sys:String>
+    <sys:String x:Key="TagDescCompanyWeeklyHours">Робочих годин в тиждень</sys:String>
+    <sys:String x:Key="TagDescCompanyDailyHours">Робочих годин в день</sys:String>
+    <sys:String x:Key="TagDescCompanyShiftCount">Кількість змін</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrStreet">Адреса {0} — Вулиця</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrNumber">Адреса {0} — Номер</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrCity">Адреса {0} — Місто</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrZip">Адреса {0} — Індекс</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrFull">Адреса {0} — Повна</sys:String>
+    <sys:String x:Key="TagDescCompanyPosTitle">Позиція {0} — Назва</sys:String>
+    <sys:String x:Key="TagDescCompanyPosNumber">Позиція {0} — Номер</sys:String>
+    <sys:String x:Key="TagDescCompanyPosSalary">Позиція {0} — Зарплата (брутто)</sys:String>
+    <sys:String x:Key="TagDescCompanyPosHourly">Позиція {0} — Годинна зарплата</sys:String>
+
+    <!-- Tag Catalog Descriptions – Agency -->
+    <sys:String x:Key="TagDescAgencyName">Назва агентства</sys:String>
+    <sys:String x:Key="TagDescAgencyICO">ІЧО агентства</sys:String>
+    <sys:String x:Key="TagDescAgencyAddress">Повна адреса агентства</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Personal -->
+    <sys:String x:Key="TagDescEmpFirstName">Ім'я працівника</sys:String>
+    <sys:String x:Key="TagDescEmpLastName">Прізвище працівника</sys:String>
+    <sys:String x:Key="TagDescEmpFullName">Повне ім'я працівника</sys:String>
+    <sys:String x:Key="TagDescEmpBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
+    <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
+    <sys:String x:Key="TagDescEmpStatus">Статус</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Passport -->
+    <sys:String x:Key="TagDescEmpPassportNumber">Номер паспорту</sys:String>
+    <sys:String x:Key="TagDescEmpPassportCity">Місто народження</sys:String>
+    <sys:String x:Key="TagDescEmpPassportCountry">Країна народження</sys:String>
+    <sys:String x:Key="TagDescEmpPassportExpiry">Дата закінчення паспорту</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Visa -->
+    <sys:String x:Key="TagDescEmpVisaNumber">Номер візи</sys:String>
+    <sys:String x:Key="TagDescEmpVisaType">Тип візи</sys:String>
+    <sys:String x:Key="TagDescEmpVisaExpiry">Дата закінчення візи</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Insurance -->
+    <sys:String x:Key="TagDescEmpInsCompany">Страхова компанія</sys:String>
+    <sys:String x:Key="TagDescEmpInsNumber">Номер страховки</sys:String>
+    <sys:String x:Key="TagDescEmpInsExpiry">Дата закінчення страховки</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Work Permit -->
+    <sys:String x:Key="TagDescEmpWpName">Назва дозволу на роботу</sys:String>
+    <sys:String x:Key="TagDescEmpWpNumber">Номер дозволу на роботу</sys:String>
+    <sys:String x:Key="TagDescEmpWpType">Тип дозволу на роботу</sys:String>
+    <sys:String x:Key="TagDescEmpWpIssueDate">Дата видачі дозволу</sys:String>
+    <sys:String x:Key="TagDescEmpWpExpiry">Термін дії дозволу</sys:String>
+    <sys:String x:Key="TagDescEmpWpAuthority">Орган що видав дозвіл</sys:String>
+    <sys:String x:Key="TagDescEmpType">Тип працівника</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Local Address -->
+    <sys:String x:Key="TagDescEmpLocalStreet">Вулиця</sys:String>
+    <sys:String x:Key="TagDescEmpLocalNumber">Номер</sys:String>
+    <sys:String x:Key="TagDescEmpLocalCity">Місто</sys:String>
+    <sys:String x:Key="TagDescEmpLocalZip">Індекс</sys:String>
+    <sys:String x:Key="TagDescEmpLocalFull">Повна адреса</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Abroad Address -->
+    <sys:String x:Key="TagDescEmpAbroadStreet">Вулиця</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadNumber">Номер</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadCity">Місто</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadZip">Індекс</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadFull">Повна адреса</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Work -->
+    <sys:String x:Key="TagDescEmpWorkAddress">Адреса роботи</sys:String>
+    <sys:String x:Key="TagDescEmpPosition">Позиція</sys:String>
+    <sys:String x:Key="TagDescEmpPosNumber">Номер позиції</sys:String>
+    <sys:String x:Key="TagDescEmpSalary">Місячна зарплата (брутто)</sys:String>
+    <sys:String x:Key="TagDescEmpHourly">Годинна зарплата</sys:String>
+    <sys:String x:Key="TagDescEmpContractType">Тип договору</sys:String>
+    <sys:String x:Key="TagDescEmpDepartment">Відділ</sys:String>
+    <sys:String x:Key="TagDescEmpStartDate">Дата наступу на роботу</sys:String>
+    <sys:String x:Key="TagDescEmpSignDate">Дата підписання договору</sys:String>
+
+    <!-- Template Editor ViewModel -->
+    <sys:String x:Key="EditorTitleFmt">Редактор: {0}</sys:String>
+    <sys:String x:Key="EditorSaved">Збережено!</sys:String>
+    <sys:String x:Key="EditorErrPath">Помилка: шлях до шаблону невідомий.</sys:String>
+    <sys:String x:Key="EditorErrEmpty">Немає вмісту для збереження.</sys:String>
+    <sys:String x:Key="EditorErrFmt">Помилка: {0}</sys:String>
+    <sys:String x:Key="EditorCopied">Скопійовано: {0}</sys:String>
+
+    <!-- XLSX Editor ViewModel -->
+    <sys:String x:Key="XlsxEditorTitle">Редактор XLSX: {0}</sys:String>
+    <sys:String x:Key="XlsxFileNotFound">Файл шаблону не знайдено.</sys:String>
+    <sys:String x:Key="XlsxLoadError">Помилка завантаження: {0}</sys:String>
+    <sys:String x:Key="XlsxNoOpenFile">Немає відкритого файлу.</sys:String>
+    <sys:String x:Key="XlsxSaved">Шаблон збережено успішно!</sys:String>
+    <sys:String x:Key="XlsxSaveError">Помилка збереження: {0}</sys:String>
+    <sys:String x:Key="XlsxSelectCell">Оберіть комірку у таблиці для вставки тегу.</sys:String>
+    <sys:String x:Key="XlsxTagInserted">Тег {0} вставлено в комірку {1}</sys:String>
+    <sys:String x:Key="XlsxInsertError">Помилка вставки: {0}</sys:String>
+    <sys:String x:Key="XlsxTagCopied">Тег {0} скопійовано в буфер обміну</sys:String>
+
+    <!-- Tag Visibility Window -->
+    <sys:String x:Key="TagVisTitle">Налаштування видимості тегів</sys:String>
+    <sys:String x:Key="TagVisHeader">Видимість тегів у редакторах</sys:String>
+    <sys:String x:Key="TagVisSelectAll">Вибрати всі</sys:String>
+    <sys:String x:Key="TagVisDeselectAll">Зняти всі</sys:String>
+    <sys:String x:Key="TagVisSave">Зберегти</sys:String>
+    <sys:String x:Key="TagVisCancel">Скасувати</sys:String>
+
+    <!-- PDF Editor ViewModel -->
+    <sys:String x:Key="PdfEditorTitle">PDF: {0}</sys:String>
+    <sys:String x:Key="PdfFileNotFound">PDF файл не знайдено.</sys:String>
+    <sys:String x:Key="PdfTagPlaced">{0} розміщено на сторінці {1}</sys:String>
+    <sys:String x:Key="PdfTagRemoved">{0} видалено</sys:String>
+    <sys:String x:Key="PdfTagCopied">{0} скопійовано</sys:String>
+
+    <!-- Payment Sign -->
+    <sys:String x:Key="PaySignTitle">Виплата на підписи</sys:String>
+    <sys:String x:Key="PaySignDesc">Генерація PDF листа підписів за отримання зарплати за обраний місяць</sys:String>
+    <sys:String x:Key="PaySignMonth">Місяць:</sys:String>
+    <sys:String x:Key="PaySignPayDate">Дата виплати:</sys:String>
+    <sys:String x:Key="PaySignSelectFirms">Оберіть фірми:</sys:String>
+    <sys:String x:Key="PaySignGenerate">Згенерувати PDF</sys:String>
+    <sys:String x:Key="PaySignPdfTitle">Виплата за місяць {0}/{1}</sys:String>
+    <sys:String x:Key="PaySignColName">Ім'я та Прізвище</sys:String>
+    <sys:String x:Key="PaySignColFirm">Фірма</sys:String>
+    <sys:String x:Key="PaySignColDate">Дата</sys:String>
+    <sys:String x:Key="PaySignColInfo">Інформація</sys:String>
+    <sys:String x:Key="PaySignColSign">Підпис</sys:String>
+    <sys:String x:Key="PaySignInfoText">Зарплату та розрахункові листки отримав</sys:String>
+
+    <!-- Salary / Finance -->
+    <sys:String x:Key="FinBtnLoadEmployees">Завантажити працівників</sys:String>
+    <sys:String x:Key="FinBtnAdvance">Аванс</sys:String>
+    <sys:String x:Key="FinSearchPlaceholder">Пошук працівника...</sys:String>
+    <sys:String x:Key="FinBtnConfirmAdvance">Додати аванс</sys:String>
+    <sys:String x:Key="FinColName">Ім'я</sys:String>
+    <sys:String x:Key="FinColHours">Години</sys:String>
+    <sys:String x:Key="FinColRate">Ставка</sys:String>
+    <sys:String x:Key="FinColGross">Нараховано</sys:String>
+    <sys:String x:Key="FinColAdvance">Аванс</sys:String>
+    <sys:String x:Key="FinColAdvances">Аванси</sys:String>
+    <sys:String x:Key="FinColAccommodation">Гуртожиток</sys:String>
+    <sys:String x:Key="FinColOther">Інше</sys:String>
+    <sys:String x:Key="FinColNet">До виплати</sys:String>
+    <sys:String x:Key="FinColFirm">Фірма</sys:String>
+    <sys:String x:Key="FinColAmount">Сума</sys:String>
+    <sys:String x:Key="FinStatEmployees">Працівники</sys:String>
+    <sys:String x:Key="FinStatHours">Годин</sys:String>
+    <sys:String x:Key="FinStatGross">Нараховано</sys:String>
+    <sys:String x:Key="FinStatAdvances">Аванси</sys:String>
+    <sys:String x:Key="FinStatAccom">Гуртожиток</sys:String>
+    <sys:String x:Key="FinStatNet">До виплати</sys:String>
+    <sys:String x:Key="FinStatPaid">Виплачено</sys:String>
+    <sys:String x:Key="FinBtnMarkAllPaid">✓ Виплачені всі</sys:String>
+    <sys:String x:Key="FinBtnCreateMonth">Наступний місяць</sys:String>
+    <sys:String x:Key="FinColPaid">Виплачено</sys:String>
+    <sys:String x:Key="FinFirmBreakdown">По фірмах</sys:String>
+    <sys:String x:Key="FinAdvanceTitle">Додати аванс</sys:String>
+    <sys:String x:Key="FinAdvanceNote">Примітка</sys:String>
+    <sys:String x:Key="FinAdvanceDate">Дата</sys:String>
+    <sys:String x:Key="FinAdvanceHistory">Історія авансів</sys:String>
+    <sys:String x:Key="FinAdvanceDeducted">Знято при зарплаті</sys:String>
+    <sys:String x:Key="FinAdvanceNotDeducted">Не знято</sys:String>
+    <sys:String x:Key="FinAdvanceTotalOpen">Не знято всього</sys:String>
+    <sys:String x:Key="FinDebtCarried">Борг з попереднього місяця:</sys:String>
+    <sys:String x:Key="FinDebtLabel">Заборгованість:</sys:String>
+    <sys:String x:Key="FinDebtFromMonth">Борг за {0}:</sys:String>
+    <sys:String x:Key="FinSalaryLoaded">Завантажено</sys:String>
+    <sys:String x:Key="FinSalarySaved">Збережено!</sys:String>
+    <sys:String x:Key="FinUnsavedChanges">Незбережені зміни</sys:String>
+    <sys:String x:Key="FinAdvanceDeleteConfirm">Видалити аванс</sys:String>
+    <sys:String x:Key="FinSalaryExported">Експортовано!</sys:String>
+    <sys:String x:Key="FinSalaryNoData">Немає даних для експорту</sys:String>
+    <sys:String x:Key="FinColSurcharge">Доплата</sys:String>
+    <sys:String x:Key="FinColNote">Примітка</sys:String>
+    <sys:String x:Key="FinFilterAll">Всі фірми</sys:String>
+    <sys:String x:Key="FinStatGrandTotal">Загальна Виплата</sys:String>
+    <sys:String x:Key="FinStatsConfig">Додаткова статистика</sys:String>
+    <sys:String x:Key="FinStatRemaining">Залишилось виплатити</sys:String>
+    <sys:String x:Key="FinStatCustomAdd">Доплатки (+)</sys:String>
+    <sys:String x:Key="FinStatCustomSub">Знято (−)</sys:String>
+    <sys:String x:Key="FinFirmExpenses">Витрати фірми</sys:String>
+    <sys:String x:Key="FinExpenseAdd">Додати витрату</sys:String>
+    <sys:String x:Key="FinExpenseTotal">Витрати разом</sys:String>
+    <sys:String x:Key="FinExpenseNew">Нова витрата</sys:String>
+    <sys:String x:Key="FinExpenseSelectFirm">Оберіть фірму для додавання витрат</sys:String>
+    <sys:String x:Key="FinAdvanceInvalid">Невірна сума</sys:String>
+    <sys:String x:Key="FinAdvanceNotFound">Працівника не знайдено</sys:String>
+    <sys:String x:Key="FinAdvanceAdded">Аванс {0} Kč → {1}</sys:String>
+    <sys:String x:Key="FinBtnManageColumns">Стовпці</sys:String>
+    <sys:String x:Key="FinManageColumnsTitle">Управління стовпцями</sys:String>
+    <sys:String x:Key="FinManageColumnsDesc">Додайте, редагуйте або видаліть власні стовпці для розрахунку зарплати.</sys:String>
+    <sys:String x:Key="FinBtnAddField">Додати</sys:String>
+    <sys:String x:Key="FinEditFieldTitle">Редагувати стовпець</sys:String>
+    <sys:String x:Key="FinConfirmDeleteField">Видалити стовпець '{0}'?</sys:String>
+    <sys:String x:Key="FinExportSelectTitle">Експорт в Excel</sys:String>
+    <sys:String x:Key="FinExportSelectDesc">Оберіть фірми для експорту</sys:String>
+    <sys:String x:Key="FinExportSelectAll">Вибрати всі</sys:String>
+    <sys:String x:Key="FinExportBtn">Експортувати</sys:String>
+    <sys:String x:Key="FinExportNoFirms">Оберіть хоча б одну фірму</sys:String>
+    <sys:String x:Key="BtnDone">Готово</sys:String>
+
+    <!-- Hardcoded strings localization -->
+    <sys:String x:Key="SettingsTagsTitle">Теги</sys:String>
+    <sys:String x:Key="SettingsTagsDesc">Налаштувати видимість тегів у редакторах шаблонів</sys:String>
+    <sys:String x:Key="SettingsTagsBtn">Налаштувати теги</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityTitle">Відображення фірм</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityDesc">Приховати фірми з якими більше не співпрацюєте</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityBtn">Налаштувати</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityHint">Зніміть галочку щоб приховати фірму. Фірми з активними працівниками не можна приховати.</sys:String>
+    <sys:String x:Key="SettingsFirmsHasEmployees">Є </sys:String>
+    <sys:String x:Key="SettingsFirmsEmployeesCount"> активних — не можна приховати</sys:String>
+    <sys:String x:Key="SettingsCopyrightTitle">Авторські права</sys:String>
+    <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. Всі права захищені.</sys:String>
+    <sys:String x:Key="SettingsCopyrightDesc">Це програмне забезпечення є власністю автора. Несанкціоноване копіювання, розповсюдження або модифікація суворо заборонені.</sys:String>
+    <sys:String x:Key="SettingsLicenseTitle">Ліцензія</sys:String>
+    <sys:String x:Key="LicenseNotActivated">Не активовано</sys:String>
+    <sys:String x:Key="LicenseOtherPC">Ліцензія для іншого ПК</sys:String>
+    <sys:String x:Key="LicenseDamaged">Ліцензія пошкоджена</sys:String>
+    <sys:String x:Key="LicenseUnlimited">Безлімітна ліцензія</sys:String>
+    <sys:String x:Key="LicenseExpired">Ліцензія закінчилась</sys:String>
+    <sys:String x:Key="LicenseActiveUntil">Активна до</sys:String>
+    <sys:String x:Key="LicenseDaysLeft">дн.</sys:String>
+    <sys:String x:Key="LicenseCheckError">Помилка перевірки</sys:String>
+    <sys:String x:Key="WizDocLabel">Документ</sys:String>
+    <sys:String x:Key="WizKeepAspect">Зберігати пропорції</sys:String>
+    <sys:String x:Key="WizRotateLeft">Повернути вліво</sys:String>
+    <sys:String x:Key="WizRotateRight">Повернути вправо</sys:String>
+    <sys:String x:Key="WizEnhanceBtn">Покращити</sys:String>
+    <sys:String x:Key="WizPreviewLabel">Попередній перегляд:</sys:String>
+    <sys:String x:Key="MsgOpenFolderFail">Не вдалося відкрити папку.</sys:String>
+    <sys:String x:Key="MsgEnterNewDate">Введіть нову дату.</sys:String>
+    <sys:String x:Key="MsgSaveFail">Не вдалося зберегти.</sys:String>
+    <sys:String x:Key="MsgGenerating">Генерація документа...</sys:String>
+    <sys:String x:Key="MsgTemplateNotFound">Файл шаблону не знайдено.</sys:String>
+    <sys:String x:Key="MsgProfileSaveFail">Не вдалося зберегти анкету.</sys:String>
+    <sys:String x:Key="MsgOpenFileFail">Не вдалося відкрити файл.</sys:String>
+    <sys:String x:Key="MsgFileNotFound">Файл не знайдено.</sys:String>
+    <sys:String x:Key="MsgWorkPermitUpdated">Дозвіл на роботу оновлено.</sys:String>
+    <sys:String x:Key="MsgNoImageRotate">Немає зображення для обертання.</sys:String>
+    <sys:String x:Key="MsgDocNotLoaded">Документ не завантажено або доступний лише PDF.</sys:String>
+    <sys:String x:Key="MsgCropHint">Для обрізки фото працівника оберіть пункт "Фото" в списку документів.</sys:String>
+    <sys:String x:Key="MsgUploadFirst">Спочатку завантажте документ.</sys:String>
+    <sys:String x:Key="MsgHint">Підказка</sys:String>
+    <sys:String x:Key="MsgSaveEmployeeFail">Не вдалося зберегти працівника.</sys:String>
+    <sys:String x:Key="MsgFillRequiredFields">Заповніть обов'язкові поля (Ім'я, Прізвище).</sys:String>
+    <sys:String x:Key="MsgWizUnsavedClose">Є незбережені дані. Закрити без збереження?</sys:String>
+    <sys:String x:Key="MsgWizUnsavedTitle">Скасувати</sys:String>
+    <sys:String x:Key="MsgEnterCompanyName">Вкажіть назву фірми.</sys:String>
+    <sys:String x:Key="MsgUnsupportedFormat">Непідтримуваний формат файлу.</sys:String>
+
+    <!-- Expiry warning badges -->
+    <sys:String x:Key="ExpiryExpired">⚠ Прострочено</sys:String>
+    <sys:String x:Key="ExpiryCritical">⚠ &lt; 7 днів</sys:String>
+    <sys:String x:Key="ExpiryWarning">⚠ &lt; 30 днів</sys:String>
+
+    <!-- Company dialog -->
+    <sys:String x:Key="CompanyDialogTitleEdit">Редагувати фірму</sys:String>
+    <sys:String x:Key="CompanyDialogTitleAdd">Додати нову фірму</sys:String>
+    <sys:String x:Key="MsgCompanyHasEmployees">Ця фірма має {0} працівник(ів). Видалити все одно?</sys:String>
+    <sys:String x:Key="TitleWarning">Увага</sys:String>
+    <sys:String x:Key="MsgConfirmDeleteCompany">Ви впевнені, що хочете видалити фірму "{0}"?
+
+Папка на диску НЕ буде видалена.</sys:String>
+    <sys:String x:Key="TitleDeleteCompany">Видалити фірму</sys:String>
+
+    <!-- Template errors -->
+    <sys:String x:Key="MsgDeleteError">Помилка видалення: {0}</sys:String>
+    <sys:String x:Key="MsgRenameError">Помилка перейменування: {0}</sys:String>
+    <sys:String x:Key="MsgOpenFileError">Не вдалося відкрити файл: {0}</sys:String>
+
+    <!-- Crop targets -->
+    <sys:String x:Key="CropPassport">Паспорт</sys:String>
+    <sys:String x:Key="CropVisa">Віза</sys:String>
+    <sys:String x:Key="CropInsurance">Страховка</sys:String>
+    <sys:String x:Key="CropPhoto">Фото</sys:String>
+    <sys:String x:Key="CropPassport2">Паспорт 2</sys:String>
+    <sys:String x:Key="CropPermit">Дозвіл</sys:String>
+    <sys:String x:Key="CarouselPassport">Паспорт</sys:String>
+    <sys:String x:Key="CarouselPassport2">Паспорт 2</sys:String>
+    <sys:String x:Key="CarouselVisa">Віза</sys:String>
+    <sys:String x:Key="CarouselInsurance">Страховка</sys:String>
+    <sys:String x:Key="CarouselPermit">Дозвіл</sys:String>
+
+    <!-- History actions -->
+    <sys:String x:Key="HistoryActionCreation">Створення</sys:String>
+    <sys:String x:Key="HistoryDescCreated">Працівника створено: {0}</sys:String>
+
+    <!-- Extend dialog -->
+    <sys:String x:Key="DetExtendTitleVisa">Подовжити візу</sys:String>
+    <sys:String x:Key="DetExtendTitleIns">Подовжити страховку</sys:String>
+    <sys:String x:Key="DetExtendFieldVisa">Віза до</sys:String>
+    <sys:String x:Key="DetExtendFieldIns">Страховка до</sys:String>
+    <sys:String x:Key="HistoryExtendVisa">Подовження візи</sys:String>
+    <sys:String x:Key="HistoryExtendIns">Подовження страховки</sys:String>
+
+    <!-- Archive messages -->
+    <sys:String x:Key="MsgEnterArchiveDate">Введіть дату закінчення співпраці.</sys:String>
+    <sys:String x:Key="HistoryActionArchive">Переміщено в архів</sys:String>
+    <sys:String x:Key="HistoryFieldArchive">Архів</sys:String>
+    <sys:String x:Key="HistoryDescArchive">Переміщено в архів з фірми {0}. Дата закінчення: {1}</sys:String>
+    <sys:String x:Key="HistoryActionRestored">Відновлено з архіву</sys:String>
+    <sys:String x:Key="HistoryDescRestored">Працівника {0} відновлено до фірми {1}</sys:String>
+    <sys:String x:Key="HistFilterAll">Всі</sys:String>
+    <sys:String x:Key="HistFilterCreated">Створення</sys:String>
+    <sys:String x:Key="HistFilterProfile">Профіль</sys:String>
+    <sys:String x:Key="HistFilterDocuments">Документи</sys:String>
+    <sys:String x:Key="HistFilterStatus">Статус</sys:String>
+    <sys:String x:Key="HistFilterArchive">Архів</sys:String>
+    <sys:String x:Key="MsgArchiveError">Помилка при архівуванні.</sys:String>
+
+    <!-- Document generation -->
+    <sys:String x:Key="MsgDocGenerated">Документ згенеровано: {0}</sys:String>
+    <sys:String x:Key="MsgUnsupportedFmt">Непідтримуваний формат: {0}</sys:String>
+    <sys:String x:Key="MsgErrorFmt">Помилка: {0}</sys:String>
+
+    <!-- Document replacement -->
+    <sys:String x:Key="HistoryActionDocReplace">Заміна документу</sys:String>
+    <sys:String x:Key="HistoryDescDocReplace">Замінено документ: {0}</sys:String>
+    <sys:String x:Key="HistoryActionDocAdd">Додано документ</sys:String>
+    <sys:String x:Key="HistoryActionDocDelete">Видалено документ</sys:String>
+
+    <!-- Work permit renewal -->
+    <sys:String x:Key="DetRenewWpSelectTitle">Виберіть новий дозвіл на роботу</sys:String>
+    <sys:String x:Key="HistoryActionRenewWp">Оновлення дозволу на роботу</sys:String>
+    <sys:String x:Key="HistoryDescRenewWp">Номер: {0} → {1}, Термін: {2} → {3}</sys:String>
+
+    <!-- PDF Profile labels -->
+    <sys:String x:Key="PdfSecContacts">КОНТАКТИ</sys:String>
+    <sys:String x:Key="PdfSecInsurance">СТРАХОВКА</sys:String>
+    <sys:String x:Key="PdfFieldNumber">Номер</sys:String>
+    <sys:String x:Key="PdfFieldType">Тип</sys:String>
+    <sys:String x:Key="PdfFieldPermit">Дозвіл</sys:String>
+    <sys:String x:Key="PdfFieldIssued">Видано</sys:String>
+    <sys:String x:Key="PdfFieldAuthority">Орган</sys:String>
+    <sys:String x:Key="PdfFieldPosNumber">Номер позиції</sys:String>
+    <sys:String x:Key="PdfFieldDepartment">Відділ</sys:String>
+    <sys:String x:Key="PdfFieldValidTo">Дійсний до</sys:String>
+    <sys:String x:Key="PdfFieldValidToF">Дійсна до</sys:String>
+
+    <!-- Export headers (EmployeesViewModel) -->
+    <sys:String x:Key="ExportEmployees">Працівники</sys:String>
+    <sys:String x:Key="ExportColFirstName">Ім'я</sys:String>
+    <sys:String x:Key="ExportColLastName">Прізвище</sys:String>
+    <sys:String x:Key="ExportColPosition">Посада</sys:String>
+    <sys:String x:Key="ExportColPhone">Телефон</sys:String>
+    <sys:String x:Key="ExportColPassportNum">Паспорт №</sys:String>
+    <sys:String x:Key="ExportColPassportExp">Паспорт до</sys:String>
+    <sys:String x:Key="ExportColVisaNum">Віза №</sys:String>
+    <sys:String x:Key="ExportColVisaExp">Віза до</sys:String>
+    <sys:String x:Key="ExportColInsNum">Страховка №</sys:String>
+    <sys:String x:Key="ExportColInsExp">Страховка до</sys:String>
+    <sys:String x:Key="ExportColContractType">Тип контракту</sys:String>
+    <sys:String x:Key="ExportColStartDate">Дата початку</sys:String>
+    <sys:String x:Key="ExportColStatus">Статус</sys:String>
+    <sys:String x:Key="MsgExportError">Помилка експорту: {0}</sys:String>
+    <sys:String x:Key="MsgSelectedCount">Обрано працівників: {0}</sys:String>
+    <sys:String x:Key="MsgBatchResult">Згенеровано: {0}, помилок: {1}</sys:String>
+
+    <!-- Archive restore -->
+    <sys:String x:Key="MsgNoEmployeeSelected">Не обрано працівника.</sys:String>
+    <sys:String x:Key="MsgSelectFirmRestore">Оберіть фірму.</sys:String>
+    <sys:String x:Key="MsgEnterStartDate">Вкажіть дату наступу.</sys:String>
+    <sys:String x:Key="MsgRestoreError">Помилка при відновленні.</sys:String>
+
+    <!-- Services -->
+    <sys:String x:Key="MsgDbSaveError">Помилка збереження бази даних: {0}</sys:String>
+    <sys:String x:Key="MsgTemplateMissing">Шаблон не знайдено.</sys:String>
+    <sys:String x:Key="MsgCompanySaveError">Помилка при збереженні: {0}</sys:String>
+
+    <!-- History field names (EmployeeService) -->
+    <sys:String x:Key="HistFieldFirstName">Ім'я</sys:String>
+    <sys:String x:Key="HistFieldLastName">Прізвище</sys:String>
+    <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
+    <sys:String x:Key="HistFieldPassportExp">Термін паспорту</sys:String>
+    <sys:String x:Key="HistFieldVisaNum">Номер візи</sys:String>
+    <sys:String x:Key="HistFieldVisaExp">Термін візи</sys:String>
+    <sys:String x:Key="HistFieldInsNum">Номер страховки</sys:String>
+    <sys:String x:Key="HistFieldInsExp">Термін страховки</sys:String>
+    <sys:String x:Key="HistFieldPhone">Телефон</sys:String>
+    <sys:String x:Key="HistFieldStatus">Статус</sys:String>
+    <sys:String x:Key="HistFieldPosition">Позиція</sys:String>
+    <sys:String x:Key="HistFieldWorkAddr">Адреса роботи</sys:String>
+    <sys:String x:Key="HistFieldSignDate">Дата підписання</sys:String>
+    <sys:String x:Key="HistFieldContractType">Тип договору</sys:String>
+    <sys:String x:Key="HistFieldSalary">Зарплата (брутто)</sys:String>
+    <sys:String x:Key="HistFieldHourly">Годинна зарплата</sys:String>
+    <sys:String x:Key="HistFieldDepartment">Відділ</sys:String>
+    <sys:String x:Key="HistFieldStartDate">Дата наступу</sys:String>
+    <sys:String x:Key="HistoryActionProfileChange">Зміна анкети</sys:String>
+
+    <!-- Wizard crop instruction -->
+    <sys:String x:Key="WizCropInstruction">Виділіть область з фото працівника на паспорті та натисніть "Обрізати"</sys:String>
+    <sys:String x:Key="HistFieldEmail">Email</sys:String>
+    <sys:String x:Key="HistFieldVisaType">Тип візи</sys:String>
+    <sys:String x:Key="HistFieldInsCompany">Страхова компанія</sys:String>
+    <sys:String x:Key="HistFieldPassportCity">Місто народження</sys:String>
+    <sys:String x:Key="HistFieldPassportCountry">Країна народження</sys:String>
+    <sys:String x:Key="HistFieldWorkPermitName">Назва дозволу</sys:String>
+    <sys:String x:Key="HistFieldPosNumber">Номер позиції</sys:String>
+    <sys:String x:Key="MsgPdfSaved">PDF збережено.</sys:String>
+    <sys:String x:Key="MsgPdfProfileSaved">PDF анкету збережено.</sys:String>
+
+    <!-- Candidates -->
+    <sys:String x:Key="BtnCandidates">Кандидати</sys:String>
+    <sys:String x:Key="CandAdd">Додати кандидата</sys:String>
+    <sys:String x:Key="CandAddTitle">Новий кандидат</sys:String>
+    <sys:String x:Key="CandEmpty">Поки що кандидатів немає</sys:String>
+    <sys:String x:Key="CandPhoto">Фото</sys:String>
+    <sys:String x:Key="CandPassport">Паспорт</sys:String>
+    <sys:String x:Key="CandSelectPhoto">Вибрати фото</sys:String>
+    <sys:String x:Key="CandSelectPassport">Вибрати паспорт</sys:String>
+    <sys:String x:Key="CandFirstName">Ім'я</sys:String>
+    <sys:String x:Key="CandLastName">Прізвище</sys:String>
+    <sys:String x:Key="CandPassportNum">Номер паспорта</sys:String>
+    <sys:String x:Key="CandPassportExpiry">Термін дії паспорта</sys:String>
+    <sys:String x:Key="CandPassportCity">Місто видачі</sys:String>
+    <sys:String x:Key="CandPassportCountry">Країна</sys:String>
+    <sys:String x:Key="CandPosition">Бажана позиція</sys:String>
+    <sys:String x:Key="CandLocation">Місце роботи</sys:String>
+    <sys:String x:Key="CandAllPositions">Всі позиції</sys:String>
+    <sys:String x:Key="CandAllCzech">Вся Чехія</sys:String>
+    <sys:String x:Key="CandSpecific">Конкретне місце</sys:String>
+    <sys:String x:Key="CandPhone">Номер телефону</sys:String>
+    <sys:String x:Key="CandNotes">Нотатки</sys:String>
+    <sys:String x:Key="CandPersonalSection">Особисті дані</sys:String>
+    <sys:String x:Key="CandWorkSection">Робота</sys:String>
+    <sys:String x:Key="CandChangePassport">Змінити паспорт</sys:String>
+    <sys:String x:Key="CandDelete">Видалити</sys:String>
+    <sys:String x:Key="CandDeleteConfirm">Видалити кандидата {0}? Ця дія незворотна.</sys:String>
+    <sys:String x:Key="CandSaveFail">Не вдалося зберегти кандидата</sys:String>
+    <sys:String x:Key="CandAddedOn">Додано: </sys:String>
+    <sys:String x:Key="CandStepPassport">Завантажте паспорт</sys:String>
+    <sys:String x:Key="CandStepPassportHint">Завантажте фото або скан паспорта кандидата. На наступному кроці можна буде обрізати фото.</sys:String>
+    <sys:String x:Key="CandStepCrop">Обрізка фото</sys:String>
+    <sys:String x:Key="CandStepData">Дані кандидата</sys:String>
+    <sys:String x:Key="CandCroppedPreview">Результат:</sys:String>
+
+    <!-- AI Chat -->
+    <sys:String x:Key="BtnAIAssistant">AI Помічник</sys:String>
+    <sys:String x:Key="AIChatTitle">AI Помічник</sys:String>
+    <sys:String x:Key="AIChatPlaceholder">Напишіть повідомлення...</sys:String>
+    <sys:String x:Key="AIChatSend">Надіслати</sys:String>
+    <sys:String x:Key="AIChatAttachImage">Прикріпити фото</sys:String>
+    <sys:String x:Key="AIChatWelcome">Привіт! Я ваш AI помічник. Задайте питання або прикріпіть фото документа для аналізу.</sys:String>
+    <sys:String x:Key="AIChatNewChat">Новий чат</sys:String>
+    <sys:String x:Key="AIChatNoModel">Gemini API не налаштовано. Перейдіть в Налаштування, щоб додати API ключ.</sys:String>
+    <sys:String x:Key="AIChatThinking">AI думає...</sys:String>
+
+    <!-- AI Provider -->
+    <sys:String x:Key="AIProviderTitle">AI Провайдер</sys:String>
+    <sys:String x:Key="AIProviderGemini">Google Gemini (онлайн)</sys:String>
+    <sys:String x:Key="AIGeminiApiKey">API ключ Gemini:</sys:String>
+    <sys:String x:Key="AIGeminiGetKey">Отримати ключ безкоштовно</sys:String>
+    <sys:String x:Key="AIGeminiModel">Модель Gemini:</sys:String>
+    <sys:String x:Key="AIGeminiTest">Тест з'єднання</sys:String>
+    <sys:String x:Key="AIProviderForChat">AI Помічник (чат):</sys:String>
+    <sys:String x:Key="AIProviderForScan">AI Scan (документи):</sys:String>
+    <sys:String x:Key="AIProviderHint">Gemini = розумніший, потрібен інтернет. Локальна = офлайн, але слабша.</sys:String>
+
+    <!-- AI Template Overlay -->
+    <sys:String x:Key="AIAnalyzeTemplate">Аналіз шаблону</sys:String>
+    <sys:String x:Key="AISuggestTags">Підказати теги</sys:String>
+    <sys:String x:Key="AIOverlayWelcome">Привіт! Я допоможу з шаблоном. Натисніть «Аналіз шаблону» або задайте питання.</sys:String>
+    <sys:String x:Key="AIOverlayNoContent">Шаблон порожній або недоступний.</sys:String>
+    <sys:String x:Key="AIOverlayBtn">AI Помічник</sys:String>
+
+    <!-- AI Validation -->
+    <sys:String x:Key="AIValidateBtn">AI Перевірка</sys:String>
+    <sys:String x:Key="AIValidateTitle">AI Перевірка даних</sys:String>
+
+    <!-- AI Dashboard Report -->
+    <sys:String x:Key="AIReportBtn">AI Звіт</sys:String>
+    <sys:String x:Key="AIReportTitle">AI Аналітичний звіт</sys:String>
+
+    <!-- AI Search -->
+    <sys:String x:Key="AISearchTooltip">Розумний пошук (AI)</sys:String>
+
+    <!-- Replace Document Window -->
+    <sys:String x:Key="ReplDocTitle">Заміна документа</sys:String>
+    <sys:String x:Key="ReplDocUploadHint">Завантажте фото або скан документа</sys:String>
+    <sys:String x:Key="ReplDocUpload">Завантажити</sys:String>
+    <sys:String x:Key="ReplDocEdit">Редактор</sys:String>
+    <sys:String x:Key="ReplDocOldValue">Було</sys:String>
+    <sys:String x:Key="ReplDocLoadError">Не вдалося завантажити зображення</sys:String>
+
+    <!-- Empty States -->
+    <sys:String x:Key="TplEmptyState">Шаблони ще не додані. Натисніть + щоб створити перший.</sys:String>
 </ResourceDictionary>

@@ -83,7 +83,10 @@ namespace Win11DesktopApp.ViewModels
                 if (detected == null)
                 {
                     UploadedFilePath = string.Empty;
-                    MessageBox.Show("Непідтримуваний формат файлу.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(
+                        Application.Current?.TryFindResource("MsgUnsupportedFormat") as string ?? "Unsupported format.",
+                        Application.Current?.TryFindResource("TitleError") as string ?? "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
@@ -116,13 +119,15 @@ namespace Win11DesktopApp.ViewModels
                 if (!App.TemplateService.TryValidateTemplateFile(UploadedFilePath, out var detectedFormat, out var error))
                 {
                     App.TemplateService.LogTemplateError($"AddTemplate validation failed: {UploadedFilePath} | {error}");
-                    MessageBox.Show(error, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(error, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
                 SelectedFormat = detectedFormat;
                 App.TemplateService.AddTemplate(_firmName, Name, Description, SelectedFormat, UploadedFilePath);
             }
+            App.ActivityLogService.Log("TemplateAdded", "Template", _firmName, "",
+                $"Додано шаблон «{Name}» ({SelectedFormat}) до {_firmName}");
             RequestClose?.Invoke();
         }
     }

@@ -23,83 +23,215 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Command="{Binding GoBackCommand}" 
                         Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
-                        FontSize="16" Background="Transparent" BorderThickness="0"
+                        FontSize="{DynamicResource FS16}" Background="Transparent" BorderThickness="0"
                         Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,10,0"
                         VerticalAlignment="Center" Cursor="Hand" ToolTip="{DynamicResource XlsxBack}"/>
 
                 <TextBlock Grid.Column="1" Text="{Binding Title}" 
-                           FontSize="16" FontWeight="SemiBold" 
+                           FontSize="{DynamicResource FS16}" FontWeight="SemiBold" 
                            Foreground="{DynamicResource ForegroundBrush}"
                            VerticalAlignment="Center"/>
 
-                <Button Grid.Column="2" Content="{DynamicResource XlsxCancel}" 
+                <!-- AI Assistant Overlay Button -->
+                <Button x:Name="BtnAIOverlay" Grid.Column="2" Click="AIOverlay_Click"
+                        Padding="10,5" Margin="0,0,6,0" Cursor="Hand"
+                        Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                        VerticalAlignment="Center" ToolTip="{DynamicResource AIOverlayBtn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
+                                   VerticalAlignment="Center" Margin="0,0,4,0">
+                            <TextBlock.Foreground>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#7C4DFF" Offset="0"/>
+                                    <GradientStop Color="#448AFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                        <TextBlock Text="AI" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Column="3" Content="{DynamicResource XlsxCancel}" 
                         Command="{Binding GoBackCommand}"
-                        Padding="14,5" Margin="0,0,6,0" FontSize="12"
+                        Padding="14,5" Margin="0,0,6,0" FontSize="{DynamicResource FS12}"
                         Background="{DynamicResource CardBackgroundBrush}"
                         Foreground="{DynamicResource ForegroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         VerticalAlignment="Center" Cursor="Hand"/>
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         Command="{Binding SaveCommand}"
                         Padding="14,5"
                         Background="{DynamicResource AccentBrush}" Foreground="White" 
                         BorderThickness="0" FontWeight="SemiBold"
                         VerticalAlignment="Center" Cursor="Hand">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource XlsxSave}" FontSize="12"/>
+                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource XlsxSave}" FontSize="{DynamicResource FS12}"/>
                     </StackPanel>
                 </Button>
             </Grid>
         </Border>
 
-        <!-- ===== PAGE NAVIGATION BAR ===== -->
-        <Border Grid.Row="1" Background="#F8F9FA" 
-                Padding="8,6" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Command="{Binding PrevPageCommand}" 
-                        Content="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                        Width="30" Height="28" Background="Transparent" BorderThickness="0"
-                        Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
-                <TextBlock VerticalAlignment="Center" FontSize="13" Margin="10,0"
-                           Foreground="{DynamicResource ForegroundBrush}">
-                    <Run Text="{Binding CurrentPageDisplay, Mode=OneWay}"/>
-                    <Run Text=" / "/>
-                    <Run Text="{Binding PageCount, Mode=OneWay}"/>
-                </TextBlock>
-                <Button Command="{Binding NextPageCommand}" 
-                        Content="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                        Width="30" Height="28" Background="Transparent" BorderThickness="0"
-                        Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
+        <!-- ===== PAGE NAVIGATION + TOOLS BAR ===== -->
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" 
+                Padding="6,4" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <Border Width="1" Background="#DDD" Margin="16,4"/>
+                <!-- Row 0: Pages + Zoom + Grid -->
+                <WrapPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
+                    <Button Command="{Binding PrevPageCommand}" 
+                            Content="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                            Width="28" Height="26" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
+                    <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource FS12}" Margin="6,0"
+                               Foreground="{DynamicResource ForegroundBrush}">
+                        <Run Text="{Binding CurrentPageDisplay, Mode=OneWay}"/>
+                        <Run Text=" / "/>
+                        <Run Text="{Binding PageCount, Mode=OneWay}"/>
+                    </TextBlock>
+                    <Button Command="{Binding NextPageCommand}" 
+                            Content="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                            Width="28" Height="26" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
 
-                <!-- Font size selector for new tags -->
-                <TextBlock Text="{DynamicResource EditorFontSize}" FontSize="11" Foreground="#888"
-                           VerticalAlignment="Center" Margin="10,0,6,0"/>
-                <ComboBox Width="55" Height="24" VerticalContentAlignment="Center" FontSize="11"
-                          SelectedItem="{Binding NewTagFontSize}"
-                          IsEditable="True">
-                    <ComboBox.Items>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">7</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">8</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">9</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">10</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">20</system:Double>
-                        <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
-                    </ComboBox.Items>
-                </ComboBox>
-            </StackPanel>
+                    <Border Width="1" Background="{DynamicResource CardBorderBrush}" Margin="10,4"/>
+
+                    <!-- Zoom -->
+                    <Button Command="{Binding ZoomOutCommand}" 
+                            Content="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                            Width="26" Height="24" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"
+                            ToolTip="{DynamicResource PdfZoomOut}"/>
+                    <TextBlock Text="{Binding ZoomPercent}" FontSize="{DynamicResource FS11}" 
+                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"
+                               Margin="2,0" MinWidth="34" TextAlignment="Center"/>
+                    <Button Command="{Binding ZoomInCommand}" 
+                            Content="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                            Width="26" Height="24" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"
+                            ToolTip="{DynamicResource PdfZoomIn}"/>
+                    <Button Command="{Binding ZoomResetCommand}" 
+                            Content="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
+                            Width="22" Height="22" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource SecondaryForegroundBrush}" Cursor="Hand" Margin="2,0,0,0"
+                            ToolTip="{DynamicResource PdfZoomReset}"/>
+
+                    <Border Width="1" Background="{DynamicResource CardBorderBrush}" Margin="10,4"/>
+
+                    <!-- Grid toggle -->
+                    <ToggleButton IsChecked="{Binding ShowGrid}" 
+                                  Width="26" Height="24" Background="Transparent" BorderThickness="1"
+                                  BorderBrush="{DynamicResource CardBorderBrush}" Cursor="Hand"
+                                  ToolTip="{DynamicResource PdfShowGrid}">
+                        <TextBlock Text="&#xF0E2;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                    </ToggleButton>
+
+                    <!-- Snap toggle -->
+                    <ToggleButton IsChecked="{Binding SnapToGrid}" Margin="4,0,0,0"
+                                  Width="26" Height="24" Background="Transparent" BorderThickness="1"
+                                  BorderBrush="{DynamicResource CardBorderBrush}" Cursor="Hand"
+                                  ToolTip="{DynamicResource PdfSnapGrid}">
+                        <TextBlock Text="&#xE752;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                    </ToggleButton>
+
+                    <!-- Grid step -->
+                    <TextBlock Text="{DynamicResource PdfGridStep}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="8,0,3,0"/>
+                    <ComboBox Width="48" Height="22" FontSize="10" VerticalContentAlignment="Center"
+                              SelectedItem="{Binding GridSpacingPt}" IsEditable="True">
+                        <ComboBox.Items>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">6</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">8</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">10</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+                        </ComboBox.Items>
+                    </ComboBox>
+                </WrapPanel>
+
+                <!-- Row 1: Tag properties (font size, font family, max width) + editing indicator -->
+                <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                    <!-- Editing indicator -->
+                    <Border CornerRadius="3" Padding="6,2" Margin="0,0,8,0"
+                            Visibility="{Binding IsEditingPlacement, Converter={StaticResource BoolToVis}}">
+                        <Border.Background>
+                            <SolidColorBrush Color="#FFF3E0"/>
+                        </Border.Background>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
+                                       Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{DynamicResource PdfEditing}" FontSize="10" Foreground="{DynamicResource WarningBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,3,0"/>
+                            <TextBlock Text="{Binding EditingTagLabel}" FontSize="10" Foreground="{DynamicResource WarningBrush}"
+                                       FontWeight="SemiBold" FontFamily="Consolas" VerticalAlignment="Center"/>
+                            <Button Command="{Binding DeselectCommand}" Content="&#xE711;"
+                                    FontFamily="Segoe MDL2 Assets" FontSize="9"
+                                    Width="18" Height="18" Background="Transparent" BorderThickness="0"
+                                    Foreground="{DynamicResource WarningBrush}" Cursor="Hand" Margin="6,0,0,0"
+                                    ToolTip="{DynamicResource PdfDeselect}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Font size -->
+                    <TextBlock Text="{DynamicResource EditorFontSize}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="0,0,3,0"/>
+                    <ComboBox Width="50" Height="22" VerticalContentAlignment="Center" FontSize="10"
+                              SelectedItem="{Binding NewTagFontSize}" IsEditable="True">
+                        <ComboBox.Items>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">7</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">8</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">9</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">10</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">20</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+                        </ComboBox.Items>
+                    </ComboBox>
+
+                    <!-- Font family -->
+                    <TextBlock Text="{DynamicResource EditorFontFamily}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="8,0,3,0"/>
+                    <ComboBox Width="110" Height="22" VerticalContentAlignment="Center" FontSize="10"
+                              ItemsSource="{Binding AvailableFonts}"
+                              SelectedItem="{Binding NewTagFontFamily}"/>
+
+                    <!-- Max width -->
+                    <TextBlock Text="{DynamicResource EditorMaxWidth}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="8,0,3,0"/>
+                    <ComboBox Width="55" Height="22" VerticalContentAlignment="Center" FontSize="10"
+                              SelectedItem="{Binding NewTagMaxWidth}" IsEditable="True">
+                        <ComboBox.Items>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">0</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">50</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">100</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">150</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">200</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">250</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">300</system:Double>
+                        </ComboBox.Items>
+                    </ComboBox>
+                </WrapPanel>
+            </Grid>
         </Border>
 
         <!-- ===== MAIN: PDF Canvas + Tag Catalog ===== -->
@@ -112,15 +244,20 @@
 
             <!-- ===== PDF CANVAS ===== -->
             <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" 
-                          VerticalScrollBarVisibility="Auto" Background="#E0E0E0">
+                          VerticalScrollBarVisibility="Auto" Background="{DynamicResource WindowBackgroundBrush}"
+                          x:Name="PdfScrollViewer">
                 <Grid HorizontalAlignment="Center" VerticalAlignment="Top" Margin="20">
-                    <Border Background="White" BorderBrush="#B0B0B0" BorderThickness="1">
+                    <Grid.LayoutTransform>
+                        <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
+                    </Grid.LayoutTransform>
+                    <Border Background="White" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="12" ShadowDepth="3" Opacity="0.2"/>
                         </Border.Effect>
                         <Canvas x:Name="PdfCanvas" 
                                 ClipToBounds="True"
                                 MouseLeftButtonDown="PdfCanvas_MouseLeftButtonDown"
+                                MouseWheel="PdfCanvas_MouseWheel"
                                 Background="Transparent">
                             <Image x:Name="PdfImage" Source="{Binding CurrentPageImage}" 
                                    Stretch="None"/>
@@ -131,7 +268,7 @@
 
             <!-- GridSplitter -->
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" 
-                          VerticalAlignment="Stretch" Background="#DDD" 
+                          VerticalAlignment="Stretch" Background="{DynamicResource CardBorderBrush}" 
                           Cursor="SizeWE" ShowsPreview="True"/>
 
             <!-- ===== TAG CATALOG + PLACED TAGS ===== -->
@@ -150,22 +287,22 @@
                     <!-- Tags header -->
                     <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" Padding="12,8">
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="14"
+                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                             <TextBlock Text="{DynamicResource PdfClickToPlace}"
-                                       FontSize="10" Foreground="#888" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Search -->
-                    <Border Grid.Row="1" Padding="10,6" Background="#F0F4F8"
+                    <Border Grid.Row="1" Padding="10,6" Background="{DynamicResource CardBackgroundBrush}"
                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
                         <Grid>
                             <TextBox Text="{Binding TagSearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="6,4" FontSize="11"
-                                     Background="White" BorderBrush="#CCC" BorderThickness="1"
+                                     Padding="6,4" FontSize="{DynamicResource FS11}"
+                                     Background="{DynamicResource ContentBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                      VerticalContentAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="11" Foreground="#AAA"
+                            <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
                                        IsHitTestVisible="False" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -185,13 +322,13 @@
                     </Border>
 
                     <!-- Tags list -->
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="6,4">
+                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4">
                         <ItemsControl ItemsSource="{Binding FilteredTagGroups}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Expander IsExpanded="True" Margin="0,0,0,6">
                                         <Expander.Header>
-                                            <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" FontSize="13"
+                                            <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
                                         </Expander.Header>
                                         <ItemsControl ItemsSource="{Binding Tags}" Margin="0,4,0,0">
@@ -199,7 +336,7 @@
                                                 <DataTemplate>
                                                     <Border Background="{DynamicResource CardBackgroundBrush}" 
                                                             CornerRadius="4" Padding="8,5" Margin="0,0,0,3"
-                                                            BorderBrush="#E0E0E0" BorderThickness="1">
+                                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                                                         <Grid>
                                                             <Grid.RowDefinitions>
                                                                 <RowDefinition Height="Auto"/>
@@ -211,12 +348,12 @@
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <TextBlock Grid.Row="0" Grid.Column="0" 
-                                                                       FontSize="11" FontWeight="SemiBold"
-                                                                       FontFamily="Consolas" Foreground="#1565C0"
-                                                                       TextTrimming="CharacterEllipsis">
-                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
-                                                            </TextBlock>
+                                                            <!-- Description (top) -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                                                       Text="{Binding Description}" 
+                                                                       FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       TextTrimming="CharacterEllipsis"/>
 
                                                             <!-- Place button -->
                                                             <Button Grid.Row="0" Grid.Column="1"
@@ -228,14 +365,14 @@
                                                                     VerticalAlignment="Center" Cursor="Hand"
                                                                     ToolTip="{DynamicResource PdfPlaceTag}">
                                                                 <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="&#xE819;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{DynamicResource EditorInsert}" FontSize="10"/>
+                                                                    <TextBlock Text="&#xE819;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{DynamicResource EditorInsert}" FontSize="{DynamicResource FS10}"/>
                                                                 </StackPanel>
                                                             </Button>
 
                                                             <!-- Copy button -->
                                                             <Button Grid.Row="0" Grid.Column="2" Content="&#xE8C8;"
-                                                                    FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                                                    FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                                                     Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
                                                                     Width="26" Height="24"
@@ -244,10 +381,14 @@
                                                                     VerticalAlignment="Center" Cursor="Hand"
                                                                     ToolTip="{DynamicResource EditorCopyTag}"/>
 
+                                                            <!-- Tag name (bottom) -->
                                                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                                                       Text="{Binding Description}" 
-                                                                       FontSize="10" Foreground="#888"
-                                                                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       FontFamily="Consolas"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,2,0,0">
+                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
+                                                            </TextBlock>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -262,42 +403,65 @@
                     <!-- Placed tags header -->
                     <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" 
                             Padding="12,6" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
-                        <TextBlock Text="{DynamicResource PdfPlacedTags}" FontWeight="SemiBold" FontSize="13"
+                        <TextBlock Text="{DynamicResource PdfPlacedTags}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
                                    Foreground="{DynamicResource ForegroundBrush}"/>
                     </Border>
 
-                    <!-- Placed tags list -->
-                    <ScrollViewer Grid.Row="4" MaxHeight="150" VerticalScrollBarVisibility="Auto" Padding="6,4">
+                    <!-- Placed tags list (click to select & edit via toolbar) -->
+                    <ScrollViewer Grid.Row="4" MaxHeight="160" Style="{StaticResource ThinScroll}" Padding="6,4">
                         <ItemsControl ItemsSource="{Binding AllPlacements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource CardBackgroundBrush}" 
-                                            CornerRadius="4" Padding="6,4" Margin="0,0,0,3"
-                                            BorderBrush="#E0E0E0" BorderThickness="1">
+                                    <Border CornerRadius="4" Padding="6,3" Margin="0,0,0,2"
+                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                            Cursor="Hand" MouseLeftButtonDown="PlacedTag_Click">
+                                        <Border.Tag>
+                                            <Binding/>
+                                        </Border.Tag>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Background">
+                                                            <Setter.Value>
+                                                                <SolidColorBrush Color="#FFF3E0"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Setter Property="BorderBrush">
+                                                            <Setter.Value>
+                                                                <SolidColorBrush Color="#FFB74D"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#1565C0">
+                                                <TextBlock FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="{DynamicResource AccentDarkBrush}"
+                                                           TextTrimming="CharacterEllipsis">
                                                     <Run Text="${"/><Run Text="{Binding Tag, Mode=OneWay}"/><Run Text="}"/>
                                                 </TextBlock>
-                                                <TextBlock FontSize="9" Foreground="#888">
+                                                <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}">
                                                     <Run Text="P"/><Run Text="{Binding Page, Mode=OneWay}"/>
                                                     <Run Text=" | "/>
                                                     <Run Text="{Binding FontSize, StringFormat={}{0}pt, Mode=OneWay}"/>
+                                                    <Run Text=" | "/>
+                                                    <Run Text="{Binding FontFamily, Mode=OneWay}"/>
                                                 </TextBlock>
                                             </StackPanel>
-
                                             <Button Grid.Column="1" Content="&#xE74D;" 
-                                                    FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                    FontFamily="Segoe MDL2 Assets" FontSize="10"
                                                     Command="{Binding DataContext.RemovePlacementCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Width="24" Height="22"
+                                                    Width="20" Height="20"
                                                     Background="Transparent" BorderThickness="0"
-                                                    Foreground="#CC4444" Cursor="Hand"
+                                                    Foreground="{DynamicResource ErrorBrush}" Cursor="Hand"
                                                     VerticalAlignment="Center"
                                                     ToolTip="{DynamicResource BtnDelete}"/>
                                         </Grid>
@@ -312,20 +476,24 @@
 
         <!-- ===== FOOTER ===== -->
         <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" 
-                Padding="10,4" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0">
+                Padding="10,4" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
                     <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,4,0"
-                            Background="#E3F2FD" BorderBrush="#93C5FD" BorderThickness="1"/>
-                    <TextBlock Text="{DynamicResource PdfTagMarker}" FontSize="10" Foreground="#666" 
+                            Background="{DynamicResource AccentLightBrush}" BorderBrush="#93C5FD" BorderThickness="1"/>
+                    <TextBlock Text="{DynamicResource PdfTagMarker}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
                                VerticalAlignment="Center"/>
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" 
-                           FontSize="11" Foreground="{DynamicResource AccentBrush}"
+                <TextBlock Grid.Column="1" Text="{Binding CoordinateText}" 
+                           FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontFamily="Consolas"
+                           VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding StatusMessage}" 
+                           FontSize="{DynamicResource FS11}" Foreground="{DynamicResource AccentBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </Grid>
         </Border>

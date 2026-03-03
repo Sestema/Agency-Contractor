@@ -3,11 +3,27 @@
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="ForegroundBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#888888"/>
+    <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#AAAAAA"/>
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="CardHoverBrush" Color="#Fbfbfb"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#E5E5E5"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#66000000"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#0078D4"/>
-    
-    <!-- Shadow for Cards -->
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="#1565C0"/>
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#2E7D32"/>
+    <SolidColorBrush x:Key="SuccessLightBrush" Color="#E8F5E9"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#E65100"/>
+    <SolidColorBrush x:Key="WarningLightBrush" Color="#FFF3E0"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#C62828"/>
+    <SolidColorBrush x:Key="ErrorLightBrush" Color="#FFEBEE"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#00838F"/>
+    <SolidColorBrush x:Key="InfoLightBrush" Color="#E0F7FA"/>
+    <SolidColorBrush x:Key="PurpleBrush" Color="#7B1FA2"/>
+    <SolidColorBrush x:Key="PurpleLightBrush" Color="#F3E5F5"/>
+
     <DropShadowEffect x:Key="CardShadow" BlurRadius="10" ShadowDepth="2" Direction="270" Color="#D0D0D0" Opacity="0.4"/>
 </ResourceDictionary>

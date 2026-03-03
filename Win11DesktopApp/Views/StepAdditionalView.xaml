@@ -1,0 +1,104 @@
+<UserControl x:Class="Win11DesktopApp.Views.StepAdditionalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=6}"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
+            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <Border CornerRadius="8" Width="36" Height="36">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4CAF50" Offset="0"/>
+                            <GradientStop Color="#8BC34A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{DynamicResource StepAdditional}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <TextBlock Text="{DynamicResource WizPhone}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizStartDate}" Style="{StaticResource WizLabel}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="StartDateTextBox" Grid.Column="0" Text="{Binding Data.StartDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                        <DatePicker x:Name="StartDatePicker" Grid.Column="1" Width="32" Margin="4,0,0,8"
+                                    VerticalAlignment="Center" SelectedDateChanged="StartDatePicker_Changed"
+                                    Background="Transparent" BorderThickness="0"/>
+                    </Grid>
+                    <StackPanel Visibility="{Binding IsPassportOnlyType, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="{DynamicResource WizSignDate}" Style="{StaticResource WizLabel}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="SignDateTextBox" Grid.Column="0" Text="{Binding Data.ContractSignDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                            <DatePicker x:Name="SignDatePicker" Grid.Column="1" Width="32" Margin="4,0,0,8"
+                                        VerticalAlignment="Center" SelectedDateChanged="SignDatePicker_Changed"
+                                        Background="Transparent" BorderThickness="0"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <Button Command="{Binding SaveCommand}" Cursor="Hand" Margin="0,20,0,0" HorizontalAlignment="Center">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="10" Padding="40,14" RenderTransformOrigin="0.5,0.5">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#4CAF50" Offset="0"/>
+                                    <GradientStop Color="#8BC34A" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="SaveSc" ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="{DynamicResource BtnSaveEmployee}" FontSize="{DynamicResource FS16}" FontWeight="Bold"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleX" To="0.95" Duration="0:0:0.1"/>
+                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleY" To="0.95" Duration="0:0:0.1"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
+    </Border>
+</UserControl>

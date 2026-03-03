@@ -35,11 +35,11 @@
             <StackPanel Orientation="Horizontal">
                 <Button Command="{Binding GoBackCommand}" 
                         Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
-                        FontSize="18" Background="Transparent" BorderThickness="0"
+                        FontSize="{DynamicResource FS18}" Background="Transparent" BorderThickness="0"
                         Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,12,0"
                         VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Title}" 
-                           FontSize="20" FontWeight="SemiBold" 
+                           FontSize="{DynamicResource FS20}" FontWeight="SemiBold" 
                            Foreground="{DynamicResource ForegroundBrush}"
                            VerticalAlignment="Center"/>
             </StackPanel>
@@ -55,7 +55,7 @@
                         Command="EditingCommands.ToggleBold" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorBold}">
-                    <TextBlock Text="B" FontWeight="Bold" FontSize="14" 
+                    <TextBlock Text="B" FontWeight="Bold" FontSize="{DynamicResource FS14}" 
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
                 <!-- Italic -->
@@ -63,7 +63,7 @@
                         Command="EditingCommands.ToggleItalic" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorItalic}">
-                    <TextBlock Text="I" FontStyle="Italic" FontSize="14" 
+                    <TextBlock Text="I" FontStyle="Italic" FontSize="{DynamicResource FS14}" 
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
                 <!-- Underline -->
@@ -71,7 +71,7 @@
                         Command="EditingCommands.ToggleUnderline" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorUnderline}">
-                    <TextBlock FontSize="14" Foreground="{DynamicResource ForegroundBrush}">
+                    <TextBlock FontSize="{DynamicResource FS14}" Foreground="{DynamicResource ForegroundBrush}">
                         <Underline>U</Underline>
                     </TextBlock>
                 </Button>
@@ -80,7 +80,7 @@
 
                 <!-- Font Size -->
                 <ComboBox x:Name="FontSizeCombo" Width="60" Height="28" Margin="2,0"
-                          VerticalContentAlignment="Center" FontSize="12"
+                          VerticalContentAlignment="Center" FontSize="{DynamicResource FS12}"
                           SelectionChanged="FontSizeCombo_SelectionChanged"
                           ToolTip="{DynamicResource EditorFontSize}">
                     <ComboBoxItem Content="8"/>
@@ -104,7 +104,7 @@
                         Command="EditingCommands.AlignLeft" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorAlignLeft}">
-                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
                 <!-- Align Center -->
@@ -112,7 +112,7 @@
                         Command="EditingCommands.AlignCenter" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorAlignCenter}">
-                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
                 <!-- Align Right -->
@@ -120,8 +120,42 @@
                         Command="EditingCommands.AlignRight" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorAlignRight}">
-                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+
+                <Border Style="{StaticResource ToolbarSeparator}"/>
+
+                <!-- AI Assistant Overlay -->
+                <Button x:Name="BtnAIOverlay" Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="8,0"
+                        Click="AIOverlay_Click" ToolTip="{DynamicResource AIOverlayBtn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
+                                   VerticalAlignment="Center" Margin="0,0,4,0">
+                            <TextBlock.Foreground>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#7C4DFF" Offset="0"/>
+                                    <GradientStop Color="#448AFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                        <TextBlock Text="AI" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Border Style="{StaticResource ToolbarSeparator}"/>
+
+                <!-- AI Insert Tags button -->
+                <Button Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="10,0"
+                        Command="{Binding AIInsertTagsCommand}"
+                        ToolTip="✨ AI автоматично вставить теги в потрібні місця документа">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                   VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#388E3C"/>
+                        <TextBlock Text="✨ AI теги" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                   Foreground="#388E3C" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
             </StackPanel>
         </Border>
@@ -134,17 +168,38 @@
                 <ColumnDefinition Width="3*" MinWidth="220"/>
             </Grid.ColumnDefinitions>
 
-            <!-- RichTextBox Editor -->
-            <Border Grid.Column="0" CornerRadius="6" 
+            <!-- RichTextBox Editor - A4 Page -->
+            <Border Grid.Column="0" CornerRadius="6"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    Background="White">
-                <RichTextBox x:Name="Editor" 
-                             AcceptsTab="True" AcceptsReturn="True"
-                             VerticalScrollBarVisibility="Auto"
-                             HorizontalScrollBarVisibility="Auto"
-                             Padding="12" FontSize="12" FontFamily="Segoe UI"
-                             BorderThickness="0"
-                             SpellCheck.IsEnabled="False"/>
+                    Background="#E0E0E0" ClipToBounds="True">
+                <ScrollViewer x:Name="PageScrollViewer"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              Focusable="False">
+                    <Border x:Name="PageBorder" Width="794" MinHeight="1123"
+                            Background="White" Margin="30,24"
+                            HorizontalAlignment="Center"
+                            SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="15" ShadowDepth="3"
+                                              Opacity="0.22" Color="#000000"/>
+                        </Border.Effect>
+                        <Grid>
+                            <RichTextBox x:Name="Editor"
+                                         AcceptsTab="True" AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Disabled"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         Padding="48"
+                                         FontSize="{DynamicResource FS12}" FontFamily="Segoe UI"
+                                         BorderThickness="0" Background="Transparent"
+                                         SpellCheck.IsEnabled="False"
+                                         SizeChanged="Editor_SizeChanged"/>
+                            <Canvas x:Name="PageBreakCanvas" IsHitTestVisible="False"
+                                    Width="{Binding ActualWidth, ElementName=Editor}"
+                                    Height="{Binding ActualHeight, ElementName=Editor}"/>
+                        </Grid>
+                    </Border>
+                </ScrollViewer>
             </Border>
 
             <!-- GridSplitter -->
@@ -166,14 +221,14 @@
                     <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" 
                             Padding="12,8" CornerRadius="6,6,0,0">
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="14"
+                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
                                        Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,8"/>
                             <Grid>
                                 <TextBox Text="{Binding TagSearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="6,4" FontSize="11"
-                                         Background="White" BorderBrush="#CCC" BorderThickness="1"
+                                         Padding="6,4" FontSize="{DynamicResource FS11}"
+                                         Background="{DynamicResource ContentBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                          VerticalContentAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="11" Foreground="#AAA"
+                                <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
                                            IsHitTestVisible="False" Margin="8,0,0,0" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -194,13 +249,13 @@
                     </Border>
 
                     <!-- Tags list with expanders -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8,4">
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="8,4">
                         <ItemsControl ItemsSource="{Binding FilteredTagGroups}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Expander IsExpanded="True" Margin="0,0,0,4">
                                         <Expander.Header>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                            <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
                                         </Expander.Header>
                                         <ItemsControl ItemsSource="{Binding Tags}" Margin="0,4,0,0">
@@ -219,26 +274,25 @@
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <!-- Tag name -->
-                                                            <TextBlock Grid.Row="0" Grid.Column="0" 
-                                                                       FontSize="11" FontWeight="SemiBold"
+                                                            <!-- Description (top) -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                                                       Text="{Binding Description}" 
+                                                                       FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
                                                                        Foreground="{DynamicResource ForegroundBrush}"
-                                                                       TextTrimming="CharacterEllipsis">
-                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
-                                                            </TextBlock>
+                                                                       TextTrimming="CharacterEllipsis"/>
 
                                                             <!-- Insert button -->
                                                             <Button Grid.Row="0" Grid.Column="1" Content="{DynamicResource EditorInsert}"
                                                                     Command="{Binding DataContext.InsertTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
-                                                                    Padding="6,1" FontSize="10" Margin="4,0,2,0"
+                                                                    Padding="6,1" FontSize="{DynamicResource FS10}" Margin="4,0,2,0"
                                                                     Background="{DynamicResource AccentBrush}" 
                                                                     Foreground="White" BorderThickness="0"
                                                                     VerticalAlignment="Center" Cursor="Hand"/>
 
                                                             <!-- Copy button -->
                                                             <Button Grid.Row="0" Grid.Column="2" Content="&#xE8C8;"
-                                                                    FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                                    FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
                                                                     Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
                                                                     Width="24" Height="22"
@@ -247,11 +301,13 @@
                                                                     VerticalAlignment="Center" Cursor="Hand"
                                                                     ToolTip="{DynamicResource EditorCopyTag}"/>
 
-                                                            <!-- Description -->
+                                                            <!-- Tag name (bottom) -->
                                                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                                                       Text="{Binding Description}" 
-                                                                       FontSize="10" Foreground="#888"
-                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       FontFamily="Consolas"
+                                                                       TextTrimming="CharacterEllipsis">
+                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
+                                                            </TextBlock>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -266,6 +322,109 @@
             </Border>
         </Grid>
 
+        <!-- ===== AI Insert Tags Overlay ===== -->
+        <Grid Grid.RowSpan="4"
+              Visibility="{Binding IsAITagsOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#50000000">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAITagsCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                    MaxWidth="540" MaxHeight="560" Padding="28"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                                   Foreground="#388E3C" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <StackPanel>
+                            <TextBlock Text="✨ AI Вставка тегів" FontSize="{DynamicResource FS18}"
+                                       FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                            <TextBlock Text="AI знаходить дані і замінює їх на теги ${...}" FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Result text -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="340"
+                                  Style="{StaticResource ThinScroll}" Margin="0,0,0,16">
+                        <TextBox Text="{Binding AITagsStatus, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap"
+                                 BorderThickness="0" Background="Transparent" Padding="0"
+                                 FontSize="{DynamicResource FS13}"
+                                 Foreground="{DynamicResource ForegroundBrush}"
+                                 VerticalScrollBarVisibility="Disabled"/>
+                    </ScrollViewer>
+
+                    <!-- Buttons -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Spinner -->
+                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16"
+                                BorderThickness="3" RenderTransformOrigin="0.5,0.5"
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Visibility="{Binding IsAITagsRunning, Converter={StaticResource BoolToVis}}">
+                            <Border.BorderBrush>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#388E3C" Offset="0"/>
+                                    <GradientStop Color="#A5D6A7" Offset="0.5"/>
+                                    <GradientStop Color="Transparent" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.BorderBrush>
+                            <Border.RenderTransform>
+                                <RotateTransform/>
+                            </Border.RenderTransform>
+                            <Border.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle"
+                                                             From="0" To="360" Duration="0:0:1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Border.Triggers>
+                        </Border>
+
+                        <!-- Close -->
+                        <Button Grid.Column="1" Command="{Binding CloseAITagsCommand}"
+                                Padding="18,10" Margin="0,0,10,0" Cursor="Hand"
+                                Background="{DynamicResource ContentBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                Foreground="{DynamicResource ForegroundBrush}">
+                            <TextBlock Text="Закрити" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+
+                        <!-- Run AI -->
+                        <Button Grid.Column="2" Command="{Binding AIInsertTagsCommand}"
+                                Padding="18,10" Cursor="Hand" FontWeight="SemiBold"
+                                Background="#388E3C" Foreground="White" BorderThickness="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                           Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Запустити AI" FontSize="{DynamicResource FS13}"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- FOOTER -->
         <Grid Grid.Row="3" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
@@ -275,7 +434,7 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" 
-                       VerticalAlignment="Center" FontSize="12"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FS12}"
                        Foreground="{DynamicResource AccentBrush}"/>
 
             <Button Grid.Column="1" Content="{DynamicResource BtnCancel}" 

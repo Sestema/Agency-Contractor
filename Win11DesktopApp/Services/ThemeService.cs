@@ -20,6 +20,12 @@ namespace Win11DesktopApp.Services
             }
 
             Application.Current.Resources.MergedDictionaries.Add(newDict);
+
+            if (App.AppSettingsService != null && App.AppSettingsService.Settings.ThemeName != themeName)
+            {
+                App.AppSettingsService.Settings.ThemeName = themeName;
+                App.AppSettingsService.SaveSettings();
+            }
         }
     }
 }

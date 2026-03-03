@@ -5,17 +5,45 @@
     <sys:String x:Key="BtnEmployees">Employees</sys:String>
     <sys:String x:Key="BtnTemplates">Templates</sys:String>
     <sys:String x:Key="BtnProblems">Problems</sys:String>
-    <sys:String x:Key="BtnFinances">Finances</sys:String>
+    <sys:String x:Key="BtnFinances">Finances &amp; Tables</sys:String>
     <sys:String x:Key="BtnArchive">Archive</sys:String>
+    <sys:String x:Key="BtnActivityLog">Activity Log</sys:String>
+    <sys:String x:Key="ActLogEmpty">No entries yet</sys:String>
+    <sys:String x:Key="ActLogClearFilter">Clear filter</sys:String>
+    <sys:String x:Key="ActLogCatEmployee">Employee</sys:String>
+    <sys:String x:Key="ActLogCatSalary">Salary</sys:String>
+    <sys:String x:Key="ActLogCatAdvance">Advance</sys:String>
+    <sys:String x:Key="ActLogCatArchive">Archive</sys:String>
+    <sys:String x:Key="ActLogCatDocument">Document</sys:String>
+    <sys:String x:Key="ActLogCatExport">Export</sys:String>
+    <sys:String x:Key="ActLogCatCompany">Company</sys:String>
+    <sys:String x:Key="ActLogCatTemplate">Template</sys:String>
+    <sys:String x:Key="ActLogCatSettings">Settings</sys:String>
+    <sys:String x:Key="ActLogCatCandidate">Candidate</sys:String>
+    <sys:String x:Key="ActLogColDate">Date</sys:String>
+    <sys:String x:Key="ActLogColDescription">Description</sys:String>
+    <sys:String x:Key="ActLogColCategory">Category</sys:String>
+    <sys:String x:Key="ActLogColFirm">Firm</sys:String>
+    <sys:String x:Key="ActLogColEmployee">Employee</sys:String>
+    <sys:String x:Key="ActLogColOld">Old</sys:String>
+    <sys:String x:Key="ActLogColNew">New</sys:String>
+    <sys:String x:Key="ActLogDateFrom">From</sys:String>
+    <sys:String x:Key="ActLogDateTo">To</sys:String>
+    <sys:String x:Key="ActLogAllFirms">All firms</sys:String>
+    <sys:String x:Key="ActLogExport">Export</sys:String>
+    <sys:String x:Key="ActLogClearAll">Clear</sys:String>
+    <sys:String x:Key="ActLogClearConfirm">Are you sure you want to clear all activity history?</sys:String>
+    <sys:String x:Key="ActLogExported">Activity log exported</sys:String>
+    <sys:String x:Key="ActLogCleared">Activity log cleared</sys:String>
     
     <sys:String x:Key="SettingsTitle">Settings</sys:String>
     <sys:String x:Key="LangLabel">Language</sys:String>
     <sys:String x:Key="ThemeLabel">Theme</sys:String>
     
-    <sys:String x:Key="ThemeLight">Light (Win 11)</sys:String>
-    <sys:String x:Key="ThemeDarkWord">Dark (Word)</sys:String>
-    <sys:String x:Key="ThemeDark2">Dark #2</sys:String>
-    <sys:String x:Key="ThemeCustom">Custom #3</sys:String>
+    <sys:String x:Key="ThemeLight">Light</sys:String>
+    <sys:String x:Key="ThemeDarkWord">Dark</sys:String>
+    <sys:String x:Key="ThemeDark2">Night</sys:String>
+    <sys:String x:Key="ThemeCustom">Warm</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Companies</sys:String>
@@ -37,9 +65,14 @@
     <sys:String x:Key="LabelSalary">Monthly Salary</sys:String>
     <sys:String x:Key="LabelHourly">Hourly Salary</sys:String>
     <sys:String x:Key="BtnAddPosition">+ Add Position</sys:String>
+    <sys:String x:Key="LabelWorkHours">Work Hours</sys:String>
+    <sys:String x:Key="LabelWorkHoursAndShifts">Work Hours and Shifts</sys:String>
+    <sys:String x:Key="LabelWeeklyHours">Week</sys:String>
+    <sys:String x:Key="LabelDailyHours">Day</sys:String>
+    <sys:String x:Key="LabelShiftCount">Number of Shifts</sys:String>
     <sys:String x:Key="LabelFullAddress">Full Address</sys:String>
     <sys:String x:Key="BtnCancel">Cancel</sys:String>
-    <sys:String x:Key="BtnSave">Save Company</sys:String>
+    <sys:String x:Key="BtnSave">Save</sys:String>
     <sys:String x:Key="LabelRootFolder">Root Folder</sys:String>
     <sys:String x:Key="BtnSelectFolder">Select Folder</sys:String>
     <sys:String x:Key="MsgSelectCompany">Select Company...</sys:String>
@@ -61,6 +94,7 @@
     <sys:String x:Key="MsgTemplateDeleted">Template successfully deleted.</sys:String>
     <sys:String x:Key="TitleSuccess">Success</sys:String>
     <sys:String x:Key="TitleError">Error</sys:String>
+    <sys:String x:Key="MsgUnexpectedError">An unexpected error occurred:</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Error deleting template: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -71,11 +105,13 @@
     <sys:String x:Key="StepDocuments">Step 1. Documents</sys:String>
     <sys:String x:Key="StepCropPhoto">Step 2. Crop Photo</sys:String>
     <sys:String x:Key="StepPassportData">Step 3. Passport Data</sys:String>
+    <sys:String x:Key="StepPassportPage2Data">Passport Data (Page 2)</sys:String>
     <sys:String x:Key="StepInsuranceData">Step 4. Insurance Data</sys:String>
     <sys:String x:Key="StepVisaData">Step 5. Visa Data</sys:String>
     <sys:String x:Key="StepAddresses">Step 6. Addresses, Position, Contract</sys:String>
     <sys:String x:Key="StepAdditional">Step 7. Additional Data</sys:String>
-    <sys:String x:Key="BtnUploadPassport">Upload Passport</sys:String>
+    <sys:String x:Key="BtnUploadPassport">Upload Document 1</sys:String>
+    <sys:String x:Key="BtnUploadPassportPage2">Upload Document 2</sys:String>
     <sys:String x:Key="BtnUploadVisa">Upload Visa</sys:String>
     <sys:String x:Key="BtnUploadInsurance">Upload Insurance</sys:String>
     <sys:String x:Key="BtnApplyCrop">Crop Photo</sys:String>
@@ -110,6 +146,10 @@
     <sys:String x:Key="EmpSortDate">Start date</sys:String>
     <sys:String x:Key="EmpSortStatus">Status</sys:String>
     <sys:String x:Key="EmpSortProblems">Problems</sys:String>
+    <sys:String x:Key="ViewTable">Table</sys:String>
+    <sys:String x:Key="ViewList">List</sys:String>
+    <sys:String x:Key="ViewTiles">Tiles</sys:String>
+    <sys:String x:Key="ViewIcons">Icons</sys:String>
     <sys:String x:Key="EmpSelectAll">Select all</sys:String>
     <sys:String x:Key="EmpGenerate">Generate</sys:String>
     <sys:String x:Key="EmpBadgePassport">Passport</sys:String>
@@ -129,6 +169,8 @@
     <sys:String x:Key="DetNoPhoto">No photo</sys:String>
     <sys:String x:Key="DetBtnGenerate">Generate document</sys:String>
     <sys:String x:Key="DetBtnOpenFolder">Open folder</sys:String>
+    <sys:String x:Key="DetBtnExportPdf">Export profile PDF</sys:String>
+    <sys:String x:Key="DetProfileCompletion">Completion: </sys:String>
     <sys:String x:Key="DetBtnArchive">To archive</sys:String>
     <sys:String x:Key="DetLabelStatus">Status</sys:String>
     <sys:String x:Key="DetTabDocs">Documents</sys:String>
@@ -138,10 +180,39 @@
     <sys:String x:Key="DetDocPassport">Passport</sys:String>
     <sys:String x:Key="DetDocVisa">Visa</sys:String>
     <sys:String x:Key="DetDocInsurance">Insurance</sys:String>
+    <sys:String x:Key="DetDocWorkPermit">Work Permit</sys:String>
+    <sys:String x:Key="DetFieldWpNumber">Permit Number</sys:String>
+    <sys:String x:Key="DetFieldWpType">Permit Type</sys:String>
+    <sys:String x:Key="DetFieldWpIssueDate">Issue Date</sys:String>
+    <sys:String x:Key="DetFieldWpAuthority">Issuing Authority</sys:String>
     <sys:String x:Key="DetDocPhoto">Photo</sys:String>
     <sys:String x:Key="DetBtnReplace">Replace</sys:String>
     <sys:String x:Key="DetBtnOpenFile">Open</sys:String>
     <sys:String x:Key="DetBtnExtend">Extend</sys:String>
+    <sys:String x:Key="DetBtnRenewPermit">Renew Permit</sys:String>
+    <sys:String x:Key="DetCustomDocsTitle">Custom signed documents</sys:String>
+    <sys:String x:Key="DetBtnAddCustomDoc">Add document</sys:String>
+    <sys:String x:Key="DetAddCustomDocTitle">Add signed document</sys:String>
+    <sys:String x:Key="DetCustomDocFieldName">Document name</sys:String>
+    <sys:String x:Key="DetCustomDocFieldSignDate">Sign date</sys:String>
+    <sys:String x:Key="DetCustomDocFieldExpiry">Expiry date (optional)</sys:String>
+    <sys:String x:Key="DetCustomDocFieldFile">File (JPG / PNG / HEIC / PDF)</sys:String>
+    <sys:String x:Key="DetBtnBrowseFile">Browse...</sys:String>
+    <sys:String x:Key="DetCustomDocNoFile">No file selected</sys:String>
+    <sys:String x:Key="DetCustomDocSigned">Signed:</sys:String>
+    <sys:String x:Key="DetCustomDocExpires">Expires:</sys:String>
+    <sys:String x:Key="DetCustomDocNoExpiry">No expiry</sys:String>
+    <sys:String x:Key="DetBtnDeleteDoc">Delete</sys:String>
+    <sys:String x:Key="DetBtnOpenCustomDocFolder">Open folder</sys:String>
+    <sys:String x:Key="DetBtnHideDoc">Hide</sys:String>
+    <sys:String x:Key="DetBtnShowDoc">Show</sys:String>
+    <sys:String x:Key="DetHiddenDocsSection">Hidden documents</sys:String>
+    <sys:String x:Key="DetCustomDocEmpty">No custom documents added yet.</sys:String>
+    <sys:String x:Key="MsgCustomDocNameRequired">Please enter the document name.</sys:String>
+    <sys:String x:Key="MsgCustomDocSignDateRequired">Please enter the sign date.</sys:String>
+    <sys:String x:Key="MsgCustomDocFileMissing">Please select a file.</sys:String>
+    <sys:String x:Key="MsgCustomDocSaved">Document saved.</sys:String>
+    <sys:String x:Key="DetRenewWpTitle">Renew Work Permit</sys:String>
     <sys:String x:Key="DetBtnEditProfile">Edit profile</sys:String>
     <sys:String x:Key="DetBtnSave">Save</sys:String>
     <sys:String x:Key="DetBtnCancel">Cancel</sys:String>
@@ -157,6 +228,7 @@
     <sys:String x:Key="DetSecVisa">Visa</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Visa number</sys:String>
     <sys:String x:Key="DetFieldVisaType">Visa type</sys:String>
+    <sys:String x:Key="DetFieldWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="DetSecInsurance">Insurance</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Insurance company</sys:String>
     <sys:String x:Key="DetFieldInsNum">Insurance number</sys:String>
@@ -173,11 +245,20 @@
     <sys:String x:Key="DetFieldWorkAddr">Work address</sys:String>
     <sys:String x:Key="DetSecContacts">Contacts and dates</sys:String>
     <sys:String x:Key="DetFieldPhone">Phone</sys:String>
+    <sys:String x:Key="DetFieldEmail">Email</sys:String>
+    <sys:String x:Key="DetFieldContractType">Contract type</sys:String>
     <sys:String x:Key="DetFieldStartDate">Start date</sys:String>
     <sys:String x:Key="DetFieldSignDate">Contract sign date</sys:String>
     <sys:String x:Key="DetHistoryTitle">Change history</sys:String>
     <sys:String x:Key="DetHistoryEmpty">History is empty</sys:String>
     <sys:String x:Key="DetHistoryEmptyMsg">Changes to employee profile will be displayed here.</sys:String>
+    <sys:String x:Key="DetTabSalary">Salary</sys:String>
+    <sys:String x:Key="DetSalaryTitle">Payment History</sys:String>
+    <sys:String x:Key="DetSalaryTotalNet">Total paid</sys:String>
+    <sys:String x:Key="DetSalaryTotalHours">Total hours</sys:String>
+    <sys:String x:Key="DetSalaryMonthCount">Months</sys:String>
+    <sys:String x:Key="DetSalaryEmpty">No payments yet</sys:String>
+    <sys:String x:Key="DetSalaryEmptyMsg">When an employee is marked as paid, the information will appear here.</sys:String>
     <sys:String x:Key="DetGenTitle">Select template for generation</sys:String>
     <sys:String x:Key="DetGenDesc">Select a template. The document will be generated with filled employee data and saved to their folder.</sys:String>
     <sys:String x:Key="DetArchiveTitle">Move to archive</sys:String>
@@ -193,6 +274,8 @@
     <sys:String x:Key="MainSelected">Selected: </sys:String>
     <sys:String x:Key="MainTooltipEdit">Edit company</sys:String>
     <sys:String x:Key="MainTooltipDblClick">Double click to edit</sys:String>
+    <sys:String x:Key="CompanyMoveUp">Move up</sys:String>
+    <sys:String x:Key="CompanyMoveDown">Move down</sys:String>
 
     <!-- ProblemsView -->
     <sys:String x:Key="ProbStatExpired">Expired / Critical</sys:String>
@@ -200,6 +283,36 @@
     <sys:String x:Key="ProbStatTotal">Total problems</sys:String>
     <sys:String x:Key="ProbAllOk">All documents are in order!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">No expired or soon expiring documents.</sys:String>
+    <sys:String x:Key="ProbTitle">Problems — all companies</sys:String>
+    <sys:String x:Key="ProbExportPdf">Export PDF</sys:String>
+    <sys:String x:Key="ProbIgnored">Ignored</sys:String>
+    <sys:String x:Key="ProbIgnoredTitle">Ignored problems</sys:String>
+    <sys:String x:Key="ProbUntil">until </sys:String>
+    <sys:String x:Key="ProbRestoreTooltip">Restore problem</sys:String>
+    <sys:String x:Key="ProbRestore">Restore</sys:String>
+    <sys:String x:Key="ProbIssueCount">Problems: </sys:String>
+    <sys:String x:Key="ProbOpenTooltip">Open employee</sys:String>
+    <sys:String x:Key="ProbOpen">Open</sys:String>
+    <sys:String x:Key="ProbIgnoreTooltip">Ignore for selected period</sys:String>
+    <sys:String x:Key="ProbIgnore">Ignore</sys:String>
+    <sys:String x:Key="ProbIgnoreForDays">Ignore for {0} days</sys:String>
+    <sys:String x:Key="ProbDocPassport">Passport</sys:String>
+    <sys:String x:Key="ProbDocVisa">Visa</sys:String>
+    <sys:String x:Key="ProbDocInsurance">Insurance</sys:String>
+    <sys:String x:Key="ProbDocWorkPermit">Work permit</sys:String>
+    <sys:String x:Key="ProbPdfTitle">Problems — report</sys:String>
+    <sys:String x:Key="ProbPdfDate">Date: {0}</sys:String>
+    <sys:String x:Key="ProbPdfExpired">Expired</sys:String>
+    <sys:String x:Key="ProbPdfWarning">Warnings</sys:String>
+    <sys:String x:Key="ProbPdfTotal">Total</sys:String>
+    <sys:String x:Key="ProbPdfIgnored">Ignored</sys:String>
+    <sys:String x:Key="ProbPdfIgnoredSection">Ignored problems ({0})</sys:String>
+    <sys:String x:Key="ProbPdfSaveTitle">Save problems report</sys:String>
+    <sys:String x:Key="ProbPdfExportError">Export error: {0}</sys:String>
+    <sys:String x:Key="ProbPdfError">Error</sys:String>
+    <sys:String x:Key="ProbDaysExpired">expired {0} days ago</sys:String>
+    <sys:String x:Key="ProbDaysToday">expires today</sys:String>
+    <sys:String x:Key="ProbDaysLeft">in {0} days</sys:String>
 
     <!-- ArchiveView -->
     <sys:String x:Key="ArchiveTitle">Employee archive</sys:String>
@@ -232,6 +345,7 @@
     <sys:String x:Key="WizVisaNum">Visa number</sys:String>
     <sys:String x:Key="WizVisaType">Visa type</sys:String>
     <sys:String x:Key="WizVisaExpiry">Visa expiry date</sys:String>
+    <sys:String x:Key="WizWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="WizStreet">Street</sys:String>
     <sys:String x:Key="WizNumber">Number</sys:String>
     <sys:String x:Key="WizCity">City</sys:String>
@@ -248,6 +362,16 @@
     <sys:String x:Key="EditorItalic">Italic (Ctrl+I)</sys:String>
     <sys:String x:Key="EditorUnderline">Underline (Ctrl+U)</sys:String>
     <sys:String x:Key="EditorFontSize">Font size</sys:String>
+    <sys:String x:Key="EditorFontFamily">Font</sys:String>
+    <sys:String x:Key="EditorMaxWidth">Max width</sys:String>
+    <sys:String x:Key="PdfZoomIn">Zoom in</sys:String>
+    <sys:String x:Key="PdfZoomOut">Zoom out</sys:String>
+    <sys:String x:Key="PdfZoomReset">Reset zoom</sys:String>
+    <sys:String x:Key="PdfShowGrid">Grid</sys:String>
+    <sys:String x:Key="PdfSnapGrid">Snap</sys:String>
+    <sys:String x:Key="PdfEditing">Editing</sys:String>
+    <sys:String x:Key="PdfDeselect">Deselect</sys:String>
+    <sys:String x:Key="PdfGridStep">Step</sys:String>
     <sys:String x:Key="EditorAlignLeft">Align left</sys:String>
     <sys:String x:Key="EditorAlignCenter">Align center</sys:String>
     <sys:String x:Key="EditorAlignRight">Align right</sys:String>
@@ -255,6 +379,8 @@
     <sys:String x:Key="EditorSearchTags">Search tags...</sys:String>
     <sys:String x:Key="EditorInsert">Ins.</sys:String>
     <sys:String x:Key="EditorCopyTag">Copy tag</sys:String>
+
+    <!-- DOCX Upload -->
 
     <!-- XlsxEditor -->
     <sys:String x:Key="XlsxBack">Back</sys:String>
@@ -270,16 +396,32 @@
     <!-- TemplatesView -->
     <sys:String x:Key="TplBtnDelete">Delete</sys:String>
     <sys:String x:Key="TplBtnEdit">Edit</sys:String>
+    <sys:String x:Key="TplBtnRename">Rename</sys:String>
+    <sys:String x:Key="TplRenameTitle">Rename Template</sys:String>
+    <sys:String x:Key="TplRenamePrompt">New template name:</sys:String>
+    <sys:String x:Key="TplRenameBtn">Rename</sys:String>
     <sys:String x:Key="TplUpdated">Updated: </sys:String>
     <sys:String x:Key="TplTagsTitle">Available tags for template</sys:String>
     <sys:String x:Key="TplTagsDesc">Press Copy to copy a tag to clipboard. Then paste the tag into the document in Word/Excel.</sys:String>
     <sys:String x:Key="TplCopyTag">Copy</sys:String>
     <sys:String x:Key="TplOpenEditor">Open template in editor</sys:String>
+    <sys:String x:Key="TplTemplateCount">templates</sys:String>
 
     <!-- SettingsPage -->
     <sys:String x:Key="SettingsAppVersion">App version</sys:String>
     <sys:String x:Key="SettingsLangHint">Select interface language</sys:String>
+    <sys:String x:Key="SettingsDocLangTitle">Document Language</sys:String>
+    <sys:String x:Key="SettingsDocLangHint">Language for generated documents (PDF, Excel)</sys:String>
+    <sys:String x:Key="DocLangSameAsUI">Same as UI</sys:String>
     <sys:String x:Key="SettingsThemeHint">Choose your visual theme</sys:String>
+    <sys:String x:Key="SettingsInterfaceSize">Interface Size</sys:String>
+    <sys:String x:Key="SettingsInterfaceSizeHint">Scale of interface elements</sys:String>
+    <sys:String x:Key="SettingsTextSize">Text Size</sys:String>
+    <sys:String x:Key="SettingsTextSizeHint">Font size in the application</sys:String>
+    <sys:String x:Key="SizeSmall">Small</sys:String>
+    <sys:String x:Key="SizeMedium">Medium</sys:String>
+    <sys:String x:Key="SizeLarge">Large</sys:String>
+    <sys:String x:Key="SizeExtraLarge">Extra Large</sys:String>
     <sys:String x:Key="SettingsFolderHint">Path to the root data folder</sys:String>
 
     <!-- AddCompanyView tooltips -->
@@ -290,9 +432,738 @@
     <!-- AddTemplateView -->
     <sys:String x:Key="TplFileNotNeeded">File not needed — use the built-in editor</sys:String>
 
+    <!-- Report -->
+    <sys:String x:Key="BtnReport">Report</sys:String>
+    <sys:String x:Key="ReportTitle">Report</sys:String>
+    <sys:String x:Key="ReportFilters">Filters</sys:String>
+    <sys:String x:Key="ReportFirms">Companies</sys:String>
+    <sys:String x:Key="ReportAllFirms">All companies</sys:String>
+    <sys:String x:Key="ReportDateFrom">From</sys:String>
+    <sys:String x:Key="ReportDateTo">To</sys:String>
+    <sys:String x:Key="ReportGenerate">Show</sys:String>
+    <sys:String x:Key="ReportExport">Export to Excel</sys:String>
+    <sys:String x:Key="ReportTotalEmployees">Worked in period</sys:String>
+    <sys:String x:Key="ReportActiveEmployees">Active now</sys:String>
+    <sys:String x:Key="ReportExpiredDocs">Expired</sys:String>
+    <sys:String x:Key="ReportExpiringSoon">Expiring soon</sys:String>
+    <sys:String x:Key="ReportDocuments">Documents</sys:String>
+    <sys:String x:Key="ReportArchived">Archived</sys:String>
+    <sys:String x:Key="ReportByFirm">Details by company</sys:String>
+    <sys:String x:Key="ReportProblems">Employees with problems</sys:String>
+    <sys:String x:Key="ReportColFirm">Company</sys:String>
+    <sys:String x:Key="ReportColTotal">Total</sys:String>
+    <sys:String x:Key="ReportColActive">Active</sys:String>
+    <sys:String x:Key="ReportColNoPermit">No Permit</sys:String>
+    <sys:String x:Key="ReportColExpired">Expired</sys:String>
+    <sys:String x:Key="ReportColExpiring">Expiring</sys:String>
+    <sys:String x:Key="ReportColDocs">Documents</sys:String>
+    <sys:String x:Key="ReportColArchived">Ended</sys:String>
+    <sys:String x:Key="ReportViewSummary">Summary</sys:String>
+    <sys:String x:Key="ReportViewEmployees">Employees</sys:String>
+    <sys:String x:Key="ReportConfigExport">Configure Export</sys:String>
+    <sys:String x:Key="ReportExportTitle">Export Settings</sys:String>
+    <sys:String x:Key="ReportExportDesc">Select which sheets to include in the Excel file:</sys:String>
+    <sys:String x:Key="ReportExportFormat">Format:</sys:String>
+    <sys:String x:Key="ReportExportBtn">Export</sys:String>
+    <sys:String x:Key="ReportExportSheetFirms">Company Summary</sys:String>
+    <sys:String x:Key="ReportExportSheetAgencies">Agency Statistics</sys:String>
+    <sys:String x:Key="ReportExportSheetEmployees">Employee List</sys:String>
+    <sys:String x:Key="ReportExportSheetArchive">Archive Log</sys:String>
+    <sys:String x:Key="ReportTotal">TOTAL</sys:String>
+    <sys:String x:Key="ReportArchiveChart">Archive Dynamics by Month</sys:String>
+    <sys:String x:Key="ReportArchiveLog">Archive Log</sys:String>
+    <sys:String x:Key="ReportAgencyStats">Agency Statistics</sys:String>
+    <sys:String x:Key="ReportColAgency">Agency</sys:String>
+    <sys:String x:Key="ReportColFirmCount">Companies</sys:String>
+    <sys:String x:Key="ReportFirmsCount">companies</sys:String>
+    <sys:String x:Key="ReportEmpCount">employees</sys:String>
+    <sys:String x:Key="ReportColName">Name</sys:String>
+    <sys:String x:Key="ReportColType">Type</sys:String>
+    <sys:String x:Key="ReportColPassportExp">Passport Exp.</sys:String>
+    <sys:String x:Key="ReportColVisaExp">Visa Exp.</sys:String>
+    <sys:String x:Key="ReportColInsExp">Ins. Exp.</sys:String>
+    <sys:String x:Key="ReportColStartDate">Start Date</sys:String>
+    <sys:String x:Key="ReportColEndDate">End Date</sys:String>
+    <sys:String x:Key="ReportColPhone">Phone</sys:String>
+    <sys:String x:Key="ReportColPosition">Position</sys:String>
+    <sys:String x:Key="ReportColEmployee">Employee</sys:String>
+    <sys:String x:Key="ReportColAction">Action</sys:String>
+    <sys:String x:Key="ReportColDate">Date</sys:String>
+    <sys:String x:Key="ReportColTimestamp">Timestamp</sys:String>
+    <sys:String x:Key="ReportNewInPeriod">New in period</sys:String>
+    <sys:String x:Key="ReportDismissedInPeriod">Ended in period</sys:String>
+    <sys:String x:Key="ReportEmployers">Employers</sys:String>
+    <sys:String x:Key="ReportAllEmployers">All employers</sys:String>
+    <sys:String x:Key="ReportAgencies">Agencies</sys:String>
+    <sys:String x:Key="ReportAllAgencies">All agencies</sys:String>
+    <sys:String x:Key="ReportChartArchived">Archived</sys:String>
+    <sys:String x:Key="ReportChartRestored">Restored</sys:String>
+    <sys:String x:Key="ReportStatusFmt">{0} companies, {1} worked, {2} new, {3} ended</sys:String>
+    <sys:String x:Key="ReportSheetSummary">Summary</sys:String>
+    <sys:String x:Key="ReportSheetAgencies">Agencies</sys:String>
+    <sys:String x:Key="ReportSheetEmployees">Employees</sys:String>
+    <sys:String x:Key="ReportSheetArchive">Archive log</sys:String>
+    <sys:String x:Key="ReportColArchivedPeriod">Ended in period</sys:String>
+    <sys:String x:Key="ReportNewPeriodLabel">New in period:</sys:String>
+    <sys:String x:Key="ReportDismissedPeriodLabel">Ended in period:</sys:String>
+    <sys:String x:Key="ReportRestoredPeriodLabel">Restored in period:</sys:String>
+    <sys:String x:Key="ReportColAgencyName">Agency</sys:String>
+    <sys:String x:Key="ReportColFirmCountExcel">Number of firms</sys:String>
+    <sys:String x:Key="ReportColTotalEmp">Total employees</sys:String>
+    <sys:String x:Key="ReportEmpCountFmt">{0} ({1} employees)</sys:String>
+    <sys:String x:Key="ReportColPassportExpFull">Passport expiry</sys:String>
+    <sys:String x:Key="ReportColVisaExpFull">Visa expiry</sys:String>
+    <sys:String x:Key="ReportColInsExpFull">Insurance expiry</sys:String>
+    <sys:String x:Key="ReportColStartDateFull">Start date</sys:String>
+    <sys:String x:Key="ReportColEndDateFull">End date</sys:String>
+    <sys:String x:Key="ReportActionArchived">Archived</sys:String>
+    <sys:String x:Key="ReportActionRestored">Restored</sys:String>
+    <sys:String x:Key="ReportNoSheets">No sheets selected for export.</sys:String>
+    <sys:String x:Key="ReportNoSheetsTitle">Warning</sys:String>
+    <sys:String x:Key="ReportExported">Exported!</sys:String>
+    <sys:String x:Key="ReportExportedPdf">Exported PDF!</sys:String>
+    <sys:String x:Key="ReportExportError">Export error: {0}</sys:String>
+    <sys:String x:Key="ReportExportErrorTitle">Error</sys:String>
+    <sys:String x:Key="ReportPdfTitle">Report</sys:String>
+    <sys:String x:Key="ReportPdfPeriod">Period: {0} — {1}</sys:String>
+    <sys:String x:Key="ReportPdfStatsFmt">Worked: {0}  |  Active: {1}  |  New: {2}  |  Ended: {3}</sys:String>
+    <sys:String x:Key="ReportPdfAgencySection">Agency statistics</sys:String>
+
+    <!-- Employee Statuses -->
+    <sys:String x:Key="StatusActive">Active</sys:String>
+    <sys:String x:Key="StatusOnLeave">On Leave</sys:String>
+    <sys:String x:Key="StatusDismissed">Dismissed</sys:String>
+    <sys:String x:Key="StatusAwaitingDocs">Awaiting Documents</sys:String>
+
     <!-- PDF Editor -->
     <sys:String x:Key="PdfClickToPlace">Press Ins. next to a tag, then click on PDF to place it</sys:String>
     <sys:String x:Key="PdfPlaceTag">Place on PDF</sys:String>
     <sys:String x:Key="PdfPlacedTags">Placed tags</sys:String>
     <sys:String x:Key="PdfTagMarker">Tag marker</sys:String>
+
+
+    <sys:String x:Key="ImgEditorTitle">Document Editor</sys:String>
+    <sys:String x:Key="ImgEditorCrop">Crop</sys:String>
+    <sys:String x:Key="ImgEditorRotateL">Rotate ← 90°</sys:String>
+    <sys:String x:Key="ImgEditorRotateR">Rotate → 90°</sys:String>
+    <sys:String x:Key="ImgEditorSharpen">Sharpen</sys:String>
+    <sys:String x:Key="ImgEditorReset">Reset</sys:String>
+    <sys:String x:Key="ImgEditorSave">Save</sys:String>
+    <sys:String x:Key="ImgEditorAdjust">Adjustments</sys:String>
+    <sys:String x:Key="ImgEditorBrightness">Brightness</sys:String>
+    <sys:String x:Key="ImgEditorContrast">Contrast</sys:String>
+    <sys:String x:Key="ImgEditorDeskew">Straighten</sys:String>
+    <sys:String x:Key="ImgEditorDrawCrop">Draw a crop area on the photo.</sys:String>
+    <sys:String x:Key="ImgEditorCropped">Cropped!</sys:String>
+    <sys:String x:Key="ImgEditorSharpened">Sharpened!</sys:String>
+    <sys:String x:Key="ImgEditorResetDone">Original restored.</sys:String>
+    <sys:String x:Key="ImgEditorAutoEnhance">Auto</sys:String>
+    <sys:String x:Key="ImgEditorAutoEnhanceDone">Auto-enhancement applied!</sys:String>
+    <sys:String x:Key="ImgEditorPerspective">Perspective</sys:String>
+    <sys:String x:Key="ImgEditorPerspectiveDone">Perspective corrected!</sys:String>
+    <sys:String x:Key="ImgEditorPerspectiveNotFound">Document contour not found. Try a photo with more contrast.</sys:String>
+    <sys:String x:Key="ImgEditorGamma">Gamma</sys:String>
+    <sys:String x:Key="ImgEditorDenoise">Denoise</sys:String>
+
+    <sys:String x:Key="AIStatusNotLoaded">AI not loaded</sys:String>
+    <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
+    <sys:String x:Key="AIScanWorking">AI is analyzing the document...</sys:String>
+    <sys:String x:Key="AIScanNoData">AI could not recognize data</sys:String>
+    <sys:String x:Key="AIScanDone">Filled {0} fields</sys:String>
+    <sys:String x:Key="AIStatusReady">AI is ready</sys:String>
+
+    <sys:String x:Key="EmpTypeVisa">Foreigner (visa)</sys:String>
+    <sys:String x:Key="EmpTypeEuCitizen">EU Citizen</sys:String>
+    <sys:String x:Key="EmpTypeWorkPermit">Foreigner (visa + permit)</sys:String>
+    <sys:String x:Key="EmpTypePassportOnly">Passport Only</sys:String>
+    <sys:String x:Key="EuDocTypeLabel">EU Document Type:</sys:String>
+    <sys:String x:Key="EuDocTypePassport">EU Passport</sys:String>
+    <sys:String x:Key="EuDocTypeIdCard">ID Card</sys:String>
+    <sys:String x:Key="BtnUploadWorkPermit">Work Permit</sys:String>
+    <sys:String x:Key="DragDropInvalidFormat">Unsupported file format. Allowed: JPG, PNG, HEIC, PDF.</sys:String>
+    <sys:String x:Key="GlobalSearchPlaceholder">Search employees, templates, archive...</sys:String>
+    <sys:String x:Key="GlobalSearchNoResults">No results found</sys:String>
+    <sys:String x:Key="SearchCatEmployees">Employees</sys:String>
+    <sys:String x:Key="SearchCatTemplates">Templates</sys:String>
+    <sys:String x:Key="SearchCatArchive">Archive</sys:String>
+    <sys:String x:Key="SearchCatCandidates">Candidates</sys:String>
+    <sys:String x:Key="SearchCatCompanies">Companies</sys:String>
+    <sys:String x:Key="DashboardTitle">Dashboard</sys:String>
+    <sys:String x:Key="DashWidgetEmployees">Employees</sys:String>
+    <sys:String x:Key="DashWidgetProblems">Document Issues</sys:String>
+    <sys:String x:Key="DashWidgetActivity">Recent Activity</sys:String>
+    <sys:String x:Key="DashWidgetFinance">Monthly Finance</sys:String>
+    <sys:String x:Key="DashWidgetQuickActions">Quick Actions</sys:String>
+    <sys:String x:Key="DashNoCompany">Select a company to view</sys:String>
+    <sys:String x:Key="DashActionAddEmployee">Add Employee</sys:String>
+    <sys:String x:Key="DashActionGenerate">Generate Document</sys:String>
+    <sys:String x:Key="DashExpiringSoon">Expiring Soon</sys:String>
+    <sys:String x:Key="DashThisMonth">this month</sys:String>
+    <sys:String x:Key="DashNoChange">no changes</sys:String>
+    <sys:String x:Key="DashExpired">expired</sys:String>
+    <sys:String x:Key="DashAllGood">All good</sys:String>
+    <sys:String x:Key="DashAvailable">available</sys:String>
+    <sys:String x:Key="DashSevExpired">Expired</sys:String>
+    <sys:String x:Key="DashSevDays">days</sys:String>
+    <sys:String x:Key="DashAllOk">All documents are up to date!</sys:String>
+    <sys:String x:Key="DashNoActivity">No activity yet</sys:String>
+    <sys:String x:Key="DashLoading">Loading...</sys:String>
+    <sys:String x:Key="DashTimeNow">just now</sys:String>
+    <sys:String x:Key="DashTimeMin">min ago</sys:String>
+    <sys:String x:Key="DashTimeHours">hr ago</sys:String>
+    <sys:String x:Key="DashTimeYesterday">yesterday</sys:String>
+    <sys:String x:Key="DashTimeDays">days ago</sys:String>
+    <sys:String x:Key="DashActAdded">Employee added</sys:String>
+    <sys:String x:Key="DashActArchived">Archived</sys:String>
+    <sys:String x:Key="DashActRestored">Restored</sys:String>
+    <sys:String x:Key="DashActDocGen">Document generated</sys:String>
+    <sys:String x:Key="DashActTemplateAdd">Template added</sys:String>
+    <sys:String x:Key="DashActExport">Excel export</sys:String>
+    <sys:String x:Key="DashActBatchExport">Batch export</sys:String>
+    <sys:String x:Key="DashWidgetSalary">Salaries</sys:String>
+    <sys:String x:Key="DashSalaryWorkers">employees</sys:String>
+    <sys:String x:Key="DashSalaryAdvances">Advances</sys:String>
+    <sys:String x:Key="DashSalaryTotal">Total</sys:String>
+    <sys:String x:Key="DashSalaryPaid">Paid</sys:String>
+    <sys:String x:Key="DashSalaryEmpty">No salary records yet</sys:String>
+    <sys:String x:Key="DashSalaryEmptyMsg">Create a month in Finance to see the summary here.</sys:String>
+    <sys:String x:Key="DashSalaryUnpaid">awaiting payment</sys:String>
+    <sys:String x:Key="DashSalaryNet">To pay</sys:String>
+    <sys:String x:Key="DashSalaryExpenses">Company expenses</sys:String>
+    <sys:String x:Key="DashSalaryGrandTotal">Grand total</sys:String>
+    <sys:String x:Key="StepWorkPermitData">Work Permit Data</sys:String>
+    <sys:String x:Key="WizWorkPermitNumber">Permit Number</sys:String>
+    <sys:String x:Key="WizWorkPermitType">Permit Type</sys:String>
+    <sys:String x:Key="WizWorkPermitIssueDate">Issue Date</sys:String>
+    <sys:String x:Key="WizWorkPermitExpiry">Permit Expiry</sys:String>
+    <sys:String x:Key="WizWorkPermitAuthority">Issuing Authority</sys:String>
+
+    <!-- Finance & Tables -->
+    <sys:String x:Key="FinTabTitle">Finances &amp; Tables</sys:String>
+    <sys:String x:Key="FinTabFinances">Finances</sys:String>
+    <sys:String x:Key="FinTabTables">Tables</sys:String>
+    <sys:String x:Key="FinTabFinancesDesc">Financial reports and accounting</sys:String>
+    <sys:String x:Key="FinTabTablesDesc">Generate tables for printing</sys:String>
+    <sys:String x:Key="AdvTableTitle">Advance Payment Sheet</sys:String>
+    <sys:String x:Key="AdvTableDesc">Generate PDF table with current employee list for advance payments</sys:String>
+    <sys:String x:Key="AdvTableSelectFirms">Select firms:</sys:String>
+    <sys:String x:Key="AdvTableSelectAll">Select all</sys:String>
+    <sys:String x:Key="AdvTableGenerate">Generate PDF</sys:String>
+    <sys:String x:Key="AdvTableNoFirms">Select at least one firm</sys:String>
+    <sys:String x:Key="AdvTableSuccess">PDF saved successfully</sys:String>
+    <sys:String x:Key="AdvTableColName">Name Surname</sys:String>
+    <sys:String x:Key="AdvTableColDate">Date</sys:String>
+    <sys:String x:Key="AdvTableColAmount">Amount</sys:String>
+    <sys:String x:Key="AdvTableColSign">Signature</sys:String>
+    <sys:String x:Key="AdvTablePdfTitle">Advance Payment Sheet</sys:String>
+
+    <!-- Tables Menu -->
+    <sys:String x:Key="TablesMenuTitle">Tables</sys:String>
+    <sys:String x:Key="TablesAdvance">Advance Payment Sheet</sys:String>
+    <sys:String x:Key="TablesAdvanceDesc">Table for issuing advances to employees</sys:String>
+    <sys:String x:Key="TablesPayment">Payment Signatures</sys:String>
+    <sys:String x:Key="TablesPaymentDesc">Signature sheet for salary receipt</sys:String>
+
+    <!-- Tag Catalog Groups -->
+    <sys:String x:Key="TagGrpCompany">Company</sys:String>
+    <sys:String x:Key="TagGrpAgency">Agency</sys:String>
+    <sys:String x:Key="TagGrpEmpPersonal">Employee — Personal Data</sys:String>
+    <sys:String x:Key="TagGrpEmpPassport">Employee — Passport</sys:String>
+    <sys:String x:Key="TagGrpEmpVisa">Employee — Visa</sys:String>
+    <sys:String x:Key="TagGrpEmpInsurance">Employee — Insurance</sys:String>
+    <sys:String x:Key="TagGrpEmpWorkPermit">Employee — Work Permit</sys:String>
+    <sys:String x:Key="TagGrpEmpLocalAddr">Employee — Local Address</sys:String>
+    <sys:String x:Key="TagGrpEmpAbroadAddr">Employee — Abroad Address</sys:String>
+    <sys:String x:Key="TagGrpEmpWork">Employee — Work</sys:String>
+    <sys:String x:Key="TagGrpEmployee">Employee</sys:String>
+
+    <!-- Tag Catalog Descriptions – Company -->
+    <sys:String x:Key="TagDescCompanyName">Company name</sys:String>
+    <sys:String x:Key="TagDescCompanyICO">Company ICO</sys:String>
+    <sys:String x:Key="TagDescCompanyWeeklyHours">Working hours per week</sys:String>
+    <sys:String x:Key="TagDescCompanyDailyHours">Working hours per day</sys:String>
+    <sys:String x:Key="TagDescCompanyShiftCount">Number of shifts</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrStreet">Address {0} — Street</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrNumber">Address {0} — Number</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrCity">Address {0} — City</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrZip">Address {0} — Zip</sys:String>
+    <sys:String x:Key="TagDescCompanyAddrFull">Address {0} — Full</sys:String>
+    <sys:String x:Key="TagDescCompanyPosTitle">Position {0} — Title</sys:String>
+    <sys:String x:Key="TagDescCompanyPosNumber">Position {0} — Number</sys:String>
+    <sys:String x:Key="TagDescCompanyPosSalary">Position {0} — Salary (gross)</sys:String>
+    <sys:String x:Key="TagDescCompanyPosHourly">Position {0} — Hourly rate</sys:String>
+
+    <!-- Tag Catalog Descriptions – Agency -->
+    <sys:String x:Key="TagDescAgencyName">Agency name</sys:String>
+    <sys:String x:Key="TagDescAgencyICO">Agency ICO</sys:String>
+    <sys:String x:Key="TagDescAgencyAddress">Full agency address</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Personal -->
+    <sys:String x:Key="TagDescEmpFirstName">Employee first name</sys:String>
+    <sys:String x:Key="TagDescEmpLastName">Employee last name</sys:String>
+    <sys:String x:Key="TagDescEmpFullName">Employee full name</sys:String>
+    <sys:String x:Key="TagDescEmpBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="TagDescEmpPhone">Phone</sys:String>
+    <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
+    <sys:String x:Key="TagDescEmpStatus">Status</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Passport -->
+    <sys:String x:Key="TagDescEmpPassportNumber">Passport number</sys:String>
+    <sys:String x:Key="TagDescEmpPassportCity">City of birth</sys:String>
+    <sys:String x:Key="TagDescEmpPassportCountry">Country of birth</sys:String>
+    <sys:String x:Key="TagDescEmpPassportExpiry">Passport expiry date</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Visa -->
+    <sys:String x:Key="TagDescEmpVisaNumber">Visa number</sys:String>
+    <sys:String x:Key="TagDescEmpVisaType">Visa type</sys:String>
+    <sys:String x:Key="TagDescEmpVisaExpiry">Visa expiry date</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Insurance -->
+    <sys:String x:Key="TagDescEmpInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="TagDescEmpInsNumber">Insurance number</sys:String>
+    <sys:String x:Key="TagDescEmpInsExpiry">Insurance expiry date</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Work Permit -->
+    <sys:String x:Key="TagDescEmpWpName">Work permit name</sys:String>
+    <sys:String x:Key="TagDescEmpWpNumber">Work permit number</sys:String>
+    <sys:String x:Key="TagDescEmpWpType">Work permit type</sys:String>
+    <sys:String x:Key="TagDescEmpWpIssueDate">Permit issue date</sys:String>
+    <sys:String x:Key="TagDescEmpWpExpiry">Permit expiry</sys:String>
+    <sys:String x:Key="TagDescEmpWpAuthority">Issuing authority</sys:String>
+    <sys:String x:Key="TagDescEmpType">Employee type</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Local Address -->
+    <sys:String x:Key="TagDescEmpLocalStreet">Street</sys:String>
+    <sys:String x:Key="TagDescEmpLocalNumber">Number</sys:String>
+    <sys:String x:Key="TagDescEmpLocalCity">City</sys:String>
+    <sys:String x:Key="TagDescEmpLocalZip">Zip code</sys:String>
+    <sys:String x:Key="TagDescEmpLocalFull">Full address</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Abroad Address -->
+    <sys:String x:Key="TagDescEmpAbroadStreet">Street</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadNumber">Number</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadCity">City</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadZip">Zip code</sys:String>
+    <sys:String x:Key="TagDescEmpAbroadFull">Full address</sys:String>
+
+    <!-- Tag Catalog Descriptions – Employee Work -->
+    <sys:String x:Key="TagDescEmpWorkAddress">Work address</sys:String>
+    <sys:String x:Key="TagDescEmpPosition">Position</sys:String>
+    <sys:String x:Key="TagDescEmpPosNumber">Position number</sys:String>
+    <sys:String x:Key="TagDescEmpSalary">Monthly salary (gross)</sys:String>
+    <sys:String x:Key="TagDescEmpHourly">Hourly rate</sys:String>
+    <sys:String x:Key="TagDescEmpContractType">Contract type</sys:String>
+    <sys:String x:Key="TagDescEmpDepartment">Department</sys:String>
+    <sys:String x:Key="TagDescEmpStartDate">Employment start date</sys:String>
+    <sys:String x:Key="TagDescEmpSignDate">Contract sign date</sys:String>
+
+    <!-- Template Editor ViewModel -->
+    <sys:String x:Key="EditorTitleFmt">Editor: {0}</sys:String>
+    <sys:String x:Key="EditorSaved">Saved!</sys:String>
+    <sys:String x:Key="EditorErrPath">Error: template path is unknown.</sys:String>
+    <sys:String x:Key="EditorErrEmpty">No content to save.</sys:String>
+    <sys:String x:Key="EditorErrFmt">Error: {0}</sys:String>
+    <sys:String x:Key="EditorCopied">Copied: {0}</sys:String>
+
+    <!-- XLSX Editor ViewModel -->
+    <sys:String x:Key="XlsxEditorTitle">XLSX Editor: {0}</sys:String>
+    <sys:String x:Key="XlsxFileNotFound">Template file not found.</sys:String>
+    <sys:String x:Key="XlsxLoadError">Load error: {0}</sys:String>
+    <sys:String x:Key="XlsxNoOpenFile">No open file.</sys:String>
+    <sys:String x:Key="XlsxSaved">Template saved successfully!</sys:String>
+    <sys:String x:Key="XlsxSaveError">Save error: {0}</sys:String>
+    <sys:String x:Key="XlsxSelectCell">Select a cell in the table to insert a tag.</sys:String>
+    <sys:String x:Key="XlsxTagInserted">Tag {0} inserted into cell {1}</sys:String>
+    <sys:String x:Key="XlsxInsertError">Insert error: {0}</sys:String>
+    <sys:String x:Key="XlsxTagCopied">Tag {0} copied to clipboard</sys:String>
+
+    <!-- Tag Visibility Window -->
+    <sys:String x:Key="TagVisTitle">Tag Visibility Settings</sys:String>
+    <sys:String x:Key="TagVisHeader">Tag visibility in editors</sys:String>
+    <sys:String x:Key="TagVisSelectAll">Select all</sys:String>
+    <sys:String x:Key="TagVisDeselectAll">Deselect all</sys:String>
+    <sys:String x:Key="TagVisSave">Save</sys:String>
+    <sys:String x:Key="TagVisCancel">Cancel</sys:String>
+
+    <!-- PDF Editor ViewModel -->
+    <sys:String x:Key="PdfEditorTitle">PDF: {0}</sys:String>
+    <sys:String x:Key="PdfFileNotFound">PDF file not found.</sys:String>
+    <sys:String x:Key="PdfTagPlaced">{0} placed on page {1}</sys:String>
+    <sys:String x:Key="PdfTagRemoved">{0} removed</sys:String>
+    <sys:String x:Key="PdfTagCopied">{0} copied</sys:String>
+
+    <!-- Payment Sign -->
+    <sys:String x:Key="PaySignTitle">Payment Signatures</sys:String>
+    <sys:String x:Key="PaySignDesc">Generate PDF signature sheet for salary receipt for the selected month</sys:String>
+    <sys:String x:Key="PaySignMonth">Month:</sys:String>
+    <sys:String x:Key="PaySignPayDate">Payment date:</sys:String>
+    <sys:String x:Key="PaySignSelectFirms">Select firms:</sys:String>
+    <sys:String x:Key="PaySignGenerate">Generate PDF</sys:String>
+    <sys:String x:Key="PaySignPdfTitle">Payment for month {0}/{1}</sys:String>
+    <sys:String x:Key="PaySignColName">Name and Surname</sys:String>
+    <sys:String x:Key="PaySignColFirm">Company</sys:String>
+    <sys:String x:Key="PaySignColDate">Date</sys:String>
+    <sys:String x:Key="PaySignColInfo">Information</sys:String>
+    <sys:String x:Key="PaySignColSign">Signature</sys:String>
+    <sys:String x:Key="PaySignInfoText">Salary and pay slips received</sys:String>
+
+    <!-- Salary / Finance -->
+    <sys:String x:Key="FinBtnLoadEmployees">Load Employees</sys:String>
+    <sys:String x:Key="FinBtnAdvance">Advance</sys:String>
+    <sys:String x:Key="FinSearchPlaceholder">Search employee...</sys:String>
+    <sys:String x:Key="FinBtnConfirmAdvance">Add advance</sys:String>
+    <sys:String x:Key="FinColName">Name</sys:String>
+    <sys:String x:Key="FinColHours">Hours</sys:String>
+    <sys:String x:Key="FinColRate">Rate</sys:String>
+    <sys:String x:Key="FinColGross">Gross</sys:String>
+    <sys:String x:Key="FinColAdvance">Advance</sys:String>
+    <sys:String x:Key="FinColAdvances">Advances</sys:String>
+    <sys:String x:Key="FinColAccommodation">Accommodation</sys:String>
+    <sys:String x:Key="FinColOther">Other</sys:String>
+    <sys:String x:Key="FinColNet">Net Pay</sys:String>
+    <sys:String x:Key="FinColFirm">Firm</sys:String>
+    <sys:String x:Key="FinColAmount">Amount</sys:String>
+    <sys:String x:Key="FinStatEmployees">Employees</sys:String>
+    <sys:String x:Key="FinStatHours">Hours</sys:String>
+    <sys:String x:Key="FinStatGross">Gross</sys:String>
+    <sys:String x:Key="FinStatAdvances">Advances</sys:String>
+    <sys:String x:Key="FinStatAccom">Accommodation</sys:String>
+    <sys:String x:Key="FinStatNet">Net Pay</sys:String>
+    <sys:String x:Key="FinStatPaid">Paid</sys:String>
+    <sys:String x:Key="FinBtnMarkAllPaid">✓ Mark All Paid</sys:String>
+    <sys:String x:Key="FinBtnCreateMonth">Next month</sys:String>
+    <sys:String x:Key="FinColPaid">Paid</sys:String>
+    <sys:String x:Key="FinFirmBreakdown">By Firm</sys:String>
+    <sys:String x:Key="FinAdvanceTitle">Add advance</sys:String>
+    <sys:String x:Key="FinAdvanceNote">Note</sys:String>
+    <sys:String x:Key="FinAdvanceDate">Date</sys:String>
+    <sys:String x:Key="FinAdvanceHistory">Advance history</sys:String>
+    <sys:String x:Key="FinAdvanceDeducted">Deducted from salary</sys:String>
+    <sys:String x:Key="FinAdvanceNotDeducted">Not deducted</sys:String>
+    <sys:String x:Key="FinAdvanceTotalOpen">Total not deducted</sys:String>
+    <sys:String x:Key="FinDebtCarried">Debt from previous month:</sys:String>
+    <sys:String x:Key="FinDebtLabel">Debt:</sys:String>
+    <sys:String x:Key="FinDebtFromMonth">Debt from {0}:</sys:String>
+    <sys:String x:Key="FinSalaryLoaded">Loaded</sys:String>
+    <sys:String x:Key="FinSalarySaved">Saved!</sys:String>
+    <sys:String x:Key="FinUnsavedChanges">Unsaved changes</sys:String>
+    <sys:String x:Key="FinAdvanceDeleteConfirm">Delete advance</sys:String>
+    <sys:String x:Key="FinSalaryExported">Exported!</sys:String>
+    <sys:String x:Key="FinSalaryNoData">No data to export</sys:String>
+    <sys:String x:Key="FinColSurcharge">Surcharge</sys:String>
+    <sys:String x:Key="FinColNote">Note</sys:String>
+    <sys:String x:Key="FinFilterAll">All firms</sys:String>
+    <sys:String x:Key="FinStatGrandTotal">Grand Total</sys:String>
+    <sys:String x:Key="FinStatsConfig">Extra statistics</sys:String>
+    <sys:String x:Key="FinStatRemaining">Remaining to pay</sys:String>
+    <sys:String x:Key="FinStatCustomAdd">Surcharges (+)</sys:String>
+    <sys:String x:Key="FinStatCustomSub">Deductions (−)</sys:String>
+    <sys:String x:Key="FinFirmExpenses">Firm Expenses</sys:String>
+    <sys:String x:Key="FinExpenseAdd">Add expense</sys:String>
+    <sys:String x:Key="FinExpenseTotal">Total expenses</sys:String>
+    <sys:String x:Key="FinExpenseNew">New expense</sys:String>
+    <sys:String x:Key="FinExpenseSelectFirm">Select a firm first to add expenses</sys:String>
+    <sys:String x:Key="FinAdvanceInvalid">Invalid amount</sys:String>
+    <sys:String x:Key="FinAdvanceNotFound">Employee not found</sys:String>
+    <sys:String x:Key="FinAdvanceAdded">Advance {0} Kč → {1}</sys:String>
+    <sys:String x:Key="FinBtnManageColumns">Columns</sys:String>
+    <sys:String x:Key="FinManageColumnsTitle">Manage Columns</sys:String>
+    <sys:String x:Key="FinManageColumnsDesc">Add, edit or remove custom columns for salary calculation.</sys:String>
+    <sys:String x:Key="FinBtnAddField">Add</sys:String>
+    <sys:String x:Key="FinEditFieldTitle">Edit Column</sys:String>
+    <sys:String x:Key="FinConfirmDeleteField">Delete column '{0}'?</sys:String>
+    <sys:String x:Key="FinExportSelectTitle">Export to Excel</sys:String>
+    <sys:String x:Key="FinExportSelectDesc">Select firms to export</sys:String>
+    <sys:String x:Key="FinExportSelectAll">Select all</sys:String>
+    <sys:String x:Key="FinExportBtn">Export</sys:String>
+    <sys:String x:Key="FinExportNoFirms">Select at least one firm</sys:String>
+    <sys:String x:Key="BtnDone">Done</sys:String>
+
+    <!-- Hardcoded strings localization -->
+    <sys:String x:Key="SettingsTagsTitle">Tags</sys:String>
+    <sys:String x:Key="SettingsTagsDesc">Configure tag visibility in template editors</sys:String>
+    <sys:String x:Key="SettingsTagsBtn">Configure tags</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityTitle">Company visibility</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityDesc">Hide companies that are no longer active</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityBtn">Configure</sys:String>
+    <sys:String x:Key="SettingsFirmsVisibilityHint">Uncheck to hide a company from all lists. Companies with active employees cannot be hidden.</sys:String>
+    <sys:String x:Key="SettingsFirmsHasEmployees">Has active employees: </sys:String>
+    <sys:String x:Key="SettingsFirmsEmployeesCount"> — cannot hide</sys:String>
+    <sys:String x:Key="SettingsCopyrightTitle">Copyright</sys:String>
+    <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. All rights reserved.</sys:String>
+    <sys:String x:Key="SettingsCopyrightDesc">This software is proprietary and confidential. Unauthorized copying, distribution, or modification is strictly prohibited.</sys:String>
+    <sys:String x:Key="SettingsLicenseTitle">License</sys:String>
+    <sys:String x:Key="LicenseNotActivated">Not activated</sys:String>
+    <sys:String x:Key="LicenseOtherPC">License for another PC</sys:String>
+    <sys:String x:Key="LicenseDamaged">License is damaged</sys:String>
+    <sys:String x:Key="LicenseUnlimited">Unlimited license</sys:String>
+    <sys:String x:Key="LicenseExpired">License expired</sys:String>
+    <sys:String x:Key="LicenseActiveUntil">Active until</sys:String>
+    <sys:String x:Key="LicenseDaysLeft">days</sys:String>
+    <sys:String x:Key="LicenseCheckError">Verification error</sys:String>
+    <sys:String x:Key="WizDocLabel">Document</sys:String>
+    <sys:String x:Key="WizKeepAspect">Keep aspect ratio</sys:String>
+    <sys:String x:Key="WizRotateLeft">Rotate left</sys:String>
+    <sys:String x:Key="WizRotateRight">Rotate right</sys:String>
+    <sys:String x:Key="WizEnhanceBtn">Enhance</sys:String>
+    <sys:String x:Key="WizPreviewLabel">Preview:</sys:String>
+    <sys:String x:Key="MsgOpenFolderFail">Could not open folder.</sys:String>
+    <sys:String x:Key="MsgEnterNewDate">Enter a new date.</sys:String>
+    <sys:String x:Key="MsgSaveFail">Could not save.</sys:String>
+    <sys:String x:Key="MsgGenerating">Generating document...</sys:String>
+    <sys:String x:Key="MsgTemplateNotFound">Template file not found.</sys:String>
+    <sys:String x:Key="MsgProfileSaveFail">Could not save profile.</sys:String>
+    <sys:String x:Key="MsgOpenFileFail">Could not open file.</sys:String>
+    <sys:String x:Key="MsgFileNotFound">File not found.</sys:String>
+    <sys:String x:Key="MsgWorkPermitUpdated">Work permit updated.</sys:String>
+    <sys:String x:Key="MsgNoImageRotate">No image to rotate.</sys:String>
+    <sys:String x:Key="MsgDocNotLoaded">Document not loaded or only PDF available.</sys:String>
+    <sys:String x:Key="MsgCropHint">To crop employee photo, select "Photo" in the document list.</sys:String>
+    <sys:String x:Key="MsgUploadFirst">Upload a document first.</sys:String>
+    <sys:String x:Key="MsgHint">Hint</sys:String>
+    <sys:String x:Key="MsgSaveEmployeeFail">Could not save employee.</sys:String>
+    <sys:String x:Key="MsgFillRequiredFields">Please fill in the required fields (First Name, Last Name).</sys:String>
+    <sys:String x:Key="MsgWizUnsavedClose">You have unsaved data. Close without saving?</sys:String>
+    <sys:String x:Key="MsgWizUnsavedTitle">Cancel</sys:String>
+    <sys:String x:Key="MsgEnterCompanyName">Enter company name.</sys:String>
+    <sys:String x:Key="MsgUnsupportedFormat">Unsupported file format.</sys:String>
+
+    <!-- Expiry warning badges -->
+    <sys:String x:Key="ExpiryExpired">⚠ Expired</sys:String>
+    <sys:String x:Key="ExpiryCritical">⚠ &lt; 7 days</sys:String>
+    <sys:String x:Key="ExpiryWarning">⚠ &lt; 30 days</sys:String>
+
+    <!-- Company dialog -->
+    <sys:String x:Key="CompanyDialogTitleEdit">Edit Company</sys:String>
+    <sys:String x:Key="CompanyDialogTitleAdd">Add New Company</sys:String>
+    <sys:String x:Key="MsgCompanyHasEmployees">This company has {0} employee(s). Delete anyway?</sys:String>
+    <sys:String x:Key="TitleWarning">Warning</sys:String>
+    <sys:String x:Key="MsgConfirmDeleteCompany">Are you sure you want to delete company "{0}"?
+
+The folder on disk will NOT be deleted.</sys:String>
+    <sys:String x:Key="TitleDeleteCompany">Delete Company</sys:String>
+
+    <!-- Template errors -->
+    <sys:String x:Key="MsgDeleteError">Delete error: {0}</sys:String>
+    <sys:String x:Key="MsgRenameError">Rename error: {0}</sys:String>
+    <sys:String x:Key="MsgOpenFileError">Could not open file: {0}</sys:String>
+
+    <!-- Crop targets -->
+    <sys:String x:Key="CropPassport">Passport</sys:String>
+    <sys:String x:Key="CropVisa">Visa</sys:String>
+    <sys:String x:Key="CropInsurance">Insurance</sys:String>
+    <sys:String x:Key="CropPhoto">Photo</sys:String>
+    <sys:String x:Key="CropPassport2">Passport 2</sys:String>
+    <sys:String x:Key="CropPermit">Permit</sys:String>
+    <sys:String x:Key="CarouselPassport">Passport</sys:String>
+    <sys:String x:Key="CarouselPassport2">Passport 2</sys:String>
+    <sys:String x:Key="CarouselVisa">Visa</sys:String>
+    <sys:String x:Key="CarouselInsurance">Insurance</sys:String>
+    <sys:String x:Key="CarouselPermit">Permit</sys:String>
+
+    <!-- History actions -->
+    <sys:String x:Key="HistoryActionCreation">Creation</sys:String>
+    <sys:String x:Key="HistoryDescCreated">Employee created: {0}</sys:String>
+
+    <!-- Extend dialog -->
+    <sys:String x:Key="DetExtendTitleVisa">Extend Visa</sys:String>
+    <sys:String x:Key="DetExtendTitleIns">Extend Insurance</sys:String>
+    <sys:String x:Key="DetExtendFieldVisa">Visa until</sys:String>
+    <sys:String x:Key="DetExtendFieldIns">Insurance until</sys:String>
+    <sys:String x:Key="HistoryExtendVisa">Visa extension</sys:String>
+    <sys:String x:Key="HistoryExtendIns">Insurance extension</sys:String>
+
+    <!-- Archive messages -->
+    <sys:String x:Key="MsgEnterArchiveDate">Enter end of cooperation date.</sys:String>
+    <sys:String x:Key="HistoryActionArchive">Moved to archive</sys:String>
+    <sys:String x:Key="HistoryFieldArchive">Archive</sys:String>
+    <sys:String x:Key="HistoryDescArchive">Moved to archive from company {0}. End date: {1}</sys:String>
+    <sys:String x:Key="HistoryActionRestored">Restored from archive</sys:String>
+    <sys:String x:Key="HistoryDescRestored">Employee {0} restored to company {1}</sys:String>
+    <sys:String x:Key="HistFilterAll">All</sys:String>
+    <sys:String x:Key="HistFilterCreated">Created</sys:String>
+    <sys:String x:Key="HistFilterProfile">Profile</sys:String>
+    <sys:String x:Key="HistFilterDocuments">Documents</sys:String>
+    <sys:String x:Key="HistFilterStatus">Status</sys:String>
+    <sys:String x:Key="HistFilterArchive">Archive</sys:String>
+    <sys:String x:Key="MsgArchiveError">Error during archiving.</sys:String>
+
+    <!-- Document generation -->
+    <sys:String x:Key="MsgDocGenerated">Document generated: {0}</sys:String>
+    <sys:String x:Key="MsgUnsupportedFmt">Unsupported format: {0}</sys:String>
+    <sys:String x:Key="MsgErrorFmt">Error: {0}</sys:String>
+
+    <!-- Document replacement -->
+    <sys:String x:Key="HistoryActionDocReplace">Document replacement</sys:String>
+    <sys:String x:Key="HistoryDescDocReplace">Replaced document: {0}</sys:String>
+    <sys:String x:Key="HistoryActionDocAdd">Document added</sys:String>
+    <sys:String x:Key="HistoryActionDocDelete">Document deleted</sys:String>
+
+    <!-- Work permit renewal -->
+    <sys:String x:Key="DetRenewWpSelectTitle">Select new work permit</sys:String>
+    <sys:String x:Key="HistoryActionRenewWp">Work permit renewal</sys:String>
+    <sys:String x:Key="HistoryDescRenewWp">Number: {0} → {1}, Expiry: {2} → {3}</sys:String>
+
+    <!-- PDF Profile labels -->
+    <sys:String x:Key="PdfSecContacts">CONTACTS</sys:String>
+    <sys:String x:Key="PdfSecInsurance">INSURANCE</sys:String>
+    <sys:String x:Key="PdfFieldNumber">Number</sys:String>
+    <sys:String x:Key="PdfFieldType">Type</sys:String>
+    <sys:String x:Key="PdfFieldPermit">Permit</sys:String>
+    <sys:String x:Key="PdfFieldIssued">Issued</sys:String>
+    <sys:String x:Key="PdfFieldAuthority">Authority</sys:String>
+    <sys:String x:Key="PdfFieldPosNumber">Position number</sys:String>
+    <sys:String x:Key="PdfFieldDepartment">Department</sys:String>
+    <sys:String x:Key="PdfFieldValidTo">Valid until</sys:String>
+    <sys:String x:Key="PdfFieldValidToF">Valid until</sys:String>
+
+    <!-- Export headers (EmployeesViewModel) -->
+    <sys:String x:Key="ExportEmployees">Employees</sys:String>
+    <sys:String x:Key="ExportColFirstName">First Name</sys:String>
+    <sys:String x:Key="ExportColLastName">Last Name</sys:String>
+    <sys:String x:Key="ExportColPosition">Position</sys:String>
+    <sys:String x:Key="ExportColPhone">Phone</sys:String>
+    <sys:String x:Key="ExportColPassportNum">Passport No.</sys:String>
+    <sys:String x:Key="ExportColPassportExp">Passport exp.</sys:String>
+    <sys:String x:Key="ExportColVisaNum">Visa No.</sys:String>
+    <sys:String x:Key="ExportColVisaExp">Visa exp.</sys:String>
+    <sys:String x:Key="ExportColInsNum">Insurance No.</sys:String>
+    <sys:String x:Key="ExportColInsExp">Insurance exp.</sys:String>
+    <sys:String x:Key="ExportColContractType">Contract type</sys:String>
+    <sys:String x:Key="ExportColStartDate">Start date</sys:String>
+    <sys:String x:Key="ExportColStatus">Status</sys:String>
+    <sys:String x:Key="MsgExportError">Export error: {0}</sys:String>
+    <sys:String x:Key="MsgSelectedCount">Selected employees: {0}</sys:String>
+    <sys:String x:Key="MsgBatchResult">Generated: {0}, errors: {1}</sys:String>
+
+    <!-- Archive restore -->
+    <sys:String x:Key="MsgNoEmployeeSelected">No employee selected.</sys:String>
+    <sys:String x:Key="MsgSelectFirmRestore">Select a company.</sys:String>
+    <sys:String x:Key="MsgEnterStartDate">Enter start date.</sys:String>
+    <sys:String x:Key="MsgRestoreError">Error during restoration.</sys:String>
+
+    <!-- Services -->
+    <sys:String x:Key="MsgDbSaveError">Database save error: {0}</sys:String>
+    <sys:String x:Key="MsgTemplateMissing">Template not found.</sys:String>
+    <sys:String x:Key="MsgCompanySaveError">Error saving: {0}</sys:String>
+
+    <!-- History field names (EmployeeService) -->
+    <sys:String x:Key="HistFieldFirstName">First name</sys:String>
+    <sys:String x:Key="HistFieldLastName">Last name</sys:String>
+    <sys:String x:Key="HistFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="HistFieldPassportNum">Passport number</sys:String>
+    <sys:String x:Key="HistFieldPassportExp">Passport expiry</sys:String>
+    <sys:String x:Key="HistFieldVisaNum">Visa number</sys:String>
+    <sys:String x:Key="HistFieldVisaExp">Visa expiry</sys:String>
+    <sys:String x:Key="HistFieldInsNum">Insurance number</sys:String>
+    <sys:String x:Key="HistFieldInsExp">Insurance expiry</sys:String>
+    <sys:String x:Key="HistFieldPhone">Phone</sys:String>
+    <sys:String x:Key="HistFieldStatus">Status</sys:String>
+    <sys:String x:Key="HistFieldPosition">Position</sys:String>
+    <sys:String x:Key="HistFieldWorkAddr">Work address</sys:String>
+    <sys:String x:Key="HistFieldSignDate">Sign date</sys:String>
+    <sys:String x:Key="HistFieldContractType">Contract type</sys:String>
+    <sys:String x:Key="HistFieldSalary">Salary (gross)</sys:String>
+    <sys:String x:Key="HistFieldHourly">Hourly salary</sys:String>
+    <sys:String x:Key="HistFieldDepartment">Department</sys:String>
+    <sys:String x:Key="HistFieldStartDate">Start date</sys:String>
+    <sys:String x:Key="HistoryActionProfileChange">Profile change</sys:String>
+
+    <!-- Wizard crop instruction -->
+    <sys:String x:Key="WizCropInstruction">Select the area with employee photo on passport and press "Crop"</sys:String>
+    <sys:String x:Key="HistFieldEmail">Email</sys:String>
+    <sys:String x:Key="HistFieldVisaType">Visa type</sys:String>
+    <sys:String x:Key="HistFieldInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="HistFieldPassportCity">Birth city</sys:String>
+    <sys:String x:Key="HistFieldPassportCountry">Birth country</sys:String>
+    <sys:String x:Key="HistFieldWorkPermitName">Work permit name</sys:String>
+    <sys:String x:Key="HistFieldPosNumber">Position number</sys:String>
+    <sys:String x:Key="MsgPdfSaved">PDF saved.</sys:String>
+    <sys:String x:Key="MsgPdfProfileSaved">PDF profile saved.</sys:String>
+
+    <!-- Candidates -->
+    <sys:String x:Key="BtnCandidates">Candidates</sys:String>
+    <sys:String x:Key="CandAdd">Add Candidate</sys:String>
+    <sys:String x:Key="CandAddTitle">New Candidate</sys:String>
+    <sys:String x:Key="CandEmpty">No candidates yet</sys:String>
+    <sys:String x:Key="CandPhoto">Photo</sys:String>
+    <sys:String x:Key="CandPassport">Passport</sys:String>
+    <sys:String x:Key="CandSelectPhoto">Select photo</sys:String>
+    <sys:String x:Key="CandSelectPassport">Select passport</sys:String>
+    <sys:String x:Key="CandFirstName">First Name</sys:String>
+    <sys:String x:Key="CandLastName">Last Name</sys:String>
+    <sys:String x:Key="CandPassportNum">Passport Number</sys:String>
+    <sys:String x:Key="CandPassportExpiry">Passport Expiry</sys:String>
+    <sys:String x:Key="CandPassportCity">City of Issue</sys:String>
+    <sys:String x:Key="CandPassportCountry">Country</sys:String>
+    <sys:String x:Key="CandPosition">Desired Position</sys:String>
+    <sys:String x:Key="CandLocation">Work Location</sys:String>
+    <sys:String x:Key="CandAllPositions">All positions</sys:String>
+    <sys:String x:Key="CandAllCzech">All Czech Republic</sys:String>
+    <sys:String x:Key="CandSpecific">Specific location</sys:String>
+    <sys:String x:Key="CandPhone">Phone number</sys:String>
+    <sys:String x:Key="CandNotes">Notes</sys:String>
+    <sys:String x:Key="CandPersonalSection">Personal Data</sys:String>
+    <sys:String x:Key="CandWorkSection">Work</sys:String>
+    <sys:String x:Key="CandChangePassport">Change passport</sys:String>
+    <sys:String x:Key="CandDelete">Delete</sys:String>
+    <sys:String x:Key="CandDeleteConfirm">Delete candidate {0}? This action cannot be undone.</sys:String>
+    <sys:String x:Key="CandSaveFail">Failed to save candidate</sys:String>
+    <sys:String x:Key="CandAddedOn">Added: </sys:String>
+    <sys:String x:Key="CandStepPassport">Upload Passport</sys:String>
+    <sys:String x:Key="CandStepPassportHint">Upload a photo or scan of the candidate's passport. You can crop the photo on the next step.</sys:String>
+    <sys:String x:Key="CandStepCrop">Crop Photo</sys:String>
+    <sys:String x:Key="CandStepData">Candidate Data</sys:String>
+    <sys:String x:Key="CandCroppedPreview">Result:</sys:String>
+
+    <!-- AI Chat -->
+    <sys:String x:Key="BtnAIAssistant">AI Assistant</sys:String>
+    <sys:String x:Key="AIChatTitle">AI Assistant</sys:String>
+    <sys:String x:Key="AIChatPlaceholder">Type a message...</sys:String>
+    <sys:String x:Key="AIChatSend">Send</sys:String>
+    <sys:String x:Key="AIChatAttachImage">Attach image</sys:String>
+    <sys:String x:Key="AIChatWelcome">Hello! I'm your AI assistant. Ask a question or attach a document photo for analysis.</sys:String>
+    <sys:String x:Key="AIChatNewChat">New chat</sys:String>
+    <sys:String x:Key="AIChatNoModel">Gemini API not configured. Go to Settings to add an API key.</sys:String>
+    <sys:String x:Key="AIChatThinking">AI is thinking...</sys:String>
+
+    <!-- AI Provider -->
+    <sys:String x:Key="AIProviderTitle">AI Provider</sys:String>
+    <sys:String x:Key="AIProviderGemini">Google Gemini (online)</sys:String>
+    <sys:String x:Key="AIGeminiApiKey">Gemini API Key:</sys:String>
+    <sys:String x:Key="AIGeminiGetKey">Get free API key</sys:String>
+    <sys:String x:Key="AIGeminiModel">Gemini Model:</sys:String>
+    <sys:String x:Key="AIGeminiTest">Test connection</sys:String>
+    <sys:String x:Key="AIProviderForChat">AI Assistant (chat):</sys:String>
+    <sys:String x:Key="AIProviderForScan">AI Scan (documents):</sys:String>
+    <sys:String x:Key="AIProviderHint">Gemini = smarter, needs internet. Local = offline, but weaker.</sys:String>
+
+    <!-- AI Template Overlay -->
+    <sys:String x:Key="AIAnalyzeTemplate">Analyze template</sys:String>
+    <sys:String x:Key="AISuggestTags">Suggest tags</sys:String>
+    <sys:String x:Key="AIOverlayWelcome">Hi! I'll help with your template. Click "Analyze template" or ask a question.</sys:String>
+    <sys:String x:Key="AIOverlayNoContent">Template is empty or unavailable.</sys:String>
+    <sys:String x:Key="AIOverlayBtn">AI Assistant</sys:String>
+
+    <!-- AI Validation -->
+    <sys:String x:Key="AIValidateBtn">AI Validate</sys:String>
+    <sys:String x:Key="AIValidateTitle">AI Data Validation</sys:String>
+
+    <!-- AI Dashboard Report -->
+    <sys:String x:Key="AIReportBtn">AI Report</sys:String>
+    <sys:String x:Key="AIReportTitle">AI Analytics Report</sys:String>
+
+    <!-- AI Search -->
+    <sys:String x:Key="AISearchTooltip">Smart search (AI)</sys:String>
+
+    <!-- Replace Document Window -->
+    <sys:String x:Key="ReplDocTitle">Replace Document</sys:String>
+    <sys:String x:Key="ReplDocUploadHint">Upload a photo or scan of the document</sys:String>
+    <sys:String x:Key="ReplDocUpload">Upload</sys:String>
+    <sys:String x:Key="ReplDocEdit">Editor</sys:String>
+    <sys:String x:Key="ReplDocOldValue">Was</sys:String>
+    <sys:String x:Key="ReplDocLoadError">Failed to load image</sys:String>
+
+    <!-- Empty States -->
+    <sys:String x:Key="TplEmptyState">No templates yet. Click + to create the first one.</sys:String>
 </ResourceDictionary>

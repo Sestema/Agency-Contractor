@@ -24,6 +24,27 @@ namespace Win11DesktopApp.Models
             set => SetProperty(ref _ico, value);
         }
 
+        private decimal _weeklyWorkHours;
+        public decimal WeeklyWorkHours
+        {
+            get => _weeklyWorkHours;
+            set => SetProperty(ref _weeklyWorkHours, value);
+        }
+
+        private decimal _dailyWorkHours;
+        public decimal DailyWorkHours
+        {
+            get => _dailyWorkHours;
+            set => SetProperty(ref _dailyWorkHours, value);
+        }
+
+        private int _shiftCount = 1;
+        public int ShiftCount
+        {
+            get => _shiftCount;
+            set => SetProperty(ref _shiftCount, value);
+        }
+
         public ObservableCollection<WorkAddress> Addresses { get; set; } = new();
         public ObservableCollection<Position> Positions { get; set; } = new();
         

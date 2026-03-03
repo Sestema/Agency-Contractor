@@ -6,6 +6,7 @@
              xmlns:views="clr-namespace:Win11DesktopApp.Views"
              xmlns:local="clr-namespace:Win11DesktopApp.Converters"
              xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+             xmlns:h="clr-namespace:Win11DesktopApp.Helpers"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
@@ -20,7 +21,7 @@
                     <Setter Property="Foreground" Value="#c62828"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsLoading}" Value="True">
-                    <Setter Property="Foreground" Value="#0078D4"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -29,31 +30,83 @@
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{DynamicResource CardHoverBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="HeaderBtn" TargetType="Button">
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="12,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkAwareDeleteBtn" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="#EF5350"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{DynamicResource CardHoverBrush}"
+                                BorderBrush="#EF5350" BorderThickness="1"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
-        <Grid>
-            <Grid Margin="20">
+    <Grid Background="{DynamicResource WindowBackgroundBrush}" ClipToBounds="False">
+        <Grid ClipToBounds="False">
+            <Grid Margin="20" ClipToBounds="False">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>  <!-- Header -->
                     <RowDefinition Height="Auto"/>  <!-- Statistics -->
                     <RowDefinition Height="Auto"/>  <!-- Sort bar -->
                     <RowDefinition Height="Auto"/>  <!-- Selection bar -->
+                    <RowDefinition Height="Auto"/>  <!-- View mode selector -->
                     <RowDefinition Height="*"/>     <!-- List -->
                 </Grid.RowDefinitions>
 
@@ -61,95 +114,201 @@
                 <Grid Grid.Row="0" Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,10,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource BtnBack}" FontSize="14"/>
-                            </StackPanel>
-                        </Button>
-                        <TextBlock Text="{Binding Title, FallbackValue='Працівники'}" 
-                                   FontSize="24" FontWeight="SemiBold" 
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                    </StackPanel>
 
-                    <StackPanel Grid.Column="1" Orientation="Vertical" Margin="20,0">
-                        <TextBlock Text="{DynamicResource EmployeesSearchPlaceholder}" Foreground="#888" FontSize="12" Margin="2,0,0,2"/>
-                        <TextBox Height="38" VerticalContentAlignment="Center"
-                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-                            <ProgressBar IsIndeterminate="True" Height="4" Width="120" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource MsgEmployeesLoading}" FontSize="12" VerticalAlignment="Center" Foreground="#0078D4"/>
+                    <!-- Back button -->
+                    <Button Grid.Column="0" Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBtn}" 
+                            Margin="0,0,10,0" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                    </Button>
+
+                    <!-- Firm name badge -->
+                    <Border Grid.Column="1" CornerRadius="8" Padding="12,6" Margin="0,0,16,0"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE731;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
+                                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Title, FallbackValue='Працівники'}" 
+                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold" 
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="300"/>
                         </StackPanel>
-                        <TextBlock Margin="0,4,0,0" Text="{Binding StatusMessage}" 
-                                   FontSize="12" TextWrapping="Wrap" Style="{StaticResource StatusMessageText}"/>
-                    </StackPanel>
+                    </Border>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Export to Excel -->
-                        <Button Command="{Binding ExportToExcelCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,8,0"
+                    <!-- Search (centered) -->
+                    <Border Grid.Column="2" CornerRadius="8" BorderThickness="1" Height="34"
+                            MaxWidth="360" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}">
+                        <Grid Margin="10,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                       Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox Grid.Column="1" VerticalAlignment="Center" BorderThickness="0"
+                                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="Transparent"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     CaretBrush="{DynamicResource ForegroundBrush}"
+                                     FontSize="{DynamicResource FS12}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Action buttons -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Button Command="{Binding ExportToExcelCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,6,0"
                                 ToolTip="{DynamicResource EmpTooltipExport}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,6,0"/>
-                                <TextBlock Text="Excel" FontSize="13"/>
+                                <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0"/>
+                                <TextBlock Text="Excel" FontSize="{DynamicResource FS12}"/>
                             </StackPanel>
                         </Button>
-                        <!-- Toggle Selection -->
-                        <Button Command="{Binding ToggleSelectionModeCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,8,0"
+                        <Button Command="{Binding ToggleSelectionModeCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,6,0"
                                 ToolTip="{DynamicResource EmpTooltipSelect}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE762;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource EmpBtnSelect}" FontSize="13"/>
+                                <TextBlock Text="&#xE762;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0"/>
+                                <TextBlock Text="{DynamicResource EmpBtnSelect}" FontSize="{DynamicResource FS12}"/>
                             </StackPanel>
                         </Button>
-                        <!-- Add Employee -->
-                        <Button Command="{Binding AddEmployeeCommand}" Height="42"
-                                Background="{DynamicResource AccentBrush}" Foreground="White" 
-                                FontSize="14" FontWeight="SemiBold" BorderThickness="0"
-                                Padding="18,0" Cursor="Hand">
+                        <Button Command="{Binding AddEmployeeCommand}" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="AddBd" Background="{DynamicResource AccentBrush}" CornerRadius="8"
+                                            Padding="14,0" Height="36">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="AddBd" Property="Opacity" Value="0.85"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,8,0"/>
-                                <TextBlock Text="{DynamicResource BtnAddEmployee}"/>
+                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" 
+                                           Foreground="White" Margin="0,0,6,0"/>
+                                <TextBlock Text="{DynamicResource BtnAddEmployee}" FontSize="{DynamicResource FS13}" 
+                                           FontWeight="SemiBold" Foreground="White"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
 
+                <!-- Skeleton loading placeholders -->
+                <StackPanel Grid.Row="1" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <ProgressBar IsIndeterminate="True" Height="3" Width="100" Margin="0,0,8,0"/>
+                        <TextBlock Text="{DynamicResource MsgEmployeesLoading}" FontSize="{DynamicResource FS11}" 
+                                   VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                    </StackPanel>
+                    <Border Style="{StaticResource SkeletonCard}" Height="72" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="44" Height="44" RadiusX="22" RadiusY="22" Style="{StaticResource SkeletonBlock}"/>
+                            <StackPanel Margin="14,4,0,0">
+                                <Rectangle Width="160" Height="14" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,8"/>
+                                <Rectangle Width="100" Height="10" Style="{StaticResource SkeletonBlock}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource SkeletonCard}" Height="72" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="44" Height="44" RadiusX="22" RadiusY="22" Style="{StaticResource SkeletonBlock}"/>
+                            <StackPanel Margin="14,4,0,0">
+                                <Rectangle Width="140" Height="14" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,8"/>
+                                <Rectangle Width="120" Height="10" Style="{StaticResource SkeletonBlock}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource SkeletonCard}" Height="72" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="44" Height="44" RadiusX="22" RadiusY="22" Style="{StaticResource SkeletonBlock}"/>
+                            <StackPanel Margin="14,4,0,0">
+                                <Rectangle Width="180" Height="14" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,8"/>
+                                <Rectangle Width="90" Height="10" Style="{StaticResource SkeletonBlock}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- ===== STATISTICS ===== -->
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12"
                             Visibility="{Binding HasEmployees, Converter={StaticResource BoolToVis}}">
-                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" 
-                            Padding="16,8" Margin="0,0,10,0" MinWidth="120"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                    <!-- Total -->
+                    <Border CornerRadius="8" Padding="16,8" Margin="0,0,10,0" MinWidth="120" Cursor="Hand"
+                            BorderThickness="2">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding FilterByStatCommand}" CommandParameter="all"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StatFilter}" Value="all">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <StackPanel>
-                            <TextBlock Text="{Binding TotalCount}" FontSize="22" FontWeight="Bold" 
+                            <TextBlock Text="{Binding TotalCount}" FontSize="{DynamicResource FS22}" FontWeight="Bold" 
                                        Foreground="{DynamicResource AccentBrush}"/>
-                            <TextBlock Text="{DynamicResource EmpStatTotal}" FontSize="11" Foreground="#888"/>
+                            <TextBlock Text="{DynamicResource EmpStatTotal}" FontSize="{DynamicResource FS11}" Foreground="#888"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#E8F5E9" CornerRadius="8" Padding="16,8" Margin="0,0,10,0" MinWidth="120"
-                            BorderBrush="#C8E6C9" BorderThickness="1">
+                    <!-- Problems -->
+                    <Border CornerRadius="8" Padding="16,8" Margin="0,0,10,0" MinWidth="120" Cursor="Hand"
+                            BorderThickness="2">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding FilterByStatCommand}" CommandParameter="problems"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StatFilter}" Value="problems">
+                                        <Setter Property="BorderBrush" Value="#EF6C00"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <StackPanel>
-                            <TextBlock Text="{Binding ActiveCount}" FontSize="22" FontWeight="Bold" Foreground="#2E7D32"/>
-                            <TextBlock Text="{DynamicResource EmpStatActive}" FontSize="11" Foreground="#2E7D32"/>
+                            <TextBlock Text="{Binding ProblemsCount}" FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="#EF6C00"/>
+                            <TextBlock Text="{DynamicResource EmpStatProblems}" FontSize="{DynamicResource FS11}" Foreground="#EF6C00"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#FFF3E0" CornerRadius="8" Padding="16,8" Margin="0,0,10,0" MinWidth="120"
-                            BorderBrush="#FFE0B2" BorderThickness="1">
+                    <!-- New this month -->
+                    <Border CornerRadius="8" Padding="16,8" MinWidth="120" Cursor="Hand"
+                            BorderThickness="2">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding FilterByStatCommand}" CommandParameter="new"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StatFilter}" Value="new">
+                                        <Setter Property="BorderBrush" Value="#1565C0"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <StackPanel>
-                            <TextBlock Text="{Binding ProblemsCount}" FontSize="22" FontWeight="Bold" Foreground="#EF6C00"/>
-                            <TextBlock Text="{DynamicResource EmpStatProblems}" FontSize="11" Foreground="#EF6C00"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Background="#E3F2FD" CornerRadius="8" Padding="16,8" MinWidth="120"
-                            BorderBrush="#BBDEFB" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="{Binding NewThisMonth}" FontSize="22" FontWeight="Bold" Foreground="#1565C0"/>
-                            <TextBlock Text="{DynamicResource EmpStatNewMonth}" FontSize="11" Foreground="#1565C0"/>
+                            <TextBlock Text="{Binding NewThisMonth}" FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="#42A5F5"/>
+                            <TextBlock Text="{DynamicResource EmpStatNewMonth}" FontSize="{DynamicResource FS11}" Foreground="#42A5F5"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -157,7 +316,7 @@
                 <!-- ===== SORT BAR ===== -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10"
                             Visibility="{Binding HasEmployees, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="{DynamicResource EmpSortLabel}" FontSize="12" Foreground="#888" 
+                    <TextBlock Text="{DynamicResource EmpSortLabel}" FontSize="{DynamicResource FS12}" Foreground="#888" 
                                VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                     <Button Command="{Binding SortByCommand}" CommandParameter="Name"
@@ -169,15 +328,15 @@
                                 <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SortField}" Value="Name">
-                                        <Setter Property="Background" Value="#E3F2FD"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource EmpSortName}" FontSize="12"/>
+                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource EmpSortName}" FontSize="{DynamicResource FS12}"/>
                         </StackPanel>
                     </Button>
 
@@ -190,15 +349,15 @@
                                 <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SortField}" Value="StartDate">
-                                        <Setter Property="Background" Value="#E3F2FD"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource EmpSortDate}" FontSize="12"/>
+                            <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource EmpSortDate}" FontSize="{DynamicResource FS12}"/>
                         </StackPanel>
                     </Button>
 
@@ -211,15 +370,15 @@
                                 <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SortField}" Value="Status">
-                                        <Setter Property="Background" Value="#E3F2FD"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource EmpSortStatus}" FontSize="12"/>
+                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource EmpSortStatus}" FontSize="{DynamicResource FS12}"/>
                         </StackPanel>
                     </Button>
 
@@ -239,8 +398,8 @@
                             </Style>
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="#EF6C00"/>
-                            <TextBlock Text="{DynamicResource EmpSortProblems}" FontSize="12"/>
+                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="#EF6C00"/>
+                            <TextBlock Text="{DynamicResource EmpSortProblems}" FontSize="{DynamicResource FS12}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -252,220 +411,615 @@
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedCount, StringFormat='Обрано: {0}'}" 
-                                       Foreground="White" FontWeight="SemiBold" FontSize="13" 
+                                       Foreground="White" FontWeight="SemiBold" FontSize="{DynamicResource FS13}" 
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <Button Command="{Binding SelectAllCommand}" Padding="10,4" Margin="0,0,6,0"
                                     Background="#FFFFFF" Foreground="{DynamicResource AccentBrush}" 
-                                    BorderThickness="0" Cursor="Hand" FontSize="12">
+                                    BorderThickness="0" Cursor="Hand" FontSize="{DynamicResource FS12}">
                                 <TextBlock Text="{DynamicResource EmpSelectAll}"/>
                             </Button>
                             <Button Command="{Binding BatchGenerateCommand}" Padding="10,4" Margin="0,0,6,0"
                                     Background="#FFFFFF" Foreground="{DynamicResource AccentBrush}" 
-                                    BorderThickness="0" Cursor="Hand" FontSize="12">
+                                    BorderThickness="0" Cursor="Hand" FontSize="{DynamicResource FS12}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource EmpGenerate}"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
                         <Button HorizontalAlignment="Right" Command="{Binding DeselectAllCommand}" 
                                 Padding="10,4" Background="Transparent" BorderThickness="0" 
-                                Foreground="White" Cursor="Hand" FontSize="12">
+                                Foreground="White" Cursor="Hand" FontSize="{DynamicResource FS12}">
                             <TextBlock Text="{DynamicResource BtnCancel}"/>
                         </Button>
                     </Grid>
                 </Border>
 
+                <!-- ===== VIEW MODE SELECTOR + ZOOM ===== -->
+                <DockPanel Grid.Row="4" Margin="0,0,0,6">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Table" ToolTip="{DynamicResource ViewTable}"
+                                Padding="6,4" Margin="0,0,2,0" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ViewMode}" Value="Table">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="List" ToolTip="{DynamicResource ViewList}"
+                                Padding="6,4" Margin="0,0,2,0" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ViewMode}" Value="List">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Tiles" ToolTip="{DynamicResource ViewTiles}"
+                                Padding="6,4" Margin="0,0,2,0" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ViewMode}" Value="Tiles">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Icons" ToolTip="{DynamicResource ViewIcons}"
+                                Padding="6,4" Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ViewMode}" Value="Icons">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="&#xE80B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE71E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Foreground="#999" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <Slider Value="{Binding ZoomLevel}" Minimum="0.6" Maximum="1.6" Width="100"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Foreground="#999" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+
                 <!-- ===== EMPLOYEE LIST ===== -->
-                <Grid Grid.Row="4">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl x:Name="EmployeesList" ItemsSource="{Binding Employees}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" 
-                                            Padding="16" Margin="0,0,0,10"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                        <Border.Effect>
-                                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.08"/>
-                                        </Border.Effect>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/> <!-- Checkbox -->
-                                                <ColumnDefinition Width="Auto"/> <!-- Avatar -->
-                                                <ColumnDefinition Width="*"/>    <!-- Info -->
-                                                <ColumnDefinition Width="Auto"/> <!-- Actions -->
-                                            </Grid.ColumnDefinitions>
+                <Grid Grid.Row="5" ClipToBounds="False">
+                    <ScrollViewer Style="{StaticResource ThinScroll}" ClipToBounds="False">
+                        <Grid Margin="4,10,4,4" ClipToBounds="False">
+                            <Grid.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
+                            </Grid.LayoutTransform>
 
-                                            <!-- Checkbox for selection -->
-                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" 
-                                                      VerticalAlignment="Center" Margin="0,0,10,0"
-                                                      Visibility="{Binding DataContext.IsSelectionMode, 
-                                                                   RelativeSource={RelativeSource AncestorType=ItemsControl}, 
-                                                                   Converter={StaticResource BoolToVis}}"/>
-
-                                            <!-- Avatar -->
-                                            <Border Grid.Column="1" Width="60" Height="60" CornerRadius="30" 
-                                                    Background="#E3F2FD" VerticalAlignment="Top" Margin="0,0,14,0"
-                                                    BorderBrush="#BBDEFB" BorderThickness="2">
-                                                <Border.Clip>
-                                                    <EllipseGeometry Center="30,30" RadiusX="30" RadiusY="30"/>
-                                                </Border.Clip>
-                                                <Grid>
-                                                    <Image Source="{Binding PhotoPath}" Stretch="UniformToFill" 
-                                                           Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
-                                                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="24"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                               Foreground="#90CAF9"
-                                                               Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
-                                                </Grid>
-                                            </Border>
-
-                                            <!-- Info -->
-                                            <StackPanel Grid.Column="2" Margin="0,0,10,0">
-                                                <!-- Name + Status badge -->
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
-                                                    <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="16" 
-                                                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,10,0"/>
-                                                    <!-- Status badge -->
-                                                    <Border CornerRadius="10" Padding="8,2" VerticalAlignment="Center"
-                                                            Background="{Binding Status, Converter={StaticResource StatusBg}}">
-                                                        <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold"
-                                                                   Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
-                                                    </Border>
+                            <!-- TABLE VIEW -->
+                            <DataGrid ItemsSource="{Binding Employees}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserSortColumns="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                      BorderThickness="0" Background="Transparent" RowBackground="{DynamicResource CardBackgroundBrush}"
+                                      AlternatingRowBackground="{DynamicResource ContentBackgroundBrush}"
+                                      Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS12}"
+                                      Visibility="{Binding IsTableView, Converter={StaticResource BoolToVis}}"
+                                      MouseDoubleClick="DataGrid_MouseDoubleClick">
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow">
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
+                                                <Setter Property="Background" Value="#E3F2FD"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding FullName}" Width="*" FontWeight="SemiBold">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpSortName}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding PositionTitle}" Width="Auto">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource LabelPosTitle}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding Status}" Width="80">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpSortStatus}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding StartDate}" Width="90">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizStartDate}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding Phone}" Width="110">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizPhone}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding Email}" Width="Auto">
+                                        <DataGridTextColumn.Header><TextBlock Text="Email"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding HasPassport}" Width="50">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpBadgePassport}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding HasVisa}" Width="50">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpBadgeVisa}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Binding="{Binding HasInsurance}" Width="50">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpBadgeInsurance}"/></DataGridTextColumn.Header>
+                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="" Width="Auto">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Padding="4,2" Margin="0,0,2,0" Cursor="Hand"
+                                                            Foreground="{DynamicResource ForegroundBrush}"
+                                                            Style="{StaticResource CardActionBtn}"
+                                                            Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}">
+                                                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"/>
+                                                    </Button>
+                                                    <Button Padding="4,2" Style="{StaticResource DarkAwareDeleteBtn}"
+                                                            Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}">
+                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"/>
+                                                    </Button>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding PositionTitle}" FontSize="12" Foreground="#888" Margin="0,0,0,6"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
 
-                                                <!-- Details row -->
-                                                <WrapPanel Margin="0,0,0,8">
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                                                        <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                                   Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding StartDate}" FontSize="12" Foreground="#666"/>
+                            <!-- LIST VIEW (original cards) -->
+                            <ItemsControl ItemsSource="{Binding Employees}"
+                                          ClipToBounds="False"
+                                          VirtualizingStackPanel.IsVirtualizing="True"
+                                          VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                          ScrollViewer.CanContentScroll="True"
+                                          Visibility="{Binding IsListView, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="8" Padding="10" Margin="16,3,16,6" BorderThickness="1" RenderTransformOrigin="0.5,0.5" Cursor="Hand"
+                                                h:StaggerAnimation.Enable="True">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.OpenEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <Border.RenderTransform>
+                                                <TransformGroup>
+                                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                    <TranslateTransform Y="0"/>
+                                                </TransformGroup>
+                                            </Border.RenderTransform>
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
+                                                            <Setter Property="Background" Value="#E3F2FD"/>
+                                                            <Setter Property="BorderBrush" Value="#90CAF9"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                          Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}"/>
+                                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="22" Background="#E3F2FD" VerticalAlignment="Top" Margin="0,0,10,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                    <Border.Clip><EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22"/></Border.Clip>
+                                                    <Grid>
+                                                        <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                                        <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS14}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,8,0"/>
+                                                        <Border CornerRadius="8" Padding="6,1" VerticalAlignment="Center" Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                                            <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
+                                                        </Border>
                                                     </StackPanel>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                                                        <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                                   Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Phone}" FontSize="12" Foreground="#666"/>
+                                                    <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS11}" Foreground="#888" Margin="0,0,0,4"/>
+                                                    <WrapPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding StartDate}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding Phone}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding Email}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding ContractType}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
+                                                    </WrapPanel>
+                                                    <WrapPanel Margin="0,4,0,0">
+                                                        <Border CornerRadius="8" Padding="5,2" Margin="0,0,4,0" BorderThickness="1">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                                <Run Text="{DynamicResource EmpBadgePassport}"/><Run Text=" "/><Run Text="{Binding PassportExpiry, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                        </Border>
+                                                        <Border CornerRadius="8" Padding="5,2" Margin="0,0,4,0" BorderThickness="1">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                                <Run Text="{DynamicResource EmpBadgeVisa}"/><Run Text=" "/><Run Text="{Binding VisaExpiry, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                        </Border>
+                                                        <Border CornerRadius="8" Padding="5,2" BorderThickness="1">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                                <Run Text="{DynamicResource EmpBadgeInsurance}"/><Run Text=" "/><Run Text="{Binding InsuranceExpiry, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                        </Border>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center">
+                                                    <Button Style="{StaticResource CardActionBtn}" Margin="0,0,0,3" Padding="8,4" Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource EmpBtnEdit}" FontSize="{DynamicResource FS11}"/></StackPanel></Button>
+                                                    <Button Style="{StaticResource CardActionBtn}" Margin="0,0,0,3" Padding="8,4" Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpTooltipFolder}"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource EmpBtnFolder}" FontSize="{DynamicResource FS11}"/></StackPanel></Button>
+                                                    <Button Style="{StaticResource DarkAwareDeleteBtn}" Padding="8,4" Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpTooltipDelete}"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource EmpBtnDelete}" FontSize="{DynamicResource FS11}"/></StackPanel></Button>
+                                                </StackPanel>
+                                            </Grid>
+                                            <Border.Triggers>
+                                                <EventTrigger RoutedEvent="MouseEnter">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1.015" Duration="0:0:0.15">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1.015" Duration="0:0:0.15">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                                <EventTrigger RoutedEvent="MouseLeave">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Border.Triggers>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- TILES VIEW -->
+                            <ItemsControl ItemsSource="{Binding Employees}"
+                                          ClipToBounds="False"
+                                          Visibility="{Binding IsTilesView, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel ClipToBounds="False"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="8" Padding="10" Margin="6,14,8,8" Width="260" BorderThickness="1" RenderTransformOrigin="0.5,0.5" Cursor="Hand"
+                                                h:StaggerAnimation.Enable="True">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.OpenEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <Border.RenderTransform>
+                                                <TransformGroup>
+                                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                    <TranslateTransform Y="0"/>
+                                                </TransformGroup>
+                                            </Border.RenderTransform>
+                                            <Border.Effect>
+                                                <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.08"/>
+                                            </Border.Effect>
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
+                                                            <Setter Property="Background" Value="#E3F2FD"/>
+                                                            <Setter Property="BorderBrush" Value="#90CAF9"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                    <Border Width="36" Height="36" CornerRadius="18" Background="#E3F2FD" Margin="0,0,8,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                        <Border.Clip><EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/></Border.Clip>
+                                                        <Grid>
+                                                            <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"/>
+                                                        <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS10}" Foreground="#888"/>
                                                     </StackPanel>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                                                        <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                                   Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Email}" FontSize="12" Foreground="#666"/>
-                                                    </StackPanel>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                                                   Foreground="#999" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding ContractType}" FontSize="12" Foreground="#666"/>
-                                                    </StackPanel>
+                                                </StackPanel>
+                                                <Border CornerRadius="6" Padding="4,2" Margin="0,0,0,4" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                                    <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
+                                                </Border>
+                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#666" TextWrapping="Wrap"><Run Text="&#xE787; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding StartDate, Mode=OneWay}"/><Run Text="  &#xE717; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Phone, Mode=OneWay}"/></TextBlock>
+                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#666" TextWrapping="Wrap"><Run Text="&#xE715; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Email, Mode=OneWay}"/><Run Text="  &#xE821; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding ContractType, Mode=OneWay}"/></TextBlock>
+                                                <WrapPanel Margin="0,4,0,4">
+                                                    <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding PassportExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgePassport}"/></TextBlock></Border>
+                                                    <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding VisaExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeVisa}"/></TextBlock></Border>
+                                                    <Border CornerRadius="6" Padding="4,1" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding InsuranceExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeInsurance}"/></TextBlock></Border>
                                                 </WrapPanel>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <Button Padding="4,2" Margin="0,0,2,0" Style="{StaticResource CardActionBtn}" Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
+                                                    <Button Padding="4,2" Margin="0,0,2,0" Style="{StaticResource CardActionBtn}" Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
+                                                    <Button Padding="4,2" Style="{StaticResource DarkAwareDeleteBtn}" Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <Border.Triggers>
+                                                <EventTrigger RoutedEvent="MouseEnter">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                             To="1.05" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.3"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                             To="1.05" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.3"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                             To="-5" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
+                                                                             To="18" Duration="0:0:0.2"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
+                                                                             To="5" Duration="0:0:0.2"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                                             To="0.2" Duration="0:0:0.2"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                                <EventTrigger RoutedEvent="MouseLeave">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                             To="1" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                             To="1" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                             To="0" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
+                                                                             To="6" Duration="0:0:0.25"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
+                                                                             To="2" Duration="0:0:0.25"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                                             To="0.08" Duration="0:0:0.25"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Border.Triggers>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                                                <!-- Document badges -->
-                                                <WrapPanel>
-                                                    <!-- Passport badge -->
-                                                    <Border CornerRadius="10" Padding="8,3" Margin="0,0,6,0"
-                                                            Visibility="{Binding HasPassport, Converter={StaticResource BoolToVis}}"
-                                                            Background="#E8F5E9" BorderBrush="#C8E6C9" BorderThickness="1">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                                                                       Foreground="#2E7D32" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource EmpBadgePassport}" FontSize="11" Foreground="#2E7D32"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border CornerRadius="10" Padding="8,3" Margin="0,0,6,0"
-                                                            Visibility="{Binding HasPassport, Converter={StaticResource InverseBoolToVis}}"
-                                                            Background="#FFF3E0" BorderBrush="#FFE0B2" BorderThickness="1">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                                                                       Foreground="#EF6C00" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource EmpBadgePassport}" FontSize="11" Foreground="#EF6C00"/>
-                                                        </StackPanel>
-                                                    </Border>
-
-                                                    <!-- Visa badge -->
-                                                    <Border CornerRadius="10" Padding="8,3" Margin="0,0,6,0"
-                                                            Visibility="{Binding HasVisa, Converter={StaticResource BoolToVis}}"
-                                                            Background="#E8F5E9" BorderBrush="#C8E6C9" BorderThickness="1">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                                                                       Foreground="#2E7D32" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource EmpBadgeVisa}" FontSize="11" Foreground="#2E7D32"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border CornerRadius="10" Padding="8,3" Margin="0,0,6,0"
-                                                            Visibility="{Binding HasVisa, Converter={StaticResource InverseBoolToVis}}"
-                                                            Background="#FFF3E0" BorderBrush="#FFE0B2" BorderThickness="1">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                                                                       Foreground="#EF6C00" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource EmpBadgeVisa}" FontSize="11" Foreground="#EF6C00"/>
-                                                        </StackPanel>
-                                                    </Border>
-
-                                                    <!-- Insurance badge -->
-                                                    <Border CornerRadius="10" Padding="8,3" Margin="0,0,6,0"
-                                                            Visibility="{Binding HasInsurance, Converter={StaticResource BoolToVis}}"
-                                                            Background="#E8F5E9" BorderBrush="#C8E6C9" BorderThickness="1">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                                                                       Foreground="#2E7D32" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource EmpBadgeInsurance}" FontSize="11" Foreground="#2E7D32"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border CornerRadius="10" Padding="8,3"
-                                                            Visibility="{Binding HasInsurance, Converter={StaticResource InverseBoolToVis}}"
-                                                            Background="#FFF3E0" BorderBrush="#FFE0B2" BorderThickness="1">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                                                                       Foreground="#EF6C00" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource EmpBadgeInsurance}" FontSize="11" Foreground="#EF6C00"/>
-                                                        </StackPanel>
-                                                    </Border>
+                            <!-- ICONS VIEW -->
+                            <ItemsControl ItemsSource="{Binding Employees}"
+                                          ClipToBounds="False"
+                                          Visibility="{Binding IsIconsView, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel ClipToBounds="False"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="8" Padding="8" Margin="6,14,6,6" Width="155" BorderThickness="1" RenderTransformOrigin="0.5,0.5" Cursor="Hand"
+                                                h:StaggerAnimation.Enable="True">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.OpenEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <Border.RenderTransform>
+                                                <TransformGroup>
+                                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                    <TranslateTransform Y="0"/>
+                                                </TransformGroup>
+                                            </Border.RenderTransform>
+                                            <Border.Effect>
+                                                <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.08"/>
+                                            </Border.Effect>
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
+                                                            <Setter Property="Background" Value="#E3F2FD"/>
+                                                            <Setter Property="BorderBrush" Value="#90CAF9"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <Border Width="48" Height="48" CornerRadius="24" Background="#E3F2FD" HorizontalAlignment="Center" Margin="0,0,0,4" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                    <Border.Clip><EllipseGeometry Center="24,24" RadiusX="24" RadiusY="24"/></Border.Clip>
+                                                    <Grid>
+                                                        <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                    </Grid>
+                                                </Border>
+                                                <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS9}" Foreground="#888" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <Border CornerRadius="6" Padding="4,1" HorizontalAlignment="Center" Margin="0,2,0,2" Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                                    <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
+                                                </Border>
+                                                <TextBlock FontSize="{DynamicResource FS9}" Foreground="#666" TextAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="&#xE787; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding StartDate, Mode=OneWay}"/></TextBlock>
+                                                <TextBlock FontSize="{DynamicResource FS9}" Foreground="#666" TextAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="&#xE717; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Phone, Mode=OneWay}"/></TextBlock>
+                                                <TextBlock FontSize="{DynamicResource FS9}" Foreground="#666" TextAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="&#xE715; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Email, Mode=OneWay}"/></TextBlock>
+                                                <WrapPanel HorizontalAlignment="Center" Margin="0,2,0,2">
+                                                    <Border CornerRadius="4" Padding="3,0" Margin="1" BorderThickness="1" ToolTip="{Binding PassportExpiry}"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock Text="P" FontSize="{DynamicResource FS8}" FontWeight="Bold"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Border>
+                                                    <Border CornerRadius="4" Padding="3,0" Margin="1" BorderThickness="1" ToolTip="{Binding VisaExpiry}"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock Text="V" FontSize="{DynamicResource FS8}" FontWeight="Bold"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Border>
+                                                    <Border CornerRadius="4" Padding="3,0" Margin="1" BorderThickness="1" ToolTip="{Binding InsuranceExpiry}"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock Text="I" FontSize="{DynamicResource FS8}" FontWeight="Bold"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Border>
                                                 </WrapPanel>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Button Padding="3,1" Margin="1" Style="{StaticResource CardActionBtn}" Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpBtnEdit}"><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"/></Button>
+                                                    <Button Padding="3,1" Margin="1" Style="{StaticResource CardActionBtn}" Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpBtnFolder}"><TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"/></Button>
+                                                    <Button Padding="3,1" Margin="1" Style="{StaticResource DarkAwareDeleteBtn}" Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpBtnDelete}"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"/></Button>
+                                                </StackPanel>
                                             </StackPanel>
-
-                                            <!-- Action buttons -->
-                                            <StackPanel Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center">
-                                                <Button Style="{StaticResource CardActionBtn}" Margin="0,0,0,4"
-                                                        Command="{Binding DataContext.OpenEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}"
-                                                        Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{DynamicResource EmpBtnOpen}" FontSize="12"/>
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button Style="{StaticResource CardActionBtn}" Margin="0,0,0,4"
-                                                        Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{DynamicResource EmpBtnEdit}" FontSize="12"/>
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button Style="{StaticResource CardActionBtn}" Margin="0,0,0,4"
-                                                        Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}" ToolTip="{DynamicResource EmpTooltipFolder}">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{DynamicResource EmpBtnFolder}" FontSize="12"/>
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button Style="{StaticResource CardActionBtn}"
-                                                        Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding}"
-                                                        Foreground="#D32F2F" BorderBrush="#FFCDD2" Background="#FFF5F5"
-                                                        ToolTip="{DynamicResource EmpTooltipDelete}">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{DynamicResource EmpBtnDelete}" FontSize="12"/>
-                                                    </StackPanel>
-                                                </Button>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                            <Border.Triggers>
+                                                <EventTrigger RoutedEvent="MouseEnter">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                             To="1.08" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.3"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                             To="-6" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                             To="1.08" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.3"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
+                                                                             To="20" Duration="0:0:0.2"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
+                                                                             To="6" Duration="0:0:0.2"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                                             To="0.22" Duration="0:0:0.2"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                                <EventTrigger RoutedEvent="MouseLeave">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                             To="1" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                             To="1" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                             To="0" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
+                                                                             To="6" Duration="0:0:0.25"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
+                                                                             To="2" Duration="0:0:0.25"/>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                                             To="0.08" Duration="0:0:0.25"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Border.Triggers>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
                     </ScrollViewer>
 
                     <!-- Empty state -->
@@ -473,8 +1027,8 @@
                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                             Visibility="{Binding HasEmployees, Converter={StaticResource InverseBoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="42" HorizontalAlignment="Center" Foreground="#999"/>
-                            <TextBlock Text="{Binding StatusMessage, FallbackValue=У цієї фірми ще немає працівників.}" FontSize="14" Margin="0,10,0,10" TextAlignment="Center" TextWrapping="Wrap"
+                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS42}" HorizontalAlignment="Center" Foreground="#999"/>
+                            <TextBlock Text="{Binding StatusMessage, FallbackValue=У цієї фірми ще немає працівників.}" FontSize="{DynamicResource FS14}" Margin="0,10,0,10" TextAlignment="Center" TextWrapping="Wrap"
                                        Style="{StaticResource StatusMessageText}"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="{DynamicResource BtnSelectCompany}" Command="{Binding SelectCompanyCommand}" Height="40" Padding="15,0"
@@ -489,14 +1043,27 @@
 
         <!-- Add Employee Dialog -->
         <Grid Visibility="{Binding IsAddEmployeeDialogOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#66000000">
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAddEmployeeDialogCommand}"/>
-                </Border.InputBindings>
-            </Border>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsAddEmployeeDialogOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Border Background="#66000000"/>
             <ContentControl Content="{Binding AddEmployeeVm}" 
                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
-                            Margin="30">
+                            Margin="10">
                 <ContentControl.Resources>
                     <DataTemplate DataType="{x:Type vm:AddEmployeeWizardViewModel}" xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels">
                         <views:AddEmployeeWizardView/>
@@ -507,6 +1074,23 @@
 
         <!-- Employee Details Overlay -->
         <Grid Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEmployeeDetailsOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Border Background="#66000000">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
@@ -523,6 +1107,23 @@
 
         <!-- Delete Confirm Dialog -->
         <Grid Visibility="{Binding IsDeleteConfirmOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDeleteConfirmOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Border Background="#66000000"/>
             <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" Padding="24" 
                     Width="420" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -530,25 +1131,25 @@
                     <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.25"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="32" 
+                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS32}" 
                                HorizontalAlignment="Center" Foreground="#D32F2F" Margin="0,0,0,12"/>
-                    <TextBlock Text="{DynamicResource MsgDeleteEmployee}" FontSize="16" FontWeight="SemiBold" 
+                    <TextBlock Text="{DynamicResource MsgDeleteEmployee}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" 
                                Margin="0,0,0,6" TextAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
-                    <TextBlock Text="{Binding EmployeeToDelete.FullName}" Foreground="#666" FontSize="14"
+                    <TextBlock Text="{Binding EmployeeToDelete.FullName}" Foreground="#666" FontSize="{DynamicResource FS14}"
                                Margin="0,0,0,20" TextAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Command="{Binding CancelDeleteCommand}" Padding="18,8" Margin="0,0,10,0"
                                 Background="{DynamicResource ContentBackgroundBrush}" 
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                 Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="13"/>
+                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}"/>
                         </Button>
                         <Button Command="{Binding ConfirmDeleteCommand}" Padding="18,8"
                                 Background="#D32F2F" Foreground="White" BorderThickness="0"
                                 FontWeight="SemiBold" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource BtnDelete}" FontSize="13"/>
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource BtnDelete}" FontSize="{DynamicResource FS13}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -558,6 +1159,23 @@
 
         <!-- Batch Generate Dialog -->
         <Grid Visibility="{Binding IsBatchGenerateOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBatchGenerateOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Border Background="#66000000">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseBatchGenerateCommand}"/>
@@ -579,20 +1197,20 @@
 
                     <Grid Grid.Row="0" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="18" 
+                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}" 
                                        Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource EmpBatchTitle}" FontSize="18" FontWeight="SemiBold"
+                            <TextBlock Text="{DynamicResource EmpBatchTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                         </StackPanel>
                         <Button HorizontalAlignment="Right" Command="{Binding CloseBatchGenerateCommand}"
                                 Width="30" Height="30" Background="Transparent" BorderThickness="0" Foreground="#999" Cursor="Hand">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                         </Button>
                     </Grid>
 
-                    <TextBlock Grid.Row="1" Text="{Binding BatchStatusMessage}" Foreground="#888" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Row="1" Text="{Binding BatchStatusMessage}" Foreground="#888" FontSize="{DynamicResource FS12}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="300">
+                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="300">
                         <ItemsControl ItemsSource="{Binding BatchTemplates}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -608,13 +1226,13 @@
                                             <Border Grid.Column="0" Width="40" Height="40" CornerRadius="6" 
                                                     Background="#E3F2FD" Margin="0,0,12,0">
                                                 <TextBlock Text="{Binding Format}" VerticalAlignment="Center" 
-                                                           HorizontalAlignment="Center" FontWeight="Bold" FontSize="11"
+                                                           HorizontalAlignment="Center" FontWeight="Bold" FontSize="{DynamicResource FS11}"
                                                            Foreground="{DynamicResource AccentBrush}"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
                                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                                <TextBlock Text="{Binding Description}" FontSize="11" Foreground="#888" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}" Foreground="#888" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                             <Button Grid.Column="2" 
                                                     Command="{Binding DataContext.BatchGenerateFromTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -623,8 +1241,8 @@
                                                     Background="{DynamicResource AccentBrush}" Foreground="White" 
                                                     BorderThickness="0" VerticalAlignment="Center" Cursor="Hand">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="12"/>
+                                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS12}"/>
                                                 </StackPanel>
                                             </Button>
                                         </Grid>

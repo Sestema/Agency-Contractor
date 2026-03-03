@@ -49,6 +49,8 @@ namespace Win11DesktopApp.Models
         public double X { get; set; }
         public double Y { get; set; }
         public double FontSize { get; set; } = 10;
+        public string FontFamily { get; set; } = "Arial";
+        public double MaxWidth { get; set; }
         public double PdfPageWidth { get; set; }
         public double PdfPageHeight { get; set; }
     }

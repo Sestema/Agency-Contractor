@@ -1,7 +1,18 @@
+using System;
 using System.Collections.Generic;
 
 namespace Win11DesktopApp.EmployeeModels
 {
+    public class CustomSignedDocument
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = string.Empty;
+        public string SignDate { get; set; } = string.Empty;
+        public string ExpiryDate { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public bool IsHidden { get; set; } = false;
+    }
+
     public class EmployeeAddress
     {
         public string Street { get; set; } = string.Empty;
@@ -16,10 +27,22 @@ namespace Win11DesktopApp.EmployeeModels
         public string Visa { get; set; } = string.Empty;
         public string Insurance { get; set; } = string.Empty;
         public string Photo { get; set; } = string.Empty;
+        public string PassportPage2 { get; set; } = string.Empty;
+        public string WorkPermit { get; set; } = string.Empty;
+    }
+
+    public class FirmHistoryEntry
+    {
+        public string FirmName { get; set; } = string.Empty;
+        public string StartDate { get; set; } = string.Empty;
+        public string EndDate { get; set; } = string.Empty;
     }
 
     public class EmployeeData
     {
+        public string UniqueId { get; set; } = string.Empty;
+        public string EmployeeType { get; set; } = "visa";
+        public string EuDocumentType { get; set; } = "passport";
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string BirthDate { get; set; } = string.Empty;
@@ -33,6 +56,12 @@ namespace Win11DesktopApp.EmployeeModels
         public string InsuranceCompanyShort { get; set; } = string.Empty;
         public string InsuranceNumber { get; set; } = string.Empty;
         public string InsuranceExpiry { get; set; } = string.Empty;
+        public string WorkPermitName { get; set; } = string.Empty;
+        public string WorkPermitNumber { get; set; } = string.Empty;
+        public string WorkPermitType { get; set; } = string.Empty;
+        public string WorkPermitIssueDate { get; set; } = string.Empty;
+        public string WorkPermitExpiry { get; set; } = string.Empty;
+        public string WorkPermitAuthority { get; set; } = string.Empty;
         public EmployeeAddress AddressLocal { get; set; } = new EmployeeAddress();
         public EmployeeAddress AddressAbroad { get; set; } = new EmployeeAddress();
         public string WorkAddressTag { get; set; } = string.Empty;
@@ -44,15 +73,21 @@ namespace Win11DesktopApp.EmployeeModels
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
-        public string Status { get; set; } = "Активний";
+        public string Status { get; set; } = "Active";
         public string StartDate { get; set; } = string.Empty;
         public string ContractSignDate { get; set; } = string.Empty;
         public string EndDate { get; set; } = string.Empty;
+        public bool IsArchived { get; set; }
+        public string ArchivedFromFirm { get; set; } = string.Empty;
+        public List<FirmHistoryEntry> FirmHistory { get; set; } = new List<FirmHistoryEntry>();
         public EmployeeFiles Files { get; set; } = new EmployeeFiles();
+        public Dictionary<string, string> IgnoredDocuments { get; set; } = new Dictionary<string, string>();
+        public List<CustomSignedDocument> CustomDocuments { get; set; } = new List<CustomSignedDocument>();
     }
 
     public class EmployeeSummary
     {
+        public string UniqueId { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string PositionTitle { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;
@@ -70,9 +105,14 @@ namespace Win11DesktopApp.EmployeeModels
         public string PassportExpiry { get; set; } = string.Empty;
         public string VisaExpiry { get; set; } = string.Empty;
         public string InsuranceExpiry { get; set; } = string.Empty;
+        public string PassportSeverity { get; set; } = "Ok";
+        public string VisaSeverity { get; set; } = "Ok";
+        public string InsuranceSeverity { get; set; } = "Ok";
         public string Status { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string EmployeeType { get; set; } = "visa";
+        public string WorkPermitExpiry { get; set; } = string.Empty;
         public bool IsSelected { get; set; }
     }
 

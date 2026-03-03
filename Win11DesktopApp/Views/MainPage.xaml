@@ -5,11 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:views="clr-namespace:Win11DesktopApp.Views"
              xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+             xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <CubicEase x:Key="DrawerEase" EasingMode="EaseOut"/>
+        <conv:NameToColorConverter x:Key="NameToColor"/>
+        <conv:HexToBrushConverter x:Key="HexToBrush"/>
+        <conv:IconKeyToGeometryConverter x:Key="IconKeyToGeometry"/>
+        <conv:ResourceKeyConverter x:Key="ResKey"/>
     </UserControl.Resources>
     
     <Grid>
@@ -31,49 +36,184 @@
                           Stretch="Uniform" Width="20" Height="20"/>
                 </Button>
 
-                <!-- Center: Company Name + Edit Icon -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" 
-                            HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SelectedCompany.Name, FallbackValue=''}" 
-                               FontSize="18" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ForegroundBrush}"
-                               VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" MaxWidth="400"/>
-                    <!-- Edit icon (pencil) -->
+                <!-- Center: Search Box -->
+                <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="420">
+                    <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="20"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" Padding="4,0"
+                            Height="38">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="10,0,6,0"/>
+                            <TextBox Grid.Column="1" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                     VerticalAlignment="Center" BorderThickness="0" Background="Transparent"
+                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                     Padding="2,6">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Tag" Value="{DynamicResource GlobalSearchPlaceholder}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="TextBox">
+                                                    <Grid>
+                                                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                                                        <TextBlock x:Name="placeholder" Text="{TemplateBinding Tag}"
+                                                                   Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="4,0" FontSize="{DynamicResource FS13}"
+                                                                   IsHitTestVisible="False" Visibility="Collapsed"/>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="Text" Value="">
+                                                            <Setter TargetName="placeholder" Property="Visibility" Value="Visible"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
+                                <Button Command="{Binding AISearchCommand}" Width="26" Height="26"
+                                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="{DynamicResource AISearchTooltip}">
+                                    <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{DynamicResource PurpleBrush}"/>
+                                </Button>
+                                <Button Command="{Binding ClearSearchCommand}" Width="26" Height="26"
+                                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                        Visibility="{Binding IsSearchOpen, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Search results dropdown -->
+                    <Popup IsOpen="{Binding IsSearchOpen}" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Grid}}"
+                           Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                           HorizontalOffset="0" VerticalOffset="2">
+                        <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                Width="420" MaxHeight="400" Padding="4">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.18"/>
+                            </Border.Effect>
+                            <Grid>
+                                <!-- No results -->
+                                <TextBlock Text="{DynamicResource GlobalSearchNoResults}" FontSize="{DynamicResource FS13}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,16"
+                                           Visibility="{Binding HasNoSearchResults, Converter={StaticResource BoolToVis}}"/>
+                                <!-- Results list -->
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="380">
+                                    <ItemsControl ItemsSource="{Binding SearchResults}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Command="{Binding DataContext.NavigateToSearchResultCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" Cursor="Hand"
+                                                        Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch"
+                                                        Padding="0" Margin="0">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="hoverBd" Background="Transparent" CornerRadius="8" Padding="10,8" Margin="2">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Border Grid.Column="0" Width="32" Height="32" CornerRadius="8" Margin="0,0,10,0"
+                                                                            Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.15}">
+                                                                        <TextBlock Text="{Binding CategoryIcon}" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                   Foreground="{Binding CategoryColor, Converter={StaticResource HexToBrush}}"/>
+                                                                    </Border>
+                                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                        <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                                                                   Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                                                        <TextBlock Text="{Binding Subtitle}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </StackPanel>
+                                                                    <Border Grid.Column="2" CornerRadius="10" Padding="8,3" VerticalAlignment="Center"
+                                                                            Background="{Binding CategoryColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.1}">
+                                                                        <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FS10}"
+                                                                                   Foreground="{Binding CategoryColor, Converter={StaticResource HexToBrush}}"/>
+                                                                    </Border>
+                                                                </Grid>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="hoverBd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Popup>
+                </Grid>
+                
+                <!-- Right: Company name + Edit + Settings -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SelectedCompany.Name, FallbackValue=''}"
+                               FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="180" Opacity="0.7"
+                               Margin="0,0,4,0"/>
                     <Button Command="{Binding EditCompanyCommand}"
-                            Width="32" Height="32" Background="Transparent" 
-                            BorderThickness="0" Margin="8,0,0,0"
-                            Cursor="Hand" ToolTip="{DynamicResource MainTooltipEdit}"
+                            Width="28" Height="28" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            ToolTip="{DynamicResource MainTooltipEdit}"
                             Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" 
-                                   FontSize="14" Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"/>
+                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"/>
+                    </Button>
+                    <Button Command="{Binding GoToSettingsCommand}"
+                            Width="40" Height="40" Background="Transparent" BorderThickness="0">
+                        <Path Data="{StaticResource IconSettings}"
+                              Fill="{DynamicResource ForegroundBrush}"
+                              Stretch="Uniform" Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
-                
-                <!-- Right: Settings -->
-                <Button Grid.Column="2" Command="{Binding GoToSettingsCommand}" 
-                        Width="40" Height="40" Background="Transparent" BorderThickness="0">
-                    <Path Data="{StaticResource IconSettings}" 
-                          Fill="{DynamicResource ForegroundBrush}"
-                          Stretch="Uniform" Width="20" Height="20"/>
-                </Button>
             </Grid>
             
-            <!-- Cards -->
-            <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal" ItemWidth="170" ItemHeight="170">
-                <views:CardControl Title="{DynamicResource BtnEmployees}" Icon="{StaticResource IconPeople}" Margin="10"
-                                   Command="{Binding OpenEmployeesCommand}"/>
-                <views:CardControl Title="{DynamicResource BtnTemplates}" 
-                                   Icon="{StaticResource IconTemplates}" 
-                                   Margin="10"
-                                   Command="{Binding OpenTemplatesCommand}"/>
-                <views:CardControl Title="{DynamicResource BtnProblems}" Icon="{StaticResource IconProblems}" Margin="10"
-                                   Command="{Binding OpenProblemsCommand}"
-                                   BadgeCount="{Binding ProblemsCount}"/>
-                <views:CardControl Title="{DynamicResource BtnFinances}" Icon="{StaticResource IconFinances}" Margin="10"/>
-                <views:CardControl Title="{DynamicResource BtnArchive}" Icon="{StaticResource IconArchive}" Margin="10"
-                                   Command="{Binding OpenArchiveCommand}"/>
-            </WrapPanel>
+            <!-- Cards Grid (drag to reorder) -->
+            <ItemsControl x:Name="CardsGrid" ItemsSource="{Binding MenuCards}"
+                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                          AllowDrop="True" Background="Transparent"
+                          DragOver="Grid_DragOver" Drop="Grid_Drop">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="3" HorizontalAlignment="Center"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="DragBorder" Background="Transparent" Margin="0" Padding="0"
+                                PreviewMouseLeftButtonDown="Card_PreviewMouseLeftButtonDown"
+                                PreviewMouseMove="Card_PreviewMouseMove"
+                                PreviewMouseLeftButtonUp="Card_PreviewMouseLeftButtonUp"
+                                GiveFeedback="Card_GiveFeedback">
+                            <views:CardControl Title="{Binding TitleKey, Converter={StaticResource ResKey}}" 
+                                               Icon="{Binding IconKey, Converter={StaticResource IconKeyToGeometry}}"
+                                               Command="{Binding Command}" 
+                                               BadgeCount="{Binding BadgeCount}"
+                                               Margin="10">
+                                <views:CardControl.IconGradient>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="{Binding GradientStart}" Offset="0"/>
+                                        <GradientStop Color="{Binding GradientEnd}" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </views:CardControl.IconGradient>
+                            </views:CardControl>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
         
         <!-- Drawer Overlay (Click to close) -->
@@ -104,14 +244,14 @@
         </Border>
         
         <!-- Drawer Panel -->
-        <Border x:Name="DrawerPanel" Width="320" HorizontalAlignment="Left" 
+        <Border x:Name="DrawerPanel" Width="370" HorizontalAlignment="Left" 
                 Background="{DynamicResource ContentBackgroundBrush}" 
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="30" ShadowDepth="8" Direction="0" Color="#000000" Opacity="0.25"/>
             </Border.Effect>
             <Border.RenderTransform>
-                <TranslateTransform X="-320"/>
+                <TranslateTransform X="-370"/>
             </Border.RenderTransform>
             <Border.Style>
                 <Style TargetType="Border">
@@ -121,7 +261,7 @@
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                         From="-320" To="0" Duration="0:0:0.3"
+                                                         From="-370" To="0" Duration="0:0:0.3"
                                                          EasingFunction="{StaticResource DrawerEase}"/>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -130,7 +270,7 @@
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                         From="0" To="-320" Duration="0:0:0.25"
+                                                         From="0" To="-370" Duration="0:0:0.25"
                                                          EasingFunction="{StaticResource DrawerEase}"/>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -154,12 +294,12 @@
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Border Width="42" Height="42" CornerRadius="10" Background="#20FFFFFF" Margin="0,0,14,0">
-                                <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                                <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource DrawerTitle}" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                                <TextBlock Text="{DynamicResource MainSelectCompany}" FontSize="11" Foreground="#CCFFFFFF" Margin="0,2,0,0"/>
+                                <TextBlock Text="{DynamicResource DrawerTitle}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="White"/>
+                                <TextBlock Text="{DynamicResource MainSelectCompany}" FontSize="{DynamicResource FS11}" Foreground="#CCFFFFFF" Margin="0,2,0,0"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -167,7 +307,7 @@
                         <Button HorizontalAlignment="Right" VerticalAlignment="Top" 
                                 Command="{Binding ToggleDrawerCommand}"
                                 Width="30" Height="30" Background="Transparent" BorderThickness="0" Cursor="Hand">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="#AAFFFFFF"/>
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Foreground="#AAFFFFFF"/>
                         </Button>
                     </Grid>
                 </Border>
@@ -177,46 +317,72 @@
                         Background="{DynamicResource CardBackgroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11" 
-                                   Foreground="#4CAF50" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock FontSize="12" Foreground="#888" VerticalAlignment="Center">
-                            <Run Text="Обрано: "/>
-                            <Run Text="{Binding SelectedCompany.Name, FallbackValue='не обрано', Mode=OneWay}" 
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" 
+                                   Foreground="{DynamicResource SuccessBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center">
+                            <Run Text="{DynamicResource MainSelected}"/>
+                            <Run Text="{Binding SelectedCompany.Name, FallbackValue='—', Mode=OneWay}" 
                                  FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
                         </TextBlock>
                     </StackPanel>
                 </Border>
 
                 <!-- ===== COMPANY LIST ===== -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="12,10,12,0">
-                    <ListBox ItemsSource="{Binding Companies}" 
+                <ScrollViewer x:Name="CompanyScrollViewer" Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4,6,0">
+                    <ListBox ItemsSource="{Binding VisibleCompanies}" 
                              SelectedItem="{Binding SelectedCompany}"
                              Background="Transparent" BorderThickness="0"
-                             HorizontalContentAlignment="Stretch">
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                             PreviewMouseWheel="CompanyList_PreviewMouseWheel"
+                             Margin="14,10,14,10">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <EventSetter Event="MouseDoubleClick" Handler="CompanyItem_DoubleClick"/>
-                                <Setter Property="Margin" Value="0,0,0,6"/>
+                                <Setter Property="Margin" Value="0,0,0,8"/>
+                                <Setter Property="Cursor" Value="Hand"/>
                                 <Setter Property="ToolTip" Value="{DynamicResource MainTooltipDblClick}"/>
+                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="{DynamicResource CompanyMoveUp}"
+                                                      Command="{Binding Tag.MoveCompanyUpCommand}"
+                                                      CommandParameter="{Binding DataContext}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="{DynamicResource CompanyMoveDown}"
+                                                      Command="{Binding Tag.MoveCompanyDownCommand}"
+                                                      CommandParameter="{Binding DataContext}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
                                             <Border x:Name="CardBorder" 
                                                     Background="{DynamicResource ContentBackgroundBrush}" 
-                                                    CornerRadius="10" 
+                                                    CornerRadius="12" 
                                                     Padding="12"
                                                     BorderBrush="{DynamicResource CardBorderBrush}"
-                                                    BorderThickness="1">
+                                                    BorderThickness="1.5">
                                                 <Border.Effect>
-                                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.06"/>
+                                                    <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Opacity="0.08" Color="#000000"/>
                                                 </Border.Effect>
                                                 <ContentPresenter/>
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="CardBorder" Property="Background" Value="#E8F5E9"/>
-                                                    <Setter TargetName="CardBorder" Property="BorderBrush" Value="#66BB6A"/>
-                                                    <Setter TargetName="CardBorder" Property="BorderThickness" Value="1.5"/>
+                                                    <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                    <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                    <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
                                                 </Trigger>
                                                 <Trigger Property="IsMouseOver" Value="True">
                                                     <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
@@ -228,6 +394,48 @@
                                                     </MultiTrigger.Conditions>
                                                     <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                                                 </MultiTrigger>
+                                                <EventTrigger RoutedEvent="MouseEnter">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardBorder" 
+                                                                             Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
+                                                                             To="16" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardBorder" 
+                                                                             Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.ShadowDepth)"
+                                                                             To="5" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardBorder" 
+                                                                             Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)"
+                                                                             To="0.22" Duration="0:0:0.2">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                                <EventTrigger RoutedEvent="MouseLeave">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardBorder" 
+                                                                             Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
+                                                                             To="6" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardBorder" 
+                                                                             Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.ShadowDepth)"
+                                                                             To="2" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardBorder" 
+                                                                             Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)"
+                                                                             To="0.08" Duration="0:0:0.25">
+                                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -244,26 +452,26 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Avatar circle with first letter -->
-                                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" 
-                                            Background="{DynamicResource AccentBrush}" Margin="0,0,12,0">
-                                        <TextBlock Text="{Binding Name[0]}" FontSize="18" FontWeight="Bold" 
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="21" 
+                                            Background="{Binding Name, Converter={StaticResource NameToColor}}" Margin="0,0,14,0">
+                                        <TextBlock Text="{Binding Name[0]}" FontSize="{DynamicResource FS18}" FontWeight="Bold" 
                                                    Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
 
                                     <!-- Company info -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
                                                    Foreground="{DynamicResource ForegroundBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                            <TextBlock Text="ICO:" FontSize="11" Foreground="#999" Margin="0,0,4,0"/>
-                                            <TextBlock Text="{Binding ICO}" FontSize="11" Foreground="#777"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                            <TextBlock Text="ICO:" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0"/>
+                                            <TextBlock Text="{Binding ICO}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
 
                                     <!-- Chevron -->
                                     <TextBlock Grid.Column="2" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" 
-                                               FontSize="12" Foreground="#CCC" VerticalAlignment="Center"/>
+                                               FontSize="{DynamicResource FS14}" Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -274,13 +482,16 @@
                 <Border Grid.Row="3" Padding="14,12,14,16"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
                     <Button Command="{Binding OpenAddCompanyDialogCommand}" 
-                            Height="44" Cursor="Hand"
+                            Height="46" Cursor="Hand"
                             Background="{DynamicResource AccentBrush}" Foreground="White" 
                             BorderThickness="0" HorizontalContentAlignment="Center">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" 
-                                        CornerRadius="10" Padding="16,0">
+                                        CornerRadius="12" Padding="16,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.15" Color="#000000"/>
+                                    </Border.Effect>
                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
@@ -294,9 +505,9 @@
                             </ControlTemplate>
                         </Button.Template>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" 
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
                                        Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource BtnAddNewCompany}" FontSize="14" 
+                            <TextBlock Text="{DynamicResource BtnAddNewCompany}" FontSize="{DynamicResource FS14}" 
                                        FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -306,8 +517,7 @@
 
         <!-- Modal Dialog Overlay -->
         <Grid Visibility="{Binding IsAddCompanyDialogOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#66000000">
-                 <!-- Clicking background closes dialog -->
+            <Border Background="{DynamicResource OverlayBrush}">
                  <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAddCompanyDialogCommand}"/>
                 </Border.InputBindings>

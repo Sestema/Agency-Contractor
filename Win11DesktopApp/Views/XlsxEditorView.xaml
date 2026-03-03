@@ -24,44 +24,66 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Command="{Binding GoBackCommand}" 
                         Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
-                        FontSize="16" Background="Transparent" BorderThickness="0"
+                        FontSize="{DynamicResource FS16}" Background="Transparent" BorderThickness="0"
                         Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,10,0"
                         VerticalAlignment="Center" Cursor="Hand" ToolTip="{DynamicResource XlsxBack}"/>
 
                 <TextBlock Grid.Column="1" Text="{Binding Title}" 
-                           FontSize="16" FontWeight="SemiBold" 
+                           FontSize="{DynamicResource FS16}" FontWeight="SemiBold" 
                            Foreground="{DynamicResource ForegroundBrush}"
                            VerticalAlignment="Center"/>
 
-                <Button Grid.Column="2" Content="{DynamicResource XlsxCancel}" 
+                <!-- AI Assistant Overlay Button -->
+                <Button x:Name="BtnAIOverlay" Grid.Column="2" Click="AIOverlay_Click"
+                        Padding="10,5" Margin="0,0,6,0" Cursor="Hand"
+                        Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                        VerticalAlignment="Center" ToolTip="{DynamicResource AIOverlayBtn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
+                                   VerticalAlignment="Center" Margin="0,0,4,0">
+                            <TextBlock.Foreground>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#7C4DFF" Offset="0"/>
+                                    <GradientStop Color="#448AFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                        <TextBlock Text="AI" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Column="3" Content="{DynamicResource XlsxCancel}" 
                         Command="{Binding GoBackCommand}"
-                        Padding="14,5" Margin="0,0,6,0" FontSize="12"
+                        Padding="14,5" Margin="0,0,6,0" FontSize="{DynamicResource FS12}"
                         Background="{DynamicResource CardBackgroundBrush}"
                         Foreground="{DynamicResource ForegroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         VerticalAlignment="Center" Cursor="Hand"/>
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         Command="{Binding SaveCommand}"
                         Padding="14,5"
                         Background="{DynamicResource AccentBrush}" Foreground="White" 
                         BorderThickness="0" FontWeight="SemiBold"
                         VerticalAlignment="Center" Cursor="Hand">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource XlsxSave}" FontSize="12"/>
+                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource XlsxSave}" FontSize="{DynamicResource FS12}"/>
                     </StackPanel>
                 </Button>
             </Grid>
         </Border>
 
         <!-- ===== FORMULA BAR (Name Box + fx + Cell Content) ===== -->
-        <Border Grid.Row="1" Background="#F8F9FA" 
-                Padding="4,3" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" 
+                Padding="4,3" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" MinWidth="90"/>
@@ -70,11 +92,11 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Name Box -->
-                <Border Grid.Column="0" BorderBrush="#B0B0B0" 
+                <Border Grid.Column="0" BorderBrush="{DynamicResource DividerBrush}" 
                         BorderThickness="1" Background="White" Margin="2,0">
                     <TextBlock Text="{Binding CellAddress}" 
-                               FontSize="11" FontWeight="Bold" FontFamily="Consolas"
-                               Foreground="#333" Padding="6,3"
+                               FontSize="{DynamicResource FS11}" FontWeight="Bold" FontFamily="Consolas"
+                               Foreground="{DynamicResource ForegroundBrush}" Padding="6,3"
                                VerticalAlignment="Center" HorizontalAlignment="Left"
                                MinWidth="80"/>
                 </Border>
@@ -82,17 +104,17 @@
                 <!-- Separator + fx label -->
                 <Border Grid.Column="1" Padding="6,0">
                     <TextBlock Text="fx" FontStyle="Italic" FontWeight="Bold"
-                               FontSize="12" Foreground="#999"
+                               FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                VerticalAlignment="Center"/>
                 </Border>
 
                 <!-- Formula Bar TextBox -->
                 <TextBox Grid.Column="2" 
                          Text="{Binding CellValue, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="12" FontFamily="Consolas"
-                         BorderBrush="#B0B0B0" BorderThickness="1"
+                         FontSize="{DynamicResource FS12}" FontFamily="Consolas"
+                         BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
                          Padding="4,3" VerticalAlignment="Center"
-                         Background="White" Foreground="#333"/>
+                         Background="White" Foreground="{DynamicResource ForegroundBrush}"/>
             </Grid>
         </Border>
 
@@ -116,13 +138,13 @@
                       HeadersVisibility="All"
                       GridLinesVisibility="All"
                       RowHeaderWidth="42"
-                      HorizontalGridLinesBrush="#C8C8C8"
-                      VerticalGridLinesBrush="#C8C8C8"
-                      FontSize="12" FontFamily="Segoe UI"
+                      HorizontalGridLinesBrush="{DynamicResource DividerBrush}"
+                      VerticalGridLinesBrush="{DynamicResource DividerBrush}"
+                      FontSize="{DynamicResource FS12}" FontFamily="Segoe UI"
                       BorderThickness="0"
                       Background="White"
                       RowBackground="White"
-                      AlternatingRowBackground="#FAFBFC"
+                      AlternatingRowBackground="{DynamicResource SurfaceBrush}"
                       CurrentCellChanged="XlsxGrid_CurrentCellChanged"
                       LoadingRow="XlsxGrid_LoadingRow"
                       AutoGeneratingColumn="XlsxGrid_AutoGeneratingColumn"
@@ -131,24 +153,24 @@
                 <DataGrid.Resources>
                     <!-- Column headers (like Excel) -->
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#E8ECF0"/>
-                        <Setter Property="Foreground" Value="#333"/>
+                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="FontSize" Value="11"/>
                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
                         <Setter Property="Padding" Value="6,4"/>
-                        <Setter Property="BorderBrush" Value="#C0C0C0"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
                     </Style>
                     <!-- Row headers (row numbers) -->
                     <Style TargetType="DataGridRowHeader">
-                        <Setter Property="Background" Value="#E8ECF0"/>
-                        <Setter Property="Foreground" Value="#555"/>
+                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
                         <Setter Property="FontSize" Value="11"/>
                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
                         <Setter Property="VerticalContentAlignment" Value="Center"/>
                         <Setter Property="Width" Value="42"/>
-                        <Setter Property="BorderBrush" Value="#C0C0C0"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
                         <Setter Property="BorderThickness" Value="0,0,1,0"/>
                         <Setter Property="Padding" Value="4,0"/>
                     </Style>
@@ -159,9 +181,9 @@
                         <Setter Property="BorderThickness" Value="0"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="BorderBrush" Value="#2266CC"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentDarkBrush}"/>
                                 <Setter Property="BorderThickness" Value="2"/>
-                                <Setter Property="Foreground" Value="#000"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -170,7 +192,7 @@
 
             <!-- GridSplitter -->
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" 
-                          VerticalAlignment="Stretch" Background="#DDD" 
+                          VerticalAlignment="Stretch" Background="{DynamicResource CardBorderBrush}" 
                           Cursor="SizeWE" ShowsPreview="True"/>
 
             <!-- ===== TAG CATALOG ===== -->
@@ -188,33 +210,33 @@
                     <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" 
                             Padding="12,8">
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="14"
+                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                             <TextBlock Text="{DynamicResource XlsxTagHint}"
-                                       FontSize="10" Foreground="#888" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Selected cell + search -->
-                    <Border Grid.Row="1" Padding="10,6" Background="#F0F4F8" 
+                    <Border Grid.Row="1" Padding="10,6" Background="{DynamicResource CardBackgroundBrush}" 
                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="{DynamicResource XlsxCell}" FontSize="11" Foreground="#666"
+                                <TextBlock Text="{DynamicResource XlsxCell}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                            VerticalAlignment="Center"/>
-                                <Border Background="White" CornerRadius="3" Padding="6,2" 
-                                        BorderBrush="#CCC" BorderThickness="1" MinWidth="50">
-                                    <TextBlock Text="{Binding CellAddress}" FontSize="11" FontWeight="Bold"
+                                <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="3" Padding="6,2" 
+                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" MinWidth="50">
+                                    <TextBlock Text="{Binding CellAddress}" FontSize="{DynamicResource FS11}" FontWeight="Bold"
                                                FontFamily="Consolas" Foreground="{DynamicResource AccentBrush}"
                                                HorizontalAlignment="Center"/>
                                 </Border>
                             </StackPanel>
                             <Grid>
                                 <TextBox Text="{Binding TagSearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="6,4" FontSize="11" 
-                                         Background="White" BorderBrush="#CCC" BorderThickness="1"
+                                         Padding="6,4" FontSize="{DynamicResource FS11}" 
+                                         Background="{DynamicResource ContentBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                          VerticalContentAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="11" Foreground="#AAA"
+                                <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
                                            IsHitTestVisible="False" Margin="8,0,0,0" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -235,13 +257,13 @@
                     </Border>
 
                     <!-- Tags list -->
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="6,4">
+                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4">
                         <ItemsControl ItemsSource="{Binding FilteredTagGroups}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Expander IsExpanded="True" Margin="0,0,0,6">
                                         <Expander.Header>
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                            <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
                                         </Expander.Header>
                                         <ItemsControl ItemsSource="{Binding Tags}" Margin="0,4,0,0">
@@ -249,7 +271,7 @@
                                                 <DataTemplate>
                                                     <Border Background="{DynamicResource CardBackgroundBrush}" 
                                                             CornerRadius="4" Padding="8,5" Margin="0,0,0,3"
-                                                            BorderBrush="#E0E0E0" BorderThickness="1">
+                                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                                                         <Grid>
                                                             <Grid.RowDefinitions>
                                                                 <RowDefinition Height="Auto"/>
@@ -261,13 +283,12 @@
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <TextBlock Grid.Row="0" Grid.Column="0" 
-                                                                       FontSize="11" FontWeight="SemiBold"
-                                                                       FontFamily="Consolas"
-                                                                       Foreground="#1565C0"
-                                                                       TextTrimming="CharacterEllipsis">
-                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
-                                                            </TextBlock>
+                                                            <!-- Description (top) -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                                                       Text="{Binding Description}" 
+                                                                       FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       TextTrimming="CharacterEllipsis"/>
 
                                                             <Button Grid.Row="0" Grid.Column="1"
                                                                     Command="{Binding DataContext.InsertTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -278,13 +299,13 @@
                                                                     VerticalAlignment="Center" Cursor="Hand"
                                                                     ToolTip="{DynamicResource XlsxInsertTag}">
                                                                 <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{DynamicResource EditorInsert}" FontSize="10"/>
+                                                                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{DynamicResource EditorInsert}" FontSize="{DynamicResource FS10}"/>
                                                                 </StackPanel>
                                                             </Button>
 
                                                             <Button Grid.Row="0" Grid.Column="2" Content="&#xE8C8;"
-                                                                    FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                                                    FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                                                     Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
                                                                     Width="26" Height="24"
@@ -293,10 +314,14 @@
                                                                     VerticalAlignment="Center" Cursor="Hand"
                                                                     ToolTip="{DynamicResource EditorCopyTag}"/>
 
+                                                            <!-- Tag name (bottom) -->
                                                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                                                       Text="{Binding Description}" 
-                                                                       FontSize="10" Foreground="#888"
-                                                                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       FontFamily="Consolas"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,2,0,0">
+                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
+                                                            </TextBlock>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -312,11 +337,11 @@
         </Grid>
 
         <!-- ===== SHEET TABS (bottom, like Excel) ===== -->
-        <Border Grid.Row="3" Background="#E8ECF0" Padding="4,2"
-                BorderBrush="#D0D0D0" BorderThickness="0,1,0,0">
+        <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" Padding="4,2"
+                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="&#xE7C4;" FontFamily="Segoe MDL2 Assets" FontSize="10" 
-                           Foreground="#888" VerticalAlignment="Center" Margin="4,0,8,0"/>
+                <TextBlock Text="&#xE7C4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" 
+                           Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="4,0,8,0"/>
                 <ItemsControl ItemsSource="{Binding SheetNames}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -327,13 +352,13 @@
                         <DataTemplate>
                             <RadioButton Content="{Binding}" GroupName="SheetTabs"
                                          Margin="0,0,1,0" Padding="14,4"
-                                         FontSize="11" Cursor="Hand"
+                                         FontSize="{DynamicResource FS11}" Cursor="Hand"
                                          Checked="SheetTab_Checked">
                                 <RadioButton.Template>
                                     <ControlTemplate TargetType="RadioButton">
                                         <Border x:Name="TabBd" Padding="{TemplateBinding Padding}"
                                                 Background="White"
-                                                BorderBrush="#C0C0C0" BorderThickness="1,1,1,0">
+                                                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,1,1,0">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -344,7 +369,7 @@
                                                 <Setter Property="FontWeight" Value="SemiBold"/>
                                             </Trigger>
                                             <Trigger Property="IsChecked" Value="False">
-                                                <Setter TargetName="TabBd" Property="Background" Value="#E8ECF0"/>
+                                                <Setter TargetName="TabBd" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -358,7 +383,7 @@
 
         <!-- ===== FOOTER (Status bar) ===== -->
         <Border Grid.Row="4" Background="{DynamicResource CardBackgroundBrush}" 
-                Padding="10,4" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0">
+                Padding="10,4" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -367,21 +392,21 @@
                 <!-- Merge legend -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
                     <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,4,0"
-                            Background="#DBEAFE" BorderBrush="#93C5FD" BorderThickness="1"/>
-                    <TextBlock Text="{DynamicResource XlsxMergeMaster}" FontSize="10" Foreground="#666" 
+                            Background="{DynamicResource AccentLightBrush}" BorderBrush="{DynamicResource AccentDarkBrush}" BorderThickness="1"/>
+                    <TextBlock Text="{DynamicResource XlsxMergeMaster}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
                                VerticalAlignment="Center" Margin="0,0,14,0"/>
                     <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,4,0"
-                            Background="#E8E8E8" BorderBrush="#CCC" BorderThickness="1"/>
-                    <TextBlock Text="{DynamicResource XlsxMergePart}" FontSize="10" Foreground="#666" 
+                            Background="{DynamicResource CardHoverBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
+                    <TextBlock Text="{DynamicResource XlsxMergePart}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
                                VerticalAlignment="Center" Margin="0,0,14,0"/>
                     <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,4,0"
-                            Background="White" BorderBrush="#1565C0" BorderThickness="1"/>
-                    <TextBlock Text="{DynamicResource XlsxTag}" FontSize="10" Foreground="#1565C0" FontWeight="SemiBold"
+                            Background="White" BorderBrush="{DynamicResource AccentDarkBrush}" BorderThickness="1"/>
+                    <TextBlock Text="{DynamicResource XlsxTag}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource AccentDarkBrush}" FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <!-- Status message -->
                 <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" 
-                           FontSize="11" Foreground="{DynamicResource AccentBrush}"
+                           FontSize="{DynamicResource FS11}" Foreground="{DynamicResource AccentBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </Grid>
         </Border>

@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,6 +17,7 @@ namespace Win11DesktopApp.Views
         private int _selectedRow = -1;
         private int _selectedCol = -1;
         private bool _isLoaded;
+        private AITemplateOverlayWindow? _aiOverlay;
 
         // Brushes (pre-created for performance)
         private static readonly Brush SlaveBgBrush = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xE8));
@@ -220,6 +222,54 @@ namespace Win11DesktopApp.Views
             templateCol.CellEditingTemplate = new DataTemplate { VisualTree = editFactory };
 
             e.Column = templateCol;
+        }
+
+        private void AIOverlay_Click(object sender, RoutedEventArgs e)
+        {
+            if (_aiOverlay == null || !_aiOverlay.IsLoaded)
+            {
+                _aiOverlay = new AITemplateOverlayWindow();
+                _aiOverlay.Owner = Window.GetWindow(this);
+                _aiOverlay.SetContentProviders(GetSpreadsheetContent, GetTagCatalogText);
+            }
+
+            if (_aiOverlay.IsVisible)
+                _aiOverlay.Hide();
+            else
+                _aiOverlay.Show();
+        }
+
+        private string? GetSpreadsheetContent()
+        {
+            if (_vm?.CurrentData == null) return null;
+            var dt = _vm.CurrentData;
+            var sb = new StringBuilder();
+            sb.AppendLine($"Sheet: {_vm.SelectedSheet}");
+            for (int r = 0; r < Math.Min(dt.Rows.Count, 50); r++)
+            {
+                for (int c = 0; c < dt.Columns.Count; c++)
+                {
+                    var val = dt.Rows[r][c]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(val))
+                        sb.Append($"{XlsxEditorViewModel.GetColumnLetter(c + 1)}{r + 1}={val}  ");
+                }
+                if (sb.Length > 0 && sb[sb.Length - 1] != '\n')
+                    sb.AppendLine();
+            }
+            return sb.ToString();
+        }
+
+        private string? GetTagCatalogText()
+        {
+            if (_vm == null) return null;
+            var sb = new StringBuilder();
+            foreach (var group in _vm.TagGroups)
+            {
+                sb.AppendLine($"[{group.GroupName}]");
+                foreach (var tag in group.Tags)
+                    sb.AppendLine($"  ${{{tag.Tag}}} — {tag.Description}");
+            }
+            return sb.ToString();
         }
 
         private void SheetTab_Checked(object sender, RoutedEventArgs e)

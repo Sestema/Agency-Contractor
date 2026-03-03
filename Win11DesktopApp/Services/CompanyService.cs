@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using Win11DesktopApp.Models;
 
@@ -10,6 +12,9 @@ namespace Win11DesktopApp.Services
 {
     public class CompanyService
     {
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
+
         private readonly ObservableCollection<EmployerCompany> _companies = new ObservableCollection<EmployerCompany>();
         private readonly TagCatalogService _tagCatalogService;
         private readonly AppSettingsService _appSettingsService;
@@ -18,7 +23,38 @@ namespace Win11DesktopApp.Services
         private EmployerCompany? _selectedCompany;
 
         public ObservableCollection<EmployerCompany> Companies => _companies;
+
+        public IEnumerable<EmployerCompany> VisibleCompanies =>
+            _companies.Where(c => IsCompanyVisible(c));
+
         public event Action<EmployerCompany?>? SelectedCompanyChanged;
+        public event Action? VisibilityChanged;
+
+        public bool IsCompanyVisible(EmployerCompany company)
+            => !_appSettingsService.Settings.HiddenCompanyIds.Contains(company.Id.ToString());
+
+        public void SetCompanyVisible(EmployerCompany company, bool visible)
+        {
+            var id = company.Id.ToString();
+            var list = _appSettingsService.Settings.HiddenCompanyIds;
+            if (!visible && !list.Contains(id))
+                list.Add(id);
+            else if (visible)
+                list.Remove(id);
+            _appSettingsService.SaveSettings();
+            VisibilityChanged?.Invoke();
+        }
+
+        public int GetActiveEmployeeCount(EmployerCompany company)
+        {
+            try
+            {
+                var folder = _folderService.GetEmployeesFolder(company.Name);
+                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return 0;
+                return Directory.GetDirectories(folder).Length;
+            }
+            catch { return 0; }
+        }
 
         public EmployerCompany? SelectedCompany
         {
@@ -32,7 +68,11 @@ namespace Win11DesktopApp.Services
                     _selectedCompany = value;
 
                 _appSettingsService.Settings.SelectedCompanyId = _selectedCompany?.Id.ToString() ?? string.Empty;
-                _appSettingsService.SaveSettings();
+                Task.Run(() =>
+                {
+                    try { _appSettingsService.SaveSettings(); }
+                    catch (Exception ex) { LoggingService.LogError("CompanyService.SaveSettings", ex); }
+                });
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
             }
         }
@@ -102,7 +142,7 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"CompanyService.UpdateCompany error: {ex.Message}");
-                MessageBox.Show($"Помилка при збереженні: {ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(Res("MsgCompanySaveError"), ex.Message), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -121,6 +161,24 @@ namespace Win11DesktopApp.Services
                 Debug.WriteLine($"CompanyService.DeleteCompany error: {ex.Message}");
                 return false;
             }
+        }
+
+        public void MoveCompanyUp(EmployerCompany company)
+        {
+            var idx = _companies.IndexOf(company);
+            if (idx <= 0) return;
+            _companies.Move(idx, idx - 1);
+            _persistenceService.SaveCompanies(_companies);
+            VisibilityChanged?.Invoke();
+        }
+
+        public void MoveCompanyDown(EmployerCompany company)
+        {
+            var idx = _companies.IndexOf(company);
+            if (idx < 0 || idx >= _companies.Count - 1) return;
+            _companies.Move(idx, idx + 1);
+            _persistenceService.SaveCompanies(_companies);
+            VisibilityChanged?.Invoke();
         }
     }
 }

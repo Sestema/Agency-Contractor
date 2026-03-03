@@ -21,3 +21,6 @@ packages/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+## Secrets
+activator.key

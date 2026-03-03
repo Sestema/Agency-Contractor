@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+
 using System.Text.Json;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
@@ -32,11 +34,14 @@ namespace Win11DesktopApp.Services
     {
         private readonly AppSettingsService _appSettingsService;
         private readonly FolderService _folderService;
+        private static readonly SemaphoreSlim _saveLock = new(1, 1);
+
+        private static string Res(string key) =>
+            System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
 
         private const string OldDataFileName = "company_data.json";
         private const string OldChecksumExtension = ".sha256";
 
-        // AES-256 encryption keys (same as before for backward compatibility)
         private static readonly byte[] SecureKey = new byte[32];
         private static readonly byte[] SecureIV = new byte[16];
 
@@ -44,7 +49,6 @@ namespace Win11DesktopApp.Services
         {
             var keyBytes = Encoding.UTF8.GetBytes("AgencyContractorSecretKey2024_Secure");
             Array.Copy(keyBytes, SecureKey, Math.Min(keyBytes.Length, SecureKey.Length));
-
             var ivBytes = Encoding.UTF8.GetBytes("AgencyContractor");
             Array.Copy(ivBytes, SecureIV, Math.Min(ivBytes.Length, SecureIV.Length));
         }
@@ -65,6 +69,7 @@ namespace Win11DesktopApp.Services
             var dbPath = _folderService.DatabaseFilePath;
             if (string.IsNullOrEmpty(dbPath)) return;
 
+            _saveLock.Wait();
             try
             {
                 var db = new DatabaseRoot
@@ -81,23 +86,36 @@ namespace Win11DesktopApp.Services
 
                 var json = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
 
-                // Backup existing file
                 if (File.Exists(dbPath))
                 {
                     CreateBackup(dbPath);
                 }
 
-                // Encrypt and save
                 var encryptedData = Encrypt(json);
-                File.WriteAllBytes(dbPath, encryptedData);
+                var tempPath = dbPath + ".tmp";
+                RetryHelper.Execute(() =>
+                {
+                    File.WriteAllBytes(tempPath, encryptedData);
+                    File.Move(tempPath, dbPath, true);
+                });
 
-                // Write checksum
                 var checksum = ComputeHash(encryptedData);
-                File.WriteAllText(_folderService.DatabaseChecksumPath, checksum);
+                var checksumTemp = _folderService.DatabaseChecksumPath + ".tmp";
+                RetryHelper.Execute(() =>
+                {
+                    File.WriteAllText(checksumTemp, checksum, Encoding.UTF8);
+                    File.Move(checksumTemp, _folderService.DatabaseChecksumPath, true);
+                });
             }
             catch (Exception ex)
             {
+                LoggingService.LogError("PersistenceService.SaveDatabase", ex);
                 Debug.WriteLine($"PersistenceService.SaveDatabase failed: {ex.Message}");
+                ErrorHandler.Report("PersistenceService.SaveDatabase", ex, ErrorSeverity.Error);
+            }
+            finally
+            {
+                _saveLock.Release();
             }
         }
 
@@ -123,7 +141,7 @@ namespace Win11DesktopApp.Services
                     var checksumPath = _folderService.DatabaseChecksumPath;
                     if (File.Exists(checksumPath))
                     {
-                        var storedChecksum = File.ReadAllText(checksumPath);
+                        var storedChecksum = File.ReadAllText(checksumPath, Encoding.UTF8);
                         var currentChecksum = ComputeHash(encryptedData);
                         if (storedChecksum != currentChecksum)
                         {
@@ -176,7 +194,7 @@ namespace Win11DesktopApp.Services
                 var oldChecksumPath = oldFilePath + OldChecksumExtension;
                 if (File.Exists(oldChecksumPath))
                 {
-                    var storedChecksum = File.ReadAllText(oldChecksumPath);
+                    var storedChecksum = File.ReadAllText(oldChecksumPath, Encoding.UTF8);
                     var currentChecksum = ComputeHash(encryptedData);
                     if (storedChecksum != currentChecksum)
                     {
@@ -220,7 +238,7 @@ namespace Win11DesktopApp.Services
                 var newEncrypted = Encrypt(newJson);
                 var newDbPath = Path.Combine(rootPath, "database.json");
                 File.WriteAllBytes(newDbPath, newEncrypted);
-                File.WriteAllText(newDbPath + ".sha256", ComputeHash(newEncrypted));
+                File.WriteAllText(newDbPath + ".sha256", ComputeHash(newEncrypted), Encoding.UTF8);
 
                 // 7. Rename old files (keep as backup, don't delete)
                 try
@@ -229,7 +247,7 @@ namespace Win11DesktopApp.Services
                     if (File.Exists(oldChecksumPath))
                         File.Move(oldChecksumPath, oldChecksumPath + ".migrated");
                 }
-                catch { /* Ignore rename errors */ }
+                catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Rename error: {ex.Message}"); }
 
                 Debug.WriteLine("PersistenceService: migration completed successfully");
                 return db;
@@ -274,7 +292,7 @@ namespace Win11DesktopApp.Services
                     {
                         Debug.WriteLine($"Migration: renaming {oldEmployeesInCompany} -> {newEmployeesFolder}");
                         try { Directory.Move(oldEmployeesInCompany, newEmployeesFolder); }
-                        catch { /* If rename fails, leave as is — fallback will find it */ }
+                        catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Move employees folder failed: {ex.Message}"); }
                     }
                 }
 
@@ -291,7 +309,7 @@ namespace Win11DesktopApp.Services
                 {
                     Debug.WriteLine($"Migration: renaming {oldTemplatesFolder} -> {newTemplatesFolder}");
                     try { Directory.Move(oldTemplatesFolder, newTemplatesFolder); }
-                    catch { /* Leave as is — fallback will find it */ }
+                    catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Move templates folder failed: {ex.Message}"); }
                 }
 
                 // Ensure templates folder exists
@@ -323,7 +341,7 @@ namespace Win11DesktopApp.Services
                 {
                     Debug.WriteLine($"Migration: renaming {oldArchive} -> {newArchive}");
                     try { Directory.Move(oldArchive, newArchive); }
-                    catch { /* Leave as is — fallback will find it */ }
+                    catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Move archive folder failed: {ex.Message}"); }
                 }
 
                 // Also check if Employers directory is now empty, clean up
@@ -338,11 +356,12 @@ namespace Win11DesktopApp.Services
                             Debug.WriteLine("Migration: cleaned up empty Employers directory");
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Cleanup empty dir failed: {ex.Message}"); }
                 }
             }
             catch (Exception ex)
             {
+                LoggingService.LogError("PersistenceService.MigrateArchiveFolder", ex);
                 Debug.WriteLine($"PersistenceService.MigrateArchiveFolder error: {ex.Message}");
             }
         }
@@ -370,7 +389,7 @@ namespace Win11DesktopApp.Services
                 var indexPath = Path.Combine(templatesFolder, "index.json");
                 if (!File.Exists(indexPath)) return;
 
-                var json = File.ReadAllText(indexPath);
+                var json = File.ReadAllText(indexPath, Encoding.UTF8);
                 var currentFolderName = Path.GetFileName(templatesFolder);
 
                 // Replace old "Templates/" prefix with current folder name
@@ -388,7 +407,7 @@ namespace Win11DesktopApp.Services
 
                 if (changed)
                 {
-                    File.WriteAllText(indexPath, json);
+                    File.WriteAllText(indexPath, json, Encoding.UTF8);
                     Debug.WriteLine($"Migration: updated template index paths in {indexPath}");
                 }
             }
@@ -433,7 +452,7 @@ namespace Win11DesktopApp.Services
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("PersistenceService.CleanupOldBackups", ex.Message); }
         }
 
         private DatabaseRoot TryRestoreFromBackup()
@@ -468,11 +487,8 @@ namespace Win11DesktopApp.Services
         public List<EmployerCompany> LoadCompanies()
         {
             var db = LoadDatabase();
-            // Apply loaded settings to AppSettingsService
             if (db.Settings != null)
             {
-                if (!string.IsNullOrEmpty(db.Settings.LanguageCode))
-                    _appSettingsService.Settings.LanguageCode = db.Settings.LanguageCode;
                 if (!string.IsNullOrEmpty(db.Settings.SelectedCompanyId))
                     _appSettingsService.Settings.SelectedCompanyId = db.Settings.SelectedCompanyId;
             }

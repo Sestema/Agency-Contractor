@@ -19,4 +19,19 @@ namespace Win11DesktopApp.Converters
             throw new NotSupportedException();
         }
     }
+
+    public class InverseStringNullOrEmptyToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var text = value as string;
+            var isEmpty = string.IsNullOrWhiteSpace(text);
+            return isEmpty ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+    }
 }

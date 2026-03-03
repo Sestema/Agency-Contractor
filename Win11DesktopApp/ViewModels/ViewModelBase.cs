@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows;
 
 namespace Win11DesktopApp.ViewModels
 {
@@ -20,5 +21,8 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(propertyName);
             return true;
         }
+
+        protected static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
     }
 }

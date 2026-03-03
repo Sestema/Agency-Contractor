@@ -33,7 +33,7 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        public string DialogTitle => IsEditMode ? "Редагувати фірму" : "Додати нову фірму";
+        public string DialogTitle => IsEditMode ? Res("CompanyDialogTitleEdit") : Res("CompanyDialogTitleAdd");
 
         private string _originalCompanyName = string.Empty;
         private EmployerCompany? _originalCompany;
@@ -100,7 +100,10 @@ namespace Win11DesktopApp.ViewModels
         {
             if (string.IsNullOrWhiteSpace(Employer.Name))
             {
-                MessageBox.Show("Вкажіть назву фірми.", "Помилка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    Application.Current?.TryFindResource("MsgEnterCompanyName") as string ?? "Enter company name.",
+                    Application.Current?.TryFindResource("TitleError") as string ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -118,6 +121,10 @@ namespace Win11DesktopApp.ViewModels
                 foreach (var pos in Employer.Positions)
                     _originalCompany.Positions.Add(pos);
 
+                _originalCompany.WeeklyWorkHours = Employer.WeeklyWorkHours;
+                _originalCompany.DailyWorkHours = Employer.DailyWorkHours;
+                _originalCompany.ShiftCount = Employer.ShiftCount;
+
                 _originalCompany.Agency ??= new AgencyCompany();
                 _originalCompany.Agency.Name = Agency.Name;
                 _originalCompany.Agency.ICO = Agency.ICO;
@@ -128,6 +135,8 @@ namespace Win11DesktopApp.ViewModels
             else
             {
                 App.CompanyService.AddCompany(Employer, Agency);
+                App.ActivityLogService.Log("CompanyAdded", "Company", Employer.Name, "",
+                    $"Додано фірму: {Employer.Name}");
             }
             RequestClose?.Invoke();
         }
@@ -136,15 +145,27 @@ namespace Win11DesktopApp.ViewModels
         {
             if (_originalCompany == null) return;
 
+            var employees = App.EmployeeService.GetEmployeesForFirm(_originalCompany.Name);
+            if (employees.Count > 0)
+            {
+                var empResult = MessageBox.Show(
+                    string.Format(Res("MsgCompanyHasEmployees"), employees.Count),
+                    Res("TitleWarning"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (empResult != MessageBoxResult.Yes) return;
+            }
+
             var result = MessageBox.Show(
-                $"Ви впевнені, що хочете видалити фірму \"{_originalCompany.Name}\"?\n\nПапка на диску НЕ буде видалена.",
-                "Видалити фірму",
+                string.Format(Res("MsgConfirmDeleteCompany"), _originalCompany.Name),
+                Res("TitleDeleteCompany"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
             if (result == MessageBoxResult.Yes)
             {
+                var name = _originalCompany.Name;
                 App.CompanyService.DeleteCompany(_originalCompany);
+                App.ActivityLogService.Log("CompanyDeleted", "Company", name, "",
+                    $"Видалено фірму: {name}");
                 RequestClose?.Invoke();
             }
         }
@@ -159,7 +180,10 @@ namespace Win11DesktopApp.ViewModels
                 CreatedAt = src.CreatedAt,
                 LastModified = src.LastModified,
                 Name = src.Name,
-                ICO = src.ICO
+                ICO = src.ICO,
+                WeeklyWorkHours = src.WeeklyWorkHours,
+                DailyWorkHours = src.DailyWorkHours,
+                ShiftCount = src.ShiftCount
             };
 
             clone.Addresses.Clear();
