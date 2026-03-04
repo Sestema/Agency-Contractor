@@ -215,7 +215,7 @@ namespace Win11DesktopApp.ViewModels
 
         private void Close()
         {
-            try { _employeeService.CleanupTempFolder(_tempFolder); } catch { }
+            try { _employeeService.CleanupTempFolder(_tempFolder); } catch (Exception ex) { LoggingService.LogWarning("AddCandidateViewModel.Close", $"Cleanup failed: {ex.Message}"); }
             RequestClose?.Invoke();
         }
 
@@ -243,7 +243,7 @@ namespace Win11DesktopApp.ViewModels
                 $"{Data.FirstName} {Data.LastName}",
                 $"{Data.FirstName} {Data.LastName} ({Data.DesiredPosition})");
 
-            try { _employeeService.CleanupTempFolder(_tempFolder); } catch { }
+            try { _employeeService.CleanupTempFolder(_tempFolder); } catch (Exception ex) { LoggingService.LogWarning("AddCandidateViewModel.Save", $"Cleanup failed: {ex.Message}"); }
             RequestClose?.Invoke();
         }
 
@@ -354,7 +354,7 @@ namespace Win11DesktopApp.ViewModels
                     File.Copy(editor.ResultPath, newPath, true);
                     File.Delete(editor.ResultPath);
                 }
-                catch { newPath = editor.ResultPath; }
+                catch (Exception ex) { LoggingService.LogWarning("AddCandidateViewModel.EnhanceCurrentDocument", $"Copy enhanced image failed: {ex.Message}"); newPath = editor.ResultPath; }
 
                 PassportPreviewPath = newPath;
                 if (PassportDoc != null) PassportDoc.ImagePath = newPath;

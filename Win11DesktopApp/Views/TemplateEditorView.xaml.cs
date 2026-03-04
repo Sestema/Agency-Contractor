@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -92,8 +93,9 @@ namespace Win11DesktopApp.Views
                 using var reader = new StreamReader(stream);
                 return reader.ReadToEnd();
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning("TemplateEditorView.GetRtfContent", ex.Message);
                 return null;
             }
         }
@@ -125,7 +127,11 @@ namespace Win11DesktopApp.Views
                 var range = new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd);
                 return range.Text;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateEditorView.GetPlainTextContent", ex.Message);
+                return null;
+            }
         }
 
         private void ReplaceTagsInDocument(List<(string ContextBefore, string ReplaceWhat, string Tag)> replacements)

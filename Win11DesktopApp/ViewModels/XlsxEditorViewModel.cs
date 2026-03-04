@@ -316,7 +316,7 @@ namespace Win11DesktopApp.ViewModels
                     }
                 }
             }
-            catch { /* ignore merge parsing errors */ }
+            catch (Exception ex) { LoggingService.LogWarning("XlsxEditorViewModel.WorksheetToDataTable", $"Merge parsing failed: {ex.Message}"); }
 
             _mergeInfoPerSheet[ws.Name] = mergeInfo;
 

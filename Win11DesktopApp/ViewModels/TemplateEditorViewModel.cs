@@ -339,7 +339,7 @@ namespace Win11DesktopApp.ViewModels
                                 replacements.Add((contextBefore, replaceWhat, $"${{{tag}}}"));
                         }
                     }
-                    catch { /* ignore parse errors */ }
+                    catch (Exception ex) { LoggingService.LogWarning("TemplateEditorViewModel.RunAIInsertTags", $"AI JSON parse error: {ex.Message}"); }
                 }
 
                 if (replacements.Count == 0)

@@ -78,7 +78,7 @@
                         <Border x:Name="Bd" Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
                                 BorderBrush="{DynamicResource ErrorLightBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding ExpiredCount}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="{Binding ExpiredDisplay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
                                 <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ErrorBrush}"/>
                             </StackPanel>
                         </Border>
@@ -103,7 +103,7 @@
                         <Border x:Name="Bd" Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
                                 BorderBrush="{DynamicResource WarningLightBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding WarningCount}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Text="{Binding WarningDisplay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
                                 <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource WarningBrush}"/>
                             </StackPanel>
                         </Border>
@@ -128,7 +128,7 @@
                         <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding TotalProblems}" FontSize="{DynamicResource FS28}" FontWeight="Bold" 
+                                <TextBlock Text="{Binding TotalDisplay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" 
                                            Foreground="{DynamicResource ForegroundBrush}"/>
                                 <TextBlock Text="{DynamicResource ProbStatTotal}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                             </StackPanel>
@@ -258,7 +258,7 @@
                           ScrollViewer.CanContentScroll="True">
                 <ItemsControl.Template>
                     <ControlTemplate TargetType="ItemsControl">
-                        <ScrollViewer Style="{StaticResource ThinScroll}" Padding="6" CanContentScroll="True" Focusable="False">
+                        <ScrollViewer Style="{StaticResource ThinScroll}" Padding="10" CanContentScroll="True" Focusable="False" ClipToBounds="False">
                             <ItemsPresenter/>
                         </ScrollViewer>
                     </ControlTemplate>
@@ -270,8 +270,8 @@
                 </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" 
-                                    Padding="0" Margin="8,4,8,10"
+                            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10"
+                                    Padding="0" Margin="16,6,16,10"
                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                     RenderTransformOrigin="0.5,0.5" Cursor="Hand"
                                     MouseLeftButtonDown="EmployeeCard_MouseLeftButtonDown"

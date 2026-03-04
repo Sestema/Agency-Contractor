@@ -408,36 +408,64 @@ namespace Win11DesktopApp.Views
 
         private void BtnRotateLeft_Click(object sender, RoutedEventArgs e)
         {
-            var rotated = _service.Rotate90(_currentMat, false);
-            _currentMat.Dispose();
-            _currentMat = rotated;
-            BuildPreviewMat();
-            RefreshPreviewAsync();
+            try
+            {
+                if (_currentMat == null || _currentMat.Empty()) return;
+                var rotated = _service.Rotate90(_currentMat, false);
+                _currentMat.Dispose();
+                _currentMat = rotated;
+                BuildPreviewMat();
+                RefreshPreviewAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ImageEditorWindow.BtnRotateLeft", ex.Message);
+                StatusText.Text = $"Error: {ex.Message}";
+            }
         }
 
         private void BtnRotateRight_Click(object sender, RoutedEventArgs e)
         {
-            var rotated = _service.Rotate90(_currentMat, true);
-            _currentMat.Dispose();
-            _currentMat = rotated;
-            BuildPreviewMat();
-            RefreshPreviewAsync();
+            try
+            {
+                if (_currentMat == null || _currentMat.Empty()) return;
+                var rotated = _service.Rotate90(_currentMat, true);
+                _currentMat.Dispose();
+                _currentMat = rotated;
+                BuildPreviewMat();
+                RefreshPreviewAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ImageEditorWindow.BtnRotateRight", ex.Message);
+                StatusText.Text = $"Error: {ex.Message}";
+            }
         }
 
         private void BtnSharpen_Click(object sender, RoutedEventArgs e)
         {
-            var sharpened = _service.Sharpen(_currentMat);
-            _currentMat.Dispose();
-            _currentMat = sharpened;
-            BuildPreviewMat();
-            RefreshPreviewAsync();
-            StatusText.Text = Application.Current.TryFindResource("ImgEditorSharpened") as string ?? "Різкість збільшено!";
+            try
+            {
+                if (_currentMat == null || _currentMat.Empty()) return;
+                var sharpened = _service.Sharpen(_currentMat);
+                _currentMat.Dispose();
+                _currentMat = sharpened;
+                BuildPreviewMat();
+                RefreshPreviewAsync();
+                StatusText.Text = Application.Current.TryFindResource("ImgEditorSharpened") as string ?? "Різкість збільшено!";
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ImageEditorWindow.BtnSharpen", ex.Message);
+                StatusText.Text = $"Error: {ex.Message}";
+            }
         }
 
         private void BtnAutoEnhance_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                if (_currentMat == null || _currentMat.Empty()) return;
                 var enhanced = _service.AutoEnhance(_currentMat);
                 _currentMat.Dispose();
                 _currentMat = enhanced;
@@ -456,6 +484,7 @@ namespace Win11DesktopApp.Views
         {
             try
             {
+                if (_currentMat == null || _currentMat.Empty()) return;
                 var corrected = _service.PerspectiveCorrect(_currentMat);
                 if (corrected == null)
                 {
@@ -480,14 +509,23 @@ namespace Win11DesktopApp.Views
 
         private void BtnReset_Click(object sender, RoutedEventArgs e)
         {
-            _currentMat.Dispose();
-            _currentMat = _originalMat.Clone();
-            ResetSlidersQuiet();
-            BuildPreviewMat();
-            CropRect.Visibility = Visibility.Collapsed;
-            _hasCropSelection = false;
-            RefreshPreviewAsync();
-            StatusText.Text = Application.Current.TryFindResource("ImgEditorResetDone") as string ?? "Відновлено оригінал.";
+            try
+            {
+                if (_originalMat == null || _originalMat.Empty()) return;
+                _currentMat?.Dispose();
+                _currentMat = _originalMat.Clone();
+                ResetSlidersQuiet();
+                BuildPreviewMat();
+                CropRect.Visibility = Visibility.Collapsed;
+                _hasCropSelection = false;
+                RefreshPreviewAsync();
+                StatusText.Text = Application.Current.TryFindResource("ImgEditorResetDone") as string ?? "Відновлено оригінал.";
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ImageEditorWindow.BtnReset", ex.Message);
+                StatusText.Text = $"Error: {ex.Message}";
+            }
         }
 
         private void ResetSlidersQuiet()
@@ -536,7 +574,7 @@ namespace Win11DesktopApp.Views
 
         protected override void OnClosed(EventArgs e)
         {
-            _debounceTimer.Stop();
+            _debounceTimer?.Stop();
             _renderCts?.Cancel();
             _renderCts?.Dispose();
             _previewMat?.Dispose();

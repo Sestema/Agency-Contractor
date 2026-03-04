@@ -61,8 +61,9 @@ namespace Win11DesktopApp.Services
                 UpdateLastCheckedIfNeeded(info);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogError("LicenseService.IsLicenseValid", ex);
                 return false;
             }
         }
@@ -95,6 +96,7 @@ namespace Win11DesktopApp.Services
 
                 SaveLicense(info);
 
+                LoggingService.LogInfo("LicenseService", $"License activated: plan={plan}, expires={expiresOn}");
                 var planLabel = days <= 0 ? "Безліміт" : $"{days} днів (до {expiresOn})";
                 return (true, $"Ліцензію активовано: {planLabel}");
             }
@@ -125,8 +127,9 @@ namespace Win11DesktopApp.Services
                 var daysLeft = (expires - DateTime.Now).Days;
                 return $"Активна до {expires:dd.MM.yyyy} ({daysLeft} дн.)";
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogError("LicenseService.GetLicenseStatus", ex);
                 return "Помилка перевірки";
             }
         }
@@ -141,7 +144,7 @@ namespace Win11DesktopApp.Services
                 if (!DateTime.TryParse(info.ExpiresOn, out var expires)) return -1;
                 return Math.Max(0, (expires - DateTime.Now).Days);
             }
-            catch { return -1; }
+            catch (Exception ex) { LoggingService.LogWarning("LicenseService.GetDaysLeft", ex.Message); return -1; }
         }
 
         public static string GetMachineId()
@@ -172,7 +175,7 @@ namespace Win11DesktopApp.Services
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex) { LoggingService.LogWarning("LicenseService.GetMachineId", $"Fixed disk query failed: {ex.Message}"); }
 
                 if (string.IsNullOrEmpty(diskSerial))
                 {
@@ -192,7 +195,7 @@ namespace Win11DesktopApp.Services
                             }
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { LoggingService.LogWarning("LicenseService.GetMachineId", $"Fallback disk query failed: {ex.Message}"); }
                 }
 
                 try
@@ -207,7 +210,7 @@ namespace Win11DesktopApp.Services
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex) { LoggingService.LogWarning("LicenseService.GetMachineId", $"CPU query failed: {ex.Message}"); }
 
                 sb.Append(diskSerial);
                 sb.Append(cpuId);
@@ -223,8 +226,9 @@ namespace Win11DesktopApp.Services
                 _cachedMachineId = Convert.ToBase64String(hash).Substring(0, 16);
                 return _cachedMachineId;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogError("LicenseService.GetMachineId", $"Fatal fallback: {ex.Message}");
                 _cachedMachineId = Environment.MachineName + "-fallback";
                 return _cachedMachineId;
             }
@@ -265,7 +269,7 @@ namespace Win11DesktopApp.Services
                 info.LastChecked = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 SaveLicense(info);
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("LicenseService.UpdateLastChecked", ex.Message); }
         }
 
         private static void SaveLicense(LicenseInfo info)
@@ -281,7 +285,7 @@ namespace Win11DesktopApp.Services
 
             if (File.Exists(LicensePath))
             {
-                try { File.Copy(LicensePath, BackupPath, true); } catch { }
+                try { File.Copy(LicensePath, BackupPath, true); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.SaveLicense", $"Backup copy failed: {ex.Message}"); }
             }
 
             File.Move(tempPath, LicensePath, true);
@@ -297,7 +301,7 @@ namespace Win11DesktopApp.Services
             result = TryLoadFromPath(BackupPath);
             if (result != null)
             {
-                try { File.Copy(BackupPath, LicensePath, true); } catch { }
+                try { File.Copy(BackupPath, LicensePath, true); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.LoadLicense", $"Restore from backup failed: {ex.Message}"); }
             }
             return result;
         }
@@ -321,7 +325,7 @@ namespace Win11DesktopApp.Services
                         File.Copy(oldBackup, BackupPath, true);
                 }
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("LicenseService.Migrate", ex.Message); }
         }
 
         private static LicenseInfo? TryLoadFromPath(string path)
@@ -336,7 +340,7 @@ namespace Win11DesktopApp.Services
                 var json = Encoding.UTF8.GetString(decrypted);
                 return JsonSerializer.Deserialize<LicenseInfo>(json);
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("LicenseService.TryLoad", $"CurrentUser decrypt failed: {ex.Message}"); }
 
             try
             {
@@ -344,7 +348,7 @@ namespace Win11DesktopApp.Services
                 var json = Encoding.UTF8.GetString(decrypted);
                 return JsonSerializer.Deserialize<LicenseInfo>(json);
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("LicenseService.TryLoad", $"LocalMachine decrypt failed: {ex.Message}"); }
 
             return null;
         }

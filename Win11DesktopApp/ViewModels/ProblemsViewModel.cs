@@ -57,22 +57,49 @@ namespace Win11DesktopApp.ViewModels
         public int TotalProblems
         {
             get => _totalProblems;
-            set => SetProperty(ref _totalProblems, value);
+            set { SetProperty(ref _totalProblems, value); OnPropertyChanged(nameof(TotalDisplay)); }
         }
+
+        private int _totalPeople;
+        public int TotalPeople
+        {
+            get => _totalPeople;
+            set { SetProperty(ref _totalPeople, value); OnPropertyChanged(nameof(TotalDisplay)); }
+        }
+
+        public string TotalDisplay => $"{TotalPeople} / {TotalProblems}";
 
         private int _expiredCount;
         public int ExpiredCount
         {
             get => _expiredCount;
-            set => SetProperty(ref _expiredCount, value);
+            set { SetProperty(ref _expiredCount, value); OnPropertyChanged(nameof(ExpiredDisplay)); }
         }
+
+        private int _expiredPeople;
+        public int ExpiredPeople
+        {
+            get => _expiredPeople;
+            set { SetProperty(ref _expiredPeople, value); OnPropertyChanged(nameof(ExpiredDisplay)); }
+        }
+
+        public string ExpiredDisplay => $"{ExpiredPeople} / {ExpiredCount}";
 
         private int _warningCount;
         public int WarningCount
         {
             get => _warningCount;
-            set => SetProperty(ref _warningCount, value);
+            set { SetProperty(ref _warningCount, value); OnPropertyChanged(nameof(WarningDisplay)); }
         }
+
+        private int _warningPeople;
+        public int WarningPeople
+        {
+            get => _warningPeople;
+            set { SetProperty(ref _warningPeople, value); OnPropertyChanged(nameof(WarningDisplay)); }
+        }
+
+        public string WarningDisplay => $"{WarningPeople} / {WarningCount}";
 
         private int _ignoredCount;
         public int IgnoredCount
@@ -341,8 +368,11 @@ namespace Win11DesktopApp.ViewModels
                     _allGroups = groups;
                     IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(ignoredProblems.OrderBy(p => p.EmployeeName));
                     TotalProblems = activeProblems.Count;
+                    TotalPeople = groups.Count;
                     ExpiredCount = activeProblems.Count(p => p.Severity == "Expired" || p.Severity == "Critical");
+                    ExpiredPeople = groups.Count(g => g.Issues.Any(i => i.Severity == "Expired" || i.Severity == "Critical"));
                     WarningCount = activeProblems.Count(p => p.Severity == "Warning");
+                    WarningPeople = groups.Count(g => g.Issues.Any(i => i.Severity == "Warning"));
                     IgnoredCount = ignoredProblems.Count;
                     ApplyFilter();
                 });
@@ -541,15 +571,33 @@ namespace Win11DesktopApp.ViewModels
                     new XPoint(marginLeft, y), topLeftFormat);
                 y += 20;
 
-                // --- Stats line ---
-                var statsText = $"{DocRes("ProbPdfExpired")}: {ExpiredCount}    {DocRes("ProbPdfWarning")}: {WarningCount}    {DocRes("ProbPdfTotal")}: {TotalProblems}    {DocRes("ProbPdfIgnored")}: {IgnoredCount}";
-                gfx.DrawString(statsText, fontSubtitle, brushBlack,
-                    new XPoint(marginLeft, y), topLeftFormat);
-                y += 10;
+                // --- Stats bar ---
+                var fontStat = new XFont("Arial", 11, XFontStyleEx.Bold);
+                var fontStatLabel = new XFont("Arial", 9);
+                double statBoxH = 38;
+                double statBoxW = contentWidth / 4 - 4;
+                double statY = y;
+                var statPenBorder = new XPen(XColor.FromArgb(180, 180, 180), 0.8);
 
-                // Separator
-                gfx.DrawLine(new XPen(XColor.FromArgb(220, 220, 220), 1), marginLeft, y, marginLeft + contentWidth, y);
-                y += 14;
+                var statItems = new[]
+                {
+                    (Label: DocRes("ProbPdfExpired") ?? "Expired", Value: $"{ExpiredPeople} / {ExpiredCount}", Bg: XColor.FromArgb(255, 235, 238), Fg: XColor.FromArgb(198, 40, 40)),
+                    (Label: DocRes("ProbPdfWarning") ?? "Warning", Value: $"{WarningPeople} / {WarningCount}", Bg: XColor.FromArgb(255, 243, 224), Fg: XColor.FromArgb(239, 108, 0)),
+                    (Label: DocRes("ProbPdfTotal") ?? "Total", Value: $"{TotalPeople} / {TotalProblems}", Bg: XColor.FromArgb(240, 240, 240), Fg: XColor.FromArgb(50, 50, 50)),
+                    (Label: DocRes("ProbPdfIgnored") ?? "Ignored", Value: $"{IgnoredCount}", Bg: XColor.FromArgb(232, 245, 253), Fg: XColor.FromArgb(30, 90, 150)),
+                };
+
+                for (int si = 0; si < statItems.Length; si++)
+                {
+                    double sx = marginLeft + si * (statBoxW + 5);
+                    var rect = new XRect(sx, statY, statBoxW, statBoxH);
+                    gfx.DrawRoundedRectangle(statPenBorder, new XSolidBrush(statItems[si].Bg), rect, new XSize(4, 4));
+                    var valBrush = new XSolidBrush(statItems[si].Fg);
+                    gfx.DrawString(statItems[si].Value, fontStat, valBrush, new XPoint(sx + 8, statY + 10), topLeftFormat);
+                    gfx.DrawString(statItems[si].Label, fontStatLabel, valBrush, new XPoint(sx + 8, statY + 24), topLeftFormat);
+                }
+
+                y = statY + statBoxH + 12;
 
                 // --- Employee groups ---
                 foreach (var group in ProblemGroups)

@@ -131,7 +131,7 @@ namespace Win11DesktopApp.ViewModels
                 bmp.Freeze();
                 return bmp;
             }
-            catch { return null; }
+            catch (Exception ex) { LoggingService.LogWarning("CandidateDetailsViewModel.LoadBitmap", $"Load image failed: {ex.Message}"); return null; }
         }
 
         private void Save()

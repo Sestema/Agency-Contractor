@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using Win11DesktopApp.Models;
+using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
@@ -31,7 +32,7 @@ namespace Win11DesktopApp.ViewModels
             if (CategoryResourceKeys.TryGetValue(category, out var key))
             {
                 try { return Application.Current.FindResource(key) as string ?? category; }
-                catch { return category; }
+                catch (Exception ex) { LoggingService.LogWarning("TagGroupViewModel.GetCategoryDisplayName", $"Resource '{key}' not found: {ex.Message}"); return category; }
             }
             return category;
         }

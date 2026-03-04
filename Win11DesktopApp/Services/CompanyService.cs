@@ -53,7 +53,7 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return 0;
                 return Directory.GetDirectories(folder).Length;
             }
-            catch { return 0; }
+            catch (Exception ex) { LoggingService.LogWarning("CompanyService.GetActiveEmployeeCount", ex.Message); return 0; }
         }
 
         public EmployerCompany? SelectedCompany
@@ -117,6 +117,7 @@ namespace Win11DesktopApp.Services
             _tagCatalogService.AddTagsForCompany(employer, agency);
             _folderService.EnsureCompanyStructure(employer.Name);
             _persistenceService.SaveCompanies(_companies);
+            LoggingService.LogInfo("CompanyService", $"Company added: {employer.Name}");
             VisibilityChanged?.Invoke();
         }
 
@@ -138,6 +139,7 @@ namespace Win11DesktopApp.Services
                     _tagCatalogService.AddTagsForEmployerOnly(company);
 
                 _persistenceService.SaveCompanies(_companies);
+                LoggingService.LogInfo("CompanyService", $"Company updated: {company.Name} (was: {oldName})");
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
                 VisibilityChanged?.Invoke();
             }
@@ -156,6 +158,7 @@ namespace Win11DesktopApp.Services
                 if (_selectedCompany == company) SelectedCompany = null;
                 _companies.Remove(company);
                 _persistenceService.SaveCompanies(_companies);
+                LoggingService.LogInfo("CompanyService", $"Company deleted: {company.Name}");
                 VisibilityChanged?.Invoke();
                 return true;
             }

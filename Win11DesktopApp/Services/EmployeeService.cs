@@ -199,6 +199,7 @@ namespace Win11DesktopApp.Services
             File.Move(tempPath, jsonPath, true);
 
             _tagCatalogService.AddTagsForEmployee(firmName, data);
+            LoggingService.LogInfo("EmployeeService", $"Employee saved: {data.FirstName} {data.LastName} in {firmName}");
             Debug.WriteLine($"EmployeeService.SaveEmployee: saved to {employeeFolder}");
             return employeeFolder;
         }
@@ -483,6 +484,7 @@ namespace Win11DesktopApp.Services
                 {
                     Directory.Delete(employeeFolder, true);
                 }
+                LoggingService.LogInfo("EmployeeService", $"Employee deleted: {employeeFolder}");
                 return true;
             }
             catch (Exception ex)
@@ -951,6 +953,7 @@ namespace Win11DesktopApp.Services
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 });
 
+                LoggingService.LogInfo("EmployeeService", $"Employee restored: {data.FirstName} {data.LastName} to {newFirmName}");
                 return destFolder;
             }
             catch (Exception ex)
@@ -1072,6 +1075,7 @@ namespace Win11DesktopApp.Services
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 });
 
+                LoggingService.LogInfo("EmployeeService", $"Employee archived: {employeeName} from {firmName}");
                 return destFolder;
             }
             catch (Exception ex)
@@ -1264,7 +1268,7 @@ namespace Win11DesktopApp.Services
                     {
                         File.SetAttributes(file, FileAttributes.Normal);
                         try { using var _ = File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None); }
-                        catch { }
+                        catch (Exception ex) { LoggingService.LogWarning("EmployeeService.TryBulkDelete", $"File lock check failed '{Path.GetFileName(file)}': {ex.Message}"); }
                     }
                     Directory.Delete(dir, true);
                     return true;

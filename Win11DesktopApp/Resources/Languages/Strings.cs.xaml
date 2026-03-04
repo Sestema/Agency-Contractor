@@ -276,9 +276,9 @@
     <sys:String x:Key="CompanyMoveDown">Přesunout dolů</sys:String>
 
     <!-- ProblemsView -->
-    <sys:String x:Key="ProbStatExpired">Prošlé / Kritické</sys:String>
-    <sys:String x:Key="ProbStatWarning">Brzy vyprší</sys:String>
-    <sys:String x:Key="ProbStatTotal">Celkem problémů</sys:String>
+    <sys:String x:Key="ProbStatExpired">Lidé / Dokumenty — Prošlé</sys:String>
+    <sys:String x:Key="ProbStatWarning">Lidé / Dokumenty — Brzy</sys:String>
+    <sys:String x:Key="ProbStatTotal">Lidé / Dokumenty — Celkem</sys:String>
     <sys:String x:Key="ProbAllOk">Všechny dokumenty jsou v pořádku!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">Žádné prošlé nebo brzy expirující dokumenty.</sys:String>
     <sys:String x:Key="ProbTitle">Problémy — všechny firmy</sys:String>

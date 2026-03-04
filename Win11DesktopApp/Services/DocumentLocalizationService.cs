@@ -54,7 +54,7 @@ namespace Win11DesktopApp.Services
             {
                 _docResources = LanguageService.LoadDictionary(uiLangCode);
             }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("DocumentLocalization.TryLoadFromUi", ex.Message); }
         }
     }
 }

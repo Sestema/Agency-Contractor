@@ -138,6 +138,7 @@ namespace Win11DesktopApp.Services
         {
             try
             {
+                LoggingService.LogInfo("FinanceService", "Saving finance database");
                 CreateBackupIfNeeded();
                 var json = JsonSerializer.Serialize(_db, _jsonOptions);
                 var tmp = _filePath + ".tmp";
@@ -149,12 +150,12 @@ namespace Win11DesktopApp.Services
                 catch (Exception moveEx)
                 {
                     LoggingService.LogError("FinanceService.Save", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, _filePath, true); } catch { }
+                    try { if (File.Exists(tmp)) File.Copy(tmp, _filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.Save", $"Cleanup failed: {ex.Message}"); }
                     throw;
                 }
                 finally
                 {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.Save", $"Cleanup failed: {ex.Message}"); }
                 }
             }
             catch (Exception ex)
@@ -183,7 +184,7 @@ namespace Win11DesktopApp.Services
                     .ToList();
                 for (int i = 5; i < files.Count; i++)
                 {
-                    try { files[i].Delete(); } catch { }
+                    try { files[i].Delete(); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.CreateBackupIfNeeded", $"Cleanup failed: {ex.Message}"); }
                 }
             }
             catch (Exception ex)
@@ -597,12 +598,12 @@ namespace Win11DesktopApp.Services
                 catch (Exception moveEx)
                 {
                     LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch { }
+                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveFirmPaymentToFolder", $"Cleanup failed: {ex.Message}"); }
                     throw;
                 }
                 finally
                 {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveFirmPaymentToFolder", $"Cleanup failed: {ex.Message}"); }
                 }
             }
             catch (Exception ex)
@@ -682,12 +683,12 @@ namespace Win11DesktopApp.Services
                         catch (Exception moveEx)
                         {
                             LoggingService.LogError("FinanceService.UpdateHourlyRateForward", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                            try { if (File.Exists(tmp)) File.Copy(tmp, file, true); } catch { }
+                            try { if (File.Exists(tmp)) File.Copy(tmp, file, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward", $"Cleanup failed: {ex.Message}"); }
                             throw;
                         }
                         finally
                         {
-                            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                            try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward", $"Cleanup failed: {ex.Message}"); }
                         }
                     }
                 }
@@ -992,12 +993,12 @@ namespace Win11DesktopApp.Services
                 catch (Exception moveEx)
                 {
                     LoggingService.LogError("FinanceService.SaveSalaryHistoryRecord", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch { }
+                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
                     throw;
                 }
                 finally
                 {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
                 }
             }
             catch (Exception ex)
@@ -1029,12 +1030,12 @@ namespace Win11DesktopApp.Services
                 catch (Exception moveEx)
                 {
                     LoggingService.LogError("FinanceService.RemoveSalaryHistoryRecord", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch { }
+                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.RemoveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
                     throw;
                 }
                 finally
                 {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.RemoveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
                 }
             }
             catch (Exception ex)

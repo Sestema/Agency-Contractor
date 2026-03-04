@@ -276,9 +276,9 @@
     <sys:String x:Key="CompanyMoveDown">Переместить вниз</sys:String>
 
     <!-- ProblemsView -->
-    <sys:String x:Key="ProbStatExpired">Просрочено / Критично</sys:String>
-    <sys:String x:Key="ProbStatWarning">Скоро заканчиваются</sys:String>
-    <sys:String x:Key="ProbStatTotal">Всего проблем</sys:String>
+    <sys:String x:Key="ProbStatExpired">Люди / Документы — Просрочено</sys:String>
+    <sys:String x:Key="ProbStatWarning">Люди / Документы — Скоро</sys:String>
+    <sys:String x:Key="ProbStatTotal">Люди / Документы — Всего</sys:String>
     <sys:String x:Key="ProbAllOk">Все документы в порядке!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">Нет просроченных или скоро заканчивающихся документов.</sys:String>
     <sys:String x:Key="ProbTitle">Проблемы — все фирмы</sys:String>

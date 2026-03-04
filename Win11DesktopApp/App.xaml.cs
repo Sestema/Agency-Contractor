@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using System.Windows;
 using PdfSharp.Fonts;
 using Velopack;
@@ -35,10 +37,22 @@ namespace Win11DesktopApp
 
             GlobalFontSettings.FontResolver = new PdfFontResolver();
 
+            AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+            {
+                if (args.ExceptionObject is Exception ex)
+                    LoggingService.LogError("AppDomain.UnhandledException", ex);
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                LoggingService.LogError("TaskScheduler.UnobservedTaskException", args.Exception);
+                args.SetObserved();
+            };
+
             DispatcherUnhandledException += (s, args) =>
             {
-                LoggingService.LogError("App.UnhandledException", args.Exception);
-                ErrorHandler.Report("App.UnhandledException", args.Exception, ErrorSeverity.Critical, showUser: true);
+                LoggingService.LogError("App.DispatcherUnhandledException", args.Exception);
+                ErrorHandler.Report("App.DispatcherUnhandledException", args.Exception, ErrorSeverity.Critical, showUser: true);
                 args.Handled = true;
             };
 
@@ -50,6 +64,8 @@ namespace Win11DesktopApp
 
             if (!string.IsNullOrEmpty(FolderService.RootPath))
                 LoggingService.Initialize(FolderService.RootPath);
+
+            LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
 
             PersistenceService = new PersistenceService(AppSettingsService, FolderService);
             TagCatalogService = new TagCatalogService();
@@ -86,7 +102,8 @@ namespace Win11DesktopApp
                 ThemeService.SetTheme(AppSettingsService.Settings.ThemeName);
             }
 
-            // License check
+            LoggingService.LogInfo("App", "All services initialized");
+
             if (!LicenseService.IsLicenseValid())
             {
                 var licenseWindow = new Views.LicenseWindow();

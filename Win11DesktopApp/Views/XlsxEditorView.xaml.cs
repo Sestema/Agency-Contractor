@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -78,7 +79,7 @@ namespace Win11DesktopApp.Views
                         }
                     }
                 }
-                catch { /* ignore */ }
+                catch (Exception ex) { LoggingService.LogWarning("XlsxEditorView.OnLoaded", ex.Message); }
             }
         }
 
@@ -90,7 +91,7 @@ namespace Win11DesktopApp.Views
         private void RefreshGrid()
         {
             try { XlsxGrid.Items.Refresh(); }
-            catch { /* ignore */ }
+            catch (Exception ex) { LoggingService.LogWarning("XlsxEditorView.RefreshGrid", ex.Message); }
         }
 
         // ===== DataGrid events =====
@@ -109,8 +110,9 @@ namespace Win11DesktopApp.Views
 
                 _vm.OnCellSelected(_selectedRow, _selectedCol);
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning("XlsxEditorView.XlsxGrid_CurrentCellChanged", ex.Message);
                 _selectedRow = -1;
                 _selectedCol = -1;
             }
@@ -132,7 +134,7 @@ namespace Win11DesktopApp.Views
                     }), System.Windows.Threading.DispatcherPriority.Background);
                 }
             }
-            catch { /* ignore */ }
+            catch (Exception ex) { LoggingService.LogWarning("XlsxEditorView.XlsxGrid_CellEditEnding", ex.Message); }
         }
 
         /// <summary>
@@ -154,7 +156,7 @@ namespace Win11DesktopApp.Views
                     _vm.StatusMessage = $"Комірка об'єднана. Редагуйте головну комірку {masterAddr}";
                 }
             }
-            catch { /* ignore */ }
+            catch (Exception ex) { LoggingService.LogWarning("XlsxEditorView.XlsxGrid_BeginningEdit", ex.Message); }
         }
 
         private void XlsxGrid_LoadingRow(object? sender, DataGridRowEventArgs e)
@@ -341,7 +343,7 @@ namespace Win11DesktopApp.Views
 
             int rowIndex;
             try { rowIndex = drv.Row.Table.Rows.IndexOf(drv.Row); }
-            catch { return GetDefault(mode); }
+            catch (Exception ex) { LoggingService.LogWarning("XlsxEditorView.CellDisplayConverter.Convert", ex.Message); return GetDefault(mode); }
 
             if (rowIndex < 0) return GetDefault(mode);
 
@@ -353,7 +355,7 @@ namespace Win11DesktopApp.Views
             // Get actual cell value
             string cellText;
             try { cellText = drv.Row[_propName]?.ToString() ?? ""; }
-            catch { cellText = ""; }
+            catch (Exception ex) { LoggingService.LogWarning("XlsxEditorView.CellDisplayConverter.Convert", ex.Message); cellText = ""; }
 
             bool hasTag = !isSlave && TagPattern.IsMatch(cellText);
 

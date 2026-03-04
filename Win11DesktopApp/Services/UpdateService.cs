@@ -22,7 +22,9 @@ namespace Win11DesktopApp.Services
             try
             {
                 var mgr = GetManager();
-                return await mgr.CheckForUpdatesAsync();
+                var result = await mgr.CheckForUpdatesAsync();
+                if (result != null) LoggingService.LogInfo("UpdateService", $"Update available: {result.TargetFullRelease.Version}");
+                return result;
             }
             catch (Exception ex)
             {
@@ -52,7 +54,7 @@ namespace Win11DesktopApp.Services
             get
             {
                 try { return GetManager().IsInstalled; }
-                catch { return false; }
+                catch (Exception ex) { LoggingService.LogWarning("UpdateService.IsInstalled", ex.Message); return false; }
             }
         }
     }
