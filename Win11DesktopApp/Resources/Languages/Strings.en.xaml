@@ -221,6 +221,7 @@
     <sys:String x:Key="DetFieldFirstName">First name</sys:String>
     <sys:String x:Key="DetFieldLastName">Last name</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="DetFieldGender">Gender</sys:String>
     <sys:String x:Key="DetSecPassport">Passport data</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Passport number</sys:String>
     <sys:String x:Key="DetFieldBirthCity">City of birth</sys:String>
@@ -337,6 +338,9 @@
     <sys:String x:Key="WizFirstName">First name</sys:String>
     <sys:String x:Key="WizLastName">Last name</sys:String>
     <sys:String x:Key="WizBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="WizGender">Gender</sys:String>
+    <sys:String x:Key="GenderMale">Male</sys:String>
+    <sys:String x:Key="GenderFemale">Female</sys:String>
     <sys:String x:Key="WizPassportNum">Passport or ID number</sys:String>
     <sys:String x:Key="WizBirthCity">City of birth</sys:String>
     <sys:String x:Key="WizBirthCountry">Country of birth</sys:String>
@@ -715,6 +719,7 @@
     <sys:String x:Key="TagDescEmpLastName">Employee last name</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Employee full name</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="TagDescEmpGender">Gender (Male / Female)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Phone</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Status</sys:String>
@@ -1074,6 +1079,7 @@ The folder on disk will NOT be deleted.</sys:String>
     <sys:String x:Key="HistFieldFirstName">First name</sys:String>
     <sys:String x:Key="HistFieldLastName">Last name</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="HistFieldGender">Gender</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Passport number</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Passport expiry</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Visa number</sys:String>

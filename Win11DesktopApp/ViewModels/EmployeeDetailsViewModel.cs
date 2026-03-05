@@ -45,6 +45,18 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isEditMode, value);
         }
 
+        public bool IsGenderMale
+        {
+            get => Data?.Gender == "male" || string.IsNullOrEmpty(Data?.Gender);
+            set { if (value && Data != null) { Data.Gender = "male"; OnPropertyChanged(nameof(IsGenderMale)); OnPropertyChanged(nameof(IsGenderFemale)); OnPropertyChanged(nameof(Data)); } }
+        }
+
+        public bool IsGenderFemale
+        {
+            get => Data?.Gender == "female";
+            set { if (value && Data != null) { Data.Gender = "female"; OnPropertyChanged(nameof(IsGenderMale)); OnPropertyChanged(nameof(IsGenderFemale)); OnPropertyChanged(nameof(Data)); } }
+        }
+
         private string _statusMessage = string.Empty;
         public string StatusMessage
         {
@@ -833,6 +845,8 @@ namespace Win11DesktopApp.ViewModels
                     }
 
                     IsEditMode = false;
+                    OnPropertyChanged(nameof(IsGenderMale));
+                    OnPropertyChanged(nameof(IsGenderFemale));
                     DataChanged?.Invoke();
                 }
                 else
@@ -856,6 +870,8 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(FullName));
             }
             IsEditMode = false;
+            OnPropertyChanged(nameof(IsGenderMale));
+            OnPropertyChanged(nameof(IsGenderFemale));
         }
 
         private async void ReplaceDocument(string type)

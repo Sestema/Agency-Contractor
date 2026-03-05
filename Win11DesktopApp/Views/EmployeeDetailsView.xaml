@@ -904,6 +904,33 @@
                                                     <TextBox Text="{Binding Data.LastName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldBirthDate}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.BirthDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <TextBlock Text="{DynamicResource DetFieldGender}" Style="{StaticResource FieldLabel}"/>
+                                                    <!-- View mode: text only -->
+                                                    <TextBlock FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,6"
+                                                               Visibility="{Binding IsEditMode, Converter={StaticResource InverseBoolToVis}}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{DynamicResource GenderMale}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Data.Gender}" Value="female">
+                                                                        <Setter Property="Text" Value="{DynamicResource GenderFemale}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <!-- Edit mode: radio buttons -->
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,6"
+                                                                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}">
+                                                        <RadioButton Content="{DynamicResource GenderMale}" GroupName="DetGender"
+                                                                     IsChecked="{Binding IsGenderMale, Mode=TwoWay}"
+                                                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                                                     Margin="0,0,20,0" VerticalContentAlignment="Center"/>
+                                                        <RadioButton Content="{DynamicResource GenderFemale}" GroupName="DetGender"
+                                                                     IsChecked="{Binding IsGenderFemale, Mode=TwoWay}"
+                                                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                                                     VerticalContentAlignment="Center"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </Border>
 

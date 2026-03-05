@@ -50,6 +50,17 @@
                     <TextBox Text="{Binding Data.LastName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizBirthDate}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.BirthDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizGender}" Style="{StaticResource WizLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                        <RadioButton Content="{DynamicResource GenderMale}" GroupName="Gender"
+                                     IsChecked="{Binding IsGenderMale, Mode=TwoWay}"
+                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                     Margin="0,0,20,0" VerticalContentAlignment="Center"/>
+                        <RadioButton Content="{DynamicResource GenderFemale}" GroupName="Gender"
+                                     IsChecked="{Binding IsGenderFemale, Mode=TwoWay}"
+                                     Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS13}"
+                                     VerticalContentAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock Text="{DynamicResource WizPassportNum}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.PassportNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizBirthCity}" Style="{StaticResource WizLabel}"/>

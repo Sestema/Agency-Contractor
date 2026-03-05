@@ -207,6 +207,18 @@ namespace Win11DesktopApp.ViewModels
         public bool IsEuIdCard => _euDocumentType == "id_card";
         public bool ShowEuDocTypeSelector => !_hasVisa;
 
+        public bool IsGenderMale
+        {
+            get => Data.Gender == "male";
+            set { if (value) { Data.Gender = "male"; OnPropertyChanged(nameof(IsGenderMale)); OnPropertyChanged(nameof(IsGenderFemale)); } }
+        }
+
+        public bool IsGenderFemale
+        {
+            get => Data.Gender == "female";
+            set { if (value) { Data.Gender = "female"; OnPropertyChanged(nameof(IsGenderMale)); OnPropertyChanged(nameof(IsGenderFemale)); } }
+        }
+
         public bool ShowPassportUpload => true;
         public bool ShowPassportPage2Upload => _hasPassportPage2;
         public bool ShowVisaUpload => _hasVisa;

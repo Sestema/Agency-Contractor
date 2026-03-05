@@ -70,6 +70,7 @@ namespace Win11DesktopApp.Services
             AddTag("EMPLOYEE_LastName", "Employee", companyName, Res("TagDescEmpLastName"), data.LastName);
             AddTag("EMPLOYEE_FullName", "Employee", companyName, Res("TagDescEmpFullName"), $"{data.FirstName} {data.LastName}");
             AddTag("EMPLOYEE_BirthDate", "Employee", companyName, Res("TagDescEmpBirthDate"), data.BirthDate);
+            AddTag("EMPLOYEE_Gender", "Employee", companyName, Res("TagDescEmpGender"), data.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
 
             AddTag("EMPLOYEE_PassportNumber", "Employee", companyName, Res("TagDescEmpPassportNumber"), data.PassportNumber);
             AddTag("EMPLOYEE_PassportCity", "Employee", companyName, Res("TagDescEmpPassportCity"), data.PassportCity);
@@ -142,6 +143,7 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_LastName"] = employeeData.LastName;
             map["EMPLOYEE_FullName"] = $"{employeeData.FirstName} {employeeData.LastName}";
             map["EMPLOYEE_BirthDate"] = employeeData.BirthDate;
+            map["EMPLOYEE_Gender"] = employeeData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale");
             map["EMPLOYEE_PassportNumber"] = employeeData.PassportNumber;
             map["EMPLOYEE_PassportCity"] = employeeData.PassportCity;
             map["EMPLOYEE_PassportCountry"] = employeeData.PassportCountry;
@@ -294,6 +296,7 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_LastName", Category = "Employee.Personal", Description = Res("TagDescEmpLastName") },
                 new() { Tag = "EMPLOYEE_FullName", Category = "Employee.Personal", Description = Res("TagDescEmpFullName") },
                 new() { Tag = "EMPLOYEE_BirthDate", Category = "Employee.Personal", Description = Res("TagDescEmpBirthDate") },
+                new() { Tag = "EMPLOYEE_Gender", Category = "Employee.Personal", Description = Res("TagDescEmpGender") },
                 new() { Tag = "EMPLOYEE_Phone", Category = "Employee.Personal", Description = Res("TagDescEmpPhone") },
                 new() { Tag = "EMPLOYEE_Email", Category = "Employee.Personal", Description = Res("TagDescEmpEmail") },
                 new() { Tag = "EMPLOYEE_Status", Category = "Employee.Personal", Description = Res("TagDescEmpStatus") },

@@ -1163,6 +1163,9 @@ namespace Win11DesktopApp.Services
                 Check(Res("HistFieldFirstName"), oldData.FirstName, newData.FirstName);
                 Check(Res("HistFieldLastName"), oldData.LastName, newData.LastName);
                 Check(Res("HistFieldBirthDate"), oldData.BirthDate, newData.BirthDate);
+                Check(Res("HistFieldGender"),
+                    oldData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"),
+                    newData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
                 Check(Res("HistFieldPassportNum"), oldData.PassportNumber, newData.PassportNumber);
                 Check(Res("HistFieldPassportExp"), oldData.PassportExpiry, newData.PassportExpiry);
                 Check(Res("HistFieldPassportCity"), oldData.PassportCity, newData.PassportCity);

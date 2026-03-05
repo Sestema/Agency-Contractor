@@ -221,6 +221,7 @@
     <sys:String x:Key="DetFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="DetFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="DetFieldGender">Стать</sys:String>
     <sys:String x:Key="DetSecPassport">Паспортні дані</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Місто народження</sys:String>
@@ -337,6 +338,9 @@
     <sys:String x:Key="WizFirstName">Ім'я</sys:String>
     <sys:String x:Key="WizLastName">Прізвище</sys:String>
     <sys:String x:Key="WizBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="WizGender">Стать</sys:String>
+    <sys:String x:Key="GenderMale">Чоловік</sys:String>
+    <sys:String x:Key="GenderFemale">Жінка</sys:String>
     <sys:String x:Key="WizPassportNum">Номер паспорту або ID</sys:String>
     <sys:String x:Key="WizBirthCity">Місто народження</sys:String>
     <sys:String x:Key="WizBirthCountry">Країна народження</sys:String>
@@ -715,6 +719,7 @@
     <sys:String x:Key="TagDescEmpLastName">Прізвище працівника</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Повне ім'я працівника</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="TagDescEmpGender">Стать (Чоловік / Жінка)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Статус</sys:String>
@@ -1074,6 +1079,7 @@
     <sys:String x:Key="HistFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="HistFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="HistFieldGender">Стать</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Термін паспорту</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Номер візи</sys:String>

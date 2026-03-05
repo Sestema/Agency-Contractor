@@ -48,6 +48,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string BirthDate { get; set; } = string.Empty;
+        public string Gender { get; set; } = "male";
         public string PassportNumber { get; set; } = string.Empty;
         public string PassportCity { get; set; } = string.Empty;
         public string PassportCountry { get; set; } = string.Empty;

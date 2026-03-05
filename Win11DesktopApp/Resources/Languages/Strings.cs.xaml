@@ -218,6 +218,7 @@
     <sys:String x:Key="DetFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="DetFieldLastName">Příjmení</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="DetFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="DetSecPassport">Pasové údaje</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Číslo pasu</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Město narození</sys:String>
@@ -334,6 +335,9 @@
     <sys:String x:Key="WizFirstName">Jméno</sys:String>
     <sys:String x:Key="WizLastName">Příjmení</sys:String>
     <sys:String x:Key="WizBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="WizGender">Pohlaví</sys:String>
+    <sys:String x:Key="GenderMale">Muž</sys:String>
+    <sys:String x:Key="GenderFemale">Žena</sys:String>
     <sys:String x:Key="WizPassportNum">Číslo pasu nebo ID</sys:String>
     <sys:String x:Key="WizBirthCity">Město narození</sys:String>
     <sys:String x:Key="WizBirthCountry">Země narození</sys:String>
@@ -712,6 +716,7 @@
     <sys:String x:Key="TagDescEmpLastName">Příjmení zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Celé jméno zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="TagDescEmpGender">Pohlaví (Muž / Žena)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Telefon</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Stav</sys:String>
@@ -1071,6 +1076,7 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="HistFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="HistFieldLastName">Příjmení</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="HistFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Číslo pasu</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Platnost pasu</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Číslo víza</sys:String>

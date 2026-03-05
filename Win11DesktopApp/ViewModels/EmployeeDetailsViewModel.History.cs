@@ -147,6 +147,9 @@ namespace Win11DesktopApp.ViewModels
                     employeeFolder: _employeeFolder);
             }
 
+            Check(Res("HistFieldGender"),
+                oldData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"),
+                newData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
             Check(Res("HistFieldPassportNum"), oldData.PassportNumber, newData.PassportNumber);
             Check(Res("HistFieldPassportExp"), oldData.PassportExpiry, newData.PassportExpiry);
             Check(Res("HistFieldPassportCity"), oldData.PassportCity, newData.PassportCity);

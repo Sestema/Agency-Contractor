@@ -218,6 +218,7 @@
     <sys:String x:Key="DetFieldFirstName">Имя</sys:String>
     <sys:String x:Key="DetFieldLastName">Фамилия</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="DetFieldGender">Пол</sys:String>
     <sys:String x:Key="DetSecPassport">Паспортные данные</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Номер паспорта</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Город рождения</sys:String>
@@ -334,6 +335,9 @@
     <sys:String x:Key="WizFirstName">Имя</sys:String>
     <sys:String x:Key="WizLastName">Фамилия</sys:String>
     <sys:String x:Key="WizBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="WizGender">Пол</sys:String>
+    <sys:String x:Key="GenderMale">Мужчина</sys:String>
+    <sys:String x:Key="GenderFemale">Женщина</sys:String>
     <sys:String x:Key="WizPassportNum">Номер паспорта или ID</sys:String>
     <sys:String x:Key="WizBirthCity">Город рождения</sys:String>
     <sys:String x:Key="WizBirthCountry">Страна рождения</sys:String>
@@ -712,6 +716,7 @@
     <sys:String x:Key="TagDescEmpLastName">Фамилия сотрудника</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Полное имя сотрудника</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="TagDescEmpGender">Пол (Мужчина / Женщина)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Статус</sys:String>
@@ -1071,6 +1076,7 @@
     <sys:String x:Key="HistFieldFirstName">Имя</sys:String>
     <sys:String x:Key="HistFieldLastName">Фамилия</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="HistFieldGender">Пол</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорта</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Срок паспорта</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Номер визы</sys:String>
