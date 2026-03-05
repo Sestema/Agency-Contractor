@@ -155,6 +155,7 @@
     <sys:String x:Key="EmpBadgePassport">Passport</sys:String>
     <sys:String x:Key="EmpBadgeVisa">Visa</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Insurance</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermit">Permit</sys:String>
     <sys:String x:Key="EmpBtnOpen">Open</sys:String>
     <sys:String x:Key="EmpBtnEdit">Edit</sys:String>
     <sys:String x:Key="EmpBtnFolder">Folder</sys:String>
@@ -581,6 +582,16 @@
     <sys:String x:Key="EuDocTypePassport">EU Passport</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID Card</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Work Permit</sys:String>
+    <sys:String x:Key="ChkDocOptionsTitle">Additional documents:</sys:String>
+    <sys:String x:Key="ChkPassportPage2">Passport (page 2)</sys:String>
+    <sys:String x:Key="ChkVisa">Visa</sys:String>
+    <sys:String x:Key="ChkInsurance">Insurance</sys:String>
+    <sys:String x:Key="ChkWorkPermit">Work Permit</sys:String>
+    <sys:String x:Key="ChkVisaPage2">ID Card (page 2)</sys:String>
+    <sys:String x:Key="BtnUpload">Upload</sys:String>
+    <sys:String x:Key="VisaDocTypeLabel">Document type:</sys:String>
+    <sys:String x:Key="VisaDocTypeSticker">Visa</sys:String>
+    <sys:String x:Key="VisaDocTypeIdCard">ID Card</sys:String>
     <sys:String x:Key="DragDropInvalidFormat">Unsupported file format. Allowed: JPG, PNG, HEIC, PDF.</sys:String>
     <sys:String x:Key="GlobalSearchPlaceholder">Search employees, templates, archive...</sys:String>
     <sys:String x:Key="GlobalSearchNoResults">No results found</sys:String>
@@ -965,11 +976,13 @@ The folder on disk will NOT be deleted.</sys:String>
     <sys:String x:Key="CropPhoto">Photo</sys:String>
     <sys:String x:Key="CropPassport2">Passport 2</sys:String>
     <sys:String x:Key="CropPermit">Permit</sys:String>
+    <sys:String x:Key="CropVisaPage2">ID Card 2</sys:String>
     <sys:String x:Key="CarouselPassport">Passport</sys:String>
     <sys:String x:Key="CarouselPassport2">Passport 2</sys:String>
     <sys:String x:Key="CarouselVisa">Visa</sys:String>
     <sys:String x:Key="CarouselInsurance">Insurance</sys:String>
     <sys:String x:Key="CarouselPermit">Permit</sys:String>
+    <sys:String x:Key="CarouselVisaPage2">ID Card 2</sys:String>
 
     <!-- History actions -->
     <sys:String x:Key="HistoryActionCreation">Creation</sys:String>

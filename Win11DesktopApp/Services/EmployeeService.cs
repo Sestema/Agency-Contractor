@@ -163,7 +163,8 @@ namespace Win11DesktopApp.Services
         }
 
         public string SaveEmployee(string firmName, EmployeeData data, EmployeeDocumentTemp passport, EmployeeDocumentTemp visa, EmployeeDocumentTemp insurance, string photoPath,
-            EmployeeDocumentTemp? idCardFront = null, EmployeeDocumentTemp? idCardBack = null, EmployeeDocumentTemp? workPermit = null, EmployeeDocumentTemp? passportPage2 = null)
+            EmployeeDocumentTemp? idCardFront = null, EmployeeDocumentTemp? idCardBack = null, EmployeeDocumentTemp? workPermit = null, EmployeeDocumentTemp? passportPage2 = null,
+            EmployeeDocumentTemp? visaPage2 = null)
         {
             var employeesFolder = _folderService.GetEmployeesFolder(firmName);
             if (string.IsNullOrEmpty(employeesFolder))
@@ -177,7 +178,13 @@ namespace Win11DesktopApp.Services
             Directory.CreateDirectory(employeeFolder);
 
             data.Files.Passport = SaveDocument(passport, employeeFolder, $"{data.FirstName} {data.LastName} - Pass");
-            data.Files.Visa = SaveDocument(visa, employeeFolder, $"{data.FirstName} {data.LastName} - Viza");
+
+            var isIdCard = data.VisaDocType == "id_card";
+            var visaFileName = isIdCard ? $"{data.FirstName} {data.LastName} - Carta 1" : $"{data.FirstName} {data.LastName} - Viza";
+            data.Files.Visa = SaveDocument(visa, employeeFolder, visaFileName);
+
+            if (isIdCard)
+                data.Files.VisaPage2 = SaveDocument(visaPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Carta 2");
 
             var insName = string.IsNullOrWhiteSpace(data.InsuranceCompanyShort) ? "Insurance" : data.InsuranceCompanyShort;
             data.Files.Insurance = SaveDocument(insurance, employeeFolder, $"{data.FirstName} {data.LastName} - {insName}");
@@ -638,12 +645,14 @@ namespace Win11DesktopApp.Services
                 PassportSeverity = DateParsingHelper.GetSeverity(data.PassportExpiry),
                 VisaSeverity = DateParsingHelper.GetSeverity(data.VisaExpiry),
                 InsuranceSeverity = DateParsingHelper.GetSeverity(data.InsuranceExpiry),
+                WorkPermitSeverity = DateParsingHelper.GetSeverity(data.WorkPermitExpiry),
                 Status = StatusHelper.Normalize(data.Status),
                 Phone = data.Phone,
                 Email = data.Email,
                 EmployeeFolder = employeeFolder,
                 FirmName = firmName,
                 EmployeeType = data.EmployeeType ?? "visa",
+                WorkPermitName = data.WorkPermitName ?? string.Empty,
                 WorkPermitExpiry = data.WorkPermitExpiry
             };
         }

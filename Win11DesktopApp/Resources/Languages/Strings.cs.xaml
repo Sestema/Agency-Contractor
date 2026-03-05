@@ -155,6 +155,7 @@
     <sys:String x:Key="EmpBadgePassport">Pas</sys:String>
     <sys:String x:Key="EmpBadgeVisa">Vízum</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Pojištění</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermit">Povolení</sys:String>
     <sys:String x:Key="EmpBtnOpen">Otevřít</sys:String>
     <sys:String x:Key="EmpBtnEdit">Upravit</sys:String>
     <sys:String x:Key="EmpBtnFolder">Složka</sys:String>
@@ -578,6 +579,16 @@
     <sys:String x:Key="EuDocTypePassport">Pas EU</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID karta</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Pracovní povolení</sys:String>
+    <sys:String x:Key="ChkDocOptionsTitle">Další dokumenty:</sys:String>
+    <sys:String x:Key="ChkPassportPage2">Pas (strana 2)</sys:String>
+    <sys:String x:Key="ChkVisa">Vízum</sys:String>
+    <sys:String x:Key="ChkInsurance">Pojištění</sys:String>
+    <sys:String x:Key="ChkWorkPermit">Pracovní povolení</sys:String>
+    <sys:String x:Key="ChkVisaPage2">ID karta (strana 2)</sys:String>
+    <sys:String x:Key="BtnUpload">Nahrát</sys:String>
+    <sys:String x:Key="VisaDocTypeLabel">Typ dokumentu:</sys:String>
+    <sys:String x:Key="VisaDocTypeSticker">Vízum</sys:String>
+    <sys:String x:Key="VisaDocTypeIdCard">ID karta</sys:String>
     <sys:String x:Key="DragDropInvalidFormat">Nepodporovaný formát souboru. Povolené: JPG, PNG, HEIC, PDF.</sys:String>
     <sys:String x:Key="GlobalSearchPlaceholder">Hledat zaměstnance, šablony, archiv...</sys:String>
     <sys:String x:Key="GlobalSearchNoResults">Nic nenalezeno</sys:String>
@@ -962,11 +973,13 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="CropPhoto">Foto</sys:String>
     <sys:String x:Key="CropPassport2">Pas 2</sys:String>
     <sys:String x:Key="CropPermit">Povolení</sys:String>
+    <sys:String x:Key="CropVisaPage2">ID karta 2</sys:String>
     <sys:String x:Key="CarouselPassport">Pas</sys:String>
     <sys:String x:Key="CarouselPassport2">Pas 2</sys:String>
     <sys:String x:Key="CarouselVisa">Vízum</sys:String>
     <sys:String x:Key="CarouselInsurance">Pojištění</sys:String>
     <sys:String x:Key="CarouselPermit">Povolení</sys:String>
+    <sys:String x:Key="CarouselVisaPage2">ID karta 2</sys:String>
 
     <!-- History actions -->
     <sys:String x:Key="HistoryActionCreation">Vytvoření</sys:String>

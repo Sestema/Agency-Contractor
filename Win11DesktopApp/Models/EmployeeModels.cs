@@ -25,6 +25,7 @@ namespace Win11DesktopApp.EmployeeModels
     {
         public string Passport { get; set; } = string.Empty;
         public string Visa { get; set; } = string.Empty;
+        public string VisaPage2 { get; set; } = string.Empty;
         public string Insurance { get; set; } = string.Empty;
         public string Photo { get; set; } = string.Empty;
         public string PassportPage2 { get; set; } = string.Empty;
@@ -43,6 +44,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string UniqueId { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = "visa";
         public string EuDocumentType { get; set; } = "passport";
+        public string VisaDocType { get; set; } = "visa_sticker";
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string BirthDate { get; set; } = string.Empty;
@@ -108,10 +110,12 @@ namespace Win11DesktopApp.EmployeeModels
         public string PassportSeverity { get; set; } = "Ok";
         public string VisaSeverity { get; set; } = "Ok";
         public string InsuranceSeverity { get; set; } = "Ok";
+        public string WorkPermitSeverity { get; set; } = "Ok";
         public string Status { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = "visa";
+        public string WorkPermitName { get; set; } = string.Empty;
         public string WorkPermitExpiry { get; set; } = string.Empty;
         public bool IsSelected { get; set; }
     }

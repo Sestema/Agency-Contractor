@@ -155,6 +155,7 @@
     <sys:String x:Key="EmpBadgePassport">Паспорт</sys:String>
     <sys:String x:Key="EmpBadgeVisa">Виза</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Страховка</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermit">Разрешение</sys:String>
     <sys:String x:Key="EmpBtnOpen">Открыть</sys:String>
     <sys:String x:Key="EmpBtnEdit">Редактировать</sys:String>
     <sys:String x:Key="EmpBtnFolder">Папка</sys:String>
@@ -578,6 +579,16 @@
     <sys:String x:Key="EuDocTypePassport">Паспорт ЕС</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID-карта</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Разрешение на работу</sys:String>
+    <sys:String x:Key="ChkDocOptionsTitle">Дополнительные документы:</sys:String>
+    <sys:String x:Key="ChkPassportPage2">Паспорт (стр. 2)</sys:String>
+    <sys:String x:Key="ChkVisa">Виза</sys:String>
+    <sys:String x:Key="ChkInsurance">Страховка</sys:String>
+    <sys:String x:Key="ChkWorkPermit">Разрешение на работу</sys:String>
+    <sys:String x:Key="ChkVisaPage2">ID-карта (стр. 2)</sys:String>
+    <sys:String x:Key="BtnUpload">Загрузить</sys:String>
+    <sys:String x:Key="VisaDocTypeLabel">Тип документа:</sys:String>
+    <sys:String x:Key="VisaDocTypeSticker">Виза</sys:String>
+    <sys:String x:Key="VisaDocTypeIdCard">ID-карта</sys:String>
     <sys:String x:Key="DragDropInvalidFormat">Неподдерживаемый формат файла. Допустимые: JPG, PNG, HEIC, PDF.</sys:String>
     <sys:String x:Key="GlobalSearchPlaceholder">Поиск по сотрудникам, шаблонам, архиву...</sys:String>
     <sys:String x:Key="GlobalSearchNoResults">Ничего не найдено</sys:String>
@@ -962,11 +973,13 @@
     <sys:String x:Key="CropPhoto">Фото</sys:String>
     <sys:String x:Key="CropPassport2">Паспорт 2</sys:String>
     <sys:String x:Key="CropPermit">Разрешение</sys:String>
+    <sys:String x:Key="CropVisaPage2">ID-карта 2</sys:String>
     <sys:String x:Key="CarouselPassport">Паспорт</sys:String>
     <sys:String x:Key="CarouselPassport2">Паспорт 2</sys:String>
     <sys:String x:Key="CarouselVisa">Виза</sys:String>
     <sys:String x:Key="CarouselInsurance">Страховка</sys:String>
     <sys:String x:Key="CarouselPermit">Разрешение</sys:String>
+    <sys:String x:Key="CarouselVisaPage2">ID-карта 2</sys:String>
 
     <!-- History actions -->
     <sys:String x:Key="HistoryActionCreation">Создание</sys:String>

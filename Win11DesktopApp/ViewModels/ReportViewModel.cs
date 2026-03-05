@@ -404,7 +404,7 @@ namespace Win11DesktopApp.ViewModels
                                 FullName = e.FullName,
                                 FirmName = firmName,
                                 EmployeeFolder = e.EmployeeFolder,
-                                EmployeeType = GetDocTypeDisplay(e.EmployeeType),
+                                EmployeeType = !string.IsNullOrEmpty(e.WorkPermitName) ? e.WorkPermitName : GetDocTypeDisplay(e.EmployeeType),
                                 PassportExpiry = e.PassportExpiry,
                                 VisaExpiry = e.VisaExpiry,
                                 InsuranceExpiry = e.InsuranceExpiry,
@@ -645,7 +645,7 @@ namespace Win11DesktopApp.ViewModels
                             FullName = evt.EmployeeName,
                             FirmName = evt.FirmName,
                             EmployeeFolder = resolvedFolder,
-                            EmployeeType = GetDocTypeDisplay(data.EmployeeType ?? "visa"),
+                            EmployeeType = !string.IsNullOrEmpty(data.WorkPermitName) ? data.WorkPermitName : GetDocTypeDisplay(data.EmployeeType ?? "visa"),
                             PassportExpiry = data.PassportExpiry,
                             VisaExpiry = data.VisaExpiry,
                             InsuranceExpiry = data.InsuranceExpiry,
@@ -1136,10 +1136,14 @@ namespace Win11DesktopApp.ViewModels
                     return p;
                 }
 
-                void EnsureSpace(double needed)
+                bool EnsureSpace(double needed)
                 {
                     if (page == null || y + needed > (page.Height.Point - marginBottom))
+                    {
                         page = AddPage();
+                        return true;
+                    }
+                    return false;
                 }
 
                 void DrawRow(double x, double[] colWidths, string[] texts, XFont font, XBrush? bg, XBrush? fg = null, XStringFormat[]? fmts = null)
@@ -1187,18 +1191,21 @@ namespace Win11DesktopApp.ViewModels
                         XStringFormats.Center, XStringFormats.Center, XStringFormats.Center
                     };
 
-                    EnsureSpace(rowHeight * (FirmDetails.Count + 3));
-                    DrawRow(marginLeft, firmCols, new[] { DocString("ReportColFirm"), DocString("ReportColTotal"), DocString("ReportColActive"), DocString("ReportColNoPermit"), DocString("ReportColArchived") },
-                        fontHeader, headerBg, XBrushes.White, firmFmts);
+                    string[] firmHeaders = { DocString("ReportColFirm"), DocString("ReportColTotal"), DocString("ReportColActive"), DocString("ReportColNoPermit"), DocString("ReportColArchived") };
+
+                    EnsureSpace(rowHeight * 2);
+                    DrawRow(marginLeft, firmCols, firmHeaders, fontHeader, headerBg, XBrushes.White, firmFmts);
 
                     foreach (var f in FirmDetails)
                     {
-                        EnsureSpace(rowHeight);
+                        if (EnsureSpace(rowHeight))
+                            DrawRow(marginLeft, firmCols, firmHeaders, fontHeader, headerBg, XBrushes.White, firmFmts);
                         DrawRow(marginLeft, firmCols, new[] { f.FirmName, f.TotalEmployees.ToString(), f.ActiveEmployees.ToString(),
                             f.PassportOnlyCount.ToString(), f.ArchivedEmployees.ToString() }, fontCell, null, fmts: firmFmts);
                     }
 
-                    EnsureSpace(rowHeight);
+                    if (EnsureSpace(rowHeight))
+                        DrawRow(marginLeft, firmCols, firmHeaders, fontHeader, headerBg, XBrushes.White, firmFmts);
                     DrawRow(marginLeft, firmCols, new[] { DocString("ReportTotal"), SummaryTotal.ToString(), SummaryActive.ToString(),
                         SummaryPassportOnly.ToString(), SummaryArchived.ToString() }, fontHeader, subHeaderBg, fmts: firmFmts);
                     y += 12;
@@ -1209,17 +1216,20 @@ namespace Win11DesktopApp.ViewModels
                     double contentW = pageW - marginLeft * 2;
                     double[] agCols = { contentW * 0.4, contentW * 0.2, contentW * 0.2, contentW * 0.2 };
 
+                    string[] agHeaders = { DocString("ReportColAgencyName"), DocString("ReportColFirmCount"), DocString("ReportColTotal"), DocString("ReportColActive") };
+                    var agHeaderBg = new XSolidBrush(XColor.FromArgb(123, 31, 162));
+
                     EnsureSpace(rowHeight * 2);
                     gfx!.DrawString(DocString("ReportPdfAgencySection"), fontFirmTitle, XBrushes.Black,
                         new XRect(marginLeft, y, 400, 18), XStringFormats.CenterLeft);
                     y += 22;
 
-                    DrawRow(marginLeft, agCols, new[] { DocString("ReportColAgencyName"), DocString("ReportColFirmCount"), DocString("ReportColTotal"), DocString("ReportColActive") },
-                        fontHeader, new XSolidBrush(XColor.FromArgb(123, 31, 162)), XBrushes.White);
+                    DrawRow(marginLeft, agCols, agHeaders, fontHeader, agHeaderBg, XBrushes.White);
 
                     foreach (var a in AgencyDetails)
                     {
-                        EnsureSpace(rowHeight);
+                        if (EnsureSpace(rowHeight))
+                            DrawRow(marginLeft, agCols, agHeaders, fontHeader, agHeaderBg, XBrushes.White);
                         DrawRow(marginLeft, agCols, new[] { a.AgencyName, a.FirmCount.ToString(),
                             a.TotalEmployees.ToString(), a.ActiveEmployees.ToString() }, fontCell, null);
                     }
@@ -1246,18 +1256,24 @@ namespace Win11DesktopApp.ViewModels
 
                     foreach (var group in groups)
                     {
+                        var groupTitle = string.Format(DocString("ReportEmpCountFmt"), group.Key, group.Count());
+
+                        void DrawGroupHeader()
+                        {
+                            gfx!.DrawRectangle(accentBrush, marginLeft, y, contentW, rowHeight + 2);
+                            gfx.DrawString(groupTitle, fontFirmTitle, XBrushes.White,
+                                new XRect(marginLeft + 6, y, contentW - 12, rowHeight + 2), XStringFormats.Center);
+                            y += rowHeight + 2;
+                            DrawRow(marginLeft, empCols, empHeaders, fontHeader, subHeaderBg, fmts: empFmts);
+                        }
+
                         EnsureSpace(rowHeight * 3);
-
-                        gfx!.DrawRectangle(accentBrush, marginLeft, y, contentW, rowHeight + 2);
-                        gfx.DrawString(string.Format(DocString("ReportEmpCountFmt"), group.Key, group.Count()), fontFirmTitle, XBrushes.White,
-                            new XRect(marginLeft + 6, y, contentW - 12, rowHeight + 2), XStringFormats.Center);
-                        y += rowHeight + 2;
-
-                        DrawRow(marginLeft, empCols, empHeaders, fontHeader, subHeaderBg, fmts: empFmts);
+                        DrawGroupHeader();
 
                         foreach (var emp in group)
                         {
-                            EnsureSpace(rowHeight);
+                            if (EnsureSpace(rowHeight))
+                                DrawGroupHeader();
 
                             var usedFont = emp.IsArchived ? fontCellItalic : fontCell;
                             XBrush baseFg;
@@ -1300,17 +1316,20 @@ namespace Win11DesktopApp.ViewModels
                     double contentW = pageW - marginLeft * 2;
                     double[] archCols = { contentW * 0.3, contentW * 0.25, contentW * 0.15, contentW * 0.15, contentW * 0.15 };
 
+                    string[] archHeaders = { DocString("ReportColEmployee"), DocString("ReportColFirm"), DocString("ReportColAction"), DocString("ReportColDate"), DocString("ReportColTimestamp") };
+                    var archHeaderBg = new XSolidBrush(XColor.FromArgb(123, 31, 162));
+
                     EnsureSpace(rowHeight * 3);
                     gfx!.DrawString(DocString("ReportSheetArchive"), fontFirmTitle, XBrushes.Black,
                         new XRect(marginLeft, y, 400, 18), XStringFormats.CenterLeft);
                     y += 22;
 
-                    DrawRow(marginLeft, archCols, new[] { DocString("ReportColEmployee"), DocString("ReportColFirm"), DocString("ReportColAction"), DocString("ReportColDate"), DocString("ReportColTimestamp") },
-                        fontHeader, new XSolidBrush(XColor.FromArgb(123, 31, 162)), XBrushes.White);
+                    DrawRow(marginLeft, archCols, archHeaders, fontHeader, archHeaderBg, XBrushes.White);
 
                     foreach (var entry in ArchiveHistory)
                     {
-                        EnsureSpace(rowHeight);
+                        if (EnsureSpace(rowHeight))
+                            DrawRow(marginLeft, archCols, archHeaders, fontHeader, archHeaderBg, XBrushes.White);
                         var action = entry.Action == "Archived" ? DocString("ReportActionArchived") : DocString("ReportActionRestored");
                         var bg = entry.Action == "Archived"
                             ? new XSolidBrush(XColor.FromArgb(255, 228, 225))

@@ -90,37 +90,98 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _contractType, value);
         }
 
-        // ===== Employee Type =====
-        private string _employeeType = "visa";
-        public string EmployeeType
+        // ===== Document checkboxes =====
+        private bool _hasVisa = true;
+        public bool HasVisa
         {
-            get => _employeeType;
+            get => _hasVisa;
+            set { if (SetProperty(ref _hasVisa, value)) OnDocOptionsChanged(); }
+        }
+
+        private bool _hasInsurance = true;
+        public bool HasInsurance
+        {
+            get => _hasInsurance;
+            set { if (SetProperty(ref _hasInsurance, value)) OnDocOptionsChanged(); }
+        }
+
+        private bool _hasWorkPermit;
+        public bool HasWorkPermit
+        {
+            get => _hasWorkPermit;
+            set { if (SetProperty(ref _hasWorkPermit, value)) OnDocOptionsChanged(); }
+        }
+
+        private bool _hasPassportPage2;
+        public bool HasPassportPage2
+        {
+            get => _hasPassportPage2;
+            set { if (SetProperty(ref _hasPassportPage2, value)) OnDocOptionsChanged(); }
+        }
+
+        private bool _hasVisaPage2;
+        public bool HasVisaPage2
+        {
+            get => _hasVisaPage2;
+            set { if (SetProperty(ref _hasVisaPage2, value)) OnDocOptionsChanged(); }
+        }
+
+        private string _visaDocType = "visa_sticker";
+        public string VisaDocType
+        {
+            get => _visaDocType;
             set
             {
-                if (SetProperty(ref _employeeType, value))
+                if (SetProperty(ref _visaDocType, value))
                 {
-                    Data.EmployeeType = value;
-                    UpdateCropTargets();
-                    OnPropertyChanged(nameof(IsVisaType));
-                    OnPropertyChanged(nameof(IsEuCitizenType));
-                    OnPropertyChanged(nameof(IsWorkPermitType));
-                    OnPropertyChanged(nameof(IsPassportOnlyType));
-                    OnPropertyChanged(nameof(ShowVisaUpload));
-                    OnPropertyChanged(nameof(ShowWorkPermitUpload));
-                    OnPropertyChanged(nameof(ShowPassportUpload));
-                    OnPropertyChanged(nameof(ShowPassportPage2Upload));
-                    OnPropertyChanged(nameof(ShowInsuranceUpload));
-                    OnPropertyChanged(nameof(ActiveSteps));
-                    OnPropertyChanged(nameof(TotalSteps));
-                    OnPropertyChanged(nameof(PersonalDocPreviewPath));
+                    Data.VisaDocType = value;
+                    OnPropertyChanged(nameof(IsVisaIdCard));
+                    OnPropertyChanged(nameof(ShowVisaPage2Upload));
+                    OnDocOptionsChanged();
                 }
             }
         }
 
-        public bool IsVisaType => _employeeType == "visa";
-        public bool IsEuCitizenType => _employeeType == "eu_citizen";
-        public bool IsWorkPermitType => _employeeType == "work_permit";
-        public bool IsPassportOnlyType => _employeeType == "passport_only";
+        public bool IsVisaIdCard => _visaDocType == "id_card";
+        public bool ShowVisaPage2Upload => _hasVisa && _visaDocType == "id_card" && _hasVisaPage2;
+        public bool ShowVisaDocTypeSelector => _hasVisa;
+        public bool CanToggleVisaPage2 => _hasVisa && _visaDocType == "id_card";
+
+        private void OnDocOptionsChanged()
+        {
+            Data.EmployeeType = EmployeeType;
+            UpdateCropTargets();
+            OnPropertyChanged(nameof(EmployeeType));
+            OnPropertyChanged(nameof(IsWorkPermitType));
+            OnPropertyChanged(nameof(IsPassportOnlyType));
+            OnPropertyChanged(nameof(ShowVisaUpload));
+            OnPropertyChanged(nameof(ShowWorkPermitUpload));
+            OnPropertyChanged(nameof(ShowPassportUpload));
+            OnPropertyChanged(nameof(ShowPassportPage2Upload));
+            OnPropertyChanged(nameof(ShowInsuranceUpload));
+            OnPropertyChanged(nameof(ShowEuDocTypeSelector));
+            OnPropertyChanged(nameof(ShowVisaDocTypeSelector));
+            OnPropertyChanged(nameof(ShowVisaPage2Upload));
+            OnPropertyChanged(nameof(CanToggleVisaPage2));
+            OnPropertyChanged(nameof(IsVisaIdCard));
+            OnPropertyChanged(nameof(ActiveSteps));
+            OnPropertyChanged(nameof(TotalSteps));
+            OnPropertyChanged(nameof(PersonalDocPreviewPath));
+        }
+
+        public string EmployeeType
+        {
+            get
+            {
+                if (_hasVisa && _hasWorkPermit) return "work_permit";
+                if (_hasVisa) return "visa";
+                if (_hasInsurance) return "eu_citizen";
+                return "passport_only";
+            }
+        }
+
+        public bool IsWorkPermitType => EmployeeType == "work_permit";
+        public bool IsPassportOnlyType => EmployeeType == "passport_only";
 
         private string _euDocumentType = "passport";
         public string EuDocumentType
@@ -144,28 +205,38 @@ namespace Win11DesktopApp.ViewModels
 
         public bool IsEuPassport => _euDocumentType == "passport";
         public bool IsEuIdCard => _euDocumentType == "id_card";
+        public bool ShowEuDocTypeSelector => !_hasVisa;
 
         public bool ShowPassportUpload => true;
-        public bool ShowPassportPage2Upload => _employeeType == "eu_citizen" && _euDocumentType == "passport";
-        public bool ShowVisaUpload => _employeeType == "visa" || _employeeType == "work_permit";
-        public bool ShowWorkPermitUpload => _employeeType == "work_permit";
-        public bool ShowInsuranceUpload => _employeeType != "passport_only";
+        public bool ShowPassportPage2Upload => _hasPassportPage2;
+        public bool ShowVisaUpload => _hasVisa;
+        public bool ShowWorkPermitUpload => _hasWorkPermit;
+        public bool ShowInsuranceUpload => _hasInsurance;
 
         public string PersonalDocPreviewPath => PassportPreviewPath;
 
-        // ===== Active steps based on employee type =====
+        // ===== Active steps based on document checkboxes =====
         public List<int> ActiveSteps
         {
             get
             {
-                return _employeeType switch
-                {
-                    "eu_citizen" when _euDocumentType == "id_card" => new List<int> { 0, 1, 2, 3, 5, 6 },
-                    "eu_citizen" => new List<int> { 0, 1, 2, 8, 3, 5, 6 },
-                    "work_permit" => new List<int> { 0, 1, 2, 4, 3, 7, 5, 6 },
-                    "passport_only" => new List<int> { 0, 1, 2, 6 },
-                    _ => new List<int> { 0, 1, 2, 4, 3, 5, 6 }
-                };
+                var steps = new List<int> { 0, 1, 2 };
+
+                if (_hasPassportPage2)
+                    steps.Add(8);
+
+                if (_hasVisa)
+                    steps.Add(4);
+
+                if (_hasInsurance)
+                    steps.Add(3);
+
+                if (_hasWorkPermit)
+                    steps.Add(7);
+
+                steps.Add(5);
+                steps.Add(6);
+                return steps;
             }
         }
 
@@ -176,6 +247,7 @@ namespace Win11DesktopApp.ViewModels
         public EmployeeModels.EmployeeDocumentTemp VisaDoc { get; private set; } = new EmployeeModels.EmployeeDocumentTemp();
         public EmployeeModels.EmployeeDocumentTemp InsuranceDoc { get; private set; } = new EmployeeModels.EmployeeDocumentTemp();
         public EmployeeModels.EmployeeDocumentTemp PassportPage2Doc { get; private set; } = new EmployeeModels.EmployeeDocumentTemp();
+        public EmployeeModels.EmployeeDocumentTemp VisaPage2Doc { get; private set; } = new EmployeeModels.EmployeeDocumentTemp();
         public EmployeeModels.EmployeeDocumentTemp WorkPermitDoc { get; private set; } = new EmployeeModels.EmployeeDocumentTemp();
 
         private string _passportPreviewPath = string.Empty;
@@ -208,6 +280,13 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _passportPage2PreviewPath;
             set => SetProperty(ref _passportPage2PreviewPath, value);
+        }
+
+        private string _visaPage2PreviewPath = string.Empty;
+        public string VisaPage2PreviewPath
+        {
+            get => _visaPage2PreviewPath;
+            set => SetProperty(ref _visaPage2PreviewPath, value);
         }
 
         private string _workPermitPreviewPath = string.Empty;
@@ -260,6 +339,8 @@ namespace Win11DesktopApp.ViewModels
                 CarouselItems.Add(new CarouselDocItem { Key = "passport2", Label = Res("CarouselPassport2"), ImagePath = PassportPage2PreviewPath });
             if (!string.IsNullOrEmpty(VisaPreviewPath))
                 CarouselItems.Add(new CarouselDocItem { Key = "visa", Label = Res("CarouselVisa"), ImagePath = VisaPreviewPath });
+            if (!string.IsNullOrEmpty(VisaPage2PreviewPath))
+                CarouselItems.Add(new CarouselDocItem { Key = "visa2", Label = Res("CarouselVisaPage2"), ImagePath = VisaPage2PreviewPath });
             if (!string.IsNullOrEmpty(InsurancePreviewPath))
                 CarouselItems.Add(new CarouselDocItem { Key = "insurance", Label = Res("CarouselInsurance"), ImagePath = InsurancePreviewPath });
             if (!string.IsNullOrEmpty(WorkPermitPreviewPath))
@@ -354,6 +435,7 @@ namespace Win11DesktopApp.ViewModels
             get
             {
                 if (_selectedCropTarget == Res("CropVisa")) return VisaPreviewPath;
+                if (_selectedCropTarget == Res("CropVisaPage2")) return VisaPage2PreviewPath;
                 if (_selectedCropTarget == Res("CropInsurance")) return InsurancePreviewPath;
                 if (_selectedCropTarget == Res("CropPassport2")) return PassportPage2PreviewPath;
                 if (_selectedCropTarget == Res("CropPhoto")) return PassportPreviewPath;
@@ -387,12 +469,13 @@ namespace Win11DesktopApp.ViewModels
         public ICommand UploadVisaCommand { get; }
         public ICommand UploadInsuranceCommand { get; }
         public ICommand UploadPassportPage2Command { get; }
+        public ICommand UploadVisaPage2Command { get; }
         public ICommand UploadWorkPermitCommand { get; }
+        public ICommand SetVisaDocTypeCommand { get; }
         public ICommand ApplyCropCommand { get; }
         public ICommand RotateLeftCommand { get; }
         public ICommand RotateRightCommand { get; }
         public ICommand EnhanceDocumentCommand { get; }
-        public ICommand SetEmployeeTypeCommand { get; }
         public ICommand SetEuDocTypeCommand { get; }
         public ICommand AIScanDocumentCommand { get; }
 
@@ -428,12 +511,13 @@ namespace Win11DesktopApp.ViewModels
             UploadVisaCommand = new RelayCommand(o => UploadDocument("visa"));
             UploadInsuranceCommand = new RelayCommand(o => UploadDocument("insurance"));
             UploadPassportPage2Command = new RelayCommand(o => UploadDocument("passport_page2"));
+            UploadVisaPage2Command = new RelayCommand(o => UploadDocument("visa_page2"));
             UploadWorkPermitCommand = new RelayCommand(o => UploadDocument("work_permit"));
+            SetVisaDocTypeCommand = new RelayCommand(o => VisaDocType = o?.ToString() ?? "visa_sticker");
             ApplyCropCommand = new RelayCommand(o => ApplyCrop());
             RotateLeftCommand = new RelayCommand(o => RotateCurrentImage(-90));
             RotateRightCommand = new RelayCommand(o => RotateCurrentImage(90));
             EnhanceDocumentCommand = new RelayCommand(o => EnhanceCurrentDocument(), o => !IsCropPhotoMode);
-            SetEmployeeTypeCommand = new RelayCommand(o => EmployeeType = o?.ToString() ?? "visa");
             SetEuDocTypeCommand = new RelayCommand(o => EuDocumentType = o?.ToString() ?? "passport");
             AIScanDocumentCommand = new RelayCommand(async o => await AIScanCurrentStepAsync(),
                 o => !_isAIScanning && App.GeminiApiService?.IsConfigured == true);
@@ -489,6 +573,7 @@ namespace Win11DesktopApp.ViewModels
 
             if (ShowPassportPage2Upload) CropTargets.Add(Res("CropPassport2"));
             if (ShowVisaUpload) CropTargets.Add(Res("CropVisa"));
+            if (ShowVisaPage2Upload) CropTargets.Add(Res("CropVisaPage2"));
             CropTargets.Add(Res("CropInsurance"));
             if (ShowWorkPermitUpload) CropTargets.Add(Res("CropPermit"));
             CropTargets.Add(Res("CropPhoto"));
@@ -545,6 +630,11 @@ namespace Win11DesktopApp.ViewModels
                         PassportPage2Doc = temp;
                         PassportPage2PreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
                         OnPropertyChanged(nameof(PassportPage2Doc));
+                        break;
+                    case "visa_page2":
+                        VisaPage2Doc = temp;
+                        VisaPage2PreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
+                        OnPropertyChanged(nameof(VisaPage2Doc));
                         break;
                     case "work_permit":
                         WorkPermitDoc = temp;
@@ -610,6 +700,11 @@ namespace Win11DesktopApp.ViewModels
                     PassportPage2PreviewPath = rotatedPath;
                     if (PassportPage2Doc != null) PassportPage2Doc.ImagePath = rotatedPath;
                 }
+                else if (_selectedCropTarget == Res("CropVisaPage2"))
+                {
+                    VisaPage2PreviewPath = rotatedPath;
+                    if (VisaPage2Doc != null) VisaPage2Doc.ImagePath = rotatedPath;
+                }
                 else
                 {
                     PassportPreviewPath = rotatedPath;
@@ -657,6 +752,7 @@ namespace Win11DesktopApp.ViewModels
         {
             string currentPath;
             if (_selectedCropTarget == Res("CropVisa")) currentPath = VisaPreviewPath;
+            else if (_selectedCropTarget == Res("CropVisaPage2")) currentPath = VisaPage2PreviewPath;
             else if (_selectedCropTarget == Res("CropInsurance")) currentPath = InsurancePreviewPath;
             else if (_selectedCropTarget == Res("CropPassport2")) currentPath = PassportPage2PreviewPath;
             else if (_selectedCropTarget == Res("CropPermit")) currentPath = WorkPermitPreviewPath;
@@ -716,6 +812,11 @@ namespace Win11DesktopApp.ViewModels
                     PassportPage2PreviewPath = newPath;
                     if (PassportPage2Doc != null) PassportPage2Doc.ImagePath = newPath;
                 }
+                else if (_selectedCropTarget == Res("CropVisaPage2"))
+                {
+                    VisaPage2PreviewPath = newPath;
+                    if (VisaPage2Doc != null) VisaPage2Doc.ImagePath = newPath;
+                }
                 else
                 {
                     PassportPreviewPath = newPath;
@@ -751,7 +852,7 @@ namespace Win11DesktopApp.ViewModels
                 Data.ContractType = ContractType;
 
                 var folder = _employeeService.SaveEmployee(_company.Name, Data, PassportDoc, VisaDoc, InsuranceDoc, CroppedPhotoPath,
-                    null, null, WorkPermitDoc, PassportPage2Doc);
+                    null, null, WorkPermitDoc, PassportPage2Doc, VisaPage2Doc);
                 if (string.IsNullOrEmpty(folder))
                 {
                     ToastService.Instance.Error(Res("MsgSaveEmployeeFail"));
@@ -832,7 +933,7 @@ namespace Win11DesktopApp.ViewModels
             var imagePath = selectedDoc.ImagePath;
             var docKey = selectedDoc.Key;
 
-            if (docKey == "passport" && _employeeType == "eu_citizen" && _euDocumentType == "id_card")
+            if (docKey == "passport" && EmployeeType == "eu_citizen" && _euDocumentType == "id_card")
                 docKey = "id_card";
 
             if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))

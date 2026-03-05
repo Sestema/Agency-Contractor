@@ -50,6 +50,7 @@ namespace Win11DesktopApp.Views
         private void PassportDrop(object s, DragEventArgs e) => OnDocDrop(s, e, "passport");
         private void PassportPage2Drop(object s, DragEventArgs e) => OnDocDrop(s, e, "passport_page2");
         private void VisaDrop(object s, DragEventArgs e) => OnDocDrop(s, e, "visa");
+        private void VisaPage2Drop(object s, DragEventArgs e) => OnDocDrop(s, e, "visa_page2");
         private void InsuranceDrop(object s, DragEventArgs e) => OnDocDrop(s, e, "insurance");
         private void WorkPermitDrop(object s, DragEventArgs e) => OnDocDrop(s, e, "work_permit");
 
