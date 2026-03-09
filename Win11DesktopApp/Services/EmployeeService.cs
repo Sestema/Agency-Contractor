@@ -16,6 +16,13 @@ using Win11DesktopApp.EmployeeModels;
 
 namespace Win11DesktopApp.Services
 {
+    public sealed class ArchiveEmployeeResult
+    {
+        public string ArchiveFolder { get; init; } = string.Empty;
+        public bool SourceCleanupDeferred { get; init; }
+        public bool Success => !string.IsNullOrEmpty(ArchiveFolder);
+    }
+
     public class EmployeeService
     {
         private readonly AppSettingsService _appSettingsService;
@@ -630,6 +637,7 @@ namespace Win11DesktopApp.Services
                 FullName = $"{data.FirstName} {data.LastName}",
                 PositionTitle = data.PositionTag,
                 StartDate = data.StartDate,
+                EndDate = data.EndDate,
                 ContractType = data.ContractType,
                 PhotoPath = File.Exists(photoPath) ? photoPath : string.Empty,
                 HasPhoto = File.Exists(photoPath),
@@ -936,20 +944,17 @@ namespace Win11DesktopApp.Services
                     return destFolder;
                 }
 
-                TryDeleteDirectory(archiveEmployeeFolder);
+                TryCleanupDeferredDirectory(archiveEmployeeFolder);
                 if (Directory.Exists(archiveEmployeeFolder))
                 {
                     LoggingService.LogWarning("RestoreFromArchive",
                         $"Archive folder still exists after restore, scheduling cleanup: {archiveEmployeeFolder}");
+                    await PendingCleanupService.EnqueueAsync(archiveEmployeeFolder, "restore-archive-folder");
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(5000);
-                        TryDeleteDirectory(archiveEmployeeFolder);
-                        if (Directory.Exists(archiveEmployeeFolder))
-                        {
-                            await Task.Delay(10000);
-                            TryDeleteDirectory(archiveEmployeeFolder);
-                        }
+                        await Task.Delay(15000);
+                        if (TryCleanupDeferredDirectory(archiveEmployeeFolder))
+                            await PendingCleanupService.RemoveAsync(archiveEmployeeFolder);
                     });
                 }
 
@@ -973,12 +978,12 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        public async Task<string> ArchiveEmployee(string employeeFolder, string firmName, string endDate)
+        public async Task<ArchiveEmployeeResult> ArchiveEmployee(string employeeFolder, string firmName, string endDate)
         {
             try
             {
                 var archiveFolder = _folderService.GetArchiveFolder();
-                if (string.IsNullOrEmpty(archiveFolder)) return string.Empty;
+                if (string.IsNullOrEmpty(archiveFolder)) return new ArchiveEmployeeResult();
                 Directory.CreateDirectory(archiveFolder);
 
                 var jsonPath = Path.Combine(employeeFolder, "employee.json");
@@ -1039,7 +1044,7 @@ namespace Win11DesktopApp.Services
                         File.WriteAllText(rollbackTmp, originalJson, System.Text.Encoding.UTF8);
                         File.Move(rollbackTmp, jsonPath, true);
                     }
-                    return string.Empty;
+                    return new ArchiveEmployeeResult();
                 }
 
                 var verifyJson = File.ReadAllText(archivedJsonPath, System.Text.Encoding.UTF8);
@@ -1055,23 +1060,20 @@ namespace Win11DesktopApp.Services
                         File.Move(rollbackTmp2, jsonPath, true);
                     }
                     TryDeleteDirectory(destFolder);
-                    return string.Empty;
+                    return new ArchiveEmployeeResult();
                 }
 
-                TryDeleteDirectory(employeeFolder);
-                if (Directory.Exists(employeeFolder))
+                var sourceCleanupDeferred = !CleanupArchivedSourceFolder(employeeFolder);
+                if (sourceCleanupDeferred)
                 {
                     LoggingService.LogWarning("ArchiveEmployee",
                         $"Employee folder still exists after archive, scheduling cleanup: {employeeFolder}");
+                    await PendingCleanupService.EnqueueAsync(employeeFolder, "archive-source-folder");
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(5000);
-                        TryDeleteDirectory(employeeFolder);
-                        if (Directory.Exists(employeeFolder))
-                        {
-                            await Task.Delay(10000);
-                            TryDeleteDirectory(employeeFolder);
-                        }
+                        await Task.Delay(15000);
+                        if (TryCleanupDeferredDirectory(employeeFolder))
+                            await PendingCleanupService.RemoveAsync(employeeFolder);
                     });
                 }
 
@@ -1085,13 +1087,17 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived: {employeeName} from {firmName}");
-                return destFolder;
+                return new ArchiveEmployeeResult
+                {
+                    ArchiveFolder = destFolder,
+                    SourceCleanupDeferred = sourceCleanupDeferred
+                };
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"ArchiveEmployee error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.ArchiveEmployee", ex);
-                return string.Empty;
+                return new ArchiveEmployeeResult();
             }
         }
 
@@ -1257,20 +1263,20 @@ namespace Win11DesktopApp.Services
             if (TryBulkDelete(dir)) return;
 
             TryDeleteFilesIndividually(dir);
+            TryRemoveEmptyRoot(dir);
 
             if (Directory.Exists(dir))
             {
-                bool isOneDrive = dir.IndexOf("OneDrive", StringComparison.OrdinalIgnoreCase) >= 0;
-                if (isOneDrive)
-                {
-                    LoggingService.LogWarning("TryDeleteDirectory",
-                        $"OneDrive is blocking deletion of '{dir}'. The folder may be removed after sync completes.");
-                }
+                var message = IsDirectoryEmpty(dir)
+                    ? $"Empty folder cleanup deferred: {dir}"
+                    : $"Directory cleanup incomplete: {dir}";
+                LoggingService.LogWarning("TryDeleteDirectory", message);
             }
         }
 
         private static bool TryBulkDelete(string dir)
         {
+            Exception? lastError = null;
             for (int attempt = 0; attempt < 5; attempt++)
             {
                 try
@@ -1279,18 +1285,20 @@ namespace Win11DesktopApp.Services
                     foreach (var file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
                     {
                         File.SetAttributes(file, FileAttributes.Normal);
-                        try { using var _ = File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None); }
-                        catch (Exception ex) { LoggingService.LogWarning("EmployeeService.TryBulkDelete", $"File lock check failed '{Path.GetFileName(file)}': {ex.Message}"); }
                     }
                     Directory.Delete(dir, true);
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogWarning("EmployeeService.TryBulkDelete", $"Attempt {attempt + 1} failed: {ex.Message}");
+                    lastError = ex;
                     Thread.Sleep(500 * (attempt + 1));
                 }
             }
+
+            if (Directory.Exists(dir) && lastError != null)
+                LoggingService.LogWarning("EmployeeService.TryBulkDelete", $"Bulk delete deferred for '{dir}': {lastError.Message}");
+
             return false;
         }
 
@@ -1313,7 +1321,6 @@ namespace Win11DesktopApp.Services
 
                 Thread.Sleep(200);
                 DeleteEmptyDirectories(dir);
-                TryRemoveEmptyRoot(dir);
             }
             catch (Exception ex)
             {
@@ -1321,22 +1328,28 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private static void TryRemoveEmptyRoot(string dir)
+        private static bool TryRemoveEmptyRoot(string dir)
         {
             for (int i = 0; i < 3; i++)
             {
-                if (!Directory.Exists(dir)) return;
+                if (!Directory.Exists(dir)) return true;
                 try
                 {
-                    if (Directory.GetFiles(dir, "*", SearchOption.AllDirectories).Length == 0)
+                    if (IsDirectoryEmpty(dir))
                     {
-                        Directory.Delete(dir, true);
-                        return;
+                        Directory.Delete(dir, false);
+                        return !Directory.Exists(dir);
                     }
+                    return false;
                 }
-                catch (Exception ex) { LoggingService.LogWarning("EmployeeService.TryRemoveEmptyRoot", ex.Message); }
-                Thread.Sleep(300);
+                catch (Exception ex)
+                {
+                    if (i == 2)
+                        LoggingService.LogWarning("EmployeeService.TryRemoveEmptyRoot", $"Cannot remove empty root '{dir}': {ex.Message}");
+                }
+                Thread.Sleep(400);
             }
+            return !Directory.Exists(dir);
         }
 
         private static void DeleteEmptyDirectories(string dir)
@@ -1359,6 +1372,77 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogWarning("TryDeleteDirectory.EmptyDir", $"Cannot delete {dir}: {ex.Message}");
             }
+        }
+
+        private static bool IsDirectoryEmpty(string dir)
+        {
+            try
+            {
+                return Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool TryCleanupDeferredDirectory(string dir)
+        {
+            if (!Directory.Exists(dir)) return true;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            Thread.Sleep(300);
+
+            TryDeleteFilesIndividually(dir);
+            DeleteEmptyDirectories(dir);
+
+            if (TryRemoveEmptyRoot(dir)) return true;
+
+            if (TryBulkDelete(dir)) return true;
+
+            return TryForceDeleteViaCmd(dir);
+        }
+
+        private static bool TryForceDeleteViaCmd(string dir)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c rd /s /q \"{dir}\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardError = true
+                };
+
+                var process = Process.Start(psi);
+                if (process != null)
+                {
+                    process.WaitForExit(10000);
+                    if (!Directory.Exists(dir))
+                    {
+                        LoggingService.LogInfo("EmployeeService", $"Force-deleted via cmd: {dir}");
+                        return true;
+                    }
+                    var error = process.StandardError.ReadToEnd();
+                    if (!string.IsNullOrEmpty(error))
+                        LoggingService.LogWarning("EmployeeService.TryForceDeleteViaCmd", error.Trim());
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.TryForceDeleteViaCmd", ex.Message);
+            }
+
+            return false;
+        }
+
+        private static bool CleanupArchivedSourceFolder(string dir)
+        {
+            return TryCleanupDeferredDirectory(dir);
         }
 
         private static string NormalizeFolderName(string name)

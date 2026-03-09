@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:oxy="http://oxyplot.org/wpf"
+             xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
              xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
              xmlns:views="clr-namespace:Win11DesktopApp.Views"
              mc:Ignorable="d" 
@@ -11,6 +12,7 @@
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
 
         <Style x:Key="ToggleBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
@@ -89,57 +91,34 @@
                     </Grid.ColumnDefinitions>
 
                     <Button Grid.Column="0" Command="{Binding GoBackCommand}"
-                            Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="8,6">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}" Margin="8,0,0,0"
-                                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                            Style="{StaticResource HeaderBackButton}"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Width="44" Height="44">
-                            <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
-                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource AccentBrush}">
+                            <TextBlock Text="&#xE9D2;" Style="{StaticResource PageHeaderIconText}"/>
                         </Border>
-                        <TextBlock Text="{DynamicResource ReportTitle}" FontSize="{DynamicResource FS26}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource ReportTitle}" Style="{StaticResource PageHeaderTitleText}"/>
+                            <TextBlock Text="{Binding StatusMessage}" FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <!-- Export Settings button -->
-                    <Button Grid.Column="2" Command="{Binding ShowExportDialogCommand}" Cursor="Hand" VerticalAlignment="Center">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="#4CAF50" CornerRadius="8" Padding="16,10">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{DynamicResource ReportConfigExport}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                                   Foreground="White" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                    </Trigger>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                    <Button Grid.Column="2"
+                            Command="{Binding ShowExportDialogCommand}"
+                            Cursor="Hand"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{DynamicResource ReportConfigExport}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
                 </Grid>
 
@@ -230,31 +209,28 @@
                             </StackPanel>
 
                             <Button Grid.Column="4" Command="{Binding GenerateReportCommand}" 
-                                    Cursor="Hand" VerticalAlignment="Bottom" Margin="16,0,0,0">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="20,10">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <TextBlock Text="{DynamicResource ReportGenerate}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                           Foreground="White" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
+                                    Cursor="Hand" VerticalAlignment="Bottom" Margin="16,0,0,0"
+                                    Style="{StaticResource FilledActionButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{DynamicResource ReportGenerate}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                               Foreground="White" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Button>
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- ===== VIEW TOGGLE ===== -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                <Border Background="{DynamicResource CardBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="8"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,20">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button Command="{Binding SwitchToSummaryCommand}" Margin="0,0,6,0">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource ToggleBtn}">
@@ -313,6 +289,22 @@
                         </StackPanel>
                     </Button>
                 </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CompactEmptyStateCard}"
+                        Margin="0,0,0,20"
+                        Padding="28,24"
+                        Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVis}}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS28}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock Text="{DynamicResource ReportTitle}" FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusMessage}" FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center"
+                                   TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- ╔══════════════════════════════════════════╗ -->
                 <!-- ║           SUMMARY VIEW                   ║ -->
@@ -858,6 +850,30 @@
 
             </StackPanel>
         </ScrollViewer>
+
+        <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}"/>
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="22,18"
+                    CornerRadius="14"
+                    Background="{DynamicResource ContentBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1">
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Width="84" Height="6" IsIndeterminate="True"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Margin="0,0,12,0"
+                                 VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="{DynamicResource FS13}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="320"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- ===== EMPLOYEE DETAILS OVERLAY ===== -->
         <Grid Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">

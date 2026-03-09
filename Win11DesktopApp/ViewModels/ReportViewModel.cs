@@ -677,7 +677,7 @@ namespace Win11DesktopApp.ViewModels
         private void FilterEmployees()
         {
             EmployeeGroups.Clear();
-            var search = EmployeeSearchText?.Trim().ToLower() ?? "";
+            var search = EmployeeSearchText?.Trim() ?? "";
 
             var dateFiltered = _allEmployees.Where(e =>
             {
@@ -699,10 +699,10 @@ namespace Win11DesktopApp.ViewModels
             var filtered = string.IsNullOrEmpty(search)
                 ? dateFiltered
                 : dateFiltered.Where(e =>
-                    (e.FullName ?? string.Empty).ToLower().Contains(search) ||
-                    (e.Phone ?? string.Empty).ToLower().Contains(search) ||
-                    (e.Position ?? string.Empty).ToLower().Contains(search) ||
-                    (e.FirmName ?? string.Empty).ToLower().Contains(search)).ToList();
+                    (e.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Phone?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Position?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.FirmName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
 
             var groups = filtered.GroupBy(e => e.FirmName).OrderBy(g => g.Key);
             foreach (var g in groups)

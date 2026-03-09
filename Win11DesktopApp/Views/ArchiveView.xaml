@@ -5,216 +5,819 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
              xmlns:h="clr-namespace:Win11DesktopApp.Helpers"
+             xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+             xmlns:views="clr-namespace:Win11DesktopApp.Views"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
 
-        <Style x:Key="CardActionBtn" TargetType="Button">
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="FontSize" Value="12"/>
+        <Style x:Key="ArchiveToggleButtonBase" TargetType="Button">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CardActionBtn" TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+            <Setter Property="MinWidth" Value="116"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <Style x:Key="ArchiveStatCardButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,8,6"/>
+            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
-        <Grid Margin="32,20,32,32">
+        <Grid Margin="18,12,18,18">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- ===== HEADER ===== -->
-            <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid Grid.Row="0" Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="270"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding GoBackCommand}" Height="36" Padding="12,0" Margin="0,0,10,0"
-                            Background="{DynamicResource ContentBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" Margin="0,0,6,0"/>
-                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}"/>
-                        </StackPanel>
-                    </Button>
-                    <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}" 
-                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource ArchiveTitle}" FontSize="{DynamicResource FS24}" FontWeight="SemiBold" 
-                               VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
+                <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,12,0">
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+                        <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource AccentBrush}">
+                            <TextBlock Text="&#xE7B8;" Style="{StaticResource PageHeaderIconText}"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource ArchiveTitle}" Style="{StaticResource PageHeaderTitleText}" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Margin="20,0,0,0">
-                    <TextBlock Text="{DynamicResource ArchiveSearch}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="{DynamicResource FS12}" Margin="2,0,0,2"/>
-                    <TextBox Height="38" VerticalContentAlignment="Center"
-                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
-                </StackPanel>
+                <Border Grid.Column="1"
+                        Style="{StaticResource ToolbarSearchContainer}"
+                        CornerRadius="12"
+                        Padding="8,6"
+                        VerticalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE721;"
+                                   Grid.Column="0"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS13}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1"
+                                 Height="32"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </Border>
             </Grid>
 
-            <!-- ===== ARCHIVE LIST ===== -->
-            <Grid Grid.Row="1">
+            <WrapPanel Grid.Row="1" Margin="0,0,0,8">
+                <Button Command="{Binding FilterByStatCommand}" CommandParameter="all" MinWidth="170">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ArchiveStatCardButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatFilter}" Value="all">
+                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="BorderThickness" Value="2"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource EmpStatTotal}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{Binding TotalArchivedCount, Mode=OneWay}"
+                                   FontSize="{DynamicResource FS20}"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding FilteredCount, StringFormat={}{0} записів у поточному вигляді}"
+                                   FontSize="{DynamicResource FS10}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding FilterByStatCommand}" CommandParameter="recent" MinWidth="160">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ArchiveStatCardButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatFilter}" Value="recent">
+                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="BorderThickness" Value="2"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource ArchiveStatRecent}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{Binding ArchivedThisMonthCount, Mode=OneWay}"
+                                   FontSize="{DynamicResource FS20}"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="{DynamicResource ArchiveFilterRecent}"
+                                   FontSize="{DynamicResource FS10}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding FilterByStatCommand}" CommandParameter="no_photo" Margin="0,0,0,6">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ArchiveStatCardButton}">
+                            <Setter Property="Margin" Value="0,0,0,6"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatFilter}" Value="no_photo">
+                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="BorderThickness" Value="2"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource DetNoPhoto}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{Binding WithoutPhotoCount, Mode=OneWay}"
+                                   FontSize="{DynamicResource FS20}"
+                                   FontWeight="Bold"
+                                   Foreground="#FF8F00"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="{DynamicResource ArchiveFilterNoPhoto}"
+                                   FontSize="{DynamicResource FS10}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+
+            <Border Grid.Row="2"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="8,6"
+                    Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <WrapPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource EmpSortLabel}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,6,0"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+
+                        <Button Command="{Binding SortByCommand}" CommandParameter="EndDate">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SortField}" Value="EndDate">
+                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="{DynamicResource ArchiveSortEndDate}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                        </Button>
+
+                        <Button Command="{Binding SortByCommand}" CommandParameter="Name">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SortField}" Value="Name">
+                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="{DynamicResource EmpSortName}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                        </Button>
+
+                        <Button Command="{Binding SortByCommand}" CommandParameter="Firm" Margin="0,0,12,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SortField}" Value="Firm">
+                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="{DynamicResource ArchiveSortFirm}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                        </Button>
+                    </WrapPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="List" ToolTip="{DynamicResource ViewList}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ViewMode}" Value="List">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+
+                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Tiles" ToolTip="{DynamicResource ViewTiles}" Margin="0,0,10,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ViewMode}" Value="Tiles">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+
+                        <TextBlock Text="&#xE71E;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS10}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,4,0"/>
+                        <Slider Value="{Binding ZoomLevel}"
+                                Minimum="0.75"
+                                Maximum="1.35"
+                                TickFrequency="0.05"
+                                IsSnapToTickEnabled="True"
+                                Width="84"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE8A3;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="4,0,8,0"/>
+
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}">
+                            <Run Text="{DynamicResource ArchiveResultsLabel}"/>
+                            <Run Text=" "/>
+                            <Run Text="{Binding FilteredCount, Mode=OneWay}"/>
+                            <Run Text=" / "/>
+                            <Run Text="{Binding TotalArchivedCount, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="3" ClipToBounds="False">
                 <ScrollViewer Style="{StaticResource ThinScroll}"
-                              Visibility="{Binding HasArchived, Converter={StaticResource BoolToVis}}">
-                    <ItemsControl ItemsSource="{Binding ArchivedEmployees}" Margin="24,8,24,8">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" 
-                                        Padding="16" Margin="0,4,0,10"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                        RenderTransformOrigin="0.5,0.5"
-                                        h:StaggerAnimation.Enable="True">
-                                    <Border.RenderTransform>
-                                        <TransformGroup>
-                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                            <TranslateTransform Y="0"/>
-                                        </TransformGroup>
-                                    </Border.RenderTransform>
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.08"/>
-                                    </Border.Effect>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                              Visibility="{Binding HasArchived, Converter={StaticResource BoolToVis}}"
+                              ClipToBounds="False">
+                    <Grid Margin="4,8,4,12" ClipToBounds="False">
+                        <Grid.LayoutTransform>
+                            <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
+                        </Grid.LayoutTransform>
 
-                                        <!-- Avatar -->
-                                        <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" 
-                                                Background="{DynamicResource ContentBackgroundBrush}" VerticalAlignment="Top" Margin="0,0,14,0"
-                                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="2">
-                                            <Border.Clip>
-                                                <EllipseGeometry Center="28,28" RadiusX="28" RadiusY="28"/>
-                                            </Border.Clip>
-                                            <Grid>
-                                                <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" 
-                                                       Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
-                                                <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="#BDBDBD"
-                                                           Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
-                                            </Grid>
-                                        </Border>
+                        <ItemsControl ItemsSource="{Binding ArchivedEmployees}"
+                                      Visibility="{Binding IsListView, Converter={StaticResource BoolToVis}}"
+                                      ClipToBounds="False"
+                                      VirtualizingStackPanel.IsVirtualizing="True"
+                                      VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                      ScrollViewer.CanContentScroll="True">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                                            CornerRadius="12"
+                                            Padding="16"
+                                            Margin="8,6,8,12"
+                                            MaxWidth="1140"
+                                            HorizontalAlignment="Center"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            Cursor="Hand"
+                                            h:StaggerAnimation.Enable="True">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick"
+                                                          Command="{Binding DataContext.ViewEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                          CommandParameter="{Binding}"/>
+                                        </Border.InputBindings>
+                                        <Border.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                <TranslateTransform Y="0"/>
+                                            </TransformGroup>
+                                        </Border.RenderTransform>
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.08"/>
+                                        </Border.Effect>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- Info -->
-                                        <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                            <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS16}" 
-                                                       Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,2"/>
-                                            <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,6"/>
+                                            <Border Grid.Column="0"
+                                                    Width="54"
+                                                    Height="54"
+                                                    CornerRadius="27"
+                                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                                    VerticalAlignment="Top"
+                                                    Margin="0,0,14,0"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                                    BorderThickness="1.5">
+                                                <Border.Clip>
+                                                    <EllipseGeometry Center="27,27" RadiusX="27" RadiusY="27"/>
+                                                </Border.Clip>
+                                                <Grid>
+                                                    <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}"
+                                                           Stretch="UniformToFill"
+                                                           Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                    <TextBlock Text="&#xE77B;"
+                                                               FontFamily="Segoe MDL2 Assets"
+                                                               FontSize="{DynamicResource FS20}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                               Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                </Grid>
+                                            </Border>
 
-                                            <WrapPanel Margin="0,0,0,6">
-                                                <!-- Start date -->
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                                               Foreground="{DynamicResource SuccessBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{DynamicResource ArchiveStarted}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                                        <TextBlock Text="{Binding StartDate, Mode=OneWay}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontWeight="SemiBold"/>
+                                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                    <TextBlock Text="{Binding FullName}"
+                                                               FontSize="{DynamicResource FS16}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                               Margin="0,0,10,0"/>
+                                                    <Border Background="#FFF3E0"
+                                                            BorderBrush="#FFE0B2"
+                                                            BorderThickness="1"
+                                                            CornerRadius="8"
+                                                            Padding="8,2"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding FirmName}"
+                                                                   FontSize="{DynamicResource FS10}"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="#EF6C00"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <TextBlock Text="{Binding PositionTitle}"
+                                                           FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                           Margin="0,0,0,8"/>
+
+                                                <WrapPanel Margin="0,0,0,6">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,18,4">
+                                                        <TextBlock Text="&#xE787;"
+                                                                   FontFamily="Segoe MDL2 Assets"
+                                                                   FontSize="{DynamicResource FS11}"
+                                                                   Foreground="{DynamicResource AccentBrush}"
+                                                                   Margin="0,0,4,0"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                            <Run Text="{DynamicResource ArchiveStarted}"/>
+                                                            <Run Text="{Binding StartDate, Mode=OneWay}"/>
+                                                        </TextBlock>
                                                     </StackPanel>
-                                                </StackPanel>
-                                                <!-- End date -->
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                                               Foreground="{DynamicResource ErrorBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{DynamicResource ArchiveEnded}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                                        <TextBlock Text="{Binding EndDate, Mode=OneWay}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontWeight="SemiBold"/>
+
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,18,4">
+                                                        <TextBlock Text="&#xE787;"
+                                                                   FontFamily="Segoe MDL2 Assets"
+                                                                   FontSize="{DynamicResource FS11}"
+                                                                   Foreground="{DynamicResource ErrorBrush}"
+                                                                   Margin="0,0,4,0"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                            <Run Text="{DynamicResource ArchiveEnded}"/>
+                                                            <Run Text="{Binding EndDate, Mode=OneWay}"/>
+                                                        </TextBlock>
                                                     </StackPanel>
-                                                </StackPanel>
-                                            </WrapPanel>
 
-                                            <WrapPanel>
-                                                <!-- Firm -->
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                                </StackPanel>
-                                                <!-- Phone -->
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,18,0">
-                                                    <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Phone}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                                </StackPanel>
-                                                <!-- Email -->
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Email}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                                </StackPanel>
-                                            </WrapPanel>
-                                        </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,18,4">
+                                                        <TextBlock Text="&#xE8D2;"
+                                                                   FontFamily="Segoe MDL2 Assets"
+                                                                   FontSize="{DynamicResource FS11}"
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                   Margin="0,0,4,0"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding EmployeeFolder, Mode=OneWay}"
+                                                                   FontSize="{DynamicResource FS11}"
+                                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   MaxWidth="360"/>
+                                                    </StackPanel>
+                                                </WrapPanel>
 
-                                        <!-- Action buttons -->
-                                        <StackPanel Grid.Column="2" Orientation="Vertical" VerticalAlignment="Center">
-                                            <Button Style="{StaticResource CardActionBtn}" Margin="0,0,0,4"
+                                                <Border Background="#FFF8E1"
+                                                        BorderBrush="#FFE082"
+                                                        BorderThickness="1"
+                                                        CornerRadius="8"
+                                                        Padding="8,3"
+                                                        HorizontalAlignment="Left"
+                                                        Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}">
+                                                    <TextBlock Text="{DynamicResource DetNoPhoto}"
+                                                               FontSize="{DynamicResource FS10}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#FF8F00"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2" Orientation="Vertical" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource FilledActionButton}"
+                                                        Command="{Binding DataContext.RestoreEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="14,8"
+                                                        Margin="0,0,0,6">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="White" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="{DynamicResource ArchiveRestore}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="White"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Style="{StaticResource CardActionBtn}"
+                                                        Command="{Binding DataContext.ViewEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="{DynamicResource ArchiveViewProfile}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Style="{StaticResource CardActionBtn}"
+                                                        Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="{DynamicResource ArchiveOpenFolder}"
+                                                        Margin="0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="{DynamicResource EmpBtnFolder}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Border.Triggers>
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                         To="1.015" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                         To="1.015" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                         To="-2" Duration="0:0:0.15"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" To="0" Duration="0:0:0.15"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Border.Triggers>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding ArchivedEmployees}"
+                                      Visibility="{Binding IsTilesView, Converter={StaticResource BoolToVis}}"
+                                      ClipToBounds="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ClipToBounds="False"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="260"
+                                            Background="{DynamicResource CardBackgroundBrush}"
+                                            CornerRadius="12"
+                                            Padding="14"
+                                            Margin="8,8,12,12"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            RenderTransformOrigin="0.5,0.5"
+                                            Cursor="Hand"
+                                            h:StaggerAnimation.Enable="True">
+                                        <Border.InputBindings>
+                                            <MouseBinding MouseAction="LeftClick"
+                                                          Command="{Binding DataContext.ViewEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                          CommandParameter="{Binding}"/>
+                                        </Border.InputBindings>
+                                        <Border.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                                <TranslateTransform Y="0"/>
+                                            </TransformGroup>
+                                        </Border.RenderTransform>
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="6" ShadowDepth="2" Opacity="0.08"/>
+                                        </Border.Effect>
+                                        <StackPanel>
+                                            <Border Width="58"
+                                                    Height="58"
+                                                    CornerRadius="29"
+                                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,10"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                                    BorderThickness="1.5">
+                                                <Border.Clip>
+                                                    <EllipseGeometry Center="29,29" RadiusX="29" RadiusY="29"/>
+                                                </Border.Clip>
+                                                <Grid>
+                                                    <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}"
+                                                           Stretch="UniformToFill"
+                                                           Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                    <TextBlock Text="&#xE77B;"
+                                                               FontFamily="Segoe MDL2 Assets"
+                                                               FontSize="{DynamicResource FS20}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                               Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <TextBlock Text="{Binding FullName}"
+                                                       FontSize="{DynamicResource FS14}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       TextAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding PositionTitle}"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       TextAlignment="Center"
+                                                       Margin="0,2,0,6"
+                                                       TextTrimming="CharacterEllipsis"/>
+
+                                            <Border Background="#FFF3E0"
+                                                    BorderBrush="#FFE0B2"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="8,2"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,8">
+                                                <TextBlock Text="{Binding FirmName}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#EF6C00"/>
+                                            </Border>
+
+                                            <TextBlock FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       TextAlignment="Center">
+                                                <Run Text="{DynamicResource ArchiveStarted}"/>
+                                                <Run Text="{Binding StartDate, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <TextBlock FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       TextAlignment="Center"
+                                                       Margin="0,2,0,8">
+                                                <Run Text="{DynamicResource ArchiveEnded}"/>
+                                                <Run Text="{Binding EndDate, Mode=OneWay}"/>
+                                            </TextBlock>
+
+                                            <Border Background="#FFF8E1"
+                                                    BorderBrush="#FFE082"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="8,3"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,10"
+                                                    Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}">
+                                                <TextBlock Text="{DynamicResource DetNoPhoto}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#FF8F00"/>
+                                            </Border>
+
+                                            <Button Style="{StaticResource FilledActionButton}"
                                                     Command="{Binding DataContext.RestoreEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource ArchiveRestore}" FontSize="{DynamicResource FS12}"/>
+                                                    Padding="12,8"
+                                                    Margin="0,0,0,8">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="White" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="{DynamicResource ArchiveRestore}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="White"/>
                                                 </StackPanel>
                                             </Button>
-                                            <Button Style="{StaticResource CardActionBtn}"
-                                                    Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                    CommandParameter="{Binding}" ToolTip="{DynamicResource ArchiveOpenFolder}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource EmpBtnFolder}" FontSize="{DynamicResource FS12}"/>
-                                                </StackPanel>
-                                            </Button>
+
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0"
+                                                        Style="{StaticResource ArchiveToggleButtonBase}"
+                                                        Command="{Binding DataContext.ViewEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Margin="0,0,6,0">
+                                                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                </Button>
+                                                <Button Grid.Column="1"
+                                                        Style="{StaticResource ArchiveToggleButtonBase}"
+                                                        Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Margin="0">
+                                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                </Button>
+                                            </Grid>
                                         </StackPanel>
-                                    </Grid>
-                                    <Border.Triggers>
-                                        <EventTrigger RoutedEvent="MouseEnter">
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1.015" Duration="0:0:0.15">
-                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1.015" Duration="0:0:0.15">
-                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </EventTrigger>
-                                        <EventTrigger RoutedEvent="MouseLeave">
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
-                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </EventTrigger>
-                                    </Border.Triggers>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                        <Border.Triggers>
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                                         To="1.04" Duration="0:0:0.18"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                                         To="1.04" Duration="0:0:0.18"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                                         To="-4" Duration="0:0:0.18"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" To="0" Duration="0:0:0.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Border.Triggers>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
                 </ScrollViewer>
 
-                <!-- Empty state -->
-                <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="8" Padding="30"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                <Border Padding="28,24"
                         Visibility="{Binding HasArchived, Converter={StaticResource InverseBoolToVis}}">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
+                            <Setter Property="Visibility" Value="{Binding HasArchived, Converter={StaticResource InverseBoolToVis}}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS42}" 
-                                   HorizontalAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                        <TextBlock Text="{DynamicResource ArchiveEmpty}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
-                                   Margin="0,12,0,4" TextAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="&#xE7B8;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}"/>
+                        <TextBlock Text="{DynamicResource ArchiveEmpty}" Style="{StaticResource CompactEmptyStateTitleText}" Margin="0,0,0,8"/>
                         <TextBlock Text="{DynamicResource ArchiveEmptyDesc}"
-                                   FontSize="{DynamicResource FS13}" TextAlignment="Center" Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                   Style="{StaticResource CompactEmptyStateDescriptionText}"
+                                   TextAlignment="Center"
+                                   MaxWidth="360"/>
                     </StackPanel>
                 </Border>
+
+                <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                    <Border Background="#66FFFFFF" CornerRadius="12"/>
+                    <Border HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Padding="22,18"
+                            CornerRadius="14"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="20" ShadowDepth="3" Opacity="0.15"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <ProgressBar IsIndeterminate="True"
+                                         Width="180"
+                                         Height="6"
+                                         Margin="0,0,0,14"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE7B8;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="{DynamicResource FS16}"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource DashLoading}"
+                                           FontSize="{DynamicResource FS13}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
 
@@ -336,6 +939,39 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+        </Grid>
+
+        <!-- ===== EMPLOYEE DETAILS OVERLAY ===== -->
+        <Grid Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEmployeeDetailsOpen}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Border Background="#66000000">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <ContentControl Content="{Binding EmployeeDetailsVm}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ContentControl.Resources>
+                    <DataTemplate DataType="{x:Type vm:EmployeeDetailsViewModel}">
+                        <views:EmployeeDetailsView/>
+                    </DataTemplate>
+                </ContentControl.Resources>
+            </ContentControl>
         </Grid>
     </Grid>
 </UserControl>

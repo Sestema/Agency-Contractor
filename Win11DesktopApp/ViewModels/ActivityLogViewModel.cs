@@ -250,7 +250,7 @@ namespace Win11DesktopApp.ViewModels
         private void ApplyFilter()
         {
             Entries.Clear();
-            var query = _searchText.ToLowerInvariant();
+            var query = _searchText?.Trim() ?? string.Empty;
 
             foreach (var entry in _allEntries)
             {
@@ -273,10 +273,10 @@ namespace Win11DesktopApp.ViewModels
 
                 if (!string.IsNullOrEmpty(query))
                 {
-                    if (!entry.Description.ToLower().Contains(query)
-                        && !entry.EmployeeName.ToLower().Contains(query)
-                        && !entry.FirmName.ToLower().Contains(query)
-                        && !entry.ActionType.ToLower().Contains(query))
+                    if (!(entry.Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(entry.EmployeeName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(entry.FirmName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(entry.ActionType?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
                         continue;
                 }
 
@@ -332,7 +332,7 @@ namespace Win11DesktopApp.ViewModels
                 ws.Columns().AdjustToContents();
                 wb.SaveAs(dlg.FileName);
 
-                MessageBox.Show(Res("ActLogExported"), "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Res("ActLogExported"), Res("TitleSuccess"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {

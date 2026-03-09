@@ -339,8 +339,9 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Не вдалося відкрити редактор:\n{ex.Message}",
-                    Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Error);
+                var fmt = Res("MsgEditorOpenError");
+                MessageBox.Show(string.Format(fmt, ex.Message),
+                    Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             editor.Owner = Application.Current.MainWindow;

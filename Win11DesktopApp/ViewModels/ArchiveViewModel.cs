@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Win11DesktopApp.EmployeeModels;
@@ -15,12 +16,25 @@ namespace Win11DesktopApp.ViewModels
     {
         private readonly EmployeeService _employeeService;
         private List<ArchivedEmployeeSummary> _allArchived = new();
+        private string? _pendingEmployeeFolder;
+        private string _sortField = App.AppSettingsService?.Settings?.ArchiveSortField ?? "EndDate";
+        private bool _sortAscending = App.AppSettingsService?.Settings?.ArchiveSortAscending ?? false;
+        private string _viewMode = App.AppSettingsService?.Settings?.ArchiveViewMode ?? "List";
+        private double _zoomLevel = App.AppSettingsService?.Settings?.ArchiveZoomLevel ?? 1.0;
+        private string _statFilter = "all";
+        private int _totalArchivedCount;
+        private int _archivedThisMonthCount;
+        private int _withoutPhotoCount;
 
         public ICommand GoBackCommand { get; }
         public ICommand RestoreEmployeeCommand { get; }
         public ICommand ConfirmRestoreCommand { get; }
         public ICommand CancelRestoreCommand { get; }
         public ICommand OpenEmployeeFolderCommand { get; }
+        public ICommand ViewEmployeeCommand { get; }
+        public ICommand SortByCommand { get; }
+        public ICommand SetViewModeCommand { get; }
+        public ICommand FilterByStatCommand { get; }
 
         // --- List ---
         private ObservableCollection<ArchivedEmployeeSummary> _archivedEmployees = new();
@@ -37,6 +51,33 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _hasArchived, value);
         }
 
+        public int FilteredCount => ArchivedEmployees.Count;
+
+        private bool _isLoading;
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+
+        public int TotalArchivedCount
+        {
+            get => _totalArchivedCount;
+            set => SetProperty(ref _totalArchivedCount, value);
+        }
+
+        public int ArchivedThisMonthCount
+        {
+            get => _archivedThisMonthCount;
+            set => SetProperty(ref _archivedThisMonthCount, value);
+        }
+
+        public int WithoutPhotoCount
+        {
+            get => _withoutPhotoCount;
+            set => SetProperty(ref _withoutPhotoCount, value);
+        }
+
         private string _searchQuery = string.Empty;
         public string SearchQuery
         {
@@ -44,6 +85,56 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _searchQuery, value))
+                    ApplyFilter();
+            }
+        }
+
+        public string SortField
+        {
+            get => _sortField;
+            set => SetProperty(ref _sortField, value);
+        }
+
+        public bool SortAscending
+        {
+            get => _sortAscending;
+            set => SetProperty(ref _sortAscending, value);
+        }
+
+        public string ViewMode
+        {
+            get => _viewMode;
+            set
+            {
+                if (SetProperty(ref _viewMode, value))
+                {
+                    OnPropertyChanged(nameof(IsListView));
+                    OnPropertyChanged(nameof(IsTilesView));
+                    SaveArchiveDisplaySettings();
+                }
+            }
+        }
+
+        public bool IsListView => ViewMode == "List";
+        public bool IsTilesView => ViewMode == "Tiles";
+
+        public double ZoomLevel
+        {
+            get => _zoomLevel;
+            set
+            {
+                var clamped = Math.Clamp(value, 0.75, 1.35);
+                if (SetProperty(ref _zoomLevel, clamped))
+                    SaveArchiveDisplaySettings();
+            }
+        }
+
+        public string StatFilter
+        {
+            get => _statFilter;
+            set
+            {
+                if (SetProperty(ref _statFilter, value))
                     ApplyFilter();
             }
         }
@@ -126,9 +217,24 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _restoreStatus, value);
         }
 
-        public ArchiveViewModel()
+        private bool _isEmployeeDetailsOpen;
+        public bool IsEmployeeDetailsOpen
+        {
+            get => _isEmployeeDetailsOpen;
+            set => SetProperty(ref _isEmployeeDetailsOpen, value);
+        }
+
+        private EmployeeDetailsViewModel? _employeeDetailsVm;
+        public EmployeeDetailsViewModel? EmployeeDetailsVm
+        {
+            get => _employeeDetailsVm;
+            set => SetProperty(ref _employeeDetailsVm, value);
+        }
+
+        public ArchiveViewModel(string? employeeToOpenFolder = null)
         {
             _employeeService = App.EmployeeService;
+            _pendingEmployeeFolder = employeeToOpenFolder;
 
             GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
 
@@ -154,10 +260,51 @@ namespace Win11DesktopApp.ViewModels
                 }
             });
 
-            ConfirmRestoreCommand = new RelayCommand(o => ConfirmRestore());
+            ConfirmRestoreCommand = new AsyncRelayCommand(_ => ConfirmRestoreAsync());
             CancelRestoreCommand = new RelayCommand(o => IsRestoreDialogOpen = false);
+            SortByCommand = new RelayCommand(o =>
+            {
+                var field = o as string ?? "EndDate";
+                if (SortField == field)
+                {
+                    SortAscending = !SortAscending;
+                }
+                else
+                {
+                    SortField = field;
+                    SortAscending = field != "EndDate";
+                }
 
-            LoadArchive();
+                SaveArchiveDisplaySettings();
+                ApplyFilter();
+            });
+            SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
+            FilterByStatCommand = new RelayCommand(o => StatFilter = o as string ?? "all");
+
+            ViewEmployeeCommand = new RelayCommand(o =>
+            {
+                if (o is ArchivedEmployeeSummary emp && !string.IsNullOrEmpty(emp.EmployeeFolder))
+                    OpenEmployeeDetails(emp);
+            });
+
+            _ = LoadArchiveAsync();
+        }
+
+        private void OpenEmployeeDetails(ArchivedEmployeeSummary emp)
+        {
+            CleanupDetailsVm();
+            EmployeeDetailsVm = new EmployeeDetailsViewModel(emp.FirmName, emp.EmployeeFolder, _employeeService);
+            EmployeeDetailsVm.IsArchiveMode = true;
+            EmployeeDetailsVm.RequestClose += OnDetailsClose;
+            IsEmployeeDetailsOpen = true;
+        }
+
+        private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
+
+        private void CleanupDetailsVm()
+        {
+            if (EmployeeDetailsVm != null)
+                EmployeeDetailsVm.RequestClose -= OnDetailsClose;
         }
 
         private void OnSelectedCompanyChanged()
@@ -178,39 +325,113 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void LoadArchive()
+        private async Task LoadArchiveAsync()
         {
+            IsLoading = true;
             try
             {
-                _allArchived = _employeeService.GetArchivedEmployees();
+                _allArchived = await Task.Run(() => _employeeService.GetArchivedEmployees());
+                RefreshStats();
                 ApplyFilter();
+                TryOpenPendingEmployee();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"ArchiveViewModel.LoadArchive error: {ex.Message}");
             }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         private void ApplyFilter()
         {
-            var query = SearchQuery?.Trim().ToLower() ?? string.Empty;
-            if (string.IsNullOrEmpty(query))
+            IEnumerable<ArchivedEmployeeSummary> source = _allArchived;
+            var query = SearchQuery?.Trim() ?? string.Empty;
+
+            source = StatFilter switch
             {
-                ArchivedEmployees = new ObservableCollection<ArchivedEmployeeSummary>(_allArchived);
-            }
-            else
+                "recent" => source.Where(e => IsThisMonth(e.EndDate)),
+                "no_photo" => source.Where(e => !e.HasPhoto),
+                _ => source
+            };
+
+            if (!string.IsNullOrEmpty(query))
             {
-                var filtered = _allArchived.Where(e =>
-                    (!string.IsNullOrEmpty(e.FullName) && e.FullName.ToLower().Contains(query)) ||
-                    (!string.IsNullOrEmpty(e.FirmName) && e.FirmName.ToLower().Contains(query)) ||
-                    (!string.IsNullOrEmpty(e.PositionTitle) && e.PositionTitle.ToLower().Contains(query))
-                ).ToList();
-                ArchivedEmployees = new ObservableCollection<ArchivedEmployeeSummary>(filtered);
+                source = source.Where(e =>
+                    (!string.IsNullOrEmpty(e.FullName) && e.FullName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.FirmName) && e.FirmName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.PositionTitle) && e.PositionTitle.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.StartDate) && e.StartDate.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.EndDate) && e.EndDate.Contains(query, StringComparison.OrdinalIgnoreCase)));
             }
+
+            var filtered = source.ToList();
+            filtered = SortField switch
+            {
+                "Name" => SortAscending
+                    ? filtered.OrderBy(e => e.FullName ?? string.Empty).ThenBy(e => e.FirmName ?? string.Empty).ToList()
+                    : filtered.OrderByDescending(e => e.FullName ?? string.Empty).ThenBy(e => e.FirmName ?? string.Empty).ToList(),
+                "Firm" => SortAscending
+                    ? filtered.OrderBy(e => e.FirmName ?? string.Empty).ThenBy(e => e.FullName ?? string.Empty).ToList()
+                    : filtered.OrderByDescending(e => e.FirmName ?? string.Empty).ThenBy(e => e.FullName ?? string.Empty).ToList(),
+                "StartDate" => SortAscending
+                    ? filtered.OrderBy(e => DateParsingHelper.TryParseDate(e.StartDate) ?? DateTime.MaxValue).ThenBy(e => e.FullName ?? string.Empty).ToList()
+                    : filtered.OrderByDescending(e => DateParsingHelper.TryParseDate(e.StartDate) ?? DateTime.MinValue).ThenBy(e => e.FullName ?? string.Empty).ToList(),
+                _ => SortAscending
+                    ? filtered.OrderBy(e => DateParsingHelper.TryParseDate(e.EndDate) ?? DateTime.MaxValue).ThenBy(e => e.FullName ?? string.Empty).ToList()
+                    : filtered.OrderByDescending(e => DateParsingHelper.TryParseDate(e.EndDate) ?? DateTime.MinValue).ThenBy(e => e.FullName ?? string.Empty).ToList()
+            };
+
+            ArchivedEmployees = new ObservableCollection<ArchivedEmployeeSummary>(filtered);
             HasArchived = ArchivedEmployees.Count > 0;
+            OnPropertyChanged(nameof(FilteredCount));
         }
 
-        private async void ConfirmRestore()
+        private void RefreshStats()
+        {
+            TotalArchivedCount = _allArchived.Count;
+            ArchivedThisMonthCount = _allArchived.Count(e => IsThisMonth(e.EndDate));
+            WithoutPhotoCount = _allArchived.Count(e => !e.HasPhoto);
+            OnPropertyChanged(nameof(FilteredCount));
+        }
+
+        private static bool IsThisMonth(string dateStr)
+        {
+            var dt = DateParsingHelper.TryParseDate(dateStr);
+            return dt.HasValue && dt.Value.Month == DateTime.Today.Month && dt.Value.Year == DateTime.Today.Year;
+        }
+
+        private void SaveArchiveDisplaySettings()
+        {
+            if (App.AppSettingsService == null)
+                return;
+
+            App.AppSettingsService.Settings.ArchiveSortField = SortField;
+            App.AppSettingsService.Settings.ArchiveSortAscending = SortAscending;
+            App.AppSettingsService.Settings.ArchiveViewMode = ViewMode;
+            App.AppSettingsService.Settings.ArchiveZoomLevel = ZoomLevel;
+            App.AppSettingsService.SaveSettings();
+        }
+
+        private void TryOpenPendingEmployee()
+        {
+            if (string.IsNullOrWhiteSpace(_pendingEmployeeFolder))
+                return;
+
+            var pendingFolder = _pendingEmployeeFolder;
+            _pendingEmployeeFolder = null;
+
+            var employee = _allArchived.FirstOrDefault(emp =>
+                !string.IsNullOrEmpty(emp.EmployeeFolder) &&
+                string.Equals(emp.EmployeeFolder, pendingFolder, StringComparison.OrdinalIgnoreCase));
+
+            if (employee != null)
+                OpenEmployeeDetails(employee);
+        }
+
+        private async Task ConfirmRestoreAsync()
         {
             if (EmployeeToRestore == null)
             {
@@ -263,7 +484,7 @@ namespace Win11DesktopApp.ViewModels
                         employeeFolder: EmployeeToRestore.EmployeeFolder);
 
                     IsRestoreDialogOpen = false;
-                    LoadArchive();
+                    await LoadArchiveAsync();
                 }
                 else
                 {

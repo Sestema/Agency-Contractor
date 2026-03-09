@@ -71,14 +71,14 @@ namespace Win11DesktopApp.ViewModels
         public int SelectedYear
         {
             get => _selectedYear;
-            set { SetProperty(ref _selectedYear, value); LoadReport(); }
+            set { SetProperty(ref _selectedYear, value); _ = LoadReportAsync(); }
         }
 
         private int _selectedMonth;
         public int SelectedMonth
         {
             get => _selectedMonth;
-            set { SetProperty(ref _selectedMonth, value); LoadReport(); }
+            set { SetProperty(ref _selectedMonth, value); _ = LoadReportAsync(); }
         }
 
         private string _monthDisplay = string.Empty;
@@ -269,7 +269,7 @@ namespace Win11DesktopApp.ViewModels
             ClearSearchCommand = new RelayCommand(o => SearchText = string.Empty);
 
             RefreshActiveFields();
-            LoadReport();
+            _ = LoadReportAsync();
         }
 
         public void RefreshActiveFields()
@@ -310,35 +310,41 @@ namespace Win11DesktopApp.ViewModels
             _selectedMonth = date.Month;
             OnPropertyChanged(nameof(SelectedYear));
             OnPropertyChanged(nameof(SelectedMonth));
-            LoadReport();
+            _ = LoadReportAsync();
         }
 
         private static string FolderKey(string path) =>
             System.IO.Path.GetFileName(path?.TrimEnd('\\', '/') ?? "");
 
-        private bool ArchivedWorkedInMonth(ArchivedEmployeeSummary arc, int year, int month)
+        private static bool WorkedInMonth(string? startDate, string? endDate, int year, int month)
         {
             var monthStart = new DateTime(year, month, 1);
             var monthEnd = monthStart.AddMonths(1).AddDays(-1);
 
-            var start = DateParsingHelper.TryParseDate(arc.StartDate);
+            var start = DateParsingHelper.TryParseDate(startDate ?? string.Empty);
             if (start == null)
                 return false;
 
             if (start.Value > monthEnd)
                 return false;
 
-            if (string.IsNullOrEmpty(arc.EndDate))
+            if (string.IsNullOrWhiteSpace(endDate))
                 return true;
 
-            var end = DateParsingHelper.TryParseDate(arc.EndDate);
+            var end = DateParsingHelper.TryParseDate(endDate ?? string.Empty);
             if (end == null)
                 return true;
 
             return end.Value >= monthStart;
         }
 
-        private async void LoadReport()
+        private static bool EmployeeWorkedInMonth(EmployeeSummary emp, int year, int month) =>
+            WorkedInMonth(emp.StartDate, emp.EndDate, year, month);
+
+        private static bool ArchivedWorkedInMonth(ArchivedEmployeeSummary arc, int year, int month) =>
+            WorkedInMonth(arc.StartDate, arc.EndDate, year, month);
+
+        private async Task LoadReportAsync()
         {
             try
             {
@@ -410,15 +416,27 @@ namespace Win11DesktopApp.ViewModels
             bool needResave = false;
             var activeFoldersByFirm = new Dictionary<string, HashSet<string>>();
 
-            // Build start-date map
-            var startDateByFolder = new Dictionary<string, DateTime?>(StringComparer.OrdinalIgnoreCase);
+            var allHistory = new List<ArchivedEmployeeSummary>();
+            allHistory.AddRange(_employeeService.GetArchivedEmployees());
+            allHistory.AddRange(_employeeService.GetActiveEmployeeFirmHistory());
+
+            // Build employment period map for both active and archived/history employees.
+            var employmentByKey = new Dictionary<string, (string StartDate, string EndDate)>(StringComparer.OrdinalIgnoreCase);
             foreach (var company in companies)
                 foreach (var emp in _employeeService.GetEmployeesForFirm(company.Name))
                 {
-                    var fk = FolderKey(emp.EmployeeFolder);
-                    if (!startDateByFolder.ContainsKey(fk))
-                        startDateByFolder[fk] = DateParsingHelper.TryParseDate(emp.StartDate);
+                    var key = FolderKey(emp.EmployeeFolder) + "|" + company.Name;
+                    employmentByKey.TryAdd(key, (emp.StartDate, emp.EndDate));
                 }
+
+            foreach (var arc in allHistory)
+            {
+                if (string.IsNullOrEmpty(arc.FirmName))
+                    continue;
+
+                var key = FolderKey(arc.EmployeeFolder) + "|" + arc.FirmName;
+                employmentByKey.TryAdd(key, (arc.StartDate, arc.EndDate));
+            }
 
             // Load previous month notes for carry-forward (must be before sharedEntries loop)
             int prevYear = month == 1 ? year - 1 : year;
@@ -443,10 +461,14 @@ namespace Win11DesktopApp.ViewModels
                 if (resolved != entry.EmployeeFolder) { entry.EmployeeFolder = resolved; needResave = true; }
 
                 var fKey = FolderKey(entry.EmployeeFolder);
-                if (startDateByFolder.TryGetValue(fKey, out var sd) && sd != null && sd.Value > monthEnd)
-                { needResave = true; continue; }
-
                 var key = fKey + "|" + entry.FirmName;
+                if (!employmentByKey.TryGetValue(key, out var employment)
+                    || !WorkedInMonth(employment.StartDate, employment.EndDate, year, month))
+                {
+                    needResave = true;
+                    continue;
+                }
+
                 if (existingKeys.Contains(key)) continue;
 
                 // Carry note from previous month if current entry has none
@@ -469,9 +491,7 @@ namespace Win11DesktopApp.ViewModels
                     var folderName = FolderKey(emp.EmployeeFolder);
                     if (emp.Status == "Active") activeNames.Add(folderName);
                     if (emp.Status != "Active") continue;
-
-                    var empStart = DateParsingHelper.TryParseDate(emp.StartDate);
-                    if (empStart != null && empStart.Value > monthEnd) continue;
+                    if (!EmployeeWorkedInMonth(emp, year, month)) continue;
 
                     var key = folderName + "|" + company.Name;
                     if (existingKeys.Contains(key)) continue;
@@ -495,10 +515,6 @@ namespace Win11DesktopApp.ViewModels
                 activeFoldersByFirm[company.Name] = activeNames;
             }
 
-            // Add archived / history employees
-            var allHistory = new List<ArchivedEmployeeSummary>();
-            allHistory.AddRange(_employeeService.GetArchivedEmployees());
-            allHistory.AddRange(_employeeService.GetActiveEmployeeFirmHistory());
             foreach (var arc in allHistory)
             {
                 if (!ArchivedWorkedInMonth(arc, year, month)) continue;
@@ -642,8 +658,7 @@ namespace Win11DesktopApp.ViewModels
                     var employees = _employeeService.GetEmployeesForFirm(company.Name);
                 foreach (var emp in employees.Where(e => e.Status == "Active" && !e.FullName.Contains("Archived")))
                 {
-                    var empStart = DateParsingHelper.TryParseDate(emp.StartDate);
-                    if (empStart != null && empStart.Value > initMonthEnd)
+                    if (!EmployeeWorkedInMonth(emp, _selectedYear, _selectedMonth))
                         continue;
 
                     var entry = new SalaryEntry
@@ -696,8 +711,7 @@ namespace Win11DesktopApp.ViewModels
                     var employees = _employeeService.GetEmployeesForFirm(company.Name);
                 foreach (var emp in employees.Where(e => e.Status == "Active"))
                 {
-                    var empStart = DateParsingHelper.TryParseDate(emp.StartDate);
-                    if (empStart != null && empStart.Value > nextMonthEnd)
+                    if (!EmployeeWorkedInMonth(emp, _selectedYear, _selectedMonth))
                         continue;
 
                     var key = FolderKey(emp.EmployeeFolder) + "|" + company.Name;
@@ -802,18 +816,18 @@ namespace Win11DesktopApp.ViewModels
                 GroupedEntries.Filter = null;
             else
             {
-                var searchLower = _searchText?.Trim().ToLowerInvariant() ?? "";
+                var search = _searchText?.Trim() ?? "";
                 GroupedEntries.Filter = obj =>
                 {
                     if (obj is not SalaryEntry e) return false;
                     if (hasFirmFilter && e.FirmName != _selectedFirmFilter) return false;
-                    if (hasSearch && !(e.FullName?.ToLowerInvariant().Contains(searchLower) == true)) return false;
+                    if (hasSearch && !(e.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true
+                        || e.FirmName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)) return false;
                     return true;
                 };
             }
 
             GroupedEntries.Refresh();
-            LoadExpenses();
             RecalcTotals();
         }
 
@@ -825,8 +839,8 @@ namespace Win11DesktopApp.ViewModels
                 result = result.Where(e => e.FirmName == _selectedFirmFilter);
             if (!string.IsNullOrWhiteSpace(_searchText))
             {
-                var searchLower = _searchText.Trim().ToLowerInvariant();
-                result = result.Where(e => e.FullName?.ToLowerInvariant().Contains(searchLower) == true);
+                var search = _searchText.Trim();
+                result = result.Where(e => e.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
             }
             return result;
         }

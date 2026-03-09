@@ -278,7 +278,9 @@ namespace Win11DesktopApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show(ex.ToString(), "AddEmployee Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    var errTitle = Application.Current?.TryFindResource("TitleError") as string ?? "Error";
+                    var errFmt = Application.Current?.TryFindResource("MsgErrorGeneric") as string ?? "Error: {0}";
+                    System.Windows.MessageBox.Show(string.Format(errFmt, ex.Message), errTitle, System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             });
 
@@ -407,7 +409,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            var query = SearchQuery?.Trim().ToLower() ?? string.Empty;
+            var query = SearchQuery?.Trim() ?? string.Empty;
             List<EmployeeModels.EmployeeSummary> list;
 
             IEnumerable<EmployeeModels.EmployeeSummary> source = _allEmployees;
@@ -424,10 +426,10 @@ namespace Win11DesktopApp.ViewModels
             else
             {
                 list = source.Where(e =>
-                    (!string.IsNullOrEmpty(e.FullName) && e.FullName.ToLower().Contains(query)) ||
-                    (!string.IsNullOrEmpty(e.PassportNumber) && e.PassportNumber.ToLower().Contains(query)) ||
-                    (!string.IsNullOrEmpty(e.VisaNumber) && e.VisaNumber.ToLower().Contains(query)) ||
-                    (!string.IsNullOrEmpty(e.InsuranceNumber) && e.InsuranceNumber.ToLower().Contains(query))
+                    (!string.IsNullOrEmpty(e.FullName) && e.FullName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.PassportNumber) && e.PassportNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.VisaNumber) && e.VisaNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.InsuranceNumber) && e.InsuranceNumber.Contains(query, StringComparison.OrdinalIgnoreCase))
                 ).ToList();
             }
 

@@ -122,13 +122,19 @@
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
-                            Visibility="{Binding DataContext.ExpiringDocs.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}, ConverterParameter=invert}">
-                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="40"
-                               Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="{DynamicResource DashAllOk}" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center"/>
-                </StackPanel>
+                <Border Grid.Row="1"
+                        Style="{StaticResource CompactEmptyStateCard}"
+                        Padding="20,18"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Stretch"
+                        Visibility="{Binding DataContext.ExpiringDocs.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}, ConverterParameter=invert}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="40"
+                                   Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock Text="{DynamicResource DashAllOk}" FontSize="{DynamicResource FS14}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
                 <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScrollBar}"
                               Visibility="{Binding DataContext.ExpiringDocs.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
@@ -271,16 +277,22 @@
                            Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,12"
                            Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}"/>
 
-                <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center"
-                            Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}, ConverterParameter=invert}">
-                    <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="36"
-                               Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                    <TextBlock Text="{DynamicResource DashSalaryEmpty}" FontSize="{DynamicResource FS13}"
-                               Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource DashSalaryEmptyMsg}" FontSize="{DynamicResource FS11}"
-                               Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,4,0,0"
-                               TextWrapping="Wrap" TextAlignment="Center"/>
-                </StackPanel>
+                <Border Grid.Row="2"
+                        Style="{StaticResource CompactEmptyStateCard}"
+                        Padding="20,18"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Stretch"
+                        Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}, ConverterParameter=invert}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="36"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource DashSalaryEmpty}" FontSize="{DynamicResource FS13}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource DashSalaryEmptyMsg}" FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,4,0,0"
+                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
                 <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScrollBar}"
                               Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
@@ -376,30 +388,61 @@
 
         <!-- Header -->
         <Grid Grid.Row="0" Margin="0,0,0,20">
-            <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding GoBackCommand}" Background="Transparent" BorderThickness="0"
-                        Width="36" Height="36" Cursor="Hand" Margin="0,0,12,0">
-                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="18"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                 </Button>
-                <TextBlock Text="{DynamicResource DashboardTitle}" FontSize="{DynamicResource FS22}" FontWeight="Bold"
-                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                <Border Style="{StaticResource PageHeaderIconBadge}">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#667EEA" Offset="0"/>
+                            <GradientStop Color="#764BA2" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&#xE9D2;" Style="{StaticResource PageHeaderIconText}"/>
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource DashboardTitle}" Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,3,0,0">
+                        <Run Text="{Binding TotalEmployees}"/>
+                        <Run Text=" "/>
+                        <Run Text="{DynamicResource DashWidgetEmployees}"/>
+                        <Run Text=" · "/>
+                        <Run Text="{Binding TotalProblems}"/>
+                        <Run Text=" "/>
+                        <Run Text="{DynamicResource DashWidgetProblems}"/>
+                    </TextBlock>
+                </StackPanel>
             </StackPanel>
-            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Command="{Binding AIReportCommand}" Background="{DynamicResource PurpleLightBrush}"
-                        BorderBrush="{DynamicResource PurpleBrush}" BorderThickness="1" Cursor="Hand"
-                        Padding="12,6" Margin="0,0,8,0">
+
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding AIReportCommand}"
+                        Cursor="Hand"
+                        Padding="14,8"
+                        Margin="0,0,8,0"
+                        Background="{DynamicResource PurpleLightBrush}"
+                        BorderBrush="{DynamicResource PurpleBrush}"
+                        BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                    Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{DynamicResource AIReportBtn}" FontSize="{DynamicResource FS12}"
                                    Foreground="{DynamicResource PurpleBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Command="{Binding RefreshCommand}" Background="Transparent"
-                        BorderThickness="0" Width="36" Height="36" Cursor="Hand">
-                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
+                <Button Command="{Binding RefreshCommand}"
+                        Style="{StaticResource HeaderGhostButton}"
+                        Width="36"
+                        Height="36"
+                        ToolTip="{DynamicResource DashLoading}">
+                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                 </Button>
             </StackPanel>
         </Grid>
@@ -614,15 +657,25 @@
         </Grid>
 
         <!-- Loading Overlay -->
-        <Border Grid.RowSpan="3" Background="#88FFFFFF" CornerRadius="12"
-                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,0,0,12"
-                             Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource DividerBrush}"/>
-                <TextBlock Text="{DynamicResource DashLoading}" FontSize="{DynamicResource FS14}"
-                           Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center"/>
-            </StackPanel>
-        </Border>
+        <Grid Grid.RowSpan="3" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}" CornerRadius="12"/>
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="22,18"
+                    CornerRadius="14"
+                    Background="{DynamicResource ContentBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1">
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar IsIndeterminate="True" Width="84" Height="6" Margin="0,0,12,0"
+                                 Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource DividerBrush}"
+                                 VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource DashLoading}" FontSize="{DynamicResource FS13}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Employee Details Overlay -->
         <Grid Grid.RowSpan="3" Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">

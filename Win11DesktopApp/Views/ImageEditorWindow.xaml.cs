@@ -12,6 +12,7 @@ using OpenCvSharp;
 using Win11DesktopApp.Services;
 using Window = System.Windows.Window;
 using Point = System.Windows.Point;
+using Rect = System.Windows.Rect;
 using Size = System.Windows.Size;
 
 namespace Win11DesktopApp.Views
@@ -28,7 +29,7 @@ namespace Win11DesktopApp.Views
         private bool _hasCropSelection;
         private bool _isLoaded;
 
-        private readonly DispatcherTimer _debounceTimer;
+        private readonly DispatcherTimer _debounceTimer = new() { Interval = TimeSpan.FromMilliseconds(120) };
         private const int PreviewMaxDim = 900;
         private Mat? _previewMat;
         private CancellationTokenSource? _renderCts;
@@ -56,15 +57,14 @@ namespace Win11DesktopApp.Views
                 _currentMat = _originalMat.Clone();
                 Loaded += (_, _) =>
                 {
-                    MessageBox.Show(
-                        $"Не вдалося відкрити файл:\n{ex.Message}",
-                        "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var fmt = Application.Current?.TryFindResource("MsgFileOpenError") as string ?? "Could not open file:\n{0}";
+                    var ttl = Application.Current?.TryFindResource("TitleError") as string ?? "Error";
+                    MessageBox.Show(string.Format(fmt, ex.Message), ttl, MessageBoxButton.OK, MessageBoxImage.Error);
                     Close();
                 };
                 return;
             }
 
-            _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
             _debounceTimer.Tick += DebounceTimer_Tick;
 
             Loaded += OnLoaded;
@@ -145,7 +145,7 @@ namespace Win11DesktopApp.Views
 
             try
             {
-                var (bitmap, pixW, pixH) = await Task.Run(() =>
+                var (bitmap, pixW, pixH) = await Task.Run<(BitmapImage? bitmap, int pixW, int pixH)>(() =>
                 {
                     Mat result = srcMat;
                     bool needsDispose = false;
@@ -326,8 +326,15 @@ namespace Win11DesktopApp.Views
         // --- Crop selection ---
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (!TryGetDisplayedImageBounds(out var imageBounds))
+                return;
+
+            var mousePos = e.GetPosition(ImageCanvas);
+            if (!imageBounds.Contains(mousePos))
+                return;
+
             _isDragging = true;
-            _dragStart = e.GetPosition(ImageCanvas);
+            _dragStart = ClampPointToRect(mousePos, imageBounds);
             CropRect.Visibility = Visibility.Visible;
             Canvas.SetLeft(CropRect, _dragStart.X);
             Canvas.SetTop(CropRect, _dragStart.Y);
@@ -340,7 +347,10 @@ namespace Win11DesktopApp.Views
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (!_isDragging) return;
-            var pos = e.GetPosition(ImageCanvas);
+            if (!TryGetDisplayedImageBounds(out var imageBounds))
+                return;
+
+            var pos = ClampPointToRect(e.GetPosition(ImageCanvas), imageBounds);
             double x = Math.Min(pos.X, _dragStart.X);
             double y = Math.Min(pos.Y, _dragStart.Y);
             double w = Math.Abs(pos.X - _dragStart.X);
@@ -370,15 +380,33 @@ namespace Win11DesktopApp.Views
                 return;
             }
 
-            double imgLeft = Canvas.GetLeft(PreviewImage);
-            double imgTop = Canvas.GetTop(PreviewImage);
-            double imgW = PreviewImage.Width;
-            double imgH = PreviewImage.Height;
+            if (!TryGetDisplayedImageBounds(out var imageBounds))
+                return;
 
-            double cropL = Canvas.GetLeft(CropRect);
-            double cropT = Canvas.GetTop(CropRect);
-            double cropW = CropRect.Width;
-            double cropH = CropRect.Height;
+            double imgLeft = imageBounds.Left;
+            double imgTop = imageBounds.Top;
+            double imgW = imageBounds.Width;
+            double imgH = imageBounds.Height;
+
+            var cropRect = new Rect(
+                Canvas.GetLeft(CropRect),
+                Canvas.GetTop(CropRect),
+                CropRect.Width,
+                CropRect.Height);
+            cropRect.Intersect(imageBounds);
+
+            if (cropRect.Width <= 1 || cropRect.Height <= 1)
+            {
+                ClearCropSelection();
+                StatusText.Text = Application.Current.TryFindResource("ImgEditorDrawCrop") as string
+                    ?? "Намалюйте область для обрізки на фото.";
+                return;
+            }
+
+            double cropL = cropRect.Left;
+            double cropT = cropRect.Top;
+            double cropW = cropRect.Width;
+            double cropH = cropRect.Height;
 
             var adjusted = ApplySlidersFull(_currentMat);
             int matW = adjusted.Cols;
@@ -400,8 +428,7 @@ namespace Win11DesktopApp.Views
             ResetSlidersQuiet();
             BuildPreviewMat();
 
-            CropRect.Visibility = Visibility.Collapsed;
-            _hasCropSelection = false;
+            ClearCropSelection();
             RefreshPreviewAsync();
             StatusText.Text = Application.Current.TryFindResource("ImgEditorCropped") as string ?? "Обрізано!";
         }
@@ -415,6 +442,7 @@ namespace Win11DesktopApp.Views
                 _currentMat.Dispose();
                 _currentMat = rotated;
                 BuildPreviewMat();
+                ClearCropSelection();
                 RefreshPreviewAsync();
             }
             catch (Exception ex)
@@ -433,6 +461,7 @@ namespace Win11DesktopApp.Views
                 _currentMat.Dispose();
                 _currentMat = rotated;
                 BuildPreviewMat();
+                ClearCropSelection();
                 RefreshPreviewAsync();
             }
             catch (Exception ex)
@@ -451,6 +480,7 @@ namespace Win11DesktopApp.Views
                 _currentMat.Dispose();
                 _currentMat = sharpened;
                 BuildPreviewMat();
+                ClearCropSelection();
                 RefreshPreviewAsync();
                 StatusText.Text = Application.Current.TryFindResource("ImgEditorSharpened") as string ?? "Різкість збільшено!";
             }
@@ -471,6 +501,7 @@ namespace Win11DesktopApp.Views
                 _currentMat = enhanced;
                 ResetSlidersQuiet();
                 BuildPreviewMat();
+                ClearCropSelection();
                 RefreshPreviewAsync();
                 StatusText.Text = Application.Current.TryFindResource("ImgEditorAutoEnhanceDone") as string ?? "Авто-покращення застосовано!";
             }
@@ -498,6 +529,7 @@ namespace Win11DesktopApp.Views
                 DeskewSlider.Value = 0;
                 _isLoaded = true;
                 BuildPreviewMat();
+                ClearCropSelection();
                 RefreshPreviewAsync();
                 StatusText.Text = Application.Current.TryFindResource("ImgEditorPerspectiveDone") as string ?? "Перспективу виправлено!";
             }
@@ -516,8 +548,7 @@ namespace Win11DesktopApp.Views
                 _currentMat = _originalMat.Clone();
                 ResetSlidersQuiet();
                 BuildPreviewMat();
-                CropRect.Visibility = Visibility.Collapsed;
-                _hasCropSelection = false;
+                ClearCropSelection();
                 RefreshPreviewAsync();
                 StatusText.Text = Application.Current.TryFindResource("ImgEditorResetDone") as string ?? "Відновлено оригінал.";
             }
@@ -549,8 +580,7 @@ namespace Win11DesktopApp.Views
             try
             {
                 var final = ApplySlidersFull(_currentMat);
-                var dir = Path.GetDirectoryName(_originalPath) ?? Path.GetTempPath();
-                var outPath = Path.Combine(dir, $"edited_{Guid.NewGuid():N}{Path.GetExtension(_originalPath)}");
+                var outPath = Path.Combine(Path.GetTempPath(), $"edited_{Guid.NewGuid():N}{Path.GetExtension(_originalPath)}");
                 _service.SaveImage(final, outPath);
                 final.Dispose();
 
@@ -581,6 +611,36 @@ namespace Win11DesktopApp.Views
             _currentMat?.Dispose();
             _originalMat?.Dispose();
             base.OnClosed(e);
+        }
+
+        private void ClearCropSelection()
+        {
+            CropRect.Visibility = Visibility.Collapsed;
+            CropRect.Width = 0;
+            CropRect.Height = 0;
+            _hasCropSelection = false;
+        }
+
+        private bool TryGetDisplayedImageBounds(out Rect bounds)
+        {
+            double left = Canvas.GetLeft(PreviewImage);
+            double top = Canvas.GetTop(PreviewImage);
+
+            if (double.IsNaN(left) || double.IsNaN(top) || PreviewImage.Width <= 0 || PreviewImage.Height <= 0)
+            {
+                bounds = Rect.Empty;
+                return false;
+            }
+
+            bounds = new Rect(left, top, PreviewImage.Width, PreviewImage.Height);
+            return true;
+        }
+
+        private static Point ClampPointToRect(Point point, Rect rect)
+        {
+            return new Point(
+                Math.Max(rect.Left, Math.Min(point.X, rect.Right)),
+                Math.Max(rect.Top, Math.Min(point.Y, rect.Bottom)));
         }
     }
 }

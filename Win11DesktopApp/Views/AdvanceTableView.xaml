@@ -26,24 +26,8 @@
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Command="{Binding GoBackCommand}"
-                        Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="8,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}" Margin="8,0,0,0"
-                                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
+                        Style="{StaticResource HeaderBackButton}">
+                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                 </Button>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">

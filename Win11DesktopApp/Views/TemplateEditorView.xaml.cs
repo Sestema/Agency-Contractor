@@ -17,6 +17,7 @@ namespace Win11DesktopApp.Views
     {
         private TemplateEditorViewModel? _vm;
         private bool _isLoaded;
+        private bool _suppressEditorEvents;
         private AITemplateOverlayWindow? _aiOverlay;
         private const double A4HeightPx = 1123.0;
 
@@ -53,18 +54,28 @@ namespace Win11DesktopApp.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            _isLoaded = true;
             try
             {
+                _suppressEditorEvents = true;
+
                 if (_vm != null && File.Exists(_vm.RtfFilePath))
                 {
                     LoadRtfFromFile(_vm.RtfFilePath);
                 }
+
+                UpdatePageBreakLines();
+                SyncParagraphFormattingControls();
                 Editor.Focus();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"TemplateEditorView.OnLoaded error: {ex.Message}");
+            }
+            finally
+            {
+                _suppressEditorEvents = false;
+                _isLoaded = true;
+                _vm?.NotifyEditorLoaded();
             }
         }
 
@@ -113,6 +124,9 @@ namespace Win11DesktopApp.Views
                 {
                     Editor.CaretPosition.InsertTextInRun(tagText);
                 }
+
+                _vm?.MarkDirty();
+                UpdatePageBreakLines();
             }
             catch (Exception ex)
             {
@@ -195,6 +209,9 @@ namespace Win11DesktopApp.Views
                     tpos = found + Math.Max(1, normalizedReplace.Length);
                 }
             }
+
+            _vm?.MarkDirty();
+            UpdatePageBreakLines();
         }
 
         // Normalize em-dash, en-dash and figure dash to a common em-dash for reliable searching
@@ -343,7 +360,7 @@ namespace Win11DesktopApp.Views
         private void FontSizeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // Guard: skip during initialization
-            if (!_isLoaded || Editor == null) return;
+            if (!_isLoaded || _suppressEditorEvents || Editor == null) return;
 
             try
             {
@@ -363,9 +380,170 @@ namespace Win11DesktopApp.Views
             }
         }
 
+        private void Editor_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents)
+                return;
+
+            _vm?.MarkDirty();
+            UpdatePageBreakLines();
+        }
+
+        private void Editor_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents)
+                return;
+
+            SyncParagraphFormattingControls();
+        }
+
+        private void LineSpacingCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents)
+                return;
+
+            if (!TryGetSelectedComboValue(LineSpacingCombo, out var multiplier))
+                return;
+
+            ApplyParagraphFormatting(paragraph =>
+            {
+                var fontSize = paragraph.FontSize > 0 ? paragraph.FontSize : Editor.FontSize;
+                paragraph.LineHeight = Math.Round(fontSize * multiplier, 1);
+            });
+        }
+
+        private void ParagraphSpacingCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents)
+                return;
+
+            if (!TryGetSelectedComboValue(ParagraphSpacingCombo, out var spacing))
+                return;
+
+            ApplyParagraphFormatting(paragraph =>
+            {
+                var margin = paragraph.Margin;
+                paragraph.Margin = new Thickness(margin.Left, spacing, margin.Right, spacing);
+            });
+        }
+
         private void Editor_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdatePageBreakLines();
+        }
+
+        private void ApplyParagraphFormatting(Action<Paragraph> apply)
+        {
+            var paragraphs = GetSelectedParagraphs().ToList();
+            if (paragraphs.Count == 0)
+                return;
+
+            _suppressEditorEvents = true;
+
+            try
+            {
+                foreach (var paragraph in paragraphs)
+                    apply(paragraph);
+            }
+            finally
+            {
+                _suppressEditorEvents = false;
+            }
+
+            _vm?.MarkDirty();
+            UpdatePageBreakLines();
+            Editor.Focus();
+        }
+
+        private IEnumerable<Paragraph> GetSelectedParagraphs()
+        {
+            var paragraphs = new HashSet<Paragraph>();
+            var start = Editor.Selection?.Start;
+            var end = Editor.Selection?.End;
+
+            if (start == null || end == null)
+                return paragraphs;
+
+            if (start.Paragraph != null)
+                paragraphs.Add(start.Paragraph);
+
+            var pointer = start;
+            while (pointer != null && pointer.CompareTo(end) <= 0)
+            {
+                if (pointer.Paragraph != null)
+                    paragraphs.Add(pointer.Paragraph);
+
+                var next = pointer.GetNextContextPosition(LogicalDirection.Forward);
+                if (next == null || next.CompareTo(pointer) == 0)
+                    break;
+
+                pointer = next;
+            }
+
+            if (end.Paragraph != null)
+                paragraphs.Add(end.Paragraph);
+
+            return paragraphs;
+        }
+
+        private static bool TryGetSelectedComboValue(ComboBox comboBox, out double value)
+        {
+            value = 0;
+
+            if (comboBox.SelectedItem is ComboBoxItem item)
+                return double.TryParse(item.Tag?.ToString() ?? item.Content?.ToString(), out value);
+
+            return false;
+        }
+
+        private void SyncParagraphFormattingControls()
+        {
+            var paragraph = Editor.Selection?.Start?.Paragraph;
+            if (paragraph == null)
+                return;
+
+            _suppressEditorEvents = true;
+
+            try
+            {
+                SyncComboSelection(LineSpacingCombo, GetLineSpacingValue(paragraph));
+                SyncComboSelection(ParagraphSpacingCombo, paragraph.Margin.Top);
+            }
+            finally
+            {
+                _suppressEditorEvents = false;
+            }
+        }
+
+        private static double GetLineSpacingValue(Paragraph paragraph)
+        {
+            var fontSize = paragraph.FontSize > 0 ? paragraph.FontSize : 12;
+            if (paragraph.LineHeight <= 0 || double.IsNaN(paragraph.LineHeight))
+                return 1.0;
+
+            return Math.Round(paragraph.LineHeight / fontSize, 2);
+        }
+
+        private static void SyncComboSelection(ComboBox comboBox, double actualValue)
+        {
+            ComboBoxItem? nearestItem = null;
+            var bestDelta = double.MaxValue;
+
+            foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+            {
+                if (!double.TryParse(item.Tag?.ToString() ?? item.Content?.ToString(), out var itemValue))
+                    continue;
+
+                var delta = Math.Abs(itemValue - actualValue);
+                if (delta < bestDelta)
+                {
+                    bestDelta = delta;
+                    nearestItem = item;
+                }
+            }
+
+            if (nearestItem != null)
+                comboBox.SelectedItem = nearestItem;
         }
 
         private void UpdatePageBreakLines()

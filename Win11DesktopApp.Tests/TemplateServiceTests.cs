@@ -22,7 +22,8 @@ namespace Win11DesktopApp.Tests
             // Mock AppSettingsService
             _appSettingsService = new AppSettingsService();
             _appSettingsService.Settings.RootFolderPath = _testRootPath;
-            _appSettingsService.Settings.LanguageCode = "en"; // Use English folder names in tests
+            _appSettingsService.Settings.LanguageCode = "en";
+            _appSettingsService.Settings.DocumentLanguage = "en";
 
             var folderService = new FolderService(_appSettingsService);
             _templateService = new TemplateService(_appSettingsService, folderService);
@@ -108,6 +109,33 @@ namespace Win11DesktopApp.Tests
             var templateFolder = Path.Combine(templatesRoot, "Template_To_Delete");
 
             Assert.False(Directory.Exists(templateFolder));
+        }
+
+        [Fact]
+        public void CopyTemplateToCompany_ShouldCreateCopiedTemplateInTargetCompany()
+        {
+            var sourceFirm = "SourceFirm";
+            var targetFirm = "TargetFirm";
+            var sourceFile = Path.Combine(_testRootPath, "source.docx");
+            File.WriteAllText(sourceFile, "dummy");
+
+            _templateService.AddTemplate(sourceFirm, "Original Template", "Desc", "DOCX", sourceFile);
+            var sourceTemplate = _templateService.GetTemplates(sourceFirm).Single();
+
+            var copiedTemplate = _templateService.CopyTemplateToCompany(sourceFirm, sourceTemplate, targetFirm, "Copied Template");
+
+            var targetTemplates = _templateService.GetTemplates(targetFirm);
+
+            Assert.Single(targetTemplates);
+            Assert.Equal("Copied Template", targetTemplates[0].Name);
+            Assert.Equal("Copied Template", copiedTemplate.Name);
+
+            var copiedFullPath = Path.Combine(_testRootPath, FolderService.NormalizeFolderName(targetFirm), "Templates", "Copied_Template", "template.docx");
+            Assert.True(File.Exists(copiedFullPath));
+
+            var targetIndexFile = Path.Combine(_testRootPath, FolderService.NormalizeFolderName(targetFirm), "Templates", "index.json");
+            Assert.True(File.Exists(targetIndexFile));
+            Assert.Contains("Copied Template", File.ReadAllText(targetIndexFile));
         }
 
         public void Dispose()

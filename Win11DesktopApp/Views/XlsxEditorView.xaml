@@ -27,11 +27,11 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Command="{Binding GoBackCommand}" 
-                        Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
-                        FontSize="{DynamicResource FS16}" Background="Transparent" BorderThickness="0"
-                        Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,10,0"
-                        VerticalAlignment="Center" Cursor="Hand" ToolTip="{DynamicResource XlsxBack}"/>
+                <Button Grid.Column="0" Command="{Binding GoBackCommand}"
+                        Style="{StaticResource HeaderBackButton}"
+                        Margin="0,0,10,0" ToolTip="{DynamicResource XlsxBack}">
+                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                </Button>
 
                 <TextBlock Grid.Column="1" Text="{Binding Title}" 
                            FontSize="{DynamicResource FS16}" FontWeight="SemiBold" 

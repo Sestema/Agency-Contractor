@@ -59,18 +59,47 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void RestoreWindowBounds(AppSettingsService.AppSettings settings)
     {
-        if (settings.WindowWidth > 100)
+        var hasStoredSize = settings.WindowWidth > 100 && settings.WindowHeight > 100;
+        if (hasStoredSize)
+        {
             Width = settings.WindowWidth;
-        if (settings.WindowHeight > 100)
             Height = settings.WindowHeight;
-        if (settings.WindowLeft >= 0 && settings.WindowTop >= 0)
+        }
+
+        var canRestorePosition =
+            settings.WindowLeft >= 0 &&
+            settings.WindowTop >= 0 &&
+            IsWindowRectVisible(settings.WindowLeft, settings.WindowTop, Width, Height);
+
+        if (canRestorePosition)
         {
             Left = settings.WindowLeft;
             Top = settings.WindowTop;
             WindowStartupLocation = WindowStartupLocation.Manual;
         }
-        if (settings.WindowMaximized)
+        else
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        if (settings.WindowMaximized && canRestorePosition)
             WindowState = WindowState.Maximized;
+    }
+
+    private static bool IsWindowRectVisible(double left, double top, double width, double height)
+    {
+        var screenLeft = SystemParameters.VirtualScreenLeft;
+        var screenTop = SystemParameters.VirtualScreenTop;
+        var screenRight = screenLeft + SystemParameters.VirtualScreenWidth;
+        var screenBottom = screenTop + SystemParameters.VirtualScreenHeight;
+
+        var right = left + Math.Max(width, 200);
+        var bottom = top + Math.Max(height, 150);
+
+        return right > screenLeft + 40 &&
+               bottom > screenTop + 40 &&
+               left < screenRight - 40 &&
+               top < screenBottom - 40;
     }
 
     private async void SaveWindowBounds()

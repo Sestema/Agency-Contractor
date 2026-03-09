@@ -47,6 +47,9 @@ namespace Win11DesktopApp.ViewModels
         public ICommand RenameTemplateCommand { get; }
         public ICommand ConfirmRenameCommand { get; }
         public ICommand CancelRenameCommand { get; }
+        public ICommand CopyTemplateToCompanyCommand { get; }
+        public ICommand ConfirmCopyTemplateCommand { get; }
+        public ICommand CancelCopyTemplateCommand { get; }
 
         private bool _isRenameDialogOpen;
         public bool IsRenameDialogOpen
@@ -63,6 +66,36 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private TemplateEntry? _renamingTemplate;
+
+        private bool _isCopyDialogOpen;
+        public bool IsCopyDialogOpen
+        {
+            get => _isCopyDialogOpen;
+            set => SetProperty(ref _isCopyDialogOpen, value);
+        }
+
+        private ObservableCollection<EmployerCompany> _copyTargetCompanies = new();
+        public ObservableCollection<EmployerCompany> CopyTargetCompanies
+        {
+            get => _copyTargetCompanies;
+            set => SetProperty(ref _copyTargetCompanies, value);
+        }
+
+        private EmployerCompany? _selectedCopyTargetCompany;
+        public EmployerCompany? SelectedCopyTargetCompany
+        {
+            get => _selectedCopyTargetCompany;
+            set => SetProperty(ref _selectedCopyTargetCompany, value);
+        }
+
+        private string _copyTemplateName = string.Empty;
+        public string CopyTemplateName
+        {
+            get => _copyTemplateName;
+            set => SetProperty(ref _copyTemplateName, value);
+        }
+
+        private TemplateEntry? _copyingTemplate;
 
         // Tags panel
         private bool _isTagsPanelOpen;
@@ -230,6 +263,79 @@ namespace Win11DesktopApp.ViewModels
                 _renamingTemplate = null;
             });
 
+            CopyTemplateToCompanyCommand = new RelayCommand(o =>
+            {
+                if (o is not TemplateEntry template)
+                    return;
+
+                var companies = App.CompanyService?.Companies?
+                    .Where(c => !string.Equals(c.Name, _firmName, System.StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(c => c.Name)
+                    .ToList() ?? new List<EmployerCompany>();
+
+                if (companies.Count == 0)
+                {
+                    MessageBox.Show(
+                        GetString("TplCopyNoCompanies") ?? "There are no other companies available for copying the template.",
+                        GetString("TitleError") ?? "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                _copyingTemplate = template;
+                CopyTargetCompanies = new ObservableCollection<EmployerCompany>(companies);
+                SelectedCopyTargetCompany = CopyTargetCompanies.FirstOrDefault();
+                CopyTemplateName = template.Name;
+                IsCopyDialogOpen = true;
+            });
+
+            ConfirmCopyTemplateCommand = new RelayCommand(o =>
+            {
+                if (_copyingTemplate == null)
+                {
+                    IsCopyDialogOpen = false;
+                    return;
+                }
+
+                if (SelectedCopyTargetCompany == null)
+                {
+                    MessageBox.Show(
+                        GetString("TplCopySelectCompany") ?? "Select a target company.",
+                        GetString("TitleError") ?? "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                var targetName = CopyTemplateName?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(targetName))
+                    targetName = _copyingTemplate.Name;
+
+                try
+                {
+                    var created = _templateService.CopyTemplateToCompany(_firmName, _copyingTemplate, SelectedCopyTargetCompany.Name, targetName);
+                    App.ActivityLogService?.Log(
+                        "TemplateCopiedToCompany",
+                        "Template",
+                        SelectedCopyTargetCompany.Name,
+                        "",
+                        $"Скопійовано шаблон «{_copyingTemplate.Name}» з {_firmName} у {SelectedCopyTargetCompany.Name} як «{created.Name}»");
+
+                    CloseCopyDialog();
+                }
+                catch (System.Exception ex)
+                {
+                    MessageBox.Show(
+                        string.Format(GetString("MsgUnexpectedError") ?? "Unexpected error: {0}", ex.Message),
+                        GetString("TitleError") ?? "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            });
+
+            CancelCopyTemplateCommand = new RelayCommand(o => CloseCopyDialog());
+
             CloseTagsPanelCommand = new RelayCommand(o => IsTagsPanelOpen = false);
 
             CopyTagCommand = new RelayCommand(o =>
@@ -269,6 +375,15 @@ namespace Win11DesktopApp.ViewModels
         {
             if (AddTemplateVm != null)
                 AddTemplateVm.RequestClose -= OnAddTemplateClose;
+        }
+
+        private void CloseCopyDialog()
+        {
+            IsCopyDialogOpen = false;
+            _copyingTemplate = null;
+            SelectedCopyTargetCompany = null;
+            CopyTargetCompanies = new ObservableCollection<EmployerCompany>();
+            CopyTemplateName = string.Empty;
         }
 
         private void LoadTemplates()

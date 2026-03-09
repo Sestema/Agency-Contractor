@@ -50,31 +50,6 @@
             </Setter>
         </Style>
 
-        <Style x:Key="HeaderBtn" TargetType="Button">
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}"
-                                Height="{TemplateBinding Height}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="DarkAwareDeleteBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="#EF5350"/>
@@ -100,7 +75,7 @@
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}" ClipToBounds="False">
         <Grid ClipToBounds="False">
-            <Grid Margin="20" ClipToBounds="False">
+            <Grid Margin="24,16,24,20" ClipToBounds="False">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>  <!-- Header -->
                     <RowDefinition Height="Auto"/>  <!-- Statistics -->
@@ -114,46 +89,56 @@
                 <Grid Grid.Row="0" Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Back button -->
-                    <Button Grid.Column="0" Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBtn}" 
-                            Margin="0,0,10,0" VerticalAlignment="Center">
-                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-                    </Button>
-
-                    <!-- Firm name badge -->
-                    <Border Grid.Column="1" CornerRadius="8" Padding="12,6" Margin="0,0,16,0"
-                            VerticalAlignment="Center"
-                            Background="{DynamicResource CardBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE731;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
-                                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Title, FallbackValue='Працівники'}" 
-                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold" 
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource ForegroundBrush}"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="300"/>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        </Button>
+                        <Border Style="{StaticResource PageHeaderIconBadge}">
+                            <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
+                            <TextBlock FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                       Margin="0,3,0,0">
+                                <Run Text="{Binding TotalCount}"/>
+                                <Run Text=" "/>
+                                <Run Text="{DynamicResource EmpStatActive}"/>
+                                <Run Text=" · "/>
+                                <Run Text="{Binding ProblemsCount}"/>
+                                <Run Text=" "/>
+                                <Run Text="{DynamicResource EmpStatProblems}"/>
+                            </TextBlock>
                         </StackPanel>
-                    </Border>
+                    </StackPanel>
 
-                    <!-- Search (centered) -->
-                    <Border Grid.Column="2" CornerRadius="8" BorderThickness="1" Height="34"
-                            MaxWidth="360" HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                            Background="{DynamicResource CardBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}">
-                        <Grid Margin="10,0">
+                    <Border Grid.Column="1"
+                            Style="{StaticResource ToolbarSearchContainer}"
+                            Margin="18,0,0,0"
+                            CornerRadius="12"
+                            Height="38"
+                            MaxWidth="380"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Center">
+                        <Grid Margin="12,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                       Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBox Grid.Column="1" VerticalAlignment="Center" BorderThickness="0"
+                            <TextBlock Grid.Column="0"
+                                       Text="&#xE721;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"/>
+                            <TextBox Grid.Column="1"
+                                     VerticalAlignment="Center"
+                                     BorderThickness="0"
                                      Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                      Background="Transparent"
                                      Foreground="{DynamicResource ForegroundBrush}"
@@ -162,40 +147,30 @@
                         </Grid>
                     </Border>
 
-                    <!-- Action buttons -->
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
-                        <Button Command="{Binding ExportToExcelCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,6,0"
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <Button Command="{Binding ExportToExcelCommand}"
+                                Style="{StaticResource HeaderGhostButton}"
+                                Margin="0,0,8,0"
                                 ToolTip="{DynamicResource EmpTooltipExport}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Excel" FontSize="{DynamicResource FS12}"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding ToggleSelectionModeCommand}" Style="{StaticResource HeaderBtn}" Margin="0,0,6,0"
+                        <Button Command="{Binding ToggleSelectionModeCommand}"
+                                Style="{StaticResource HeaderGhostButton}"
+                                Margin="0,0,8,0"
                                 ToolTip="{DynamicResource EmpTooltipSelect}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE762;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0"/>
                                 <TextBlock Text="{DynamicResource EmpBtnSelect}" FontSize="{DynamicResource FS12}"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding AddEmployeeCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="AddBd" Background="{DynamicResource AccentBrush}" CornerRadius="8"
-                                            Padding="14,0" Height="36">
-                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="AddBd" Property="Opacity" Value="0.85"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button Command="{Binding AddEmployeeCommand}" Style="{StaticResource FilledActionButton}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" 
+                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                            Foreground="White" Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource BtnAddEmployee}" FontSize="{DynamicResource FS13}" 
+                                <TextBlock Text="{DynamicResource BtnAddEmployee}" FontSize="{DynamicResource FS13}"
                                            FontWeight="SemiBold" Foreground="White"/>
                             </StackPanel>
                         </Button>
@@ -1055,18 +1030,18 @@
                     </ScrollViewer>
 
                     <!-- Empty state -->
-                    <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="8" Padding="30"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    <Border Style="{StaticResource CompactEmptyStateCard}"
+                            Padding="28,24"
                             Visibility="{Binding HasEmployees, Converter={StaticResource InverseBoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS42}" HorizontalAlignment="Center" Foreground="#999"/>
-                            <TextBlock Text="{Binding StatusMessage, FallbackValue=У цієї фірми ще немає працівників.}" FontSize="{DynamicResource FS14}" Margin="0,10,0,10" TextAlignment="Center" TextWrapping="Wrap"
-                                       Style="{StaticResource StatusMessageText}"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Content="{DynamicResource BtnSelectCompany}" Command="{Binding SelectCompanyCommand}" Height="40" Padding="15,0"
-                                        Background="Transparent" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                        Visibility="{Binding IsCompanySelected, Converter={StaticResource InverseBoolToVis}}"/>
-                            </StackPanel>
+                            <TextBlock Text="&#xE77B;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}"/>
+                            <TextBlock Text="{Binding StatusMessage, FallbackValue=У цієї фірми ще немає працівників.}"
+                                       Style="{StaticResource CompactEmptyStateTitleText}"
+                                       Margin="0,0,0,10"/>
+                            <Button Content="{DynamicResource BtnSelectCompany}"
+                                    Command="{Binding SelectCompanyCommand}"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    Visibility="{Binding IsCompanySelected, Converter={StaticResource InverseBoolToVis}}"/>
                         </StackPanel>
                     </Border>
                 </Grid>

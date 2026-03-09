@@ -72,7 +72,7 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogError("ChatPersistence.Save", ex);
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception delEx) { LoggingService.LogWarning("ChatPersistence.CleanupTemp", delEx.Message); }
             }
         }
 

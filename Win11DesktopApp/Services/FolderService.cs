@@ -211,6 +211,9 @@ namespace Win11DesktopApp.Services
             var invalid = Path.GetInvalidFileNameChars();
             var safe = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries)).Trim();
             safe = safe.Replace(" ", "_");
+            safe = safe.TrimEnd('.', ' ');
+            while (safe.Contains("__", StringComparison.Ordinal))
+                safe = safe.Replace("__", "_", StringComparison.Ordinal);
             return string.IsNullOrWhiteSpace(safe) ? "_unnamed_" : safe;
         }
 

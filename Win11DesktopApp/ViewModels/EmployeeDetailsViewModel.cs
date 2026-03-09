@@ -45,6 +45,22 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isEditMode, value);
         }
 
+        private bool _isArchiveMode;
+        public bool IsArchiveMode
+        {
+            get => _isArchiveMode;
+            set
+            {
+                if (SetProperty(ref _isArchiveMode, value))
+                {
+                    OnPropertyChanged(nameof(IsNotArchiveMode));
+                    OnPropertyChanged(nameof(HeaderSubtitle));
+                    OnPropertyChanged(nameof(ShowArchiveModeChip));
+                }
+            }
+        }
+        public bool IsNotArchiveMode => !IsArchiveMode;
+
         public bool IsGenderMale
         {
             get => Data?.Gender == "male" || string.IsNullOrEmpty(Data?.Gender);
@@ -63,6 +79,62 @@ namespace Win11DesktopApp.ViewModels
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
         }
+
+        private bool _isPageBusy;
+        public bool IsPageBusy
+        {
+            get => _isPageBusy;
+            set
+            {
+                if (SetProperty(ref _isPageBusy, value))
+                {
+                    OnPropertyChanged(nameof(IsBusy));
+                    OnPropertyChanged(nameof(BusyMessage));
+                }
+            }
+        }
+
+        private string _pageBusyMessage = string.Empty;
+        public string PageBusyMessage
+        {
+            get => _pageBusyMessage;
+            set
+            {
+                if (SetProperty(ref _pageBusyMessage, value))
+                    OnPropertyChanged(nameof(BusyMessage));
+            }
+        }
+
+        public bool IsBusy => IsPageBusy || IsGenerating || IsAIValidating;
+
+        public string BusyMessage
+        {
+            get
+            {
+                if (IsPageBusy)
+                    return string.IsNullOrWhiteSpace(PageBusyMessage)
+                        ? (Res("DashLoading") ?? "Завантаження...")
+                        : PageBusyMessage;
+
+                if (IsGenerating)
+                    return string.IsNullOrWhiteSpace(GenerateStatusMessage)
+                        ? (Res("MsgGenerating") ?? "Генерація документа...")
+                        : GenerateStatusMessage;
+
+                if (IsAIValidating)
+                    return string.IsNullOrWhiteSpace(AIValidationResult)
+                        ? (Res("AIChatThinking") ?? "Обробка...")
+                        : AIValidationResult;
+
+                return string.Empty;
+            }
+        }
+
+        public string HeaderSubtitle => IsArchiveMode
+            ? $"{_firmName} · {Res("BtnArchive") ?? "Архів"}"
+            : _firmName;
+
+        public bool ShowArchiveModeChip => IsArchiveMode;
 
         private string _passportFilePath = string.Empty;
         public string PassportFilePath
@@ -314,14 +386,25 @@ namespace Win11DesktopApp.ViewModels
         public bool IsGenerating
         {
             get => _isGenerating;
-            set => SetProperty(ref _isGenerating, value);
+            set
+            {
+                if (SetProperty(ref _isGenerating, value))
+                {
+                    OnPropertyChanged(nameof(IsBusy));
+                    OnPropertyChanged(nameof(BusyMessage));
+                }
+            }
         }
 
         private string _generateStatusMessage = string.Empty;
         public string GenerateStatusMessage
         {
             get => _generateStatusMessage;
-            set => SetProperty(ref _generateStatusMessage, value);
+            set
+            {
+                if (SetProperty(ref _generateStatusMessage, value))
+                    OnPropertyChanged(nameof(BusyMessage));
+            }
         }
 
         // ---- AI Validation ----
@@ -329,14 +412,25 @@ namespace Win11DesktopApp.ViewModels
         public bool IsAIValidating
         {
             get => _isAIValidating;
-            set => SetProperty(ref _isAIValidating, value);
+            set
+            {
+                if (SetProperty(ref _isAIValidating, value))
+                {
+                    OnPropertyChanged(nameof(IsBusy));
+                    OnPropertyChanged(nameof(BusyMessage));
+                }
+            }
         }
 
         private string _aiValidationResult = string.Empty;
         public string AIValidationResult
         {
             get => _aiValidationResult;
-            set => SetProperty(ref _aiValidationResult, value);
+            set
+            {
+                if (SetProperty(ref _aiValidationResult, value))
+                    OnPropertyChanged(nameof(BusyMessage));
+            }
         }
 
         private bool _isAIValidationOpen;
@@ -418,6 +512,9 @@ namespace Win11DesktopApp.ViewModels
             get => _salaryMonthDisplays;
             set => SetProperty(ref _salaryMonthDisplays, value);
         }
+
+        private bool _isHistoryLoaded;
+        private bool _isSalaryHistoryLoaded;
 
         private bool _hasAdvances;
         public bool HasAdvances
@@ -589,17 +686,25 @@ namespace Win11DesktopApp.ViewModels
             CloseCommand = new RelayCommand(o => RequestClose?.Invoke());
             ShowDocumentsCommand = new RelayCommand(o => TabIndex = 0);
             ShowProfileCommand = new RelayCommand(o => TabIndex = 1);
-            ShowHistoryCommand = new RelayCommand(o => { TabIndex = 2; LoadHistory(); });
+            ShowHistoryCommand = new RelayCommand(o =>
+            {
+                TabIndex = 2;
+                EnsureHistoryLoaded();
+            });
             SetHistoryFilterCommand = new RelayCommand(o => HistoryFilter = o?.ToString() ?? "All");
-            ShowSalaryCommand = new RelayCommand(o => { TabIndex = 3; LoadSalaryHistory(); });
+            ShowSalaryCommand = new RelayCommand(o =>
+            {
+                TabIndex = 3;
+                EnsureSalaryHistoryLoaded();
+            });
             EditProfileCommand = new RelayCommand(o => IsEditMode = true);
-            SaveProfileCommand = new RelayCommand(o => SaveProfile());
+            SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync());
             CancelEditCommand = new RelayCommand(o => CancelEdit());
 
-            ReplacePassportCommand = new RelayCommand(o => ReplaceDocument("passport"));
-            ReplaceVisaCommand = new RelayCommand(o => ReplaceDocument("visa"));
-            ReplaceInsuranceCommand = new RelayCommand(o => ReplaceDocument("insurance"));
-            ReplacePhotoCommand = new RelayCommand(o => ReplaceDocument("photo"));
+            ReplacePassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport"));
+            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("visa"));
+            ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"));
+            ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"));
 
             OpenPassportCommand = new RelayCommand(o => OpenFile(PassportFilePath), o => HasPassport);
             OpenVisaCommand = new RelayCommand(o => OpenFile(VisaFilePath), o => HasVisa);
@@ -625,12 +730,12 @@ namespace Win11DesktopApp.ViewModels
 
             ExtendVisaCommand = new RelayCommand(o => ShowExtendDialog("visa"));
             ExtendInsuranceCommand = new RelayCommand(o => ShowExtendDialog("insurance"));
-            ConfirmExtendCommand = new RelayCommand(o => ConfirmExtend());
+            ConfirmExtendCommand = new AsyncRelayCommand(_ => ConfirmExtendAsync());
             CancelExtendCommand = new RelayCommand(o => IsExtendDialogOpen = false);
 
             OpenWorkPermitCommand = new RelayCommand(o => OpenFile(WorkPermitFilePath), o => HasWorkPermit);
             RenewWorkPermitCommand = new RelayCommand(o => StartRenewWorkPermit(), o => IsWorkPermitType);
-            ConfirmRenewWpCommand = new RelayCommand(o => ConfirmRenewWorkPermit());
+            ConfirmRenewWpCommand = new AsyncRelayCommand(_ => ConfirmRenewWorkPermitAsync());
             CancelRenewWpCommand = new RelayCommand(o => IsRenewWpDialogOpen = false);
 
             ArchiveEmployeeCommand = new RelayCommand(o =>
@@ -639,10 +744,10 @@ namespace Win11DesktopApp.ViewModels
                 ArchiveStatus = string.Empty;
                 IsArchiveDialogOpen = true;
             });
-            ConfirmArchiveCommand = new RelayCommand(o => ConfirmArchive());
+            ConfirmArchiveCommand = new AsyncRelayCommand(_ => ConfirmArchiveAsync());
             CancelArchiveCommand = new RelayCommand(o => IsArchiveDialogOpen = false);
             ExportProfilePdfCommand = new RelayCommand(o => ExportProfilePdf());
-            AIValidateCommand = new RelayCommand(o => RunAIValidation(), o => !IsAIValidating);
+            AIValidateCommand = new AsyncRelayCommand(_ => RunAIValidationAsync(), _ => !IsAIValidating);
             CloseAIValidationCommand = new RelayCommand(o => IsAIValidationOpen = false);
 
 
@@ -656,7 +761,7 @@ namespace Win11DesktopApp.ViewModels
                 IsAddCustomDocOpen = true;
             });
             CancelAddCustomDocCommand = new RelayCommand(o => IsAddCustomDocOpen = false);
-            ConfirmAddCustomDocCommand = new RelayCommand(o => ConfirmAddCustomDoc());
+            ConfirmAddCustomDocCommand = new AsyncRelayCommand(_ => ConfirmAddCustomDocAsync());
             BrowseCustomDocFileCommand = new RelayCommand(o => BrowseCustomDocFile());
             OpenCustomDocCommand = new RelayCommand(o =>
             {
@@ -696,14 +801,21 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (o is CustomSignedDocument cd) ToggleHideDoc(cd, !cd.IsHidden);
             });
-            DeleteCustomDocCommand = new RelayCommand(o =>
+            DeleteCustomDocCommand = new AsyncRelayCommand(o =>
             {
-                if (o is CustomSignedDocument cd) DeleteCustomDoc(cd);
+                if (o is CustomSignedDocument cd) return DeleteCustomDocAsync(cd);
+                return Task.CompletedTask;
             });
 
             LoadCustomDocuments();
 
             RefreshExpiryWarnings();
+        }
+
+        private void SetBusyState(bool isBusy, string? message = null)
+        {
+            PageBusyMessage = isBusy ? (message ?? string.Empty) : string.Empty;
+            IsPageBusy = isBusy;
         }
 
         private void ShowExtendDialog(string type)
@@ -714,7 +826,7 @@ namespace Win11DesktopApp.ViewModels
             IsExtendDialogOpen = true;
         }
 
-        private async void ConfirmExtend()
+        private async Task ConfirmExtendAsync()
         {
             if (string.IsNullOrWhiteSpace(NewExpiryDate))
             {
@@ -724,6 +836,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
+                SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
                 var oldDate = _extendType == "visa" ? Data.VisaExpiry : Data.InsuranceExpiry;
                 var fieldName = _extendType == "visa" ? Res("DetExtendFieldVisa") : Res("DetExtendFieldIns");
                 var actionName = _extendType == "visa" ? Res("HistoryExtendVisa") : Res("HistoryExtendIns");
@@ -752,6 +865,7 @@ namespace Win11DesktopApp.ViewModels
 
                     IsExtendDialogOpen = false;
                     OnPropertyChanged(nameof(Data));
+                    InvalidateDetailCaches();
                     DataChanged?.Invoke();
                     StatusMessage = string.Empty;
                 }
@@ -764,9 +878,13 @@ namespace Win11DesktopApp.ViewModels
             {
                 StatusMessage = ex.Message;
             }
+            finally
+            {
+                SetBusyState(false);
+            }
         }
 
-        private async void ConfirmArchive()
+        private async Task ConfirmArchiveAsync()
         {
             if (string.IsNullOrWhiteSpace(ArchiveEndDate))
             {
@@ -776,6 +894,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
+                SetBusyState(true, Res("DetArchiveTitle") ?? "Перемістити в архів");
                 await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
                 {
                     EventType = "Archived",
@@ -799,6 +918,7 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(WorkPermitFilePath));
 
                 // Force WPF to release image file handles
+                Converters.ImagePathConverter.InvalidateCache();
                 await Task.Delay(100);
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
@@ -806,13 +926,19 @@ namespace Win11DesktopApp.ViewModels
                 await Task.Delay(200);
 
                 var result = await _employeeService.ArchiveEmployee(_employeeFolder, _firmName, ArchiveEndDate);
-                if (!string.IsNullOrEmpty(result))
+                if (result.Success)
                 {
                     App.ActivityLogService?.Log("EmployeeArchived", "Archive", _firmName, FullName,
                         $"Архівовано {FullName} з {_firmName}, дата закінчення: {ArchiveEndDate}",
                         _firmName, ArchiveEndDate, employeeFolder: _employeeFolder);
 
+                    if (result.SourceCleanupDeferred)
+                        ToastService.Instance.Warning(Res("MsgArchiveCleanupDeferred"));
+                    else
+                        ToastService.Instance.Success(Res("MsgArchiveSuccess"));
+
                     IsArchiveDialogOpen = false;
+                    InvalidateDetailCaches();
                     DataChanged?.Invoke();
                     RequestClose?.Invoke();
                 }
@@ -825,15 +951,20 @@ namespace Win11DesktopApp.ViewModels
             {
                 ArchiveStatus = string.Format(Res("MsgErrorFmt"), ex.Message);
             }
+            finally
+            {
+                SetBusyState(false);
+            }
         }
 
         // Document generation methods moved to EmployeeDetailsViewModel.Documents.cs
         // History and salary methods moved to EmployeeDetailsViewModel.History.cs
 
-        private async void SaveProfile()
+        private async Task SaveProfileAsync()
         {
             try
             {
+                SetBusyState(true, Res("EditorSaving") ?? "Збереження...");
                 var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
 
                 if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
@@ -847,6 +978,7 @@ namespace Win11DesktopApp.ViewModels
                     IsEditMode = false;
                     OnPropertyChanged(nameof(IsGenderMale));
                     OnPropertyChanged(nameof(IsGenderFemale));
+                    InvalidateDetailCaches();
                     DataChanged?.Invoke();
                 }
                 else
@@ -857,6 +989,10 @@ namespace Win11DesktopApp.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = ex.Message;
+            }
+            finally
+            {
+                SetBusyState(false);
             }
         }
 
@@ -874,10 +1010,11 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(IsGenderFemale));
         }
 
-        private async void ReplaceDocument(string type)
+        private async Task ReplaceDocumentAsync(string type)
         {
             try
             {
+                SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
                 if (type == "photo")
                 {
                     await ReplacePhotoSimple();
@@ -887,7 +1024,9 @@ namespace Win11DesktopApp.ViewModels
                 var window = new Views.ReplaceDocumentWindow(type, Data);
                 window.Owner = Application.Current?.MainWindow;
                 if (window.ShowDialog() != true || !window.Saved) return;
-                SaveReplacedDocumentFile(type, window.ResultFilePath);
+                var tempFile = window.ResultFilePath;
+                SaveReplacedDocumentFile(type, tempFile);
+                CleanupTempFile(tempFile);
                 var changes = ApplyNewFieldValues(window.NewValues);
                 _employeeService.SaveEmployeeData(_employeeFolder, Data);
                 await LogDocumentReplacement(type, changes);
@@ -896,11 +1035,16 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(FullName));
                 RefreshDocuments();
                 RefreshExpiryWarnings();
+                InvalidateDetailCaches();
                 DataChanged?.Invoke();
             }
             catch (Exception ex)
             {
                 StatusMessage = ex.Message;
+            }
+            finally
+            {
+                SetBusyState(false);
             }
         }
 
@@ -931,6 +1075,19 @@ namespace Win11DesktopApp.ViewModels
                 case "insurance": Data.Files.Insurance = saved; break;
                 case "work_permit": Data.Files.WorkPermit = saved; break;
             }
+        }
+
+        private static void CleanupTempFile(string? path)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(path) && File.Exists(path)
+                    && path.StartsWith(Path.GetTempPath(), StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception ex) { LoggingService.LogWarning("CleanupTempFile", ex.Message); }
         }
 
         private void ArchiveOldDocument(string type, string suffix)
@@ -1068,6 +1225,7 @@ namespace Win11DesktopApp.ViewModels
                     Description = string.Format(Res("HistoryDescDocReplace"), Res("DetDocPhoto"))
                 });
                 RefreshDocuments();
+                InvalidateDetailCaches();
                 DataChanged?.Invoke();
             }
             catch (Exception ex)
@@ -1151,10 +1309,10 @@ namespace Win11DesktopApp.ViewModels
 
         private void StartRenewWorkPermit()
         {
-            ReplaceDocument("work_permit");
+            _ = ReplaceDocumentAsync("work_permit");
         }
 
-        private async void ConfirmRenewWorkPermit()
+        private async Task ConfirmRenewWorkPermitAsync()
         {
             if (string.IsNullOrWhiteSpace(RenewWpFilePath) || !File.Exists(RenewWpFilePath))
             {
@@ -1164,6 +1322,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
+                SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
                 var ext = Path.GetExtension(RenewWpFilePath);
                 var destName = $"{Data.FirstName} {Data.LastName} - Povolení k práci{ext}";
                 var destPath = Path.Combine(_employeeFolder, destName);
@@ -1211,15 +1370,20 @@ namespace Win11DesktopApp.ViewModels
                 RefreshDocuments();
                 IsRenewWpDialogOpen = false;
                 StatusMessage = Res("MsgWorkPermitUpdated");
+                InvalidateDetailCaches();
                 DataChanged?.Invoke();
             }
             catch (Exception ex)
             {
                 StatusMessage = string.Format(Res("MsgErrorFmt"), ex.Message);
             }
+            finally
+            {
+                SetBusyState(false);
+            }
         }
 
-        private async void RunAIValidation()
+        private async Task RunAIValidationAsync()
         {
             try
             {
@@ -1371,7 +1535,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 NewCustomDocFilePath = dialog.FileName;
         }
 
-        private async void ConfirmAddCustomDoc()
+        private async Task ConfirmAddCustomDocAsync()
         {
             AddCustomDocError = string.Empty;
 
@@ -1444,10 +1608,11 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             CustomDocuments.Add(doc);
             IsAddCustomDocOpen = false;
             StatusMessage = Res("MsgSaved") ?? "Saved.";
+            InvalidateDetailCaches();
             DataChanged?.Invoke();
         }
 
-        private async void DeleteCustomDoc(CustomSignedDocument doc)
+        private async Task DeleteCustomDocAsync(CustomSignedDocument doc)
         {
             _employeeService.DeleteCustomDocFile(_employeeFolder, doc.FileName);
             Data.CustomDocuments?.Remove(doc);
@@ -1467,6 +1632,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 histDesc, employeeFolder: _employeeFolder);
 
             CustomDocuments.Remove(doc);
+            InvalidateDetailCaches();
             DataChanged?.Invoke();
         }
     }

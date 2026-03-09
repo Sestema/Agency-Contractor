@@ -36,15 +36,35 @@
     <ScrollViewer Style="{StaticResource ThinScroll}">
         <StackPanel Margin="28,24,28,28">
 
-            <!-- ===== TOP: Close button ===== -->
-            <Grid Margin="0,0,0,8">
+            <Grid Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="1" Command="{Binding CloseCommand}" Width="32" Height="32"
-                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Close">
-                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#999"/>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding CloseCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                    </Button>
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="#FFB74D">
+                        <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding FullName}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
+                        <TextBlock FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,3,0,0">
+                            <Run Text="{DynamicResource CandAddedOn}"/>
+                            <Run Text="{Binding Data.DateAdded}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Grid.Column="1" Command="{Binding CloseCommand}"
+                        Style="{StaticResource HeaderGhostButton}"
+                        Width="36" Height="36"
+                        ToolTip="{DynamicResource BtnCancel}">
+                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                 </Button>
             </Grid>
 
@@ -274,37 +294,21 @@
                 </Button>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Command="{Binding CloseCommand}" Height="38" Padding="20,0" Margin="0,0,8,0"
-                            Background="{DynamicResource ContentBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"
-                            Content="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS12}"/>
-                    <Button Command="{Binding SaveCommand}" Height="38" Padding="20,0" Cursor="Hand"
-                            BorderThickness="0" FontWeight="SemiBold" FontSize="{DynamicResource FS12}">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" CornerRadius="8" Padding="{TemplateBinding Padding}"
-                                        Height="{TemplateBinding Height}">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#43A047" Offset="0"/>
-                                            <GradientStop Color="#66BB6A" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13"
-                                                   Foreground="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{DynamicResource BtnSave}" FontSize="{DynamicResource FS12}"
-                                                   FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                    <Button Command="{Binding CloseCommand}"
+                            Style="{StaticResource HeaderGhostButton}"
+                            Margin="0,0,8,0"
+                            Padding="16,8">
+                        <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS12}"/>
+                    </Button>
+                    <Button Command="{Binding SaveCommand}"
+                            Style="{StaticResource FilledActionButton}"
+                            Padding="16,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       Foreground="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource BtnSave}" FontSize="{DynamicResource FS12}"
+                                       FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
                 </StackPanel>
             </Grid>

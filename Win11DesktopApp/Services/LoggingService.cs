@@ -35,6 +35,32 @@ namespace Win11DesktopApp.Services
             Log("INFO", source, message);
         }
 
+        public static string GetLogPath()
+        {
+            return _logPath ?? string.Empty;
+        }
+
+        public static string GetRecentLogText(int maxLines = 120)
+        {
+            if (string.IsNullOrWhiteSpace(_logPath) || !File.Exists(_logPath))
+                return string.Empty;
+
+            try
+            {
+                lock (_lock)
+                {
+                    var lines = File.ReadAllLines(_logPath);
+                    var take = Math.Min(maxLines, lines.Length);
+                    return string.Join(Environment.NewLine, lines[^take..]);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ReadLog error: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
         private static void Log(string level, string source, string message)
         {
             System.Diagnostics.Debug.WriteLine($"[{level}] {source}: {message}");
@@ -69,7 +95,7 @@ namespace Win11DesktopApp.Services
                     File.Move(_logPath, backup);
                 }
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"LogRotation error: {ex.Message}"); }
         }
     }
 }

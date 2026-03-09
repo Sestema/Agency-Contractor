@@ -94,6 +94,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string FullName { get; set; } = string.Empty;
         public string PositionTitle { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;
+        public string EndDate { get; set; } = string.Empty;
         public string ContractType { get; set; } = string.Empty;
         public string PhotoPath { get; set; } = string.Empty;
         public bool HasPhoto { get; set; }

@@ -30,14 +30,8 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Command="{Binding GoBackCommand}"
-                    Background="Transparent" BorderThickness="0" Cursor="Hand"
-                    VerticalAlignment="Center" Padding="8,6">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource ForegroundBrush}" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                </StackPanel>
+                    Style="{StaticResource HeaderBackButton}">
+                <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
             </Button>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">

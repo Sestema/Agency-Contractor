@@ -423,7 +423,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 StatusMessage = ResF("XlsxSaveError", ex.Message);
                 LoggingService.LogError("XlsxEditor.Save", ex);
-                MessageBox.Show(ResF("XlsxSaveError", ex.Message), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ResF("XlsxSaveError", ex.Message), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

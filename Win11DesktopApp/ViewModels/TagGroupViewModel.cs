@@ -81,7 +81,8 @@ namespace Win11DesktopApp.ViewModels
 
         public static ObservableCollection<TagGroupViewModel> ApplyHiddenTagsFilter(ObservableCollection<TagGroupViewModel> groups, ICollection<string> hiddenTags)
         {
-            if (groups == null || hiddenTags == null || hiddenTags.Count == 0) return groups;
+            if (groups == null) return new ObservableCollection<TagGroupViewModel>();
+            if (hiddenTags == null || hiddenTags.Count == 0) return groups;
 
             var result = new ObservableCollection<TagGroupViewModel>();
             foreach (var group in groups)
@@ -104,15 +105,15 @@ namespace Win11DesktopApp.ViewModels
             if (allGroups == null) return new ObservableCollection<TagGroupViewModel>();
             if (string.IsNullOrWhiteSpace(query)) return allGroups;
 
-            var q = query.Trim().ToLower();
+            var q = query.Trim();
             var result = new ObservableCollection<TagGroupViewModel>();
 
             foreach (var group in allGroups)
             {
                 var filteredTags = group.Tags
                     .Where(t =>
-                        (!string.IsNullOrEmpty(t.Tag) && t.Tag.ToLower().Contains(q)) ||
-                        (!string.IsNullOrEmpty(t.Description) && t.Description.ToLower().Contains(q)))
+                        (!string.IsNullOrEmpty(t.Tag) && t.Tag.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrEmpty(t.Description) && t.Description.Contains(q, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
 
                 if (filteredTags.Count > 0)

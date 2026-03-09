@@ -1,35 +1,84 @@
 using System.Security.Cryptography;
 using System.Text;
 
-var secret = "AC-2026-Kachalin-OA-LicKey";
-Console.WriteLine("Searching for valid activator key...");
+Console.OutputEncoding = Encoding.UTF8;
+Console.WriteLine("═══════════════════════════════════════════");
+Console.WriteLine("  Agency Contractor — Key Generator");
+Console.WriteLine("═══════════════════════════════════════════");
+Console.WriteLine();
 
-var rng = RandomNumberGenerator.Create();
-var buf = new byte[24];
+var outputDir = Path.Combine(AppContext.BaseDirectory, "keys");
+Directory.CreateDirectory(outputDir);
 
-for (long i = 0; i < 50_000_000; i++)
+while (true)
 {
-    rng.GetBytes(buf);
-    var candidate = "ACK-" + Convert.ToHexString(buf);
-    var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(candidate + secret));
-    var hash = Convert.ToHexString(bytes)[..6];
-    if (hash == "AC2026")
+    Console.Write("Кількість ключів для генерації (1-100, або 'q' для виходу): ");
+    var input = Console.ReadLine()?.Trim();
+    if (input == "q" || input == "Q") break;
+    if (!int.TryParse(input, out var count) || count < 1 || count > 100)
     {
-        var outputDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
-        var outputPath = Path.Combine(outputDir, "activator.key");
-        File.WriteAllText(outputPath, candidate);
-        Console.WriteLine($"Found after {i + 1} attempts");
-        Console.WriteLine($"Key: {candidate}");
-        Console.WriteLine($"Saved to: {Path.GetFullPath(outputPath)}");
-        return;
+        Console.WriteLine("Невірне значення. Спробуйте ще.");
+        continue;
     }
-    if (i % 1_000_000 == 0 && i > 0)
-        Console.WriteLine($"  ...{i:N0} attempts...");
-}
-Console.WriteLine("Could not find key. Trying fallback...");
 
-// Fallback: just create a key with embedded marker
-var fallback = "AC2026-MASTER-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-var fbDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
-File.WriteAllText(Path.Combine(fbDir, "activator.key"), fallback);
-Console.WriteLine($"Fallback key: {fallback}");
+    Console.Write("Термін дії в днях (0 = безліміт): ");
+    var daysInput = Console.ReadLine()?.Trim();
+    if (!int.TryParse(daysInput, out var days)) days = 0;
+
+    Console.Write("Нотатка (опціонально): ");
+    var note = Console.ReadLine()?.Trim() ?? "";
+
+    Console.WriteLine();
+
+    var batch = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+    var batchDir = Path.Combine(outputDir, $"batch_{batch}");
+    Directory.CreateDirectory(batchDir);
+
+    var logLines = new List<string>
+    {
+        $"Batch: {batch}",
+        $"Count: {count}",
+        $"Days: {(days == 0 ? "unlimited" : days.ToString())}",
+        $"Note: {note}",
+        $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+        "─────────────────────────────────────",
+    };
+
+    for (int i = 0; i < count; i++)
+    {
+        var key = GenerateKey();
+        var fileName = $"key_{i + 1:D3}.key";
+        var filePath = Path.Combine(batchDir, fileName);
+
+        File.WriteAllText(filePath, key);
+
+        Console.WriteLine($"  [{i + 1}/{count}] {fileName} → {key[..30]}...");
+        logLines.Add($"{fileName}: {key}");
+    }
+
+    logLines.Add("");
+    logLines.Add($"Plan: {(days == 0 ? "unlimited" : $"{days} days")}");
+    logLines.Add("Usage: Open Agency Contractor → License Window → Select .key file");
+
+    File.WriteAllLines(Path.Combine(batchDir, "_batch_info.txt"), logLines);
+
+    Console.WriteLine();
+    Console.WriteLine($"✅ Згенеровано {count} ключів у: {batchDir}");
+    Console.WriteLine($"   Інфо: _batch_info.txt");
+    Console.WriteLine();
+}
+
+Console.WriteLine("Вихід.");
+
+static string GenerateKey()
+{
+    var guid1 = Guid.NewGuid().ToString("N");
+    var guid2 = Guid.NewGuid().ToString("N");
+    var raw = $"{guid1}{guid2}";
+
+    using var sha = SHA256.Create();
+    var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(raw + DateTime.UtcNow.Ticks));
+    var hashStr = Convert.ToHexString(hash)[..24];
+
+    return $"ACK-{hashStr[..8]}-{hashStr[8..16]}-{hashStr[16..24]}-{guid1[..8]}";
+}

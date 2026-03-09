@@ -55,49 +55,18 @@
                 </StackPanel>
             </Grid>
 
-            <Button Command="{Binding SaveCommand}" Cursor="Hand" Margin="0,20,0,0" HorizontalAlignment="Center">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="10" Padding="40,14" RenderTransformOrigin="0.5,0.5">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#4CAF50" Offset="0"/>
-                                    <GradientStop Color="#8BC34A" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <Border.RenderTransform>
-                                <ScaleTransform x:Name="SaveSc" ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <TextBlock Text="{DynamicResource BtnSaveEmployee}" FontSize="{DynamicResource FS16}" FontWeight="Bold"
-                                           Foreground="White" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleX" To="0.95" Duration="0:0:0.1"/>
-                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleY" To="0.95" Duration="0:0:0.1"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
-                                        <DoubleAnimation Storyboard.TargetName="SaveSc" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
+            <Button Command="{Binding SaveCommand}"
+                    Cursor="Hand"
+                    Margin="0,20,0,0"
+                    HorizontalAlignment="Center"
+                    Style="{StaticResource FilledActionButton}"
+                    Padding="28,14">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                               Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="{DynamicResource BtnSaveEmployee}" FontSize="{DynamicResource FS16}" FontWeight="Bold"
+                               Foreground="White" VerticalAlignment="Center"/>
+                </StackPanel>
             </Button>
         </StackPanel>
     </Border>

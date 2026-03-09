@@ -4,7 +4,9 @@
     <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#1E2228"/>
     <SolidColorBrush x:Key="ForegroundBrush" Color="#E8EAED"/>
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#8C939E"/>
+    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#8C939E"/>
     <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#636B76"/>
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#191C20"/>
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="#252A31"/>
     <SolidColorBrush x:Key="CardHoverBrush" Color="#2D333B"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#373E47"/>

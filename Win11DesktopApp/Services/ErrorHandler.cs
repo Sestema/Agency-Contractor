@@ -7,6 +7,8 @@ namespace Win11DesktopApp.Services
 
     public static class ErrorHandler
     {
+        private static bool _criticalDialogShown;
+
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
 
@@ -41,6 +43,10 @@ namespace Win11DesktopApp.Services
 
                 case ErrorSeverity.Critical:
                     LoggingService.LogError(source, message);
+                    if (_criticalDialogShown)
+                        break;
+
+                    _criticalDialogShown = true;
                     Application.Current?.Dispatcher?.Invoke(() =>
                         MessageBox.Show(message, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error));
                     break;
@@ -62,6 +68,10 @@ namespace Win11DesktopApp.Services
                     if (showUser) ToastService.Instance.Error(ex.Message);
                     break;
                 case ErrorSeverity.Critical:
+                    if (_criticalDialogShown)
+                        break;
+
+                    _criticalDialogShown = true;
                     Application.Current?.Dispatcher?.Invoke(() =>
                         MessageBox.Show($"{Res("MsgUnexpectedError")}\n\n{ex.Message}",
                             Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error));

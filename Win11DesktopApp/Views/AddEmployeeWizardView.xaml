@@ -22,28 +22,37 @@
             <!-- ===== HEADER ===== -->
             <StackPanel Grid.Row="0" Margin="0,0,0,20">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Border CornerRadius="10" Width="40" Height="40">
+                    <Border Style="{StaticResource PageHeaderIconBadge}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                 <GradientStop Color="#667EEA" Offset="0"/>
                                 <GradientStop Color="#764BA2" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
-                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
-                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
-                    <TextBlock Text="{DynamicResource HeaderAddEmployee}" FontSize="{DynamicResource FS22}" FontWeight="SemiBold" 
-                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    <TextBlock Text="{DynamicResource HeaderAddEmployee}"
+                               FontSize="{DynamicResource FS22}"
+                               Style="{StaticResource PageHeaderTitleText}"
+                               VerticalAlignment="Center"
+                               Margin="14,0,0,0"/>
                 </StackPanel>
 
                 <!-- Step indicator (dynamic) -->
-                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="10" Padding="12,8">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="10" Padding="14,10"
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <ProgressBar Minimum="1"
+                                     Maximum="{Binding TotalSteps, Mode=OneWay}"
+                                     Value="{Binding CurrentStepDisplay, Mode=OneWay}"
+                                     Height="8"
+                                     Margin="0,0,0,8"/>
+                        <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center">
                             <TextBlock.Text>
                                 <MultiBinding StringFormat="{}{0} / {1}">
-                                    <Binding Path="CurrentStepDisplay"/>
-                                    <Binding Path="TotalSteps"/>
+                                    <Binding Path="CurrentStepDisplay" Mode="OneWay"/>
+                                    <Binding Path="TotalSteps" Mode="OneWay"/>
                                 </MultiBinding>
                             </TextBlock.Text>
                         </TextBlock>
@@ -95,69 +104,28 @@
             <!-- ===== NAVIGATION BUTTONS ===== -->
             <Grid Grid.Row="2" Margin="0,16,0,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <Button Command="{Binding CancelCommand}" Cursor="Hand">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="16,10"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1.5">
-                                    <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                               Foreground="{DynamicResource ForegroundBrush}"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                    <Button Command="{Binding CancelCommand}"
+                            Cursor="Hand"
+                            Style="{StaticResource HeaderGhostButton}">
+                        <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}" FontWeight="Medium"/>
                     </Button>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Command="{Binding BackCommand}" Cursor="Hand" Margin="0,0,10,0">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="16,10"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1.5">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                    <Button Command="{Binding BackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS13}" FontWeight="Medium"/>
+                        </StackPanel>
                     </Button>
-                    <Button Command="{Binding NextCommand}" Cursor="Hand">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="20,10">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{DynamicResource BtnNext}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                   Foreground="White" VerticalAlignment="Center"/>
-                                        <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                   Foreground="White" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                    </Trigger>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                    <Button Command="{Binding NextCommand}" Cursor="Hand" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource BtnNext}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                        </StackPanel>
                     </Button>
                 </StackPanel>
             </Grid>

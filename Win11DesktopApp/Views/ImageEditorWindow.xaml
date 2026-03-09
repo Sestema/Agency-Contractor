@@ -13,20 +13,35 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Style="{StaticResource PageHeaderIconBadge}">
+                    <TextBlock Text="&#xE8B9;" Style="{StaticResource PageHeaderIconText}"/>
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource ImgEditorTitle}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock Text="{DynamicResource ImgEditorAdjust}"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,3,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
         <!-- TOOLBAR -->
-        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource CardBackgroundBrush}"
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="8" Padding="8,6" Margin="0,0,0,8"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-            <StackPanel Orientation="Horizontal">
+            <WrapPanel>
                 <!-- Crop -->
                 <Button x:Name="BtnCrop" Click="BtnCrop_Click" ToolTip="{DynamicResource ImgEditorCrop}"
-                        Padding="10,6" Margin="0,0,4,0" Cursor="Hand"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        Padding="10,6" Margin="0,0,4,4" Cursor="Hand"
+                        Style="{StaticResource HeaderGhostButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                    Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -39,17 +54,15 @@
 
                 <!-- Rotate Left -->
                 <Button x:Name="BtnRotL" Click="BtnRotateLeft_Click" ToolTip="{DynamicResource ImgEditorRotateL}"
-                        Padding="8,6" Margin="0,0,2,0" Cursor="Hand"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        Padding="8,6" Margin="0,0,2,4" Cursor="Hand"
+                        Style="{StaticResource HeaderGhostButton}">
                     <TextBlock Text="&#xE80C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
                 <!-- Rotate Right -->
                 <Button x:Name="BtnRotR" Click="BtnRotateRight_Click" ToolTip="{DynamicResource ImgEditorRotateR}"
-                        Padding="8,6" Margin="0,0,4,0" Cursor="Hand"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        Padding="8,6" Margin="0,0,4,4" Cursor="Hand"
+                        Style="{StaticResource HeaderGhostButton}">
                     <TextBlock Text="&#xE80D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
@@ -58,9 +71,8 @@
 
                 <!-- Sharpen -->
                 <Button x:Name="BtnSharpen" Click="BtnSharpen_Click" ToolTip="{DynamicResource ImgEditorSharpen}"
-                        Padding="10,6" Margin="0,0,4,0" Cursor="Hand"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        Padding="10,6" Margin="0,0,4,4" Cursor="Hand"
+                        Style="{StaticResource HeaderGhostButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE773;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                    Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -73,7 +85,7 @@
 
                 <!-- Auto-Enhance -->
                 <Button x:Name="BtnAutoEnhance" Click="BtnAutoEnhance_Click" ToolTip="{DynamicResource ImgEditorAutoEnhance}"
-                        Padding="10,6" Margin="0,0,4,0" Cursor="Hand"
+                        Padding="10,6" Margin="0,0,4,4" Cursor="Hand"
                         Background="#E8F5E9" BorderBrush="#4CAF50" BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE771;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
@@ -85,9 +97,8 @@
 
                 <!-- Perspective Correction -->
                 <Button x:Name="BtnPerspective" Click="BtnPerspective_Click" ToolTip="{DynamicResource ImgEditorPerspective}"
-                        Padding="10,6" Margin="0,0,4,0" Cursor="Hand"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        Padding="10,6" Margin="0,0,4,4" Cursor="Hand"
+                        Style="{StaticResource HeaderGhostButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE809;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                    Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -101,8 +112,8 @@
                 <!-- Reset -->
                 <Button x:Name="BtnReset" Click="BtnReset_Click" ToolTip="{DynamicResource ImgEditorReset}"
                         Padding="10,6" Cursor="Hand"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        Margin="0,0,0,4"
+                        Style="{StaticResource HeaderGhostButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                    Foreground="#E53935" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -110,11 +121,11 @@
                                    Foreground="#E53935" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-            </StackPanel>
+            </WrapPanel>
         </Border>
 
         <!-- IMAGE CANVAS -->
-        <Border Grid.Row="1" Grid.Column="0" CornerRadius="8" Background="{DynamicResource WindowBackgroundBrush}" Margin="0,0,8,0"
+        <Border Grid.Row="2" Grid.Column="0" CornerRadius="8" Background="{DynamicResource WindowBackgroundBrush}" Margin="0,0,8,0"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" ClipToBounds="True">
             <Canvas x:Name="ImageCanvas" Background="Transparent"
                     MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
@@ -128,7 +139,7 @@
         </Border>
 
         <!-- SLIDERS PANEL -->
-        <Border Grid.Row="1" Grid.Column="1" CornerRadius="8" Padding="12"
+        <Border Grid.Row="2" Grid.Column="1" CornerRadius="8" Padding="12"
                 Background="{DynamicResource CardBackgroundBrush}"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
             <StackPanel>
@@ -181,7 +192,7 @@
         </Border>
 
         <!-- FOOTER BUTTONS -->
-        <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0">
+        <Grid Grid.Row="3" Grid.ColumnSpan="2" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -192,13 +203,11 @@
                        Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
 
             <Button Grid.Column="1" Click="BtnCancel_Click" Padding="20,10" Margin="0,0,8,0" Cursor="Hand"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    Foreground="{DynamicResource ForegroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    Style="{StaticResource HeaderGhostButton}"
                     Content="{DynamicResource BtnCancel}"/>
 
             <Button Grid.Column="2" Click="BtnSave_Click" Padding="20,10" Cursor="Hand"
-                    Background="#4CAF50" Foreground="White" BorderThickness="0" FontWeight="SemiBold"
+                    Style="{StaticResource FilledActionButton}" FontWeight="SemiBold"
                     Content="{DynamicResource ImgEditorSave}"/>
         </Grid>
     </Grid>

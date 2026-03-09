@@ -280,12 +280,12 @@ namespace Win11DesktopApp.ViewModels
                 App.ActivityLogService.Log("ExportPdf", "Export", "", "",
                     $"Згенеровано виплату на підписи → PDF");
                 StatusMessage = GetString("AdvTableSuccess");
-                MessageBox.Show(GetString("AdvTableSuccess"), "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(GetString("AdvTableSuccess"), GetString("TitleSuccess"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error: {ex.Message}";
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = string.Format(GetString("MsgErrorGeneric"), ex.Message);
+                MessageBox.Show(string.Format(GetString("MsgErrorGeneric"), ex.Message), GetString("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

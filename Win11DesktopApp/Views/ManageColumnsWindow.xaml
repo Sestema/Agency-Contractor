@@ -15,10 +15,14 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock Text="{DynamicResource FinManageColumnsTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
-                       Foreground="{DynamicResource ForegroundBrush}"/>
-            <TextBlock Text="{DynamicResource FinManageColumnsDesc}" FontSize="{DynamicResource FS11}" Foreground="#888" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+            <Border Style="{StaticResource PageHeaderIconBadge}">
+                <TextBlock Text="&#xE70F;" Style="{StaticResource PageHeaderIconText}"/>
+            </Border>
+            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource FinManageColumnsTitle}" FontSize="{DynamicResource FS20}" Style="{StaticResource PageHeaderTitleText}"/>
+                <TextBlock Text="{DynamicResource FinManageColumnsDesc}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- Existing fields list -->
@@ -107,24 +111,13 @@
 
                     <ComboBox x:Name="NewFieldFirm" Grid.Column="0" Padding="6,5" FontSize="{DynamicResource FS12}" Margin="0,0,8,0"/>
 
-                    <Button Grid.Column="1" Click="AddField_Click" Cursor="Hand">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="16,7">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{DynamicResource FinBtnAddField}" FontSize="{DynamicResource FS12}"
-                                                   Foreground="White" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                    <Button Grid.Column="1" Click="AddField_Click" Cursor="Hand" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource FinBtnAddField}" FontSize="{DynamicResource FS12}"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
                 </Grid>
             </Grid>
@@ -132,19 +125,8 @@
 
         <!-- Bottom buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button Click="Close_Click" Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="24,9">
-                            <TextBlock Text="{DynamicResource BtnDone}" FontSize="{DynamicResource FS13}" Foreground="White" FontWeight="SemiBold"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
+            <Button Click="Close_Click" Cursor="Hand" Style="{StaticResource FilledActionButton}">
+                <TextBlock Text="{DynamicResource BtnDone}" FontSize="{DynamicResource FS13}" Foreground="White" FontWeight="SemiBold"/>
             </Button>
         </StackPanel>
     </Grid>

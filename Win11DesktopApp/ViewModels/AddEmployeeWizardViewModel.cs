@@ -517,7 +517,7 @@ namespace Win11DesktopApp.ViewModels
             NextCommand = new RelayCommand(o => GoNext(), o => CanGoNext());
             BackCommand = new RelayCommand(o => GoBack(), o => CanGoBack());
             CancelCommand = new RelayCommand(o => TryClose());
-            SaveCommand = new RelayCommand(o => SaveEmployee());
+            SaveCommand = new AsyncRelayCommand(_ => SaveEmployeeAsync());
 
             UploadPassportCommand = new RelayCommand(o => UploadDocument("passport"));
             UploadVisaCommand = new RelayCommand(o => UploadDocument("visa"));
@@ -531,8 +531,8 @@ namespace Win11DesktopApp.ViewModels
             RotateRightCommand = new RelayCommand(o => RotateCurrentImage(90));
             EnhanceDocumentCommand = new RelayCommand(o => EnhanceCurrentDocument(), o => !IsCropPhotoMode);
             SetEuDocTypeCommand = new RelayCommand(o => EuDocumentType = o?.ToString() ?? "passport");
-            AIScanDocumentCommand = new RelayCommand(async o => await AIScanCurrentStepAsync(),
-                o => !_isAIScanning && App.GeminiApiService?.IsConfigured == true);
+            AIScanDocumentCommand = new AsyncRelayCommand(_ => AIScanCurrentStepAsync(),
+                _ => !_isAIScanning && App.GeminiApiService?.IsConfigured == true);
             CarouselPrevCommand = new RelayCommand(o => CarouselPrev(), o => _selectedCarouselIndex > 0);
             CarouselNextCommand = new RelayCommand(o => CarouselNext(), o => _selectedCarouselIndex < CarouselItems.Count - 1);
             SelectCarouselTabCommand = new RelayCommand(o =>
@@ -784,8 +784,9 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Не вдалося відкрити редактор:\n{ex.Message}",
-                    Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Error);
+                var fmt = Res("MsgEditorOpenError");
+                MessageBox.Show(string.Format(fmt, ex.Message),
+                    Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             editor.Owner = Application.Current.MainWindow;
@@ -844,7 +845,7 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private async void SaveEmployee()
+        private async Task SaveEmployeeAsync()
         {
             if (string.IsNullOrWhiteSpace(Data.FirstName) || string.IsNullOrWhiteSpace(Data.LastName))
             {

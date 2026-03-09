@@ -88,7 +88,7 @@ namespace Win11DesktopApp.Services
                 {
                     if (entry.CustomValues.Count > 0) continue;
 
-#pragma warning disable CS0612
+#pragma warning disable CS0618
                     if (entry.Surcharge != 0)
                     {
                         if (surchargeField == null)
@@ -126,7 +126,7 @@ namespace Win11DesktopApp.Services
                         entry.CustomValues[accomField.Id] = entry.Accommodation;
                         changed = true;
                     }
-#pragma warning restore CS0612
+#pragma warning restore CS0618
                 }
             }
 

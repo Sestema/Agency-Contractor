@@ -157,7 +157,7 @@ namespace Win11DesktopApp.ViewModels
         private void ApplyFilter()
         {
             Candidates.Clear();
-            var query = _searchText.ToLowerInvariant();
+            var query = _searchText?.Trim() ?? string.Empty;
 
             foreach (var c in _allCandidates)
             {
@@ -167,9 +167,9 @@ namespace Win11DesktopApp.ViewModels
 
                 if (!string.IsNullOrEmpty(query))
                 {
-                    if (!c.FullName.ToLower().Contains(query)
-                        && !c.DesiredPosition.ToLower().Contains(query)
-                        && !(c.LocationDetails ?? "").ToLower().Contains(query))
+                    if (!(c.FullName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(c.DesiredPosition?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(c.LocationDetails?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
                         continue;
                 }
 

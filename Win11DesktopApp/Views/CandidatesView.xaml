@@ -21,48 +21,32 @@
             </Grid.RowDefinitions>
 
             <!-- HEADER -->
-            <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid Grid.Row="0" Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding GoBackCommand}" Height="36" Padding="12,0" Margin="0,0,10,0"
-                            Background="{DynamicResource ContentBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" Margin="0,0,6,0"/>
-                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}"/>
-                        </StackPanel>
+                    <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
-                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}"
-                               Foreground="#FF9800" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource BtnCandidates}" FontSize="{DynamicResource FS24}" FontWeight="SemiBold"
-                               VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
-                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FS14}" Foreground="#888">
-                        <Run Text="("/>
-                        <Run Text="{Binding TotalCount, Mode=OneWay}"/>
-                        <Run Text=")"/>
-                    </TextBlock>
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="#FFB74D">
+                        <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource BtnCandidates}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
+                        <TextBlock FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,3,0,0">
+                            <Run Text="{Binding TotalCount}"/>
+                            <Run Text=" "/>
+                            <Run Text="{DynamicResource BtnCandidates}"/>
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
 
-                <Button Grid.Column="2" Command="{Binding AddCandidateCommand}" Cursor="Hand">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="AddBd" Background="{DynamicResource AccentBrush}" CornerRadius="8"
-                                    Padding="14,0" Height="36">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="AddBd" Property="Opacity" Value="0.85"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
+                <Button Grid.Column="1" Command="{Binding AddCandidateCommand}" Style="{StaticResource FilledActionButton}">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                    Foreground="White" Margin="0,0,6,0"/>
@@ -451,11 +435,9 @@
             </ScrollViewer>
 
             <!-- Empty state -->
-            <TextBlock Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                       FontSize="{DynamicResource FS16}" Foreground="#888"
-                       Text="{DynamicResource CandEmpty}">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
+            <Border Grid.Row="2" VerticalAlignment="Center">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
                         <Setter Property="Visibility" Value="Visible"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding HasCandidates}" Value="True">
@@ -463,8 +445,14 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </TextBlock.Style>
-            </TextBlock>
+                </Border.Style>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="&#xE77B;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}" Foreground="#FFB74D"/>
+                    <TextBlock Text="{DynamicResource CandEmpty}" Style="{StaticResource CompactEmptyStateTitleText}"/>
+                    <TextBlock Text="{DynamicResource CandAddTitle}"
+                               Style="{StaticResource CompactEmptyStateDescriptionText}"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- ADD CANDIDATE OVERLAY -->

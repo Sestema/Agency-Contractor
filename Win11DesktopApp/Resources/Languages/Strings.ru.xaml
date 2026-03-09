@@ -95,6 +95,12 @@
     <sys:String x:Key="TitleSuccess">Успех</sys:String>
     <sys:String x:Key="TitleError">Ошибка</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Произошла непредвиденная ошибка:</sys:String>
+    <sys:String x:Key="MsgLicenseBlocked">Лицензия заблокирована. Обратитесь к администратору.</sys:String>
+    <sys:String x:Key="MsgEditorOpenError">Не удалось открыть редактор:
+{0}</sys:String>
+    <sys:String x:Key="MsgFileOpenError">Не удалось открыть файл:
+{0}</sys:String>
+    <sys:String x:Key="MsgErrorGeneric">Ошибка: {0}</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Ошибка удаления шаблона: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -133,6 +139,7 @@
     <sys:String x:Key="MsgEmployeesFolderMissing">Папка сотрудников не найдена.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">У этой фирмы пока нет сотрудников.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Ошибка загрузки сотрудников.</sys:String>
+    <sys:String x:Key="MsgEmployeesLoading">Загрузка сотрудников...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">Сотрудники не найдены.</sys:String>
 
     <!-- EmployeesView -->
@@ -214,6 +221,7 @@
     <sys:String x:Key="DetBtnEditProfile">Редактировать анкету</sys:String>
     <sys:String x:Key="DetBtnSave">Сохранить</sys:String>
     <sys:String x:Key="DetBtnCancel">Отмена</sys:String>
+    <sys:String x:Key="DetBtnClose">Закрыть</sys:String>
     <sys:String x:Key="DetSecPersonal">Личные данные</sys:String>
     <sys:String x:Key="DetFieldFirstName">Имя</sys:String>
     <sys:String x:Key="DetFieldLastName">Фамилия</sys:String>
@@ -320,10 +328,19 @@
     <sys:String x:Key="ArchiveStarted">Начал: </sys:String>
     <sys:String x:Key="ArchiveEnded">Закончил: </sys:String>
     <sys:String x:Key="ArchiveRestore">Восстановить</sys:String>
+    <sys:String x:Key="ArchiveViewProfile">Профиль</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Открыть папку</sys:String>
     <sys:String x:Key="ArchiveEmpty">Архив пуст</sys:String>
     <sys:String x:Key="ArchiveEmptyDesc">Здесь будут сотрудники, которые завершили сотрудничество.</sys:String>
     <sys:String x:Key="ArchiveRestoreTitle">Восстановить сотрудника</sys:String>
+    <sys:String x:Key="ArchiveHeaderDesc">Поиск, фильтрация, восстановление и быстрый просмотр архивных профилей.</sys:String>
+    <sys:String x:Key="ArchiveFilterAll">Все</sys:String>
+    <sys:String x:Key="ArchiveFilterRecent">Этот месяц</sys:String>
+    <sys:String x:Key="ArchiveFilterNoPhoto">Без фото</sys:String>
+    <sys:String x:Key="ArchiveStatRecent">Завершили в этом мес.</sys:String>
+    <sys:String x:Key="ArchiveSortEndDate">Дата завершения</sys:String>
+    <sys:String x:Key="ArchiveSortFirm">Фирма</sys:String>
+    <sys:String x:Key="ArchiveResultsLabel">Показано</sys:String>
     <sys:String x:Key="ArchiveFirm">Фирма</sys:String>
     <sys:String x:Key="ArchiveStartDate">Дата начала</sys:String>
     <sys:String x:Key="ArchiveSignDate">Дата подписания договора</sys:String>
@@ -364,6 +381,7 @@
     <sys:String x:Key="EditorBold">Жирный (Ctrl+B)</sys:String>
     <sys:String x:Key="EditorItalic">Курсив (Ctrl+I)</sys:String>
     <sys:String x:Key="EditorUnderline">Подчеркнутый (Ctrl+U)</sys:String>
+    <sys:String x:Key="EditorFormatting">Форматирование</sys:String>
     <sys:String x:Key="EditorFontSize">Размер шрифта</sys:String>
     <sys:String x:Key="EditorFontFamily">Шрифт</sys:String>
     <sys:String x:Key="EditorMaxWidth">Макс. ширина</sys:String>
@@ -375,9 +393,13 @@
     <sys:String x:Key="PdfEditing">Редактирование</sys:String>
     <sys:String x:Key="PdfDeselect">Снять выделение</sys:String>
     <sys:String x:Key="PdfGridStep">Шаг</sys:String>
+    <sys:String x:Key="EditorAlignment">Выравнивание</sys:String>
     <sys:String x:Key="EditorAlignLeft">По левому краю</sys:String>
     <sys:String x:Key="EditorAlignCenter">По центру</sys:String>
     <sys:String x:Key="EditorAlignRight">По правому краю</sys:String>
+    <sys:String x:Key="EditorSpacing">Интервалы</sys:String>
+    <sys:String x:Key="EditorLineSpacing">Межстрочный</sys:String>
+    <sys:String x:Key="EditorParagraphSpacing">Абзац</sys:String>
     <sys:String x:Key="EditorTagCatalog">Каталог тегов</sys:String>
     <sys:String x:Key="EditorSearchTags">Поиск тегов...</sys:String>
     <sys:String x:Key="EditorInsert">Вст.</sys:String>
@@ -407,6 +429,13 @@
     <sys:String x:Key="TplTagsTitle">Доступные теги для шаблона</sys:String>
     <sys:String x:Key="TplTagsDesc">Нажмите Копировать чтобы скопировать тег в буфер обмена. Затем вставьте тег в документ в Word/Excel.</sys:String>
     <sys:String x:Key="TplCopyTag">Копировать</sys:String>
+    <sys:String x:Key="TplCopyToCompanyTooltip">Скопировать шаблон в другую фирму</sys:String>
+    <sys:String x:Key="TplCopyDialogTitle">Копировать шаблон</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Целевая фирма:</sys:String>
+    <sys:String x:Key="TplCopyDialogName">Новое название шаблона:</sys:String>
+    <sys:String x:Key="TplCopyDialogBtn">Копировать</sys:String>
+    <sys:String x:Key="TplCopyNoCompanies">Нет других фирм для копирования шаблона.</sys:String>
+    <sys:String x:Key="TplCopySelectCompany">Выберите целевую фирму.</sys:String>
     <sys:String x:Key="TplOpenEditor">Открыть шаблон в редакторе</sys:String>
     <sys:String x:Key="TplTemplateCount">шаблонов</sys:String>
 
@@ -773,11 +802,19 @@
 
     <!-- Template Editor ViewModel -->
     <sys:String x:Key="EditorTitleFmt">Редактор: {0}</sys:String>
+    <sys:String x:Key="EditorLoading">Загрузка редактора...</sys:String>
+    <sys:String x:Key="EditorReady">Готово к редактированию</sys:String>
+    <sys:String x:Key="EditorSaving">Сохранение...</sys:String>
     <sys:String x:Key="EditorSaved">Сохранено!</sys:String>
+    <sys:String x:Key="EditorUnsaved">Несохранённые изменения</sys:String>
+    <sys:String x:Key="EditorLastSavedFmt">Последнее сохранение: {0}</sys:String>
     <sys:String x:Key="EditorErrPath">Ошибка: путь к шаблону неизвестен.</sys:String>
     <sys:String x:Key="EditorErrEmpty">Нет содержимого для сохранения.</sys:String>
     <sys:String x:Key="EditorErrFmt">Ошибка: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Скопировано: {0}</sys:String>
+    <sys:String x:Key="EditorUnsavedTitle">Несохранённые изменения</sys:String>
+    <sys:String x:Key="EditorUnsavedClose">Есть несохранённые изменения. Выйти без сохранения?</sys:String>
+    <sys:String x:Key="EditorUnsavedPrompt">В шаблоне есть несохранённые изменения. Нажмите "Да", чтобы сохранить и вернуться, "Нет" - чтобы выйти без сохранения, или "Отмена" - чтобы остаться в редакторе.</sys:String>
 
     <!-- XLSX Editor ViewModel -->
     <sys:String x:Key="XlsxEditorTitle">Редактор XLSX: {0}</sys:String>
@@ -1012,6 +1049,8 @@
     <sys:String x:Key="HistFilterStatus">Статус</sys:String>
     <sys:String x:Key="HistFilterArchive">Архив</sys:String>
     <sys:String x:Key="MsgArchiveError">Ошибка при архивировании.</sys:String>
+    <sys:String x:Key="MsgArchiveSuccess">Сотрудник успешно перемещён в архив.</sys:String>
+    <sys:String x:Key="MsgArchiveCleanupDeferred">Сотрудник архивирован, но очистка старой папки будет завершена позже.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Документ сгенерирован: {0}</sys:String>
@@ -1097,6 +1136,7 @@
 
     <!-- Wizard crop instruction -->
     <sys:String x:Key="WizCropInstruction">Выделите область с фото сотрудника на паспорте и нажмите "Обрезать"</sys:String>
+    <sys:String x:Key="WizCropApply">Обрезать</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Тип визы</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Страховая компания</sys:String>

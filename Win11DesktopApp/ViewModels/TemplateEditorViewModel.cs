@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Win11DesktopApp.Models;
@@ -19,7 +20,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly string _firmName;
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
-        private readonly TagCatalogService _tagCatalogService;
+        private readonly TagCatalogService? _tagCatalogService;
 
         private static new string Res(string key)
         {
@@ -61,11 +62,70 @@ namespace Win11DesktopApp.ViewModels
         public ICommand AIInsertTagsCommand { get; private set; }
         public ICommand CloseAITagsCommand { get; private set; }
 
-        public event Action<string, string>? SendMessageToWebView;
         public event Action<string>? RequestInsertTag;
         public event Action<List<(string ContextBefore, string ReplaceWhat, string Tag)>>? RequestReplaceTagsInDocument;
         public Func<string?>? RequestGetRtfContent { get; set; }
         public Func<string?>? RequestGetPlainText { get; set; }
+
+        private bool _isEditorLoading = true;
+        public bool IsEditorLoading
+        {
+            get => _isEditorLoading;
+            set
+            {
+                if (SetProperty(ref _isEditorLoading, value))
+                    OnPropertyChanged(nameof(HeaderStatusText));
+            }
+        }
+
+        private bool _isSaving;
+        public bool IsSaving
+        {
+            get => _isSaving;
+            set
+            {
+                if (SetProperty(ref _isSaving, value))
+                    OnPropertyChanged(nameof(HeaderStatusText));
+            }
+        }
+
+        private bool _isDirty;
+        public bool IsDirty
+        {
+            get => _isDirty;
+            set
+            {
+                if (SetProperty(ref _isDirty, value))
+                    OnPropertyChanged(nameof(HeaderStatusText));
+            }
+        }
+
+        private DateTime? _lastSavedAt;
+        public DateTime? LastSavedAt
+        {
+            get => _lastSavedAt;
+            set
+            {
+                if (SetProperty(ref _lastSavedAt, value))
+                    OnPropertyChanged(nameof(HeaderStatusText));
+            }
+        }
+
+        public string HeaderStatusText
+        {
+            get
+            {
+                if (IsEditorLoading)
+                    return Res("EditorLoading");
+                if (IsSaving)
+                    return Res("EditorSaving");
+                if (IsDirty)
+                    return Res("EditorUnsaved");
+                if (LastSavedAt.HasValue)
+                    return ResF("EditorLastSavedFmt", LastSavedAt.Value.ToString("HH:mm"));
+                return Res("EditorReady");
+            }
+        }
 
         private string _statusMessage = string.Empty;
         public string StatusMessage
@@ -115,6 +175,8 @@ namespace Win11DesktopApp.ViewModels
                 var fullPath = _templateService.GetTemplateFullPath(firmName, template.FilePath);
                 TemplateFolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 RtfFilePath = Path.Combine(TemplateFolderPath, "content.rtf");
+                if (File.Exists(RtfFilePath))
+                    LastSavedAt = File.GetLastWriteTime(RtfFilePath);
             }
             catch
             {
@@ -134,11 +196,12 @@ namespace Win11DesktopApp.ViewModels
             }
 
             GoBackCommand = new RelayCommand(o => NavigateBack());
-            SaveCommand = new RelayCommand(o => Save());
+            SaveCommand = new AsyncRelayCommand(_ => SaveAsync(), _ => !IsSaving && !IsEditorLoading);
             InsertTagCommand = new RelayCommand(o => InsertTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
             CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
+            StatusMessage = Res("EditorLoading");
         }
 
         public TemplateEditorViewModel(string firmName, TemplateEntry template, TagCatalogService tagCatalogService, TemplateService templateService)
@@ -153,6 +216,8 @@ namespace Win11DesktopApp.ViewModels
                 var fullPath = _templateService.GetTemplateFullPath(firmName, template.FilePath);
                 TemplateFolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 RtfFilePath = Path.Combine(TemplateFolderPath, "content.rtf");
+                if (File.Exists(RtfFilePath))
+                    LastSavedAt = File.GetLastWriteTime(RtfFilePath);
             }
             catch
             {
@@ -172,15 +237,28 @@ namespace Win11DesktopApp.ViewModels
             }
 
             GoBackCommand = new RelayCommand(o => NavigateBack());
-            SaveCommand = new RelayCommand(o => Save());
+            SaveCommand = new AsyncRelayCommand(_ => SaveAsync(), _ => !IsSaving && !IsEditorLoading);
             InsertTagCommand = new RelayCommand(o => InsertTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
             CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
+            StatusMessage = Res("EditorLoading");
         }
 
         private void NavigateBack()
         {
+            if (IsDirty)
+            {
+                var result = MessageBox.Show(
+                    Res("EditorUnsavedClose"),
+                    Res("EditorUnsavedTitle"),
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result != MessageBoxResult.Yes)
+                    return;
+            }
+
             var company = App.CompanyService?.Companies?.FirstOrDefault(c => c.Name == _firmName);
             if (company != null)
                 App.NavigationService?.NavigateTo(new TemplatesViewModel(company));
@@ -188,10 +266,16 @@ namespace Win11DesktopApp.ViewModels
                 App.NavigationService?.NavigateTo(new MainViewModel());
         }
 
-        private void Save()
+        private async Task SaveAsync()
         {
+            await Task.Yield();
+
             try
             {
+                IsSaving = true;
+                StatusMessage = Res("EditorSaving");
+                CommandManager.InvalidateRequerySuggested();
+
                 if (string.IsNullOrEmpty(TemplateFolderPath))
                 {
                     StatusMessage = Res("EditorErrPath");
@@ -208,10 +292,17 @@ namespace Win11DesktopApp.ViewModels
 
                 File.WriteAllText(RtfFilePath, rtfContent);
                 StatusMessage = Res("EditorSaved");
+                LastSavedAt = DateTime.Now;
+                IsDirty = false;
             }
             catch (Exception ex)
             {
                 StatusMessage = ResF("EditorErrFmt", ex.Message);
+            }
+            finally
+            {
+                IsSaving = false;
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -227,6 +318,26 @@ namespace Win11DesktopApp.ViewModels
                 var tagText = $"${{{entry.Tag}}}";
                 RequestInsertTag?.Invoke(tagText);
             }
+        }
+
+        public void NotifyEditorLoaded()
+        {
+            IsEditorLoading = false;
+            StatusMessage = LastSavedAt.HasValue
+                ? ResF("EditorLastSavedFmt", LastSavedAt.Value.ToString("HH:mm"))
+                : Res("EditorReady");
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        public void MarkDirty()
+        {
+            if (IsEditorLoading)
+                return;
+
+            if (!IsDirty)
+                IsDirty = true;
+
+            StatusMessage = Res("EditorUnsaved");
         }
 
         private async void RunAIInsertTags()

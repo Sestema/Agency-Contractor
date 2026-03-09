@@ -9,7 +9,8 @@ namespace Win11DesktopApp.Services
 {
     public class TagCatalogService
     {
-        private List<TagEntry> _tags = new List<TagEntry>();
+        private readonly List<TagEntry> _tags = new List<TagEntry>();
+        private readonly object _lock = new();
 
         private static string Res(string key)
         {
@@ -132,8 +133,9 @@ namespace Win11DesktopApp.Services
         {
             var map = new Dictionary<string, string>();
 
-            // Add company tags
-            foreach (var tag in _tags.Where(t => t.CompanyName == companyName && t.Category != "Employee"))
+            List<TagEntry> snapshot;
+            lock (_lock) { snapshot = _tags.Where(t => t.CompanyName == companyName && t.Category != "Employee").ToList(); }
+            foreach (var tag in snapshot)
             {
                 map[tag.Tag] = tag.Value;
             }
@@ -191,21 +193,24 @@ namespace Win11DesktopApp.Services
 
         private void AddTag(string tag, string category, string companyName, string description, string value)
         {
-            var existing = _tags.FirstOrDefault(t => t.Tag == tag && t.CompanyName == companyName);
-            if (existing != null)
+            lock (_lock)
             {
-                existing.Value = value;
-                return;
-            }
+                var existing = _tags.FirstOrDefault(t => t.Tag == tag && t.CompanyName == companyName);
+                if (existing != null)
+                {
+                    existing.Value = value;
+                    return;
+                }
 
-            _tags.Add(new TagEntry
-            {
-                Tag = tag,
-                Category = category,
-                CompanyName = companyName,
-                Description = description,
-                Value = value
-            });
+                _tags.Add(new TagEntry
+                {
+                    Tag = tag,
+                    Category = category,
+                    CompanyName = companyName,
+                    Description = description,
+                    Value = value
+                });
+            }
         }
 
         /// <summary>
@@ -214,12 +219,12 @@ namespace Win11DesktopApp.Services
         public void RemoveTagsForCompany(string companyName)
         {
             if (string.IsNullOrEmpty(companyName)) return;
-            _tags.RemoveAll(t => t.CompanyName == companyName);
+            lock (_lock) { _tags.RemoveAll(t => t.CompanyName == companyName); }
         }
 
-        public List<TagEntry> GetAllTags() => _tags;
-        public List<TagEntry> GetTagsByCompany(string companyName) => _tags.Where(t => t.CompanyName == companyName).ToList();
-        public List<TagEntry> GetTagsByCategory(string category) => _tags.Where(t => t.Category == category).ToList();
+        public List<TagEntry> GetAllTags() { lock (_lock) { return _tags.ToList(); } }
+        public List<TagEntry> GetTagsByCompany(string companyName) { lock (_lock) { return _tags.Where(t => t.CompanyName == companyName).ToList(); } }
+        public List<TagEntry> GetTagsByCategory(string category) { lock (_lock) { return _tags.Where(t => t.Category == category).ToList(); } }
 
         private static readonly Dictionary<string, string> CompanyTagResKeys = new()
         {
@@ -282,11 +287,15 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public List<TagEntry> GetAllTagDefinitions()
         {
-            var companyTags = _tags
-                .Where(t => t.Category != "Employee")
-                .GroupBy(t => t.Tag)
-                .Select(g => g.First())
-                .ToList();
+            List<TagEntry> companyTags;
+            lock (_lock)
+            {
+                companyTags = _tags
+                    .Where(t => t.Category != "Employee")
+                    .GroupBy(t => t.Tag)
+                    .Select(g => new TagEntry { Tag = g.Key, Category = g.First().Category, CompanyName = g.First().CompanyName, Description = g.First().Description, Value = g.First().Value })
+                    .ToList();
+            }
             foreach (var tag in companyTags)
                 tag.Description = ResolveCompanyTagDescription(tag.Tag);
 
@@ -361,10 +370,13 @@ namespace Win11DesktopApp.Services
 
         public Dictionary<string, string> GetTagValueMap(string companyName)
         {
-            return _tags
-                .Where(t => t.CompanyName == companyName)
-                .GroupBy(t => t.Tag)
-                .ToDictionary(g => g.Key, g => g.First().Value);
+            lock (_lock)
+            {
+                return _tags
+                    .Where(t => t.CompanyName == companyName)
+                    .GroupBy(t => t.Tag)
+                    .ToDictionary(g => g.Key, g => g.First().Value);
+            }
         }
     }
 }

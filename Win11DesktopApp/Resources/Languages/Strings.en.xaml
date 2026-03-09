@@ -95,6 +95,12 @@
     <sys:String x:Key="TitleSuccess">Success</sys:String>
     <sys:String x:Key="TitleError">Error</sys:String>
     <sys:String x:Key="MsgUnexpectedError">An unexpected error occurred:</sys:String>
+    <sys:String x:Key="MsgLicenseBlocked">License is blocked. Contact the administrator.</sys:String>
+    <sys:String x:Key="MsgEditorOpenError">Could not open editor:
+{0}</sys:String>
+    <sys:String x:Key="MsgFileOpenError">Could not open file:
+{0}</sys:String>
+    <sys:String x:Key="MsgErrorGeneric">Error: {0}</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Error deleting template: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -133,6 +139,7 @@
     <sys:String x:Key="MsgEmployeesFolderMissing">Employees folder not found.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">This company has no employees yet.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Failed to load employees.</sys:String>
+    <sys:String x:Key="MsgEmployeesLoading">Loading employees...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">No employees found.</sys:String>
 
     <!-- EmployeesView -->
@@ -217,6 +224,7 @@
     <sys:String x:Key="DetBtnEditProfile">Edit profile</sys:String>
     <sys:String x:Key="DetBtnSave">Save</sys:String>
     <sys:String x:Key="DetBtnCancel">Cancel</sys:String>
+    <sys:String x:Key="DetBtnClose">Close</sys:String>
     <sys:String x:Key="DetSecPersonal">Personal data</sys:String>
     <sys:String x:Key="DetFieldFirstName">First name</sys:String>
     <sys:String x:Key="DetFieldLastName">Last name</sys:String>
@@ -323,10 +331,19 @@
     <sys:String x:Key="ArchiveStarted">Started: </sys:String>
     <sys:String x:Key="ArchiveEnded">Ended: </sys:String>
     <sys:String x:Key="ArchiveRestore">Restore</sys:String>
+    <sys:String x:Key="ArchiveViewProfile">Profile</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Open folder</sys:String>
     <sys:String x:Key="ArchiveEmpty">Archive is empty</sys:String>
     <sys:String x:Key="ArchiveEmptyDesc">Employees who ended cooperation will appear here.</sys:String>
     <sys:String x:Key="ArchiveRestoreTitle">Restore employee</sys:String>
+    <sys:String x:Key="ArchiveHeaderDesc">Search, filter, restore and quickly review archived employee profiles.</sys:String>
+    <sys:String x:Key="ArchiveFilterAll">All</sys:String>
+    <sys:String x:Key="ArchiveFilterRecent">This month</sys:String>
+    <sys:String x:Key="ArchiveFilterNoPhoto">No photo</sys:String>
+    <sys:String x:Key="ArchiveStatRecent">Ended this month</sys:String>
+    <sys:String x:Key="ArchiveSortEndDate">End date</sys:String>
+    <sys:String x:Key="ArchiveSortFirm">Company</sys:String>
+    <sys:String x:Key="ArchiveResultsLabel">Showing</sys:String>
     <sys:String x:Key="ArchiveFirm">Company</sys:String>
     <sys:String x:Key="ArchiveStartDate">Start date</sys:String>
     <sys:String x:Key="ArchiveSignDate">Contract sign date</sys:String>
@@ -367,6 +384,7 @@
     <sys:String x:Key="EditorBold">Bold (Ctrl+B)</sys:String>
     <sys:String x:Key="EditorItalic">Italic (Ctrl+I)</sys:String>
     <sys:String x:Key="EditorUnderline">Underline (Ctrl+U)</sys:String>
+    <sys:String x:Key="EditorFormatting">Formatting</sys:String>
     <sys:String x:Key="EditorFontSize">Font size</sys:String>
     <sys:String x:Key="EditorFontFamily">Font</sys:String>
     <sys:String x:Key="EditorMaxWidth">Max width</sys:String>
@@ -378,9 +396,13 @@
     <sys:String x:Key="PdfEditing">Editing</sys:String>
     <sys:String x:Key="PdfDeselect">Deselect</sys:String>
     <sys:String x:Key="PdfGridStep">Step</sys:String>
+    <sys:String x:Key="EditorAlignment">Alignment</sys:String>
     <sys:String x:Key="EditorAlignLeft">Align left</sys:String>
     <sys:String x:Key="EditorAlignCenter">Align center</sys:String>
     <sys:String x:Key="EditorAlignRight">Align right</sys:String>
+    <sys:String x:Key="EditorSpacing">Spacing</sys:String>
+    <sys:String x:Key="EditorLineSpacing">Line</sys:String>
+    <sys:String x:Key="EditorParagraphSpacing">Paragraph</sys:String>
     <sys:String x:Key="EditorTagCatalog">Tag catalog</sys:String>
     <sys:String x:Key="EditorSearchTags">Search tags...</sys:String>
     <sys:String x:Key="EditorInsert">Ins.</sys:String>
@@ -410,6 +432,13 @@
     <sys:String x:Key="TplTagsTitle">Available tags for template</sys:String>
     <sys:String x:Key="TplTagsDesc">Press Copy to copy a tag to clipboard. Then paste the tag into the document in Word/Excel.</sys:String>
     <sys:String x:Key="TplCopyTag">Copy</sys:String>
+    <sys:String x:Key="TplCopyToCompanyTooltip">Copy template to another company</sys:String>
+    <sys:String x:Key="TplCopyDialogTitle">Copy Template</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Target company:</sys:String>
+    <sys:String x:Key="TplCopyDialogName">New template name:</sys:String>
+    <sys:String x:Key="TplCopyDialogBtn">Copy</sys:String>
+    <sys:String x:Key="TplCopyNoCompanies">There are no other companies available for copying the template.</sys:String>
+    <sys:String x:Key="TplCopySelectCompany">Select a target company.</sys:String>
     <sys:String x:Key="TplOpenEditor">Open template in editor</sys:String>
     <sys:String x:Key="TplTemplateCount">templates</sys:String>
 
@@ -776,11 +805,19 @@
 
     <!-- Template Editor ViewModel -->
     <sys:String x:Key="EditorTitleFmt">Editor: {0}</sys:String>
+    <sys:String x:Key="EditorLoading">Loading editor...</sys:String>
+    <sys:String x:Key="EditorReady">Ready to edit</sys:String>
+    <sys:String x:Key="EditorSaving">Saving...</sys:String>
     <sys:String x:Key="EditorSaved">Saved!</sys:String>
+    <sys:String x:Key="EditorUnsaved">Unsaved changes</sys:String>
+    <sys:String x:Key="EditorLastSavedFmt">Last saved: {0}</sys:String>
     <sys:String x:Key="EditorErrPath">Error: template path is unknown.</sys:String>
     <sys:String x:Key="EditorErrEmpty">No content to save.</sys:String>
     <sys:String x:Key="EditorErrFmt">Error: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Copied: {0}</sys:String>
+    <sys:String x:Key="EditorUnsavedTitle">Unsaved changes</sys:String>
+    <sys:String x:Key="EditorUnsavedClose">You have unsaved changes. Exit without saving?</sys:String>
+    <sys:String x:Key="EditorUnsavedPrompt">This template has unsaved changes. Click Yes to save and go back, No to go back without saving, or Cancel to stay in the editor.</sys:String>
 
     <!-- XLSX Editor ViewModel -->
     <sys:String x:Key="XlsxEditorTitle">XLSX Editor: {0}</sys:String>
@@ -1015,6 +1052,8 @@ The folder on disk will NOT be deleted.</sys:String>
     <sys:String x:Key="HistFilterStatus">Status</sys:String>
     <sys:String x:Key="HistFilterArchive">Archive</sys:String>
     <sys:String x:Key="MsgArchiveError">Error during archiving.</sys:String>
+    <sys:String x:Key="MsgArchiveSuccess">Employee successfully moved to archive.</sys:String>
+    <sys:String x:Key="MsgArchiveCleanupDeferred">Employee archived, but cleanup of the old folder will finish later.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Document generated: {0}</sys:String>
@@ -1100,6 +1139,7 @@ The folder on disk will NOT be deleted.</sys:String>
 
     <!-- Wizard crop instruction -->
     <sys:String x:Key="WizCropInstruction">Select the area with employee photo on passport and press "Crop"</sys:String>
+    <sys:String x:Key="WizCropApply">Crop</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Visa type</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Insurance company</sys:String>

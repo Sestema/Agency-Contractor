@@ -22,7 +22,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="24,18,24,24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header -->
             <RowDefinition Height="Auto"/>  <!-- Toolbar -->
@@ -31,26 +31,66 @@
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Grid Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding GoBackCommand}" 
-                        Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" 
-                        FontSize="{DynamicResource FS18}" Background="Transparent" BorderThickness="0"
-                        Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,12,0"
-                        VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Title}" 
-                           FontSize="{DynamicResource FS20}" FontWeight="SemiBold" 
-                           Foreground="{DynamicResource ForegroundBrush}"
-                           VerticalAlignment="Center"/>
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                </Button>
+                <Border Style="{StaticResource PageHeaderIconBadge}">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#667EEA" Offset="0"/>
+                            <GradientStop Color="#764BA2" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&#xE8A5;" Style="{StaticResource PageHeaderIconText}"/>
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock Text="{Binding HeaderStatusText}"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,3,0,0"/>
+                </StackPanel>
             </StackPanel>
+
+            <Border Grid.Column="1"
+                    Style="{StaticResource CompactInfoCard}"
+                    Padding="12,8"
+                    VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE70B;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource AccentBrush}"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding HeaderStatusText}"
+                               FontSize="{DynamicResource FS12}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- TOOLBAR -->
         <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" 
-                CornerRadius="6" Padding="8,4" Margin="0,0,0,8"
+                CornerRadius="12" Padding="12,10" Margin="0,0,0,12"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-            <StackPanel Orientation="Horizontal">
-                <!-- Bold -->
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource EditorFormatting}"
+                           FontSize="{DynamicResource FS12}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="0,0,10,0"
+                           VerticalAlignment="Center"/>
+
                 <Button Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.ToggleBold" 
                         CommandTarget="{Binding ElementName=Editor}"
@@ -58,7 +98,6 @@
                     <TextBlock Text="B" FontWeight="Bold" FontSize="{DynamicResource FS14}" 
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <!-- Italic -->
                 <Button Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.ToggleItalic" 
                         CommandTarget="{Binding ElementName=Editor}"
@@ -66,7 +105,6 @@
                     <TextBlock Text="I" FontStyle="Italic" FontSize="{DynamicResource FS14}" 
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <!-- Underline -->
                 <Button Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.ToggleUnderline" 
                         CommandTarget="{Binding ElementName=Editor}"
@@ -78,7 +116,11 @@
 
                 <Border Style="{StaticResource ToolbarSeparator}"/>
 
-                <!-- Font Size -->
+                <TextBlock Text="{DynamicResource EditorFontSize}"
+                           FontSize="{DynamicResource FS12}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="2,0,6,0"
+                           VerticalAlignment="Center"/>
                 <ComboBox x:Name="FontSizeCombo" Width="60" Height="28" Margin="2,0"
                           VerticalContentAlignment="Center" FontSize="{DynamicResource FS12}"
                           SelectionChanged="FontSizeCombo_SelectionChanged"
@@ -99,7 +141,11 @@
 
                 <Border Style="{StaticResource ToolbarSeparator}"/>
 
-                <!-- Align Left -->
+                <TextBlock Text="{DynamicResource EditorAlignment}"
+                           FontSize="{DynamicResource FS12}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="2,0,6,0"
+                           VerticalAlignment="Center"/>
                 <Button Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.AlignLeft" 
                         CommandTarget="{Binding ElementName=Editor}"
@@ -107,7 +153,6 @@
                     <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <!-- Align Center -->
                 <Button Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.AlignCenter" 
                         CommandTarget="{Binding ElementName=Editor}"
@@ -115,7 +160,6 @@
                     <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <!-- Align Right -->
                 <Button Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.AlignRight" 
                         CommandTarget="{Binding ElementName=Editor}"
@@ -126,7 +170,47 @@
 
                 <Border Style="{StaticResource ToolbarSeparator}"/>
 
-                <!-- AI Assistant Overlay -->
+                <TextBlock Text="{DynamicResource EditorSpacing}"
+                           FontSize="{DynamicResource FS12}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="2,0,6,0"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{DynamicResource EditorLineSpacing}"
+                           FontSize="{DynamicResource FS11}"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           Margin="2,0,4,0"
+                           VerticalAlignment="Center"/>
+                <ComboBox x:Name="LineSpacingCombo"
+                          Width="78"
+                          Height="28"
+                          Margin="0,0,6,0"
+                          SelectionChanged="LineSpacingCombo_SelectionChanged"
+                          ToolTip="{DynamicResource EditorLineSpacing}">
+                    <ComboBoxItem Content="1.0" Tag="1.0" IsSelected="True"/>
+                    <ComboBoxItem Content="1.15" Tag="1.15"/>
+                    <ComboBoxItem Content="1.5" Tag="1.5"/>
+                    <ComboBoxItem Content="2.0" Tag="2.0"/>
+                </ComboBox>
+                <TextBlock Text="{DynamicResource EditorParagraphSpacing}"
+                           FontSize="{DynamicResource FS11}"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           Margin="2,0,4,0"
+                           VerticalAlignment="Center"/>
+                <ComboBox x:Name="ParagraphSpacingCombo"
+                          Width="68"
+                          Height="28"
+                          Margin="0,0,6,0"
+                          SelectionChanged="ParagraphSpacingCombo_SelectionChanged"
+                          ToolTip="{DynamicResource EditorParagraphSpacing}">
+                    <ComboBoxItem Content="0" Tag="0" IsSelected="True"/>
+                    <ComboBoxItem Content="4" Tag="4"/>
+                    <ComboBoxItem Content="8" Tag="8"/>
+                    <ComboBoxItem Content="12" Tag="12"/>
+                    <ComboBoxItem Content="16" Tag="16"/>
+                </ComboBox>
+
+                <Border Style="{StaticResource ToolbarSeparator}"/>
+
                 <Button x:Name="BtnAIOverlay" Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="8,0"
                         Click="AIOverlay_Click" ToolTip="{DynamicResource AIOverlayBtn}">
                     <StackPanel Orientation="Horizontal">
@@ -146,7 +230,6 @@
 
                 <Border Style="{StaticResource ToolbarSeparator}"/>
 
-                <!-- AI Insert Tags button -->
                 <Button Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="10,0"
                         Command="{Binding AIInsertTagsCommand}"
                         ToolTip="✨ AI автоматично вставить теги в потрібні місця документа">
@@ -157,7 +240,7 @@
                                    Foreground="#388E3C" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-            </StackPanel>
+            </WrapPanel>
         </Border>
 
         <!-- MAIN: Editor + Tags -->
@@ -193,6 +276,8 @@
                                          FontSize="{DynamicResource FS12}" FontFamily="Segoe UI"
                                          BorderThickness="0" Background="Transparent"
                                          SpellCheck.IsEnabled="False"
+                                         TextChanged="Editor_TextChanged"
+                                         SelectionChanged="Editor_SelectionChanged"
                                          SizeChanged="Editor_SizeChanged"/>
                             <Canvas x:Name="PageBreakCanvas" IsHitTestVisible="False"
                                     Width="{Binding ActualWidth, ElementName=Editor}"
@@ -320,6 +405,32 @@
                     </ScrollViewer>
                 </Grid>
             </Border>
+
+            <Grid Visibility="{Binding IsEditorLoading, Converter={StaticResource BoolToVis}}"
+                  Grid.ColumnSpan="3">
+                <Border Background="#66FFFFFF" CornerRadius="12"/>
+                <Border HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Padding="20,16"
+                        CornerRadius="12"
+                        Background="{DynamicResource ContentBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <ProgressBar Width="72"
+                                     Height="6"
+                                     IsIndeterminate="True"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     Margin="0,0,10,0"
+                                     VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource EditorLoading}"
+                                   FontSize="{DynamicResource FS13}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- ===== AI Insert Tags Overlay ===== -->
@@ -435,7 +546,9 @@
 
             <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" 
                        VerticalAlignment="Center" FontSize="{DynamicResource FS12}"
-                       Foreground="{DynamicResource AccentBrush}"/>
+                       Foreground="{DynamicResource AccentBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,12,0"/>
 
             <Button Grid.Column="1" Content="{DynamicResource BtnCancel}" 
                     Command="{Binding GoBackCommand}"
@@ -447,8 +560,8 @@
             <Button Grid.Column="2" Content="{DynamicResource DetBtnSave}" 
                     Command="{Binding SaveCommand}"
                     Padding="16,8"
-                    Background="{DynamicResource AccentBrush}" Foreground="White" 
-                    BorderThickness="0" FontWeight="SemiBold"/>
+                    Style="{StaticResource FilledActionButton}"
+                    FontWeight="SemiBold"/>
         </Grid>
     </Grid>
 </UserControl>

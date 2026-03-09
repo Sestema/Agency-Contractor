@@ -31,41 +31,33 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Command="{Binding GoBackCommand}" Height="36" Padding="12,0" Margin="0,0,10,0"
-                        Background="{DynamicResource ContentBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                        Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" Margin="0,0,6,0"/>
-                        <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}"/>
-                    </StackPanel>
+                <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                 </Button>
-                <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS22}" 
-                           Foreground="{DynamicResource ErrorBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS24}" FontWeight="SemiBold" 
-                           VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
+                <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource ErrorBrush}">
+                    <TextBlock Text="&#xE7BA;" Style="{StaticResource PageHeaderIconText}"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,3,0,0">
+                        <Run Text="{Binding TotalDisplay, Mode=OneWay}"/>
+                        <Run Text=" · "/>
+                        <Run Text="{Binding ExpiredDisplay, Mode=OneWay}"/>
+                        <Run Text=" · "/>
+                        <Run Text="{Binding WarningDisplay, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
             </StackPanel>
 
-            <!-- Export PDF button -->
-            <Button Grid.Column="1" Command="{Binding ExportToPdfCommand}" Cursor="Hand"
-                    VerticalAlignment="Center">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="14,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource ProbExportPdf}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                           Foreground="White" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
+            <Button Grid.Column="1" Command="{Binding ExportToPdfCommand}" Style="{StaticResource FilledActionButton}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                               Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="{DynamicResource ProbExportPdf}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                               Foreground="White" VerticalAlignment="Center"/>
+                </StackPanel>
             </Button>
         </Grid>
 
@@ -78,7 +70,7 @@
                         <Border x:Name="Bd" Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
                                 BorderBrush="{DynamicResource ErrorLightBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding ExpiredDisplay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="{Binding ExpiredDisplay, Mode=OneWay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
                                 <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ErrorBrush}"/>
                             </StackPanel>
                         </Border>
@@ -103,7 +95,7 @@
                         <Border x:Name="Bd" Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
                                 BorderBrush="{DynamicResource WarningLightBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding WarningDisplay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Text="{Binding WarningDisplay, Mode=OneWay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
                                 <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource WarningBrush}"/>
                             </StackPanel>
                         </Border>
@@ -128,7 +120,7 @@
                         <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding TotalDisplay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" 
+                                <TextBlock Text="{Binding TotalDisplay, Mode=OneWay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" 
                                            Foreground="{DynamicResource ForegroundBrush}"/>
                                 <TextBlock Text="{DynamicResource ProbStatTotal}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                             </StackPanel>
@@ -462,16 +454,15 @@
                 </ItemsControl>
 
             <!-- Empty state -->
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="8" Padding="30"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+            <Border Style="{StaticResource CompactEmptyStateCard}"
+                    Padding="28,24"
                     Visibility="{Binding HasProblems, Converter={StaticResource InverseBoolToVis}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS42}" 
-                               HorizontalAlignment="Center" Foreground="{DynamicResource SuccessBrush}"/>
-                    <TextBlock Text="{DynamicResource ProbAllOk}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
-                               Margin="0,12,0,4" TextAlignment="Center" Foreground="{DynamicResource SuccessBrush}"/>
-                    <TextBlock Text="{DynamicResource ProbAllOkDesc}" 
-                               FontSize="{DynamicResource FS13}" TextAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <TextBlock Text="&#xE73E;" Style="{StaticResource CompactEmptyStateIconText}"
+                               FontSize="{DynamicResource FS28}" Foreground="{DynamicResource SuccessBrush}"/>
+                    <TextBlock Text="{DynamicResource ProbAllOk}" Style="{StaticResource CompactEmptyStateTitleText}"
+                               Foreground="{DynamicResource SuccessBrush}"/>
+                    <TextBlock Text="{DynamicResource ProbAllOkDesc}" Style="{StaticResource CompactEmptyStateDescriptionText}"/>
                 </StackPanel>
             </Border>
         </Grid>

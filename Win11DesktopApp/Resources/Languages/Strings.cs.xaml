@@ -95,6 +95,12 @@
     <sys:String x:Key="TitleSuccess">Úspěch</sys:String>
     <sys:String x:Key="TitleError">Chyba</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Došlo k neočekávané chybě:</sys:String>
+    <sys:String x:Key="MsgLicenseBlocked">Licence je zablokována. Kontaktujte administrátora.</sys:String>
+    <sys:String x:Key="MsgEditorOpenError">Nepodařilo se otevřít editor:
+{0}</sys:String>
+    <sys:String x:Key="MsgFileOpenError">Nepodařilo se otevřít soubor:
+{0}</sys:String>
+    <sys:String x:Key="MsgErrorGeneric">Chyba: {0}</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Chyba při mazání šablony: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -133,6 +139,7 @@
     <sys:String x:Key="MsgEmployeesFolderMissing">Složka zaměstnanců nebyla nalezena.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">Tato firma zatím nemá žádné zaměstnance.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Chyba při načítání zaměstnanců.</sys:String>
+    <sys:String x:Key="MsgEmployeesLoading">Načítání zaměstnanců...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">Zaměstnanci nebyli nalezeni.</sys:String>
 
     <!-- EmployeesView -->
@@ -214,6 +221,7 @@
     <sys:String x:Key="DetBtnEditProfile">Upravit dotazník</sys:String>
     <sys:String x:Key="DetBtnSave">Uložit</sys:String>
     <sys:String x:Key="DetBtnCancel">Zrušit</sys:String>
+    <sys:String x:Key="DetBtnClose">Zavřít</sys:String>
     <sys:String x:Key="DetSecPersonal">Osobní údaje</sys:String>
     <sys:String x:Key="DetFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="DetFieldLastName">Příjmení</sys:String>
@@ -320,10 +328,19 @@
     <sys:String x:Key="ArchiveStarted">Nástup: </sys:String>
     <sys:String x:Key="ArchiveEnded">Ukončil: </sys:String>
     <sys:String x:Key="ArchiveRestore">Obnovit</sys:String>
+    <sys:String x:Key="ArchiveViewProfile">Profil</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Otevřít složku</sys:String>
     <sys:String x:Key="ArchiveEmpty">Archiv je prázdný</sys:String>
     <sys:String x:Key="ArchiveEmptyDesc">Zde se zobrazí zaměstnanci, kteří ukončili spolupráci.</sys:String>
     <sys:String x:Key="ArchiveRestoreTitle">Obnovit zaměstnance</sys:String>
+    <sys:String x:Key="ArchiveHeaderDesc">Vyhledávání, filtrování, obnovení a rychlý přehled archivovaných profilů.</sys:String>
+    <sys:String x:Key="ArchiveFilterAll">Vše</sys:String>
+    <sys:String x:Key="ArchiveFilterRecent">Tento měsíc</sys:String>
+    <sys:String x:Key="ArchiveFilterNoPhoto">Bez fotografie</sys:String>
+    <sys:String x:Key="ArchiveStatRecent">Ukončili tento měsíc</sys:String>
+    <sys:String x:Key="ArchiveSortEndDate">Datum ukončení</sys:String>
+    <sys:String x:Key="ArchiveSortFirm">Firma</sys:String>
+    <sys:String x:Key="ArchiveResultsLabel">Zobrazeno</sys:String>
     <sys:String x:Key="ArchiveFirm">Firma</sys:String>
     <sys:String x:Key="ArchiveStartDate">Datum nástupu</sys:String>
     <sys:String x:Key="ArchiveSignDate">Datum podpisu smlouvy</sys:String>
@@ -364,6 +381,7 @@
     <sys:String x:Key="EditorBold">Tučné (Ctrl+B)</sys:String>
     <sys:String x:Key="EditorItalic">Kurzíva (Ctrl+I)</sys:String>
     <sys:String x:Key="EditorUnderline">Podtržené (Ctrl+U)</sys:String>
+    <sys:String x:Key="EditorFormatting">Formátování</sys:String>
     <sys:String x:Key="EditorFontSize">Velikost písma</sys:String>
     <sys:String x:Key="EditorFontFamily">Písmo</sys:String>
     <sys:String x:Key="EditorMaxWidth">Max. šířka</sys:String>
@@ -375,9 +393,13 @@
     <sys:String x:Key="PdfEditing">Úprava</sys:String>
     <sys:String x:Key="PdfDeselect">Zrušit výběr</sys:String>
     <sys:String x:Key="PdfGridStep">Krok</sys:String>
+    <sys:String x:Key="EditorAlignment">Zarovnání</sys:String>
     <sys:String x:Key="EditorAlignLeft">Zarovnat doleva</sys:String>
     <sys:String x:Key="EditorAlignCenter">Zarovnat na střed</sys:String>
     <sys:String x:Key="EditorAlignRight">Zarovnat doprava</sys:String>
+    <sys:String x:Key="EditorSpacing">Řádkování</sys:String>
+    <sys:String x:Key="EditorLineSpacing">Řádky</sys:String>
+    <sys:String x:Key="EditorParagraphSpacing">Odstavec</sys:String>
     <sys:String x:Key="EditorTagCatalog">Katalog tagů</sys:String>
     <sys:String x:Key="EditorSearchTags">Hledat tagy...</sys:String>
     <sys:String x:Key="EditorInsert">Vl.</sys:String>
@@ -407,6 +429,13 @@
     <sys:String x:Key="TplTagsTitle">Dostupné tagy pro šablonu</sys:String>
     <sys:String x:Key="TplTagsDesc">Stiskněte Kopírovat pro zkopírování tagu do schránky. Poté vložte tag do dokumentu ve Wordu/Excelu.</sys:String>
     <sys:String x:Key="TplCopyTag">Kopírovat</sys:String>
+    <sys:String x:Key="TplCopyToCompanyTooltip">Zkopírovat šablonu do jiné firmy</sys:String>
+    <sys:String x:Key="TplCopyDialogTitle">Kopírovat šablonu</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Cílová firma:</sys:String>
+    <sys:String x:Key="TplCopyDialogName">Nový název šablony:</sys:String>
+    <sys:String x:Key="TplCopyDialogBtn">Kopírovat</sys:String>
+    <sys:String x:Key="TplCopyNoCompanies">Pro kopírování šablony nejsou k dispozici žádné jiné firmy.</sys:String>
+    <sys:String x:Key="TplCopySelectCompany">Vyberte cílovou firmu.</sys:String>
     <sys:String x:Key="TplOpenEditor">Otevřít šablonu v editoru</sys:String>
     <sys:String x:Key="TplTemplateCount">šablon</sys:String>
 
@@ -773,11 +802,19 @@
 
     <!-- Template Editor ViewModel -->
     <sys:String x:Key="EditorTitleFmt">Editor: {0}</sys:String>
+    <sys:String x:Key="EditorLoading">Načítání editoru...</sys:String>
+    <sys:String x:Key="EditorReady">Připraveno k úpravám</sys:String>
+    <sys:String x:Key="EditorSaving">Ukládání...</sys:String>
     <sys:String x:Key="EditorSaved">Uloženo!</sys:String>
+    <sys:String x:Key="EditorUnsaved">Neuložené změny</sys:String>
+    <sys:String x:Key="EditorLastSavedFmt">Naposledy uloženo: {0}</sys:String>
     <sys:String x:Key="EditorErrPath">Chyba: cesta k šabloně je neznámá.</sys:String>
     <sys:String x:Key="EditorErrEmpty">Žádný obsah k uložení.</sys:String>
     <sys:String x:Key="EditorErrFmt">Chyba: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Zkopírováno: {0}</sys:String>
+    <sys:String x:Key="EditorUnsavedTitle">Neuložené změny</sys:String>
+    <sys:String x:Key="EditorUnsavedClose">Máte neuložené změny. Opravdu odejít bez uložení?</sys:String>
+    <sys:String x:Key="EditorUnsavedPrompt">Tato šablona obsahuje neuložené změny. Klikněte na "Ano" pro uložení a návrat, na "Ne" pro návrat bez uložení nebo na "Zrušit" pro pokračování v editoru.</sys:String>
 
     <!-- XLSX Editor ViewModel -->
     <sys:String x:Key="XlsxEditorTitle">XLSX editor: {0}</sys:String>
@@ -1012,6 +1049,8 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="HistFilterStatus">Status</sys:String>
     <sys:String x:Key="HistFilterArchive">Archiv</sys:String>
     <sys:String x:Key="MsgArchiveError">Chyba při archivaci.</sys:String>
+    <sys:String x:Key="MsgArchiveSuccess">Zaměstnanec byl úspěšně přesunut do archivu.</sys:String>
+    <sys:String x:Key="MsgArchiveCleanupDeferred">Zaměstnanec byl archivován, ale vyčištění původní složky bude dokončeno později.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Dokument vygenerován: {0}</sys:String>
@@ -1097,6 +1136,7 @@ Složka na disku NEBUDE smazána.</sys:String>
 
     <!-- Wizard crop instruction -->
     <sys:String x:Key="WizCropInstruction">Vyberte oblast s fotkou zaměstnance na pase a stiskněte "Oříznout"</sys:String>
+    <sys:String x:Key="WizCropApply">Oříznout</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Typ víza</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Pojišťovna</sys:String>

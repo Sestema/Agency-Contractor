@@ -25,20 +25,55 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Border Grid.Row="1" ClipToBounds="True">
-                <Image x:Name="DocImage" Source="{Binding CarouselPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                       RenderOptions.BitmapScalingMode="HighQuality"
-                       MouseWheel="DocImage_MouseWheel"
-                       MouseRightButtonDown="DocImage_MouseRightButtonDown"
-                       MouseRightButtonUp="DocImage_MouseRightButtonUp"
-                       MouseMove="DocImage_MouseMove"
-                       MouseLeftButtonDown="DocImage_ResetZoom">
-                    <Image.RenderTransform>
-                        <TransformGroup>
-                            <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            <TranslateTransform X="0" Y="0"/>
-                        </TransformGroup>
-                    </Image.RenderTransform>
-                </Image>
+                <Grid>
+                    <Image x:Name="DocImage" Source="{Binding CarouselPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           MouseWheel="DocImage_MouseWheel"
+                           MouseRightButtonDown="DocImage_MouseRightButtonDown"
+                           MouseRightButtonUp="DocImage_MouseRightButtonUp"
+                           MouseMove="DocImage_MouseMove"
+                           MouseLeftButtonDown="DocImage_ResetZoom">
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CarouselPreviewPath, Converter={StaticResource StringToVis}}" Value="{x:Static Visibility.Collapsed}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                <TranslateTransform X="0" Y="0"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
+
+                    <Border Margin="12"
+                            Padding="24,20"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CarouselPreviewPath, Converter={StaticResource StringToVis}}" Value="{x:Static Visibility.Collapsed}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="&#xE8A7;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS24}"/>
+                            <TextBlock Text="Попередній перегляд з'явиться тут"
+                                       Style="{StaticResource CompactEmptyStateTitleText}"/>
+                            <TextBlock Text="Завантаж документ або перейди до кроку з прикріпленим файлом."
+                                       Style="{StaticResource CompactEmptyStateDescriptionText}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Border>
         </Grid>
     </Border>

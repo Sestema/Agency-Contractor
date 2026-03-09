@@ -11,176 +11,6 @@
         <conv:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter"/>
-        <!-- Active/inactive button style for language & theme selectors -->
-        <Style x:Key="SelectorButton" TargetType="Button">
-            <Setter Property="MinWidth" Value="110"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="16,6"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.03" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.03" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Active version (accent bg) -->
-        <Style x:Key="SelectorButtonActive" TargetType="Button" BasedOn="{StaticResource SelectorButton}">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-        </Style>
-
-        <!-- Themed ComboBox -->
-        <Style x:Key="ThemedComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="ItemContainerStyle">
-                <Setter.Value>
-                    <Style TargetType="ComboBoxItem">
-                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="Padding" Value="10,6"/>
-                        <Setter Property="Cursor" Value="Hand"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ComboBoxItem">
-                                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                            Padding="{TemplateBinding Padding}" CornerRadius="4" Margin="2">
-                                        <ContentPresenter/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsHighlighted" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                        </Trigger>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Grid>
-                            <ToggleButton x:Name="ToggleBtn" Focusable="False" ClickMode="Press"
-                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
-                                <ToggleButton.Template>
-                                    <ControlTemplate TargetType="ToggleButton">
-                                        <Border x:Name="Border" Background="{DynamicResource ContentBackgroundBrush}"
-                                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                                CornerRadius="8" Padding="0">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="28"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Border Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                    <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </ToggleButton.Template>
-                            </ToggleButton>
-                            <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False"
-                                              Content="{TemplateBinding SelectionBoxItem}"
-                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                              Margin="10,6,28,6" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <ContentPresenter.Resources>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-                                    </Style>
-                                </ContentPresenter.Resources>
-                            </ContentPresenter>
-                            <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
-                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
-                                <Grid x:Name="DropDown" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
-                                      SnapsToDevicePixels="True">
-                                    <Border x:Name="DropDownBorder" Background="{DynamicResource CardBackgroundBrush}"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                            CornerRadius="8" Padding="2,4" Margin="0,4,0,0">
-                                        <Border.Effect>
-                                            <DropShadowEffect BlurRadius="12" ShadowDepth="4" Opacity="0.15"/>
-                                        </Border.Effect>
-                                        <ScrollViewer SnapsToDevicePixels="True">
-                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
-                                        </ScrollViewer>
-                                    </Border>
-                                </Grid>
-                            </Popup>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -189,30 +19,23 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Static Back Button -->
-        <Button Grid.Row="0" Command="{Binding GoBackCommand}"
-                HorizontalAlignment="Left" VerticalAlignment="Center"
-                Margin="16,8,0,8"
-                Background="Transparent" BorderThickness="0"
-                Cursor="Hand">
-            <Button.Template>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="8,6">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS14}" Margin="8,0,0,0"
-                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                        </StackPanel>
+        <Border Grid.Row="0" Padding="16,8,16,12">
+            <Grid MaxWidth="1100" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding GoBackCommand}"
+                            Style="{StaticResource HeaderBackButton}"
+                            Margin="0,0,10,0">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                    </Button>
+                    <Border Style="{StaticResource PageHeaderIconBadge}">
+                        <TextBlock Text="&#xE713;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Button.Template>
-        </Button>
+                    <TextBlock Text="{DynamicResource SettingsTitle}"
+                               FontSize="{DynamicResource FS24}"
+                               Style="{StaticResource PageHeaderTitleText}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
 
     <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}">
         <Grid MaxWidth="1100" HorizontalAlignment="Center" Margin="48,32,48,48">
@@ -234,28 +57,11 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Title -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,32">
-                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Width="44" Height="44"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
-                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <TextBlock Text="{DynamicResource SettingsTitle}" 
-                           FontSize="{DynamicResource FS28}" FontWeight="SemiBold" 
-                           Foreground="{DynamicResource ForegroundBrush}"
-                           VerticalAlignment="Center" Margin="16,0,0,0"/>
-            </StackPanel>
-
             <!-- Language Card -->
-            <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="2" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="36" Height="36"
-                                VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="{DynamicResource AccentLightBrush}">
                             <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -331,14 +137,10 @@
             </Border>
 
             <!-- Document Language Card -->
-            <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="3" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="{DynamicResource InfoLightBrush}" CornerRadius="8" Width="36" Height="36"
-                                VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="{DynamicResource InfoLightBrush}">
                             <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -428,14 +230,10 @@
             </Border>
 
             <!-- Theme Card -->
-            <Border Grid.Row="4" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="4" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Width="36" Height="36"
-                                VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="{DynamicResource WarningLightBrush}">
                             <TextBlock Text="&#xE790;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -745,14 +543,10 @@
             </Border>
 
             <!-- Interface Size Card -->
-            <Border Grid.Row="5" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="5" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="{DynamicResource InfoLightBrush}" CornerRadius="8" Width="36" Height="36"
-                                VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="{DynamicResource InfoLightBrush}">
                             <TextBlock Text="&#xE740;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -828,10 +622,7 @@
             </Border>
 
             <!-- Text Size Card -->
-            <Border Grid.Row="6" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="6" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <Border Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Width="36" Height="36"
@@ -919,10 +710,7 @@
             </Border>
 
             <!-- Tags Visibility Card -->
-            <Border Grid.Row="7" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="7" Style="{StaticResource SettingsSectionCard}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -944,34 +732,20 @@
                         </StackPanel>
                     </StackPanel>
                     <Button Grid.Column="1" Command="{Binding OpenTagVisibilityCommand}" Cursor="Hand"
-                            VerticalAlignment="Center">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="16,10">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE8EC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{DynamicResource SettingsTagsBtn}" 
-                                                   FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                                   Foreground="White" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                            VerticalAlignment="Center" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8EC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource SettingsTagsBtn}" 
+                                       FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
                 </Grid>
             </Border>
 
             <!-- Company Visibility Card -->
-            <Border Grid.Row="8" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="8" Style="{StaticResource SettingsSectionCard}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -992,38 +766,23 @@
                         </StackPanel>
                     </StackPanel>
                     <Button Grid.Column="1" Command="{Binding OpenCompanyVisibilityCommand}" Cursor="Hand"
-                            VerticalAlignment="Center">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="16,10">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{DynamicResource SettingsFirmsVisibilityBtn}"
-                                                   FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                                   Foreground="White" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                            VerticalAlignment="Center" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource SettingsFirmsVisibilityBtn}"
+                                       FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
                 </Grid>
             </Border>
 
             <!-- Root Folder Card -->
-            <Border Grid.Row="9" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="9" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="{DynamicResource SuccessLightBrush}" CornerRadius="8" Width="36" Height="36"
-                                VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="{DynamicResource SuccessLightBrush}">
                             <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -1050,39 +809,26 @@
                                        Foreground="{DynamicResource ForegroundBrush}"
                                        TextTrimming="CharacterEllipsis"/>
                         </Border>
-                        <Button Grid.Column="1" Command="{Binding SelectRootFolderCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="16,10">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="{DynamicResource BtnSelectFolder}" 
-                                                       FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                                       Foreground="White" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button Grid.Column="1" Command="{Binding SelectRootFolderCommand}" Cursor="Hand"
+                                Style="{StaticResource FilledActionButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="{DynamicResource BtnSelectFolder}" 
+                                           FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
                     </Grid>
                 </StackPanel>
             </Border>
 
             <!-- AI (Gemini) Card -->
-            <Border Grid.Row="10" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="10" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <!-- Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                        <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="36" Height="36" VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="{DynamicResource AccentLightBrush}">
                             <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -1141,14 +887,8 @@
                                      BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
                             <Button Grid.Column="1" Command="{Binding TestGeminiCommand}" Margin="8,0,0,0"
                                     Padding="12,6" Cursor="Hand" BorderThickness="0"
-                                    Background="#4CAF50" Foreground="White" FontSize="{DynamicResource FS11}">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Button.Template>
+                                    Background="{DynamicResource SuccessBrush}" Foreground="White" FontSize="{DynamicResource FS11}"
+                                    Style="{StaticResource FilledActionButton}">
                                 <TextBlock Text="{DynamicResource AIGeminiTest}" Foreground="White" FontSize="{DynamicResource FS11}"/>
                             </Button>
                             <Button Grid.Column="2" Command="{Binding OpenGeminiSiteCommand}" Margin="8,0,0,0"
@@ -1173,10 +913,7 @@
             </Border>
 
             <!-- App Version Card -->
-            <Border Grid.Row="11" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="11" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel Orientation="Horizontal">
                     <Border Background="{DynamicResource PurpleLightBrush}" CornerRadius="8" Width="36" Height="36"
                             VerticalAlignment="Center">
@@ -1202,10 +939,7 @@
             </Border>
 
             <!-- Update Card -->
-            <Border Grid.Row="12" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="12" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Width="36" Height="36" CornerRadius="8" Background="#E3F2FD"
@@ -1221,38 +955,13 @@
                                FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,12"/>
                     <StackPanel Orientation="Horizontal">
                         <Button Command="{Binding CheckForUpdatesCommand}" Cursor="Hand"
-                                Padding="14,8" Background="#1976D2" Foreground="White" BorderThickness="0">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
-                                            Padding="{TemplateBinding Padding}">
-                                        <ContentPresenter HorizontalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="#1565C0"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                                Padding="14,8" Foreground="White" Style="{StaticResource FilledActionButton}">
                             <TextBlock Text="{DynamicResource SettingsUpdateBtn}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="White"/>
                         </Button>
                         <Button Command="{Binding InstallUpdateCommand}" Cursor="Hand"
-                                Padding="14,8" Background="#4CAF50" Foreground="White" BorderThickness="0" Margin="8,0,0,0"
+                                Padding="14,8" Background="{DynamicResource SuccessBrush}" Foreground="White" Margin="8,0,0,0"
+                                Style="{StaticResource FilledActionButton}"
                                 Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
-                                            Padding="{TemplateBinding Padding}">
-                                        <ContentPresenter HorizontalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="#388E3C"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
                             <TextBlock Text="{DynamicResource SettingsInstallBtn}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="White"/>
                         </Button>
                         <TextBlock Text="{Binding UpdateStatus}" FontSize="{DynamicResource FS12}"
@@ -1262,10 +971,7 @@
             </Border>
 
             <!-- Copyright Card -->
-            <Border Grid.Row="13" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="13" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Width="36" Height="36" CornerRadius="8" Background="#E8EAF6"
@@ -1287,10 +993,7 @@
             </Border>
 
             <!-- License Status Card -->
-            <Border Grid.Row="14" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="24,20" Margin="0,0,0,16"
-                    Effect="{DynamicResource CardShadow}">
+            <Border Grid.Row="14" Style="{StaticResource SettingsSectionCard}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Width="36" Height="36" CornerRadius="8" Background="#E8F5E9"
@@ -1322,11 +1025,9 @@
                 <MouseBinding MouseAction="LeftClick" Command="{Binding CloseCompanyVisibilityCommand}"/>
             </Border.InputBindings>
         </Border>
-        <Border Background="{DynamicResource CardBackgroundBrush}"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                CornerRadius="16" Padding="28,24" Width="480" MaxHeight="600"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
-                Effect="{DynamicResource CardShadow}">
+        <Border Style="{StaticResource DialogSectionCard}"
+                Padding="28,24" Width="480" MaxHeight="600"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
             <StackPanel>
                 <!-- Header -->
                 <Grid Margin="0,0,0,20">
@@ -1335,7 +1036,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal">
-                        <Border Background="#E3F2FD" CornerRadius="8" Width="36" Height="36" VerticalAlignment="Center">
+                        <Border Style="{StaticResource SettingsSectionIconBadge}" Background="#E3F2FD">
                             <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                        Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -1345,20 +1046,10 @@
                                    VerticalAlignment="Center" Margin="12,0,0,0"/>
                     </StackPanel>
                     <Button Grid.Column="1" Command="{Binding CloseCompanyVisibilityCommand}" Cursor="Hand"
-                            Background="Transparent" BorderThickness="0" VerticalAlignment="Center">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="6">
-                                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBorderBrush}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                            VerticalAlignment="Center" Width="36" Height="36"
+                            Style="{StaticResource HeaderGhostButton}">
+                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7"/>
                     </Button>
                 </Grid>
 
@@ -1422,24 +1113,11 @@
 
                 <!-- OK button -->
                 <Button Command="{Binding CloseCompanyVisibilityCommand}" Cursor="Hand"
-                        HorizontalAlignment="Center" Margin="0,16,0,0" MinWidth="120">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="32,12">
-                                <TextBlock Text="OK"
-                                           FontSize="{DynamicResource FS14}" FontWeight="SemiBold" Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
+                        HorizontalAlignment="Center" Margin="0,16,0,0" MinWidth="120"
+                        Padding="32,12" Style="{StaticResource FilledActionButton}">
+                    <TextBlock Text="OK"
+                               FontSize="{DynamicResource FS14}" FontWeight="SemiBold" Foreground="White"
+                               HorizontalAlignment="Center"/>
                 </Button>
             </StackPanel>
         </Border>

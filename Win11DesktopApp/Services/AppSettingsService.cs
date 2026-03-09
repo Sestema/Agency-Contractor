@@ -13,7 +13,7 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.11-beta";
+        public const string CurrentAppVersion = "0.1.16-beta.2";
         private string _settingsPath;
         private string _backupPath;
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { WriteIndented = true };
@@ -33,6 +33,10 @@ namespace Win11DesktopApp.Services
             public bool EmployeeSortAscending { get; set; } = true;
             public string EmployeeViewMode { get; set; } = "List";
             public double EmployeeZoomLevel { get; set; } = 1.0;
+            public string ArchiveSortField { get; set; } = "EndDate";
+            public bool ArchiveSortAscending { get; set; } = false;
+            public string ArchiveViewMode { get; set; } = "List";
+            public double ArchiveZoomLevel { get; set; } = 1.0;
             public double CandidateZoomLevel { get; set; } = 1.0;
             public string CandidateViewMode { get; set; } = "List";
             public bool ShowStatPaid { get; set; } = false;
@@ -48,6 +52,18 @@ namespace Win11DesktopApp.Services
             public string ReportDateTo { get; set; } = "";
             public string GeminiApiKey { get; set; } = "";
             public string GeminiModel { get; set; } = "gemini-2.5-flash";
+            public bool AdminReadOnlyMode { get; set; } = false;
+            public bool AdminDisableAI { get; set; } = false;
+            public bool AdminDisableExports { get; set; } = false;
+            public bool AdminMaintenanceMode { get; set; } = false;
+            public bool AdminHideTemplates { get; set; } = false;
+            public bool AdminHideFinance { get; set; } = false;
+            public bool AdminForceUpdate { get; set; } = false;
+            public string AdminMessage { get; set; } = "";
+            public string AdminUpdateChannel { get; set; } = "stable";
+            public string AdminMinimumSupportedVersion { get; set; } = "";
+            public string AdminRecommendedVersion { get; set; } = "";
+            public string RemotePolicyVersion { get; set; } = "";
             public double WindowLeft { get; set; } = -1;
             public double WindowTop { get; set; } = -1;
             public double WindowWidth { get; set; } = -1;
@@ -134,6 +150,7 @@ namespace Win11DesktopApp.Services
             Settings.WindowWidth = SafeDouble(Settings.WindowWidth);
             Settings.WindowHeight = SafeDouble(Settings.WindowHeight);
             Settings.EmployeeZoomLevel = SafeDouble(Settings.EmployeeZoomLevel, 1.0);
+            Settings.ArchiveZoomLevel = SafeDouble(Settings.ArchiveZoomLevel, 1.0);
             Settings.CandidateZoomLevel = SafeDouble(Settings.CandidateZoomLevel, 1.0);
 
             if (Settings.SalaryColumnWidths?.Count > 0)
@@ -166,7 +183,7 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogError("AppSettingsService.SaveSettings", ex);
-                try { if (File.Exists(_settingsPath + ".tmp")) File.Delete(_settingsPath + ".tmp"); } catch { }
+                try { if (File.Exists(_settingsPath + ".tmp")) File.Delete(_settingsPath + ".tmp"); } catch (Exception delEx) { LoggingService.LogWarning("AppSettings.CleanupTemp", delEx.Message); }
             }
             finally
             {

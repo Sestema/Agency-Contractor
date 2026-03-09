@@ -57,7 +57,7 @@ namespace Win11DesktopApp.ViewModels
 
                 if (format == "PDF" && hasTemplateFile)
                 {
-                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data);
+                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
                     var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.pdf";
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);
@@ -74,7 +74,7 @@ namespace Win11DesktopApp.ViewModels
 
                 if (format == "DOCX" || hasRtfContent)
                 {
-                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data);
+                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
 
                     if (hasRtfContent)
                     {
@@ -99,7 +99,7 @@ namespace Win11DesktopApp.ViewModels
                 }
                 else if (format == "XLSX" && hasTemplateFile)
                 {
-                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data);
+                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
                     var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.xlsx";
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);

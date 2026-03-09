@@ -133,6 +133,7 @@
     <sys:String x:Key="MsgEmployeesFolderMissing">Папку працівників не знайдено.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">У цієї фірми ще немає працівників.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Помилка завантаження працівників.</sys:String>
+    <sys:String x:Key="MsgEmployeesLoading">Завантаження працівників...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">Працівників не знайдено.</sys:String>
 
     <!-- EmployeesView -->
@@ -155,7 +156,6 @@
     <sys:String x:Key="EmpBadgePassport">Паспорт</sys:String>
     <sys:String x:Key="EmpBadgeVisa">Віза</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Страховка</sys:String>
-    <sys:String x:Key="EmpBadgeWorkPermit">Дозвіл</sys:String>
     <sys:String x:Key="EmpBtnOpen">Відкрити</sys:String>
     <sys:String x:Key="EmpBtnEdit">Редагувати</sys:String>
     <sys:String x:Key="EmpBtnFolder">Папка</sys:String>
@@ -217,11 +217,11 @@
     <sys:String x:Key="DetBtnEditProfile">Редагувати анкету</sys:String>
     <sys:String x:Key="DetBtnSave">Зберегти</sys:String>
     <sys:String x:Key="DetBtnCancel">Скасувати</sys:String>
+    <sys:String x:Key="DetBtnClose">Закрити</sys:String>
     <sys:String x:Key="DetSecPersonal">Особисті дані</sys:String>
     <sys:String x:Key="DetFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="DetFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Дата народження</sys:String>
-    <sys:String x:Key="DetFieldGender">Стать</sys:String>
     <sys:String x:Key="DetSecPassport">Паспортні дані</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Місто народження</sys:String>
@@ -281,9 +281,9 @@
     <sys:String x:Key="CompanyMoveDown">Перемістити вниз</sys:String>
 
     <!-- ProblemsView -->
-    <sys:String x:Key="ProbStatExpired">Люди / Документи — Прострочено</sys:String>
-    <sys:String x:Key="ProbStatWarning">Люди / Документи — Скоро</sys:String>
-    <sys:String x:Key="ProbStatTotal">Люди / Документи — Всього</sys:String>
+    <sys:String x:Key="ProbStatExpired">Прострочено / Критично</sys:String>
+    <sys:String x:Key="ProbStatWarning">Скоро закінчуються</sys:String>
+    <sys:String x:Key="ProbStatTotal">Всього проблем</sys:String>
     <sys:String x:Key="ProbAllOk">Всі документи в порядку!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">Немає прострочених або документів що скоро закінчуються.</sys:String>
     <sys:String x:Key="ProbTitle">Проблеми — всі фірми</sys:String>
@@ -323,10 +323,19 @@
     <sys:String x:Key="ArchiveStarted">Наступив: </sys:String>
     <sys:String x:Key="ArchiveEnded">Закінчив: </sys:String>
     <sys:String x:Key="ArchiveRestore">Повернути</sys:String>
+    <sys:String x:Key="ArchiveViewProfile">Профіль</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Відкрити папку</sys:String>
     <sys:String x:Key="ArchiveEmpty">Архів порожній</sys:String>
     <sys:String x:Key="ArchiveEmptyDesc">Тут будуть працівники, які завершили співпрацю.</sys:String>
     <sys:String x:Key="ArchiveRestoreTitle">Повернути працівника</sys:String>
+    <sys:String x:Key="ArchiveHeaderDesc">Пошук, фільтрація, відновлення та швидкий перегляд архівних профілів.</sys:String>
+    <sys:String x:Key="ArchiveFilterAll">Усі</sys:String>
+    <sys:String x:Key="ArchiveFilterRecent">Цей місяць</sys:String>
+    <sys:String x:Key="ArchiveFilterNoPhoto">Без фото</sys:String>
+    <sys:String x:Key="ArchiveStatRecent">Завершили цього міс.</sys:String>
+    <sys:String x:Key="ArchiveSortEndDate">Дата завершення</sys:String>
+    <sys:String x:Key="ArchiveSortFirm">Фірма</sys:String>
+    <sys:String x:Key="ArchiveResultsLabel">Показано</sys:String>
     <sys:String x:Key="ArchiveFirm">Фірма</sys:String>
     <sys:String x:Key="ArchiveStartDate">Дата наступу</sys:String>
     <sys:String x:Key="ArchiveSignDate">Дата підписання договору</sys:String>
@@ -367,6 +376,7 @@
     <sys:String x:Key="EditorBold">Жирний (Ctrl+B)</sys:String>
     <sys:String x:Key="EditorItalic">Курсив (Ctrl+I)</sys:String>
     <sys:String x:Key="EditorUnderline">Підкреслений (Ctrl+U)</sys:String>
+    <sys:String x:Key="EditorFormatting">Форматування</sys:String>
     <sys:String x:Key="EditorFontSize">Розмір шрифту</sys:String>
     <sys:String x:Key="EditorFontFamily">Шрифт</sys:String>
     <sys:String x:Key="EditorMaxWidth">Макс. ширина</sys:String>
@@ -378,9 +388,13 @@
     <sys:String x:Key="PdfEditing">Редагування</sys:String>
     <sys:String x:Key="PdfDeselect">Зняти виділення</sys:String>
     <sys:String x:Key="PdfGridStep">Крок</sys:String>
+    <sys:String x:Key="EditorAlignment">Вирівнювання</sys:String>
     <sys:String x:Key="EditorAlignLeft">По лівому краю</sys:String>
     <sys:String x:Key="EditorAlignCenter">По центру</sys:String>
     <sys:String x:Key="EditorAlignRight">По правому краю</sys:String>
+    <sys:String x:Key="EditorSpacing">Інтервали</sys:String>
+    <sys:String x:Key="EditorLineSpacing">Міжрядковий</sys:String>
+    <sys:String x:Key="EditorParagraphSpacing">Абзац</sys:String>
     <sys:String x:Key="EditorTagCatalog">Каталог тегів</sys:String>
     <sys:String x:Key="EditorSearchTags">Пошук тегів...</sys:String>
     <sys:String x:Key="EditorInsert">Вст.</sys:String>
@@ -410,6 +424,13 @@
     <sys:String x:Key="TplTagsTitle">Доступні теги для шаблону</sys:String>
     <sys:String x:Key="TplTagsDesc">Натисніть кнопку «Копіювати» щоб скопіювати тег у буфер обміну. Потім вставте тег у документ у Word/Excel.</sys:String>
     <sys:String x:Key="TplCopyTag">Копіювати</sys:String>
+    <sys:String x:Key="TplCopyToCompanyTooltip">Скопіювати шаблон в іншу фірму</sys:String>
+    <sys:String x:Key="TplCopyDialogTitle">Скопіювати шаблон</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Цільова фірма:</sys:String>
+    <sys:String x:Key="TplCopyDialogName">Нова назва шаблону:</sys:String>
+    <sys:String x:Key="TplCopyDialogBtn">Скопіювати</sys:String>
+    <sys:String x:Key="TplCopyNoCompanies">Немає інших фірм для копіювання шаблону.</sys:String>
+    <sys:String x:Key="TplCopySelectCompany">Виберіть цільову фірму.</sys:String>
     <sys:String x:Key="TplOpenEditor">Відкрити шаблон у редакторі</sys:String>
     <sys:String x:Key="TplTemplateCount">шаблонів</sys:String>
 
@@ -776,11 +797,19 @@
 
     <!-- Template Editor ViewModel -->
     <sys:String x:Key="EditorTitleFmt">Редактор: {0}</sys:String>
+    <sys:String x:Key="EditorLoading">Завантаження редактора...</sys:String>
+    <sys:String x:Key="EditorReady">Готово до редагування</sys:String>
+    <sys:String x:Key="EditorSaving">Збереження...</sys:String>
     <sys:String x:Key="EditorSaved">Збережено!</sys:String>
+    <sys:String x:Key="EditorUnsaved">Незбережені зміни</sys:String>
+    <sys:String x:Key="EditorLastSavedFmt">Останнє збереження: {0}</sys:String>
     <sys:String x:Key="EditorErrPath">Помилка: шлях до шаблону невідомий.</sys:String>
     <sys:String x:Key="EditorErrEmpty">Немає вмісту для збереження.</sys:String>
     <sys:String x:Key="EditorErrFmt">Помилка: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Скопійовано: {0}</sys:String>
+    <sys:String x:Key="EditorUnsavedTitle">Незбережені зміни</sys:String>
+    <sys:String x:Key="EditorUnsavedClose">Є незбережені зміни. Вийти без збереження?</sys:String>
+    <sys:String x:Key="EditorUnsavedPrompt">У шаблоні є незбережені зміни. Натисніть "Так", щоб зберегти і вийти, "Ні" - щоб вийти без збереження, або "Скасувати" - щоб залишитися в редакторі.</sys:String>
 
     <!-- XLSX Editor ViewModel -->
     <sys:String x:Key="XlsxEditorTitle">Редактор XLSX: {0}</sys:String>
@@ -981,13 +1010,11 @@
     <sys:String x:Key="CropPhoto">Фото</sys:String>
     <sys:String x:Key="CropPassport2">Паспорт 2</sys:String>
     <sys:String x:Key="CropPermit">Дозвіл</sys:String>
-    <sys:String x:Key="CropVisaPage2">ID-карта 2</sys:String>
     <sys:String x:Key="CarouselPassport">Паспорт</sys:String>
     <sys:String x:Key="CarouselPassport2">Паспорт 2</sys:String>
     <sys:String x:Key="CarouselVisa">Віза</sys:String>
     <sys:String x:Key="CarouselInsurance">Страховка</sys:String>
     <sys:String x:Key="CarouselPermit">Дозвіл</sys:String>
-    <sys:String x:Key="CarouselVisaPage2">ID-карта 2</sys:String>
 
     <!-- History actions -->
     <sys:String x:Key="HistoryActionCreation">Створення</sys:String>
@@ -1015,6 +1042,8 @@
     <sys:String x:Key="HistFilterStatus">Статус</sys:String>
     <sys:String x:Key="HistFilterArchive">Архів</sys:String>
     <sys:String x:Key="MsgArchiveError">Помилка при архівуванні.</sys:String>
+    <sys:String x:Key="MsgArchiveSuccess">Працівника успішно переміщено в архів.</sys:String>
+    <sys:String x:Key="MsgArchiveCleanupDeferred">Працівника архівовано, але очищення старої папки буде завершено пізніше.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Документ згенеровано: {0}</sys:String>
@@ -1079,7 +1108,6 @@
     <sys:String x:Key="HistFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="HistFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
-    <sys:String x:Key="HistFieldGender">Стать</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Термін паспорту</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Номер візи</sys:String>
@@ -1100,6 +1128,7 @@
 
     <!-- Wizard crop instruction -->
     <sys:String x:Key="WizCropInstruction">Виділіть область з фото працівника на паспорті та натисніть "Обрізати"</sys:String>
+    <sys:String x:Key="WizCropApply">Обрізати</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Тип візи</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Страхова компанія</sys:String>

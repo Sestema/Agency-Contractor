@@ -474,11 +474,13 @@
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <!-- Back -->
-                    <Button Command="{Binding BackCommand}" Height="36" Padding="16,0" Margin="0,0,8,0"
-                            Background="{DynamicResource ContentBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"
-                            Content="{DynamicResource BtnBack}"/>
+                    <Button Command="{Binding BackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS13}" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
 
                     <!-- Next (visible when not last step) -->
                     <Button Command="{Binding NextCommand}" Cursor="Hand"

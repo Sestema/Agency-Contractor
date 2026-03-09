@@ -357,6 +357,97 @@ namespace Win11DesktopApp.Services
             template.UpdatedAt = DateTime.Now;
         }
 
+        public TemplateEntry CopyTemplateToCompany(string sourceFirmName, TemplateEntry template, string targetFirmName, string newName)
+        {
+            if (string.IsNullOrEmpty(_folderService.RootPath))
+                throw new InvalidOperationException("Root folder is not configured.");
+            if (template == null)
+                throw new ArgumentNullException(nameof(template));
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentException("Template name is required.", nameof(newName));
+
+            var sourceCompanyFolder = _folderService.GetCompanyFolder(sourceFirmName);
+            var targetTemplatesRoot = _folderService.GetTemplatesFolder(targetFirmName);
+            Directory.CreateDirectory(targetTemplatesRoot);
+
+            var sourceFullPath = Path.Combine(sourceCompanyFolder, template.FilePath);
+            var sourceTemplateDirectory = Path.GetDirectoryName(sourceFullPath);
+            if (string.IsNullOrEmpty(sourceTemplateDirectory) || !Directory.Exists(sourceTemplateDirectory))
+                throw new DirectoryNotFoundException("Source template folder was not found.");
+
+            var safeName = FolderService.NormalizeFolderName(newName);
+            var targetTemplateDirectory = Path.Combine(targetTemplatesRoot, safeName);
+            var counter = 1;
+            while (Directory.Exists(targetTemplateDirectory))
+            {
+                targetTemplateDirectory = Path.Combine(targetTemplatesRoot, $"{safeName}_{counter}");
+                counter++;
+            }
+
+            CopyDirectory(sourceTemplateDirectory, targetTemplateDirectory);
+
+            var now = DateTime.Now;
+            var templateFileName = Path.GetFileName(template.FilePath);
+            var metadataPath = Path.Combine(targetTemplateDirectory, "metadata.json");
+            if (File.Exists(metadataPath))
+            {
+                try
+                {
+                    var metadataJson = File.ReadAllText(metadataPath);
+                    var metadata = JsonSerializer.Deserialize<TemplateMetadata>(metadataJson) ?? new TemplateMetadata();
+                    metadata.Name = newName.Trim();
+                    metadata.Format = string.IsNullOrWhiteSpace(metadata.Format) ? template.Format : metadata.Format;
+                    metadata.CreatedAt = now;
+                    metadata.UpdatedAt = now;
+                    File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("TemplateService.CopyTemplateToCompany.Metadata", ex);
+                }
+            }
+
+            var relativePath = Path.Combine(Path.GetFileName(targetTemplatesRoot), Path.GetFileName(targetTemplateDirectory), templateFileName);
+            var indexFile = Path.Combine(targetTemplatesRoot, "index.json");
+            List<TemplateIndexEntry> index;
+            if (File.Exists(indexFile))
+            {
+                try
+                {
+                    index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(File.ReadAllText(indexFile)) ?? new List<TemplateIndexEntry>();
+                }
+                catch
+                {
+                    index = new List<TemplateIndexEntry>();
+                }
+            }
+            else
+            {
+                index = new List<TemplateIndexEntry>();
+            }
+
+            index.Add(new TemplateIndexEntry
+            {
+                Name = newName.Trim(),
+                Format = template.Format,
+                Path = relativePath,
+                Updated = now
+            });
+
+            File.WriteAllText(indexFile, JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true }));
+
+            return new TemplateEntry
+            {
+                Name = newName.Trim(),
+                Description = template.Description,
+                Format = template.Format,
+                FilePath = relativePath,
+                CreatedAt = now,
+                UpdatedAt = now,
+                TagsUsed = new List<string>(template.TagsUsed ?? new List<string>())
+            };
+        }
+
         public void DeleteTemplate(string firmName, TemplateEntry template)
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null) return;
@@ -401,6 +492,27 @@ namespace Win11DesktopApp.Services
                 {
                     throw new Exception($"Failed to delete template files at {templateDirectory}", ex);
                 }
+            }
+        }
+
+        private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+        {
+            var sourceInfo = new DirectoryInfo(sourceDirectory);
+            if (!sourceInfo.Exists)
+                throw new DirectoryNotFoundException($"Source directory not found: {sourceDirectory}");
+
+            Directory.CreateDirectory(destinationDirectory);
+
+            foreach (var file in sourceInfo.GetFiles())
+            {
+                var targetFile = Path.Combine(destinationDirectory, file.Name);
+                file.CopyTo(targetFile, false);
+            }
+
+            foreach (var directory in sourceInfo.GetDirectories())
+            {
+                var targetSubdirectory = Path.Combine(destinationDirectory, directory.Name);
+                CopyDirectory(directory.FullName, targetSubdirectory);
             }
         }
 

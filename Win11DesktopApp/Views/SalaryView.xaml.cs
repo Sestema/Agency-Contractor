@@ -36,6 +36,13 @@ namespace Win11DesktopApp.Views
             }
         }
 
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            bool hasText = !string.IsNullOrEmpty(SearchBox.Text);
+            SearchPlaceholder.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
+            SearchClearBtn.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private void SalaryView_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             if (!AdvancePopup.IsOpen) return;

@@ -374,7 +374,8 @@ namespace Win11DesktopApp.ViewModels
                 IsUpdateChecking = true;
                 UpdateStatus = Res("UpdateDownloading");
                 var success = await Services.UpdateService.DownloadAndApplyAsync(
-                    _pendingUpdate, progress => UpdateStatus = $"{Res("UpdateDownloading")} {progress}%");
+                    _pendingUpdate,
+                    progress => UpdateStatus = $"{Res("UpdateDownloading")} {progress}%");
                 if (!success)
                 {
                     UpdateStatus = Res("UpdateError");

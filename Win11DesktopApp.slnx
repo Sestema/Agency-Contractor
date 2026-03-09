@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="Win11DesktopApp/Win11DesktopApp.csproj" />
   <Project Path="Win11DesktopApp.Tests/Win11DesktopApp.Tests.csproj" />
+  <Project Path="AdminPanel/AdminPanel.csproj" />
+  <Project Path="KeyGenerator/KeyGenerator.csproj" />
 </Solution>

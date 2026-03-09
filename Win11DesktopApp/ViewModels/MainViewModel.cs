@@ -415,14 +415,14 @@ namespace Win11DesktopApp.ViewModels
         private static List<SearchResultItem> PerformSearch(string query, CancellationToken ct)
         {
             var results = new List<SearchResultItem>();
-            var q = query.ToLowerInvariant();
+            var q = query;
             var companies = App.CompanyService?.Companies;
             if (companies == null) return results;
 
             foreach (var company in companies)
             {
                 if (ct.IsCancellationRequested) return results;
-                if (company.Name.ToLowerInvariant().Contains(q))
+                if (company.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
                 {
                     results.Add(new SearchResultItem
                     {
@@ -442,14 +442,14 @@ namespace Win11DesktopApp.ViewModels
                     foreach (var emp in employees)
                     {
                         if (ct.IsCancellationRequested) return results;
-                        var name = emp.FullName.ToLowerInvariant();
-                        if (name.Contains(q) || (emp.PassportNumber?.ToLowerInvariant().Contains(q) == true)
-                            || (emp.Phone?.ToLowerInvariant().Contains(q) == true))
+                        if ((emp.FullName?.Contains(q, StringComparison.OrdinalIgnoreCase) == true)
+                            || (emp.PassportNumber?.Contains(q, StringComparison.OrdinalIgnoreCase) == true)
+                            || (emp.Phone?.Contains(q, StringComparison.OrdinalIgnoreCase) == true))
                         {
                             results.Add(new SearchResultItem
                             {
                                 Category = Res("SearchCatEmployees"), CategoryIcon = "\uE77B", CategoryColor = "#4CAF50",
-                                Title = emp.FullName,
+                                Title = emp.FullName ?? string.Empty,
                                 Subtitle = company.Name,
                                 CompanyName = company.Name,
                                 EmployeeFolder = emp.EmployeeFolder
@@ -470,7 +470,7 @@ namespace Win11DesktopApp.ViewModels
                     if (templates == null) continue;
                     foreach (var t in templates)
                     {
-                        if (t.Name.ToLowerInvariant().Contains(q))
+                        if (t.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
                         {
                             results.Add(new SearchResultItem
                             {
@@ -493,7 +493,7 @@ namespace Win11DesktopApp.ViewModels
                     foreach (var a in archived)
                     {
                         if (ct.IsCancellationRequested) return results;
-                        if (a.FullName.ToLowerInvariant().Contains(q))
+                        if (a.FullName.Contains(q, StringComparison.OrdinalIgnoreCase))
                         {
                             results.Add(new SearchResultItem
                             {
@@ -516,13 +516,13 @@ namespace Win11DesktopApp.ViewModels
                     foreach (var c in candidates)
                     {
                         if (ct.IsCancellationRequested) return results;
-                        var name = c.FullName.ToLowerInvariant();
-                        if (name.Contains(q) || (c.Phone?.ToLowerInvariant().Contains(q) == true))
+                        if ((c.FullName?.Contains(q, StringComparison.OrdinalIgnoreCase) == true)
+                            || (c.Phone?.Contains(q, StringComparison.OrdinalIgnoreCase) == true))
                         {
                             results.Add(new SearchResultItem
                             {
                                 Category = Res("SearchCatCandidates"), CategoryIcon = "\uE716", CategoryColor = "#FF5722",
-                                Title = c.FullName,
+                                Title = c.FullName ?? string.Empty,
                                 Subtitle = c.DesiredPosition,
                                 EmployeeFolder = c.CandidateFolder
                             });
@@ -619,7 +619,7 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
                     SearchResults = new ObservableCollection<SearchResultItem>(new[]
                     {
                         new SearchResultItem { Category = "AI", CategoryIcon = "\uE9D9", CategoryColor = "#E53935",
-                            Title = "Error", Subtitle = ex.Message }
+                            Title = Res("TitleError"), Subtitle = ex.Message }
                     });
                 });
             }

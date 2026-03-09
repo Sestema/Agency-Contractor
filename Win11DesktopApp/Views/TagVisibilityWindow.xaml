@@ -15,50 +15,25 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="{DynamicResource TagVisHeader}"
-                   FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
-                   Foreground="{DynamicResource ForegroundBrush}"
-                   Margin="0,0,0,12"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <Border Style="{StaticResource PageHeaderIconBadge}">
+                <TextBlock Text="&#xE8D2;" Style="{StaticResource PageHeaderIconText}"/>
+            </Border>
+            <TextBlock Text="{DynamicResource TagVisHeader}"
+                       FontSize="{DynamicResource FS20}" Style="{StaticResource PageHeaderTitleText}"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
 
         <!-- Select All / Deselect All -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
             <Button Content="{DynamicResource TagVisSelectAll}" Click="SelectAll_Click"
                     Padding="14,6" Margin="0,0,10,0" Cursor="Hand"
-                    FontSize="{DynamicResource FS13}" FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-                <Button.Foreground>
-                    <SolidColorBrush Color="White"/>
-                </Button.Foreground>
-            </Button>
+                    FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                    Style="{StaticResource FilledActionButton}"/>
             <Button Content="{DynamicResource TagVisDeselectAll}" Click="DeselectAll_Click"
                     Padding="14,6" Margin="0,0,10,0" Cursor="Hand"
-                    FontSize="{DynamicResource FS13}" FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" 
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                    Style="{StaticResource HeaderGhostButton}"/>
         </StackPanel>
 
         <!-- Tag list grouped by category -->
@@ -103,41 +78,12 @@
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="{DynamicResource TagVisSave}" Click="Save_Click"
                     Padding="20,8" Margin="0,0,10,0" Cursor="Hand"
-                    FontSize="{DynamicResource FS14}" FontWeight="SemiBold">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-                <Button.Foreground>
-                    <SolidColorBrush Color="White"/>
-                </Button.Foreground>
-            </Button>
+                    FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                    Style="{StaticResource FilledActionButton}"/>
             <Button Content="{DynamicResource TagVisCancel}" Click="Cancel_Click"
                     Padding="20,8" Cursor="Hand"
-                    FontSize="{DynamicResource FS14}" FontWeight="Medium">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" 
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    FontSize="{DynamicResource FS14}" FontWeight="Medium"
+                    Style="{StaticResource HeaderGhostButton}"/>
         </StackPanel>
     </Grid>
 </Window>

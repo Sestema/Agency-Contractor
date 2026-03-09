@@ -95,17 +95,63 @@
                 <Border Grid.Row="0" Padding="20,16,20,12" 
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
                     <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}" 
-                                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding FullName}" FontSize="{DynamicResource FS20}" FontWeight="SemiBold" 
-                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                            <Button Command="{Binding CloseCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
+                                <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                            </Button>
+                            <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource AccentBrush}">
+                                <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
+                            </Border>
+                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding FullName}" Style="{StaticResource PageHeaderTitleText}"/>
+                                <TextBlock Text="{Binding HeaderSubtitle}"
+                                           FontSize="{DynamicResource FS12}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}"
+                                           Margin="0,3,0,0"/>
+                            </StackPanel>
                         </StackPanel>
-                        <Button HorizontalAlignment="Right" Command="{Binding CloseCommand}"
-                                Width="32" Height="32" Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SecondaryForegroundBrush}" Cursor="Hand" ToolTip="{DynamicResource DetTooltipClose}">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-                        </Button>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border CornerRadius="999"
+                                    Padding="10,5"
+                                    Margin="0,0,8,0"
+                                    Background="{Binding Data.Status, Converter={StaticResource StatusBg}}">
+                                <TextBlock Text="{Binding Data.Status, Converter={StaticResource StatusDisplayConverter}, FallbackValue='—'}"
+                                           FontSize="{DynamicResource FS11}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{Binding Data.Status, Converter={StaticResource StatusColor}}"/>
+                            </Border>
+                            <Border Style="{StaticResource CompactInfoCard}"
+                                    Padding="10,5"
+                                    Margin="0,0,8,0"
+                                    Visibility="{Binding ShowArchiveModeChip, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7B8;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS11}"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               Margin="0,0,6,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource BtnArchive}"
+                                               FontSize="{DynamicResource FS11}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Button Command="{Binding CloseCommand}"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    Width="34"
+                                    Height="34"
+                                    ToolTip="{DynamicResource DetTooltipClose}">
+                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -248,6 +294,7 @@
 
                                 <!-- Archive button -->
                                 <Button Command="{Binding ArchiveEmployeeCommand}" Padding="12,8" Cursor="Hand" Margin="0,8,0,0"
+                                        Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}"
                                         Background="{DynamicResource ErrorLightBrush}" 
                                         BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                                         Foreground="{DynamicResource ErrorBrush}" HorizontalContentAlignment="Center">
@@ -386,10 +433,11 @@
                         </Border>
 
                         <!-- Tab Content -->
-                        <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="20,16">
-                            <Grid>
+                        <Grid Grid.Row="1">
                                 <!-- ========== TAB 0: DOCUMENTS ========== -->
-                                <StackPanel Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=0}">
+                                <ScrollViewer Style="{StaticResource ThinScroll}" Padding="20,16"
+                                              Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=0}">
+                                <StackPanel>
                                     <TextBlock Text="{DynamicResource DetDocsTitle}" Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0,0,0,14"/>
                                     <WrapPanel>
                                         <!-- Passport -->
@@ -422,7 +470,8 @@
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplacePassportCommand}" Margin="0,0,6,0">
+                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplacePassportCommand}" Margin="0,0,6,0"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{DynamicResource DetBtnReplace}" FontSize="{DynamicResource FS11}"/>
@@ -477,7 +526,8 @@
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplaceVisaCommand}" Margin="0,0,6,0">
+                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplaceVisaCommand}" Margin="0,0,6,0"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{DynamicResource DetBtnReplace}" FontSize="{DynamicResource FS11}"/>
@@ -490,6 +540,7 @@
                                                         </StackPanel>
                                                     </Button>
                                                     <Button Style="{StaticResource DocCardBtn}" Command="{Binding ExtendVisaCommand}"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}"
                                                             ToolTip="{DynamicResource DetTooltipExtendVisa}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
@@ -539,7 +590,8 @@
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplaceInsuranceCommand}" Margin="0,0,6,0">
+                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplaceInsuranceCommand}" Margin="0,0,6,0"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{DynamicResource DetBtnReplace}" FontSize="{DynamicResource FS11}"/>
@@ -552,6 +604,7 @@
                                                         </StackPanel>
                                                     </Button>
                                                     <Button Style="{StaticResource DocCardBtn}" Command="{Binding ExtendInsuranceCommand}"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}"
                                                             ToolTip="{DynamicResource DetTooltipExtendIns}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
@@ -599,7 +652,8 @@
                                                             <TextBlock Text="{DynamicResource DetBtnOpenFile}" FontSize="{DynamicResource FS11}"/>
                                                         </StackPanel>
                                                     </Button>
-                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding RenewWorkPermitCommand}">
+                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding RenewWorkPermitCommand}"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{DynamicResource DetBtnRenewPermit}" FontSize="{DynamicResource FS11}"/>
@@ -630,7 +684,8 @@
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplacePhotoCommand}" Margin="0,0,6,0">
+                                                    <Button Style="{StaticResource DocCardBtn}" Command="{Binding ReplacePhotoCommand}" Margin="0,0,6,0"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{DynamicResource DetBtnReplace}" FontSize="{DynamicResource FS11}"/>
@@ -847,15 +902,30 @@
                                         </ItemsControl>
                                     </StackPanel>
                                 </StackPanel>
+                                </ScrollViewer>
 
                                 <!-- ========== TAB 1: PROFILE (ANKETA) ========== -->
-                                <StackPanel Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=1}">
+                                <ScrollViewer Style="{StaticResource ThinScroll}" Padding="20,16"
+                                              Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=1}">
+                                <StackPanel>
 
                                     <!-- Action buttons -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                         <Button Command="{Binding EditProfileCommand}" Padding="12,7" Margin="0,0,8,0" Cursor="Hand"
-                                                Visibility="{Binding IsEditMode, Converter={StaticResource InverseBoolToVis}}"
                                                 Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsArchiveMode}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="{DynamicResource DetBtnEditProfile}" FontSize="{DynamicResource FS12}"/>
@@ -889,7 +959,7 @@
                                         <StackPanel Grid.Column="0">
                                             <!-- Personal -->
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource SuccessLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource SuccessLightBrush}">
                                                     <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="{DynamicResource DetSecPersonal}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
@@ -936,7 +1006,7 @@
 
                                             <!-- Passport -->
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource SuccessLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource SuccessLightBrush}">
                                                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="{DynamicResource DetSecPassport}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
@@ -974,7 +1044,7 @@
                                                     </Style>
                                                 </StackPanel.Style>
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                    <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                    <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
                                                         <TextBlock Text="&#xE81E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                     <TextBlock Text="{DynamicResource DetDocVisa}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
@@ -1024,7 +1094,7 @@
                                                     </Style>
                                                 </StackPanel.Style>
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                    <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                    <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource WarningLightBrush}">
                                                         <TextBlock Text="&#xE8C9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                     <TextBlock Text="{DynamicResource DetDocInsurance}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
@@ -1062,7 +1132,7 @@
                                                     </Style>
                                                 </StackPanel.Style>
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                    <Border Background="{DynamicResource ErrorLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                    <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource ErrorLightBrush}">
                                                         <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ErrorBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                     <TextBlock Text="{DynamicResource DetDocWorkPermit}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" VerticalAlignment="Center"/>
@@ -1090,7 +1160,7 @@
                                         <StackPanel Grid.Column="2">
                                             <!-- Address local -->
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource PurpleLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource PurpleLightBrush}">
                                                     <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="{DynamicResource DetSecAddrLocal}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center"/>
@@ -1123,7 +1193,7 @@
 
                                             <!-- Address abroad -->
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource InfoLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource InfoLightBrush}">
                                                     <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="{DynamicResource DetSecAddrAbroad}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center"/>
@@ -1156,7 +1226,7 @@
 
                                             <!-- Work info -->
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
                                                     <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="{DynamicResource DetSecWork}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
@@ -1194,7 +1264,7 @@
 
                                             <!-- Contact & Dates -->
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource PurpleLightBrush}" CornerRadius="6" Width="24" Height="24" Margin="0,0,8,0">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource PurpleLightBrush}">
                                                     <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="{DynamicResource DetSecContacts}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center"/>
@@ -1237,13 +1307,20 @@
                                     <!-- Status message -->
                                     <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ErrorBrush}" Margin="0,4,0,0" FontSize="{DynamicResource FS12}"/>
                                 </StackPanel>
+                                </ScrollViewer>
 
                                 <!-- ========== TAB 2: HISTORY ========== -->
-                                <StackPanel Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=2}">
-                                    <TextBlock Text="{DynamicResource DetHistoryTitle}" Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0,0,0,10"/>
+                                <Grid Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=2}"
+                                      Margin="20,16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="{DynamicResource DetHistoryTitle}" Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0,0,0,10"/>
 
                                     <!-- Filter buttons -->
-                                    <WrapPanel Margin="0,0,0,14">
+                                    <WrapPanel Grid.Row="1" Margin="0,0,0,14">
                                         <WrapPanel.Resources>
                                             <Style x:Key="FilterBtn" TargetType="Button">
                                                 <Setter Property="Padding" Value="10,5"/>
@@ -1277,9 +1354,25 @@
                                         <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterArchive}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Archive"/>
                                     </WrapPanel>
 
+                                    <Grid Grid.Row="2">
                                     <!-- Timeline list -->
                                     <ItemsControl ItemsSource="{Binding HistoryEntries}"
-                                                  Visibility="{Binding HasHistory, Converter={StaticResource BoolToVis}}">
+                                                  Visibility="{Binding HasHistory, Converter={StaticResource BoolToVis}}"
+                                                  VirtualizingPanel.IsVirtualizing="True"
+                                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                                  ScrollViewer.CanContentScroll="True">
+                                        <ItemsControl.Template>
+                                            <ControlTemplate TargetType="ItemsControl">
+                                                <ScrollViewer Style="{StaticResource ThinScroll}" CanContentScroll="True" Focusable="False">
+                                                    <ItemsPresenter/>
+                                                </ScrollViewer>
+                                            </ControlTemplate>
+                                        </ItemsControl.Template>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <VirtualizingStackPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Margin="0,0,0,0">
@@ -1328,27 +1421,29 @@
                                     </ItemsControl>
 
                                     <!-- Empty state -->
-                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="24"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                    <Border Style="{StaticResource CompactEmptyStateCard}"
                                             Visibility="{Binding HasHistory, Converter={StaticResource InverseBoolToVis}}">
                                         <StackPanel HorizontalAlignment="Center">
-                                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS32}"
-                                                       HorizontalAlignment="Center" Foreground="{DynamicResource TertiaryForegroundBrush}"/>
-                                            <TextBlock Text="{DynamicResource DetHistoryEmpty}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Margin="0,8,0,4" TextAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                            <TextBlock Text="{DynamicResource DetHistoryEmptyMsg}"
-                                                       FontSize="{DynamicResource FS12}" TextAlignment="Center" Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                            <TextBlock Text="&#xE81C;" Style="{StaticResource CompactEmptyStateIconText}"/>
+                                            <TextBlock Text="{DynamicResource DetHistoryEmpty}" Style="{StaticResource CompactEmptyStateTitleText}"/>
+                                            <TextBlock Text="{DynamicResource DetHistoryEmptyMsg}" Style="{StaticResource CompactEmptyStateDescriptionText}"/>
                                         </StackPanel>
                                     </Border>
-                                </StackPanel>
+                                    </Grid>
+                                </Grid>
 
                                 <!-- ========== TAB 3: SALARY HISTORY ========== -->
-                                <StackPanel Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=3}">
-                                    <TextBlock Text="{DynamicResource DetSalaryTitle}" Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0,0,0,14"/>
+                                <Grid Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=3}"
+                                      Margin="20,16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="{DynamicResource DetSalaryTitle}" Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0,0,0,14"/>
 
                                     <!-- Summary stats -->
-                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="16" Margin="0,0,0,16"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                    <Border Grid.Row="1" Style="{StaticResource CompactInfoCard}" Margin="0,0,0,16"
                                             Visibility="{Binding HasSalaryHistory, Converter={StaticResource BoolToVis}}">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                             <StackPanel Margin="0,0,40,0" HorizontalAlignment="Center">
@@ -1381,8 +1476,24 @@
                                         </StackPanel>
                                     </Border>
 
+                                    <Grid Grid.Row="2">
                                     <!-- Combined Salary + Advances per month -->
-                                    <ItemsControl ItemsSource="{Binding SalaryMonthDisplays}" Margin="0,10,0,0">
+                                    <ItemsControl ItemsSource="{Binding SalaryMonthDisplays}" Margin="0,10,0,0"
+                                                  VirtualizingPanel.IsVirtualizing="True"
+                                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                                  ScrollViewer.CanContentScroll="True">
+                                        <ItemsControl.Template>
+                                            <ControlTemplate TargetType="ItemsControl">
+                                                <ScrollViewer Style="{StaticResource ThinScroll}" CanContentScroll="True" Focusable="False">
+                                                    <ItemsPresenter/>
+                                                </ScrollViewer>
+                                            </ControlTemplate>
+                                        </ItemsControl.Template>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <VirtualizingStackPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8"
@@ -1667,25 +1778,48 @@
                                     </ItemsControl>
 
                                     <!-- Empty state -->
-                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="24"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                    <Border Style="{StaticResource CompactEmptyStateCard}"
                                             Visibility="{Binding HasSalaryHistory, Converter={StaticResource InverseBoolToVis}}">
                                         <StackPanel HorizontalAlignment="Center">
-                                            <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS32}" 
-                                                       HorizontalAlignment="Center" Foreground="{DynamicResource TertiaryForegroundBrush}"/>
-                                            <TextBlock Text="{DynamicResource DetSalaryEmpty}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold" 
-                                                       Margin="0,8,0,4" TextAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                            <TextBlock Text="{DynamicResource DetSalaryEmptyMsg}"
-                                                       FontSize="{DynamicResource FS12}" TextAlignment="Center" Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                            <TextBlock Text="&#xE8C7;" Style="{StaticResource CompactEmptyStateIconText}"/>
+                                            <TextBlock Text="{DynamicResource DetSalaryEmpty}" Style="{StaticResource CompactEmptyStateTitleText}"/>
+                                            <TextBlock Text="{DynamicResource DetSalaryEmptyMsg}" Style="{StaticResource CompactEmptyStateDescriptionText}"/>
                                         </StackPanel>
                                     </Border>
-                                </StackPanel>
+                                    </Grid>
+                                </Grid>
                             </Grid>
-                        </ScrollViewer>
                     </Grid>
                 </Grid>
             </Grid>
         </Border>
+
+        <Grid Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}"/>
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="22,18"
+                    CornerRadius="14"
+                    Background="{DynamicResource ContentBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1">
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Width="78"
+                                 Height="6"
+                                 IsIndeterminate="True"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Margin="0,0,12,0"
+                                 VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding BusyMessage}"
+                               FontSize="{DynamicResource FS13}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="320"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- ===== Generate Document Dialog Overlay ===== -->
         <Grid Visibility="{Binding IsGenerateDialogOpen, Converter={StaticResource BoolToVis}}">

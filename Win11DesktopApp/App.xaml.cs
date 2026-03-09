@@ -1,8 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Markup;
 using PdfSharp.Fonts;
-using Velopack;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
@@ -29,11 +30,10 @@ namespace Win11DesktopApp
         public static CandidateService CandidateService { get; private set; } = null!;
         public static GeminiApiService GeminiApiService { get; private set; } = null!;
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
-            VelopackApp.Build().Run();
-
             base.OnStartup(e);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             GlobalFontSettings.FontResolver = new PdfFontResolver();
 
@@ -52,7 +52,17 @@ namespace Win11DesktopApp
             DispatcherUnhandledException += (s, args) =>
             {
                 LoggingService.LogError("App.DispatcherUnhandledException", args.Exception);
+                var isXamlParseError = args.Exception is XamlParseException;
+
                 ErrorHandler.Report("App.DispatcherUnhandledException", args.Exception, ErrorSeverity.Critical, showUser: true);
+
+                if (isXamlParseError)
+                {
+                    Shutdown(-1);
+                    args.Handled = true;
+                    return;
+                }
+
                 args.Handled = true;
             };
 
@@ -82,6 +92,7 @@ namespace Win11DesktopApp
                 GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
             DocumentGenerationService = new DocumentGenerationService();
             DocumentLocalizationService = new DocumentLocalizationService();
+            _ = Task.Run(() => PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory));
 
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
@@ -104,10 +115,21 @@ namespace Win11DesktopApp
 
             LoggingService.LogInfo("App", "All services initialized");
 
-            if (!LicenseService.IsLicenseValid())
+            var skipLicenseGate =
+#if DEBUG
+                true;
+#else
+                Debugger.IsAttached;
+#endif
+
+            if (!skipLicenseGate && !LicenseService.IsLicenseValid())
             {
                 var licenseWindow = new Views.LicenseWindow();
-                if (licenseWindow.ShowDialog() != true || !licenseWindow.IsActivated)
+                MainWindow = licenseWindow;
+                var licenseAccepted = licenseWindow.ShowDialog() == true && licenseWindow.IsActivated;
+                MainWindow = null;
+
+                if (!licenseAccepted)
                 {
                     Shutdown();
                     return;
@@ -120,7 +142,10 @@ namespace Win11DesktopApp
             {
                 DataContext = new MainWindowViewModel(NavigationService)
             };
+            MainWindow = mainWindow;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+
         }
     }
 }

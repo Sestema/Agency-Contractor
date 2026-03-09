@@ -134,6 +134,20 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public static string GetExpiresAt()
+        {
+            try
+            {
+                var info = LoadLicense();
+                if (info == null) return DateTime.UtcNow.AddDays(1).ToString("o");
+                if (info.Plan == "unlimited") return "9999-12-31T00:00:00Z";
+                if (DateTime.TryParse(info.ExpiresOn, out var dt))
+                    return dt.ToUniversalTime().ToString("o");
+            }
+            catch (Exception ex) { LoggingService.LogWarning("LicenseService.GetExpiresAt", ex.Message); }
+            return DateTime.UtcNow.AddDays(1).ToString("o");
+        }
+
         public static int GetDaysLeft()
         {
             try

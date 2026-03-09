@@ -22,7 +22,7 @@
         <!-- Main Content -->
         <Grid>
             <!-- Top Bar -->
-            <Grid VerticalAlignment="Top" Height="60" Margin="20,10">
+            <Grid VerticalAlignment="Top" Height="60" Margin="24,14,24,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -31,7 +31,7 @@
 
                 <!-- Left: Hamburger (Now on Left) -->
                 <Button Grid.Column="0" Command="{Binding ToggleDrawerCommand}" 
-                        Width="40" Height="40" Background="Transparent" BorderThickness="0" Margin="0,0,10,0">
+                        Style="{StaticResource ToolbarIconButton}" Margin="0,0,10,0">
                     <Path Data="{StaticResource IconHamburger}" 
                           Fill="{DynamicResource ForegroundBrush}"
                           Stretch="Uniform" Width="20" Height="20"/>
@@ -39,8 +39,7 @@
 
                 <!-- Center: Search Box -->
                 <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="420">
-                    <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="20"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" Padding="4,0"
+                    <Border Style="{StaticResource ToolbarSearchContainer}" CornerRadius="20" Padding="6,0"
                             Height="38">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -78,12 +77,11 @@
                                 </TextBox.Style>
                             </TextBox>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
-                                <Button Command="{Binding AISearchCommand}" Width="26" Height="26"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="{DynamicResource AISearchTooltip}">
+                                <Button Command="{Binding AISearchCommand}" Style="{StaticResource ToolbarInlineIconButton}"
+                                        ToolTip="{DynamicResource AISearchTooltip}">
                                     <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{DynamicResource PurpleBrush}"/>
                                 </Button>
-                                <Button Command="{Binding ClearSearchCommand}" Width="26" Height="26"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                <Button Command="{Binding ClearSearchCommand}" Style="{StaticResource ToolbarInlineIconButton}"
                                         Visibility="{Binding IsSearchOpen, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                 </Button>
@@ -165,16 +163,16 @@
                     <TextBlock Text="{Binding SelectedCompany.Name, FallbackValue=''}"
                                FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="180" Opacity="0.7"
-                               Margin="0,0,4,0"/>
+                               Margin="0,0,8,0"/>
                     <Button Command="{Binding EditCompanyCommand}"
-                            Width="28" Height="28" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Style="{StaticResource ToolbarInlineIconButton}"
                             ToolTip="{DynamicResource MainTooltipEdit}"
                             Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"/>
+                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.65"/>
                     </Button>
                     <Button Command="{Binding GoToSettingsCommand}"
-                            Width="40" Height="40" Background="Transparent" BorderThickness="0">
+                            Style="{StaticResource ToolbarIconButton}" Margin="8,0,0,0">
                         <Path Data="{StaticResource IconSettings}"
                               Fill="{DynamicResource ForegroundBrush}"
                               Stretch="Uniform" Width="20" Height="20"/>
