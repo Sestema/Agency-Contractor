@@ -8,6 +8,7 @@
     <sys:String x:Key="BtnFinances">Finances &amp; Tables</sys:String>
     <sys:String x:Key="BtnArchive">Archive</sys:String>
     <sys:String x:Key="BtnActivityLog">Activity Log</sys:String>
+    <sys:String x:Key="BtnNews">News</sys:String>
     <sys:String x:Key="ActLogEmpty">No entries yet</sys:String>
     <sys:String x:Key="ActLogClearFilter">Clear filter</sys:String>
     <sys:String x:Key="ActLogCatEmployee">Employee</sys:String>
@@ -37,6 +38,49 @@
     <sys:String x:Key="ActLogCleared">Activity log cleared</sys:String>
     
     <sys:String x:Key="SettingsTitle">Settings</sys:String>
+    <sys:String x:Key="NewsTitle">News</sys:String>
+    <sys:String x:Key="NewsRefresh">Refresh</sys:String>
+    <sys:String x:Key="NewsSearchPlaceholder">Search news by title or text</sys:String>
+    <sys:String x:Key="NewsLoading">Loading news...</sys:String>
+    <sys:String x:Key="NewsEmpty">No news available yet.</sys:String>
+    <sys:String x:Key="NewsStatusFmt">News found: {0}</sys:String>
+    <sys:String x:Key="NewsLoadError">Failed to refresh news. Showing the last cached data.</sys:String>
+    <sys:String x:Key="NewsOpenOriginal">Original</sys:String>
+    <sys:String x:Key="NewsSelectArticle">Select a news item from the list to open the full article in the app.</sys:String>
+    <sys:String x:Key="NewsAllSources">All sources</sys:String>
+    <sys:String x:Key="NewsImportant">Important</sys:String>
+    <sys:String x:Key="NewsTranslate">Translate</sys:String>
+    <sys:String x:Key="NewsViewOriginal">Original</sys:String>
+    <sys:String x:Key="NewsViewTranslated">Translation</sys:String>
+    <sys:String x:Key="NewsTranslatingFmt">Translating the article into {0}...</sys:String>
+    <sys:String x:Key="NewsTranslatedFmt">The article translation into {0} is ready.</sys:String>
+    <sys:String x:Key="NewsTranslateCachedFmt">Showing the saved translation in {0}.</sys:String>
+    <sys:String x:Key="NewsTranslateFailedFmt">Failed to translate the article into {0}.</sys:String>
+    <sys:String x:Key="NewsTranslateConfigureAi">Add a Gemini API key in settings before using article translation.</sys:String>
+    <sys:String x:Key="NewsTranslateReaderUnavailable">Could not read the current article text for translation.</sys:String>
+    <sys:String x:Key="NewsTranslatedForLanguageFmt">translation: {0}</sys:String>
+    <sys:String x:Key="NewsAiAnalyze">AI Analysis</sys:String>
+    <sys:String x:Key="NewsAiAssistantTitle">AI article assistant</sys:String>
+    <sys:String x:Key="NewsAiSummaryTitle">Short summary</sys:String>
+    <sys:String x:Key="NewsAiKeyPointsTitle">Key points</sys:String>
+    <sys:String x:Key="NewsAiPracticalImpactTitle">Practical impact</sys:String>
+    <sys:String x:Key="NewsAiConversationTitle">Questions about the article</sys:String>
+    <sys:String x:Key="NewsAiAskPlaceholder">Ask a question about this article</sys:String>
+    <sys:String x:Key="NewsAiAsk">Ask</sys:String>
+    <sys:String x:Key="NewsAiEmpty">Click AI Analysis to generate a short summary. Then you can ask your own questions about the article below.</sys:String>
+    <sys:String x:Key="NewsAiAnalyzingFmt">AI is analyzing the article in {0}...</sys:String>
+    <sys:String x:Key="NewsAiReadyFmt">The AI article summary in {0} is ready.</sys:String>
+    <sys:String x:Key="NewsAiCachedFmt">Showing the saved AI analysis in {0}.</sys:String>
+    <sys:String x:Key="NewsAiFailedFmt">Failed to analyze the article in {0}.</sys:String>
+    <sys:String x:Key="NewsAiReaderUnavailable">Could not extract the main article text reliably enough. Try another article or wait until the page fully loads.</sys:String>
+    <sys:String x:Key="NewsAiThinking">AI is preparing an answer about this article...</sys:String>
+    <sys:String x:Key="NewsAiThinkingBubble">AI is thinking about the answer...</sys:String>
+    <sys:String x:Key="NewsAiAskFailed">Failed to get an AI answer for this article.</sys:String>
+    <sys:String x:Key="NewsAiAnswerReady">The AI answer is ready.</sys:String>
+    <sys:String x:Key="NewsAiConfigure">Add a Gemini API key in settings before using AI news analysis.</sys:String>
+    <sys:String x:Key="NewsAiYou">You</sys:String>
+    <sys:String x:Key="NewsAiAssistantName">AI</sys:String>
+    <sys:String x:Key="NewsAiClose">Close AI panel</sys:String>
     <sys:String x:Key="LangLabel">Language</sys:String>
     <sys:String x:Key="ThemeLabel">Theme</sys:String>
     
@@ -53,7 +97,9 @@
     <sys:String x:Key="TabAgency">Agency</sys:String>
     <sys:String x:Key="LabelCompanyName">Company Name</sys:String>
     <sys:String x:Key="LabelICO">ICO</sys:String>
+    <sys:String x:Key="LabelLegalAddress">Legal address</sys:String>
     <sys:String x:Key="LabelAddress">Addresses</sys:String>
+    <sys:String x:Key="LabelWorkAddresses">Work addresses</sys:String>
     <sys:String x:Key="LabelStreet">Street</sys:String>
     <sys:String x:Key="LabelNumber">Number</sys:String>
     <sys:String x:Key="LabelCity">City</sys:String>
@@ -95,6 +141,10 @@
     <sys:String x:Key="TitleSuccess">Success</sys:String>
     <sys:String x:Key="TitleError">Error</sys:String>
     <sys:String x:Key="MsgUnexpectedError">An unexpected error occurred:</sys:String>
+    <sys:String x:Key="MsgSettingsRecoveredFromBackup">The settings file was damaged or missing. Settings were restored from backup.</sys:String>
+    <sys:String x:Key="MsgSettingsResetToDefaults">The settings file is damaged and the backup could not be restored. Default settings are being used.</sys:String>
+    <sys:String x:Key="MsgFinanceRecoveredFromBackup">The finance data file was damaged or missing. Finance data was restored from backup.</sys:String>
+    <sys:String x:Key="MsgFinanceResetToDefaults">The finance data file is damaged and the backup could not be restored. An empty finance database is being used.</sys:String>
     <sys:String x:Key="MsgLicenseBlocked">License is blocked. Contact the administrator.</sys:String>
     <sys:String x:Key="MsgEditorOpenError">Could not open editor:
 {0}</sys:String>
@@ -112,12 +162,20 @@
     <sys:String x:Key="StepCropPhoto">Step 2. Crop Photo</sys:String>
     <sys:String x:Key="StepPassportData">Step 3. Passport Data</sys:String>
     <sys:String x:Key="StepPassportPage2Data">Passport Data (Page 2)</sys:String>
+    <sys:String x:Key="StepIdCardData">Step 3. ID Card Data</sys:String>
+    <sys:String x:Key="StepIdCardPage2Data">ID Card Data (2 sides)</sys:String>
+    <sys:String x:Key="StepPassportPage2Hint">AI analyzes the second document and takes the status and expiry from it.</sys:String>
+    <sys:String x:Key="StepIdCardPage2Hint">AI analyzes both ID card sides and takes the status and expiry from them.</sys:String>
     <sys:String x:Key="StepInsuranceData">Step 4. Insurance Data</sys:String>
     <sys:String x:Key="StepVisaData">Step 5. Visa Data</sys:String>
     <sys:String x:Key="StepAddresses">Step 6. Addresses, Position, Contract</sys:String>
     <sys:String x:Key="StepAdditional">Step 7. Additional Data</sys:String>
     <sys:String x:Key="BtnUploadPassport">Upload Document 1</sys:String>
     <sys:String x:Key="BtnUploadPassportPage2">Upload Document 2</sys:String>
+    <sys:String x:Key="WizardPassport1">Passport 1</sys:String>
+    <sys:String x:Key="WizardPassport2">Passport 2</sys:String>
+    <sys:String x:Key="WizardIdCard1">ID Card 1</sys:String>
+    <sys:String x:Key="WizardIdCard2">ID Card 2</sys:String>
     <sys:String x:Key="BtnUploadVisa">Upload Visa</sys:String>
     <sys:String x:Key="BtnUploadInsurance">Upload Insurance</sys:String>
     <sys:String x:Key="BtnApplyCrop">Crop Photo</sys:String>
@@ -137,6 +195,8 @@
     <sys:String x:Key="BtnDelete">Delete</sys:String>
     <sys:String x:Key="MsgEmployeesRootMissing">Root folder is not set. Please configure it in Settings.</sys:String>
     <sys:String x:Key="MsgEmployeesFolderMissing">Employees folder not found.</sys:String>
+    <sys:String x:Key="MsgEmployeeFolderMissing">Employee folder not found.</sys:String>
+    <sys:String x:Key="MsgEmployeeProfileMissing">The employee profile could not be loaded. The employee.json file is missing or corrupted.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">This company has no employees yet.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Failed to load employees.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Loading employees...</sys:String>
@@ -403,6 +463,15 @@
     <sys:String x:Key="EditorSpacing">Spacing</sys:String>
     <sys:String x:Key="EditorLineSpacing">Line</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Paragraph</sys:String>
+    <sys:String x:Key="EditorSpacingTooltipTitle">Line and paragraph spacing</sys:String>
+    <sys:String x:Key="EditorSpacingTooltipDescription">Change line spacing and add or remove space before or after the current paragraph.</sys:String>
+    <sys:String x:Key="EditorMoreLineSpacingOptions">More line spacing options...</sys:String>
+    <sys:String x:Key="EditorSpacingBefore">Space before paragraph</sys:String>
+    <sys:String x:Key="EditorSpacingAfter">Space after paragraph</sys:String>
+    <sys:String x:Key="EditorAddSpaceBeforeParagraph">Add space before paragraph</sys:String>
+    <sys:String x:Key="EditorRemoveSpaceBeforeParagraph">Remove space before paragraph</sys:String>
+    <sys:String x:Key="EditorAddSpaceAfterParagraph">Add space after paragraph</sys:String>
+    <sys:String x:Key="EditorRemoveSpaceAfterParagraph">Remove space after paragraph</sys:String>
     <sys:String x:Key="EditorTagCatalog">Tag catalog</sys:String>
     <sys:String x:Key="EditorSearchTags">Search tags...</sys:String>
     <sys:String x:Key="EditorInsert">Ins.</sys:String>
@@ -434,7 +503,7 @@
     <sys:String x:Key="TplCopyTag">Copy</sys:String>
     <sys:String x:Key="TplCopyToCompanyTooltip">Copy template to another company</sys:String>
     <sys:String x:Key="TplCopyDialogTitle">Copy Template</sys:String>
-    <sys:String x:Key="TplCopyDialogCompany">Target company:</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Select company:</sys:String>
     <sys:String x:Key="TplCopyDialogName">New template name:</sys:String>
     <sys:String x:Key="TplCopyDialogBtn">Copy</sys:String>
     <sys:String x:Key="TplCopyNoCompanies">There are no other companies available for copying the template.</sys:String>
@@ -725,6 +794,7 @@
     <!-- Tag Catalog Descriptions – Company -->
     <sys:String x:Key="TagDescCompanyName">Company name</sys:String>
     <sys:String x:Key="TagDescCompanyICO">Company ICO</sys:String>
+    <sys:String x:Key="TagDescCompanyLegalAddress">Company legal address</sys:String>
     <sys:String x:Key="TagDescCompanyWeeklyHours">Working hours per week</sys:String>
     <sys:String x:Key="TagDescCompanyDailyHours">Working hours per day</sys:String>
     <sys:String x:Key="TagDescCompanyShiftCount">Number of shifts</sys:String>
@@ -815,6 +885,43 @@
     <sys:String x:Key="EditorErrEmpty">No content to save.</sys:String>
     <sys:String x:Key="EditorErrFmt">Error: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Copied: {0}</sys:String>
+    <sys:String x:Key="EditorLayout">Layout</sys:String>
+    <sys:String x:Key="EditorFont">Font</sys:String>
+    <sys:String x:Key="EditorParagraph">Paragraph</sys:String>
+    <sys:String x:Key="EditorTools">Tools</sys:String>
+    <sys:String x:Key="EditorPageSize">Page</sys:String>
+    <sys:String x:Key="EditorPageOrientation">Orientation</sys:String>
+    <sys:String x:Key="EditorPageMargins">Margins</sys:String>
+    <sys:String x:Key="EditorBullets">Bulleted list</sys:String>
+    <sys:String x:Key="EditorNumbering">Numbered list</sys:String>
+    <sys:String x:Key="EditorIndentLeft">Left indent</sys:String>
+    <sys:String x:Key="EditorIndentRight">Right indent</sys:String>
+    <sys:String x:Key="EditorIndentFirstLine">First line</sys:String>
+    <sys:String x:Key="EditorOrientationPortrait">Portrait</sys:String>
+    <sys:String x:Key="EditorOrientationLandscape">Landscape</sys:String>
+    <sys:String x:Key="EditorMarginsNormal">Normal</sys:String>
+    <sys:String x:Key="EditorMarginsNarrow">Narrow</sys:String>
+    <sys:String x:Key="EditorMarginsWide">Wide</sys:String>
+    <sys:String x:Key="EditorMarginTopFmt">Top: 2.54 cm</sys:String>
+    <sys:String x:Key="EditorMarginBottomFmt">Bottom: 2.54 cm</sys:String>
+    <sys:String x:Key="EditorMarginLeftFmt">Left: 2.54 cm</sys:String>
+    <sys:String x:Key="EditorMarginRightFmt">Right: 2.54 cm</sys:String>
+    <sys:String x:Key="EditorMarginTopNarrowFmt">Top: 1.27 cm</sys:String>
+    <sys:String x:Key="EditorMarginBottomNarrowFmt">Bottom: 1.27 cm</sys:String>
+    <sys:String x:Key="EditorMarginLeftNarrowFmt">Left: 1.27 cm</sys:String>
+    <sys:String x:Key="EditorMarginRightNarrowFmt">Right: 1.27 cm</sys:String>
+    <sys:String x:Key="EditorMarginLeftWideFmt">Left: 5.08 cm</sys:String>
+    <sys:String x:Key="EditorMarginRightWideFmt">Right: 5.08 cm</sys:String>
+    <sys:String x:Key="EditorSamplesButton">Samples</sys:String>
+    <sys:String x:Key="EditorSamplesTitle">Ready-made contract samples</sys:String>
+    <sys:String x:Key="EditorSamplesDescription">Choose one of the ready-made DOCX samples. When applied, the current editor content will be replaced with a starter template that already includes styles and tags.</sys:String>
+    <sys:String x:Key="EditorSamplesPreview">Preview</sys:String>
+    <sys:String x:Key="EditorSamplesApply">Use sample</sys:String>
+    <sys:String x:Key="EditorSamplesEmpty">There are no bundled samples in the catalog yet.</sys:String>
+    <sys:String x:Key="EditorSamplesLoadError">Could not load the selected sample.</sys:String>
+    <sys:String x:Key="EditorSamplesHint">Select the needed contract type and review the preview before applying it.</sys:String>
+    <sys:String x:Key="EditorStarterApplied">Sample applied: {0}</sys:String>
+    <sys:String x:Key="EditorPageBadgeFmt">Page {0}</sys:String>
     <sys:String x:Key="EditorUnsavedTitle">Unsaved changes</sys:String>
     <sys:String x:Key="EditorUnsavedClose">You have unsaved changes. Exit without saving?</sys:String>
     <sys:String x:Key="EditorUnsavedPrompt">This template has unsaved changes. Click Yes to save and go back, No to go back without saving, or Cancel to stay in the editor.</sys:String>
@@ -929,6 +1036,11 @@
     <sys:String x:Key="FinExportSelectTitle">Export to Excel</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Select firms to export</sys:String>
     <sys:String x:Key="FinExportSelectAll">Select all</sys:String>
+    <sys:String x:Key="FinExportClearAll">Clear selection</sys:String>
+    <sys:String x:Key="FinExportFirmsCount">Firms</sys:String>
+    <sys:String x:Key="FinExportSelectedCount">Selected</sys:String>
+    <sys:String x:Key="FinExportRowsCount">Rows</sys:String>
+    <sys:String x:Key="FinExportSelectionHint">Selected {0} of {1}</sys:String>
     <sys:String x:Key="FinExportBtn">Export</sys:String>
     <sys:String x:Key="FinExportNoFirms">Select at least one firm</sys:String>
     <sys:String x:Key="BtnDone">Done</sys:String>
@@ -943,6 +1055,11 @@
     <sys:String x:Key="SettingsFirmsVisibilityHint">Uncheck to hide a company from all lists. Companies with active employees cannot be hidden.</sys:String>
     <sys:String x:Key="SettingsFirmsHasEmployees">Has active employees: </sys:String>
     <sys:String x:Key="SettingsFirmsEmployeesCount"> — cannot hide</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsTitle">Diagnostics</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsDesc">Recent error log entries for quick issue inspection.</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsRefreshBtn">Refresh log</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsLogPathLabel">Log file: </sys:String>
+    <sys:String x:Key="SettingsDiagnosticsEmpty">The error log is empty so far.</sys:String>
     <sys:String x:Key="SettingsCopyrightTitle">Copyright</sys:String>
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. All rights reserved.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">This software is proprietary and confidential. Unauthorized copying, distribution, or modification is strictly prohibited.</sys:String>
@@ -999,6 +1116,7 @@
     <!-- Company dialog -->
     <sys:String x:Key="CompanyDialogTitleEdit">Edit Company</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Add New Company</sys:String>
+    <sys:String x:Key="CompanyDialogSubtitle">Company details, addresses, and positions</sys:String>
     <sys:String x:Key="MsgCompanyHasEmployees">This company has {0} employee(s). Delete anyway?</sys:String>
     <sys:String x:Key="TitleWarning">Warning</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Are you sure you want to delete company "{0}"?
@@ -1013,14 +1131,18 @@ The folder on disk will NOT be deleted.</sys:String>
 
     <!-- Crop targets -->
     <sys:String x:Key="CropPassport">Passport</sys:String>
+    <sys:String x:Key="CropIdCard1">ID Card 1</sys:String>
     <sys:String x:Key="CropVisa">Visa</sys:String>
     <sys:String x:Key="CropInsurance">Insurance</sys:String>
     <sys:String x:Key="CropPhoto">Photo</sys:String>
     <sys:String x:Key="CropPassport2">Passport 2</sys:String>
+    <sys:String x:Key="CropIdCard2">ID Card 2</sys:String>
     <sys:String x:Key="CropPermit">Permit</sys:String>
     <sys:String x:Key="CropVisaPage2">ID Card 2</sys:String>
     <sys:String x:Key="CarouselPassport">Passport</sys:String>
     <sys:String x:Key="CarouselPassport2">Passport 2</sys:String>
+    <sys:String x:Key="CarouselIdCard1">ID Card 1</sys:String>
+    <sys:String x:Key="CarouselIdCard2">ID Card 2</sys:String>
     <sys:String x:Key="CarouselVisa">Visa</sys:String>
     <sys:String x:Key="CarouselInsurance">Insurance</sys:String>
     <sys:String x:Key="CarouselPermit">Permit</sys:String>
@@ -1054,6 +1176,8 @@ The folder on disk will NOT be deleted.</sys:String>
     <sys:String x:Key="MsgArchiveError">Error during archiving.</sys:String>
     <sys:String x:Key="MsgArchiveSuccess">Employee successfully moved to archive.</sys:String>
     <sys:String x:Key="MsgArchiveCleanupDeferred">Employee archived, but cleanup of the old folder will finish later.</sys:String>
+    <sys:String x:Key="MsgArchiveSourceMissing">The employee folder or employee.json file was not found.</sys:String>
+    <sys:String x:Key="MsgArchiveConflict">Archiving was stopped because an employee with the same identifier already exists in the archive.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Document generated: {0}</sys:String>
@@ -1108,6 +1232,8 @@ The folder on disk will NOT be deleted.</sys:String>
     <sys:String x:Key="MsgSelectFirmRestore">Select a company.</sys:String>
     <sys:String x:Key="MsgEnterStartDate">Enter start date.</sys:String>
     <sys:String x:Key="MsgRestoreError">Error during restoration.</sys:String>
+    <sys:String x:Key="MsgRestoreSourceMissing">The archived employee folder or employee.json file was not found.</sys:String>
+    <sys:String x:Key="MsgRestoreConflict">Restore was stopped because an employee with the same identifier already exists in the selected company.</sys:String>
 
     <!-- Services -->
     <sys:String x:Key="MsgDbSaveError">Database save error: {0}</sys:String>
@@ -1195,6 +1321,8 @@ The folder on disk will NOT be deleted.</sys:String>
     <sys:String x:Key="AIChatNewChat">New chat</sys:String>
     <sys:String x:Key="AIChatNoModel">Gemini API not configured. Go to Settings to add an API key.</sys:String>
     <sys:String x:Key="AIChatThinking">AI is thinking...</sys:String>
+    <sys:String x:Key="AIChatTimeout">AI did not respond in time. Please try again.</sys:String>
+    <sys:String x:Key="AIChatNetworkError">Could not connect to Gemini. Check your internet connection.</sys:String>
 
     <!-- AI Provider -->
     <sys:String x:Key="AIProviderTitle">AI Provider</sys:String>
@@ -1235,4 +1363,70 @@ The folder on disk will NOT be deleted.</sys:String>
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">No templates yet. Click + to create the first one.</sys:String>
+
+    <!-- Profile Dialogs -->
+    <sys:String x:Key="ProfileSetupWindowTitle">Agency Contractor - Create Profile</sys:String>
+    <sys:String x:Key="ProfileLoginWindowTitle">Agency Contractor - Profile Login</sys:String>
+    <sys:String x:Key="ProfileResetWindowTitle">Agency Contractor - Reset Password</sys:String>
+    <sys:String x:Key="ProfileSetupHeaderSubtitle">Create profile</sys:String>
+    <sys:String x:Key="ProfileLoginHeaderSubtitle">Profile login</sys:String>
+    <sys:String x:Key="ProfileResetHeaderSubtitle">Reset password</sys:String>
+    <sys:String x:Key="ProfileSetupCardTitle">Assigned user</sys:String>
+    <sys:String x:Key="ProfileSetupCardDescription">You need to create one user profile for this app.</sys:String>
+    <sys:String x:Key="ProfileLoginCardTitle">Confirm login</sys:String>
+    <sys:String x:Key="ProfileLoginCardDescription">This profile is already created for the app. Enter the password to continue.</sys:String>
+    <sys:String x:Key="ProfileResetCardTitle">A new password is required</sys:String>
+    <sys:String x:Key="ProfileResetDescriptionPrefix">For profile </sys:String>
+    <sys:String x:Key="ProfileResetDescriptionSuffix"> an administrator reset the password. Enter a new password to continue.</sys:String>
+    <sys:String x:Key="ProfileFirstNameLabel">First name</sys:String>
+    <sys:String x:Key="ProfileLastNameLabel">Last name</sys:String>
+    <sys:String x:Key="ProfileUserLabel">User</sys:String>
+    <sys:String x:Key="ProfilePasswordLabel">Password</sys:String>
+    <sys:String x:Key="ProfileCurrentPasswordLabel">Current password</sys:String>
+    <sys:String x:Key="ProfileNewPasswordLabel">New password</sys:String>
+    <sys:String x:Key="ProfileConfirmPasswordLabel">Confirm password</sys:String>
+    <sys:String x:Key="ProfileShowPassword">Show password</sys:String>
+    <sys:String x:Key="ProfileShowPasswords">Show passwords</sys:String>
+    <sys:String x:Key="ProfileRememberMe">Remember login on this computer</sys:String>
+    <sys:String x:Key="ProfileSetupFooterHint">After the profile is created, the app will continue launching.</sys:String>
+    <sys:String x:Key="ProfileLoginFooterHint">If you close this window, the app will not open.</sys:String>
+    <sys:String x:Key="ProfileResetFooterHint">After a successful reset, the app will open as usual.</sys:String>
+    <sys:String x:Key="ProfileCloseButton">Close</sys:String>
+    <sys:String x:Key="ProfileCreateButton">Create profile</sys:String>
+    <sys:String x:Key="ProfileLoginButton">Log in</sys:String>
+    <sys:String x:Key="ProfileSavePasswordButton">Save password</sys:String>
+    <sys:String x:Key="ProfileNameLatinHint">Use only Latin letters in Abc format, for example: Ivan, Petrenko.</sys:String>
+    <sys:String x:Key="ProfileErrClientIdMissing">Client ID is not available.</sys:String>
+    <sys:String x:Key="ProfileErrFirstNameRequired">Enter first name.</sys:String>
+    <sys:String x:Key="ProfileErrLastNameRequired">Enter last name.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordRequired">Enter password.</sys:String>
+    <sys:String x:Key="ProfileErrCurrentPasswordRequired">Enter current password.</sys:String>
+    <sys:String x:Key="ProfileErrNewPasswordRequired">Enter new password.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordMinLength">Password must contain at least 6 characters.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordsMismatch">Passwords do not match.</sys:String>
+    <sys:String x:Key="ProfileErrFirstNameLatin">First name must use Latin letters in Abc format.</sys:String>
+    <sys:String x:Key="ProfileErrLastNameLatin">Last name must use Latin letters in Abc format.</sys:String>
+    <sys:String x:Key="ProfileErrAlreadyExists">A profile for this app already exists.</sys:String>
+    <sys:String x:Key="ProfileErrStorageUnavailable">Profile storage is not available yet in Supabase.</sys:String>
+    <sys:String x:Key="ProfileErrCreateFailed">Failed to create profile.</sys:String>
+    <sys:String x:Key="ProfileErrNotFound">Profile was not found.</sys:String>
+    <sys:String x:Key="ProfileErrWrongPassword">Wrong password.</sys:String>
+    <sys:String x:Key="ProfileErrCurrentPasswordWrong">Current password is wrong.</sys:String>
+    <sys:String x:Key="ProfileErrLoadFailed">Failed to load profile.</sys:String>
+    <sys:String x:Key="ProfileErrUpdateFailed">Failed to update profile.</sys:String>
+    <sys:String x:Key="ProfileErrEmptyServerResponse">Empty response from server.</sys:String>
+    <sys:String x:Key="SettingsProfileTitle">Profile</sys:String>
+    <sys:String x:Key="SettingsProfileSubtitle">Here you can change the name, surname, password, and remembered login setting.</sys:String>
+    <sys:String x:Key="SettingsProfileNotLoaded">User profile has not been loaded yet.</sys:String>
+    <sys:String x:Key="SettingsProfileAssignedUserTitle">Assigned user</sys:String>
+    <sys:String x:Key="SettingsProfileClientIdLabel">Client ID: </sys:String>
+    <sys:String x:Key="SettingsProfileDetailsTitle">Profile details</sys:String>
+    <sys:String x:Key="SettingsProfileSaveButton">Save profile</sys:String>
+    <sys:String x:Key="SettingsProfileChangePasswordTitle">Change password</sys:String>
+    <sys:String x:Key="SettingsProfileChangePasswordButton">Change password</sys:String>
+    <sys:String x:Key="SettingsProfileNotLoadedError">Profile has not been loaded.</sys:String>
+    <sys:String x:Key="SettingsProfileUpdated">Profile updated.</sys:String>
+    <sys:String x:Key="SettingsProfilePasswordChanged">Password changed.</sys:String>
+    <sys:String x:Key="SettingsProfileRememberUpdated">Login preference updated.</sys:String>
+    <sys:String x:Key="SettingsProfileRememberUpdateFailed">Failed to update login preference.</sys:String>
 </ResourceDictionary>

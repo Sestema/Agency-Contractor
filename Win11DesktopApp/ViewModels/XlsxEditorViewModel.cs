@@ -34,6 +34,9 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
         private readonly string _xlsxFilePath;
+        private bool _templateUnavailable;
+        private bool _templateUnavailableNotified;
+        private bool _navigateBackScheduled;
 
         private XLWorkbook? _workbook;
         private Dictionary<string, DataTable> _sheetData = new();
@@ -259,7 +262,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!File.Exists(_xlsxFilePath))
                 {
-                    StatusMessage = Res("XlsxFileNotFound");
+                    MarkTemplateUnavailable(Res("XlsxFileNotFound"));
                     return;
                 }
 
@@ -279,7 +282,8 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = ResF("XlsxLoadError", ex.Message);
+                LoggingService.LogError("XlsxEditorViewModel.LoadWorkbook", ex);
+                MarkTemplateUnavailable(ResF("XlsxLoadError", ex.Message));
             }
         }
 
@@ -387,6 +391,9 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
+                if (_templateUnavailable)
+                    return;
+
                 if (_workbook == null)
                 {
                     StatusMessage = Res("XlsxNoOpenFile");
@@ -425,6 +432,25 @@ namespace Win11DesktopApp.ViewModels
                 LoggingService.LogError("XlsxEditor.Save", ex);
                 MessageBox.Show(ResF("XlsxSaveError", ex.Message), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void MarkTemplateUnavailable(string message)
+        {
+            _templateUnavailable = true;
+            StatusMessage = message;
+            if (_templateUnavailableNotified)
+                return;
+
+            _templateUnavailableNotified = true;
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+            {
+                ToastService.Instance.Warning(message);
+                if (_navigateBackScheduled)
+                    return;
+
+                _navigateBackScheduled = true;
+                NavigateBack();
+            }));
         }
 
         private void InsertTag(object? param)

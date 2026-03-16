@@ -12,6 +12,14 @@ namespace Win11DesktopApp.ViewModels
     {
         private void LoadHistory()
         {
+            if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.LoadHistory"))
+            {
+                _allHistoryEntries = new List<EmployeeHistoryEntry>();
+                HistoryEntries = new ObservableCollection<EmployeeHistoryEntry>();
+                HasHistory = false;
+                return;
+            }
+
             try
             {
                 _allHistoryEntries = _employeeService.LoadHistory(_employeeFolder);
@@ -44,6 +52,18 @@ namespace Win11DesktopApp.ViewModels
 
         private void LoadSalaryHistory()
         {
+            if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.LoadSalaryHistory"))
+            {
+                SalaryHistoryEntries = new ObservableCollection<SalaryHistoryRecord>();
+                HasSalaryHistory = false;
+                TotalSalaryEarned = 0;
+                TotalHoursAll = 0;
+                SalaryMonthDisplays = new ObservableCollection<SalaryMonthDisplay>();
+                HasAdvances = false;
+                TotalAdvances = 0;
+                return;
+            }
+
             try
             {
                 var financeService = App.FinanceService;
@@ -164,6 +184,7 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldEmail"), oldData.Email, newData.Email);
             Check(Res("HistFieldPosition"), oldData.PositionTag, newData.PositionTag);
             Check(Res("HistFieldPosNumber"), oldData.PositionNumber, newData.PositionNumber);
+            Check(Res("HistFieldWorkAddr"), oldData.WorkAddressTag, newData.WorkAddressTag);
             Check(Res("HistFieldContractType"), oldData.ContractType, newData.ContractType);
             Check(Res("HistFieldWorkPermitName"), oldData.WorkPermitName, newData.WorkPermitName);
             Check(Res("HistFieldDepartment"), oldData.Department, newData.Department);

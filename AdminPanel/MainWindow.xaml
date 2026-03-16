@@ -217,6 +217,8 @@
                             Background="#89B4FA" Foreground="#1E1E2E" Click="BtnExtend_Click" Margin="0,0,6,0" IsEnabled="False"/>
                     <Button x:Name="BtnDelete" Content="🗑 Видалити" Style="{StaticResource ActionBtn}"
                             Background="#F38BA8" Click="BtnDelete_Click" Margin="0,0,12,0" IsEnabled="False"/>
+                    <Button x:Name="BtnResetProfile" Content="🔑 Скинути пароль профілю" Style="{StaticResource ActionBtn}"
+                            Background="#74C7EC" Foreground="#1E1E2E" Click="BtnResetProfile_Click" Margin="0,0,12,0" IsEnabled="False"/>
                     <TextBlock x:Name="TxtCount" Text="Клієнтів: 0" Foreground="#A6ADC8" FontSize="13"
                                VerticalAlignment="Center"/>
                 </WrapPanel>
@@ -358,7 +360,6 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Machine ID" Binding="{Binding MachineId}" Width="140"/>
-                        <DataGridTextColumn Header="Причини ризику" Binding="{Binding RiskReasonsDisplay}" Width="230"/>
                         <DataGridTextColumn Header="Нотатки" Binding="{Binding Notes}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
@@ -422,20 +423,39 @@
                             </StackPanel>
                         </UniformGrid>
 
-                        <StackPanel Margin="0,0,0,12">
-                            <TextBlock Text="Останній heartbeat" Style="{StaticResource DetailLabel}"/>
-                            <TextBlock x:Name="TxtDetailHeartbeat" Text="—" Style="{StaticResource DetailValue}"/>
-                        </StackPanel>
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Text="Останній стан" Style="{StaticResource DetailLabel}"/>
+                        <TextBlock x:Name="TxtDetailHeartbeat" Text="—" Style="{StaticResource DetailValue}"/>
+                    </StackPanel>
 
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Причина блокування" Style="{StaticResource DetailLabel}"/>
                             <TextBlock x:Name="TxtDetailBlockReason" Text="—" Style="{StaticResource DetailValue}"/>
                         </StackPanel>
 
-                        <StackPanel Margin="0,0,0,12">
-                            <TextBlock Text="Причини ризику" Style="{StaticResource DetailLabel}"/>
-                            <TextBlock x:Name="TxtDetailRiskReasons" Text="—" Style="{StaticResource DetailValue}"/>
-                        </StackPanel>
+                        <Border Background="#2F364D" CornerRadius="6" Padding="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Профіль користувача" Foreground="#A6ADC8" FontSize="12.5" Margin="0,0,0,8"/>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Margin="0,0,10,10">
+                                        <TextBlock Text="Ім'я та прізвище" Style="{StaticResource DetailLabel}"/>
+                                        <TextBlock x:Name="TxtDetailProfileName" Text="—" Style="{StaticResource DetailValue}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="Статус профілю" Style="{StaticResource DetailLabel}"/>
+                                        <TextBlock x:Name="TxtDetailProfileStatus" Text="—" Style="{StaticResource DetailValue}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Remember me" Style="{StaticResource DetailLabel}"/>
+                                        <TextBlock x:Name="TxtDetailRememberMe" Text="—" Style="{StaticResource DetailValue}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,0">
+                                        <TextBlock Text="Оновлено" Style="{StaticResource DetailLabel}"/>
+                                        <TextBlock x:Name="TxtDetailProfileUpdatedAt" Text="—" Style="{StaticResource DetailValue}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
 
                         <TextBlock Text="Нотатки оператора" Foreground="#A6ADC8" FontSize="12.5" Margin="0,0,0,6"/>
                         <TextBox x:Name="TxtNotes"
@@ -457,92 +477,6 @@
                                 Margin="0,10,0,0"
                                 IsEnabled="False"
                                 Click="BtnSaveNotes_Click"/>
-
-                        <Separator Margin="0,18,0,18" Background="#45475A"/>
-
-                        <TextBlock Text="Remote commands" Foreground="#CDD6F4" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBox x:Name="TxtCommandMessage"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 MinHeight="72"
-                                 Background="#1E1E2E"
-                                 Foreground="#CDD6F4"
-                                 BorderBrush="#585B70"
-                                 BorderThickness="1"
-                                 Padding="10"/>
-                        <WrapPanel Margin="0,10,0,16">
-                            <Button x:Name="BtnSendAdminMessage" Content="Повідомлення" Style="{StaticResource ActionBtn}"
-                                    Background="#89B4FA" Foreground="#1E1E2E" Margin="0,0,6,6"
-                                    IsEnabled="False" Click="BtnSendAdminMessage_Click"/>
-                            <Button x:Name="BtnRequestDiagnostics" Content="Запросити діагностику" Style="{StaticResource ActionBtn}"
-                                    Background="#A6E3A1" Foreground="#1E1E2E" Margin="0,0,6,6"
-                                    IsEnabled="False" Click="BtnRequestDiagnostics_Click"/>
-                            <Button x:Name="BtnRunUpdateCheck" Content="Перевірити оновлення" Style="{StaticResource ActionBtn}"
-                                    Background="#74C7EC" Foreground="#1E1E2E" Margin="0,0,6,6"
-                                    IsEnabled="False" Click="BtnRunUpdateCheck_Click"/>
-                            <Button x:Name="BtnRemoteRestart" Content="Перезапустити" Style="{StaticResource ActionBtn}"
-                                    Background="#FAB387" Foreground="#1E1E2E" Margin="0,0,6,6"
-                                    IsEnabled="False" Click="BtnRemoteRestart_Click"/>
-                            <Button x:Name="BtnOpenLicenseRemote" Content="Відкрити ліцензію" Style="{StaticResource ActionBtn}"
-                                    Background="#585B70" Margin="0,0,6,6"
-                                    IsEnabled="False" Click="BtnOpenLicenseRemote_Click"/>
-                            <Button x:Name="BtnSetReadOnlyCommand" Content="Read-only now" Style="{StaticResource ActionBtn}"
-                                    Background="#F9E2AF" Foreground="#1E1E2E" Margin="0,0,6,6"
-                                    IsEnabled="False" Click="BtnSetReadOnlyCommand_Click"/>
-                        </WrapPanel>
-
-                        <TextBlock Text="Policy" Foreground="#CDD6F4" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <UniformGrid Columns="2" Margin="0,0,0,8">
-                            <StackPanel Margin="0,0,10,8">
-                                <TextBlock Text="Minimum version" Style="{StaticResource DetailLabel}"/>
-                                <TextBox x:Name="TxtPolicyMinVersion" Style="{StaticResource FilterTextBox}"/>
-                            </StackPanel>
-                            <StackPanel Margin="0,0,0,8">
-                                <TextBlock Text="Recommended version" Style="{StaticResource DetailLabel}"/>
-                                <TextBox x:Name="TxtPolicyRecommendedVersion" Style="{StaticResource FilterTextBox}"/>
-                            </StackPanel>
-                            <StackPanel Margin="0,0,10,8">
-                                <TextBlock Text="Update channel" Style="{StaticResource DetailLabel}"/>
-                                <ComboBox x:Name="CmbPolicyChannel" Style="{StaticResource FilterComboBox}">
-                                    <ComboBoxItem Tag="stable" IsSelected="True">stable</ComboBoxItem>
-                                    <ComboBoxItem Tag="beta">beta</ComboBoxItem>
-                                </ComboBox>
-                            </StackPanel>
-                            <StackPanel Margin="0,0,0,8">
-                                <TextBlock Text="Policy message" Style="{StaticResource DetailLabel}"/>
-                                <TextBox x:Name="TxtPolicyVersion" Style="{StaticResource FilterTextBox}" IsReadOnly="True"/>
-                            </StackPanel>
-                        </UniformGrid>
-
-                        <WrapPanel Margin="0,0,0,8">
-                            <CheckBox x:Name="ChkPolicyForceUpdate" Content="Force update" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyMaintenance" Content="Maintenance mode" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyReadOnly" Content="Read-only mode" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyDisableAI" Content="Disable AI" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyDisableExports" Content="Disable exports" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyHideTemplates" Content="Hide templates" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyHideFinance" Content="Hide finance" Style="{StaticResource PanelCheckBox}"/>
-                            <CheckBox x:Name="ChkPolicyRequireOnline" Content="Require online check" Style="{StaticResource PanelCheckBox}"/>
-                        </WrapPanel>
-
-                        <TextBox x:Name="TxtPolicyAdminMessage"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 MinHeight="68"
-                                 Background="#1E1E2E"
-                                 Foreground="#CDD6F4"
-                                 BorderBrush="#585B70"
-                                 BorderThickness="1"
-                                 Padding="10"/>
-                        <Button x:Name="BtnSavePolicy"
-                                Content="Застосувати policy"
-                                Style="{StaticResource ActionBtn}"
-                                Background="#89B4FA"
-                                Foreground="#1E1E2E"
-                                HorizontalAlignment="Right"
-                                Margin="0,10,0,0"
-                                IsEnabled="False"
-                                Click="BtnSavePolicy_Click"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -609,86 +543,11 @@
                             </DataGrid.ColumnHeaderStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Дата" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="150"/>
-                                <DataGridTextColumn Header="Подія" Binding="{Binding EventType}" Width="130"/>
-                                <DataGridTextColumn Header="Machine" Binding="{Binding MachineId}" Width="130"/>
+                                <DataGridTextColumn Header="Подія" Binding="{Binding EventTypeDisplay}" Width="150"/>
+                                <DataGridTextColumn Header="ПК" Binding="{Binding MachineId}" Width="130"/>
                                 <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="120"/>
                                 <DataGridTextColumn Header="Версія" Binding="{Binding AppVersion}" Width="90"/>
-                                <DataGridTextColumn Header="Дані" Binding="{Binding EventDataDisplay}" Width="*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </TabItem>
-
-                <TabItem Header="Commands">
-                    <Grid Margin="8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock x:Name="TxtCommandsSummary" Text="Команди: 0" Foreground="#BAC2DE" Margin="0,0,0,8"/>
-                        <DataGrid Grid.Row="1" x:Name="DgCommands"
-                                  AutoGenerateColumns="False" IsReadOnly="True"
-                                  Background="#313244" Foreground="#CDD6F4"
-                                  BorderThickness="0" GridLinesVisibility="Horizontal"
-                                  HorizontalGridLinesBrush="#45475A"
-                                  RowBackground="#313244" AlternatingRowBackground="#363849"
-                                  HeadersVisibility="Column" FontSize="11.5">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Створено" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="150"/>
-                                <DataGridTextColumn Header="Команда" Binding="{Binding CommandType}" Width="130"/>
-                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
-                                <DataGridTextColumn Header="Виконано" Binding="{Binding ExecutedAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="150"/>
-                                <DataGridTextColumn Header="Payload" Binding="{Binding PayloadDisplay}" Width="*"/>
-                                <DataGridTextColumn Header="Result" Binding="{Binding ResultDisplay}" Width="220"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </TabItem>
-
-                <TabItem Header="Audit">
-                    <Grid Margin="8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock x:Name="TxtAuditSummary" Text="Аудит: 0" Foreground="#BAC2DE" Margin="0,0,0,8"/>
-                        <DataGrid Grid.Row="1" x:Name="DgAudit"
-                                  AutoGenerateColumns="False" IsReadOnly="True"
-                                  Background="#313244" Foreground="#CDD6F4"
-                                  BorderThickness="0" GridLinesVisibility="Horizontal"
-                                  HorizontalGridLinesBrush="#45475A"
-                                  RowBackground="#313244" AlternatingRowBackground="#363849"
-                                  HeadersVisibility="Column" FontSize="11.5">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Дата" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="150"/>
-                                <DataGridTextColumn Header="Action" Binding="{Binding ActionType}" Width="160"/>
-                                <DataGridTextColumn Header="Actor" Binding="{Binding Actor}" Width="120"/>
-                                <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="220"/>
-                                <DataGridTextColumn Header="Old" Binding="{Binding OldValueDisplay}" Width="*"/>
-                                <DataGridTextColumn Header="New" Binding="{Binding NewValueDisplay}" Width="*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </TabItem>
-
-                <TabItem Header="Diagnostics">
-                    <Grid Margin="8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock x:Name="TxtDiagnosticsSummary" Text="Діагностика: 0" Foreground="#BAC2DE" Margin="0,0,0,8"/>
-                        <DataGrid Grid.Row="1" x:Name="DgDiagnostics"
-                                  AutoGenerateColumns="False" IsReadOnly="True"
-                                  Background="#313244" Foreground="#CDD6F4"
-                                  BorderThickness="0" GridLinesVisibility="Horizontal"
-                                  HorizontalGridLinesBrush="#45475A"
-                                  RowBackground="#313244" AlternatingRowBackground="#363849"
-                                  HeadersVisibility="Column" FontSize="11.5">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Дата" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="150"/>
-                                <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120"/>
-                                <DataGridTextColumn Header="Payload" Binding="{Binding PayloadDisplay}" Width="*"/>
+                                <DataGridTextColumn Header="Опис" Binding="{Binding EventSummary}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

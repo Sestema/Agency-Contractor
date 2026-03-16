@@ -20,84 +20,73 @@
         </Grid.RowDefinitions>
 
         <!-- Top Bar -->
-        <Grid Grid.Row="0" Margin="24,16,24,8">
+        <Grid Grid.Row="0" Margin="24,10,24,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Command="{Binding GoBackCommand}"
-                    Style="{StaticResource HeaderBackButton}">
-                <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-            </Button>
-
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Border Background="#FFF3E0" CornerRadius="8" Width="36" Height="36">
-                    <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                               Foreground="#E65100" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,8,0">
+                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                </Button>
+                <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource WarningBrush}">
+                    <TextBlock Text="&#xE81C;" Style="{StaticResource PageHeaderIconText}"/>
                 </Border>
-                <TextBlock Text="{DynamicResource BtnActivityLog}" FontSize="{DynamicResource FS20}" FontWeight="SemiBold"
-                           Foreground="{DynamicResource ForegroundBrush}" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                <Border Background="#FFF3E0" CornerRadius="10" Padding="10,3" Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="#E65100">
-                        <TextBlock.Text>
-                            <MultiBinding StringFormat="{}{0}/{1}">
-                                <Binding Path="FilteredCount"/>
-                                <Binding Path="TotalCount"/>
-                            </MultiBinding>
-                        </TextBlock.Text>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource BtnActivityLog}" FontSize="{DynamicResource FS20}" Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock FontSize="{DynamicResource FS10}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,1,0,0">
+                        <Run Text="{Binding FilteredCount}"/>
+                        <Run Text=" / "/>
+                        <Run Text="{Binding TotalCount}"/>
                     </TextBlock>
-                </Border>
+                </StackPanel>
             </StackPanel>
 
-            <!-- Export -->
-            <Button Grid.Column="2" Command="{Binding ExportCommand}"
-                    Background="Transparent" BorderThickness="0" Cursor="Hand"
-                    VerticalAlignment="Center" Padding="8,6" Margin="4,0"
-                    ToolTip="{DynamicResource ActLogExport}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE8A1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-
-            <!-- Clear All -->
-            <Button Grid.Column="3" Command="{Binding ClearAllCommand}"
-                    Background="Transparent" BorderThickness="0" Cursor="Hand"
-                    VerticalAlignment="Center" Padding="8,6" Margin="4,0"
-                    ToolTip="{DynamicResource ActLogClearAll}">
-                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                           Foreground="#C62828" VerticalAlignment="Center"/>
-            </Button>
-
-            <!-- Clear Filter -->
-            <Button Grid.Column="4" Command="{Binding ClearFilterCommand}"
-                    Background="Transparent" BorderThickness="0" Cursor="Hand"
-                    VerticalAlignment="Center" Padding="8,6"
-                    ToolTip="{DynamicResource ActLogClearFilter}">
-                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                           Foreground="{DynamicResource ForegroundBrush}"/>
-            </Button>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Command="{Binding ExportCommand}"
+                        Style="{StaticResource ToolbarIconButton}"
+                        Width="34"
+                        Height="34"
+                        Margin="0,0,6,0"
+                        ToolTip="{DynamicResource ActLogExport}">
+                    <TextBlock Text="&#xE8A1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Foreground="{DynamicResource AccentBrush}"/>
+                </Button>
+                <Button Command="{Binding ClearAllCommand}"
+                        Style="{StaticResource ToolbarIconButton}"
+                        Width="34"
+                        Height="34"
+                        Margin="0,0,6,0"
+                        ToolTip="{DynamicResource ActLogClearAll}">
+                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Foreground="{DynamicResource ErrorBrush}"/>
+                </Button>
+                <Button Command="{Binding ClearFilterCommand}"
+                        Style="{StaticResource ToolbarIconButton}"
+                        Width="34"
+                        Height="34"
+                        ToolTip="{DynamicResource ActLogClearFilter}">
+                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Filters Row 1: Search + Date + Firm -->
-        <Grid Grid.Row="1" Margin="24,4,24,4">
+        <Grid Grid.Row="1" Margin="24,0,24,4">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Search -->
-            <Border Grid.Column="0" Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="12,6" Margin="0,0,8,0">
+            <Border Grid.Column="0"
+                    Style="{StaticResource ToolbarSearchContainer}"
+                    Width="250"
+                    HorizontalAlignment="Left"
+                    Padding="10,4">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -106,38 +95,82 @@
                     <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"
                                VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             Background="Transparent" BorderThickness="0"
-                             FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontSize="{DynamicResource FS12}"
+                             Foreground="{DynamicResource ForegroundBrush}"
                              VerticalAlignment="Center"/>
                 </Grid>
             </Border>
 
-            <!-- Date From -->
-            <TextBlock Grid.Column="1" Text="{DynamicResource ActLogDateFrom}"
-                       FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6"
-                       VerticalAlignment="Center" Margin="4,0,4,0"/>
-            <DatePicker Grid.Column="2" SelectedDate="{Binding DateFrom}" Width="120"
-                        FontSize="{DynamicResource FS11}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <Border Grid.Column="2" Style="{StaticResource ToolbarSurfaceBorder}" Padding="8,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <!-- Date To -->
-            <TextBlock Grid.Column="3" Text="{DynamicResource ActLogDateTo}"
-                       FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" Opacity="0.6"
-                       VerticalAlignment="Center" Margin="4,0,4,0"/>
-            <DatePicker Grid.Column="4" SelectedDate="{Binding DateTo}" Width="120"
-                        FontSize="{DynamicResource FS11}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="0"
+                               Text="{DynamicResource ActLogDateFrom}"
+                               FontSize="{DynamicResource FS9}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0"/>
+                    <DatePicker Grid.Column="1"
+                                SelectedDate="{Binding DateFrom}"
+                                Width="142"
+                                Style="{StaticResource ThemedDatePicker}"
+                                FontSize="{DynamicResource FS11}"
+                                VerticalAlignment="Center"/>
 
-            <!-- Firm Filter -->
-            <ComboBox Grid.Column="5" Width="180" FontSize="{DynamicResource FS11}"
-                      VerticalAlignment="Center"
-                      ItemsSource="{Binding FirmNames}"
-                      SelectedItem="{Binding SelectedFirm}"
-                      IsEditable="False"/>
+                    <TextBlock Grid.Column="3"
+                               Text="{DynamicResource ActLogDateTo}"
+                               FontSize="{DynamicResource FS9}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0"/>
+                    <DatePicker Grid.Column="4"
+                                SelectedDate="{Binding DateTo}"
+                                Width="142"
+                                Style="{StaticResource ThemedDatePicker}"
+                                FontSize="{DynamicResource FS11}"
+                                VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="4" Style="{StaticResource ToolbarSurfaceBorder}" Padding="8,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="{DynamicResource LabelCompany}"
+                               FontSize="{DynamicResource FS9}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0"/>
+                    <ComboBox Grid.Column="1"
+                              Width="168"
+                              FontSize="{DynamicResource FS11}"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ThemedComboBox}"
+                              ItemsSource="{Binding FirmNames}"
+                              SelectedItem="{Binding SelectedFirm}"
+                              IsEditable="False"/>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- Filters Row 2: Category chips -->
         <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                      Margin="24,4,24,8">
+                      Margin="24,0,24,6">
             <ItemsControl ItemsSource="{Binding Categories}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -146,12 +179,12 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Margin="0,0,6,0" Cursor="Hand" Padding="10,5"
+                        <Button Margin="0,0,6,0" Cursor="Hand" Padding="9,4"
                                 Command="{Binding DataContext.FilterByCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding Key}">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" CornerRadius="14" Padding="{TemplateBinding Padding}"
+                                    <Border x:Name="Bd" CornerRadius="13" Padding="{TemplateBinding Padding}"
                                             BorderThickness="1.5">
                                         <Border.Style>
                                             <Style TargetType="Border">
@@ -168,7 +201,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="{DynamicResource FS11}"
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="{DynamicResource FS10}"
                                                        VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
@@ -376,6 +409,20 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS12}"
                                                    Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Details}" FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"
+                                                   TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Details}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                         <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                                             <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS10}"
                                                        Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"/>
@@ -418,14 +465,25 @@
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <!-- Time -->
-                                    <TextBlock Grid.Column="2" VerticalAlignment="Top" Margin="12,0,0,0"
-                                               FontSize="{DynamicResource FS10}"
-                                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.4">
-                                        <TextBlock.Text>
-                                            <Binding Path="Timestamp" StringFormat="{}{0:HH:mm}"/>
-                                        </TextBlock.Text>
-                                    </TextBlock>
+                                    <!-- Time / actor -->
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="12,0,0,0" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding ActorName}" FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ActorName}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding TimeDisplay}" FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.4"
+                                                   HorizontalAlignment="Right"/>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>

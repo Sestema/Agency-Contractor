@@ -24,6 +24,13 @@ namespace Win11DesktopApp.Models
         public List<string> TagsUsed { get; set; } = new List<string>();
     }
 
+    public class TemplateEditorLayoutSettings
+    {
+        public string PageSizeKey { get; set; } = "a4";
+        public string OrientationKey { get; set; } = "portrait";
+        public string MarginKey { get; set; } = "normal";
+    }
+
     public class TemplateIndexEntry
     {
         public string Name { get; set; } = string.Empty;

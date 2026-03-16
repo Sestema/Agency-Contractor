@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Win11DesktopApp"
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
              xmlns:system="clr-namespace:System;assembly=mscorlib">
     <Application.Resources>
         <ResourceDictionary>
@@ -16,6 +17,8 @@
             <BooleanToVisibilityConverter x:Key="BoolToVis"/>
             <conv:ImagePathConverter x:Key="ImagePathConverter"/>
             <conv:StatusDisplayConverter x:Key="StatusDisplayConverter"/>
+            <conv:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
+            <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
 
             <system:Double x:Key="FS8">8</system:Double>
             <system:Double x:Key="FS9">9</system:Double>
@@ -138,6 +141,61 @@
                                     <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsFocused" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ThicknessAnimation Storyboard.TargetName="Bd"
+                                                                    Storyboard.TargetProperty="BorderThickness"
+                                                                    To="1.5" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ThicknessAnimation Storyboard.TargetName="Bd"
+                                                                    Storyboard.TargetProperty="BorderThickness"
+                                                                    To="1" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="PasswordBox">
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="6,4"/>
+                <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="PasswordBox">
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    CornerRadius="4"
+                                    SnapsToDevicePixels="True">
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Focusable="False"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Hidden"
+                                              Margin="0"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
                                     <Trigger.EnterActions>
                                         <BeginStoryboard>
                                             <Storyboard>
@@ -395,7 +453,6 @@
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                     <Trigger.EnterActions>
                                         <BeginStoryboard>
                                             <Storyboard>
@@ -535,6 +592,88 @@
                                     </Grid>
                                 </Popup>
                             </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="ThemedDatePicker" TargetType="DatePicker">
+                <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DatePicker">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border x:Name="TextBorder"
+                                        Grid.Column="0"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        SnapsToDevicePixels="True">
+                                    <primitives:DatePickerTextBox x:Name="PART_TextBox"
+                                                                  Background="Transparent"
+                                                                  BorderThickness="0"
+                                                                  Padding="{TemplateBinding Padding}"
+                                                                  Foreground="{TemplateBinding Foreground}"
+                                                                  CaretBrush="{TemplateBinding Foreground}"/>
+                                </Border>
+
+                                <Button x:Name="PART_Button"
+                                        Grid.Column="1"
+                                        Width="36"
+                                        Height="36"
+                                        Margin="6,0,0,0"
+                                        Focusable="False"
+                                        Style="{StaticResource HeaderGhostButton}">
+                                    <TextBlock Text="&#xE787;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS14}"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"/>
+                                </Button>
+
+                                <Popup x:Name="PART_Popup"
+                                       Placement="Bottom"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       PopupAnimation="Fade"
+                                       StaysOpen="False">
+                                    <Border Background="{DynamicResource WindowBackgroundBrush}"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12"
+                                            Padding="8"
+                                            Effect="{DynamicResource CardShadow}">
+                                        <Calendar x:Name="PART_Calendar"
+                                                  Background="{DynamicResource WindowBackgroundBrush}"
+                                                  Foreground="{DynamicResource ForegroundBrush}"
+                                                  Language="{TemplateBinding Language}"/>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TextBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter TargetName="TextBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="TextBorder" Property="Opacity" Value="0.45"/>
+                                    <Setter TargetName="PART_Button" Property="Opacity" Value="0.45"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>

@@ -54,15 +54,21 @@
 
         <Style x:Key="StatCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="14"/>
-            <Setter Property="Padding" Value="20,16"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="20,18"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="RenderTransform">
                 <Setter.Value>
                     <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="3" Opacity="0.08" Color="#000000"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
@@ -70,9 +76,13 @@
                     <BeginStoryboard>
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                             To="1.03" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
+                                             To="1.025" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
                             <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                             To="1.03" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
+                                             To="1.025" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Effect.BlurRadius"
+                                             To="16" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Effect.Opacity"
+                                             To="0.14" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
@@ -83,6 +93,10 @@
                                              To="1" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
                             <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
                                              To="1" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Effect.BlurRadius"
+                                             To="10" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
+                            <DoubleAnimation Storyboard.TargetProperty="Effect.Opacity"
+                                             To="0.08" Duration="0:0:0.2" EasingFunction="{StaticResource Ease}"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
@@ -103,6 +117,46 @@
                     <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
                 </Trigger>
             </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DashboardPrimaryGhostButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Background" Value="{DynamicResource PurpleLightBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PurpleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource PurpleBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E9D8FD"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DashboardWidgetCard" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="13,11"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
         </Style>
 
         <!-- ===== WIDGET: Expiring Documents ===== -->
@@ -141,9 +195,7 @@
                     <ItemsControl ItemsSource="{Binding DataContext.ExpiringDocs, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,0,0,6" Padding="12,10" CornerRadius="10"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                        Background="{DynamicResource WindowBackgroundBrush}" Cursor="Hand">
+                                <Border Style="{StaticResource DashboardWidgetCard}" Cursor="Hand" Margin="0,0,0,6">
                                     <Border.InputBindings>
                                         <MouseBinding MouseAction="LeftClick"
                                                       Command="{Binding DataContext.OpenEmployeeDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -299,9 +351,7 @@
                     <ItemsControl ItemsSource="{Binding DataContext.SalaryMonths, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,0,0,8" Padding="12,10" CornerRadius="10"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                        Background="{DynamicResource WindowBackgroundBrush}">
+                                <Border Style="{StaticResource DashboardWidgetCard}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -371,11 +421,16 @@
         <!-- Widget slot style with drop highlight -->
         <Style x:Key="WidgetSlot" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Padding" Value="18"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="AllowDrop" Value="True"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -387,7 +442,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="0,0,0,20">
+        <Grid Grid.Row="0" Margin="0,0,0,18">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -424,12 +479,8 @@
 
             <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Command="{Binding AIReportCommand}"
-                        Cursor="Hand"
-                        Padding="14,8"
-                        Margin="0,0,8,0"
-                        Background="{DynamicResource PurpleLightBrush}"
-                        BorderBrush="{DynamicResource PurpleBrush}"
-                        BorderThickness="1">
+                        Style="{StaticResource DashboardPrimaryGhostButton}"
+                        Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                    Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -448,7 +499,7 @@
         </Grid>
 
         <!-- Stats Cards Row -->
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,20">
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,18">
             <Border Style="{StaticResource StatCard}" Margin="0,0,10,0">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding OpenEmployeesCommand}"/>

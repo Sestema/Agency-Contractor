@@ -2,12 +2,15 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource FinExportSelectTitle}"
-        Width="400" Height="420" WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        Width="640" Height="700"
+        MinWidth="560" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
         Background="{DynamicResource WindowBackgroundBrush}">
 
-    <Grid Margin="20">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -15,46 +18,185 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <Border Background="{DynamicResource SuccessLightBrush}" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0">
-                    <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                               Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource FinExportSelectTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
-                    <TextBlock Text="{DynamicResource FinExportSelectDesc}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                </StackPanel>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+            <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource SuccessBrush}">
+                <TextBlock Text="&#xE80A;" Style="{StaticResource PageHeaderIconText}"/>
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource FinExportSelectTitle}"
+                           FontSize="{DynamicResource FS20}"
+                           Style="{StaticResource PageHeaderTitleText}"/>
+                <TextBlock Text="{DynamicResource FinExportSelectDesc}"
+                           FontSize="{DynamicResource FS11}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap"/>
             </StackPanel>
         </StackPanel>
 
+        <!-- Summary -->
+        <Border Grid.Row="1" Style="{StaticResource DialogSectionCard}" Margin="0,0,0,12" Padding="16,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource DialogPreviewSurface}" Padding="12,10">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource FinExportFirmsCount}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        <TextBlock x:Name="TotalFirmsText"
+                                   FontSize="{DynamicResource FS18}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource DialogPreviewSurface}" Padding="12,10">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource FinExportSelectedCount}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        <TextBlock x:Name="SelectedFirmsText"
+                                   FontSize="{DynamicResource FS18}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="4" Style="{StaticResource DialogPreviewSurface}" Padding="12,10">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource FinExportRowsCount}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        <TextBlock x:Name="SelectedRowsText"
+                                   FontSize="{DynamicResource FS18}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SuccessBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
         <!-- Select All -->
-        <CheckBox x:Name="SelectAllBox" Grid.Row="1" Margin="4,0,0,8"
-                  IsChecked="True" Checked="SelectAll_Checked" Unchecked="SelectAll_Unchecked"
-                  FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                  Foreground="{DynamicResource ForegroundBrush}">
-            <TextBlock Text="{DynamicResource FinExportSelectAll}"/>
-        </CheckBox>
+        <Border Grid.Row="2" Style="{StaticResource DialogSectionCard}" Margin="0,0,0,12">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource SuccessLightBrush}">
+                        <TextBlock Text="&#xE8B5;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS13}"
+                                   Foreground="{DynamicResource SuccessBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource FinExportSelectAll}"
+                                   FontSize="{DynamicResource FS14}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                        <TextBlock x:Name="SelectionHintText"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,2,0,0"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox x:Name="SelectAllBox"
+                              Checked="SelectAll_Checked"
+                              Unchecked="SelectAll_Unchecked"
+                              FontSize="{DynamicResource FS13}"
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource ForegroundBrush}"
+                              Cursor="Hand"
+                              VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource FinExportSelectAll}"/>
+                    </CheckBox>
+
+                    <Button Grid.Column="1"
+                            Click="ClearAll_Click"
+                            Style="{StaticResource HeaderGhostButton}"
+                            Padding="12,6">
+                        <TextBlock Text="{DynamicResource FinExportClearAll}"
+                                   FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
 
         <!-- Firm list -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" Padding="8">
+        <Border Grid.Row="3" Style="{StaticResource DialogSectionCard}" Padding="10">
             <ScrollViewer Style="{StaticResource ThinScroll}">
                 <ItemsControl x:Name="FirmList">
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Margin" Value="0,0,0,8"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="8"
-                                    Padding="10,8" Margin="0,2">
-                                <CheckBox IsChecked="{Binding IsSelected}" FontSize="{DynamicResource FS13}"
-                                          Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding FirmName}" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding EmployeeCount, StringFormat=' ({0})'}" 
-                                                   FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
-                                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            <Border Padding="12,10">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource DialogPreviewSurface}">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <CheckBox Grid.Column="0"
+                                              IsChecked="{Binding IsSelected}"
+                                              FontSize="{DynamicResource FS13}"
+                                              Foreground="{DynamicResource ForegroundBrush}"
+                                              Cursor="Hand"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,12,0"/>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding FirmName}"
+                                                   FontSize="{DynamicResource FS13}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
                                     </StackPanel>
-                                </CheckBox>
+
+                                    <Border Grid.Column="2"
+                                            Background="{DynamicResource SuccessLightBrush}"
+                                            CornerRadius="999"
+                                            Padding="10,4"
+                                            VerticalAlignment="Center">
+                                        <TextBlock FontSize="{DynamicResource FS11}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SuccessBrush}">
+                                            <Run Text="{Binding EmployeeCount}"/>
+                                        </TextBlock>
+                                    </Border>
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -63,42 +205,29 @@
         </Border>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button Click="Cancel_Click" Cursor="Hand" Margin="0,0,8,0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="18,9"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}"
-                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Click="Cancel_Click" Margin="0,0,8,0" Style="{StaticResource HeaderGhostButton}">
+                <TextBlock Text="{DynamicResource BtnCancel}"
+                           FontSize="{DynamicResource FS13}"
+                           Foreground="{DynamicResource ForegroundBrush}"/>
             </Button>
 
-            <Button Click="Export_Click" Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource SuccessBrush}" CornerRadius="8" Padding="22,9">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource FinExportBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                           Foreground="White"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
+            <Button x:Name="ExportButton"
+                    Click="Export_Click"
+                    Background="{DynamicResource SuccessBrush}"
+                    Style="{StaticResource FilledActionButton}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE80A;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0"/>
+                    <TextBlock Text="{DynamicResource FinExportBtn}"
+                               FontSize="{DynamicResource FS13}"
+                               FontWeight="SemiBold"
+                               Foreground="White"/>
+                </StackPanel>
             </Button>
         </StackPanel>
     </Grid>

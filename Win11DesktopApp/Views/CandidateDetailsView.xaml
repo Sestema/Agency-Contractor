@@ -10,26 +10,74 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
-            <Setter Property="Foreground" Value="#999"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style x:Key="FieldInput" TargetType="TextBox">
-            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinHeight" Value="38"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Padding" Value="11,8"/>
             <Setter Property="FontSize" Value="{DynamicResource FS13}"/>
             <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         <Style x:Key="SectionCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="18,14"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="18,16"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+        <Style x:Key="SectionHeaderTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS13}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SectionHeaderBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="MetaHintText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TertiaryForegroundBrush}"/>
+        </Style>
+        <Style x:Key="InlineIconButton" TargetType="Button">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -76,7 +124,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Large square photo -->
-                <Border Grid.Column="0" Width="160" Height="160" CornerRadius="12" ClipToBounds="True"
+                <Border Grid.Column="0" Width="160" Height="160" CornerRadius="14" ClipToBounds="True"
                         Margin="0,0,22,0" Cursor="Hand"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                     <Border.Effect>
@@ -86,7 +134,7 @@
                         <MouseBinding MouseAction="LeftClick" Command="{Binding BrowsePhotoCommand}"/>
                     </Border.InputBindings>
                     <Grid>
-                        <Border Background="#E8EAF6" CornerRadius="12">
+                        <Border Background="#E8EAF6" CornerRadius="14">
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="48"
                                            Foreground="#9FA8DA" HorizontalAlignment="Center"/>
@@ -103,13 +151,11 @@
                     <StackPanel>
                         <!-- Section header -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Background="#E3F2FD" CornerRadius="6" Width="26" Height="26" Margin="0,0,8,0">
+                            <Border Background="#E3F2FD" Style="{StaticResource SectionHeaderBadge}">
                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                            Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="{DynamicResource CandPersonalSection}" FontSize="{DynamicResource FS13}" 
-                                       FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
-                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource CandPersonalSection}" Style="{StaticResource SectionHeaderTitle}"/>
                         </StackPanel>
 
                         <!-- Name row -->
@@ -139,10 +185,10 @@
                         </StackPanel>
 
                         <!-- Date added -->
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="11"
-                                       Foreground="#BBBBBB" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock FontSize="{DynamicResource FS11}" Foreground="#BBBBBB">
+                                       Foreground="{DynamicResource TertiaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Style="{StaticResource MetaHintText}">
                                 <Run Text="{DynamicResource CandAddedOn}"/>
                                 <Run Text="{Binding Data.DateAdded, Mode=OneWay}"/>
                             </TextBlock>
@@ -163,13 +209,11 @@
                 <Border Grid.Column="0" Style="{StaticResource SectionCard}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Background="#FFF3E0" CornerRadius="6" Width="26" Height="26" Margin="0,0,8,0">
+                            <Border Background="#FFF3E0" Style="{StaticResource SectionHeaderBadge}">
                                 <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                            Foreground="#E65100" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="{DynamicResource CandPassport}" FontSize="{DynamicResource FS13}" 
-                                       FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
-                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource CandPassport}" Style="{StaticResource SectionHeaderTitle}"/>
                         </StackPanel>
 
                         <StackPanel Margin="0,0,0,8">
@@ -190,17 +234,16 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="8" 
-                                    MinHeight="40" Padding="6"
-                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                            <Border Grid.Column="0" Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="10" 
+                                    MinHeight="44" Padding="6"
+                                    BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
                                 <Image Source="{Binding PassportPreviewPath}" MaxHeight="140" Stretch="Uniform"
                                        HorizontalAlignment="Center"/>
                             </Border>
                             <Button Grid.Column="1" Command="{Binding BrowsePassportCommand}" 
-                                    Width="34" Height="34" Margin="6,0,0,0"
-                                    Background="{DynamicResource WindowBackgroundBrush}"
-                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                    Cursor="Hand" VerticalAlignment="Top" ToolTip="{DynamicResource CandChangePassport}">
+                                    Margin="6,0,0,0"
+                                    Style="{StaticResource InlineIconButton}"
+                                    VerticalAlignment="Top" ToolTip="{DynamicResource CandChangePassport}">
                                 <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="13" 
                                            Foreground="{DynamicResource AccentBrush}"/>
                             </Button>
@@ -212,13 +255,11 @@
                 <Border Grid.Column="2" Style="{StaticResource SectionCard}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Background="#E8F5E9" CornerRadius="6" Width="26" Height="26" Margin="0,0,8,0">
+                            <Border Background="#E8F5E9" Style="{StaticResource SectionHeaderBadge}">
                                 <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                            Foreground="#2E7D32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="{DynamicResource CandWorkSection}" FontSize="{DynamicResource FS13}" 
-                                       FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
-                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource CandWorkSection}" Style="{StaticResource SectionHeaderTitle}"/>
                         </StackPanel>
 
                         <StackPanel Margin="0,0,0,8">
@@ -229,7 +270,7 @@
 
                         <StackPanel>
                             <TextBlock Text="{DynamicResource CandLocation}" Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                 <RadioButton Content="{DynamicResource CandAllCzech}" IsChecked="{Binding IsAllCzech}" Margin="0,0,16,0"
                                              Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS12}"/>
                                 <RadioButton Content="{DynamicResource CandSpecific}" IsChecked="{Binding IsSpecificLocation}"
@@ -243,19 +284,17 @@
                         <!-- Notes inside work section to balance columns -->
                         <StackPanel Margin="0,14,0,0">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <Border Background="#F3E5F5" CornerRadius="6" Width="26" Height="26" Margin="0,0,8,0">
+                                <Border Background="#F3E5F5" Style="{StaticResource SectionHeaderBadge}">
                                     <TextBlock Text="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                                Foreground="#7B1FA2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <TextBlock Text="{DynamicResource CandNotes}" FontSize="{DynamicResource FS13}" 
-                                           FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
-                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource CandNotes}" Style="{StaticResource SectionHeaderTitle}"/>
                             </StackPanel>
-                            <TextBox Height="80" AcceptsReturn="True" TextWrapping="Wrap" 
-                                     VerticalContentAlignment="Top" Padding="10,8"
+                            <TextBox MinHeight="88" AcceptsReturn="True" TextWrapping="Wrap" 
+                                     VerticalContentAlignment="Top" Padding="11,9"
                                      FontSize="{DynamicResource FS13}"
                                      Background="{DynamicResource WindowBackgroundBrush}"
-                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                     BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
                                      Foreground="{DynamicResource ForegroundBrush}"
                                      Text="{Binding Data.Notes, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
@@ -271,11 +310,11 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Command="{Binding DeleteCommand}" Height="38" Padding="18,0"
+                <Button Grid.Column="0" Command="{Binding DeleteCommand}" Height="40" Padding="18,0"
                         Cursor="Hand" BorderThickness="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="#FFEBEE" CornerRadius="8" Padding="{TemplateBinding Padding}"
+                            <Border x:Name="Bd" Background="#FFEBEE" CornerRadius="10" Padding="{TemplateBinding Padding}"
                                     Height="{TemplateBinding Height}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" 
@@ -297,12 +336,12 @@
                     <Button Command="{Binding CloseCommand}"
                             Style="{StaticResource HeaderGhostButton}"
                             Margin="0,0,8,0"
-                            Padding="16,8">
+                            Padding="16,9">
                         <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS12}"/>
                     </Button>
                     <Button Command="{Binding SaveCommand}"
                             Style="{StaticResource FilledActionButton}"
-                            Padding="16,8">
+                            Padding="16,9">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                        Foreground="White" Margin="0,0,8,0" VerticalAlignment="Center"/>

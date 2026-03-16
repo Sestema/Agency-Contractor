@@ -25,6 +25,9 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeService _employeeService;
         private readonly string _employeeFolder;
         private readonly string _firmName;
+        private bool _profileUnavailable;
+        private bool _profileUnavailableNotified;
+        private bool _profileCloseScheduled;
 
         public event Action? RequestClose;
         public event Action? DataChanged;
@@ -610,6 +613,7 @@ namespace Win11DesktopApp.ViewModels
 
         // Company positions for ComboBox
         public ObservableCollection<Position> CompanyPositions { get; } = new();
+        public ObservableCollection<WorkAddress> CompanyAddresses { get; } = new();
 
         private Position? _selectedPosition;
         public Position? SelectedPosition
@@ -623,6 +627,20 @@ namespace Win11DesktopApp.ViewModels
                     Data.PositionNumber = value.PositionNumber;
                     Data.MonthlySalaryBrutto = value.MonthlySalaryBrutto;
                     Data.HourlySalary = value.HourlySalary;
+                    OnPropertyChanged(nameof(Data));
+                }
+            }
+        }
+
+        private WorkAddress? _selectedWorkAddress;
+        public WorkAddress? SelectedWorkAddress
+        {
+            get => _selectedWorkAddress;
+            set
+            {
+                if (SetProperty(ref _selectedWorkAddress, value) && value != null)
+                {
+                    Data.WorkAddressTag = FormatWorkAddress(value);
                     OnPropertyChanged(nameof(Data));
                 }
             }
@@ -678,10 +696,11 @@ namespace Win11DesktopApp.ViewModels
             _employeeFolder = employeeFolder;
             _employeeService = employeeService ?? App.EmployeeService;
 
-            Data = _employeeService.LoadEmployeeData(employeeFolder) ?? new EmployeeData();
+            Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
             RefreshDocuments();
             LoadCompanyPositions();
+            LoadCompanyAddresses();
 
             CloseCommand = new RelayCommand(o => RequestClose?.Invoke());
             ShowDocumentsCommand = new RelayCommand(o => TabIndex = 0);
@@ -717,6 +736,9 @@ namespace Win11DesktopApp.ViewModels
 
             OpenFolderCommand = new RelayCommand(o =>
             {
+                if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.OpenFolder", notifyUser: true))
+                    return;
+
                 try
                 {
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -768,7 +790,16 @@ namespace Win11DesktopApp.ViewModels
                 if (o is CustomSignedDocument cd)
                 {
                     var path = _employeeService.GetCustomDocPath(_employeeFolder, cd.FileName);
-                    if (!string.IsNullOrEmpty(path)) OpenFile(path);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        OpenFile(path);
+                    }
+                    else
+                    {
+                        LoggingService.LogWarning("EmployeeDetailsViewModel.OpenCustomDocCommand",
+                            $"Custom document file not found for {_employeeFolder}: {cd.FileName}");
+                        StatusMessage = Res("MsgFileNotFound");
+                    }
                 }
             });
             HideCustomDocCommand = new RelayCommand(o =>
@@ -784,6 +815,9 @@ namespace Win11DesktopApp.ViewModels
 
             OpenCustomDocFolderCommand = new RelayCommand(o =>
             {
+                if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.OpenCustomDocFolder", notifyUser: true))
+                    return;
+
                 var folderPath = System.IO.Path.Combine(_employeeFolder, "CustomDocs");
                 if (!System.IO.Directory.Exists(folderPath))
                     System.IO.Directory.CreateDirectory(folderPath);
@@ -810,6 +844,9 @@ namespace Win11DesktopApp.ViewModels
             LoadCustomDocuments();
 
             RefreshExpiryWarnings();
+
+            if (_profileUnavailable)
+                ScheduleProfileClose();
         }
 
         private void SetBusyState(bool isBusy, string? message = null)
@@ -846,7 +883,7 @@ namespace Win11DesktopApp.ViewModels
                 else if (_extendType == "insurance")
                     Data.InsuranceExpiry = NewExpiryDate;
 
-                if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
+                if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
                 {
                     await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
                     {
@@ -967,7 +1004,7 @@ namespace Win11DesktopApp.ViewModels
                 SetBusyState(true, Res("EditorSaving") ?? "Збереження...");
                 var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
 
-                if (_employeeService.SaveEmployeeData(_employeeFolder, Data))
+                if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
                 {
                     if (oldData != null)
                     {
@@ -1028,7 +1065,11 @@ namespace Win11DesktopApp.ViewModels
                 SaveReplacedDocumentFile(type, tempFile);
                 CleanupTempFile(tempFile);
                 var changes = ApplyNewFieldValues(window.NewValues);
-                _employeeService.SaveEmployeeData(_employeeFolder, Data);
+                if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+                {
+                    StatusMessage = Res("MsgProfileSaveFail");
+                    return;
+                }
                 await LogDocumentReplacement(type, changes);
 
                 OnPropertyChanged(nameof(Data));
@@ -1236,17 +1277,23 @@ namespace Win11DesktopApp.ViewModels
 
         private void RefreshDocuments()
         {
-            PassportFilePath = BuildPath(Data.Files.Passport);
-            VisaFilePath = BuildPath(Data.Files.Visa);
-            InsuranceFilePath = BuildPath(Data.Files.Insurance);
-            PhotoFilePath = BuildPath(Data.Files.Photo);
-            WorkPermitFilePath = BuildPath(Data.Files.WorkPermit);
+            if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.RefreshDocuments"))
+            {
+                ClearDocumentState();
+                return;
+            }
 
-            HasPassport = File.Exists(PassportFilePath);
-            HasVisa = File.Exists(VisaFilePath);
-            HasInsurance = File.Exists(InsuranceFilePath);
-            HasPhoto = File.Exists(PhotoFilePath);
-            HasWorkPermit = File.Exists(WorkPermitFilePath);
+            PassportFilePath = ResolveDocumentPath(Data.Files.Passport, "passport");
+            VisaFilePath = ResolveDocumentPath(Data.Files.Visa, "visa");
+            InsuranceFilePath = ResolveDocumentPath(Data.Files.Insurance, "insurance");
+            PhotoFilePath = ResolveDocumentPath(Data.Files.Photo, "photo");
+            WorkPermitFilePath = ResolveDocumentPath(Data.Files.WorkPermit, "work permit");
+
+            HasPassport = !string.IsNullOrEmpty(PassportFilePath);
+            HasVisa = !string.IsNullOrEmpty(VisaFilePath);
+            HasInsurance = !string.IsNullOrEmpty(InsuranceFilePath);
+            HasPhoto = !string.IsNullOrEmpty(PhotoFilePath);
+            HasWorkPermit = !string.IsNullOrEmpty(WorkPermitFilePath);
 
             PassportIsPdf = IsPdf(PassportFilePath);
             VisaIsPdf = IsPdf(VisaFilePath);
@@ -1254,7 +1301,7 @@ namespace Win11DesktopApp.ViewModels
             WorkPermitIsPdf = IsPdf(WorkPermitFilePath);
         }
 
-        private void LoadCompanyPositions()
+        private async void LoadCompanyPositions()
         {
             try
             {
@@ -1265,11 +1312,43 @@ namespace Win11DesktopApp.ViewModels
                 foreach (var pos in company.Positions)
                     CompanyPositions.Add(pos);
 
-                if (!string.IsNullOrEmpty(Data.PositionTag))
+                if (!string.IsNullOrWhiteSpace(Data.PositionTag) || !string.IsNullOrWhiteSpace(Data.PositionNumber))
                 {
-                    _selectedPosition = CompanyPositions.FirstOrDefault(p => p.Title == Data.PositionTag)
-                                     ?? CompanyPositions.FirstOrDefault(p => p.PositionNumber == Data.PositionNumber);
-                    OnPropertyChanged(nameof(SelectedPosition));
+                    var matchedPosition = CompanyPositions.FirstOrDefault(p =>
+                        string.Equals(p.Title, Data.PositionTag, StringComparison.OrdinalIgnoreCase))
+                        ?? CompanyPositions.FirstOrDefault(p =>
+                            string.Equals(p.PositionNumber, Data.PositionNumber, StringComparison.OrdinalIgnoreCase))
+                        ?? CompanyPositions.FirstOrDefault(p =>
+                            string.Equals(p.PositionNumber, Data.PositionTag, StringComparison.OrdinalIgnoreCase));
+
+                    if (matchedPosition != null)
+                    {
+                        var shouldResave =
+                            !string.Equals(Data.PositionTag, matchedPosition.Title, StringComparison.OrdinalIgnoreCase) ||
+                            !string.Equals(Data.PositionNumber, matchedPosition.PositionNumber, StringComparison.OrdinalIgnoreCase) ||
+                            Data.MonthlySalaryBrutto != matchedPosition.MonthlySalaryBrutto ||
+                            Data.HourlySalary != matchedPosition.HourlySalary;
+
+                        var oldData = shouldResave
+                            ? _employeeService.LoadEmployeeData(_employeeFolder)
+                            : null;
+
+                        SelectedPosition = matchedPosition;
+
+                        if (shouldResave)
+                        {
+                            if (_employeeService.SaveEmployeeData(_employeeFolder, Data) && oldData != null)
+                            {
+                                await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+                                LogProfileChanges(oldData, Data);
+                                InvalidateDetailCaches();
+                                DataChanged?.Invoke();
+
+                                if (TabIndex == 2)
+                                    EnsureHistoryLoaded();
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -1278,9 +1357,74 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private async void LoadCompanyAddresses()
+        {
+            try
+            {
+                var company = App.CompanyService.Companies.FirstOrDefault(c => c.Name == _firmName);
+                if (company == null) return;
+
+                CompanyAddresses.Clear();
+                foreach (var address in company.Addresses)
+                    CompanyAddresses.Add(address);
+
+                if (!string.IsNullOrWhiteSpace(Data.WorkAddressTag))
+                {
+                    var matchedAddress = CompanyAddresses.FirstOrDefault(address =>
+                        string.Equals(FormatWorkAddress(address), Data.WorkAddressTag, StringComparison.OrdinalIgnoreCase));
+
+                    if (matchedAddress != null)
+                    {
+                        var normalizedAddress = FormatWorkAddress(matchedAddress);
+                        var shouldResave = !string.Equals(Data.WorkAddressTag, normalizedAddress, StringComparison.OrdinalIgnoreCase);
+                        var oldData = shouldResave
+                            ? _employeeService.LoadEmployeeData(_employeeFolder)
+                            : null;
+
+                        SelectedWorkAddress = matchedAddress;
+
+                        if (shouldResave)
+                        {
+                            if (_employeeService.SaveEmployeeData(_employeeFolder, Data) && oldData != null)
+                            {
+                                await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+                                LogProfileChanges(oldData, Data);
+                                InvalidateDetailCaches();
+                                DataChanged?.Invoke();
+
+                                if (TabIndex == 2)
+                                    EnsureHistoryLoaded();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadCompanyAddresses error: {ex.Message}");
+            }
+        }
+
+        private static string FormatWorkAddress(WorkAddress address)
+        {
+            var streetPart = string.Join(" ", new[] { address.Street, address.Number }
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .Select(part => part.Trim()));
+
+            var cityPart = string.Join(" ", new[] { address.City, address.ZipCode }
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .Select(part => part.Trim()));
+
+            if (!string.IsNullOrWhiteSpace(streetPart) && !string.IsNullOrWhiteSpace(cityPart))
+                return $"{streetPart}, {cityPart}";
+
+            return !string.IsNullOrWhiteSpace(streetPart) ? streetPart : cityPart;
+        }
+
         private string BuildPath(string fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return string.Empty;
+            if (string.IsNullOrWhiteSpace(_employeeFolder)) return string.Empty;
             return Path.Combine(_employeeFolder, fileName);
         }
 
@@ -1291,7 +1435,12 @@ namespace Win11DesktopApp.ViewModels
 
         private void OpenFile(string path)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.OpenFile", $"File not found: {path}");
+                StatusMessage = Res("MsgFileNotFound");
+                return;
+            }
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -1305,6 +1454,94 @@ namespace Win11DesktopApp.ViewModels
                 LoggingService.LogError("EmployeeDetailsViewModel.OpenFile", ex);
                 StatusMessage = Res("MsgOpenFileFail");
             }
+        }
+
+        private EmployeeData LoadInitialEmployeeData()
+        {
+            if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.LoadInitialEmployeeData", notifyUser: true))
+                return new EmployeeData();
+
+            var data = _employeeService.LoadEmployeeData(_employeeFolder);
+            if (data != null)
+                return data;
+
+            LoggingService.LogWarning("EmployeeDetailsViewModel.LoadInitialEmployeeData",
+                $"Employee profile could not be loaded from {_employeeFolder}");
+            NotifyProfileUnavailable(Res("MsgEmployeeProfileMissing"));
+            return new EmployeeData();
+        }
+
+        private bool EnsureEmployeeFolderAvailable(string source, bool notifyUser = false)
+        {
+            if (!string.IsNullOrWhiteSpace(_employeeFolder) && Directory.Exists(_employeeFolder))
+                return true;
+
+            _profileUnavailable = true;
+            ClearDocumentState();
+            LoggingService.LogWarning(source, $"Employee folder not found: {_employeeFolder}");
+            StatusMessage = Res("MsgEmployeeFolderMissing");
+            if (notifyUser)
+                NotifyProfileUnavailable(StatusMessage);
+            return false;
+        }
+
+        private void NotifyProfileUnavailable(string message)
+        {
+            if (_profileUnavailableNotified || string.IsNullOrWhiteSpace(message))
+                return;
+
+            _profileUnavailableNotified = true;
+            Application.Current?.Dispatcher?.BeginInvoke(() =>
+            {
+                if (Application.Current?.MainWindow?.IsVisible == true)
+                {
+                    ToastService.Instance.Warning(message);
+                    return;
+                }
+
+                MessageBox.Show(message, Res("TitleWarning"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            });
+        }
+
+        private void ScheduleProfileClose()
+        {
+            if (_profileCloseScheduled)
+                return;
+
+            _profileCloseScheduled = true;
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() => RequestClose?.Invoke()));
+        }
+
+        private string ResolveDocumentPath(string fileName, string documentLabel)
+        {
+            var path = BuildPath(fileName);
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            if (File.Exists(path))
+                return path;
+
+            LoggingService.LogWarning("EmployeeDetailsViewModel.ResolveDocumentPath",
+                $"Missing {documentLabel} file for {_employeeFolder}: {path}");
+            return string.Empty;
+        }
+
+        private void ClearDocumentState()
+        {
+            PassportFilePath = string.Empty;
+            VisaFilePath = string.Empty;
+            InsuranceFilePath = string.Empty;
+            PhotoFilePath = string.Empty;
+            WorkPermitFilePath = string.Empty;
+            HasPassport = false;
+            HasVisa = false;
+            HasInsurance = false;
+            HasPhoto = false;
+            HasWorkPermit = false;
+            PassportIsPdf = false;
+            VisaIsPdf = false;
+            InsuranceIsPdf = false;
+            WorkPermitIsPdf = false;
         }
 
         private void StartRenewWorkPermit()
@@ -1348,7 +1585,11 @@ namespace Win11DesktopApp.ViewModels
                 Data.WorkPermitExpiry = RenewWpExpiry;
                 Data.WorkPermitAuthority = RenewWpAuthority;
 
-                _employeeService.SaveEmployeeData(_employeeFolder, Data);
+                if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+                {
+                    StatusMessage = Res("MsgProfileSaveFail");
+                    return;
+                }
 
                 await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
                 {
@@ -1455,6 +1696,18 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
                 var result = await geminiService.ChatAsync(context, systemPrompt, cts.Token);
+                if (GeminiApiService.IsTimeoutResponse(result))
+                {
+                    AIValidationResult = Res("AIChatTimeout");
+                    return;
+                }
+
+                if (GeminiApiService.IsNetworkErrorResponse(result))
+                {
+                    AIValidationResult = Res("AIChatNetworkError");
+                    return;
+                }
+
                 AIValidationResult = result;
             }
             catch (Exception ex)
@@ -1506,8 +1759,14 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         private void ToggleHideDoc(CustomSignedDocument doc, bool hide)
         {
+            var previousHiddenState = doc.IsHidden;
             doc.IsHidden = hide;
-            _employeeService.SaveEmployeeData(_employeeFolder, Data);
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+            {
+                doc.IsHidden = previousHiddenState;
+                StatusMessage = Res("MsgProfileSaveFail");
+                return;
+            }
 
             if (hide)
             {
@@ -1589,7 +1848,13 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
             Data.CustomDocuments ??= new List<CustomSignedDocument>();
             Data.CustomDocuments.Add(doc);
-            _employeeService.SaveEmployeeData(_employeeFolder, Data);
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+            {
+                Data.CustomDocuments.Remove(doc);
+                _employeeService.DeleteCustomDocFile(_employeeFolder, savedFileName);
+                AddCustomDocError = Res("MsgProfileSaveFail") ?? "Failed to save profile.";
+                return;
+            }
 
             var expiryPart = string.IsNullOrEmpty(doc.ExpiryDate) ? "" : $", до: {doc.ExpiryDate}";
             var histDesc = $"{doc.Name} (підписано: {doc.SignDate}{expiryPart})";
@@ -1614,9 +1879,24 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         private async Task DeleteCustomDocAsync(CustomSignedDocument doc)
         {
+            var docs = Data.CustomDocuments;
+            if (docs == null)
+                return;
+
+            var removeIndex = docs.IndexOf(doc);
+            docs.Remove(doc);
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+            {
+                if (removeIndex >= 0 && removeIndex <= docs.Count)
+                    docs.Insert(removeIndex, doc);
+                else
+                    docs.Add(doc);
+
+                StatusMessage = Res("MsgProfileSaveFail");
+                return;
+            }
+
             _employeeService.DeleteCustomDocFile(_employeeFolder, doc.FileName);
-            Data.CustomDocuments?.Remove(doc);
-            _employeeService.SaveEmployeeData(_employeeFolder, Data);
 
             var histDesc = $"{doc.Name} (підписано: {doc.SignDate})";
 

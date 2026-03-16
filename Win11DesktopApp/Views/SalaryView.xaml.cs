@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Win11DesktopApp.Models;
@@ -21,9 +24,17 @@ namespace Win11DesktopApp.Views
         public SalaryView()
         {
             InitializeComponent();
+            Language = XmlLanguage.GetLanguage(Thread.CurrentThread.CurrentUICulture.IetfLanguageTag);
             DataContextChanged += OnDataContextChanged;
+            Loaded += SalaryView_Loaded;
             PreviewMouseDown += SalaryView_PreviewMouseDown;
             PreviewKeyDown += SalaryView_PreviewKeyDown;
+        }
+
+        private void SalaryView_Loaded(object sender, RoutedEventArgs e)
+        {
+            RestoreSidebarWidth();
+            RestoreSidebarRowRatio();
         }
 
         private void SalaryView_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -186,6 +197,7 @@ namespace Win11DesktopApp.Views
 
                 var elemStyle = new Style(typeof(TextBlock));
                 elemStyle.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Center));
+                elemStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
                 elemStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, brush));
 
                 var zeroTrigger = new DataTrigger { Binding = new Binding($"[{field.Id}]"), Value = 0m };
@@ -194,6 +206,11 @@ namespace Win11DesktopApp.Views
                 elemStyle.Triggers.Add(zeroTrigger);
 
                 col.ElementStyle = elemStyle;
+
+                var editingStyle = new Style(typeof(TextBox));
+                editingStyle.Setters.Add(new Setter(TextBox.HorizontalContentAlignmentProperty, HorizontalAlignment.Center));
+                editingStyle.Setters.Add(new Setter(TextBox.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+                col.EditingElementStyle = editingStyle;
 
                 SalaryGrid.Columns.Insert(insertIdx, col);
                 insertIdx++;
@@ -231,6 +248,67 @@ namespace Win11DesktopApp.Views
                 if (widths[i] > 0)
                     SalaryGrid.Columns[i].Width = new DataGridLength(widths[i]);
             }
+        }
+
+        private void RestoreSidebarRowRatio()
+        {
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            var ratio = settings.SalarySidebarTopRatio;
+            if (ratio <= 0.1 || ratio >= 20)
+                return;
+
+            SidebarTopRow.Height = new GridLength(ratio, GridUnitType.Star);
+            SidebarExpensesRow.Height = new GridLength(1.0, GridUnitType.Star);
+        }
+
+        private void RestoreSidebarWidth()
+        {
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            var width = settings.SalarySidebarWidth;
+            if (width < 210 || width > 420)
+                return;
+
+            SidebarColumn.Width = new GridLength(width, GridUnitType.Pixel);
+        }
+
+        private void SidebarRowSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            if (SidebarTopRow.ActualHeight <= 1 || SidebarExpensesRow.ActualHeight <= 1)
+                return;
+
+            var ratio = SidebarTopRow.ActualHeight / SidebarExpensesRow.ActualHeight;
+            if (ratio <= 0.1 || ratio >= 20)
+                return;
+
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            settings.SalarySidebarTopRatio = ratio;
+            App.AppSettingsService?.SaveSettings();
+        }
+
+        private void SidebarColumnSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            if (SidebarColumn.ActualWidth <= 1)
+                return;
+
+            var width = SidebarColumn.ActualWidth;
+            if (width < 210 || width > 420)
+                return;
+
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            settings.SalarySidebarWidth = width;
+            App.AppSettingsService?.SaveSettings();
         }
 
         private void OnViewModelDataLoaded()

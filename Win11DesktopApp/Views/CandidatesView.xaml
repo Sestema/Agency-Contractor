@@ -10,6 +10,64 @@
              d:DesignHeight="700" d:DesignWidth="1000">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style x:Key="CandidateViewModeButton" TargetType="Button">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CandidateMetaIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TertiaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CandidateMetaText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CandidateChipBorder" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="0,0,4,4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="CandidateChipText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
@@ -64,12 +122,36 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBox Grid.Column="0" Height="36" VerticalContentAlignment="Center" Margin="0,0,12,0"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                <Border Grid.Column="0"
+                        Style="{StaticResource ToolbarSearchContainer}"
+                        Margin="0,0,12,0"
+                        CornerRadius="12"
+                        Height="38">
+                    <Grid Margin="12,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="&#xE721;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalAlignment="Center"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </Border>
 
-                <ComboBox Grid.Column="1" Width="200" Height="36" VerticalContentAlignment="Center" Margin="0,0,12,0"
+                <ComboBox Grid.Column="1" Width="210" Height="38" VerticalContentAlignment="Center" Margin="0,0,12,0"
                           ItemsSource="{Binding Positions}"
-                          SelectedItem="{Binding SelectedPosition}">
+                          SelectedItem="{Binding SelectedPosition}"
+                          Padding="10,6">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock>
@@ -90,14 +172,9 @@
 
                 <!-- View mode toggle + Zoom -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding SetViewModeCommand}" CommandParameter="List" ToolTip="{DynamicResource ViewList}"
-                            Padding="6,4" Margin="0,0,2,0" Cursor="Hand">
+                    <Button Command="{Binding SetViewModeCommand}" CommandParameter="List" ToolTip="{DynamicResource ViewList}">
                         <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                            <Style TargetType="Button" BasedOn="{StaticResource CandidateViewModeButton}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding ViewMode}" Value="List">
                                         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -110,13 +187,9 @@
                         <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
                     <Button Command="{Binding SetViewModeCommand}" CommandParameter="Tiles" ToolTip="{DynamicResource ViewTiles}"
-                            Padding="6,4" Margin="0,0,12,0" Cursor="Hand">
+                            Margin="0,0,12,0">
                         <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                            <Style TargetType="Button" BasedOn="{StaticResource CandidateViewModeButton}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding ViewMode}" Value="Tiles">
                                         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -161,9 +234,12 @@
                 </ItemsControl.LayoutTransform>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border CornerRadius="8" Padding="10" Margin="0,0,0,6" BorderThickness="1" Cursor="Hand"
+                            <Border CornerRadius="12" Padding="12,11" Margin="0,0,0,8" BorderThickness="1" Cursor="Hand"
                                     Background="{DynamicResource CardBackgroundBrush}"
                                     BorderBrush="{DynamicResource CardBorderBrush}">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.07"/>
+                                </Border.Effect>
                                 <Border.InputBindings>
                                     <MouseBinding MouseAction="LeftClick"
                                                   Command="{Binding DataContext.OpenCandidateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -177,8 +253,8 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Photo -->
-                                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22" Background="#E3F2FD"
-                                            VerticalAlignment="Top" Margin="0,0,10,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                    <Border Grid.Column="0" Width="46" Height="46" CornerRadius="23" Background="#E3F2FD"
+                                            VerticalAlignment="Top" Margin="0,0,12,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
                                         <Border.Clip>
                                             <EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22"/>
                                         </Border.Clip>
@@ -203,27 +279,24 @@
 
                                     <!-- Info -->
                                     <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                             <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS14}"
                                                        Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,8,0"/>
                                         </StackPanel>
-                                        <WrapPanel Margin="0,0,0,4">
+                                        <WrapPanel Margin="0,0,0,5">
                                             <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
-                                                <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                           Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding DesiredPosition}" FontSize="{DynamicResource FS11}" Foreground="#666"/>
+                                                <TextBlock Text="&#xE821;" Style="{StaticResource CandidateMetaIcon}"/>
+                                                <TextBlock Text="{Binding DesiredPosition}" Style="{StaticResource CandidateMetaText}"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
-                                                <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                           Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Phone}" FontSize="{DynamicResource FS11}" Foreground="#666"/>
+                                                <TextBlock Text="&#xE717;" Style="{StaticResource CandidateMetaIcon}"/>
+                                                <TextBlock Text="{Binding Phone}" Style="{StaticResource CandidateMetaText}"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
-                                                <TextBlock Text="&#xE81D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                           Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                <TextBlock FontSize="{DynamicResource FS11}" Foreground="#666">
+                                                <TextBlock Text="&#xE81D;" Style="{StaticResource CandidateMetaIcon}"/>
+                                                <TextBlock>
                                                     <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CandidateMetaText}">
                                                             <Setter Property="Text" Value="{Binding LocationDetails}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding LocationPreference}" Value="all">
@@ -235,23 +308,23 @@
                                                 </TextBlock>
                                             </StackPanel>
                                         </WrapPanel>
-                                        <WrapPanel>
-                                            <Border CornerRadius="8" Padding="5,2" Margin="0,0,4,0" BorderThickness="1"
+                                        <WrapPanel Margin="0,2,0,0">
+                                            <Border Style="{StaticResource CandidateChipBorder}"
                                                     Background="#E3F2FD" BorderBrush="#BBDEFB">
-                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#1565C0">
+                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="#1565C0">
                                                     <Run Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets"/>
                                                     <Run Text=" "/>
                                                     <Run Text="{Binding PassportNumber, Mode=OneWay}"/>
                                                 </TextBlock>
                                             </Border>
-                                            <Border CornerRadius="8" Padding="5,2" Margin="0,0,4,0" BorderThickness="1"
+                                            <Border Style="{StaticResource CandidateChipBorder}"
                                                     Background="#E8F5E9" BorderBrush="#C8E6C9">
-                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#2E7D32"
+                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="#2E7D32"
                                                            Text="{Binding PassportCountry}"/>
                                             </Border>
-                                            <Border CornerRadius="8" Padding="5,2" BorderThickness="1"
+                                            <Border Style="{StaticResource CandidateChipBorder}"
                                                     Background="#FFF3E0" BorderBrush="#FFE0B2">
-                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#E65100">
+                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="#E65100">
                                                     <Run Text="{DynamicResource CandAddedOn}"/>
                                                     <Run Text="{Binding DateAdded, Mode=OneWay}"/>
                                                 </TextBlock>
@@ -280,7 +353,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border CornerRadius="8" Padding="10" Margin="6,14,8,8" Width="260" BorderThickness="1"
+                            <Border CornerRadius="12" Padding="10" Margin="6,14,8,8" Width="258" BorderThickness="1"
                                     RenderTransformOrigin="0.5,0.5" Cursor="Hand"
                                     Background="{DynamicResource CardBackgroundBrush}"
                                     BorderBrush="{DynamicResource CardBorderBrush}">
@@ -296,13 +369,13 @@
                                     </TransformGroup>
                                 </Border.RenderTransform>
                                 <Border.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.08"/>
+                                    <DropShadowEffect BlurRadius="10" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.1"/>
                                 </Border.Effect>
                                 <StackPanel>
                                     <!-- Photo + Name -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,7">
                                         <Border Width="36" Height="36" CornerRadius="18" Background="#E3F2FD"
-                                                Margin="0,0,8,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                Margin="0,0,9,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
                                             <Border.Clip>
                                                 <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
                                             </Border.Clip>
@@ -328,19 +401,18 @@
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS13}"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
-                                            <TextBlock Text="{Binding DesiredPosition}" FontSize="{DynamicResource FS10}" Foreground="#888"/>
+                                            <TextBlock Text="{Binding DesiredPosition}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
 
                                     <!-- Phone + Location -->
-                                    <TextBlock FontSize="{DynamicResource FS10}" Foreground="#666" TextWrapping="Wrap" Margin="0,0,0,2">
+                                    <TextBlock FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="0,0,0,2">
                                         <Run Text="&#xE717; " FontFamily="Segoe MDL2 Assets"/>
                                         <Run Text="{Binding Phone, Mode=OneWay}"/>
                                     </TextBlock>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="&#xE81D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                   Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                        <TextBlock FontSize="{DynamicResource FS10}" Foreground="#666">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                        <TextBlock Text="&#xE81D;" Style="{StaticResource CandidateMetaIcon}"/>
+                                        <TextBlock FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Text" Value="{Binding LocationDetails}"/>
@@ -355,23 +427,23 @@
                                     </StackPanel>
 
                                     <!-- Badges -->
-                                    <WrapPanel Margin="0,4,0,0">
-                                        <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"
+                                    <WrapPanel Margin="0,5,0,0">
+                                        <Border Style="{StaticResource CandidateChipBorder}"
                                                 Background="#E3F2FD" BorderBrush="#BBDEFB">
-                                            <TextBlock FontSize="{DynamicResource FS9}" Foreground="#1565C0">
+                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="#1565C0">
                                                 <Run Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets"/>
                                                 <Run Text=" "/>
                                                 <Run Text="{Binding PassportNumber, Mode=OneWay}"/>
                                             </TextBlock>
                                         </Border>
-                                        <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"
+                                        <Border Style="{StaticResource CandidateChipBorder}"
                                                 Background="#E8F5E9" BorderBrush="#C8E6C9">
-                                            <TextBlock FontSize="{DynamicResource FS9}" Foreground="#2E7D32"
+                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="#2E7D32"
                                                        Text="{Binding PassportCountry}"/>
                                         </Border>
-                                        <Border CornerRadius="6" Padding="4,1" BorderThickness="1"
+                                        <Border Style="{StaticResource CandidateChipBorder}"
                                                 Background="#FFF3E0" BorderBrush="#FFE0B2">
-                                            <TextBlock FontSize="{DynamicResource FS9}" Foreground="#E65100">
+                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="#E65100">
                                                 <Run Text="{DynamicResource CandAddedOn}"/>
                                                 <Run Text="{Binding DateAdded, Mode=OneWay}"/>
                                             </TextBlock>

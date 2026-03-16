@@ -8,6 +8,7 @@
     <sys:String x:Key="BtnFinances">Фінанси та Таблиці</sys:String>
     <sys:String x:Key="BtnArchive">Архів</sys:String>
     <sys:String x:Key="BtnActivityLog">Історія дій</sys:String>
+    <sys:String x:Key="BtnNews">Новості</sys:String>
     <sys:String x:Key="ActLogEmpty">Поки що немає записів</sys:String>
     <sys:String x:Key="ActLogClearFilter">Скинути фільтр</sys:String>
     <sys:String x:Key="ActLogCatEmployee">Працівник</sys:String>
@@ -37,6 +38,49 @@
     <sys:String x:Key="ActLogCleared">Історію дій очищено</sys:String>
 
     <sys:String x:Key="SettingsTitle">Налаштування</sys:String>
+    <sys:String x:Key="NewsTitle">Новості</sys:String>
+    <sys:String x:Key="NewsRefresh">Оновити</sys:String>
+    <sys:String x:Key="NewsSearchPlaceholder">Пошук по заголовку або тексту новини</sys:String>
+    <sys:String x:Key="NewsLoading">Завантаження новин...</sys:String>
+    <sys:String x:Key="NewsEmpty">Новин поки немає.</sys:String>
+    <sys:String x:Key="NewsStatusFmt">Знайдено новин: {0}</sys:String>
+    <sys:String x:Key="NewsLoadError">Не вдалося оновити новини. Показано останній доступний кеш.</sys:String>
+    <sys:String x:Key="NewsOpenOriginal">Оригінал</sys:String>
+    <sys:String x:Key="NewsSelectArticle">Оберіть новину зі списку, щоб відкрити статтю в програмі.</sys:String>
+    <sys:String x:Key="NewsAllSources">Всі джерела</sys:String>
+    <sys:String x:Key="NewsImportant">Важливо</sys:String>
+    <sys:String x:Key="NewsTranslate">Перекласти</sys:String>
+    <sys:String x:Key="NewsViewOriginal">Оригінал</sys:String>
+    <sys:String x:Key="NewsViewTranslated">Переклад</sys:String>
+    <sys:String x:Key="NewsTranslatingFmt">Перекладаю статтю на {0}...</sys:String>
+    <sys:String x:Key="NewsTranslatedFmt">Переклад статті на {0} готовий.</sys:String>
+    <sys:String x:Key="NewsTranslateCachedFmt">Показано збережений переклад на {0}.</sys:String>
+    <sys:String x:Key="NewsTranslateFailedFmt">Не вдалося перекласти статтю на {0}.</sys:String>
+    <sys:String x:Key="NewsTranslateConfigureAi">Для перекладу новин спочатку вкажіть Gemini API key у налаштуваннях.</sys:String>
+    <sys:String x:Key="NewsTranslateReaderUnavailable">Не вдалося прочитати текст поточної статті для перекладу.</sys:String>
+    <sys:String x:Key="NewsTranslatedForLanguageFmt">переклад: {0}</sys:String>
+    <sys:String x:Key="NewsAiAnalyze">AI аналіз</sys:String>
+    <sys:String x:Key="NewsAiAssistantTitle">AI-помічник по статті</sys:String>
+    <sys:String x:Key="NewsAiSummaryTitle">Коротке зведення</sys:String>
+    <sys:String x:Key="NewsAiKeyPointsTitle">Головне</sys:String>
+    <sys:String x:Key="NewsAiPracticalImpactTitle">Що це означає на практиці</sys:String>
+    <sys:String x:Key="NewsAiConversationTitle">Питання по статті</sys:String>
+    <sys:String x:Key="NewsAiAskPlaceholder">Поставте питання по цій статті</sys:String>
+    <sys:String x:Key="NewsAiAsk">Запитати</sys:String>
+    <sys:String x:Key="NewsAiEmpty">Натисніть AI аналіз, щоб отримати коротке зведення, а нижче можна ставити свої питання по статті.</sys:String>
+    <sys:String x:Key="NewsAiAnalyzingFmt">AI аналізує статтю на {0}...</sys:String>
+    <sys:String x:Key="NewsAiReadyFmt">AI-зведення статті на {0} готове.</sys:String>
+    <sys:String x:Key="NewsAiCachedFmt">Показано збережений AI-аналіз на {0}.</sys:String>
+    <sys:String x:Key="NewsAiFailedFmt">Не вдалося проаналізувати статтю на {0}.</sys:String>
+    <sys:String x:Key="NewsAiReaderUnavailable">Не вдалося достатньо точно виділити основний текст статті. Спробуйте відкрити іншу новину або дочекатися повного завантаження сторінки.</sys:String>
+    <sys:String x:Key="NewsAiThinking">AI готує відповідь по статті...</sys:String>
+    <sys:String x:Key="NewsAiThinkingBubble">AI думає над відповіддю...</sys:String>
+    <sys:String x:Key="NewsAiAskFailed">Не вдалося отримати відповідь AI по цій статті.</sys:String>
+    <sys:String x:Key="NewsAiAnswerReady">Відповідь AI готова.</sys:String>
+    <sys:String x:Key="NewsAiConfigure">Для AI-аналізу новин спочатку вкажіть Gemini API key у налаштуваннях.</sys:String>
+    <sys:String x:Key="NewsAiYou">Ви</sys:String>
+    <sys:String x:Key="NewsAiAssistantName">AI</sys:String>
+    <sys:String x:Key="NewsAiClose">Закрити AI-панель</sys:String>
     <sys:String x:Key="LangLabel">Мова</sys:String>
     <sys:String x:Key="ThemeLabel">Тема</sys:String>
     
@@ -53,7 +97,9 @@
     <sys:String x:Key="TabAgency">Агенція</sys:String>
     <sys:String x:Key="LabelCompanyName">Назва фірми</sys:String>
     <sys:String x:Key="LabelICO">ICO</sys:String>
+    <sys:String x:Key="LabelLegalAddress">Юридична адреса</sys:String>
     <sys:String x:Key="LabelAddress">Адреси</sys:String>
+    <sys:String x:Key="LabelWorkAddresses">Адреси виконання роботи</sys:String>
     <sys:String x:Key="LabelStreet">Вулиця</sys:String>
     <sys:String x:Key="LabelNumber">Номер</sys:String>
     <sys:String x:Key="LabelCity">Місто</sys:String>
@@ -95,6 +141,10 @@
     <sys:String x:Key="TitleSuccess">Успіх</sys:String>
     <sys:String x:Key="TitleError">Помилка</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Виникла непередбачена помилка:</sys:String>
+    <sys:String x:Key="MsgSettingsRecoveredFromBackup">Файл налаштувань було пошкоджено або втрачено. Налаштування відновлено з резервної копії.</sys:String>
+    <sys:String x:Key="MsgSettingsResetToDefaults">Файл налаштувань пошкоджено, резервну копію не вдалося відновити. Використано стандартні налаштування.</sys:String>
+    <sys:String x:Key="MsgFinanceRecoveredFromBackup">Файл фінансів було пошкоджено або втрачено. Дані фінансів відновлено з резервної копії.</sys:String>
+    <sys:String x:Key="MsgFinanceResetToDefaults">Файл фінансів пошкоджено, резервну копію не вдалося відновити. Використано порожню базу фінансів.</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Помилка видалення шаблону: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -106,12 +156,20 @@
     <sys:String x:Key="StepCropPhoto">Етап 2. Обрізка фото</sys:String>
     <sys:String x:Key="StepPassportData">Етап 3. Дані з паспорту</sys:String>
     <sys:String x:Key="StepPassportPage2Data">Дані з паспорту (стор. 2)</sys:String>
+    <sys:String x:Key="StepIdCardData">Етап 3. Дані ID-карти</sys:String>
+    <sys:String x:Key="StepIdCardPage2Data">Дані ID-карти (2 сторони)</sys:String>
+    <sys:String x:Key="StepPassportPage2Hint">AI аналізує другий документ і бере звідти статус та дату закінчення.</sys:String>
+    <sys:String x:Key="StepIdCardPage2Hint">AI аналізує дві сторони ID-карти і бере звідти статус та дату закінчення.</sys:String>
     <sys:String x:Key="StepInsuranceData">Етап 4. Дані страховки</sys:String>
     <sys:String x:Key="StepVisaData">Етап 5. Дані візи</sys:String>
     <sys:String x:Key="StepAddresses">Етап 6. Адреси, позиція, договір</sys:String>
     <sys:String x:Key="StepAdditional">Етап 7. Додаткові дані</sys:String>
     <sys:String x:Key="BtnUploadPassport">Завантажити Документ 1</sys:String>
     <sys:String x:Key="BtnUploadPassportPage2">Завантажити Документ 2</sys:String>
+    <sys:String x:Key="WizardPassport1">Паспорт 1</sys:String>
+    <sys:String x:Key="WizardPassport2">Паспорт 2</sys:String>
+    <sys:String x:Key="WizardIdCard1">ID-карта 1</sys:String>
+    <sys:String x:Key="WizardIdCard2">ID-карта 2</sys:String>
     <sys:String x:Key="BtnUploadVisa">Завантажити візу</sys:String>
     <sys:String x:Key="BtnUploadInsurance">Завантажити страховку</sys:String>
     <sys:String x:Key="BtnApplyCrop">Обрізати фото</sys:String>
@@ -131,6 +189,8 @@
     <sys:String x:Key="BtnDelete">Видалити</sys:String>
     <sys:String x:Key="MsgEmployeesRootMissing">Не задано кореневу папку. Вкажіть Root Folder у налаштуваннях.</sys:String>
     <sys:String x:Key="MsgEmployeesFolderMissing">Папку працівників не знайдено.</sys:String>
+    <sys:String x:Key="MsgEmployeeFolderMissing">Папку працівника не знайдено.</sys:String>
+    <sys:String x:Key="MsgEmployeeProfileMissing">Анкету працівника не вдалося завантажити. Файл employee.json відсутній або пошкоджений.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">У цієї фірми ще немає працівників.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Помилка завантаження працівників.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Завантаження працівників...</sys:String>
@@ -156,6 +216,7 @@
     <sys:String x:Key="EmpBadgePassport">Паспорт</sys:String>
     <sys:String x:Key="EmpBadgeVisa">Віза</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Страховка</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermit">Дозвіл</sys:String>
     <sys:String x:Key="EmpBtnOpen">Відкрити</sys:String>
     <sys:String x:Key="EmpBtnEdit">Редагувати</sys:String>
     <sys:String x:Key="EmpBtnFolder">Папка</sys:String>
@@ -245,7 +306,7 @@
     <sys:String x:Key="DetFieldPosNumber">CZ-ISCO код</sys:String>
     <sys:String x:Key="DetFieldSalary">Зарплата (брутто)</sys:String>
     <sys:String x:Key="DetFieldHourly">Годинна зарплата</sys:String>
-    <sys:String x:Key="DetFieldWorkAddr">Адреса роботи</sys:String>
+    <sys:String x:Key="DetFieldWorkAddr">Адреса виконання роботи</sys:String>
     <sys:String x:Key="DetSecContacts">Контакти та дати</sys:String>
     <sys:String x:Key="DetFieldPhone">Телефон</sys:String>
     <sys:String x:Key="DetFieldEmail">Електронна пошта</sys:String>
@@ -395,6 +456,15 @@
     <sys:String x:Key="EditorSpacing">Інтервали</sys:String>
     <sys:String x:Key="EditorLineSpacing">Міжрядковий</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Абзац</sys:String>
+    <sys:String x:Key="EditorSpacingTooltipTitle">Інтервали</sys:String>
+    <sys:String x:Key="EditorSpacingTooltipDescription">Змінює міжрядковий інтервал і відступи перед або після абзацу.</sys:String>
+    <sys:String x:Key="EditorMoreLineSpacingOptions">Інші параметри інтервалів...</sys:String>
+    <sys:String x:Key="EditorSpacingBefore">Інтервал перед абзацом</sys:String>
+    <sys:String x:Key="EditorSpacingAfter">Інтервал після абзацу</sys:String>
+    <sys:String x:Key="EditorAddSpaceBeforeParagraph">Додати інтервал перед абзацом</sys:String>
+    <sys:String x:Key="EditorRemoveSpaceBeforeParagraph">Прибрати інтервал перед абзацом</sys:String>
+    <sys:String x:Key="EditorAddSpaceAfterParagraph">Додати інтервал після абзацу</sys:String>
+    <sys:String x:Key="EditorRemoveSpaceAfterParagraph">Прибрати інтервал після абзацу</sys:String>
     <sys:String x:Key="EditorTagCatalog">Каталог тегів</sys:String>
     <sys:String x:Key="EditorSearchTags">Пошук тегів...</sys:String>
     <sys:String x:Key="EditorInsert">Вст.</sys:String>
@@ -426,7 +496,7 @@
     <sys:String x:Key="TplCopyTag">Копіювати</sys:String>
     <sys:String x:Key="TplCopyToCompanyTooltip">Скопіювати шаблон в іншу фірму</sys:String>
     <sys:String x:Key="TplCopyDialogTitle">Скопіювати шаблон</sys:String>
-    <sys:String x:Key="TplCopyDialogCompany">Цільова фірма:</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Виберіть фірму:</sys:String>
     <sys:String x:Key="TplCopyDialogName">Нова назва шаблону:</sys:String>
     <sys:String x:Key="TplCopyDialogBtn">Скопіювати</sys:String>
     <sys:String x:Key="TplCopyNoCompanies">Немає інших фірм для копіювання шаблону.</sys:String>
@@ -717,6 +787,7 @@
     <!-- Tag Catalog Descriptions – Company -->
     <sys:String x:Key="TagDescCompanyName">Назва фірми</sys:String>
     <sys:String x:Key="TagDescCompanyICO">ІЧО фірми</sys:String>
+    <sys:String x:Key="TagDescCompanyLegalAddress">Юридична адреса фірми</sys:String>
     <sys:String x:Key="TagDescCompanyWeeklyHours">Робочих годин в тиждень</sys:String>
     <sys:String x:Key="TagDescCompanyDailyHours">Робочих годин в день</sys:String>
     <sys:String x:Key="TagDescCompanyShiftCount">Кількість змін</sys:String>
@@ -785,7 +856,7 @@
     <sys:String x:Key="TagDescEmpAbroadFull">Повна адреса</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Work -->
-    <sys:String x:Key="TagDescEmpWorkAddress">Адреса роботи</sys:String>
+    <sys:String x:Key="TagDescEmpWorkAddress">Адреса виконання роботи</sys:String>
     <sys:String x:Key="TagDescEmpPosition">Позиція</sys:String>
     <sys:String x:Key="TagDescEmpPosNumber">Номер позиції</sys:String>
     <sys:String x:Key="TagDescEmpSalary">Місячна зарплата (брутто)</sys:String>
@@ -807,6 +878,43 @@
     <sys:String x:Key="EditorErrEmpty">Немає вмісту для збереження.</sys:String>
     <sys:String x:Key="EditorErrFmt">Помилка: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Скопійовано: {0}</sys:String>
+    <sys:String x:Key="EditorLayout">Макет</sys:String>
+    <sys:String x:Key="EditorFont">Шрифт</sys:String>
+    <sys:String x:Key="EditorParagraph">Абзац</sys:String>
+    <sys:String x:Key="EditorTools">Інструменти</sys:String>
+    <sys:String x:Key="EditorPageSize">Аркуш</sys:String>
+    <sys:String x:Key="EditorPageOrientation">Орієнтація</sys:String>
+    <sys:String x:Key="EditorPageMargins">Поля</sys:String>
+    <sys:String x:Key="EditorBullets">Маркований список</sys:String>
+    <sys:String x:Key="EditorNumbering">Нумерований список</sys:String>
+    <sys:String x:Key="EditorIndentLeft">Лівий відступ</sys:String>
+    <sys:String x:Key="EditorIndentRight">Правий відступ</sys:String>
+    <sys:String x:Key="EditorIndentFirstLine">Перший рядок</sys:String>
+    <sys:String x:Key="EditorOrientationPortrait">Книжкова</sys:String>
+    <sys:String x:Key="EditorOrientationLandscape">Альбомна</sys:String>
+    <sys:String x:Key="EditorMarginsNormal">Звичайні</sys:String>
+    <sys:String x:Key="EditorMarginsNarrow">Вузькі</sys:String>
+    <sys:String x:Key="EditorMarginsWide">Широкі</sys:String>
+    <sys:String x:Key="EditorMarginTopFmt">Верхнє: 2,54 см</sys:String>
+    <sys:String x:Key="EditorMarginBottomFmt">Нижнє: 2,54 см</sys:String>
+    <sys:String x:Key="EditorMarginLeftFmt">Ліве: 2,54 см</sys:String>
+    <sys:String x:Key="EditorMarginRightFmt">Праве: 2,54 см</sys:String>
+    <sys:String x:Key="EditorMarginTopNarrowFmt">Верхнє: 1,27 см</sys:String>
+    <sys:String x:Key="EditorMarginBottomNarrowFmt">Нижнє: 1,27 см</sys:String>
+    <sys:String x:Key="EditorMarginLeftNarrowFmt">Ліве: 1,27 см</sys:String>
+    <sys:String x:Key="EditorMarginRightNarrowFmt">Праве: 1,27 см</sys:String>
+    <sys:String x:Key="EditorMarginLeftWideFmt">Ліве: 5,08 см</sys:String>
+    <sys:String x:Key="EditorMarginRightWideFmt">Праве: 5,08 см</sys:String>
+    <sys:String x:Key="EditorSamplesButton">Взірці</sys:String>
+    <sys:String x:Key="EditorSamplesTitle">Готові взірці договорів</sys:String>
+    <sys:String x:Key="EditorSamplesDescription">Оберіть один із готових DOCX-взірців. Після вибору поточний вміст редактора буде замінено на стартовий шаблон зі стилями та тегами.</sys:String>
+    <sys:String x:Key="EditorSamplesPreview">Попередній перегляд</sys:String>
+    <sys:String x:Key="EditorSamplesApply">Вибрати взірець</sys:String>
+    <sys:String x:Key="EditorSamplesEmpty">У каталозі поки немає готових взірців.</sys:String>
+    <sys:String x:Key="EditorSamplesLoadError">Не вдалося завантажити вибраний взірець.</sys:String>
+    <sys:String x:Key="EditorSamplesHint">Оберіть потрібний тип договору та перевірте preview перед застосуванням.</sys:String>
+    <sys:String x:Key="EditorStarterApplied">Взірець застосовано: {0}</sys:String>
+    <sys:String x:Key="EditorPageBadgeFmt">Сторінка {0}</sys:String>
     <sys:String x:Key="EditorUnsavedTitle">Незбережені зміни</sys:String>
     <sys:String x:Key="EditorUnsavedClose">Є незбережені зміни. Вийти без збереження?</sys:String>
     <sys:String x:Key="EditorUnsavedPrompt">У шаблоні є незбережені зміни. Натисніть "Так", щоб зберегти і вийти, "Ні" - щоб вийти без збереження, або "Скасувати" - щоб залишитися в редакторі.</sys:String>
@@ -921,6 +1029,11 @@
     <sys:String x:Key="FinExportSelectTitle">Експорт в Excel</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Оберіть фірми для експорту</sys:String>
     <sys:String x:Key="FinExportSelectAll">Вибрати всі</sys:String>
+    <sys:String x:Key="FinExportClearAll">Очистити вибір</sys:String>
+    <sys:String x:Key="FinExportFirmsCount">Фірми</sys:String>
+    <sys:String x:Key="FinExportSelectedCount">Вибрано</sys:String>
+    <sys:String x:Key="FinExportRowsCount">Рядки</sys:String>
+    <sys:String x:Key="FinExportSelectionHint">Вибрано {0} з {1}</sys:String>
     <sys:String x:Key="FinExportBtn">Експортувати</sys:String>
     <sys:String x:Key="FinExportNoFirms">Оберіть хоча б одну фірму</sys:String>
     <sys:String x:Key="BtnDone">Готово</sys:String>
@@ -935,6 +1048,11 @@
     <sys:String x:Key="SettingsFirmsVisibilityHint">Зніміть галочку щоб приховати фірму. Фірми з активними працівниками не можна приховати.</sys:String>
     <sys:String x:Key="SettingsFirmsHasEmployees">Є </sys:String>
     <sys:String x:Key="SettingsFirmsEmployeesCount"> активних — не можна приховати</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsTitle">Діагностика</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsDesc">Останні записи журналу помилок для швидкої перевірки проблем.</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsRefreshBtn">Оновити лог</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsLogPathLabel">Файл логу: </sys:String>
+    <sys:String x:Key="SettingsDiagnosticsEmpty">Журнал помилок поки що порожній.</sys:String>
     <sys:String x:Key="SettingsCopyrightTitle">Авторські права</sys:String>
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. Всі права захищені.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">Це програмне забезпечення є власністю автора. Несанкціоноване копіювання, розповсюдження або модифікація суворо заборонені.</sys:String>
@@ -991,6 +1109,7 @@
     <!-- Company dialog -->
     <sys:String x:Key="CompanyDialogTitleEdit">Редагувати фірму</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Додати нову фірму</sys:String>
+    <sys:String x:Key="CompanyDialogSubtitle">Основні дані, адреси та позиції компанії</sys:String>
     <sys:String x:Key="MsgCompanyHasEmployees">Ця фірма має {0} працівник(ів). Видалити все одно?</sys:String>
     <sys:String x:Key="TitleWarning">Увага</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Ви впевнені, що хочете видалити фірму "{0}"?
@@ -1005,13 +1124,17 @@
 
     <!-- Crop targets -->
     <sys:String x:Key="CropPassport">Паспорт</sys:String>
+    <sys:String x:Key="CropIdCard1">ID-карта 1</sys:String>
     <sys:String x:Key="CropVisa">Віза</sys:String>
     <sys:String x:Key="CropInsurance">Страховка</sys:String>
     <sys:String x:Key="CropPhoto">Фото</sys:String>
     <sys:String x:Key="CropPassport2">Паспорт 2</sys:String>
+    <sys:String x:Key="CropIdCard2">ID-карта 2</sys:String>
     <sys:String x:Key="CropPermit">Дозвіл</sys:String>
     <sys:String x:Key="CarouselPassport">Паспорт</sys:String>
     <sys:String x:Key="CarouselPassport2">Паспорт 2</sys:String>
+    <sys:String x:Key="CarouselIdCard1">ID-карта 1</sys:String>
+    <sys:String x:Key="CarouselIdCard2">ID-карта 2</sys:String>
     <sys:String x:Key="CarouselVisa">Віза</sys:String>
     <sys:String x:Key="CarouselInsurance">Страховка</sys:String>
     <sys:String x:Key="CarouselPermit">Дозвіл</sys:String>
@@ -1044,6 +1167,8 @@
     <sys:String x:Key="MsgArchiveError">Помилка при архівуванні.</sys:String>
     <sys:String x:Key="MsgArchiveSuccess">Працівника успішно переміщено в архів.</sys:String>
     <sys:String x:Key="MsgArchiveCleanupDeferred">Працівника архівовано, але очищення старої папки буде завершено пізніше.</sys:String>
+    <sys:String x:Key="MsgArchiveSourceMissing">Папку працівника або файл employee.json не знайдено.</sys:String>
+    <sys:String x:Key="MsgArchiveConflict">Архівування зупинено: в архіві вже існує працівник з таким самим ідентифікатором.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Документ згенеровано: {0}</sys:String>
@@ -1098,6 +1223,8 @@
     <sys:String x:Key="MsgSelectFirmRestore">Оберіть фірму.</sys:String>
     <sys:String x:Key="MsgEnterStartDate">Вкажіть дату наступу.</sys:String>
     <sys:String x:Key="MsgRestoreError">Помилка при відновленні.</sys:String>
+    <sys:String x:Key="MsgRestoreSourceMissing">Архівну папку працівника або файл employee.json не знайдено.</sys:String>
+    <sys:String x:Key="MsgRestoreConflict">Відновлення зупинено: у вибраній фірмі вже існує працівник з таким самим ідентифікатором.</sys:String>
 
     <!-- Services -->
     <sys:String x:Key="MsgDbSaveError">Помилка збереження бази даних: {0}</sys:String>
@@ -1117,7 +1244,7 @@
     <sys:String x:Key="HistFieldPhone">Телефон</sys:String>
     <sys:String x:Key="HistFieldStatus">Статус</sys:String>
     <sys:String x:Key="HistFieldPosition">Позиція</sys:String>
-    <sys:String x:Key="HistFieldWorkAddr">Адреса роботи</sys:String>
+    <sys:String x:Key="HistFieldWorkAddr">Адреса виконання роботи</sys:String>
     <sys:String x:Key="HistFieldSignDate">Дата підписання</sys:String>
     <sys:String x:Key="HistFieldContractType">Тип договору</sys:String>
     <sys:String x:Key="HistFieldSalary">Зарплата (брутто)</sys:String>
@@ -1184,6 +1311,8 @@
     <sys:String x:Key="AIChatNewChat">Новий чат</sys:String>
     <sys:String x:Key="AIChatNoModel">Gemini API не налаштовано. Перейдіть в Налаштування, щоб додати API ключ.</sys:String>
     <sys:String x:Key="AIChatThinking">AI думає...</sys:String>
+    <sys:String x:Key="AIChatTimeout">AI не відповів вчасно. Спробуйте ще раз.</sys:String>
+    <sys:String x:Key="AIChatNetworkError">Не вдалося підключитися до Gemini. Перевірте інтернет-з'єднання.</sys:String>
 
     <!-- AI Provider -->
     <sys:String x:Key="AIProviderTitle">AI Провайдер</sys:String>
@@ -1224,4 +1353,70 @@
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">Шаблони ще не додані. Натисніть + щоб створити перший.</sys:String>
+
+    <!-- Profile Dialogs -->
+    <sys:String x:Key="ProfileSetupWindowTitle">Agency Contractor - Створення профілю</sys:String>
+    <sys:String x:Key="ProfileLoginWindowTitle">Agency Contractor - Вхід у профіль</sys:String>
+    <sys:String x:Key="ProfileResetWindowTitle">Agency Contractor - Скидання пароля</sys:String>
+    <sys:String x:Key="ProfileSetupHeaderSubtitle">Створення профілю</sys:String>
+    <sys:String x:Key="ProfileLoginHeaderSubtitle">Вхід у профіль</sys:String>
+    <sys:String x:Key="ProfileResetHeaderSubtitle">Скидання пароля</sys:String>
+    <sys:String x:Key="ProfileSetupCardTitle">Закріплений користувач</sys:String>
+    <sys:String x:Key="ProfileSetupCardDescription">Для цієї програми потрібно один раз створити профіль користувача.</sys:String>
+    <sys:String x:Key="ProfileLoginCardTitle">Підтвердження входу</sys:String>
+    <sys:String x:Key="ProfileLoginCardDescription">Цей профіль уже створено для програми. Введіть пароль, щоб продовжити.</sys:String>
+    <sys:String x:Key="ProfileResetCardTitle">Потрібно задати новий пароль</sys:String>
+    <sys:String x:Key="ProfileResetDescriptionPrefix">Для профілю </sys:String>
+    <sys:String x:Key="ProfileResetDescriptionSuffix"> адміністратор скинув пароль. Введіть новий пароль, щоб продовжити роботу.</sys:String>
+    <sys:String x:Key="ProfileFirstNameLabel">Ім'я</sys:String>
+    <sys:String x:Key="ProfileLastNameLabel">Прізвище</sys:String>
+    <sys:String x:Key="ProfileUserLabel">Користувач</sys:String>
+    <sys:String x:Key="ProfilePasswordLabel">Пароль</sys:String>
+    <sys:String x:Key="ProfileCurrentPasswordLabel">Поточний пароль</sys:String>
+    <sys:String x:Key="ProfileNewPasswordLabel">Новий пароль</sys:String>
+    <sys:String x:Key="ProfileConfirmPasswordLabel">Підтвердження пароля</sys:String>
+    <sys:String x:Key="ProfileShowPassword">Показати пароль</sys:String>
+    <sys:String x:Key="ProfileShowPasswords">Показати паролі</sys:String>
+    <sys:String x:Key="ProfileRememberMe">Запам'ятати вхід на цьому комп'ютері</sys:String>
+    <sys:String x:Key="ProfileSetupFooterHint">Після створення профілю програма продовжить запуск.</sys:String>
+    <sys:String x:Key="ProfileLoginFooterHint">Якщо закрити це вікно, програма не відкриється.</sys:String>
+    <sys:String x:Key="ProfileResetFooterHint">Після успішного скидання програма відкриється як звичайно.</sys:String>
+    <sys:String x:Key="ProfileCloseButton">Закрити</sys:String>
+    <sys:String x:Key="ProfileCreateButton">Створити профіль</sys:String>
+    <sys:String x:Key="ProfileLoginButton">Увійти</sys:String>
+    <sys:String x:Key="ProfileSavePasswordButton">Зберегти пароль</sys:String>
+    <sys:String x:Key="ProfileNameLatinHint">Тільки латиниця у форматі Abc, наприклад: Ivan, Petrenko.</sys:String>
+    <sys:String x:Key="ProfileErrClientIdMissing">Client ID is not available.</sys:String>
+    <sys:String x:Key="ProfileErrFirstNameRequired">Вкажіть ім'я.</sys:String>
+    <sys:String x:Key="ProfileErrLastNameRequired">Вкажіть прізвище.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordRequired">Вкажіть пароль.</sys:String>
+    <sys:String x:Key="ProfileErrCurrentPasswordRequired">Введіть поточний пароль.</sys:String>
+    <sys:String x:Key="ProfileErrNewPasswordRequired">Введіть новий пароль.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordMinLength">Пароль має містити щонайменше 6 символів.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordsMismatch">Паролі не співпадають.</sys:String>
+    <sys:String x:Key="ProfileErrFirstNameLatin">Ім'я має бути тільки латиницею у форматі Abc.</sys:String>
+    <sys:String x:Key="ProfileErrLastNameLatin">Прізвище має бути тільки латиницею у форматі Abc.</sys:String>
+    <sys:String x:Key="ProfileErrAlreadyExists">Профіль для цієї програми вже існує.</sys:String>
+    <sys:String x:Key="ProfileErrStorageUnavailable">Таблиця профілів ще не підготовлена в Supabase.</sys:String>
+    <sys:String x:Key="ProfileErrCreateFailed">Не вдалося створити профіль.</sys:String>
+    <sys:String x:Key="ProfileErrNotFound">Профіль не знайдено.</sys:String>
+    <sys:String x:Key="ProfileErrWrongPassword">Невірний пароль.</sys:String>
+    <sys:String x:Key="ProfileErrCurrentPasswordWrong">Поточний пароль невірний.</sys:String>
+    <sys:String x:Key="ProfileErrLoadFailed">Не вдалося завантажити профіль.</sys:String>
+    <sys:String x:Key="ProfileErrUpdateFailed">Не вдалося оновити профіль.</sys:String>
+    <sys:String x:Key="ProfileErrEmptyServerResponse">Порожня відповідь від сервера.</sys:String>
+    <sys:String x:Key="SettingsProfileTitle">Профіль</sys:String>
+    <sys:String x:Key="SettingsProfileSubtitle">Тут можна змінити ім'я, прізвище, пароль і параметр запам'ятовування входу.</sys:String>
+    <sys:String x:Key="SettingsProfileNotLoaded">Профіль користувача ще не завантажено.</sys:String>
+    <sys:String x:Key="SettingsProfileAssignedUserTitle">Закріплений користувач</sys:String>
+    <sys:String x:Key="SettingsProfileClientIdLabel">Client ID: </sys:String>
+    <sys:String x:Key="SettingsProfileDetailsTitle">Дані профілю</sys:String>
+    <sys:String x:Key="SettingsProfileSaveButton">Зберегти профіль</sys:String>
+    <sys:String x:Key="SettingsProfileChangePasswordTitle">Зміна пароля</sys:String>
+    <sys:String x:Key="SettingsProfileChangePasswordButton">Змінити пароль</sys:String>
+    <sys:String x:Key="SettingsProfileNotLoadedError">Профіль не завантажено.</sys:String>
+    <sys:String x:Key="SettingsProfileUpdated">Профіль оновлено.</sys:String>
+    <sys:String x:Key="SettingsProfilePasswordChanged">Пароль змінено.</sys:String>
+    <sys:String x:Key="SettingsProfileRememberUpdated">Параметр входу оновлено.</sys:String>
+    <sys:String x:Key="SettingsProfileRememberUpdateFailed">Не вдалося оновити параметр входу.</sys:String>
 </ResourceDictionary>

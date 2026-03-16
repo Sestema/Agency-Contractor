@@ -8,6 +8,7 @@
     <sys:String x:Key="BtnFinances">Finance a Tabulky</sys:String>
     <sys:String x:Key="BtnArchive">Archiv</sys:String>
     <sys:String x:Key="BtnActivityLog">Historie akcí</sys:String>
+    <sys:String x:Key="BtnNews">Novinky</sys:String>
     <sys:String x:Key="ActLogEmpty">Zatím žádné záznamy</sys:String>
     <sys:String x:Key="ActLogClearFilter">Vymazat filtr</sys:String>
     <sys:String x:Key="ActLogCatEmployee">Zaměstnanec</sys:String>
@@ -37,6 +38,49 @@
     <sys:String x:Key="ActLogCleared">Historie akcí vymazána</sys:String>
     
     <sys:String x:Key="SettingsTitle">Nastavení</sys:String>
+    <sys:String x:Key="NewsTitle">Novinky</sys:String>
+    <sys:String x:Key="NewsRefresh">Obnovit</sys:String>
+    <sys:String x:Key="NewsSearchPlaceholder">Hledat zprávy podle názvu nebo textu</sys:String>
+    <sys:String x:Key="NewsLoading">Načítání novinek...</sys:String>
+    <sys:String x:Key="NewsEmpty">Zatím nejsou k dispozici žádné novinky.</sys:String>
+    <sys:String x:Key="NewsStatusFmt">Počet novinek: {0}</sys:String>
+    <sys:String x:Key="NewsLoadError">Nepodařilo se obnovit novinky. Zobrazuje se poslední dostupná cache.</sys:String>
+    <sys:String x:Key="NewsOpenOriginal">Originál</sys:String>
+    <sys:String x:Key="NewsSelectArticle">Vyberte novinku ze seznamu a otevřete celý článek v programu.</sys:String>
+    <sys:String x:Key="NewsAllSources">Všechny zdroje</sys:String>
+    <sys:String x:Key="NewsImportant">Důležité</sys:String>
+    <sys:String x:Key="NewsTranslate">Přeložit</sys:String>
+    <sys:String x:Key="NewsViewOriginal">Originál</sys:String>
+    <sys:String x:Key="NewsViewTranslated">Překlad</sys:String>
+    <sys:String x:Key="NewsTranslatingFmt">Překládám článek do jazyka {0}...</sys:String>
+    <sys:String x:Key="NewsTranslatedFmt">Překlad článku do jazyka {0} je připraven.</sys:String>
+    <sys:String x:Key="NewsTranslateCachedFmt">Zobrazuje se uložený překlad v jazyce {0}.</sys:String>
+    <sys:String x:Key="NewsTranslateFailedFmt">Nepodařilo se přeložit článek do jazyka {0}.</sys:String>
+    <sys:String x:Key="NewsTranslateConfigureAi">Před překladem novinek nastavte v nastavení Gemini API key.</sys:String>
+    <sys:String x:Key="NewsTranslateReaderUnavailable">Nepodařilo se načíst text aktuálního článku pro překlad.</sys:String>
+    <sys:String x:Key="NewsTranslatedForLanguageFmt">překlad: {0}</sys:String>
+    <sys:String x:Key="NewsAiAnalyze">AI analýza</sys:String>
+    <sys:String x:Key="NewsAiAssistantTitle">AI asistent článku</sys:String>
+    <sys:String x:Key="NewsAiSummaryTitle">Krátké shrnutí</sys:String>
+    <sys:String x:Key="NewsAiKeyPointsTitle">Hlavní body</sys:String>
+    <sys:String x:Key="NewsAiPracticalImpactTitle">Praktický dopad</sys:String>
+    <sys:String x:Key="NewsAiConversationTitle">Otázky k článku</sys:String>
+    <sys:String x:Key="NewsAiAskPlaceholder">Zeptejte se na tento článek</sys:String>
+    <sys:String x:Key="NewsAiAsk">Zeptat se</sys:String>
+    <sys:String x:Key="NewsAiEmpty">Klikněte na AI analýzu pro krátké shrnutí. Níže pak můžete pokládat vlastní otázky k článku.</sys:String>
+    <sys:String x:Key="NewsAiAnalyzingFmt">AI analyzuje článek v jazyce {0}...</sys:String>
+    <sys:String x:Key="NewsAiReadyFmt">AI shrnutí článku v jazyce {0} je připraveno.</sys:String>
+    <sys:String x:Key="NewsAiCachedFmt">Zobrazuje se uložená AI analýza v jazyce {0}.</sys:String>
+    <sys:String x:Key="NewsAiFailedFmt">Nepodařilo se analyzovat článek v jazyce {0}.</sys:String>
+    <sys:String x:Key="NewsAiReaderUnavailable">Nepodařilo se dostatečně přesně získat hlavní text článku. Zkuste jinou novinku nebo počkejte na úplné načtení stránky.</sys:String>
+    <sys:String x:Key="NewsAiThinking">AI připravuje odpověď k tomuto článku...</sys:String>
+    <sys:String x:Key="NewsAiThinkingBubble">AI přemýšlí nad odpovědí...</sys:String>
+    <sys:String x:Key="NewsAiAskFailed">Nepodařilo se získat AI odpověď k tomuto článku.</sys:String>
+    <sys:String x:Key="NewsAiAnswerReady">AI odpověď je připravena.</sys:String>
+    <sys:String x:Key="NewsAiConfigure">Před AI analýzou novinek nastavte v nastavení Gemini API key.</sys:String>
+    <sys:String x:Key="NewsAiYou">Vy</sys:String>
+    <sys:String x:Key="NewsAiAssistantName">AI</sys:String>
+    <sys:String x:Key="NewsAiClose">Zavřít AI panel</sys:String>
     <sys:String x:Key="LangLabel">Jazyk</sys:String>
     <sys:String x:Key="ThemeLabel">Motiv</sys:String>
     
@@ -53,7 +97,9 @@
     <sys:String x:Key="TabAgency">Agentura</sys:String>
     <sys:String x:Key="LabelCompanyName">Název firmy</sys:String>
     <sys:String x:Key="LabelICO">IČO</sys:String>
+    <sys:String x:Key="LabelLegalAddress">Právní adresa</sys:String>
     <sys:String x:Key="LabelAddress">Adresy</sys:String>
+    <sys:String x:Key="LabelWorkAddresses">Adresy výkonu práce</sys:String>
     <sys:String x:Key="LabelStreet">Ulice</sys:String>
     <sys:String x:Key="LabelNumber">Číslo</sys:String>
     <sys:String x:Key="LabelCity">Město</sys:String>
@@ -95,6 +141,10 @@
     <sys:String x:Key="TitleSuccess">Úspěch</sys:String>
     <sys:String x:Key="TitleError">Chyba</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Došlo k neočekávané chybě:</sys:String>
+    <sys:String x:Key="MsgSettingsRecoveredFromBackup">Soubor nastavení byl poškozen nebo chyběl. Nastavení bylo obnoveno ze zálohy.</sys:String>
+    <sys:String x:Key="MsgSettingsResetToDefaults">Soubor nastavení je poškozený a zálohu se nepodařilo obnovit. Použije se výchozí nastavení.</sys:String>
+    <sys:String x:Key="MsgFinanceRecoveredFromBackup">Soubor financí byl poškozen nebo chyběl. Finanční data byla obnovena ze zálohy.</sys:String>
+    <sys:String x:Key="MsgFinanceResetToDefaults">Soubor financí je poškozený a zálohu se nepodařilo obnovit. Použije se prázdná databáze financí.</sys:String>
     <sys:String x:Key="MsgLicenseBlocked">Licence je zablokována. Kontaktujte administrátora.</sys:String>
     <sys:String x:Key="MsgEditorOpenError">Nepodařilo se otevřít editor:
 {0}</sys:String>
@@ -112,12 +162,20 @@
     <sys:String x:Key="StepCropPhoto">Krok 2. Oříznutí fotky</sys:String>
     <sys:String x:Key="StepPassportData">Krok 3. Údaje z pasu</sys:String>
     <sys:String x:Key="StepPassportPage2Data">Údaje z pasu (strana 2)</sys:String>
+    <sys:String x:Key="StepIdCardData">Krok 3. Údaje z ID karty</sys:String>
+    <sys:String x:Key="StepIdCardPage2Data">Údaje z ID karty (2 strany)</sys:String>
+    <sys:String x:Key="StepPassportPage2Hint">AI analyzuje druhý dokument a vezme z něj status a datum konce.</sys:String>
+    <sys:String x:Key="StepIdCardPage2Hint">AI analyzuje obě strany ID karty a vezme z nich status a datum konce.</sys:String>
     <sys:String x:Key="StepInsuranceData">Krok 4. Údaje o pojištění</sys:String>
     <sys:String x:Key="StepVisaData">Krok 5. Údaje o vízu</sys:String>
     <sys:String x:Key="StepAddresses">Krok 6. Adresy, pozice, smlouva</sys:String>
     <sys:String x:Key="StepAdditional">Krok 7. Další údaje</sys:String>
     <sys:String x:Key="BtnUploadPassport">Nahrát Dokument 1</sys:String>
     <sys:String x:Key="BtnUploadPassportPage2">Nahrát Dokument 2</sys:String>
+    <sys:String x:Key="WizardPassport1">Pas 1</sys:String>
+    <sys:String x:Key="WizardPassport2">Pas 2</sys:String>
+    <sys:String x:Key="WizardIdCard1">ID karta 1</sys:String>
+    <sys:String x:Key="WizardIdCard2">ID karta 2</sys:String>
     <sys:String x:Key="BtnUploadVisa">Nahrát vízum</sys:String>
     <sys:String x:Key="BtnUploadInsurance">Nahrát pojištění</sys:String>
     <sys:String x:Key="BtnApplyCrop">Oříznout fotku</sys:String>
@@ -137,6 +195,8 @@
     <sys:String x:Key="BtnDelete">Smazat</sys:String>
     <sys:String x:Key="MsgEmployeesRootMissing">Není nastavena kořenová složka. Nastavte ji v Nastavení.</sys:String>
     <sys:String x:Key="MsgEmployeesFolderMissing">Složka zaměstnanců nebyla nalezena.</sys:String>
+    <sys:String x:Key="MsgEmployeeFolderMissing">Složka zaměstnance nebyla nalezena.</sys:String>
+    <sys:String x:Key="MsgEmployeeProfileMissing">Profil zaměstnance se nepodařilo načíst. Soubor employee.json chybí nebo je poškozen.</sys:String>
     <sys:String x:Key="MsgEmployeesEmpty">Tato firma zatím nemá žádné zaměstnance.</sys:String>
     <sys:String x:Key="MsgEmployeesLoadError">Chyba při načítání zaměstnanců.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Načítání zaměstnanců...</sys:String>
@@ -250,7 +310,7 @@
     <sys:String x:Key="DetFieldPosNumber">CZ-ISCO kód</sys:String>
     <sys:String x:Key="DetFieldSalary">Mzda (hrubá)</sys:String>
     <sys:String x:Key="DetFieldHourly">Hodinová mzda</sys:String>
-    <sys:String x:Key="DetFieldWorkAddr">Adresa pracoviště</sys:String>
+    <sys:String x:Key="DetFieldWorkAddr">Adresa výkonu práce</sys:String>
     <sys:String x:Key="DetSecContacts">Kontakty a data</sys:String>
     <sys:String x:Key="DetFieldPhone">Telefon</sys:String>
     <sys:String x:Key="DetFieldEmail">E-mail</sys:String>
@@ -400,6 +460,15 @@
     <sys:String x:Key="EditorSpacing">Řádkování</sys:String>
     <sys:String x:Key="EditorLineSpacing">Řádky</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Odstavec</sys:String>
+    <sys:String x:Key="EditorSpacingTooltipTitle">Řádkování a mezery</sys:String>
+    <sys:String x:Key="EditorSpacingTooltipDescription">Změní řádkování a přidá nebo odebere mezeru před nebo za aktuálním odstavcem.</sys:String>
+    <sys:String x:Key="EditorMoreLineSpacingOptions">Další možnosti řádkování...</sys:String>
+    <sys:String x:Key="EditorSpacingBefore">Mezera před odstavcem</sys:String>
+    <sys:String x:Key="EditorSpacingAfter">Mezera za odstavcem</sys:String>
+    <sys:String x:Key="EditorAddSpaceBeforeParagraph">Přidat mezeru před odstavcem</sys:String>
+    <sys:String x:Key="EditorRemoveSpaceBeforeParagraph">Odebrat mezeru před odstavcem</sys:String>
+    <sys:String x:Key="EditorAddSpaceAfterParagraph">Přidat mezeru za odstavcem</sys:String>
+    <sys:String x:Key="EditorRemoveSpaceAfterParagraph">Odebrat mezeru za odstavcem</sys:String>
     <sys:String x:Key="EditorTagCatalog">Katalog tagů</sys:String>
     <sys:String x:Key="EditorSearchTags">Hledat tagy...</sys:String>
     <sys:String x:Key="EditorInsert">Vl.</sys:String>
@@ -431,7 +500,7 @@
     <sys:String x:Key="TplCopyTag">Kopírovat</sys:String>
     <sys:String x:Key="TplCopyToCompanyTooltip">Zkopírovat šablonu do jiné firmy</sys:String>
     <sys:String x:Key="TplCopyDialogTitle">Kopírovat šablonu</sys:String>
-    <sys:String x:Key="TplCopyDialogCompany">Cílová firma:</sys:String>
+    <sys:String x:Key="TplCopyDialogCompany">Vyberte firmu:</sys:String>
     <sys:String x:Key="TplCopyDialogName">Nový název šablony:</sys:String>
     <sys:String x:Key="TplCopyDialogBtn">Kopírovat</sys:String>
     <sys:String x:Key="TplCopyNoCompanies">Pro kopírování šablony nejsou k dispozici žádné jiné firmy.</sys:String>
@@ -722,6 +791,7 @@
     <!-- Tag Catalog Descriptions – Company -->
     <sys:String x:Key="TagDescCompanyName">Název firmy</sys:String>
     <sys:String x:Key="TagDescCompanyICO">IČO firmy</sys:String>
+    <sys:String x:Key="TagDescCompanyLegalAddress">Právní adresa firmy</sys:String>
     <sys:String x:Key="TagDescCompanyWeeklyHours">Pracovní hodiny za týden</sys:String>
     <sys:String x:Key="TagDescCompanyDailyHours">Pracovní hodiny za den</sys:String>
     <sys:String x:Key="TagDescCompanyShiftCount">Počet směn</sys:String>
@@ -790,7 +860,7 @@
     <sys:String x:Key="TagDescEmpAbroadFull">Celá adresa</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Work -->
-    <sys:String x:Key="TagDescEmpWorkAddress">Adresa pracoviště</sys:String>
+    <sys:String x:Key="TagDescEmpWorkAddress">Adresa výkonu práce</sys:String>
     <sys:String x:Key="TagDescEmpPosition">Pozice</sys:String>
     <sys:String x:Key="TagDescEmpPosNumber">Číslo pozice</sys:String>
     <sys:String x:Key="TagDescEmpSalary">Měsíční mzda (hrubá)</sys:String>
@@ -812,6 +882,43 @@
     <sys:String x:Key="EditorErrEmpty">Žádný obsah k uložení.</sys:String>
     <sys:String x:Key="EditorErrFmt">Chyba: {0}</sys:String>
     <sys:String x:Key="EditorCopied">Zkopírováno: {0}</sys:String>
+    <sys:String x:Key="EditorLayout">Rozvrzeni</sys:String>
+    <sys:String x:Key="EditorFont">Pismo</sys:String>
+    <sys:String x:Key="EditorParagraph">Odstavec</sys:String>
+    <sys:String x:Key="EditorTools">Nastroje</sys:String>
+    <sys:String x:Key="EditorPageSize">Stranka</sys:String>
+    <sys:String x:Key="EditorPageOrientation">Orientace</sys:String>
+    <sys:String x:Key="EditorPageMargins">Okraje</sys:String>
+    <sys:String x:Key="EditorBullets">Odraskovy seznam</sys:String>
+    <sys:String x:Key="EditorNumbering">Cislovany seznam</sys:String>
+    <sys:String x:Key="EditorIndentLeft">Levy odsazeni</sys:String>
+    <sys:String x:Key="EditorIndentRight">Pravy odsazeni</sys:String>
+    <sys:String x:Key="EditorIndentFirstLine">Prvni radek</sys:String>
+    <sys:String x:Key="EditorOrientationPortrait">Na vysku</sys:String>
+    <sys:String x:Key="EditorOrientationLandscape">Na sirku</sys:String>
+    <sys:String x:Key="EditorMarginsNormal">Normalni</sys:String>
+    <sys:String x:Key="EditorMarginsNarrow">Uzke</sys:String>
+    <sys:String x:Key="EditorMarginsWide">Siroke</sys:String>
+    <sys:String x:Key="EditorMarginTopFmt">Horni: 2,54 cm</sys:String>
+    <sys:String x:Key="EditorMarginBottomFmt">Dolni: 2,54 cm</sys:String>
+    <sys:String x:Key="EditorMarginLeftFmt">Leve: 2,54 cm</sys:String>
+    <sys:String x:Key="EditorMarginRightFmt">Prave: 2,54 cm</sys:String>
+    <sys:String x:Key="EditorMarginTopNarrowFmt">Horni: 1,27 cm</sys:String>
+    <sys:String x:Key="EditorMarginBottomNarrowFmt">Dolni: 1,27 cm</sys:String>
+    <sys:String x:Key="EditorMarginLeftNarrowFmt">Leve: 1,27 cm</sys:String>
+    <sys:String x:Key="EditorMarginRightNarrowFmt">Prave: 1,27 cm</sys:String>
+    <sys:String x:Key="EditorMarginLeftWideFmt">Leve: 5,08 cm</sys:String>
+    <sys:String x:Key="EditorMarginRightWideFmt">Prave: 5,08 cm</sys:String>
+    <sys:String x:Key="EditorSamplesButton">Vzory</sys:String>
+    <sys:String x:Key="EditorSamplesTitle">Hotove vzory smluv</sys:String>
+    <sys:String x:Key="EditorSamplesDescription">Vyberte jeden z pripravenych DOCX vzoru. Po potvrzeni se aktualni obsah editoru nahradi startovni sablonou se styly a tagy.</sys:String>
+    <sys:String x:Key="EditorSamplesPreview">Nahled</sys:String>
+    <sys:String x:Key="EditorSamplesApply">Pouzit vzor</sys:String>
+    <sys:String x:Key="EditorSamplesEmpty">V katalogu zatim nejsou zadne vestavene vzory.</sys:String>
+    <sys:String x:Key="EditorSamplesLoadError">Vybrany vzor se nepodarilo nacist.</sys:String>
+    <sys:String x:Key="EditorSamplesHint">Vyberte potrebny typ smlouvy a pred pouzitim zkontrolujte nahled.</sys:String>
+    <sys:String x:Key="EditorStarterApplied">Vzor byl pouzit: {0}</sys:String>
+    <sys:String x:Key="EditorPageBadgeFmt">Stranka {0}</sys:String>
     <sys:String x:Key="EditorUnsavedTitle">Neuložené změny</sys:String>
     <sys:String x:Key="EditorUnsavedClose">Máte neuložené změny. Opravdu odejít bez uložení?</sys:String>
     <sys:String x:Key="EditorUnsavedPrompt">Tato šablona obsahuje neuložené změny. Klikněte na "Ano" pro uložení a návrat, na "Ne" pro návrat bez uložení nebo na "Zrušit" pro pokračování v editoru.</sys:String>
@@ -926,6 +1033,11 @@
     <sys:String x:Key="FinExportSelectTitle">Export do Excelu</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Vyberte firmy pro export</sys:String>
     <sys:String x:Key="FinExportSelectAll">Vybrat vše</sys:String>
+    <sys:String x:Key="FinExportClearAll">Vymazat výběr</sys:String>
+    <sys:String x:Key="FinExportFirmsCount">Firmy</sys:String>
+    <sys:String x:Key="FinExportSelectedCount">Vybráno</sys:String>
+    <sys:String x:Key="FinExportRowsCount">Řádky</sys:String>
+    <sys:String x:Key="FinExportSelectionHint">Vybráno {0} z {1}</sys:String>
     <sys:String x:Key="FinExportBtn">Exportovat</sys:String>
     <sys:String x:Key="FinExportNoFirms">Vyberte alespoň jednu firmu</sys:String>
     <sys:String x:Key="BtnDone">Hotovo</sys:String>
@@ -940,6 +1052,11 @@
     <sys:String x:Key="SettingsFirmsVisibilityHint">Odškrtnutím skryjete firmu ze všech seznamů. Firmy s aktivními zaměstnanci nelze skrýt.</sys:String>
     <sys:String x:Key="SettingsFirmsHasEmployees">Má aktivní zaměstnance: </sys:String>
     <sys:String x:Key="SettingsFirmsEmployeesCount"> — nelze skrýt</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsTitle">Diagnostika</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsDesc">Poslední záznamy chybového logu pro rychlou kontrolu problémů.</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsRefreshBtn">Obnovit log</sys:String>
+    <sys:String x:Key="SettingsDiagnosticsLogPathLabel">Soubor logu: </sys:String>
+    <sys:String x:Key="SettingsDiagnosticsEmpty">Chybový log je zatím prázdný.</sys:String>
     <sys:String x:Key="SettingsCopyrightTitle">Autorská práva</sys:String>
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. Všechna práva vyhrazena.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">Tento software je vlastnictvím autora. Neoprávněné kopírování, šíření nebo úpravy jsou přísně zakázány.</sys:String>
@@ -996,6 +1113,7 @@
     <!-- Company dialog -->
     <sys:String x:Key="CompanyDialogTitleEdit">Upravit firmu</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Přidat novou firmu</sys:String>
+    <sys:String x:Key="CompanyDialogSubtitle">Základní údaje, adresy a pozice firmy</sys:String>
     <sys:String x:Key="MsgCompanyHasEmployees">Tato firma má {0} zaměstnanc(ů). Smazat přesto?</sys:String>
     <sys:String x:Key="TitleWarning">Upozornění</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Opravdu chcete smazat firmu "{0}"?
@@ -1010,14 +1128,18 @@ Složka na disku NEBUDE smazána.</sys:String>
 
     <!-- Crop targets -->
     <sys:String x:Key="CropPassport">Pas</sys:String>
+    <sys:String x:Key="CropIdCard1">ID karta 1</sys:String>
     <sys:String x:Key="CropVisa">Vízum</sys:String>
     <sys:String x:Key="CropInsurance">Pojištění</sys:String>
     <sys:String x:Key="CropPhoto">Foto</sys:String>
     <sys:String x:Key="CropPassport2">Pas 2</sys:String>
+    <sys:String x:Key="CropIdCard2">ID karta 2</sys:String>
     <sys:String x:Key="CropPermit">Povolení</sys:String>
     <sys:String x:Key="CropVisaPage2">ID karta 2</sys:String>
     <sys:String x:Key="CarouselPassport">Pas</sys:String>
     <sys:String x:Key="CarouselPassport2">Pas 2</sys:String>
+    <sys:String x:Key="CarouselIdCard1">ID karta 1</sys:String>
+    <sys:String x:Key="CarouselIdCard2">ID karta 2</sys:String>
     <sys:String x:Key="CarouselVisa">Vízum</sys:String>
     <sys:String x:Key="CarouselInsurance">Pojištění</sys:String>
     <sys:String x:Key="CarouselPermit">Povolení</sys:String>
@@ -1051,6 +1173,8 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="MsgArchiveError">Chyba při archivaci.</sys:String>
     <sys:String x:Key="MsgArchiveSuccess">Zaměstnanec byl úspěšně přesunut do archivu.</sys:String>
     <sys:String x:Key="MsgArchiveCleanupDeferred">Zaměstnanec byl archivován, ale vyčištění původní složky bude dokončeno později.</sys:String>
+    <sys:String x:Key="MsgArchiveSourceMissing">Složka zaměstnance nebo soubor employee.json nebyl nalezen.</sys:String>
+    <sys:String x:Key="MsgArchiveConflict">Archivace byla zastavena, protože v archivu již existuje zaměstnanec se stejným identifikátorem.</sys:String>
 
     <!-- Document generation -->
     <sys:String x:Key="MsgDocGenerated">Dokument vygenerován: {0}</sys:String>
@@ -1105,6 +1229,8 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="MsgSelectFirmRestore">Vyberte firmu.</sys:String>
     <sys:String x:Key="MsgEnterStartDate">Zadejte datum nástupu.</sys:String>
     <sys:String x:Key="MsgRestoreError">Chyba při obnovení.</sys:String>
+    <sys:String x:Key="MsgRestoreSourceMissing">Archivní složka zaměstnance nebo soubor employee.json nebyl nalezen.</sys:String>
+    <sys:String x:Key="MsgRestoreConflict">Obnovení bylo zastaveno, protože ve vybrané firmě již existuje zaměstnanec se stejným identifikátorem.</sys:String>
 
     <!-- Services -->
     <sys:String x:Key="MsgDbSaveError">Chyba ukládání databáze: {0}</sys:String>
@@ -1125,7 +1251,7 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="HistFieldPhone">Telefon</sys:String>
     <sys:String x:Key="HistFieldStatus">Stav</sys:String>
     <sys:String x:Key="HistFieldPosition">Pozice</sys:String>
-    <sys:String x:Key="HistFieldWorkAddr">Adresa pracoviště</sys:String>
+    <sys:String x:Key="HistFieldWorkAddr">Adresa výkonu práce</sys:String>
     <sys:String x:Key="HistFieldSignDate">Datum podpisu</sys:String>
     <sys:String x:Key="HistFieldContractType">Typ smlouvy</sys:String>
     <sys:String x:Key="HistFieldSalary">Mzda (hrubá)</sys:String>
@@ -1192,6 +1318,8 @@ Složka na disku NEBUDE smazána.</sys:String>
     <sys:String x:Key="AIChatNewChat">Nový chat</sys:String>
     <sys:String x:Key="AIChatNoModel">Gemini API není nakonfigurováno. Přejděte do Nastavení a přidejte API klíč.</sys:String>
     <sys:String x:Key="AIChatThinking">AI přemýšlí...</sys:String>
+    <sys:String x:Key="AIChatTimeout">AI neodpověděla včas. Zkuste to prosím znovu.</sys:String>
+    <sys:String x:Key="AIChatNetworkError">Nepodařilo se připojit ke Gemini. Zkontrolujte internetové připojení.</sys:String>
 
     <!-- AI Provider -->
     <sys:String x:Key="AIProviderTitle">AI Poskytovatel</sys:String>
@@ -1232,4 +1360,70 @@ Složka na disku NEBUDE smazána.</sys:String>
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">Žádné šablony. Klikněte na + pro vytvoření první.</sys:String>
+
+    <!-- Profile Dialogs -->
+    <sys:String x:Key="ProfileSetupWindowTitle">Agency Contractor - Vytvoření profilu</sys:String>
+    <sys:String x:Key="ProfileLoginWindowTitle">Agency Contractor - Přihlášení do profilu</sys:String>
+    <sys:String x:Key="ProfileResetWindowTitle">Agency Contractor - Reset hesla</sys:String>
+    <sys:String x:Key="ProfileSetupHeaderSubtitle">Vytvoření profilu</sys:String>
+    <sys:String x:Key="ProfileLoginHeaderSubtitle">Přihlášení do profilu</sys:String>
+    <sys:String x:Key="ProfileResetHeaderSubtitle">Reset hesla</sys:String>
+    <sys:String x:Key="ProfileSetupCardTitle">Přiřazený uživatel</sys:String>
+    <sys:String x:Key="ProfileSetupCardDescription">Pro tuto aplikaci je potřeba jednou vytvořit uživatelský profil.</sys:String>
+    <sys:String x:Key="ProfileLoginCardTitle">Potvrzení přihlášení</sys:String>
+    <sys:String x:Key="ProfileLoginCardDescription">Tento profil už je pro aplikaci vytvořen. Zadejte heslo a pokračujte.</sys:String>
+    <sys:String x:Key="ProfileResetCardTitle">Je potřeba zadat nové heslo</sys:String>
+    <sys:String x:Key="ProfileResetDescriptionPrefix">Pro profil </sys:String>
+    <sys:String x:Key="ProfileResetDescriptionSuffix"> administrátor resetoval heslo. Zadejte nové heslo a pokračujte.</sys:String>
+    <sys:String x:Key="ProfileFirstNameLabel">Jméno</sys:String>
+    <sys:String x:Key="ProfileLastNameLabel">Příjmení</sys:String>
+    <sys:String x:Key="ProfileUserLabel">Uživatel</sys:String>
+    <sys:String x:Key="ProfilePasswordLabel">Heslo</sys:String>
+    <sys:String x:Key="ProfileCurrentPasswordLabel">Aktuální heslo</sys:String>
+    <sys:String x:Key="ProfileNewPasswordLabel">Nové heslo</sys:String>
+    <sys:String x:Key="ProfileConfirmPasswordLabel">Potvrzení hesla</sys:String>
+    <sys:String x:Key="ProfileShowPassword">Zobrazit heslo</sys:String>
+    <sys:String x:Key="ProfileShowPasswords">Zobrazit hesla</sys:String>
+    <sys:String x:Key="ProfileRememberMe">Zapamatovat přihlášení na tomto počítači</sys:String>
+    <sys:String x:Key="ProfileSetupFooterHint">Po vytvoření profilu bude aplikace pokračovat ve spouštění.</sys:String>
+    <sys:String x:Key="ProfileLoginFooterHint">Pokud toto okno zavřete, aplikace se neotevře.</sys:String>
+    <sys:String x:Key="ProfileResetFooterHint">Po úspěšném resetu se aplikace otevře jako obvykle.</sys:String>
+    <sys:String x:Key="ProfileCloseButton">Zavřít</sys:String>
+    <sys:String x:Key="ProfileCreateButton">Vytvořit profil</sys:String>
+    <sys:String x:Key="ProfileLoginButton">Přihlásit se</sys:String>
+    <sys:String x:Key="ProfileSavePasswordButton">Uložit heslo</sys:String>
+    <sys:String x:Key="ProfileNameLatinHint">Použijte jen latinku ve formátu Abc, například: Ivan, Petrenko.</sys:String>
+    <sys:String x:Key="ProfileErrClientIdMissing">Client ID is not available.</sys:String>
+    <sys:String x:Key="ProfileErrFirstNameRequired">Zadejte jméno.</sys:String>
+    <sys:String x:Key="ProfileErrLastNameRequired">Zadejte příjmení.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordRequired">Zadejte heslo.</sys:String>
+    <sys:String x:Key="ProfileErrCurrentPasswordRequired">Zadejte aktuální heslo.</sys:String>
+    <sys:String x:Key="ProfileErrNewPasswordRequired">Zadejte nové heslo.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordMinLength">Heslo musí mít alespoň 6 znaků.</sys:String>
+    <sys:String x:Key="ProfileErrPasswordsMismatch">Hesla se neshodují.</sys:String>
+    <sys:String x:Key="ProfileErrFirstNameLatin">Jméno musí být jen latinkou ve formátu Abc.</sys:String>
+    <sys:String x:Key="ProfileErrLastNameLatin">Příjmení musí být jen latinkou ve formátu Abc.</sys:String>
+    <sys:String x:Key="ProfileErrAlreadyExists">Profil pro tuto aplikaci už existuje.</sys:String>
+    <sys:String x:Key="ProfileErrStorageUnavailable">Úložiště profilů ještě není v Supabase připravené.</sys:String>
+    <sys:String x:Key="ProfileErrCreateFailed">Profil se nepodařilo vytvořit.</sys:String>
+    <sys:String x:Key="ProfileErrNotFound">Profil nebyl nalezen.</sys:String>
+    <sys:String x:Key="ProfileErrWrongPassword">Neplatné heslo.</sys:String>
+    <sys:String x:Key="ProfileErrCurrentPasswordWrong">Aktuální heslo je nesprávné.</sys:String>
+    <sys:String x:Key="ProfileErrLoadFailed">Profil se nepodařilo načíst.</sys:String>
+    <sys:String x:Key="ProfileErrUpdateFailed">Profil se nepodařilo aktualizovat.</sys:String>
+    <sys:String x:Key="ProfileErrEmptyServerResponse">Prázdná odpověď ze serveru.</sys:String>
+    <sys:String x:Key="SettingsProfileTitle">Profil</sys:String>
+    <sys:String x:Key="SettingsProfileSubtitle">Zde můžete změnit jméno, příjmení, heslo a nastavení zapamatování přihlášení.</sys:String>
+    <sys:String x:Key="SettingsProfileNotLoaded">Uživatelský profil zatím nebyl načten.</sys:String>
+    <sys:String x:Key="SettingsProfileAssignedUserTitle">Přiřazený uživatel</sys:String>
+    <sys:String x:Key="SettingsProfileClientIdLabel">Client ID: </sys:String>
+    <sys:String x:Key="SettingsProfileDetailsTitle">Údaje profilu</sys:String>
+    <sys:String x:Key="SettingsProfileSaveButton">Uložit profil</sys:String>
+    <sys:String x:Key="SettingsProfileChangePasswordTitle">Změna hesla</sys:String>
+    <sys:String x:Key="SettingsProfileChangePasswordButton">Změnit heslo</sys:String>
+    <sys:String x:Key="SettingsProfileNotLoadedError">Profil není načten.</sys:String>
+    <sys:String x:Key="SettingsProfileUpdated">Profil byl aktualizován.</sys:String>
+    <sys:String x:Key="SettingsProfilePasswordChanged">Heslo bylo změněno.</sys:String>
+    <sys:String x:Key="SettingsProfileRememberUpdated">Nastavení přihlášení bylo aktualizováno.</sys:String>
+    <sys:String x:Key="SettingsProfileRememberUpdateFailed">Nepodařilo se aktualizovat nastavení přihlášení.</sys:String>
 </ResourceDictionary>

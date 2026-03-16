@@ -80,6 +80,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string OldValue { get; set; } = string.Empty;
         public string NewValue { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string ActorName { get; set; } = string.Empty;
 
         public string EventIcon => EventType switch
         {
@@ -221,6 +222,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string OldValue { get; set; } = string.Empty;
         public string NewValue { get; set; } = string.Empty;
         public string Details { get; set; } = string.Empty;
+        public string ActorName { get; set; } = string.Empty;
+        public string TimeDisplay => DateTime.TryParse(Timestamp, out var dt) ? dt.ToString("HH:mm") : Timestamp;
     }
 
     public class ExportSheetOption : System.ComponentModel.INotifyPropertyChanged

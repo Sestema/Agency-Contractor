@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Win11DesktopApp.Services
 {
@@ -13,7 +14,7 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.16-beta.2";
+        public const string CurrentAppVersion = "0.1.22";
         private string _settingsPath;
         private string _backupPath;
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { WriteIndented = true };
@@ -39,6 +40,8 @@ namespace Win11DesktopApp.Services
             public double ArchiveZoomLevel { get; set; } = 1.0;
             public double CandidateZoomLevel { get; set; } = 1.0;
             public string CandidateViewMode { get; set; } = "List";
+            public double SalarySidebarTopRatio { get; set; } = 2.0;
+            public double SalarySidebarWidth { get; set; } = 230.0;
             public bool ShowStatPaid { get; set; } = false;
             public bool ShowStatRemaining { get; set; } = false;
             public bool ShowStatAdvances { get; set; } = false;
@@ -69,12 +72,18 @@ namespace Win11DesktopApp.Services
             public double WindowWidth { get; set; } = -1;
             public double WindowHeight { get; set; } = -1;
             public bool WindowMaximized { get; set; } = false;
+            public double ExportFirmSelectWindowWidth { get; set; } = -1;
+            public double ExportFirmSelectWindowHeight { get; set; } = -1;
             public List<string> MenuCardOrder { get; set; } = new List<string>();
             public string DashSlot0 { get; set; } = "expiring";
             public string DashSlot1 { get; set; } = "companies";
             public string DashSlot2 { get; set; } = "salary";
             public double DashColumnRatio { get; set; } = 1.0;
             public double DashRowRatio { get; set; } = 0.4;
+            public bool RememberProfileLogin { get; set; } = false;
+            public string EncryptedProfileSessionToken { get; set; } = string.Empty;
+            public int ProfileSessionVersion { get; set; } = 0;
+            public string ProfileClientId { get; set; } = string.Empty;
         }
 
         public AppSettings Settings { get; private set; } = new AppSettings();
@@ -92,29 +101,41 @@ namespace Win11DesktopApp.Services
 
         private void LoadSettings()
         {
+            var shouldPersistDefaults = false;
+
             if (File.Exists(_settingsPath))
             {
                 try
                 {
-                    var json = File.ReadAllText(_settingsPath, Encoding.UTF8);
-                    Settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                    Settings = SafeFileService.ReadJsonOrDefault(_settingsPath, new AppSettings(), _jsonOptions, Encoding.UTF8);
                 }
                 catch (Exception ex)
                 {
                     LoggingService.LogError("AppSettingsService.LoadSettings", ex);
+                    BackupUnreadableFile(_settingsPath, "settings");
                     if (TryRestoreFromBackup())
                         return;
+
                     Settings = new AppSettings();
+                    shouldPersistDefaults = true;
+                    NotifyWarning(Res("MsgSettingsResetToDefaults"));
                 }
             }
             else
             {
+                if (TryRestoreFromBackup())
+                    return;
+
                 Settings = new AppSettings();
             }
 
             if (Settings.AppVersion != CurrentAppVersion)
             {
                 Settings.AppVersion = CurrentAppVersion;
+                _ = SaveSettingsImmediate();
+            }
+            else if (shouldPersistDefaults)
+            {
                 _ = SaveSettingsImmediate();
             }
         }
@@ -124,16 +145,60 @@ namespace Win11DesktopApp.Services
             try
             {
                 if (!File.Exists(_backupPath)) return false;
-                var json = File.ReadAllText(_backupPath, Encoding.UTF8);
-                Settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                Settings = SafeFileService.ReadJsonOrDefault(_backupPath, new AppSettings(), _jsonOptions, Encoding.UTF8);
                 LoggingService.LogWarning("AppSettingsService", "Restored settings from backup");
+                NotifyWarning(Res("MsgSettingsRecoveredFromBackup"));
                 _ = SaveSettingsImmediate();
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning("AppSettingsService.TryRestoreFromBackup", ex.Message);
+                BackupUnreadableFile(_backupPath, "settings-backup");
                 return false;
             }
+        }
+
+        private static void BackupUnreadableFile(string path, string label)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                    return;
+
+                var directory = Path.GetDirectoryName(path);
+                var fileName = Path.GetFileName(path);
+                var quarantineName = $"{fileName}.corrupt.{DateTime.Now:yyyyMMdd_HHmmss}";
+                var quarantinePath = string.IsNullOrWhiteSpace(directory)
+                    ? quarantineName
+                    : Path.Combine(directory, quarantineName);
+                File.Move(path, quarantinePath, true);
+                LoggingService.LogWarning("AppSettingsService.BackupUnreadableFile",
+                    $"Moved unreadable {label} file to {quarantinePath}");
+            }
+            catch
+            {
+            }
+        }
+
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
+
+        private static void NotifyWarning(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            Application.Current?.Dispatcher?.BeginInvoke(() =>
+            {
+                if (Application.Current?.MainWindow?.IsVisible == true)
+                {
+                    ToastService.Instance.Warning(message);
+                    return;
+                }
+
+                MessageBox.Show(message, Res("TitleWarning"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            });
         }
 
         private static double SafeDouble(double value, double fallback = -1)
@@ -149,9 +214,13 @@ namespace Win11DesktopApp.Services
             Settings.WindowTop = SafeDouble(Settings.WindowTop);
             Settings.WindowWidth = SafeDouble(Settings.WindowWidth);
             Settings.WindowHeight = SafeDouble(Settings.WindowHeight);
+            Settings.ExportFirmSelectWindowWidth = SafeDouble(Settings.ExportFirmSelectWindowWidth);
+            Settings.ExportFirmSelectWindowHeight = SafeDouble(Settings.ExportFirmSelectWindowHeight);
             Settings.EmployeeZoomLevel = SafeDouble(Settings.EmployeeZoomLevel, 1.0);
             Settings.ArchiveZoomLevel = SafeDouble(Settings.ArchiveZoomLevel, 1.0);
             Settings.CandidateZoomLevel = SafeDouble(Settings.CandidateZoomLevel, 1.0);
+            Settings.SalarySidebarTopRatio = SafeDouble(Settings.SalarySidebarTopRatio, 2.0);
+            Settings.SalarySidebarWidth = SafeDouble(Settings.SalarySidebarWidth, 230.0);
 
             if (Settings.SalaryColumnWidths?.Count > 0)
                 Settings.SalaryColumnWidths = Settings.SalaryColumnWidths
@@ -171,19 +240,18 @@ namespace Win11DesktopApp.Services
             try
             {
                 SanitizeSettings();
-                var tempPath = _settingsPath + ".tmp";
-                var json = JsonSerializer.Serialize(Settings, _jsonOptions);
-                File.WriteAllText(tempPath, json, Encoding.UTF8);
 
                 if (File.Exists(_settingsPath))
-                    File.Copy(_settingsPath, _backupPath, true);
+                {
+                    var existingJson = SafeFileService.ReadAllText(_settingsPath, Encoding.UTF8);
+                    SafeFileService.WriteTextAtomic(_backupPath, existingJson, Encoding.UTF8);
+                }
 
-                File.Move(tempPath, _settingsPath, true);
+                SafeFileService.WriteJsonAtomic(_settingsPath, Settings, _jsonOptions, Encoding.UTF8);
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("AppSettingsService.SaveSettings", ex);
-                try { if (File.Exists(_settingsPath + ".tmp")) File.Delete(_settingsPath + ".tmp"); } catch (Exception delEx) { LoggingService.LogWarning("AppSettings.CleanupTemp", delEx.Message); }
             }
             finally
             {

@@ -274,6 +274,8 @@ namespace Win11DesktopApp.ViewModels
                 if (!string.IsNullOrEmpty(query))
                 {
                     if (!(entry.Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(entry.Details?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                        && !(entry.ActorName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
                         && !(entry.EmployeeName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
                         && !(entry.FirmName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
                         && !(entry.ActionType?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
@@ -311,8 +313,10 @@ namespace Win11DesktopApp.ViewModels
                 ws.Cell(1, 5).Value = Res("ActLogColEmployee");
                 ws.Cell(1, 6).Value = Res("ActLogColOld");
                 ws.Cell(1, 7).Value = Res("ActLogColNew");
+                ws.Cell(1, 8).Value = "Actor";
+                ws.Cell(1, 9).Value = "Details";
 
-                var headerRange = ws.Range(1, 1, 1, 7);
+                var headerRange = ws.Range(1, 1, 1, 9);
                 headerRange.Style.Font.Bold = true;
                 headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#E3F2FD");
 
@@ -327,10 +331,15 @@ namespace Win11DesktopApp.ViewModels
                     ws.Cell(r, 5).Value = e.EmployeeName;
                     ws.Cell(r, 6).Value = e.OldValue;
                     ws.Cell(r, 7).Value = e.NewValue;
+                    ws.Cell(r, 8).Value = e.ActorName;
+                    ws.Cell(r, 9).Value = e.Details;
                 }
 
                 ws.Columns().AdjustToContents();
                 wb.SaveAs(dlg.FileName);
+                _logService.Log("ExportExcel", "Export", SelectedFirm, "",
+                    "Експортовано журнал дій → Excel",
+                    details: BuildExportDetailsForLog(dlg.FileName));
 
                 MessageBox.Show(Res("ActLogExported"), Res("TitleSuccess"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -338,6 +347,29 @@ namespace Win11DesktopApp.ViewModels
             {
                 LoggingService.LogError("ActivityLogViewModel.ExportToExcel", ex);
             }
+        }
+
+        private string BuildExportDetailsForLog(string outputPath)
+        {
+            var activeFilters = new List<string>
+            {
+                $"Записів: {Entries.Count}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
+                activeFilters.Add($"Пошук: {SearchText}");
+
+            if (!string.IsNullOrWhiteSpace(SelectedCategory))
+                activeFilters.Add($"Категорія: {SelectedCategory}");
+
+            if (!string.IsNullOrWhiteSpace(SelectedFirm))
+                activeFilters.Add($"Фірма: {SelectedFirm}");
+
+            if (DateFrom != null || DateTo != null)
+                activeFilters.Add($"Період: {DateFrom?.ToString("dd.MM.yyyy") ?? "..." } - {DateTo?.ToString("dd.MM.yyyy") ?? "..."}");
+
+            activeFilters.Add($"Файл: {Path.GetFileName(outputPath)}");
+            return string.Join("; ", activeFilters);
         }
 
         private void ClearAllHistory()

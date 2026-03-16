@@ -29,6 +29,7 @@ namespace Win11DesktopApp.Services
         private readonly TagCatalogService _tagCatalogService;
         private readonly FolderService _folderService;
         private static readonly SemaphoreSlim _historyLock = new(1, 1);
+        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         public EmployeeService(AppSettingsService appSettingsService, TagCatalogService tagCatalogService, FolderService folderService)
         {
@@ -36,6 +37,21 @@ namespace Win11DesktopApp.Services
             _tagCatalogService = tagCatalogService;
             _folderService = folderService;
             CleanupStaleTempFolders();
+        }
+
+        private static T? ReadJson<T>(string path)
+        {
+            return SafeFileService.ReadJson<T>(path, _jsonOptions, System.Text.Encoding.UTF8);
+        }
+
+        private static T ReadJsonOrDefault<T>(string path, T fallback)
+        {
+            return SafeFileService.ReadJsonOrDefault(path, fallback, _jsonOptions, System.Text.Encoding.UTF8);
+        }
+
+        private static void WriteJsonAtomic<T>(string path, T value)
+        {
+            SafeFileService.WriteJsonAtomic(path, value, _jsonOptions, System.Text.Encoding.UTF8);
         }
 
         private static void CleanupStaleTempFolders()
@@ -177,45 +193,71 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(employeesFolder))
             {
                 Debug.WriteLine("EmployeeService.SaveEmployee: employees folder path is empty");
+                LoggingService.LogWarning("EmployeeService.SaveEmployee", $"Employees folder path is empty for firm '{firmName}'");
                 return string.Empty;
             }
-            Directory.CreateDirectory(employeesFolder);
 
-            var employeeFolder = ResolveEmployeeFolder(employeesFolder, data);
-            Directory.CreateDirectory(employeeFolder);
+            string employeeFolder = string.Empty;
+            var employeeFolderExisted = false;
 
-            data.Files.Passport = SaveDocument(passport, employeeFolder, $"{data.FirstName} {data.LastName} - Pass");
-
-            var isIdCard = data.VisaDocType == "id_card";
-            var visaFileName = isIdCard ? $"{data.FirstName} {data.LastName} - Carta 1" : $"{data.FirstName} {data.LastName} - Viza";
-            data.Files.Visa = SaveDocument(visa, employeeFolder, visaFileName);
-
-            if (isIdCard)
-                data.Files.VisaPage2 = SaveDocument(visaPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Carta 2");
-
-            var insName = string.IsNullOrWhiteSpace(data.InsuranceCompanyShort) ? "Insurance" : data.InsuranceCompanyShort;
-            data.Files.Insurance = SaveDocument(insurance, employeeFolder, $"{data.FirstName} {data.LastName} - {insName}");
-
-            data.Files.WorkPermit = SaveDocument(workPermit, employeeFolder, $"{data.FirstName} {data.LastName} - Povolení k práci");
-            data.Files.PassportPage2 = SaveDocument(passportPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Pass Page2");
-
-            if (!string.IsNullOrEmpty(photoPath))
+            try
             {
-                var photoDest = Path.Combine(employeeFolder, $"{data.FirstName} {data.LastName} - Photo.jpg");
-                File.Copy(photoPath, photoDest, true);
-                data.Files.Photo = Path.GetFileName(photoDest);
+                Directory.CreateDirectory(employeesFolder);
+
+                employeeFolder = ResolveEmployeeFolder(employeesFolder, data);
+                employeeFolderExisted = Directory.Exists(employeeFolder);
+                Directory.CreateDirectory(employeeFolder);
+
+                data.Files.Passport = SaveDocument(passport, employeeFolder, $"{data.FirstName} {data.LastName} - Pass");
+
+                var isIdCard = data.VisaDocType == "id_card";
+                var visaFileName = isIdCard ? $"{data.FirstName} {data.LastName} - Carta 1" : $"{data.FirstName} {data.LastName} - Viza";
+                data.Files.Visa = SaveDocument(visa, employeeFolder, visaFileName);
+
+                if (isIdCard)
+                    data.Files.VisaPage2 = SaveDocument(visaPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Carta 2");
+
+                var insName = string.IsNullOrWhiteSpace(data.InsuranceCompanyShort) ? "Insurance" : data.InsuranceCompanyShort;
+                data.Files.Insurance = SaveDocument(insurance, employeeFolder, $"{data.FirstName} {data.LastName} - {insName}");
+
+                data.Files.WorkPermit = SaveDocument(workPermit, employeeFolder, $"{data.FirstName} {data.LastName} - Povolení k práci");
+                data.Files.PassportPage2 = SaveDocument(passportPage2, employeeFolder, $"{data.FirstName} {data.LastName} - Pass Page2");
+
+                if (!string.IsNullOrEmpty(photoPath))
+                {
+                    if (!File.Exists(photoPath))
+                    {
+                        LoggingService.LogWarning("EmployeeService.SaveEmployee",
+                            $"Photo file not found: {photoPath}");
+                    }
+                    else
+                    {
+                        var photoDest = Path.Combine(employeeFolder, $"{data.FirstName} {data.LastName} - Photo.jpg");
+                        File.Copy(photoPath, photoDest, true);
+                        data.Files.Photo = Path.GetFileName(photoDest);
+                    }
+                }
+
+                if (!SaveEmployeeData(employeeFolder, data, notifyUser: false))
+                {
+                    if (!employeeFolderExisted)
+                        TryDeleteIncompleteEmployeeFolder(employeeFolder);
+                    return string.Empty;
+                }
+
+                _tagCatalogService.AddTagsForEmployee(firmName, data);
+                LoggingService.LogInfo("EmployeeService", $"Employee saved: {data.FirstName} {data.LastName} in {firmName}");
+                Debug.WriteLine($"EmployeeService.SaveEmployee: saved to {employeeFolder}");
+                return employeeFolder;
             }
-
-            var jsonPath = Path.Combine(employeeFolder, "employee.json");
-            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-            var tempPath = jsonPath + ".tmp";
-            File.WriteAllText(tempPath, json, System.Text.Encoding.UTF8);
-            File.Move(tempPath, jsonPath, true);
-
-            _tagCatalogService.AddTagsForEmployee(firmName, data);
-            LoggingService.LogInfo("EmployeeService", $"Employee saved: {data.FirstName} {data.LastName} in {firmName}");
-            Debug.WriteLine($"EmployeeService.SaveEmployee: saved to {employeeFolder}");
-            return employeeFolder;
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SaveEmployee error: {ex.Message}");
+                LoggingService.LogError("EmployeeService.SaveEmployee", ex);
+                if (!employeeFolderExisted && !string.IsNullOrWhiteSpace(employeeFolder))
+                    TryDeleteIncompleteEmployeeFolder(employeeFolder);
+                return string.Empty;
+            }
         }
 
         public List<EmployeeSummary> GetEmployeesForFirm(string firmName)
@@ -244,8 +286,7 @@ namespace Win11DesktopApp.Services
                 }
                 try
                 {
-                    var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                    var data = JsonSerializer.Deserialize<EmployeeData>(json);
+                    var data = ReadJson<EmployeeData>(jsonPath);
                     if (data == null) continue;
                     _tagCatalogService.AddTagsForEmployee(firmName, data);
                     summaries.Add(BuildSummary(firmName, folder, data));
@@ -279,8 +320,7 @@ namespace Win11DesktopApp.Services
                 }
                 try
                 {
-                    var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                    var data = JsonSerializer.Deserialize<EmployeeData>(json);
+                    var data = ReadJson<EmployeeData>(jsonPath);
                     if (data == null) continue;
                     _tagCatalogService.AddTagsForEmployee(firmName, data);
                     summaries.Add(BuildSummary(firmName, folder, data));
@@ -306,8 +346,7 @@ namespace Win11DesktopApp.Services
             if (!File.Exists(jsonPath)) return null;
             try
             {
-                var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                var data = JsonSerializer.Deserialize<EmployeeData>(json);
+                var data = ReadJson<EmployeeData>(jsonPath);
                 if (data == null) return null;
 
                 bool changed = false;
@@ -436,21 +475,37 @@ namespace Win11DesktopApp.Services
             return changed;
         }
 
-        public bool SaveEmployeeData(string employeeFolder, EmployeeData data)
+        public bool SaveEmployeeData(string employeeFolder, EmployeeData data, bool notifyUser = true)
         {
-            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+            {
+                LoggingService.LogWarning("EmployeeService.SaveEmployeeData", "Employee folder path is empty.");
+                if (notifyUser)
+                    NotifySaveFailure(Res("MsgProfileSaveFail"));
+                return false;
+            }
+
+            if (data == null)
+            {
+                LoggingService.LogWarning("EmployeeService.SaveEmployeeData", $"Employee data is null for {employeeFolder}");
+                if (notifyUser)
+                    NotifySaveFailure(Res("MsgProfileSaveFail"));
+                return false;
+            }
+
             try
             {
-                var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                var tempPath = jsonPath + ".tmp";
-                File.WriteAllText(tempPath, json, System.Text.Encoding.UTF8);
-                File.Move(tempPath, jsonPath, true);
+                Directory.CreateDirectory(employeeFolder);
+                var jsonPath = Path.Combine(employeeFolder, "employee.json");
+                WriteJsonAtomic(jsonPath, data);
                 return true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"SaveEmployeeData error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.SaveEmployeeData", ex);
+                if (notifyUser)
+                    NotifySaveFailure(Res("MsgProfileSaveFail"), ex.Message);
                 return false;
             }
         }
@@ -592,6 +647,11 @@ namespace Win11DesktopApp.Services
             {
                 if (string.IsNullOrEmpty(doc.PdfPath))
                     return string.Empty;
+                if (!File.Exists(doc.PdfPath))
+                {
+                    LoggingService.LogWarning("EmployeeService.SaveDocument", $"PDF source file not found: {doc.PdfPath}");
+                    return string.Empty;
+                }
                 var pdfPath = Path.Combine(employeeFolder, $"{baseName}.pdf");
                 File.Copy(doc.PdfPath, pdfPath, true);
                 return Path.GetFileName(pdfPath);
@@ -599,9 +659,61 @@ namespace Win11DesktopApp.Services
 
             if (string.IsNullOrEmpty(doc.ImagePath))
                 return string.Empty;
+            if (!File.Exists(doc.ImagePath))
+            {
+                LoggingService.LogWarning("EmployeeService.SaveDocument", $"Image source file not found: {doc.ImagePath}");
+                return string.Empty;
+            }
             var jpgPath = Path.Combine(employeeFolder, $"{baseName}.jpg");
             File.Copy(doc.ImagePath, jpgPath, true);
             return Path.GetFileName(jpgPath);
+        }
+
+        private static void TryDeleteIncompleteEmployeeFolder(string employeeFolder)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(employeeFolder) || !Directory.Exists(employeeFolder))
+                    return;
+
+                if (File.Exists(Path.Combine(employeeFolder, "employee.json")))
+                    return;
+
+                Directory.Delete(employeeFolder, true);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.TryDeleteIncompleteEmployeeFolder", ex.Message);
+            }
+        }
+
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
+
+        private static void NotifySaveFailure(string message, string? details = null)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            var fullMessage = string.IsNullOrWhiteSpace(details)
+                ? message
+                : $"{message} {details}";
+
+            Application.Current?.Dispatcher?.BeginInvoke(() =>
+            {
+                if (Application.Current?.MainWindow?.IsVisible == true)
+                {
+                    ToastService.Instance.Error(fullMessage);
+                    return;
+                }
+
+                MessageBox.Show(fullMessage, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+        }
+
+        private static void NotifyOperationFailure(string message, string? details = null)
+        {
+            NotifySaveFailure(message, details);
         }
 
         private void ConvertImageToJpg(string inputPath, string outputPath)
@@ -712,8 +824,7 @@ namespace Win11DesktopApp.Services
                 var jsonPath = Path.Combine(folderPath, "employee.json");
                 if (!File.Exists(jsonPath)) return false;
 
-                var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                var existing = JsonSerializer.Deserialize<EmployeeData>(json);
+                var existing = ReadJson<EmployeeData>(jsonPath);
                 if (existing == null) return false;
 
                 return string.Equals(existing.BirthDate?.Trim(), newData.BirthDate?.Trim(), StringComparison.OrdinalIgnoreCase);
@@ -742,8 +853,7 @@ namespace Win11DesktopApp.Services
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
                     return new List<ArchiveLogEntry>();
-                var json = File.ReadAllText(path, System.Text.Encoding.UTF8);
-                return JsonSerializer.Deserialize<List<ArchiveLogEntry>>(json) ?? new List<ArchiveLogEntry>();
+                return ReadJsonOrDefault(path, new List<ArchiveLogEntry>());
             }
             catch (Exception ex)
             {
@@ -761,10 +871,7 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrEmpty(path)) return;
                 var entries = LoadArchiveLog();
                 entries.Add(entry);
-                var json = JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true });
-                var tmp = path + ".tmp";
-                File.WriteAllText(tmp, json, System.Text.Encoding.UTF8);
-                File.Move(tmp, path, true);
+                WriteJsonAtomic(path, entries);
             }
             catch (Exception ex)
             {
@@ -792,8 +899,7 @@ namespace Win11DesktopApp.Services
                 if (!File.Exists(jsonPath)) continue;
                 try
                 {
-                    var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                    var data = JsonSerializer.Deserialize<EmployeeData>(json);
+                    var data = ReadJson<EmployeeData>(jsonPath);
                     if (data == null) continue;
 
                     var fullName = $"{data.FirstName} {data.LastName}";
@@ -813,11 +919,8 @@ namespace Win11DesktopApp.Services
                             data.FirmHistory = deduplicated;
                             try
                             {
-                                var resaveJson = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                                 var resavePath = Path.Combine(folder, "employee.json");
-                                var resaveTmp = resavePath + ".tmp";
-                                File.WriteAllText(resaveTmp, resaveJson, System.Text.Encoding.UTF8);
-                                File.Move(resaveTmp, resavePath, true);
+                                WriteJsonAtomic(resavePath, data);
                             }
                             catch (Exception ex2) { LoggingService.LogWarning("GetArchivedEmployees.Dedup", ex2.Message); }
                         }
@@ -870,8 +973,7 @@ namespace Win11DesktopApp.Services
                     if (!File.Exists(jsonPath)) continue;
                     try
                     {
-                        var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                        var data = JsonSerializer.Deserialize<EmployeeData>(json);
+                        var data = ReadJson<EmployeeData>(jsonPath);
                         if (data == null || data.FirmHistory == null || data.FirmHistory.Count == 0) continue;
 
                         var fullName = $"{data.FirstName} {data.LastName}";
@@ -900,20 +1002,43 @@ namespace Win11DesktopApp.Services
             return result;
         }
 
-        public async Task<string> RestoreFromArchive(string archiveEmployeeFolder, string newFirmName, string newStartDate, string newContractSignDate, string positionTag, string workAddressTag)
+        public async Task<string> RestoreFromArchive(string archiveEmployeeFolder, string newFirmName, string newStartDate, string newContractSignDate, string positionTag, string positionNumber, string workAddressTag)
         {
             try
             {
-                var jsonPath = Path.Combine(archiveEmployeeFolder, "employee.json");
-                if (!File.Exists(jsonPath)) return string.Empty;
+                if (string.IsNullOrWhiteSpace(archiveEmployeeFolder) || !Directory.Exists(archiveEmployeeFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
+                        $"Archive employee folder not found: {archiveEmployeeFolder}");
+                    NotifyOperationFailure(Res("MsgRestoreSourceMissing"));
+                    return string.Empty;
+                }
 
-                var json = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                var data = JsonSerializer.Deserialize<EmployeeData>(json);
-                if (data == null) return string.Empty;
+                var jsonPath = Path.Combine(archiveEmployeeFolder, "employee.json");
+                if (!File.Exists(jsonPath))
+                {
+                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
+                        $"Archive employee.json not found: {jsonPath}");
+                    NotifyOperationFailure(Res("MsgRestoreSourceMissing"));
+                    return string.Empty;
+                }
+
+                var data = ReadJson<EmployeeData>(jsonPath);
+                if (data == null)
+                {
+                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
+                        $"Could not read archived employee data: {jsonPath}");
+                    NotifyOperationFailure(Res("MsgRestoreError"));
+                    return string.Empty;
+                }
+
+                if (string.IsNullOrWhiteSpace(data.UniqueId))
+                    data.UniqueId = Guid.NewGuid().ToString();
 
                 data.StartDate = newStartDate;
                 data.ContractSignDate = newContractSignDate;
                 data.PositionTag = positionTag;
+                data.PositionNumber = positionNumber;
                 data.WorkAddressTag = workAddressTag;
                 data.EndDate = string.Empty;
                 data.IsArchived = false;
@@ -921,27 +1046,48 @@ namespace Win11DesktopApp.Services
                 data.Status = "Active";
 
                 var employeesFolder = _folderService.GetEmployeesFolder(newFirmName);
-                if (string.IsNullOrEmpty(employeesFolder)) return string.Empty;
+                if (string.IsNullOrEmpty(employeesFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
+                        $"Employees folder path is empty for firm '{newFirmName}'");
+                    NotifyOperationFailure(Res("MsgEmployeesRootMissing"));
+                    return string.Empty;
+                }
+
                 Directory.CreateDirectory(employeesFolder);
 
-                var folderName = Path.GetFileName(archiveEmployeeFolder);
-                var destFolder = Path.Combine(employeesFolder, folderName);
+                var existingFolderWithSameId = FindEmployeeFolderByUniqueId(employeesFolder, data.UniqueId);
+                if (!string.IsNullOrWhiteSpace(existingFolderWithSameId))
+                {
+                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
+                        $"Restore blocked because employee with the same UniqueId already exists: {existingFolderWithSameId}");
+                    NotifyOperationFailure(Res("MsgRestoreConflict"));
+                    return string.Empty;
+                }
+
+                var destFolder = ResolveAvailableFolder(employeesFolder,
+                    NormalizeFolderName($"{data.FirstName}_{data.LastName} - {data.StartDate}"));
+                if (string.IsNullOrWhiteSpace(destFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
+                        $"Could not resolve destination folder for {data.FirstName} {data.LastName} in {employeesFolder}");
+                    NotifyOperationFailure(Res("MsgRestoreError"));
+                    return string.Empty;
+                }
 
                 CopyDirectory(archiveEmployeeFolder, destFolder);
 
-                var newJson = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                 var restoredJsonPath = Path.Combine(destFolder, "employee.json");
-                var restoredTmp = restoredJsonPath + ".tmp";
-                File.WriteAllText(restoredTmp, newJson, System.Text.Encoding.UTF8);
-                File.Move(restoredTmp, restoredJsonPath, true);
+                WriteJsonAtomic(restoredJsonPath, data);
 
-                var written = File.ReadAllText(restoredJsonPath, System.Text.Encoding.UTF8);
-                var verify = JsonSerializer.Deserialize<EmployeeData>(written);
-                if (verify == null || string.IsNullOrEmpty(verify.FirstName))
+                var verify = ReadJson<EmployeeData>(restoredJsonPath);
+                if (verify == null || string.IsNullOrEmpty(verify.FirstName) || !string.Equals(verify.UniqueId, data.UniqueId, StringComparison.OrdinalIgnoreCase))
                 {
                     LoggingService.LogError("RestoreFromArchive", new InvalidOperationException(
                         $"Restored employee.json validation failed for {restoredJsonPath}"));
-                    return destFolder;
+                    TryDeleteDirectory(destFolder);
+                    NotifyOperationFailure(Res("MsgRestoreError"));
+                    return string.Empty;
                 }
 
                 TryCleanupDeferredDirectory(archiveEmployeeFolder);
@@ -982,20 +1128,46 @@ namespace Win11DesktopApp.Services
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(employeeFolder) || !Directory.Exists(employeeFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployee",
+                        $"Employee folder not found: {employeeFolder}");
+                    NotifyOperationFailure(Res("MsgArchiveSourceMissing"));
+                    return new ArchiveEmployeeResult();
+                }
+
                 var archiveFolder = _folderService.GetArchiveFolder();
-                if (string.IsNullOrEmpty(archiveFolder)) return new ArchiveEmployeeResult();
+                if (string.IsNullOrEmpty(archiveFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployee", "Archive folder path is empty.");
+                    NotifyOperationFailure(Res("MsgArchiveError"));
+                    return new ArchiveEmployeeResult();
+                }
                 Directory.CreateDirectory(archiveFolder);
 
                 var jsonPath = Path.Combine(employeeFolder, "employee.json");
+                if (!File.Exists(jsonPath))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployee",
+                        $"employee.json not found: {jsonPath}");
+                    NotifyOperationFailure(Res("MsgArchiveSourceMissing"));
+                    return new ArchiveEmployeeResult();
+                }
+
                 string employeeName = "";
                 string? originalJson = null;
+                string? employeeUniqueId = null;
 
                 if (File.Exists(jsonPath))
                 {
-                    originalJson = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
+                    originalJson = SafeFileService.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
                     var data = JsonSerializer.Deserialize<EmployeeData>(originalJson);
                     if (data != null)
                     {
+                        if (string.IsNullOrWhiteSpace(data.UniqueId))
+                            data.UniqueId = Guid.NewGuid().ToString();
+
+                        employeeUniqueId = data.UniqueId;
                         employeeName = $"{data.FirstName} {data.LastName}";
                         data.FirmHistory ??= new List<FirmHistoryEntry>();
 
@@ -1021,15 +1193,21 @@ namespace Win11DesktopApp.Services
                         data.IsArchived = true;
                         data.ArchivedFromFirm = firmName;
                         data.Status = "Dismissed";
-                        var newJson = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                        var archTmp = jsonPath + ".tmp";
-                        File.WriteAllText(archTmp, newJson, System.Text.Encoding.UTF8);
-                        File.Move(archTmp, jsonPath, true);
+                        WriteJsonAtomic(jsonPath, data);
                     }
                 }
 
                 var folderName = Path.GetFileName(employeeFolder);
-                var destFolder = Path.Combine(archiveFolder, folderName);
+                var destFolder = ResolveArchiveDestinationFolder(archiveFolder, folderName, employeeUniqueId);
+                if (string.IsNullOrWhiteSpace(destFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployee",
+                        $"Archive blocked because conflicting archive folder already exists for '{employeeFolder}'");
+                    if (originalJson != null)
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    NotifyOperationFailure(Res("MsgArchiveConflict"));
+                    return new ArchiveEmployeeResult();
+                }
 
                 CopyDirectory(employeeFolder, destFolder);
 
@@ -1040,26 +1218,33 @@ namespace Win11DesktopApp.Services
                         new IOException($"Copy to archive failed for {employeeFolder}"));
                     if (originalJson != null)
                     {
-                        var rollbackTmp = jsonPath + ".tmp";
-                        File.WriteAllText(rollbackTmp, originalJson, System.Text.Encoding.UTF8);
-                        File.Move(rollbackTmp, jsonPath, true);
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
                     }
                     return new ArchiveEmployeeResult();
                 }
 
-                var verifyJson = File.ReadAllText(archivedJsonPath, System.Text.Encoding.UTF8);
-                var verifyData = JsonSerializer.Deserialize<EmployeeData>(verifyJson);
+                var verifyData = ReadJson<EmployeeData>(archivedJsonPath);
                 if (verifyData == null || string.IsNullOrEmpty(verifyData.FirstName))
                 {
                     LoggingService.LogError("ArchiveEmployee",
                         new InvalidOperationException($"Archive verification failed for {destFolder}"));
                     if (originalJson != null)
                     {
-                        var rollbackTmp2 = jsonPath + ".tmp";
-                        File.WriteAllText(rollbackTmp2, originalJson, System.Text.Encoding.UTF8);
-                        File.Move(rollbackTmp2, jsonPath, true);
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
                     }
                     TryDeleteDirectory(destFolder);
+                    return new ArchiveEmployeeResult();
+                }
+
+                if (!string.IsNullOrWhiteSpace(employeeUniqueId)
+                    && !string.Equals(verifyData.UniqueId, employeeUniqueId, StringComparison.OrdinalIgnoreCase))
+                {
+                    LoggingService.LogError("ArchiveEmployee",
+                        new InvalidOperationException($"Archive UniqueId mismatch for {destFolder}"));
+                    if (originalJson != null)
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    TryDeleteDirectory(destFolder);
+                    NotifyOperationFailure(Res("MsgArchiveError"));
                     return new ArchiveEmployeeResult();
                 }
 
@@ -1113,16 +1298,19 @@ namespace Win11DesktopApp.Services
 
                 if (File.Exists(historyFile))
                 {
-                    var json = File.ReadAllText(historyFile, System.Text.Encoding.UTF8);
-                    entries = JsonSerializer.Deserialize<List<EmployeeHistoryEntry>>(json) ?? new List<EmployeeHistoryEntry>();
+                    entries = ReadJsonOrDefault(historyFile, new List<EmployeeHistoryEntry>());
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.ActorName))
+                {
+                    var profile = App.CurrentProfile;
+                    if (profile != null)
+                        entry.ActorName = $"{profile.FirstName} {profile.LastName}".Trim();
                 }
 
                 entries.Add(entry);
 
-                var newJson = JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true });
-                var tempHistory = historyFile + ".tmp";
-                File.WriteAllText(tempHistory, newJson, System.Text.Encoding.UTF8);
-                File.Move(tempHistory, historyFile, true);
+                WriteJsonAtomic(historyFile, entries);
             }
             catch (Exception ex)
             {
@@ -1142,8 +1330,7 @@ namespace Win11DesktopApp.Services
                 var historyFile = Path.Combine(employeeFolder, "history.json");
                 if (!File.Exists(historyFile)) return new List<EmployeeHistoryEntry>();
 
-                var json = File.ReadAllText(historyFile, System.Text.Encoding.UTF8);
-                return JsonSerializer.Deserialize<List<EmployeeHistoryEntry>>(json) ?? new List<EmployeeHistoryEntry>();
+                return ReadJsonOrDefault(historyFile, new List<EmployeeHistoryEntry>());
             }
             catch (Exception ex)
             {
@@ -1232,9 +1419,6 @@ namespace Win11DesktopApp.Services
 
             return string.Empty;
         }
-
-        private static string Res(string key) =>
-            Application.Current?.TryFindResource(key) as string ?? key;
 
         private static void CopyDirectory(string sourceDir, string destDir)
         {
@@ -1443,6 +1627,84 @@ namespace Win11DesktopApp.Services
         private static bool CleanupArchivedSourceFolder(string dir)
         {
             return TryCleanupDeferredDirectory(dir);
+        }
+
+        private static string? FindEmployeeFolderByUniqueId(string employeesFolder, string? uniqueId)
+        {
+            if (string.IsNullOrWhiteSpace(employeesFolder) || string.IsNullOrWhiteSpace(uniqueId) || !Directory.Exists(employeesFolder))
+                return null;
+
+            try
+            {
+                foreach (var folder in Directory.GetDirectories(employeesFolder))
+                {
+                    var folderUniqueId = ReadEmployeeUniqueId(folder);
+                    if (string.Equals(folderUniqueId, uniqueId, StringComparison.OrdinalIgnoreCase))
+                        return folder;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.FindEmployeeFolderByUniqueId", ex.Message);
+            }
+
+            return null;
+        }
+
+        private static string ResolveArchiveDestinationFolder(string archiveFolder, string folderName, string? uniqueId)
+        {
+            if (string.IsNullOrWhiteSpace(archiveFolder) || string.IsNullOrWhiteSpace(folderName))
+                return string.Empty;
+
+            for (var i = 0; i < 100; i++)
+            {
+                var candidateName = i == 0 ? folderName : $"{folderName}.{i}";
+                var candidatePath = Path.Combine(archiveFolder, candidateName);
+                if (!Directory.Exists(candidatePath))
+                    return candidatePath;
+
+                var existingUniqueId = ReadEmployeeUniqueId(candidatePath);
+                if (!string.IsNullOrWhiteSpace(uniqueId)
+                    && string.Equals(existingUniqueId, uniqueId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Empty;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveAvailableFolder(string parentFolder, string baseFolderName)
+        {
+            if (string.IsNullOrWhiteSpace(parentFolder) || string.IsNullOrWhiteSpace(baseFolderName))
+                return string.Empty;
+
+            for (var i = 0; i < 100; i++)
+            {
+                var candidateName = i == 0 ? baseFolderName : $"{baseFolderName}.{i}";
+                var candidatePath = Path.Combine(parentFolder, candidateName);
+                if (!Directory.Exists(candidatePath))
+                    return candidatePath;
+            }
+
+            return string.Empty;
+        }
+
+        private static string? ReadEmployeeUniqueId(string folderPath)
+        {
+            try
+            {
+                var jsonPath = Path.Combine(folderPath, "employee.json");
+                if (!File.Exists(jsonPath))
+                    return null;
+
+                return ReadJson<EmployeeData>(jsonPath)?.UniqueId;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.ReadEmployeeUniqueId", ex.Message);
+                return null;
+            }
         }
 
         private static string NormalizeFolderName(string name)

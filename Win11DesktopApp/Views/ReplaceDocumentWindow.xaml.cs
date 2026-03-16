@@ -34,6 +34,17 @@ namespace Win11DesktopApp.Views
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
 
+        private static string FormatAiServiceMessage(string response)
+        {
+            if (GeminiApiService.IsTimeoutResponse(response))
+                return Res("AIChatTimeout");
+
+            if (GeminiApiService.IsNetworkErrorResponse(response))
+                return Res("AIChatNetworkError");
+
+            return response;
+        }
+
         private string GetDocLabel() => _docType switch
         {
             "passport" => Res("DetDocPassport"),
@@ -213,7 +224,7 @@ namespace Win11DesktopApp.Views
 
                 if (result.StartsWith("["))
                 {
-                    AIScanStatus.Text = result;
+                    AIScanStatus.Text = FormatAiServiceMessage(result);
                     return;
                 }
 
@@ -238,7 +249,7 @@ namespace Win11DesktopApp.Views
             }
             catch (Exception ex)
             {
-                AIScanStatus.Text = $"Error: {ex.Message}";
+                AIScanStatus.Text = FormatAiServiceMessage($"[Error: {ex.Message}]");
                 LoggingService.LogError("ReplaceDoc.AIScan", ex);
             }
             finally

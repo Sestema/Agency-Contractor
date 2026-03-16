@@ -168,8 +168,8 @@ namespace Win11DesktopApp.Services
             if (!File.Exists(path))
                 return new List<PendingCleanupItem>();
 
-            var json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<List<PendingCleanupItem>>(json) ?? new List<PendingCleanupItem>();
+            return await Task.FromResult(
+                SafeFileService.ReadJsonOrDefault(path, new List<PendingCleanupItem>(), _jsonOptions)).ConfigureAwait(false);
         }
 
         private static async Task SaveCoreAsync(List<PendingCleanupItem> items)
@@ -182,10 +182,7 @@ namespace Win11DesktopApp.Services
                 return;
             }
 
-            var json = JsonSerializer.Serialize(items, _jsonOptions);
-            var tempPath = path + ".tmp";
-            await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
-            File.Move(tempPath, path, true);
+            await Task.Run(() => SafeFileService.WriteJsonAtomic(path, items, _jsonOptions)).ConfigureAwait(false);
         }
     }
 }

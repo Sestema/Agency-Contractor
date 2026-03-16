@@ -73,6 +73,9 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateService _templateService;
         private readonly string _pdfFilePath;
         private readonly string _tagMapPath;
+        private bool _templateUnavailable;
+        private bool _templateUnavailableNotified;
+        private bool _navigateBackScheduled;
 
         private List<BitmapSource> _pageImages = new();
 
@@ -374,7 +377,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!File.Exists(_pdfFilePath))
                 {
-                    StatusMessage = Res("PdfFileNotFound");
+                    MarkTemplateUnavailable(Res("PdfFileNotFound"));
                     return;
                 }
 
@@ -382,7 +385,8 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = ResF("EditorErrFmt", ex.Message);
+                LoggingService.LogError("PdfEditorViewModel.LoadPdf", ex);
+                MarkTemplateUnavailable(ResF("EditorErrFmt", ex.Message));
             }
         }
 
@@ -520,6 +524,9 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
+                if (_templateUnavailable)
+                    return;
+
                 var map = new PdfTagMap
                 {
                     Placements = AllPlacements.Select(p => p.Model).ToList()
@@ -542,6 +549,25 @@ namespace Win11DesktopApp.ViewModels
                 App.NavigationService.NavigateTo(new TemplatesViewModel(company));
             else
                 App.NavigationService.NavigateTo(new MainViewModel());
+        }
+
+        private void MarkTemplateUnavailable(string message)
+        {
+            _templateUnavailable = true;
+            StatusMessage = message;
+            if (_templateUnavailableNotified)
+                return;
+
+            _templateUnavailableNotified = true;
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+            {
+                ToastService.Instance.Warning(message);
+                if (_navigateBackScheduled)
+                    return;
+
+                _navigateBackScheduled = true;
+                NavigateBack();
+            }));
         }
     }
 }

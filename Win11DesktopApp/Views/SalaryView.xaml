@@ -307,11 +307,12 @@
             <!-- ===== DATA GRID + SIDEBAR ===== -->
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="230"/>
+                    <ColumnDefinition Width="*" MinWidth="540"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition x:Name="SidebarColumn" Width="230" MinWidth="210"/>
                 </Grid.ColumnDefinitions>
 
-                <Grid Grid.Column="0" Margin="0,0,10,0">
+                <Grid Grid.Column="0" Margin="0,0,12,0">
                 <Border x:Name="DataGridBorder" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                     <Border.RenderTransform>
@@ -324,11 +325,11 @@
                               SelectionMode="Single" SelectionUnit="FullRow"
                               HeadersVisibility="Column"                               GridLinesVisibility="All"
                               Background="Transparent" BorderThickness="0"
-                              RowBackground="Transparent" AlternatingRowBackground="#08000000"
+                              RowBackground="Transparent" AlternatingRowBackground="#14000000"
                               Foreground="{DynamicResource ForegroundBrush}"
                               HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
                               VerticalGridLinesBrush="{DynamicResource CardBorderBrush}"
-                              ColumnHeaderHeight="34" RowHeight="32"
+                              ColumnHeaderHeight="36" RowHeight="32"
                               FontSize="{DynamicResource FS12}"
                               FrozenColumnCount="2"
                               VirtualizingPanel.IsVirtualizing="True"
@@ -348,14 +349,15 @@
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="{x:Type GroupItem}">
                                                     <StackPanel>
-                                                        <Border Padding="10,6" Margin="0,10,0,0" CornerRadius="6,6,0,0"
-                                                                Background="{DynamicResource SuccessBrush}">
+                                                        <Border Padding="12,7" Margin="0,14,0,3" CornerRadius="8,8,0,0"
+                                                                Background="{DynamicResource SuccessBrush}"
+                                                                BorderBrush="#12000000" BorderThickness="1">
                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                                                 <TextBlock Text="&#xE731;" FontFamily="Segoe MDL2 Assets" FontSize="13"
-                                                                           Foreground="White" Opacity="0.85" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                                           Foreground="White" Opacity="0.92" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                                 <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="{DynamicResource FS13}"
                                                                            Foreground="White" VerticalAlignment="Center"/>
-                                                                <Border Background="#FFFFFF" Opacity="0.25" CornerRadius="8" Padding="7,2" Margin="10,0,0,0">
+                                                                <Border Background="#FFFFFF" Opacity="0.28" CornerRadius="9" Padding="8,2" Margin="10,0,0,0">
                                                                     <TextBlock Foreground="White" FontSize="11" FontWeight="SemiBold"
                                                                                VerticalAlignment="Center">
                                                                         <Run Text="{Binding ItemCount, Mode=OneWay}"/>
@@ -377,21 +379,25 @@
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                                 <Setter Property="Foreground" Value="White"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
-                                <Setter Property="Padding" Value="6,4"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
+                                <Setter Property="Padding" Value="8,5"/>
                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="DataGridColumnHeader">
                                             <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="1"/>
+                                                </Grid.RowDefinitions>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <!-- Left gripper -->
-                                                <Thumb x:Name="PART_LeftHeaderGripper" Grid.Column="0"
+                                                <Thumb x:Name="PART_LeftHeaderGripper" Grid.RowSpan="2" Grid.Column="0"
                                                        HorizontalAlignment="Left" Width="2" Cursor="SizeWE"
                                                        Background="Transparent"/>
                                                 <!-- Header content -->
@@ -403,9 +409,10 @@
                                                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                                 </Border>
                                                 <!-- Right gripper — thin dark separator line -->
-                                                <Thumb x:Name="PART_RightHeaderGripper" Grid.Column="2"
+                                                <Thumb x:Name="PART_RightHeaderGripper" Grid.RowSpan="2" Grid.Column="2"
                                                        HorizontalAlignment="Right" Width="1" Cursor="SizeWE"
                                                        Background="#3D5AFE"/>
+                                                <Border Grid.Row="1" Grid.ColumnSpan="3" Background="#40FFFFFF"/>
                                             </Grid>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -414,8 +421,8 @@
                         </DataGrid.ColumnHeaderStyle>
 
                         <DataGrid.Resources>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{Binding Color, Source={StaticResource SuccessBrush}}" Opacity="0.13"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{Binding Color, Source={StaticResource SuccessBrush}}" Opacity="0.09"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{Binding Color, Source={StaticResource AccentBrush}}" Opacity="0.14"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{Binding Color, Source={StaticResource AccentBrush}}" Opacity="0.10"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource ForegroundBrush}}"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource ForegroundBrush}}"/>
                         </DataGrid.Resources>
@@ -425,6 +432,7 @@
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="BorderBrush" Value="Transparent"/>
                                 <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                <Setter Property="SnapsToDevicePixels" Value="True"/>
                                 <Style.Triggers>
                                     <!-- Hours = 0: subtle orange left border (not yet filled) -->
                                     <DataTrigger Binding="{Binding HoursWorked}" Value="0">
@@ -432,12 +440,7 @@
                                     </DataTrigger>
                                     <!-- Hover -->
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
-                                    </Trigger>
-                                    <!-- Selected -->
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
-                                        <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                        <Setter Property="Background" Value="#142196F3"/>
                                     </Trigger>
                                     <!-- Paid -->
                                     <DataTrigger Binding="{Binding IsPaid}" Value="True">
@@ -446,9 +449,15 @@
                                     </DataTrigger>
                                     <!-- Finished (no longer active at firm) -->
                                     <DataTrigger Binding="{Binding IsFinished}" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                        <Setter Property="Background" Value="#10D32F2F"/>
                                         <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
                                     </DataTrigger>
+                                    <!-- Selected must remain visually strongest -->
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Setter Property="Background" Value="#262196F3"/>
+                                    </Trigger>
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
@@ -457,13 +466,14 @@
                             <Style TargetType="DataGridCell">
                                 <Setter Property="BorderThickness" Value="0"/>
                                 <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                <Setter Property="Padding" Value="4,2"/>
+                                <Setter Property="Padding" Value="6,3"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
                             </Style>
                         </DataGrid.CellStyle>
 
                         <DataGrid.Columns>
                             <!-- Name (FIXED, clickable) -->
-                            <DataGridTemplateColumn IsReadOnly="True" Width="170" SortMemberPath="FullName">
+                            <DataGridTemplateColumn IsReadOnly="True" Width="220" SortMemberPath="FullName">
                                 <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColName}"/>
@@ -471,14 +481,57 @@
                                 </DataGridTemplateColumn.HeaderTemplate>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" Cursor="Hand"
-                                                   TextDecorations="Underline" Foreground="{DynamicResource AccentBrush}">
-                                            <TextBlock.InputBindings>
+                                        <Grid Cursor="Hand" VerticalAlignment="Center" Margin="6,0,0,0">
+                                            <Grid.InputBindings>
                                                 <MouseBinding MouseAction="LeftClick"
                                                               Command="{Binding DataContext.OpenEmployeeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                               CommandParameter="{Binding}"/>
-                                            </TextBlock.InputBindings>
-                                        </TextBlock>
+                                            </Grid.InputBindings>
+
+                                            <Border x:Name="NameCell"
+                                                    Padding="6,2,4,2"
+                                                    CornerRadius="6"
+                                                    Background="Transparent">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                                <Setter Property="Background" Value="#122196F3"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                                <Setter Property="Background" Value="#1C2196F3"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                                                <Setter Property="Background" Value="#12D32F2F"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding FullName}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                                    <Setter Property="TextDecorations" Value="Underline"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -493,13 +546,14 @@
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HoursWorked}" Value="0">
                                                 <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
                                                 <Setter Property="FontWeight" Value="Normal"/>
-                                                <Setter Property="Opacity" Value="0.5"/>
+                                                <Setter Property="Opacity" Value="0.45"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -516,10 +570,14 @@
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HourlyRate}" Value="0">
                                                 <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
-                                                <Setter Property="Opacity" Value="0.5"/>
+                                                <Setter Property="FontWeight" Value="Normal"/>
+                                                <Setter Property="Opacity" Value="0.45"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -536,6 +594,7 @@
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
                                         <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                         <Style.Triggers>
@@ -558,7 +617,7 @@
                                 </DataGridTemplateColumn.HeaderTemplate>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border Background="Transparent" HorizontalAlignment="Center" 
+                                        <Border Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                 Cursor="Hand" Padding="4,2"
                                                 MouseLeftButtonDown="AdvanceCell_Click" Tag="{Binding}">
                                             <TextBlock Text="{Binding Advance, StringFormat={}{0:N0}}" 
@@ -594,6 +653,7 @@
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
                                         <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                         <Style.Triggers>
@@ -619,9 +679,31 @@
                                 </DataGridTemplateColumn.HeaderTemplate>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <CheckBox IsChecked="{Binding IsPaid, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                  Cursor="Hand"/>
+                                        <Border x:Name="PaidCellBadge"
+                                                Background="Transparent"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="4,2"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                            <CheckBox IsChecked="{Binding IsPaid, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Cursor="Hand"
+                                                      Width="16"
+                                                      Height="16">
+                                                <CheckBox.LayoutTransform>
+                                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
+                                                </CheckBox.LayoutTransform>
+                                            </CheckBox>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                                <Setter TargetName="PaidCellBadge" Property="Background" Value="#1534A853"/>
+                                                <Setter TargetName="PaidCellBadge" Property="BorderBrush" Value="#3034A853"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -637,6 +719,10 @@
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
                                         <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+                                        <Setter Property="FontStyle" Value="Italic"/>
+                                        <Setter Property="Opacity" Value="0.82"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="Margin" Value="4,0,0,0"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
@@ -700,14 +786,42 @@
                 </Grid>
 
                 <!-- ===== RIGHT SIDEBAR ===== -->
-                <Border Grid.Column="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
+                <GridSplitter Grid.Column="1"
+                              Width="8"
+                              Margin="0"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              Background="Transparent"
+                              ResizeDirection="Columns"
+                              ResizeBehavior="PreviousAndNext"
+                              ShowsPreview="True"
+                              DragCompleted="SidebarColumnSplitter_DragCompleted">
+                    <GridSplitter.Template>
+                        <ControlTemplate TargetType="GridSplitter">
+                            <Grid Width="8" Background="Transparent">
+                                <Border Width="1" HorizontalAlignment="Center"
+                                        Background="{DynamicResource CardBorderBrush}"/>
+                                <Border Width="4" Height="42" CornerRadius="2"
+                                        Background="{DynamicResource AccentBrush}"
+                                        VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        Opacity="0.45"/>
+                            </Grid>
+                        </ControlTemplate>
+                    </GridSplitter.Template>
+                </GridSplitter>
+
+                <Border Grid.Column="2" Margin="4,0,0,0" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" Padding="12,10">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.08"/>
+                    </Border.Effect>
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <RowDefinition x:Name="SidebarTopRow" Height="2*" MinHeight="120"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition x:Name="SidebarExpensesRow" Height="*" MinHeight="140"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
@@ -803,16 +917,44 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <!-- ===== FIRM EXPENSES SECTION ===== -->
-                        <StackPanel Grid.Row="3" Margin="0,8,0,0">
-                            <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,0,0,6"/>
+                        <GridSplitter Grid.Row="3"
+                                      Height="8"
+                                      Margin="0,8,0,8"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Center"
+                                      Background="Transparent"
+                                      ResizeDirection="Rows"
+                                      ResizeBehavior="PreviousAndNext"
+                                      ShowsPreview="True"
+                                      DragCompleted="SidebarRowSplitter_DragCompleted">
+                            <GridSplitter.Template>
+                                <ControlTemplate TargetType="GridSplitter">
+                                    <Grid Height="8" Background="Transparent">
+                                        <Border Height="1" VerticalAlignment="Center"
+                                                Background="{DynamicResource CardBorderBrush}"/>
+                                        <Border Width="42" Height="4" CornerRadius="2"
+                                                Background="{DynamicResource AccentBrush}"
+                                                VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                Opacity="0.45"/>
+                                    </Grid>
+                                </ControlTemplate>
+                            </GridSplitter.Template>
+                        </GridSplitter>
 
-                            <Grid Margin="0,0,0,4">
+                        <!-- ===== FIRM EXPENSES SECTION ===== -->
+                        <Grid Grid.Row="4" Margin="0,0,0,0" MinHeight="140">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{DynamicResource FinFirmExpenses}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                <TextBlock Text="{Binding ExpenseHeaderText}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                            Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                                 <Button Grid.Column="1" Command="{Binding AddExpenseCommand}" Cursor="Hand" ToolTip="{DynamicResource FinExpenseAdd}">
                                     <Button.Template>
@@ -832,52 +974,66 @@
                                 </Button>
                             </Grid>
 
-                            <ItemsControl ItemsSource="{Binding FirmExpenses}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="6"
-                                                Padding="8,5" Margin="0,0,0,3"
-                                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="75"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=LostFocus}"
-                                                         FontSize="{DynamicResource FS11}" VerticalAlignment="Center"
-                                                         BorderThickness="0" Background="Transparent"
-                                                         Foreground="{DynamicResource ForegroundBrush}" Padding="2,1"/>
-                                                <TextBox Grid.Column="1" Text="{Binding Amount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N0}}"
-                                                         FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                                         HorizontalContentAlignment="Right" VerticalAlignment="Center"
-                                                         BorderThickness="0" Background="Transparent"
-                                                         Foreground="{DynamicResource WarningBrush}" Padding="2,1"/>
-                                                <Button Grid.Column="2" Cursor="Hand" Margin="4,0,0,0"
-                                                        Command="{Binding DataContext.RemoveExpenseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding Id}">
-                                                    <Button.Template>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border x:Name="Bd" Background="Transparent" CornerRadius="4"
-                                                                    Width="20" Height="20">
-                                                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                                                           Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Button.Template>
-                                                </Button>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding FirmExpenses}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="6"
+                                                    Padding="8,5" Margin="0,0,0,3"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="75"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
 
-                            <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="6" Padding="8,5" Margin="0,3,0,0">
+                                                    <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=LostFocus}"
+                                                             FontSize="{DynamicResource FS11}" VerticalAlignment="Center"
+                                                             BorderThickness="0" Background="Transparent"
+                                                             Foreground="{DynamicResource ForegroundBrush}" Padding="2,1"/>
+
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding FirmName}"
+                                                               FontSize="{DynamicResource FS10}"
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                               Margin="2,1,0,0" TextTrimming="CharacterEllipsis"/>
+
+                                                    <TextBox Grid.RowSpan="2" Grid.Column="1" Text="{Binding Amount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N0}}"
+                                                             FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                             HorizontalContentAlignment="Right" VerticalAlignment="Center"
+                                                             BorderThickness="0" Background="Transparent"
+                                                             Foreground="{DynamicResource WarningBrush}" Padding="2,1"/>
+
+                                                    <Button Grid.RowSpan="2" Grid.Column="2" Cursor="Hand" Margin="4,0,0,0"
+                                                            Command="{Binding DataContext.RemoveExpenseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding Id}">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="4"
+                                                                        Width="20" Height="20">
+                                                                    <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <Border Grid.Row="2" Background="{DynamicResource WarningLightBrush}" CornerRadius="6" Padding="8,5" Margin="0,6,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -890,10 +1046,10 @@
                                     </TextBlock>
                                 </Grid>
                             </Border>
-                        </StackPanel>
+                        </Grid>
 
                         <!-- Summary boxes -->
-                        <StackPanel Grid.Row="4" Margin="0,8,0,0">
+                        <StackPanel Grid.Row="5" Margin="0,8,0,0">
                             <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,0,0,8"/>
 
                             <!-- Výplata (Net) -->
@@ -1141,6 +1297,7 @@
 
                     <TextBlock Text="{DynamicResource FinAdvanceDate}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <DatePicker SelectedDate="{Binding AdvanceDate}" Margin="0,0,0,12" FontSize="{DynamicResource FS13}"
+                                Style="{StaticResource ThemedDatePicker}"
                                 Padding="4,4"/>
 
                     <TextBlock Text="{DynamicResource FinAdvanceNote}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>

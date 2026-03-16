@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -26,7 +26,6 @@ namespace AdminPanel
         public string RiskLevel { get; set; } = "OK";
         public int RiskScore { get; set; }
         public List<string> RiskReasons { get; set; } = new();
-        public string RiskReasonsDisplay => RiskReasons.Count == 0 ? "Немає ризиків" : string.Join(" | ", RiskReasons);
         public bool IsOutdatedVersion { get; set; }
         public int ErrorLikeCount { get; set; }
         public DateTime? LatestHeartbeatAt { get; set; }
@@ -45,65 +44,151 @@ namespace AdminPanel
 
         public string EventDataDisplay => EventData?.ValueKind == JsonValueKind.Object
             ? EventData.Value.ToString() : EventData?.ToString() ?? "";
+
+        public string EventTypeDisplay => EventType switch
+        {
+            "app_started" => "Запуск програми",
+            "first_launch" => "Перший запуск",
+            "heartbeat" => "Heartbeat",
+            "employee_added" => "Додано працівника",
+            "firm_created" => "Створено фірму",
+            _ when EventType.Contains("license", StringComparison.OrdinalIgnoreCase) => "Ліцензія",
+            _ when EventType.Contains("activate", StringComparison.OrdinalIgnoreCase) => "Активація",
+            _ when EventType.Contains("block", StringComparison.OrdinalIgnoreCase) => "Блокування",
+            _ when EventType.Contains("error", StringComparison.OrdinalIgnoreCase) => "Помилка",
+            _ => string.IsNullOrWhiteSpace(EventType) ? "Подія" : EventType
+        };
+
+        public string EventSummary
+        {
+            get
+            {
+                if (EventData?.ValueKind != JsonValueKind.Object)
+                    return string.IsNullOrWhiteSpace(EventDataDisplay) ? "—" : EventDataDisplay;
+
+                var data = EventData.Value;
+                return EventType switch
+                {
+                    "app_started" => BuildStatsSummary("Програму запущено", data),
+                    "first_launch" => BuildStatsSummary("Перший запуск програми", data),
+                    "heartbeat" => BuildStatsSummary("Синхронізація стану", data),
+                    "employee_added" => BuildEmployeeAddedSummary(data),
+                    "firm_created" => BuildFirmCreatedSummary(data),
+                    _ => BuildGenericSummary(data)
+                };
+            }
+        }
+
+        private static string BuildEmployeeAddedSummary(JsonElement data)
+        {
+            var employeeName = GetString(data, "employee_name");
+            var firmName = GetString(data, "firm_name");
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(employeeName))
+                parts.Add($"Працівник: {employeeName}");
+            if (!string.IsNullOrWhiteSpace(firmName))
+                parts.Add($"Фірма: {firmName}");
+
+            AppendStats(parts, data);
+            return parts.Count == 0 ? "Додано працівника" : string.Join(" | ", parts);
+        }
+
+        private static string BuildFirmCreatedSummary(JsonElement data)
+        {
+            var firmName = GetString(data, "firm_name");
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(firmName))
+                parts.Add($"Фірма: {firmName}");
+
+            AppendStats(parts, data);
+            return parts.Count == 0 ? "Створено фірму" : string.Join(" | ", parts);
+        }
+
+        private static string BuildStatsSummary(string prefix, JsonElement data)
+        {
+            var parts = new List<string> { prefix };
+            AppendStats(parts, data);
+            return string.Join(" | ", parts);
+        }
+
+        private static void AppendStats(List<string> parts, JsonElement data)
+        {
+            if (TryGetInt(data, "firms_count", out var firms))
+                parts.Add($"Фірм: {firms}");
+            if (TryGetInt(data, "employees_count", out var employees))
+                parts.Add($"Працівників: {employees}");
+        }
+
+        private static string BuildGenericSummary(JsonElement data)
+        {
+            var parts = new List<string>();
+
+            AddValue(parts, "Фірма", GetString(data, "firm_name"));
+            AddValue(parts, "Працівник", GetString(data, "employee_name"));
+            AddValue(parts, "Повідомлення", GetString(data, "message"));
+            AddValue(parts, "Причина", GetString(data, "reason"));
+
+            AppendStats(parts, data);
+
+            if (parts.Count > 0)
+                return string.Join(" | ", parts);
+
+            var raw = data.ToString();
+            return string.IsNullOrWhiteSpace(raw) ? "—" : raw;
+        }
+
+        private static void AddValue(List<string> parts, string label, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                parts.Add($"{label}: {value}");
+        }
+
+        private static string GetString(JsonElement data, string propertyName)
+        {
+            if (!data.TryGetProperty(propertyName, out var value))
+                return string.Empty;
+
+            return value.ValueKind switch
+            {
+                JsonValueKind.String => value.GetString() ?? string.Empty,
+                JsonValueKind.Number => value.ToString(),
+                JsonValueKind.True => "Так",
+                JsonValueKind.False => "Ні",
+                _ => value.ToString()
+            };
+        }
+
+        private static bool TryGetInt(JsonElement data, string propertyName, out int value)
+        {
+            value = 0;
+            if (!data.TryGetProperty(propertyName, out var element))
+                return false;
+
+            if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out value))
+                return true;
+
+            if (element.ValueKind == JsonValueKind.String && int.TryParse(element.GetString(), out value))
+                return true;
+
+            return false;
+        }
     }
 
-    public class AdminCommandRecord
+    public class ClientProfileRecord
     {
         public string Id { get; set; } = "";
         public string ClientId { get; set; } = "";
-        public string CommandType { get; set; } = "";
-        public JsonElement? PayloadJson { get; set; }
-        public string Status { get; set; } = "";
-        public string CreatedBy { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string PasswordHash { get; set; } = "";
+        public string PasswordSalt { get; set; } = "";
+        public bool MustResetPassword { get; set; }
+        public bool RememberMeEnabled { get; set; }
+        public int SessionVersion { get; set; } = 1;
         public DateTime? CreatedAt { get; set; }
-        public DateTime? ExecutedAt { get; set; }
-        public JsonElement? ResultJson { get; set; }
-        public string? ErrorText { get; set; }
-        public string PayloadDisplay => PayloadJson?.ToString() ?? "";
-        public string ResultDisplay => ResultJson?.ToString() ?? "";
-    }
-
-    public class ClientPolicyRecord
-    {
-        public string ClientId { get; set; } = "";
-        public string MinimumSupportedVersion { get; set; } = "";
-        public string RecommendedVersion { get; set; } = "";
-        public string UpdateChannel { get; set; } = "stable";
-        public bool ForceUpdate { get; set; }
-        public bool MaintenanceMode { get; set; }
-        public bool ReadOnlyMode { get; set; }
-        public bool DisableAI { get; set; }
-        public bool DisableExports { get; set; }
-        public bool HideTemplates { get; set; }
-        public bool HideFinance { get; set; }
-        public bool RequireOnlineCheck { get; set; }
-        public string? AdminMessage { get; set; }
-        public string PolicyVersion { get; set; } = "";
         public DateTime? UpdatedAt { get; set; }
-    }
-
-    public class AdminAuditRecord
-    {
-        public string Id { get; set; } = "";
-        public string? TargetClientId { get; set; }
-        public string ActionType { get; set; } = "";
-        public JsonElement? OldValueJson { get; set; }
-        public JsonElement? NewValueJson { get; set; }
-        public string? Note { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public string Actor { get; set; } = "";
-        public string OldValueDisplay => OldValueJson?.ToString() ?? "";
-        public string NewValueDisplay => NewValueJson?.ToString() ?? "";
-    }
-
-    public class ClientDiagnosticRecord
-    {
-        public string Id { get; set; } = "";
-        public string ClientId { get; set; } = "";
-        public string Kind { get; set; } = "";
-        public JsonElement? PayloadJson { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public string PayloadDisplay => PayloadJson?.ToString() ?? "";
     }
 
     public class SupabaseService
@@ -235,72 +320,63 @@ namespace AdminPanel
             resp2.EnsureSuccessStatusCode();
         }
 
-        public async Task<List<AdminCommandRecord>> GetAdminCommandsAsync(string? clientId = null, int limit = 100)
-        {
-            var filter = string.IsNullOrWhiteSpace(clientId) ? "" : $"&client_id=eq.{clientId}";
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/admin_commands?select=*&order=created_at.desc&limit={limit}{filter}");
-            SetHeaders(req);
-            return await SendListRequestAsync<AdminCommandRecord>(req);
-        }
-
-        public async Task<List<AdminAuditRecord>> GetAdminAuditLogAsync(string? clientId = null, int limit = 100)
-        {
-            var filter = string.IsNullOrWhiteSpace(clientId) ? "" : $"&target_client_id=eq.{clientId}";
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/admin_audit_log?select=*&order=created_at.desc&limit={limit}{filter}");
-            SetHeaders(req);
-            return await SendListRequestAsync<AdminAuditRecord>(req);
-        }
-
-        public async Task<List<ClientDiagnosticRecord>> GetClientDiagnosticsAsync(string? clientId = null, int limit = 50)
-        {
-            var filter = string.IsNullOrWhiteSpace(clientId) ? "" : $"&client_id=eq.{clientId}";
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/client_diagnostics?select=*&order=created_at.desc&limit={limit}{filter}");
-            SetHeaders(req);
-            return await SendListRequestAsync<ClientDiagnosticRecord>(req);
-        }
-
-        public async Task<ClientPolicyRecord?> GetClientPolicyAsync(string clientId)
+        public async Task<ClientProfileRecord?> GetClientProfileAsync(string clientId)
         {
             var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/client_policies?client_id=eq.{clientId}&select=*&limit=1");
+                $"{_baseUrl}/rest/v1/client_profiles?client_id=eq.{Uri.EscapeDataString(clientId)}&select=*");
             SetHeaders(req);
 
-            var list = await SendListRequestAsync<ClientPolicyRecord>(req);
-            return list.Count > 0 ? list[0] : null;
+            var resp = await _http.SendAsync(req);
+            var json = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode)
+            {
+                if (LooksLikeMissingTable(json))
+                    return null;
+                resp.EnsureSuccessStatusCode();
+            }
+
+            var profiles = JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
+            return profiles.Count == 0 ? null : profiles[0];
         }
 
-        public async Task UpsertClientPolicyAsync(ClientPolicyRecord policy)
+        public async Task<ClientProfileRecord?> ResetClientProfilePasswordAsync(string clientId)
         {
-            var payload = JsonSerializer.Serialize(policy, _jsonOpts);
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/rest/v1/client_policies")
+            var profile = await GetClientProfileAsync(clientId);
+            if (profile == null)
+                return null;
+
+            var randomPassword = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            var newSalt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+            var newHash = Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(
+                randomPassword,
+                Convert.FromBase64String(newSalt),
+                100_000,
+                HashAlgorithmName.SHA256,
+                32));
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                password_hash = newHash,
+                password_salt = newSalt,
+                must_reset_password = true,
+                remember_me_enabled = false,
+                session_version = profile.SessionVersion + 1
+            }, _jsonOpts);
+
+            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
+                $"{_baseUrl}/rest/v1/client_profiles?client_id=eq.{Uri.EscapeDataString(clientId)}")
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
             };
+            req.Headers.Add("Prefer", "return=representation");
             SetHeaders(req);
-            req.Headers.TryAddWithoutValidation("Prefer", "resolution=merge-duplicates");
-            await SendMutationAsync(req);
-        }
 
-        public async Task CreateAdminCommandAsync(string clientId, string commandType, object payload, string createdBy = "admin-panel")
-        {
-            var body = JsonSerializer.Serialize(new
-            {
-                client_id = clientId,
-                command_type = commandType,
-                payload_json = payload,
-                status = "pending",
-                created_by = createdBy
-            }, _jsonOpts);
+            var resp = await _http.SendAsync(req);
+            var json = await resp.Content.ReadAsStringAsync();
+            resp.EnsureSuccessStatusCode();
 
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/rest/v1/admin_commands")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            SetHeaders(req);
-            await SendMutationAsync(req);
+            var profiles = JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
+            return profiles.Count == 0 ? null : profiles[0];
         }
 
         public async Task WriteAuditAsync(string? clientId, string actionType, object? oldValue, object? newValue, string? note, string actor = "admin-panel")
@@ -335,27 +411,6 @@ namespace AdminPanel
             }
         }
 
-        private async Task<List<T>> SendListRequestAsync<T>(HttpRequestMessage request)
-        {
-            try
-            {
-                var response = await _http.SendAsync(request);
-                var json = await response.Content.ReadAsStringAsync();
-                if (!response.IsSuccessStatusCode)
-                {
-                    if (response.StatusCode == HttpStatusCode.NotFound || LooksLikeMissingTable(json))
-                        return new List<T>();
-                    response.EnsureSuccessStatusCode();
-                }
-
-                return JsonSerializer.Deserialize<List<T>>(json, _jsonOpts) ?? new List<T>();
-            }
-            catch (HttpRequestException)
-            {
-                return new List<T>();
-            }
-        }
-
         private async Task SendMutationAsync(HttpRequestMessage request)
         {
             var response = await _http.SendAsync(request);
@@ -366,8 +421,10 @@ namespace AdminPanel
 
         private static bool LooksLikeMissingTable(string payload)
         {
-            return payload.Contains("relation", StringComparison.OrdinalIgnoreCase) &&
-                   payload.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
+            return (payload.Contains("relation", StringComparison.OrdinalIgnoreCase) &&
+                    payload.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
+                   || payload.Contains("schema cache", StringComparison.OrdinalIgnoreCase)
+                   || payload.Contains("client_profiles", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

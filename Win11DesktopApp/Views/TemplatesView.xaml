@@ -19,7 +19,6 @@
         <Grid Margin="32,20,32,32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -46,78 +45,42 @@
                         </Border.Background>
                         <TextBlock Text="&#xE8A5;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
-                    <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS26}"
-                               Style="{StaticResource PageHeaderTitleText}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS26}"
+                                   Style="{StaticResource PageHeaderTitleText}"/>
+                        <TextBlock FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,3,0,0">
+                            <Run Text="{Binding Templates.Count, Mode=OneWay, FallbackValue=0}"/>
+                            <Run Text=" "/>
+                            <Run Text="{DynamicResource TplTemplateCount}"/>
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Add template button -->
-                <Button Grid.Column="2" Command="{Binding AddTemplateCommand}" Cursor="Hand" VerticalAlignment="Center">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" CornerRadius="10" Padding="18,10"
-                                    RenderTransformOrigin="0.5,0.5">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#11998E" Offset="0"/>
-                                        <GradientStop Color="#38EF7D" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <Border.RenderTransform>
-                                    <ScaleTransform x:Name="BtnScale" ScaleX="1" ScaleY="1"/>
-                                </Border.RenderTransform>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                               Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{DynamicResource BtnAddTemplate}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                               Foreground="White" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
-                                </Trigger>
-                                <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX"
-                                                             To="0.95" Duration="0:0:0.1"/>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY"
-                                                             To="0.95" Duration="0:0:0.1"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                                <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX"
-                                                             To="1" Duration="0:0:0.15" EasingFunction="{StaticResource SmoothEase}"/>
-                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY"
-                                                             To="1" Duration="0:0:0.15" EasingFunction="{StaticResource SmoothEase}"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
+                <Button Grid.Column="2"
+                        Command="{Binding AddTemplateCommand}"
+                        Style="{StaticResource FilledActionButton}"
+                        Padding="18,10"
+                        VerticalAlignment="Center">
+                    <Button.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#11998E" Offset="0"/>
+                            <GradientStop Color="#38EF7D" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Button.Background>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                   Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{DynamicResource BtnAddTemplate}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
             </Grid>
 
-            <!-- ===== STATS BAR ===== -->
-            <Border Grid.Row="1" Style="{StaticResource ElevatedInfoCard}"
-                    Padding="20,14" Margin="0,0,0,20">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center">
-                        <Run Text="{Binding Templates.Count, Mode=OneWay, FallbackValue=0}"/>
-                        <Run Text=" "/>
-                        <Run Text="{DynamicResource TplTemplateCount}"/>
-                    </TextBlock>
-                </StackPanel>
-            </Border>
-
             <!-- ===== TEMPLATE LIST ===== -->
-            <ItemsControl Grid.Row="2" ItemsSource="{Binding Templates}" Margin="24,8,24,8"
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Templates}" Margin="0,4,0,8"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True">
@@ -138,7 +101,7 @@
                             <Border x:Name="TemplateCard" 
                                     Background="{DynamicResource CardBackgroundBrush}" 
                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                    CornerRadius="12" Padding="14,12" Margin="16,6,16,6"
+                                    CornerRadius="14" Padding="15,12" Margin="12,4,12,14"
                                     RenderTransformOrigin="0.5,0.5"
                                     Effect="{DynamicResource CardShadow}"
                                     h:StaggerAnimation.Enable="True">
@@ -219,10 +182,22 @@
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS15}" 
                                                    Foreground="{DynamicResource ForegroundBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <Border Background="{DynamicResource SurfaceBrush}"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="8,3"
+                                                    Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Format}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                            </Border>
                                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
                                                        Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                            <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       VerticalAlignment="Center">
                                                 <Run Text="{DynamicResource TplUpdated}"/>
                                                 <Run Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM.yyyy HH:mm}}"/>
                                             </TextBlock>
@@ -233,165 +208,64 @@
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                         <!-- Edit button -->
                                         <Button Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}" Cursor="Hand" Margin="0,0,8,0">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="14,8"
-                                                            RenderTransformOrigin="0.5,0.5">
-                                                        <Border.RenderTransform>
-                                                            <ScaleTransform x:Name="BtnSc" ScaleX="1" ScaleY="1"/>
-                                                        </Border.RenderTransform>
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                            <TextBlock Text="{DynamicResource TplBtnEdit}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
-                                                                       Foreground="White" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                                        </Trigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="BtnSc" Storyboard.TargetProperty="ScaleX" To="0.93" Duration="0:0:0.08"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="BtnSc" Storyboard.TargetProperty="ScaleY" To="0.93" Duration="0:0:0.08"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="BtnSc" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="BtnSc" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource FilledActionButton}"
+                                                Padding="14,8"
+                                                Margin="0,0,8,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock Text="{DynamicResource TplBtnEdit}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
+                                                           Foreground="White" VerticalAlignment="Center"/>
+                                            </StackPanel>
                                         </Button>
 
                                         <!-- Rename button -->
                                         <Button Command="{Binding DataContext.RenameTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}" Cursor="Hand" Margin="0,0,8,0">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="10,8"
-                                                            BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1.5"
-                                                            RenderTransformOrigin="0.5,0.5">
-                                                        <Border.RenderTransform>
-                                                            <ScaleTransform x:Name="RenSc" ScaleX="1" ScaleY="1"/>
-                                                        </Border.RenderTransform>
-                                                        <TextBlock Text="&#xE8AC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                                   Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WarningLightBrush}"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#FB8C00"/>
-                                                        </Trigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="RenSc" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="RenSc" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="RenSc" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="RenSc" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource ToolbarIconButton}"
+                                                Width="38"
+                                                Height="38"
+                                                Margin="0,0,8,0"
+                                                Background="{DynamicResource WarningLightBrush}"
+                                                BorderBrush="{DynamicResource WarningLightBrush}"
+                                                Foreground="{DynamicResource WarningBrush}">
+                                            <TextBlock Text="&#xE8AC;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="{DynamicResource FS14}"
+                                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
                                         </Button>
 
                                         <!-- Copy to company button -->
                                         <Button Command="{Binding DataContext.CopyTemplateToCompanyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}" Cursor="Hand" Margin="0,0,8,0"
-                                                ToolTip="{DynamicResource TplCopyToCompanyTooltip}">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="10,8"
-                                                            BorderBrush="{DynamicResource SecondaryForegroundBrush}" BorderThickness="1.5"
-                                                            RenderTransformOrigin="0.5,0.5">
-                                                        <Border.RenderTransform>
-                                                            <ScaleTransform x:Name="CopySc" ScaleX="1" ScaleY="1"/>
-                                                        </Border.RenderTransform>
-                                                        <TextBlock Text="&#xE8FA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                        </Trigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="CopySc" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="CopySc" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="CopySc" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="CopySc" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource ToolbarIconButton}"
+                                                Width="38"
+                                                Height="38"
+                                                Margin="0,0,8,0"
+                                                ToolTip="{DynamicResource TplCopyToCompanyTooltip}"
+                                                Background="{DynamicResource SurfaceBrush}"
+                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                Foreground="{DynamicResource AccentBrush}">
+                                            <TextBlock Text="&#xE8FA;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="{DynamicResource FS14}"
+                                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
                                         </Button>
 
                                         <!-- Delete button -->
                                         <Button Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}" Cursor="Hand">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="10,8"
-                                                            BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1.5"
-                                                            RenderTransformOrigin="0.5,0.5">
-                                                        <Border.RenderTransform>
-                                                            <ScaleTransform x:Name="DelSc" ScaleX="1" ScaleY="1"/>
-                                                        </Border.RenderTransform>
-                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                                   Foreground="{DynamicResource ErrorBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-                                                        </Trigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="DelSc" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="DelSc" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                        <EventTrigger RoutedEvent="PreviewMouseLeftButtonUp">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="DelSc" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
-                                                                    <DoubleAnimation Storyboard.TargetName="DelSc" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Button.Template>
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource ToolbarIconButton}"
+                                                Width="38"
+                                                Height="38"
+                                                Background="{DynamicResource ErrorLightBrush}"
+                                                BorderBrush="{DynamicResource ErrorLightBrush}"
+                                                Foreground="{DynamicResource ErrorBrush}">
+                                            <TextBlock Text="&#xE74D;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="{DynamicResource FS14}"
+                                                       Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
                                         </Button>
                                     </StackPanel>
                                 </Grid>
@@ -427,7 +301,7 @@
                 </ItemsControl>
 
             <!-- Empty state -->
-            <Border Grid.Row="2" Style="{StaticResource EmptyStateCard}"
+            <Border Grid.Row="1" Style="{StaticResource EmptyStateCard}"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding HasTemplates, Converter={StaticResource InverseBoolToVis}}">
                 <StackPanel HorizontalAlignment="Center">
@@ -460,12 +334,12 @@
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CancelCopyTemplateCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
-                    Width="460" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="28">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.25"/>
-                </Border.Effect>
+            <Border Style="{StaticResource DialogSectionCard}"
+                    Width="460"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="28"
+                    Background="{DynamicResource ContentBackgroundBrush}">
                 <StackPanel>
                     <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
@@ -480,48 +354,48 @@
                             <TextBlock Text="{DynamicResource TplCopyDialogTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Width="32" Height="32" Command="{Binding CancelCopyTemplateCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Width="32" Height="32">
-                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                   Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button Grid.Column="1"
+                                Command="{Binding CancelCopyTemplateCommand}"
+                                Style="{StaticResource ToolbarInlineIconButton}">
+                            <TextBlock Text="&#xE711;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         </Button>
                     </Grid>
 
-                    <TextBlock Text="{DynamicResource TplCopyDialogCompany}" FontSize="{DynamicResource FS13}"
-                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
-                    <ComboBox ItemsSource="{Binding CopyTargetCompanies}"
-                              SelectedItem="{Binding SelectedCopyTargetCompany}"
-                              DisplayMemberPath="Name"
-                              FontSize="{DynamicResource FS14}" Padding="10,8"
-                              Background="{DynamicResource CardBackgroundBrush}"
-                              Foreground="{DynamicResource ForegroundBrush}"
-                              BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                              Margin="0,0,0,18"/>
+                    <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14" Margin="0,0,0,20">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource TplCopyDialogCompany}" FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding CopyTargetCompanies}"
+                                      SelectedItem="{Binding SelectedCopyTargetCompany}"
+                                      TextSearch.TextPath="Name"
+                                      Style="{StaticResource ThemedComboBox}"
+                                      FontSize="{DynamicResource FS13}"
+                                      Margin="0,0,0,14">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
-                    <TextBlock Text="{DynamicResource TplCopyDialogName}" FontSize="{DynamicResource FS13}"
-                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding CopyTemplateName, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="{DynamicResource FS14}" Padding="10,8"
-                             Background="{DynamicResource CardBackgroundBrush}"
-                             Foreground="{DynamicResource ForegroundBrush}"
-                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                             Margin="0,0,0,20">
-                        <TextBox.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="8"/>
-                            </Style>
-                        </TextBox.Resources>
-                    </TextBox>
+                            <TextBlock Text="{DynamicResource TplCopyDialogName}" FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
+                            <TextBox Text="{Binding CopyTemplateName, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="{DynamicResource FS14}" Padding="10,8"
+                                     Background="{DynamicResource CardBackgroundBrush}"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                <TextBox.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="8"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                        </StackPanel>
+                    </Border>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Command="{Binding CancelCopyTemplateCommand}" Cursor="Hand" Margin="0,0,10,0">
@@ -540,20 +414,11 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-                        <Button Command="{Binding ConfirmCopyTemplateCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="18,9">
-                                        <TextBlock Text="{DynamicResource TplCopyDialogBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                   Foreground="White"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button Command="{Binding ConfirmCopyTemplateCommand}"
+                                Style="{StaticResource FilledActionButton}"
+                                Padding="18,9">
+                            <TextBlock Text="{DynamicResource TplCopyDialogBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                       Foreground="White"/>
                         </Button>
                     </StackPanel>
                 </StackPanel>
@@ -567,36 +432,53 @@
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CancelRenameCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
-                    Width="420" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="28">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.25"/>
-                </Border.Effect>
+            <Border Style="{StaticResource DialogSectionCard}"
+                    Width="420"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="28"
+                    Background="{DynamicResource ContentBackgroundBrush}">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
-                            <TextBlock Text="&#xE8AC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                       Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="{DynamicResource TplRenameTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
+                                <TextBlock Text="&#xE8AC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource TplRenameTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Command="{Binding CancelRenameCommand}"
+                                Style="{StaticResource ToolbarInlineIconButton}">
+                            <TextBlock Text="&#xE711;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        </Button>
+                    </Grid>
 
-                    <TextBlock Text="{DynamicResource TplRenamePrompt}" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
+                    <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14" Margin="0,0,0,20">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource TplRenamePrompt}" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"/>
 
-                    <TextBox Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="{DynamicResource FS14}" Padding="10,8" 
-                             Background="{DynamicResource CardBackgroundBrush}"
-                             Foreground="{DynamicResource ForegroundBrush}"
-                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                             Margin="0,0,0,20">
-                        <TextBox.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="8"/>
-                            </Style>
-                        </TextBox.Resources>
-                    </TextBox>
+                            <TextBox Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="{DynamicResource FS14}" Padding="10,8" 
+                                     Background="{DynamicResource CardBackgroundBrush}"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                <TextBox.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="8"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                        </StackPanel>
+                    </Border>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Command="{Binding CancelRenameCommand}" Cursor="Hand" Margin="0,0,10,0">
@@ -615,20 +497,11 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-                        <Button Command="{Binding ConfirmRenameCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="18,9">
-                                        <TextBlock Text="{DynamicResource TplRenameBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                   Foreground="White"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button Command="{Binding ConfirmRenameCommand}"
+                                Style="{StaticResource FilledActionButton}"
+                                Padding="18,9">
+                            <TextBlock Text="{DynamicResource TplRenameBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                       Foreground="White"/>
                         </Button>
                     </StackPanel>
                 </StackPanel>
@@ -642,13 +515,13 @@
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseTagsPanelCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16" 
-                    Width="650" MaxHeight="600"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Padding="28">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.25"/>
-                </Border.Effect>
+            <Border Style="{StaticResource DialogSectionCard}"
+                    Width="650"
+                    MaxHeight="600"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="28"
+                    Background="{DynamicResource ContentBackgroundBrush}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -667,33 +540,28 @@
                             <TextBlock Text="{DynamicResource TplTagsTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <Button Width="32" Height="32" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                Command="{Binding CloseTagsPanelCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Width="32" Height="32">
-                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
-                                                   Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Command="{Binding CloseTagsPanelCommand}"
+                                Style="{StaticResource ToolbarInlineIconButton}">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
 
-                    <TextBlock Grid.Row="1" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="{DynamicResource FS12}" Margin="0,0,0,16"
-                               Text="{DynamicResource TplTagsDesc}"/>
+                    <Border Grid.Row="1" Style="{StaticResource DialogPreviewSurface}" Padding="14,12" Margin="0,0,0,16">
+                        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="{DynamicResource FS12}"
+                                   Text="{DynamicResource TplTagsDesc}"/>
+                    </Border>
 
                     <!-- Tags list -->
-                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="400">
+                    <Border Grid.Row="2" Style="{StaticResource DialogPreviewSurface}" Padding="10">
+                        <ScrollViewer Style="{StaticResource ThinScroll}" MaxHeight="400">
                         <ItemsControl ItemsSource="{Binding AvailableTags}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" 
+                                    <Border Style="{StaticResource DialogPreviewSurface}"
+                                            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" 
                                             Padding="12,8" Margin="0,0,0,6"
                                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                                         <Grid>
@@ -751,27 +619,19 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ScrollViewer>
+                        </ScrollViewer>
+                    </Border>
 
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-                        <Button Command="{Binding OpenTemplateFileCommand}" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="18,10">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock Text="{DynamicResource TplOpenEditor}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                       Foreground="White" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
+                        <Button Command="{Binding OpenTemplateFileCommand}"
+                                Style="{StaticResource FilledActionButton}"
+                                Padding="18,10">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{DynamicResource TplOpenEditor}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>

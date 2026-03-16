@@ -16,7 +16,7 @@
         <conv:ExpirySeverityBackgroundConverter x:Key="SeverityBg"/>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}" Margin="32,20,32,32" ClipToBounds="False">
+    <Grid Background="{DynamicResource WindowBackgroundBrush}" Margin="24,14,24,24" ClipToBounds="False">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -25,7 +25,7 @@
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Grid Grid.Row="0" Margin="0,0,0,16">
+        <Grid Grid.Row="0" Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -38,10 +38,10 @@
                     <TextBlock Text="&#xE7BA;" Style="{StaticResource PageHeaderIconText}"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
-                    <TextBlock FontSize="{DynamicResource FS12}"
+                    <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS22}" Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock FontSize="{DynamicResource FS11}"
                                Foreground="{DynamicResource MutedForegroundBrush}"
-                               Margin="0,3,0,0">
+                               Margin="0,2,0,0">
                         <Run Text="{Binding TotalDisplay, Mode=OneWay}"/>
                         <Run Text=" · "/>
                         <Run Text="{Binding ExpiredDisplay, Mode=OneWay}"/>
@@ -51,27 +51,27 @@
                 </StackPanel>
             </StackPanel>
 
-            <Button Grid.Column="1" Command="{Binding ExportToPdfCommand}" Style="{StaticResource FilledActionButton}">
+            <Button Grid.Column="1" Command="{Binding ExportToPdfCommand}" Padding="10,6" Style="{StaticResource FilledActionButton}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBlock Text="{DynamicResource ProbExportPdf}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                    <TextBlock Text="{DynamicResource ProbExportPdf}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
                                Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
         </Grid>
 
         <!-- STATS -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
             <!-- Expired / Critical -->
-            <Button Command="{Binding FilterExpiredCommand}" Cursor="Hand" Margin="0,0,10,0">
+            <Button Command="{Binding FilterExpiredCommand}" Cursor="Hand" Margin="0,0,8,0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
+                        <Border x:Name="Bd" Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
                                 BorderBrush="{DynamicResource ErrorLightBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding ExpiredDisplay, Mode=OneWay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="{Binding ExpiredDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource ErrorBrush}"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -89,14 +89,14 @@
             </Button>
 
             <!-- Warning / Expiring soon -->
-            <Button Command="{Binding FilterWarningCommand}" Cursor="Hand" Margin="0,0,10,0">
+            <Button Command="{Binding FilterWarningCommand}" Cursor="Hand" Margin="0,0,8,0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
+                        <Border x:Name="Bd" Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
                                 BorderBrush="{DynamicResource WarningLightBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding WarningDisplay, Mode=OneWay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Text="{Binding WarningDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource WarningBrush}"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -114,15 +114,15 @@
             </Button>
 
             <!-- Total -->
-            <Button Command="{Binding FilterAllCommand}" Cursor="Hand" Margin="0,0,10,0">
+            <Button Command="{Binding FilterAllCommand}" Cursor="Hand" Margin="0,0,8,0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
+                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding TotalDisplay, Mode=OneWay}" FontSize="{DynamicResource FS28}" FontWeight="Bold" 
+                                <TextBlock Text="{Binding TotalDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" 
                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatTotal}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                <TextBlock Text="{DynamicResource ProbStatTotal}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -142,12 +142,12 @@
             <Button Command="{Binding ToggleIgnoredListCommand}" Cursor="Hand">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Padding="16,10" MinWidth="140"
+                        <Border x:Name="Bd" Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
                                 BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="{Binding IgnoredCount}" FontSize="{DynamicResource FS28}" FontWeight="Bold" Foreground="{DynamicResource AccentDarkBrush}"/>
+                                <TextBlock Text="{Binding IgnoredCount}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource AccentDarkBrush}"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{DynamicResource ProbIgnored}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource AccentDarkBrush}"/>
+                                    <TextBlock Text="{DynamicResource ProbIgnored}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource AccentDarkBrush}"/>
                                     <TextBlock Text=" &#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
                                                Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center" Margin="4,1,0,0"/>
                                 </StackPanel>

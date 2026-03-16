@@ -146,12 +146,9 @@ namespace Win11DesktopApp.Services
                     return new Dictionary<string, object?> { ["restart_scheduled"] = true };
 
                 case "upload_diagnostics":
-                    {
-                        var success = await DiagnosticsService.UploadDiagnosticsAsync(clientId, "command").ConfigureAwait(false);
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                            ToastService.Instance.Info(success ? "Діагностику завантажено" : "Не вдалося завантажити діагностику"));
-                        return new Dictionary<string, object?> { ["uploaded"] = success };
-                    }
+                    LoggingService.LogWarning("CommandService.ExecuteRemoteCommand",
+                        "upload_diagnostics command ignored because diagnostics uploads are disabled.");
+                    return new Dictionary<string, object?> { ["uploaded"] = false, ["disabled"] = true };
 
                 default:
                     throw new InvalidOperationException($"Unknown remote command: {command.CommandType}");

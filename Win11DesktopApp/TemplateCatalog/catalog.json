@@ -1,0 +1,110 @@
+{
+  "Templates": [
+    {
+      "Id": "cz-2026-employer-employee-hpp",
+      "Category": "contract",
+      "Title": "Firma <-> Zamestnanec - HPP",
+      "Description": "Zakladni pracovni smlouva mezi firmou a zamestnancem na hlavni pracovni pomer.",
+      "PartyModel": "employer-employee",
+      "ContractType": "HPP",
+      "Format": "DOCX",
+      "RelativeContentPath": "contracts/cz-2026/employer-employee-hpp.rtf",
+      "PreviewText": "Zakladni pracovni smlouva na HPP mezi firmou a zamestnancem. Obsahuje smluvni strany, druh prace, misto vykonu prace, datum nastupu, mzdu a podpisy.",
+      "TagsIncluded": [
+        "COMPANY_Name",
+        "COMPANY_ICO",
+        "COMPANY_LegalAddress",
+        "EMPLOYEE_FullName",
+        "EMPLOYEE_BirthDate",
+        "EMPLOYEE_LocalAddress_Full",
+        "EMPLOYEE_PassportNumber",
+        "EMPLOYEE_Position",
+        "EMPLOYEE_WorkAddress",
+        "EMPLOYEE_StartDate",
+        "EMPLOYEE_SalaryBrutto",
+        "EMPLOYEE_ContractSignDate"
+      ]
+    },
+    {
+      "Id": "cz-2026-employer-employee-dpp",
+      "Category": "contract",
+      "Title": "Firma <-> Zamestnanec - DPP",
+      "Description": "Zakladni dohoda o provedeni prace mezi firmou a zamestnancem.",
+      "PartyModel": "employer-employee",
+      "ContractType": "DPP",
+      "Format": "DOCX",
+      "RelativeContentPath": "contracts/cz-2026/employer-employee-dpp.rtf",
+      "PreviewText": "Zakladni DPP mezi firmou a zamestnancem. Obsahuje vymezeni ukolu, misto vykonu prace, odmenu, dobu trvani a podpisy.",
+      "TagsIncluded": [
+        "COMPANY_Name",
+        "COMPANY_ICO",
+        "COMPANY_LegalAddress",
+        "EMPLOYEE_FullName",
+        "EMPLOYEE_BirthDate",
+        "EMPLOYEE_LocalAddress_Full",
+        "EMPLOYEE_PassportNumber",
+        "EMPLOYEE_Position",
+        "EMPLOYEE_WorkAddress",
+        "EMPLOYEE_StartDate",
+        "EMPLOYEE_HourlySalary",
+        "EMPLOYEE_ContractSignDate"
+      ]
+    },
+    {
+      "Id": "cz-2026-agency-employee-hpp",
+      "Category": "contract",
+      "Title": "Agentura <-> Zamestnanec - HPP",
+      "Description": "Rozsirena pracovni smlouva mezi agenturou prace a zamestnancem pro HPP s body o zkusebni dobe, dovolene, mzde, BOZP a rozvazani pracovniho pomeru.",
+      "PartyModel": "agency-employee",
+      "ContractType": "HPP",
+      "Format": "DOCX",
+      "RelativeContentPath": "contracts/cz-2026/agency-employee-hpp.rtf",
+      "PreviewText": "Rozsireny HPP vzor podle ceskeho zakoniku prace. Obsahuje smluvni strany, zakladni a zvlastni ujednani, mzdove podminky, BOZP, mlcenlivost, ukonceni pracovniho pomeru a zaverecna ustanoveni.",
+      "TagsIncluded": [
+        "AGENCY_Name",
+        "AGENCY_ICO",
+        "AGENCY_FullAddress",
+        "COMPANY_Name",
+        "EMPLOYEE_FullName",
+        "EMPLOYEE_BirthDate",
+        "EMPLOYEE_PassportCity",
+        "EMPLOYEE_PassportCountry",
+        "EMPLOYEE_LocalAddress_Full",
+        "EMPLOYEE_AbroadAddress_Full",
+        "EMPLOYEE_PassportNumber",
+        "EMPLOYEE_Position",
+        "EMPLOYEE_WorkAddress",
+        "EMPLOYEE_StartDate",
+        "COMPANY_WeeklyWorkHours",
+        "COMPANY_POS1_HourlySalary",
+        "EMPLOYEE_ContractSignDate"
+      ]
+    },
+    {
+      "Id": "cz-2026-agency-employee-dpp",
+      "Category": "contract",
+      "Title": "Agentura <-> Zamestnanec - DPP",
+      "Description": "Zakladni dohoda o provedeni prace mezi agenturou prace a zamestnancem.",
+      "PartyModel": "agency-employee",
+      "ContractType": "DPP",
+      "Format": "DOCX",
+      "RelativeContentPath": "contracts/cz-2026/agency-employee-dpp.rtf",
+      "PreviewText": "Zakladni DPP mezi agenturou a zamestnancem. Obsahuje agenturu jako zamestnavatele, uzivatele a dohodnutou odmenu za praci.",
+      "TagsIncluded": [
+        "AGENCY_Name",
+        "AGENCY_ICO",
+        "AGENCY_FullAddress",
+        "COMPANY_Name",
+        "EMPLOYEE_FullName",
+        "EMPLOYEE_BirthDate",
+        "EMPLOYEE_LocalAddress_Full",
+        "EMPLOYEE_PassportNumber",
+        "EMPLOYEE_Position",
+        "EMPLOYEE_WorkAddress",
+        "EMPLOYEE_StartDate",
+        "EMPLOYEE_HourlySalary",
+        "EMPLOYEE_ContractSignDate"
+      ]
+    }
+  ]
+}

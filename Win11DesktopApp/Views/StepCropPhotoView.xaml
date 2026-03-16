@@ -4,8 +4,17 @@
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=1}"
             Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-        <StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,16">
                 <Border Background="{DynamicResource PurpleLightBrush}" CornerRadius="8" Width="36" Height="36">
                     <TextBlock Text="&#xE91B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                Foreground="{DynamicResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -13,113 +22,115 @@
                 <TextBlock Text="{DynamicResource StepCropPhoto}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
                            Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="220"/>
-                </Grid.ColumnDefinitions>
 
-                <!-- Canvas area -->
-                <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="10" 
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                        ClipToBounds="True">
-                    <Canvas x:Name="CropCanvas" Width="600" Height="380" Background="Transparent" Cursor="Cross">
-                        <Image x:Name="CropImage" Width="600" Height="380" Stretch="Uniform" 
-                               Source="{Binding CurrentCropImagePath, Converter={StaticResource ImagePathConverter}}"/>
-                        <Rectangle x:Name="CropRect" Stroke="#0078D4" StrokeThickness="2" 
-                                   Fill="#300078D4" StrokeDashArray="4 2"/>
-                    </Canvas>
-                </Border>
+            <!-- Canvas area -->
+            <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="10" 
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    ClipToBounds="True">
+                <Canvas x:Name="CropCanvas" Width="600" Height="380" Background="Transparent" Cursor="Cross">
+                    <Image x:Name="CropImage" Width="600" Height="380" Stretch="Uniform" 
+                           Source="{Binding CurrentCropImagePath, Converter={StaticResource ImagePathConverter}}"/>
+                    <Rectangle x:Name="CropRect" Stroke="#0078D4" StrokeThickness="2" 
+                               Fill="#300078D4" StrokeDashArray="4 2"/>
+                </Canvas>
+            </Border>
 
-                <!-- Right panel: controls -->
-                <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                    <!-- Document selector -->
-                    <TextBlock Text="{DynamicResource WizDocLabel}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding CropTargets}" SelectedItem="{Binding SelectedCropTarget}" 
-                              Style="{StaticResource WizCombo}" Margin="0,0,0,10"/>
+            <!-- Right panel: controls -->
+            <ScrollViewer Grid.Column="1"
+                          Grid.RowSpan="2"
+                          Margin="16,0,0,0"
+                          VerticalAlignment="Top"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Style="{StaticResource ThinScroll}">
+                <StackPanel>
+                        <!-- Document selector -->
+                        <TextBlock Text="{DynamicResource WizDocLabel}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding CropTargets}" SelectedItem="{Binding SelectedCropTarget}" 
+                                  Style="{StaticResource WizCombo}" Margin="0,0,0,8"/>
 
-                    <!-- Aspect ratio -->
-                    <CheckBox Content="{DynamicResource WizKeepAspect}" IsChecked="{Binding KeepAspectRatio}" 
-                              Margin="0,0,0,6" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
-                    <ComboBox x:Name="AspectCombo" SelectedValuePath="Tag" SelectedValue="{Binding CropAspectRatio}" 
-                              Style="{StaticResource WizCombo}" Margin="0,0,0,10">
-                        <ComboBoxItem Content="1:1" Tag="1"/>
-                        <ComboBoxItem Content="4:3" Tag="1.3333"/>
-                        <ComboBoxItem Content="3:4" Tag="0.75"/>
-                    </ComboBox>
+                        <!-- Aspect ratio -->
+                        <CheckBox Content="{DynamicResource WizKeepAspect}" IsChecked="{Binding KeepAspectRatio}" 
+                                  Margin="0,0,0,4" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                        <ComboBox x:Name="AspectCombo" SelectedValuePath="Tag" SelectedValue="{Binding CropAspectRatio}" 
+                                  Style="{StaticResource WizCombo}" Margin="0,0,0,8">
+                            <ComboBoxItem Content="1:1" Tag="1"/>
+                            <ComboBoxItem Content="4:3" Tag="1.3333"/>
+                            <ComboBoxItem Content="3:4" Tag="0.75"/>
+                        </ComboBox>
 
-                    <!-- Rotate buttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <Button Command="{Binding RotateLeftCommand}"
-                                Cursor="Hand"
-                                ToolTip="{DynamicResource WizRotateLeft}"
-                                Style="{StaticResource HeaderGhostButton}"
-                                Width="44"
-                                Height="38"
-                                Padding="0">
-                            <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                       Foreground="{DynamicResource ForegroundBrush}" 
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                        <Button Command="{Binding RotateRightCommand}"
-                                Cursor="Hand"
-                                Margin="6,0,0,0"
-                                ToolTip="{DynamicResource WizRotateRight}"
-                                Style="{StaticResource HeaderGhostButton}"
-                                Width="44"
-                                Height="38"
-                                Padding="0">
-                            <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                       Foreground="{DynamicResource ForegroundBrush}" 
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Button>
-                    </StackPanel>
-
-                    <!-- Enhance button (not for Фото mode) -->
-                    <Button Command="{Binding EnhanceDocumentCommand}"
-                            Cursor="Hand"
-                            Margin="0,0,0,12"
-                            Visibility="{Binding IsCropPhotoMode, Converter={StaticResource InverseBoolToVis}}"
-                            Style="{StaticResource FilledActionButton}">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="&#xE771;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource WizEnhanceBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="White"/>
+                        <!-- Rotate buttons -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Command="{Binding RotateLeftCommand}"
+                                    Cursor="Hand"
+                                    ToolTip="{DynamicResource WizRotateLeft}"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    Width="44"
+                                    Height="38"
+                                    Padding="0">
+                                <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                           Foreground="{DynamicResource ForegroundBrush}" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Command="{Binding RotateRightCommand}"
+                                    Cursor="Hand"
+                                    Margin="6,0,0,0"
+                                    ToolTip="{DynamicResource WizRotateRight}"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    Width="44"
+                                    Height="38"
+                                    Padding="0">
+                                <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                           Foreground="{DynamicResource ForegroundBrush}" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
                         </StackPanel>
-                    </Button>
 
-                    <!-- Hint for Фото mode -->
-                    <TextBlock Text="{DynamicResource WizCropInstruction}" TextWrapping="Wrap" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,8"
-                               Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
+                        <!-- Enhance button (not for Фото mode) -->
+                        <Button Command="{Binding EnhanceDocumentCommand}"
+                                Cursor="Hand"
+                                Margin="0,0,0,10"
+                                Visibility="{Binding IsCropPhotoMode, Converter={StaticResource InverseBoolToVis}}"
+                                Style="{StaticResource FilledActionButton}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE771;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{DynamicResource WizEnhanceBtn}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold" Foreground="White"/>
+                            </StackPanel>
+                        </Button>
 
-                    <!-- Apply crop button (only in Фото mode) -->
-                    <Button Command="{Binding ApplyCropCommand}"
-                            Cursor="Hand"
-                            Margin="0,0,0,12"
-                            Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"
-                            Style="{StaticResource FilledActionButton}">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource BtnApplyCrop}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                       Foreground="White" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                        <!-- Hint for Фото mode -->
+                        <TextBlock Text="{DynamicResource WizCropInstruction}" TextWrapping="Wrap" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,6"
+                                   Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
 
-                    <!-- Preview label + photo (only in Фото mode) -->
-                    <TextBlock Text="{DynamicResource WizPreviewLabel}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,6"
-                               Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
+                        <!-- Apply crop button (only in Фото mode) -->
+                        <Button Command="{Binding ApplyCropCommand}"
+                                Cursor="Hand"
+                                Margin="0,0,0,8"
+                                Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource FilledActionButton}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{DynamicResource BtnApplyCrop}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
-                    <Border CornerRadius="10" Width="180" Height="180" Background="{DynamicResource ContentBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                            ClipToBounds="True"
-                            Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}">
-                        <Image Source="{Binding CroppedPhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill"/>
-                    </Border>
+                        <!-- Preview label + photo (only in Фото mode) -->
+                        <TextBlock Text="{DynamicResource WizPreviewLabel}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,6"
+                                   Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
+
+                        <Border CornerRadius="10" Width="180" Height="210" Background="{DynamicResource ContentBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                ClipToBounds="True"
+                                Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}">
+                            <Image Source="{Binding CroppedPhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"/>
+                        </Border>
                 </StackPanel>
-            </Grid>
-        </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Border>
 </UserControl>

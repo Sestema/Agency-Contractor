@@ -26,6 +26,11 @@ namespace Win11DesktopApp.ViewModels
         private void GenerateDocument(TemplateEntry? template)
         {
             if (template == null) return;
+            if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.GenerateDocument", notifyUser: true))
+            {
+                GenerateStatusMessage = Res("MsgEmployeeFolderMissing");
+                return;
+            }
 
             try
             {
@@ -385,7 +390,9 @@ namespace Win11DesktopApp.ViewModels
                 gfx.Dispose();
                 doc.Save(dlg.FileName);
                 App.ActivityLogService?.Log("ExportPdf", "Export", _firmName, FullName,
-                    $"Експортовано анкету {FullName} → PDF", employeeFolder: _employeeFolder);
+                    $"Експортовано анкету {FullName} → PDF",
+                    details: $"Фірма: {_firmName}; Документ: анкета працівника; Файл: {Path.GetFileName(dlg.FileName)}",
+                    employeeFolder: _employeeFolder);
                 ToastService.Instance.Success(Res("MsgPdfSaved"));
             }
             catch (Exception ex)

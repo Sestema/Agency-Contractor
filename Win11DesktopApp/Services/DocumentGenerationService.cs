@@ -24,14 +24,32 @@ namespace Win11DesktopApp.Services
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
 
+        private static void EnsureTemplateExists(string templatePath)
+        {
+            if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
+                throw new FileNotFoundException(Res("MsgTemplateMissing"), templatePath);
+        }
+
+        private static void EnsureOutputDirectory(string outputPath)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath))
+                throw new IOException(Res("MsgOpenFileFail"));
+
+            var directory = Path.GetDirectoryName(outputPath);
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new DirectoryNotFoundException(Res("MsgOpenFolderFail"));
+
+            Directory.CreateDirectory(directory);
+        }
+
         /// <summary>
         /// Generates a DOCX document from a template by replacing all ${TAG} placeholders with values.
         /// Preserves all formatting, styles, tables, images — only tag text is replaced.
         /// </summary>
         public string GenerateDocx(string templatePath, string outputPath, Dictionary<string, string> tagValues)
         {
-            if (!File.Exists(templatePath))
-                throw new FileNotFoundException(Res("MsgTemplateMissing"), templatePath);
+            EnsureTemplateExists(templatePath);
+            EnsureOutputDirectory(outputPath);
 
             File.Copy(templatePath, outputPath, true);
 
@@ -185,8 +203,8 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public string GenerateFromRtf(string rtfTemplatePath, string outputPath, Dictionary<string, string> tagValues)
         {
-            if (!File.Exists(rtfTemplatePath))
-                throw new FileNotFoundException("RTF шаблон не знайдено.", rtfTemplatePath);
+            EnsureTemplateExists(rtfTemplatePath);
+            EnsureOutputDirectory(outputPath);
 
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var ansiEncoding = Encoding.GetEncoding(1252);
@@ -211,8 +229,7 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public string GenerateDocxFromRtf(string rtfTemplatePath, string outputPath, Dictionary<string, string> tagValues)
         {
-            if (!File.Exists(rtfTemplatePath))
-                throw new FileNotFoundException("RTF шаблон не знайдено.", rtfTemplatePath);
+            EnsureTemplateExists(rtfTemplatePath);
 
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var ansiEncoding = Encoding.GetEncoding(1252);
@@ -224,6 +241,8 @@ namespace Win11DesktopApp.Services
             var docxPath = outputPath;
             if (!docxPath.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
                 docxPath = Path.ChangeExtension(docxPath, ".docx");
+
+            EnsureOutputDirectory(docxPath);
 
             using (var doc = WordprocessingDocument.Create(docxPath, WordprocessingDocumentType.Document))
             {
@@ -324,8 +343,8 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public string GenerateXlsx(string templatePath, string outputPath, Dictionary<string, string> tagValues)
         {
-            if (!File.Exists(templatePath))
-                throw new FileNotFoundException("XLSX шаблон не знайдено.", templatePath);
+            EnsureTemplateExists(templatePath);
+            EnsureOutputDirectory(outputPath);
 
             File.Copy(templatePath, outputPath, true);
 
@@ -370,8 +389,8 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public string GeneratePdf(string templatePath, string outputPath, Dictionary<string, string> tagValues)
         {
-            if (!File.Exists(templatePath))
-                throw new FileNotFoundException("PDF template not found.", templatePath);
+            EnsureTemplateExists(templatePath);
+            EnsureOutputDirectory(outputPath);
 
             var tagMapPath = Path.ChangeExtension(templatePath, ".tags.json");
             if (!File.Exists(tagMapPath))
@@ -381,8 +400,20 @@ namespace Win11DesktopApp.Services
                 return outputPath;
             }
 
-            var json = File.ReadAllText(tagMapPath);
-            var tagMap = JsonSerializer.Deserialize<PdfTagMap>(json);
+            PdfTagMap? tagMap;
+            try
+            {
+                var json = File.ReadAllText(tagMapPath);
+                tagMap = JsonSerializer.Deserialize<PdfTagMap>(json);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("DocumentGenerationService.GeneratePdf",
+                    $"Tag map could not be read, copying original PDF instead: {ex.Message}");
+                File.Copy(templatePath, outputPath, true);
+                return outputPath;
+            }
+
             if (tagMap?.Placements == null || tagMap.Placements.Count == 0)
             {
                 File.Copy(templatePath, outputPath, true);

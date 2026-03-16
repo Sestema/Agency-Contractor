@@ -13,12 +13,10 @@ namespace AdminPanel
     {
         private readonly SupabaseService _svc;
         private ClientRecord? _selected;
+        private ClientProfileRecord? _selectedProfile;
         private List<ClientRecord> _allClients = new();
         private List<TelemetryRecord> _allTelemetry = new();
         private List<TelemetryRecord> _activeTelemetry = new();
-        private List<AdminCommandRecord> _activeCommands = new();
-        private List<AdminAuditRecord> _activeAuditEntries = new();
-        private List<ClientDiagnosticRecord> _activeDiagnostics = new();
         private bool _isUpdatingTelemetryEventFilter;
 
         private const string BaseUrl = "https://tssgxhatnjvqthdiyuwo.supabase.co";
@@ -52,12 +50,12 @@ namespace AdminPanel
 
                 if (_selected == null)
                 {
+                    _selectedProfile = null;
                     _activeTelemetry = _allTelemetry;
                     PopulateTelemetryEventFilter();
                     ApplyTelemetryFilters();
                     UpdateStats(_allTelemetry, null);
                     PopulateClientDetails(null);
-                    ClearRemoteControlData();
                     UpdateActionButtons();
                 }
 
@@ -87,12 +85,12 @@ namespace AdminPanel
             if (match == null)
             {
                 _selected = null;
+                _selectedProfile = null;
                 _activeTelemetry = _allTelemetry;
                 PopulateTelemetryEventFilter();
                 ApplyTelemetryFilters();
                 UpdateStats(_allTelemetry, null);
                 PopulateClientDetails(null);
-                ClearRemoteControlData();
                 UpdateActionButtons();
             }
         }
@@ -210,21 +208,18 @@ namespace AdminPanel
 
             if (clientId != null)
             {
-                var hb = filtered
-                    .Where(t => t.EventType == "heartbeat" && t.EventData?.ValueKind == JsonValueKind.Object)
-                    .OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue)
-                    .FirstOrDefault();
-                ExtractStats(hb, out totalFirms, out totalEmployees);
+                var latestStats = GetLatestStatsTelemetry(filtered);
+                ExtractStats(latestStats, out totalFirms, out totalEmployees);
             }
             else
             {
                 var byClient = telemetry
-                    .Where(t => t.ClientId != null && t.EventType == "heartbeat" && t.EventData?.ValueKind == JsonValueKind.Object)
+                    .Where(t => t.ClientId != null)
                     .GroupBy(t => t.ClientId);
 
                 foreach (var group in byClient)
                 {
-                    var latest = group.OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue).FirstOrDefault();
+                    var latest = GetLatestStatsTelemetry(group);
                     ExtractStats(latest, out var firms, out var employees);
                     totalFirms += firms;
                     totalEmployees += employees;
@@ -261,6 +256,7 @@ namespace AdminPanel
         private void DgClients_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _selected = DgClients.SelectedItem as ClientRecord;
+            _selectedProfile = null;
             UpdateActionButtons();
             PopulateClientDetails(_selected);
             _ = LoadSelectedClientDataAsync();
@@ -274,15 +270,8 @@ namespace AdminPanel
             BtnBlockIp.IsEnabled = hasSelection && !string.IsNullOrWhiteSpace(_selected?.IpAddress);
             BtnExtend.IsEnabled = hasSelection;
             BtnDelete.IsEnabled = hasSelection;
+            BtnResetProfile.IsEnabled = hasSelection && _selectedProfile != null;
             BtnSaveNotes.IsEnabled = hasSelection && HasNotesChanged();
-
-            BtnSendAdminMessage.IsEnabled = hasSelection;
-            BtnRequestDiagnostics.IsEnabled = hasSelection;
-            BtnRunUpdateCheck.IsEnabled = hasSelection;
-            BtnRemoteRestart.IsEnabled = hasSelection;
-            BtnOpenLicenseRemote.IsEnabled = hasSelection;
-            BtnSetReadOnlyCommand.IsEnabled = hasSelection;
-            BtnSavePolicy.IsEnabled = hasSelection;
         }
 
         private async Task LoadSelectedClientDataAsync()
@@ -291,43 +280,49 @@ namespace AdminPanel
             {
                 if (_selected == null)
                 {
+                    _selectedProfile = null;
                     _activeTelemetry = _allTelemetry;
                     PopulateTelemetryEventFilter();
                     ApplyTelemetryFilters();
                     UpdateStats(_allTelemetry, null);
                     PopulateClientDetails(null);
-                    ClearRemoteControlData();
                     return;
                 }
 
                 var selectedId = _selected.Id;
                 var telemetryTask = _svc.GetTelemetryAsync(selectedId, 500);
-                var commandsTask = _svc.GetAdminCommandsAsync(selectedId, 100);
-                var auditTask = _svc.GetAdminAuditLogAsync(selectedId, 100);
-                var diagnosticsTask = _svc.GetClientDiagnosticsAsync(selectedId, 50);
-                var policyTask = _svc.GetClientPolicyAsync(selectedId);
-
-                await Task.WhenAll(telemetryTask, commandsTask, auditTask, diagnosticsTask, policyTask);
+                var profileTask = _svc.GetClientProfileAsync(selectedId);
+                await Task.WhenAll(telemetryTask, profileTask);
 
                 if (_selected?.Id != selectedId)
                     return;
 
                 _activeTelemetry = telemetryTask.Result;
-                _activeCommands = commandsTask.Result;
-                _activeAuditEntries = auditTask.Result;
-                _activeDiagnostics = diagnosticsTask.Result;
+                _selectedProfile = profileTask.Result;
 
                 UpdateStats(_activeTelemetry, selectedId);
                 PopulateClientDetails(_selected);
                 PopulateTelemetryEventFilter();
                 ApplyTelemetryFilters();
-                ApplyPolicyToEditor(policyTask.Result);
-                RefreshRemoteDataViews();
+                UpdateActionButtons();
             }
             catch (Exception ex)
             {
-                TxtStatus.Text = $"Telemetry/control error: {ex.Message}";
+                TxtStatus.Text = $"Telemetry error: {ex.Message}";
             }
+        }
+
+        private static TelemetryRecord? GetLatestStatsTelemetry(IEnumerable<TelemetryRecord> telemetry)
+        {
+            return telemetry
+                .Where(t => t.EventData?.ValueKind == JsonValueKind.Object && HasStats(t.EventData.Value))
+                .OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue)
+                .FirstOrDefault();
+        }
+
+        private static bool HasStats(JsonElement data)
+        {
+            return data.TryGetProperty("firms_count", out _) || data.TryGetProperty("employees_count", out _);
         }
 
         private void PopulateTelemetryEventFilter()
@@ -383,9 +378,11 @@ namespace AdminPanel
             {
                 filtered = filtered.Where(t =>
                     t.EventType.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    t.EventTypeDisplay.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     t.MachineId.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     t.IpAddress.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     t.AppVersion.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    t.EventSummary.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     t.EventDataDisplay.Contains(query, StringComparison.OrdinalIgnoreCase));
             }
 
@@ -422,8 +419,11 @@ namespace AdminPanel
                 TxtDetailLicense.Text = "—";
                 TxtDetailHeartbeat.Text = "—";
                 TxtDetailRisk.Text = "—";
-                TxtDetailRiskReasons.Text = "—";
                 TxtDetailErrors.Text = "—";
+                TxtDetailProfileName.Text = "—";
+                TxtDetailProfileStatus.Text = "—";
+                TxtDetailRememberMe.Text = "—";
+                TxtDetailProfileUpdatedAt.Text = "—";
                 TxtNotes.Text = string.Empty;
                 BtnSaveNotes.IsEnabled = false;
                 return;
@@ -442,96 +442,29 @@ namespace AdminPanel
             TxtDetailLastSeen.Text = FormatDate(client.LastSeen?.ToLocalTime(), "dd.MM.yyyy HH:mm");
             TxtDetailBlockReason.Text = string.IsNullOrWhiteSpace(client.BlockReason) ? "—" : client.BlockReason;
             TxtDetailLicense.Text = GetLicenseStateLabel(client);
-            TxtDetailHeartbeat.Text = BuildHeartbeatSummary();
+            TxtDetailHeartbeat.Text = BuildLatestStateSummary();
             TxtDetailRisk.Text = $"{client.RiskLevel} ({client.RiskScore})";
-            TxtDetailRiskReasons.Text = BuildRiskReasonsText(client);
             TxtDetailErrors.Text = client.ErrorLikeCount == 0 ? "Немає error-like подій" : $"{client.ErrorLikeCount} error-like подій";
+            TxtDetailProfileName.Text = _selectedProfile == null
+                ? "Профіль не створено"
+                : $"{_selectedProfile.FirstName} {_selectedProfile.LastName}".Trim();
+            TxtDetailProfileStatus.Text = _selectedProfile == null
+                ? "Відсутній"
+                : _selectedProfile.MustResetPassword ? "Очікує примусового reset" : "Активний";
+            TxtDetailRememberMe.Text = _selectedProfile == null
+                ? "—"
+                : _selectedProfile.RememberMeEnabled ? "Увімкнено" : "Вимкнено";
+            TxtDetailProfileUpdatedAt.Text = _selectedProfile?.UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—";
             TxtNotes.Text = client.Notes ?? string.Empty;
             BtnSaveNotes.IsEnabled = HasNotesChanged();
         }
 
-        private string BuildHeartbeatSummary()
+        private string BuildLatestStateSummary()
         {
-            var hb = _activeTelemetry
-                .Where(t => string.Equals(t.EventType, "heartbeat", StringComparison.OrdinalIgnoreCase) && t.EventData?.ValueKind == JsonValueKind.Object)
-                .OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue)
-                .FirstOrDefault();
+            var latestStats = GetLatestStatsTelemetry(_activeTelemetry);
 
-            ExtractStats(hb, out var firms, out var employees);
-            return hb == null ? "—" : $"Фірм: {firms}, працівників: {employees}";
-        }
-
-        private void ApplyPolicyToEditor(ClientPolicyRecord? policy)
-        {
-            var effective = policy ?? new ClientPolicyRecord
-            {
-                ClientId = _selected?.Id ?? string.Empty,
-                UpdateChannel = "stable"
-            };
-
-            TxtPolicyMinVersion.Text = effective.MinimumSupportedVersion ?? string.Empty;
-            TxtPolicyRecommendedVersion.Text = effective.RecommendedVersion ?? string.Empty;
-            TxtPolicyVersion.Text = string.IsNullOrWhiteSpace(effective.PolicyVersion)
-                ? "policy: not set"
-                : $"policy: {effective.PolicyVersion}";
-            TxtPolicyAdminMessage.Text = effective.AdminMessage ?? string.Empty;
-            ChkPolicyForceUpdate.IsChecked = effective.ForceUpdate;
-            ChkPolicyMaintenance.IsChecked = effective.MaintenanceMode;
-            ChkPolicyReadOnly.IsChecked = effective.ReadOnlyMode;
-            ChkPolicyDisableAI.IsChecked = effective.DisableAI;
-            ChkPolicyDisableExports.IsChecked = effective.DisableExports;
-            ChkPolicyHideTemplates.IsChecked = effective.HideTemplates;
-            ChkPolicyHideFinance.IsChecked = effective.HideFinance;
-            ChkPolicyRequireOnline.IsChecked = effective.RequireOnlineCheck;
-            SelectComboTag(CmbPolicyChannel, string.IsNullOrWhiteSpace(effective.UpdateChannel) ? "stable" : effective.UpdateChannel);
-        }
-
-        private ClientPolicyRecord BuildPolicyFromEditor()
-        {
-            return new ClientPolicyRecord
-            {
-                ClientId = _selected?.Id ?? string.Empty,
-                MinimumSupportedVersion = (TxtPolicyMinVersion.Text ?? string.Empty).Trim(),
-                RecommendedVersion = (TxtPolicyRecommendedVersion.Text ?? string.Empty).Trim(),
-                UpdateChannel = GetSelectedComboTag(CmbPolicyChannel),
-                ForceUpdate = ChkPolicyForceUpdate.IsChecked == true,
-                MaintenanceMode = ChkPolicyMaintenance.IsChecked == true,
-                ReadOnlyMode = ChkPolicyReadOnly.IsChecked == true,
-                DisableAI = ChkPolicyDisableAI.IsChecked == true,
-                DisableExports = ChkPolicyDisableExports.IsChecked == true,
-                HideTemplates = ChkPolicyHideTemplates.IsChecked == true,
-                HideFinance = ChkPolicyHideFinance.IsChecked == true,
-                RequireOnlineCheck = ChkPolicyRequireOnline.IsChecked == true,
-                AdminMessage = (TxtPolicyAdminMessage.Text ?? string.Empty).Trim(),
-                PolicyVersion = DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
-                UpdatedAt = DateTime.UtcNow
-            };
-        }
-
-        private void RefreshRemoteDataViews()
-        {
-            DgCommands.ItemsSource = _activeCommands;
-            DgAudit.ItemsSource = _activeAuditEntries;
-            DgDiagnostics.ItemsSource = _activeDiagnostics;
-
-            TxtCommandsSummary.Text = $"Команди: {_activeCommands.Count} | Pending: {_activeCommands.Count(c => string.Equals(c.Status, "pending", StringComparison.OrdinalIgnoreCase))}";
-            TxtAuditSummary.Text = $"Аудит: {_activeAuditEntries.Count}";
-            TxtDiagnosticsSummary.Text = $"Діагностика: {_activeDiagnostics.Count}";
-        }
-
-        private void ClearRemoteControlData()
-        {
-            _activeCommands = new();
-            _activeAuditEntries = new();
-            _activeDiagnostics = new();
-            DgCommands.ItemsSource = _activeCommands;
-            DgAudit.ItemsSource = _activeAuditEntries;
-            DgDiagnostics.ItemsSource = _activeDiagnostics;
-            TxtCommandsSummary.Text = "Команди: 0";
-            TxtAuditSummary.Text = "Аудит: 0";
-            TxtDiagnosticsSummary.Text = "Діагностика: 0";
-            ApplyPolicyToEditor(null);
-            TxtCommandMessage.Text = string.Empty;
+            ExtractStats(latestStats, out var firms, out var employees);
+            return latestStats == null ? "—" : $"Фірм: {firms}, працівників: {employees}";
         }
 
         private static string FormatDate(DateTime? value, string format)
@@ -705,13 +638,6 @@ namespace AdminPanel
 
             version = parsedVersion;
             return true;
-        }
-
-        private static string BuildRiskReasonsText(ClientRecord client)
-        {
-            return client.RiskReasons.Count == 0
-                ? "—"
-                : string.Join(Environment.NewLine, client.RiskReasons.Select(reason => $"- {reason}"));
         }
 
         private void ClientFilter_Changed(object sender, EventArgs e)
@@ -953,102 +879,53 @@ namespace AdminPanel
             }
         }
 
-        private async void BtnSendAdminMessage_Click(object sender, RoutedEventArgs e)
+        private async void BtnResetProfile_Click(object sender, RoutedEventArgs e)
         {
-            if (_selected == null)
+            if (_selected == null || _selectedProfile == null)
                 return;
 
-            var message = (TxtCommandMessage.Text ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(message))
-            {
-                MessageBox.Show("Введіть текст повідомлення.", "Команда", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            try
-            {
-                var payload = new { message, severity = "info", modal = false };
-                await _svc.CreateAdminCommandAsync(_selected.Id, "show_message", payload);
-                await _svc.TryWriteAuditAsync(_selected.Id, "command_sent", null, new { command = "show_message", payload }, "Надіслано повідомлення");
-                TxtCommandMessage.Text = string.Empty;
-                await LoadSelectedClientDataAsync();
-                TxtStatus.Text = "Команду show_message додано";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Команда", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private async void BtnRequestDiagnostics_Click(object sender, RoutedEventArgs e)
-        {
-            await QueueSimpleCommandAsync("upload_diagnostics", "Запит діагностики");
-        }
-
-        private async void BtnRunUpdateCheck_Click(object sender, RoutedEventArgs e)
-        {
-            await QueueSimpleCommandAsync("run_update_check", "Remote update check");
-        }
-
-        private async void BtnRemoteRestart_Click(object sender, RoutedEventArgs e)
-        {
-            await QueueSimpleCommandAsync("restart_app", "Remote restart");
-        }
-
-        private async void BtnOpenLicenseRemote_Click(object sender, RoutedEventArgs e)
-        {
-            await QueueSimpleCommandAsync("open_license_window", "Open license window");
-        }
-
-        private async void BtnSetReadOnlyCommand_Click(object sender, RoutedEventArgs e)
-        {
-            var message = (TxtCommandMessage.Text ?? string.Empty).Trim();
-            var payload = string.IsNullOrWhiteSpace(message)
-                ? new { admin_message = "Клієнт переведено в read-only режим адміністратором." }
-                : new { admin_message = message };
-            await QueueCommandAsync("enter_readonly_mode", payload, "Read-only command");
-        }
-
-        private async void BtnSavePolicy_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selected == null)
+            if (MessageBox.Show(
+                    $"Скинути пароль профілю для {_selected.MachineName}?\nКористувач при наступному запуску повинен буде задати новий пароль.",
+                    "Скидання пароля профілю",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
             try
             {
-                var existing = await _svc.GetClientPolicyAsync(_selected.Id);
-                var policy = BuildPolicyFromEditor();
-                await _svc.UpsertClientPolicyAsync(policy);
-                await _svc.TryWriteAuditAsync(_selected.Id, "policy_updated", existing, policy, "Оновлено remote policy");
-                await LoadSelectedClientDataAsync();
-                TxtStatus.Text = "Policy збережено";
+                var before = new
+                {
+                    must_reset_password = _selectedProfile.MustResetPassword,
+                    remember_me_enabled = _selectedProfile.RememberMeEnabled,
+                    session_version = _selectedProfile.SessionVersion
+                };
+
+                var updatedProfile = await _svc.ResetClientProfilePasswordAsync(_selected.Id);
+                if (updatedProfile == null)
+                {
+                    MessageBox.Show("У цього клієнта ще немає створеного профілю.", "Профіль відсутній",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                await _svc.TryWriteAuditAsync(_selected.Id, "profile_password_reset",
+                    before,
+                    new
+                    {
+                        must_reset_password = updatedProfile.MustResetPassword,
+                        remember_me_enabled = updatedProfile.RememberMeEnabled,
+                        session_version = updatedProfile.SessionVersion
+                    },
+                    "Адміністратор скинув пароль профілю");
+
+                MessageBox.Show("Пароль профілю скинуто. При наступному запуску клієнт повинен буде ввести новий пароль.",
+                    "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                await RefreshAsync(_selected.Id);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Policy", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private async Task QueueSimpleCommandAsync(string commandType, string note)
-        {
-            await QueueCommandAsync(commandType, new { }, note);
-        }
-
-        private async Task QueueCommandAsync(string commandType, object payload, string note)
-        {
-            if (_selected == null)
-                return;
-
-            try
-            {
-                await _svc.CreateAdminCommandAsync(_selected.Id, commandType, payload);
-                await _svc.TryWriteAuditAsync(_selected.Id, "command_sent", null, new { command = commandType, payload }, note);
-                await LoadSelectedClientDataAsync();
-                TxtStatus.Text = $"Команду {commandType} додано";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Команда", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

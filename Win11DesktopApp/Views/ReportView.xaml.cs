@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Markup;
+using System.Threading;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.ViewModels;
 
@@ -11,6 +13,7 @@ namespace Win11DesktopApp.Views
         public ReportView()
         {
             InitializeComponent();
+            Language = XmlLanguage.GetLanguage(Thread.CurrentThread.CurrentUICulture.IetfLanguageTag);
         }
 
         private void EmployeeRow_DoubleClick(object sender, MouseButtonEventArgs e)

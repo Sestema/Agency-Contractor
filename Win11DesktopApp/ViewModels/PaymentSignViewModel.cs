@@ -145,9 +145,9 @@ namespace Win11DesktopApp.ViewModels
                 var fontTitle = new XFont("Segoe UI", 14, XFontStyleEx.Bold);
                 var fontHeader = new XFont("Segoe UI", 9, XFontStyleEx.Bold);
                 var fontCell = new XFont("Segoe UI", 9, XFontStyleEx.Bold);
-                var fontInfo = new XFont("Segoe UI", 10, XFontStyleEx.Regular);
+                var fontInfo = new XFont("Segoe UI", 10, XFontStyleEx.Bold);
                 var fontSmall = new XFont("Segoe UI", 8, XFontStyleEx.Regular);
-                var fontPage = new XFont("Segoe UI", 9, XFontStyleEx.Bold);
+                var fontPage = new XFont("Segoe UI", 24, XFontStyleEx.Bold);
 
                 double marginLeft = 30;
                 double marginTop = 36;
@@ -167,10 +167,10 @@ namespace Win11DesktopApp.ViewModels
                 void CalcCols()
                 {
                     contentW = pageW - marginLeft * 2;
-                    colName = contentW * 0.20;
-                    colFirm = contentW * 0.26;
-                    colDate = contentW * 0.12;
-                    colInfo = contentW * 0.32;
+                    colName = contentW * 0.19;
+                    colFirm = contentW * 0.36;
+                    colDate = contentW * 0.11;
+                    colInfo = contentW * 0.24;
                     colSign = contentW * 0.10;
                 }
 
@@ -178,7 +178,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     var p = doc.AddPage();
                     p.Size = PdfSharp.PageSize.A4;
-                    p.Orientation = PdfSharp.PageOrientation.Portrait;
+                    p.Orientation = PdfSharp.PageOrientation.Landscape;
                     gfx?.Dispose();
                     gfx = XGraphics.FromPdfPage(p);
                     pageW = p.Width.Point;
@@ -194,13 +194,15 @@ namespace Win11DesktopApp.ViewModels
                         fontTitle, XBrushes.Black,
                         new XRect(marginLeft, marginTop, contentW, titleH), XStringFormats.Center);
 
-                    // Page number — book layout
-                    if (pageNum % 2 == 1)
-                        gfx.DrawString(pageNum.ToString(), fontPage, XBrushes.Black,
-                            new XRect(pageW - marginLeft - 30, marginTop, 30, titleH), XStringFormats.CenterRight);
-                    else
-                        gfx.DrawString(pageNum.ToString(), fontPage, XBrushes.Black,
-                            new XRect(marginLeft, marginTop, 30, titleH), XStringFormats.CenterLeft);
+                    // Page number in a separate visible frame.
+                    double pageBoxWidth = 62;
+                    double pageBoxHeight = titleH;
+                    double pageBoxX = pageNum % 2 == 1
+                        ? pageW - marginLeft - pageBoxWidth
+                        : marginLeft;
+                    var pageBoxRect = new XRect(pageBoxX, marginTop, pageBoxWidth, pageBoxHeight);
+                    gfx.DrawRectangle(pen, XBrushes.White, pageBoxRect);
+                    gfx.DrawString(pageNum.ToString(), fontPage, XBrushes.Black, pageBoxRect, XStringFormats.Center);
 
                     y = marginTop + titleH;
 

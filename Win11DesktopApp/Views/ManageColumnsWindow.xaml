@@ -2,11 +2,11 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource FinManageColumnsTitle}"
-        Width="520" Height="560" WindowStartupLocation="CenterOwner"
+        Width="560" Height="620" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{DynamicResource WindowBackgroundBrush}">
 
-    <Grid Margin="20">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -14,59 +14,109 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
             <Border Style="{StaticResource PageHeaderIconBadge}">
                 <TextBlock Text="&#xE70F;" Style="{StaticResource PageHeaderIconText}"/>
             </Border>
-            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                <TextBlock Text="{DynamicResource FinManageColumnsTitle}" FontSize="{DynamicResource FS20}" Style="{StaticResource PageHeaderTitleText}"/>
-                <TextBlock Text="{DynamicResource FinManageColumnsDesc}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource FinManageColumnsTitle}"
+                           FontSize="{DynamicResource FS20}"
+                           Style="{StaticResource PageHeaderTitleText}"/>
+                <TextBlock Text="{DynamicResource FinManageColumnsDesc}"
+                           FontSize="{DynamicResource FS11}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap"/>
             </StackPanel>
         </StackPanel>
 
-        <!-- Existing fields list -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" Padding="6">
-            <ListBox x:Name="FieldsList" ItemsSource="{Binding}" Background="Transparent" BorderThickness="0"
-                     HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <Border Grid.Row="1" Style="{StaticResource DialogSectionCard}" Padding="10">
+            <ListBox x:Name="FieldsList"
+                     ItemsSource="{Binding}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0,0,0,8"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="8" Padding="10,7" Margin="0,2">
+                        <Border Style="{StaticResource DialogPreviewSurface}" Padding="12,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30"/>
+                                    <ColumnDefinition Width="36"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
-                                           HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}">
-                                    <TextBlock.Text>
-                                        <MultiBinding StringFormat="{}{0}">
-                                            <Binding Path="OperationSymbol"/>
-                                        </MultiBinding>
-                                    </TextBlock.Text>
-                                </TextBlock>
+                                <Border Grid.Column="0"
+                                        Background="{DynamicResource AccentLightBrush}"
+                                        CornerRadius="9"
+                                        Width="30"
+                                        Height="30"
+                                        VerticalAlignment="Center">
+                                    <TextBlock FontSize="{DynamicResource FS15}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AccentDarkBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}{0}">
+                                                <Binding Path="OperationSymbol"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </Border>
 
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontWeight="SemiBold"
+                                               FontSize="{DynamicResource FS13}"
                                                Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <TextBlock Text="{Binding FirmDisplay}" FontSize="{DynamicResource FS10}" Foreground="#888"/>
+                                    <TextBlock Text="{Binding FirmDisplay}"
+                                               FontSize="{DynamicResource FS11}"
+                                               Foreground="{DynamicResource MutedForegroundBrush}"
+                                               Margin="0,2,0,0"/>
                                 </StackPanel>
 
-                                <Button Grid.Column="2" Content="&#xE70F;" FontFamily="Segoe MDL2 Assets"
-                                        Tag="{Binding Id}" Click="EditField_Click"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                        Foreground="{DynamicResource AccentBrush}" FontSize="14"
-                                        Padding="8,4" Margin="4,0" VerticalAlignment="Center"/>
+                                <Button Grid.Column="2"
+                                        Tag="{Binding Id}"
+                                        Click="EditField_Click"
+                                        Style="{StaticResource ToolbarInlineIconButton}"
+                                        Foreground="{DynamicResource AccentBrush}"
+                                        Margin="8,0,6,0"
+                                        ToolTip="{DynamicResource FinEditFieldTitle}">
+                                    <TextBlock Text="&#xE70F;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS13}"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
+                                </Button>
 
-                                <Button Grid.Column="3" Content="&#xE74D;" FontFamily="Segoe MDL2 Assets"
-                                        Tag="{Binding Id}" Click="DeleteField_Click"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                        Foreground="#E53935" FontSize="14"
-                                        Padding="8,4" VerticalAlignment="Center"/>
+                                <Button Grid.Column="3"
+                                        Tag="{Binding Id}"
+                                        Click="DeleteField_Click"
+                                        Style="{StaticResource ToolbarInlineIconButton}"
+                                        Foreground="{DynamicResource ErrorBrush}"
+                                        ToolTip="{DynamicResource TitleConfirmDelete}">
+                                    <TextBlock Text="&#xE74D;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS13}"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
+                                </Button>
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -74,59 +124,107 @@
             </ListBox>
         </Border>
 
-        <!-- Add new field panel -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                Padding="14,10" Margin="0,10,0,0">
+        <Border Grid.Row="2" Style="{StaticResource DialogSectionCard}" Margin="0,12,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <Border Style="{StaticResource SectionHeaderIconBadge}"
+                            Background="{DynamicResource SuccessLightBrush}">
+                        <TextBlock Text="&#xE710;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS13}"
+                                   Foreground="{DynamicResource SuccessBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource FinBtnAddField}"
+                                   FontSize="{DynamicResource FS15}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource FinManageColumnsDesc}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,2,0,0"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
 
-                    <TextBox x:Name="NewFieldName" Grid.Column="0" Padding="8,6" FontSize="{DynamicResource FS13}" Margin="0,0,8,0"
-                             VerticalContentAlignment="Center"/>
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <ComboBox x:Name="NewFieldOperation" Grid.Column="1" Width="120" Padding="6,5" FontSize="{DynamicResource FS13}"
-                              SelectedIndex="1">
-                        <ComboBoxItem Content="+ Dodávat" Tag="Add"/>
-                        <ComboBoxItem Content="− Odečítat" Tag="Subtract"/>
-                        <ComboBoxItem Content="× Násobit" Tag="Multiply"/>
-                        <ComboBoxItem Content="÷ Dělit" Tag="Divide"/>
-                    </ComboBox>
-                </Grid>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
 
-                <Grid Grid.Row="1" Margin="0,6,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                        <TextBox x:Name="NewFieldName"
+                                 Grid.Column="0"
+                                 Padding="10,7"
+                                 FontSize="{DynamicResource FS13}"
+                                 Margin="0,0,10,0"
+                                 VerticalContentAlignment="Center"/>
 
-                    <ComboBox x:Name="NewFieldFirm" Grid.Column="0" Padding="6,5" FontSize="{DynamicResource FS12}" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="NewFieldOperation"
+                                  Grid.Column="1"
+                                  Width="130"
+                                  FontSize="{DynamicResource FS13}"
+                                  Style="{StaticResource ThemedComboBox}"
+                                  SelectedIndex="1">
+                            <ComboBoxItem Content="+ Dodávat" Tag="Add"/>
+                            <ComboBoxItem Content="− Odečítat" Tag="Subtract"/>
+                            <ComboBoxItem Content="× Násobit" Tag="Multiply"/>
+                            <ComboBoxItem Content="÷ Dělit" Tag="Divide"/>
+                        </ComboBox>
+                    </Grid>
 
-                    <Button Grid.Column="1" Click="AddField_Click" Cursor="Hand" Style="{StaticResource FilledActionButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="{DynamicResource FinBtnAddField}" FontSize="{DynamicResource FS12}"
-                                       Foreground="White" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox x:Name="NewFieldFirm"
+                                  Grid.Column="0"
+                                  FontSize="{DynamicResource FS12}"
+                                  Style="{StaticResource ThemedComboBox}"
+                                  Margin="0,0,10,0"/>
+
+                        <Button Grid.Column="1"
+                                Click="AddField_Click"
+                                Style="{StaticResource FilledActionButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE710;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="{DynamicResource FS12}"
+                                           Foreground="White"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,6,0"/>
+                                <TextBlock Text="{DynamicResource FinBtnAddField}"
+                                           FontSize="{DynamicResource FS12}"
+                                           Foreground="White"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </Grid>
             </Grid>
         </Border>
 
-        <!-- Bottom buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button Click="Close_Click" Cursor="Hand" Style="{StaticResource FilledActionButton}">
-                <TextBlock Text="{DynamicResource BtnDone}" FontSize="{DynamicResource FS13}" Foreground="White" FontWeight="SemiBold"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Click="Close_Click" Style="{StaticResource FilledActionButton}">
+                <TextBlock Text="{DynamicResource BtnDone}"
+                           FontSize="{DynamicResource FS13}"
+                           Foreground="White"
+                           FontWeight="SemiBold"/>
             </Button>
         </StackPanel>
     </Grid>

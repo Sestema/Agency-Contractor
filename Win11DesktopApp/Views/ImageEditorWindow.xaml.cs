@@ -39,6 +39,9 @@ namespace Win11DesktopApp.Views
         public string? ResultPath { get; private set; }
         public bool LoadFailed { get; private set; }
 
+        private static string Res(string key, string fallback)
+            => Application.Current?.TryFindResource(key) as string ?? fallback;
+
         public ImageEditorWindow(string imagePath)
         {
             InitializeComponent();
@@ -46,6 +49,15 @@ namespace Win11DesktopApp.Views
 
             try
             {
+                if (string.IsNullOrWhiteSpace(imagePath))
+                    throw new FileNotFoundException(Res("MsgFileNotFound", "File not found."));
+
+                if (!File.Exists(imagePath))
+                    throw new FileNotFoundException(Res("MsgFileNotFound", "File not found."), imagePath);
+
+                if (new FileInfo(imagePath).Length <= 0)
+                    throw new IOException(Res("MsgOpenFileFail", "Could not open file."));
+
                 _originalMat = LoadWithRetry(imagePath);
                 _currentMat = _originalMat.Clone();
                 BuildPreviewMat();
@@ -53,12 +65,13 @@ namespace Win11DesktopApp.Views
             catch (Exception ex)
             {
                 LoadFailed = true;
+                LoggingService.LogWarning("ImageEditorWindow.Load", $"Failed to open '{imagePath}': {ex.Message}");
                 _originalMat = new Mat(100, 100, MatType.CV_8UC3, new Scalar(255, 255, 255));
                 _currentMat = _originalMat.Clone();
                 Loaded += (_, _) =>
                 {
-                    var fmt = Application.Current?.TryFindResource("MsgFileOpenError") as string ?? "Could not open file:\n{0}";
-                    var ttl = Application.Current?.TryFindResource("TitleError") as string ?? "Error";
+                    var fmt = Res("MsgFileOpenError", "Could not open file:\n{0}");
+                    var ttl = Res("TitleError", "Error");
                     MessageBox.Show(string.Format(fmt, ex.Message), ttl, MessageBoxButton.OK, MessageBoxImage.Error);
                     Close();
                 };
@@ -579,6 +592,12 @@ namespace Win11DesktopApp.Views
         {
             try
             {
+                if (_currentMat == null || _currentMat.Empty())
+                {
+                    StatusText.Text = Res("MsgOpenFileFail", "Could not open file.");
+                    return;
+                }
+
                 var final = ApplySlidersFull(_currentMat);
                 var outPath = Path.Combine(Path.GetTempPath(), $"edited_{Guid.NewGuid():N}{Path.GetExtension(_originalPath)}");
                 _service.SaveImage(final, outPath);

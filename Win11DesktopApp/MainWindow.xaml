@@ -75,6 +75,9 @@
         <DataTemplate DataType="{x:Type vm:AIChatViewModel}">
             <views:AIChatView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:NewsViewModel}">
+            <views:NewsView/>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid ClipToBounds="False">

@@ -40,23 +40,23 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("UpdateService.CheckForUpdates", ex.Message);
-                return null;
+                throw;
             }
         }
 
-        public static async Task<bool> DownloadAndApplyAsync(UpdateInfo updateInfo, Action<int>? progressCallback = null, string? channel = null)
+        public static async Task<string?> DownloadAndApplyAsync(UpdateInfo updateInfo, Action<int>? progressCallback = null, string? channel = null)
         {
             try
             {
                 var mgr = GetManager(channel);
                 await mgr.DownloadUpdatesAsync(updateInfo, progress: progressCallback);
                 mgr.ApplyUpdatesAndRestart(updateInfo);
-                return true;
+                return null;
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("UpdateService.DownloadAndApply", ex.Message);
-                return false;
+                return ex.Message;
             }
         }
 

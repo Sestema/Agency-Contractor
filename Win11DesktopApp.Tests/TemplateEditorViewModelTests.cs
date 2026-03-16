@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
@@ -41,6 +42,7 @@ namespace Win11DesktopApp.Tests
 
             Assert.False(string.IsNullOrEmpty(vm.RtfFilePath));
             Assert.EndsWith("content.rtf", vm.RtfFilePath);
+            Assert.EndsWith("content.xamlpackage", vm.NativeDocumentPath);
         }
 
         [Fact]
@@ -82,6 +84,80 @@ namespace Win11DesktopApp.Tests
             var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
 
             Assert.NotNull(vm.TagGroups);
+        }
+
+        [Fact]
+        public void Constructor_ShouldRestorePersistedPageLayout()
+        {
+            var firmName = "TestFirm";
+            var fileName = "test.docx";
+            SetupTemplateFile(firmName, fileName, "dummy content");
+
+            var folder = Path.Combine(_testRootPath, firmName, "Templates", "Test_Template");
+            SafeFileService.WriteJsonAtomic(Path.Combine(folder, "editor-layout.json"), new TemplateEditorLayoutSettings
+            {
+                PageSizeKey = "letter",
+                OrientationKey = "landscape",
+                MarginKey = "wide"
+            });
+
+            var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
+
+            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
+
+            Assert.Equal("letter", vm.SelectedPageSize?.Key);
+            Assert.Equal("landscape", vm.SelectedPageOrientation?.Key);
+            Assert.Equal("wide", vm.SelectedPageMargin?.Key);
+        }
+
+        [Fact]
+        public async Task SaveCommand_ShouldPersistPageLayout()
+        {
+            var firmName = "TestFirm";
+            var fileName = "test.docx";
+            SetupTemplateFile(firmName, fileName, "dummy content");
+
+            var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
+            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService)
+            {
+                RequestGetRtfContent = () => "{\\rtf1\\ansi test}"
+            };
+            vm.NotifyEditorLoaded();
+
+            vm.SelectedPageSize = vm.AvailablePageSizes.Single(x => x.Key == "letter");
+            vm.SelectedPageOrientation = vm.AvailablePageOrientations.Single(x => x.Key == "landscape");
+            vm.SelectedPageMargin = vm.AvailablePageMargins.Single(x => x.Key == "wide");
+
+            vm.SaveCommand.Execute(null);
+            await Task.Delay(250);
+
+            var settings = SafeFileService.ReadJsonOrDefault(vm.LayoutSettingsPath, new TemplateEditorLayoutSettings());
+            Assert.Equal("letter", settings.PageSizeKey);
+            Assert.Equal("landscape", settings.OrientationKey);
+            Assert.Equal("wide", settings.MarginKey);
+        }
+
+        [Fact]
+        public async Task SaveCommand_ShouldPersistNativeEditorDocument()
+        {
+            var firmName = "TestFirm";
+            var fileName = "test.docx";
+            SetupTemplateFile(firmName, fileName, "dummy content");
+
+            var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
+            var expectedBytes = new byte[] { 1, 2, 3, 4, 5 };
+            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService)
+            {
+                RequestGetRtfContent = () => "{\\rtf1\\ansi test}",
+                RequestGetXamlPackageContent = () => expectedBytes
+            };
+            vm.NotifyEditorLoaded();
+
+            vm.SaveCommand.Execute(null);
+            await Task.Delay(250);
+
+            Assert.True(File.Exists(vm.NativeDocumentPath));
+            Assert.Equal(expectedBytes, SafeFileService.ReadAllBytes(vm.NativeDocumentPath));
         }
 
         private string SetupTemplateFile(string firmName, string fileName, string content)

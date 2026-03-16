@@ -112,6 +112,27 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void DeleteTemplate_ShouldRemoveReadOnlyFilesAndFolder()
+        {
+            var firmName = "TestFirm";
+            var sourceFile = Path.Combine(_testRootPath, "source.docx");
+            File.WriteAllText(sourceFile, "dummy");
+
+            _templateService.AddTemplate(firmName, "ReadOnly Template", "Desc", "DOCX", sourceFile);
+
+            var template = _templateService.GetTemplates(firmName).Single();
+            var templateFolder = Path.Combine(_testRootPath, "TestFirm", "Templates", "ReadOnly_Template");
+            var templateFile = Path.Combine(templateFolder, "template.docx");
+
+            File.SetAttributes(templateFile, FileAttributes.ReadOnly);
+
+            _templateService.DeleteTemplate(firmName, template);
+
+            Assert.False(Directory.Exists(templateFolder));
+            Assert.Empty(_templateService.GetTemplates(firmName));
+        }
+
+        [Fact]
         public void CopyTemplateToCompany_ShouldCreateCopiedTemplateInTargetCompany()
         {
             var sourceFirm = "SourceFirm";

@@ -618,7 +618,8 @@ namespace Win11DesktopApp.ViewModels
                 ws.Columns().AdjustToContents();
                 workbook.SaveAs(dialog.FileName);
                 App.ActivityLogService?.Log("ExportExcel", "Export", _company?.Name ?? "", "",
-                    $"Експортовано список працівників {_company?.Name} → Excel");
+                    $"Експортовано список працівників {_company?.Name} → Excel",
+                    details: $"Фірма: {_company?.Name}; Працівників: {Employees.Count}; Файл: {Path.GetFileName(dialog.FileName)}");
                 Process.Start(new ProcessStartInfo { FileName = dialog.FileName, UseShellExecute = true });
             }
             catch (Exception ex)

@@ -26,6 +26,7 @@ namespace Win11DesktopApp.Services
         private static string? _clientId;
 
         public static bool IsBlocked => _isBlocked;
+        public static string? GetCurrentClientId() => _clientId;
         internal static HttpClient HttpClient => _http;
         internal static string BaseUrl => _baseUrl;
 
@@ -122,6 +123,56 @@ namespace Win11DesktopApp.Services
                 LoggingService.LogWarning("TelemetryService", $"Heartbeat failed: {ex.Message}");
                 return result;
             }
+        }
+
+        /// <summary>
+        /// Lightweight startup sync for AdminPanel visibility.
+        /// Updates the client row immediately when the app launches.
+        /// </summary>
+        public static async Task ReportStartupSnapshotAsync()
+        {
+            try
+            {
+                var machineId = LicenseService.GetMachineId();
+                var machineName = Environment.MachineName;
+                var appVersion = AppSettingsService.CurrentAppVersion;
+                var expiresAt = LicenseService.GetExpiresAt();
+                var stats = CollectStats();
+
+                string ip = await GetIpSilentAsync().ConfigureAwait(false);
+
+                ConfigureHeaders();
+
+                var existing = await FindClientAsync(machineId).ConfigureAwait(false);
+
+                if (existing != null)
+                {
+                    _clientId = existing.Value.GetProperty("id").GetString();
+                    _isBlocked = existing.Value.TryGetProperty("is_blocked", out var b) && b.GetBoolean();
+
+                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName, expiresAt).ConfigureAwait(false);
+                    await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "app_started", stats).ConfigureAwait(false);
+                }
+                else
+                {
+                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, expiresAt).ConfigureAwait(false);
+                    if (_clientId != null)
+                        await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.StartupSnapshot", ex.Message);
+            }
+        }
+
+        public static async Task<string?> EnsureStartupClientIdAsync()
+        {
+            if (!string.IsNullOrWhiteSpace(_clientId))
+                return _clientId;
+
+            await ReportStartupSnapshotAsync().ConfigureAwait(false);
+            return _clientId;
         }
 
         /// <summary>

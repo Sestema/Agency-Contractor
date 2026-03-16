@@ -1,73 +1,108 @@
 <UserControl x:Class="Win11DesktopApp.Views.StepAdditionalView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="WizardCalendarButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=6}"
-            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
         <StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                <Border CornerRadius="8" Width="36" Height="36">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#4CAF50" Offset="0"/>
-                            <GradientStop Color="#8BC34A" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <TextBlock Text="{DynamicResource StepAdditional}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
-                           Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            <StackPanel Margin="0,0,0,18">
+                <StackPanel Orientation="Horizontal">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource SuccessBrush}">
+                        <TextBlock Text="&#xE73E;" Style="{StaticResource PageHeaderIconText}"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource StepAdditional}"
+                                   FontSize="{DynamicResource FS18}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource BtnSaveEmployee}"
+                                   FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                    <TextBlock Text="{DynamicResource WizPhone}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizStartDate}" Style="{StaticResource WizLabel}"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="StartDateTextBox" Grid.Column="0" Text="{Binding Data.StartDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                        <DatePicker x:Name="StartDatePicker" Grid.Column="1" Width="32" Margin="4,0,0,8"
-                                    VerticalAlignment="Center" SelectedDateChanged="StartDatePicker_Changed"
-                                    Background="Transparent" BorderThickness="0"/>
-                    </Grid>
-                    <StackPanel Visibility="{Binding IsPassportOnlyType, Converter={StaticResource InverseBoolToVis}}">
-                        <TextBlock Text="{DynamicResource WizSignDate}" Style="{StaticResource WizLabel}"/>
+            <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
+                <Grid MaxWidth="640" HorizontalAlignment="Left">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{DynamicResource WizPhone}" Style="{StaticResource WizLabel}"/>
+                        <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                        <TextBlock Text="{DynamicResource WizStartDate}" Style="{StaticResource WizLabel}"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="SignDateTextBox" Grid.Column="0" Text="{Binding Data.ContractSignDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                            <DatePicker x:Name="SignDatePicker" Grid.Column="1" Width="32" Margin="4,0,0,8"
-                                        VerticalAlignment="Center" SelectedDateChanged="SignDatePicker_Changed"
-                                        Background="Transparent" BorderThickness="0"/>
+                            <TextBox x:Name="StartDateTextBox" Grid.Column="0" Text="{Binding Data.StartDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                            <Grid Grid.Column="1" Width="36" Margin="6,0,0,8">
+                                <DatePicker x:Name="StartDatePicker"
+                                            Width="1" Height="1"
+                                            Opacity="0"
+                                            Focusable="False"
+                                            IsHitTestVisible="False"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            SelectedDateChanged="StartDatePicker_Changed"
+                                            Background="Transparent"
+                                            BorderThickness="0"/>
+                                <Button Click="OpenStartDatePicker_Click"
+                                        Style="{StaticResource WizardCalendarButton}">
+                                    <TextBlock Text="&#xE787;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS14}"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"/>
+                                </Button>
+                            </Grid>
                         </Grid>
+                        <StackPanel Visibility="{Binding IsPassportOnlyType, Converter={StaticResource InverseBoolToVis}}">
+                            <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,6,0,12"/>
+                            <TextBlock Text="{DynamicResource WizSignDate}" Style="{StaticResource WizLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="SignDateTextBox" Grid.Column="0" Text="{Binding Data.ContractSignDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                                <Grid Grid.Column="1" Width="36" Margin="6,0,0,8">
+                                    <DatePicker x:Name="SignDatePicker"
+                                                Width="1" Height="1"
+                                                Opacity="0"
+                                                Focusable="False"
+                                                IsHitTestVisible="False"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"
+                                                SelectedDateChanged="SignDatePicker_Changed"
+                                                Background="Transparent"
+                                                BorderThickness="0"/>
+                                    <Button Click="OpenSignDatePicker_Click"
+                                            Style="{StaticResource WizardCalendarButton}">
+                                        <TextBlock Text="&#xE787;"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="{DynamicResource FS14}"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"/>
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-            </Grid>
-
-            <Button Command="{Binding SaveCommand}"
-                    Cursor="Hand"
-                    Margin="0,20,0,0"
-                    HorizontalAlignment="Center"
-                    Style="{StaticResource FilledActionButton}"
-                    Padding="28,14">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                               Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock Text="{DynamicResource BtnSaveEmployee}" FontSize="{DynamicResource FS16}" FontWeight="Bold"
-                               Foreground="White" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+                </Grid>
+            </Border>
         </StackPanel>
     </Border>
 </UserControl>

@@ -53,6 +53,8 @@ namespace Win11DesktopApp.ViewModels
         private readonly AppSettingsService _appSettingsService;
         private readonly ThemeService _themeService;
         private readonly CompanyService? _companyService;
+        private readonly ProfileAuthService _profileAuthService;
+        private readonly ProfileSessionService _profileSessionService;
 
         public ICommand GoBackCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
@@ -67,6 +69,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand TestGeminiCommand { get; }
         public ICommand OpenGeminiSiteCommand { get; }
         public ICommand CheckForUpdatesCommand { get; }
+        public ICommand SaveProfileCommand { get; }
+        public ICommand ChangeProfilePasswordCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -100,6 +104,16 @@ namespace Win11DesktopApp.ViewModels
 
         private Velopack.UpdateInfo? _pendingUpdate;
         public ICommand InstallUpdateCommand { get; }
+        private string _profileFirstName = string.Empty;
+        private string _profileLastName = string.Empty;
+        private bool _profileRememberMeEnabled;
+        private string _profileCurrentPassword = string.Empty;
+        private string _profileNewPassword = string.Empty;
+        private string _profileConfirmPassword = string.Empty;
+        private string _profileStatusMessage = string.Empty;
+        private bool _profileStatusIsError;
+        private bool _isInitializingProfileFields;
+        private bool _isSyncingRememberMe;
 
         public string RootFolderPath
         {
@@ -122,6 +136,65 @@ namespace Win11DesktopApp.ViewModels
 
         public string LicenseStatus => GetLocalizedLicenseStatus();
         public string MachineId => Services.LicenseService.GetMachineId();
+        public bool HasProfile => App.CurrentProfile != null;
+        public string ProfileClientId => App.CurrentProfile?.ClientId ?? string.Empty;
+
+        public string ProfileFirstName
+        {
+            get => _profileFirstName;
+            set => SetProperty(ref _profileFirstName, value);
+        }
+
+        public string ProfileLastName
+        {
+            get => _profileLastName;
+            set => SetProperty(ref _profileLastName, value);
+        }
+
+        public bool ProfileRememberMeEnabled
+        {
+            get => _profileRememberMeEnabled;
+            set
+            {
+                if (!SetProperty(ref _profileRememberMeEnabled, value))
+                    return;
+
+                if (_isInitializingProfileFields || _isSyncingRememberMe || App.CurrentProfile == null)
+                    return;
+
+                _ = SyncRememberMeAsync(value);
+            }
+        }
+
+        public string ProfileCurrentPassword
+        {
+            get => _profileCurrentPassword;
+            set => SetProperty(ref _profileCurrentPassword, value);
+        }
+
+        public string ProfileNewPassword
+        {
+            get => _profileNewPassword;
+            set => SetProperty(ref _profileNewPassword, value);
+        }
+
+        public string ProfileConfirmPassword
+        {
+            get => _profileConfirmPassword;
+            set => SetProperty(ref _profileConfirmPassword, value);
+        }
+
+        public string ProfileStatusMessage
+        {
+            get => _profileStatusMessage;
+            set => SetProperty(ref _profileStatusMessage, value);
+        }
+
+        public bool ProfileStatusIsError
+        {
+            get => _profileStatusIsError;
+            set => SetProperty(ref _profileStatusIsError, value);
+        }
 
         private string GetLocalizedLicenseStatus()
         {
@@ -225,17 +298,25 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _currentDocLanguage, value);
         }
 
-        public SettingsViewModel(AppSettingsService? appSettingsService = null, ThemeService? themeService = null, CompanyService? companyService = null)
+        public SettingsViewModel(
+            AppSettingsService? appSettingsService = null,
+            ThemeService? themeService = null,
+            CompanyService? companyService = null,
+            ProfileAuthService? profileAuthService = null,
+            ProfileSessionService? profileSessionService = null)
         {
             _appSettingsService = appSettingsService ?? App.AppSettingsService;
             _themeService = themeService ?? App.ThemeService;
             _companyService = companyService ?? App.CompanyService;
+            _profileAuthService = profileAuthService ?? App.ProfileAuthService;
+            _profileSessionService = profileSessionService ?? App.ProfileSessionService;
 
             _currentLanguage = _appSettingsService.Settings.LanguageCode;
             _currentTheme = DetectCurrentTheme();
             _currentInterfaceSize = _appSettingsService.Settings.InterfaceSize ?? "Medium";
             _currentTextSize = _appSettingsService.Settings.TextSize ?? "Medium";
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
+            InitializeProfileFields();
 
             GoBackCommand = new RelayCommand(o =>
             {
@@ -346,6 +427,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 IsUpdateChecking = true;
                 IsUpdateAvailable = false;
+                _pendingUpdate = null;
                 UpdateStatus = Res("UpdateChecking");
                 try
                 {
@@ -373,15 +455,22 @@ namespace Win11DesktopApp.ViewModels
                 if (_pendingUpdate == null) return;
                 IsUpdateChecking = true;
                 UpdateStatus = Res("UpdateDownloading");
-                var success = await Services.UpdateService.DownloadAndApplyAsync(
+                var errorMessage = await Services.UpdateService.DownloadAndApplyAsync(
                     _pendingUpdate,
-                    progress => UpdateStatus = $"{Res("UpdateDownloading")} {progress}%");
-                if (!success)
+                    progress =>
+                    {
+                        Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+                            UpdateStatus = $"{Res("UpdateDownloading")} {progress}%"));
+                    });
+                if (!string.IsNullOrWhiteSpace(errorMessage))
                 {
-                    UpdateStatus = Res("UpdateError");
+                    UpdateStatus = $"{Res("UpdateError")}: {errorMessage}";
                     IsUpdateChecking = false;
                 }
             });
+
+            SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync(), _ => HasProfile);
+            ChangeProfilePasswordCommand = new AsyncRelayCommand(_ => ChangeProfilePasswordAsync(), _ => HasProfile);
         }
 
         public static double GetInterfaceSizeMultiplier(string size) => size switch
@@ -434,6 +523,193 @@ namespace Win11DesktopApp.ViewModels
                 }
             }
             return "Light";
+        }
+
+        private void InitializeProfileFields()
+        {
+            _isInitializingProfileFields = true;
+            try
+            {
+                if (App.CurrentProfile == null)
+                {
+                    ProfileFirstName = string.Empty;
+                    ProfileLastName = string.Empty;
+                    ProfileRememberMeEnabled = false;
+                    return;
+                }
+
+                ProfileFirstName = App.CurrentProfile.FirstName;
+                ProfileLastName = App.CurrentProfile.LastName;
+                ProfileRememberMeEnabled = App.CurrentProfile.RememberMeEnabled;
+            }
+            finally
+            {
+                _isInitializingProfileFields = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task SaveProfileAsync()
+        {
+            if (App.CurrentProfile == null)
+            {
+                SetProfileStatus(Res("SettingsProfileNotLoadedError"), true);
+                return;
+            }
+
+            if (!ProfileAuthService.IsValidProfileName(ProfileFirstName))
+            {
+                SetProfileStatus(Res("ProfileErrFirstNameLatin"), true);
+                return;
+            }
+
+            if (!ProfileAuthService.IsValidProfileName(ProfileLastName))
+            {
+                SetProfileStatus(Res("ProfileErrLastNameLatin"), true);
+                return;
+            }
+
+            var nameResult = await _profileAuthService.UpdateProfileNameAsync(
+                App.CurrentProfile.ClientId,
+                ProfileFirstName,
+                ProfileLastName);
+
+            if (!nameResult.Success || nameResult.Profile == null)
+            {
+                SetProfileStatus(nameResult.ErrorMessage, true);
+                return;
+            }
+
+            var rememberResult = await _profileAuthService.UpdateRememberMeAsync(
+                nameResult.Profile.ClientId,
+                ProfileRememberMeEnabled);
+
+            if (!rememberResult.Success || rememberResult.Profile == null)
+            {
+                SetProfileStatus(rememberResult.ErrorMessage, true);
+                return;
+            }
+
+            UpdateCurrentProfile(rememberResult.Profile);
+
+            if (ProfileRememberMeEnabled)
+                _profileSessionService.SaveRememberedSession(rememberResult.Profile);
+            else
+                _profileSessionService.ClearRememberedSession();
+
+            SetProfileStatus(Res("SettingsProfileUpdated"), false);
+        }
+
+        private async System.Threading.Tasks.Task ChangeProfilePasswordAsync()
+        {
+            if (App.CurrentProfile == null)
+            {
+                SetProfileStatus(Res("SettingsProfileNotLoadedError"), true);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(ProfileCurrentPassword))
+            {
+                SetProfileStatus(Res("ProfileErrCurrentPasswordRequired"), true);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(ProfileNewPassword))
+            {
+                SetProfileStatus(Res("ProfileErrNewPasswordRequired"), true);
+                return;
+            }
+
+            if (ProfileNewPassword.Length < 6)
+            {
+                SetProfileStatus(Res("ProfileErrPasswordMinLength"), true);
+                return;
+            }
+
+            if (!string.Equals(ProfileNewPassword, ProfileConfirmPassword, StringComparison.Ordinal))
+            {
+                SetProfileStatus(Res("ProfileErrPasswordsMismatch"), true);
+                return;
+            }
+
+            var result = await _profileAuthService.ChangePasswordAsync(
+                App.CurrentProfile.ClientId,
+                ProfileCurrentPassword,
+                ProfileNewPassword);
+
+            if (!result.Success || result.Profile == null)
+            {
+                SetProfileStatus(result.ErrorMessage, true);
+                return;
+            }
+
+            UpdateCurrentProfile(result.Profile);
+
+            if (ProfileRememberMeEnabled)
+                _profileSessionService.SaveRememberedSession(result.Profile);
+            else
+                _profileSessionService.ClearRememberedSession();
+
+            ProfileCurrentPassword = string.Empty;
+            ProfileNewPassword = string.Empty;
+            ProfileConfirmPassword = string.Empty;
+            SetProfileStatus(Res("SettingsProfilePasswordChanged"), false);
+        }
+
+        private void UpdateCurrentProfile(ClientProfileRecord profile)
+        {
+            App.SetCurrentProfile(profile);
+            InitializeProfileFields();
+            OnPropertyChanged(nameof(HasProfile));
+            OnPropertyChanged(nameof(ProfileClientId));
+        }
+
+        private async System.Threading.Tasks.Task SyncRememberMeAsync(bool enabled)
+        {
+            if (App.CurrentProfile == null)
+                return;
+
+            var currentProfile = App.CurrentProfile;
+            _isSyncingRememberMe = true;
+
+            try
+            {
+                var result = await _profileAuthService.UpdateRememberMeAsync(currentProfile.ClientId, enabled);
+                if (!result.Success || result.Profile == null)
+                {
+                    _isInitializingProfileFields = true;
+                    ProfileRememberMeEnabled = currentProfile.RememberMeEnabled;
+                    _isInitializingProfileFields = false;
+                    SetProfileStatus(result.ErrorMessage, true);
+                    return;
+                }
+
+                UpdateCurrentProfile(result.Profile);
+
+                if (enabled)
+                    _profileSessionService.SaveRememberedSession(result.Profile);
+                else
+                    _profileSessionService.ClearRememberedSession();
+
+                SetProfileStatus(Res("SettingsProfileRememberUpdated"), false);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.SyncRememberMe", ex.Message);
+                _isInitializingProfileFields = true;
+                ProfileRememberMeEnabled = currentProfile.RememberMeEnabled;
+                _isInitializingProfileFields = false;
+                SetProfileStatus(Res("SettingsProfileRememberUpdateFailed"), true);
+            }
+            finally
+            {
+                _isSyncingRememberMe = false;
+            }
+        }
+
+        private void SetProfileStatus(string message, bool isError)
+        {
+            ProfileStatusMessage = message;
+            ProfileStatusIsError = isError;
         }
     }
 }

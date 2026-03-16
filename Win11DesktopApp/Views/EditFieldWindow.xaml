@@ -2,57 +2,86 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource FinEditFieldTitle}"
-        Width="400" Height="280" WindowStartupLocation="CenterOwner"
+        Width="440" Height="320" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{DynamicResource WindowBackgroundBrush}">
 
-    <Grid Margin="20">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{DynamicResource FinEditFieldTitle}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
-                   Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,12"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+            <Border Style="{StaticResource PageHeaderIconBadge}">
+                <TextBlock Text="&#xE70F;" Style="{StaticResource PageHeaderIconText}"/>
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource FinEditFieldTitle}"
+                           FontSize="{DynamicResource FS18}"
+                           Style="{StaticResource PageHeaderTitleText}"/>
+                <TextBlock Text="{DynamicResource FinManageColumnsDesc}"
+                           FontSize="{DynamicResource FS11}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </StackPanel>
 
-        <Grid Grid.Row="1" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="130"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="NameBox" Grid.Column="0" Padding="8,6" FontSize="{DynamicResource FS13}" Margin="0,0,8,0"
-                     VerticalContentAlignment="Center"/>
-            <ComboBox x:Name="OpBox" Grid.Column="1" Padding="6,5" FontSize="{DynamicResource FS13}" SelectedIndex="1">
-                <ComboBoxItem Content="+ Dodávat" Tag="Add"/>
-                <ComboBoxItem Content="− Odečítat" Tag="Subtract"/>
-                <ComboBoxItem Content="× Násobit" Tag="Multiply"/>
-                <ComboBoxItem Content="÷ Dělit" Tag="Divide"/>
-            </ComboBox>
-        </Grid>
+        <Border Grid.Row="1" Style="{StaticResource DialogSectionCard}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <ComboBox x:Name="FirmBox" Grid.Row="2" Padding="6,5" FontSize="{DynamicResource FS12}" Margin="0,0,0,8"/>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="130"/>
+                    </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="{DynamicResource BtnCancel}" Click="Cancel_Click" Cursor="Hand" Margin="0,0,8,0"
-                    Padding="16,8" Background="Transparent" BorderThickness="1"
-                    BorderBrush="{DynamicResource CardBorderBrush}" FontSize="{DynamicResource FS12}"/>
-            <Button Click="Save_Click" Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="20,8">
-                            <TextBlock Text="{DynamicResource BtnSave}" FontSize="{DynamicResource FS12}" Foreground="White" FontWeight="SemiBold"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    <TextBox x:Name="NameBox"
+                             Grid.Column="0"
+                             Padding="10,7"
+                             FontSize="{DynamicResource FS13}"
+                             Margin="0,0,10,0"
+                             VerticalContentAlignment="Center"/>
+
+                    <ComboBox x:Name="OpBox"
+                              Grid.Column="1"
+                              FontSize="{DynamicResource FS13}"
+                              Style="{StaticResource ThemedComboBox}"
+                              SelectedIndex="1">
+                        <ComboBoxItem Content="+ Dodávat" Tag="Add"/>
+                        <ComboBoxItem Content="− Odečítat" Tag="Subtract"/>
+                        <ComboBoxItem Content="× Násobit" Tag="Multiply"/>
+                        <ComboBoxItem Content="÷ Dělit" Tag="Divide"/>
+                    </ComboBox>
+                </Grid>
+
+                <ComboBox x:Name="FirmBox"
+                          Grid.Row="1"
+                          FontSize="{DynamicResource FS12}"
+                          Style="{StaticResource ThemedComboBox}"
+                          Margin="0,10,0,0"/>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="{DynamicResource BtnCancel}"
+                    Click="Cancel_Click"
+                    Margin="0,0,8,0"
+                    Padding="16,8"
+                    FontSize="{DynamicResource FS12}"
+                    Style="{StaticResource HeaderGhostButton}"/>
+            <Button Content="{DynamicResource BtnSave}"
+                    Click="Save_Click"
+                    Padding="20,8"
+                    FontSize="{DynamicResource FS12}"
+                    FontWeight="SemiBold"
+                    Style="{StaticResource FilledActionButton}"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -24,6 +24,13 @@ namespace Win11DesktopApp.Models
             set => SetProperty(ref _ico, value);
         }
 
+        private string _legalAddress = string.Empty;
+        public string LegalAddress
+        {
+            get => _legalAddress;
+            set => SetProperty(ref _legalAddress, value);
+        }
+
         private decimal _weeklyWorkHours;
         public decimal WeeklyWorkHours
         {

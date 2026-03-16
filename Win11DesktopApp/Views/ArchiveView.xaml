@@ -14,7 +14,7 @@
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
 
         <Style x:Key="ArchiveToggleButtonBase" TargetType="Button">
-            <Setter Property="Height" Value="30"/>
+            <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="10,0"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -29,7 +29,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
+                                CornerRadius="10"
                                 Padding="{TemplateBinding Padding}"
                                 Height="{TemplateBinding Height}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -52,7 +52,7 @@
         </Style>
 
         <Style x:Key="CardActionBtn" TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-            <Setter Property="MinWidth" Value="116"/>
+            <Setter Property="MinWidth" Value="120"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
 
@@ -93,6 +93,31 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="ArchiveMetaIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TertiaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="ArchiveMetaText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="ArchiveInfoChip" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="ArchiveTileIconButton" TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
         </Style>
     </UserControl.Resources>
 
@@ -384,8 +409,8 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Background="{DynamicResource CardBackgroundBrush}"
-                                            CornerRadius="12"
-                                            Padding="16"
+                                            CornerRadius="14"
+                                            Padding="16,15"
                                             Margin="8,6,8,12"
                                             MaxWidth="1140"
                                             HorizontalAlignment="Center"
@@ -406,7 +431,7 @@
                                             </TransformGroup>
                                         </Border.RenderTransform>
                                         <Border.Effect>
-                                            <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.08"/>
+                                            <DropShadowEffect BlurRadius="10" ShadowDepth="3" Opacity="0.1"/>
                                         </Border.Effect>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -468,38 +493,23 @@
 
                                                 <WrapPanel Margin="0,0,0,6">
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,18,4">
-                                                        <TextBlock Text="&#xE787;"
-                                                                   FontFamily="Segoe MDL2 Assets"
-                                                                   FontSize="{DynamicResource FS11}"
-                                                                   Foreground="{DynamicResource AccentBrush}"
-                                                                   Margin="0,0,4,0"
-                                                                   VerticalAlignment="Center"/>
-                                                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                        <TextBlock Text="&#xE787;" Style="{StaticResource ArchiveMetaIcon}" Foreground="{DynamicResource AccentBrush}"/>
+                                                        <TextBlock Style="{StaticResource ArchiveMetaText}">
                                                             <Run Text="{DynamicResource ArchiveStarted}"/>
                                                             <Run Text="{Binding StartDate, Mode=OneWay}"/>
                                                         </TextBlock>
                                                     </StackPanel>
 
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,18,4">
-                                                        <TextBlock Text="&#xE787;"
-                                                                   FontFamily="Segoe MDL2 Assets"
-                                                                   FontSize="{DynamicResource FS11}"
-                                                                   Foreground="{DynamicResource ErrorBrush}"
-                                                                   Margin="0,0,4,0"
-                                                                   VerticalAlignment="Center"/>
-                                                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                        <TextBlock Text="&#xE787;" Style="{StaticResource ArchiveMetaIcon}" Foreground="{DynamicResource ErrorBrush}"/>
+                                                        <TextBlock Style="{StaticResource ArchiveMetaText}">
                                                             <Run Text="{DynamicResource ArchiveEnded}"/>
                                                             <Run Text="{Binding EndDate, Mode=OneWay}"/>
                                                         </TextBlock>
                                                     </StackPanel>
 
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,18,4">
-                                                        <TextBlock Text="&#xE8D2;"
-                                                                   FontFamily="Segoe MDL2 Assets"
-                                                                   FontSize="{DynamicResource FS11}"
-                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                   Margin="0,0,4,0"
-                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="&#xE8D2;" Style="{StaticResource ArchiveMetaIcon}"/>
                                                         <TextBlock Text="{Binding EmployeeFolder, Mode=OneWay}"
                                                                    FontSize="{DynamicResource FS11}"
                                                                    Foreground="{DynamicResource TertiaryForegroundBrush}"
@@ -597,11 +607,11 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Width="260"
+                                    <Border Width="256"
                                             Background="{DynamicResource CardBackgroundBrush}"
-                                            CornerRadius="12"
-                                            Padding="14"
-                                            Margin="8,8,12,12"
+                                            CornerRadius="14"
+                                            Padding="13"
+                                            Margin="8,8,10,10"
                                             BorderBrush="{DynamicResource CardBorderBrush}"
                                             BorderThickness="1"
                                             RenderTransformOrigin="0.5,0.5"
@@ -619,7 +629,7 @@
                                             </TransformGroup>
                                         </Border.RenderTransform>
                                         <Border.Effect>
-                                            <DropShadowEffect BlurRadius="6" ShadowDepth="2" Opacity="0.08"/>
+                                            <DropShadowEffect BlurRadius="10" ShadowDepth="3" Opacity="0.1"/>
                                         </Border.Effect>
                                         <StackPanel>
                                             <Border Width="58"
@@ -718,14 +728,14 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
                                                 <Button Grid.Column="0"
-                                                        Style="{StaticResource ArchiveToggleButtonBase}"
+                                                        Style="{StaticResource ArchiveTileIconButton}"
                                                         Command="{Binding DataContext.ViewEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding}"
                                                         Margin="0,0,6,0">
                                                     <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
                                                 </Button>
                                                 <Button Grid.Column="1"
-                                                        Style="{StaticResource ArchiveToggleButtonBase}"
+                                                        Style="{StaticResource ArchiveTileIconButton}"
                                                         Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding}"
                                                         Margin="0">

@@ -454,6 +454,7 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var positionTitle = SelectedPosition?.Title ?? string.Empty;
+                var positionNumber = SelectedPosition?.PositionNumber ?? string.Empty;
                 var workAddress = SelectedAddress != null
                     ? $"{SelectedAddress.Street} {SelectedAddress.Number}, {SelectedAddress.City} {SelectedAddress.ZipCode}".Trim()
                     : string.Empty;
@@ -464,6 +465,7 @@ namespace Win11DesktopApp.ViewModels
                     NewStartDate,
                     NewContractSignDate,
                     positionTitle,
+                    positionNumber,
                     workAddress
                 );
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.IO.Compression;
+using System.Threading;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -35,8 +36,7 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var json = File.ReadAllText(templatesIndexFile);
-                var indexEntries = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(json);
+                var indexEntries = SafeFileService.ReadJsonOrDefault(templatesIndexFile, new List<TemplateIndexEntry>());
 
                 return indexEntries?.Select(e => new TemplateEntry
                 {
@@ -90,8 +90,7 @@ namespace Win11DesktopApp.Services
                 TagsUsed = new List<string>()
             };
 
-            var metaJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(Path.Combine(templateFolder, "metadata.json"), metaJson);
+            SafeFileService.WriteJsonAtomic(Path.Combine(templateFolder, "metadata.json"), metadata);
 
             // Update index.json
             var indexFile = Path.Combine(templatesRoot, "index.json");
@@ -101,8 +100,7 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    var existingJson = File.ReadAllText(indexFile);
-                    index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(existingJson) ?? new List<TemplateIndexEntry>();
+                    index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
                 }
                 catch (Exception ex) { LoggingService.LogError("TemplateService.AddTemplate", ex); }
             }
@@ -119,8 +117,7 @@ namespace Win11DesktopApp.Services
                 Updated = now
             });
 
-            var newIndexJson = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(indexFile, newIndexJson);
+            SafeFileService.WriteJsonAtomic(indexFile, index);
 
             // Create versions folder
             Directory.CreateDirectory(Path.Combine(templateFolder, "versions"));
@@ -165,8 +162,7 @@ namespace Win11DesktopApp.Services
                 TagsUsed = new List<string>()
             };
 
-            var metaJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(Path.Combine(templateFolder, "metadata.json"), metaJson);
+            SafeFileService.WriteJsonAtomic(Path.Combine(templateFolder, "metadata.json"), metadata);
 
             // Update index.json
             var indexFile = Path.Combine(templatesRoot, "index.json");
@@ -176,8 +172,7 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    var existingJson = File.ReadAllText(indexFile);
-                    index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(existingJson) ?? new List<TemplateIndexEntry>();
+                    index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
                 }
                 catch (Exception ex) { LoggingService.LogError("TemplateService.AddTemplateFromRtf", ex); }
             }
@@ -193,8 +188,7 @@ namespace Win11DesktopApp.Services
                 Updated = now
             });
 
-            var newIndexJson = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(indexFile, newIndexJson);
+            SafeFileService.WriteJsonAtomic(indexFile, index);
 
             // Create subfolders
             Directory.CreateDirectory(Path.Combine(templateFolder, "versions"));
@@ -298,7 +292,7 @@ namespace Win11DesktopApp.Services
             var mdPath = Path.Combine(templateDirectory, "content.md");
             if (!File.Exists(mdPath)) return string.Empty;
 
-            var content = File.ReadAllText(mdPath);
+            var content = SafeFileService.ReadAllText(mdPath);
             var tagMap = _tagCatalogService?.GetTagValueMap(firmName) ?? new Dictionary<string, string>();
 
             var result = System.Text.RegularExpressions.Regex.Replace(content, @"\$\{(.*?)\}", match =>
@@ -308,7 +302,7 @@ namespace Win11DesktopApp.Services
             });
 
             var outputPath = Path.Combine(templateDirectory, $"generated_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-            File.WriteAllText(outputPath, result);
+            SafeFileService.WriteTextAtomic(outputPath, result);
             return outputPath;
         }
 
@@ -322,15 +316,13 @@ namespace Win11DesktopApp.Services
 
             if (File.Exists(indexFile))
             {
-                var json = File.ReadAllText(indexFile);
-                var index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(json) ?? new List<TemplateIndexEntry>();
+                var index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
                 var item = index.FirstOrDefault(x => x.Path == template.FilePath);
                 if (item != null)
                 {
                     item.Name = newName;
                     item.Updated = DateTime.Now;
-                    var newJson = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(indexFile, newJson);
+                    SafeFileService.WriteJsonAtomic(indexFile, index);
                 }
             }
 
@@ -341,14 +333,12 @@ namespace Win11DesktopApp.Services
                 var metadataPath = Path.Combine(templateDirectory, "metadata.json");
                 if (File.Exists(metadataPath))
                 {
-                    var json = File.ReadAllText(metadataPath);
-                    var meta = JsonSerializer.Deserialize<TemplateMetadata>(json);
+                    var meta = SafeFileService.ReadJson<TemplateMetadata>(metadataPath);
                     if (meta != null)
                     {
                         meta.Name = newName;
                         meta.UpdatedAt = DateTime.Now;
-                        var newJson = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
-                        File.WriteAllText(metadataPath, newJson);
+                        SafeFileService.WriteJsonAtomic(metadataPath, meta);
                     }
                 }
             }
@@ -393,13 +383,12 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    var metadataJson = File.ReadAllText(metadataPath);
-                    var metadata = JsonSerializer.Deserialize<TemplateMetadata>(metadataJson) ?? new TemplateMetadata();
+                    var metadata = SafeFileService.ReadJsonOrDefault(metadataPath, new TemplateMetadata());
                     metadata.Name = newName.Trim();
                     metadata.Format = string.IsNullOrWhiteSpace(metadata.Format) ? template.Format : metadata.Format;
                     metadata.CreatedAt = now;
                     metadata.UpdatedAt = now;
-                    File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
+                    SafeFileService.WriteJsonAtomic(metadataPath, metadata);
                 }
                 catch (Exception ex)
                 {
@@ -414,7 +403,7 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(File.ReadAllText(indexFile)) ?? new List<TemplateIndexEntry>();
+                    index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
                 }
                 catch
                 {
@@ -434,7 +423,7 @@ namespace Win11DesktopApp.Services
                 Updated = now
             });
 
-            File.WriteAllText(indexFile, JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true }));
+            SafeFileService.WriteJsonAtomic(indexFile, index);
 
             return new TemplateEntry
             {
@@ -456,42 +445,160 @@ namespace Win11DesktopApp.Services
             var templatesRoot = _folderService.GetTemplatesFolder(firmName);
             var indexFile = Path.Combine(templatesRoot, "index.json");
 
-            // 1. Remove from index.json
+            // 1. Delete the template folder FIRST
+            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var templateDirectory = Path.GetDirectoryName(fullPath);
+
+            if (!string.IsNullOrEmpty(templateDirectory) && Directory.Exists(templateDirectory))
+            {
+                var deleted = TryDeleteTemplateDirectory(templateDirectory);
+                if (!deleted && Directory.Exists(templateDirectory))
+                {
+                    var message = $"Folder still exists after delete, scheduling deferred cleanup: {templateDirectory}";
+                    LoggingService.LogWarning("TemplateService.DeleteTemplate", message);
+                    PendingCleanupService.EnqueueAsync(templateDirectory, "template-delete-folder").GetAwaiter().GetResult();
+                    _ = System.Threading.Tasks.Task.Run(async () =>
+                    {
+                        await System.Threading.Tasks.Task.Delay(15000);
+                        if (TryDeleteTemplateDirectory(templateDirectory))
+                            await PendingCleanupService.RemoveAsync(templateDirectory);
+                    });
+                }
+            }
+
+            // 2. Remove from index.json AFTER folder is deleted
             if (File.Exists(indexFile))
             {
                 try
                 {
-                    var json = File.ReadAllText(indexFile);
-                    var index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(json) ?? new List<TemplateIndexEntry>();
+                    var index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
 
                     var itemToRemove = index.FirstOrDefault(x => x.Path == template.FilePath);
                     if (itemToRemove != null)
                     {
                         index.Remove(itemToRemove);
-                        var newJson = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true });
-                        File.WriteAllText(indexFile, newJson);
+                        SafeFileService.WriteJsonAtomic(indexFile, index);
                     }
                 }
                 catch (Exception ex)
                 {
+                    LoggingService.LogError("TemplateService.DeleteTemplate", ex);
                     throw new Exception("Failed to update template index.", ex);
                 }
             }
+        }
 
-            // 2. Delete the template folder
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
-            var templateDirectory = Path.GetDirectoryName(fullPath);
+        private static bool TryDeleteTemplateDirectory(string templateDirectory)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            Thread.Sleep(300);
+
+            if (TryBulkDeleteTemplateDirectory(templateDirectory))
+                return true;
+
+            TryDeleteTemplateFilesIndividually(templateDirectory);
+            TryRemoveEmptyTemplateDirectories(templateDirectory);
 
             if (Directory.Exists(templateDirectory))
+                TryForceDeleteTemplateDirectory(templateDirectory);
+
+            return !Directory.Exists(templateDirectory);
+        }
+
+        private static bool TryBulkDeleteTemplateDirectory(string templateDirectory)
+        {
+            Exception? lastError = null;
+            for (int attempt = 0; attempt < 5; attempt++)
             {
                 try
                 {
+                    if (!Directory.Exists(templateDirectory))
+                        return true;
+
+                    foreach (var file in Directory.GetFiles(templateDirectory, "*", SearchOption.AllDirectories))
+                        File.SetAttributes(file, FileAttributes.Normal);
+
                     Directory.Delete(templateDirectory, true);
+                    return true;
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to delete template files at {templateDirectory}", ex);
+                    lastError = ex;
+                    Thread.Sleep(400 * (attempt + 1));
                 }
+            }
+
+            if (Directory.Exists(templateDirectory) && lastError != null)
+                LoggingService.LogWarning("TemplateService.TryBulkDeleteTemplateDirectory", $"Bulk delete deferred for '{templateDirectory}': {lastError.Message}");
+
+            return false;
+        }
+
+        private static void TryDeleteTemplateFilesIndividually(string templateDirectory)
+        {
+            try
+            {
+                foreach (var file in Directory.GetFiles(templateDirectory, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                        File.Delete(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("TemplateService.TryDeleteTemplateFilesIndividually", $"Cannot delete {file}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateService.TryDeleteTemplateFilesIndividually", ex.Message);
+            }
+        }
+
+        private static void TryRemoveEmptyTemplateDirectories(string templateDirectory)
+        {
+            if (!Directory.Exists(templateDirectory))
+                return;
+
+            foreach (var subDirectory in Directory.GetDirectories(templateDirectory))
+                TryRemoveEmptyTemplateDirectories(subDirectory);
+
+            try
+            {
+                if (Directory.Exists(templateDirectory)
+                    && Directory.GetFiles(templateDirectory).Length == 0
+                    && Directory.GetDirectories(templateDirectory).Length == 0)
+                {
+                    Directory.Delete(templateDirectory, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateService.TryRemoveEmptyTemplateDirectories", $"Cannot delete {templateDirectory}: {ex.Message}");
+            }
+        }
+
+        private static void TryForceDeleteTemplateDirectory(string templateDirectory)
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c rd /s /q \"{templateDirectory}\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                };
+
+                System.Diagnostics.Process.Start(psi)?.WaitForExit(10000);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateService.TryForceDeleteTemplateDirectory", $"Force delete failed: {ex.Message}");
             }
         }
 
@@ -526,8 +633,7 @@ namespace Win11DesktopApp.Services
             if (templateDirectory == null || !Directory.Exists(templateDirectory)) return;
 
             var path = Path.Combine(templateDirectory, "tag_positions.json");
-            var json = JsonSerializer.Serialize(positions ?? new List<TagPosition>(), new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(path, json);
+            SafeFileService.WriteJsonAtomic(path, positions ?? new List<TagPosition>());
         }
 
         public List<TagPosition> LoadTagPositions(string firmName, TemplateEntry template)
@@ -544,8 +650,7 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var json = File.ReadAllText(path);
-                return JsonSerializer.Deserialize<List<TagPosition>>(json) ?? new List<TagPosition>();
+                return SafeFileService.ReadJsonOrDefault(path, new List<TagPosition>());
             }
             catch
             {
@@ -565,7 +670,7 @@ namespace Win11DesktopApp.Services
             {
                 // Save Markdown
                 var mdPath = Path.Combine(templateDirectory, "content.md");
-                File.WriteAllText(mdPath, markdownContent);
+                SafeFileService.WriteTextAtomic(mdPath, markdownContent);
 
                 // Update Metadata
                 var metadataPath = Path.Combine(templateDirectory, "metadata.json");
@@ -573,15 +678,13 @@ namespace Win11DesktopApp.Services
                 {
                     try
                     {
-                        var json = File.ReadAllText(metadataPath);
-                        var metadata = JsonSerializer.Deserialize<TemplateMetadata>(json);
+                        var metadata = SafeFileService.ReadJson<TemplateMetadata>(metadataPath);
                         if (metadata != null)
                         {
                             metadata.UpdatedAt = DateTime.Now;
                             metadata.TagsUsed = tagsUsed ?? new List<string>();
 
-                            var newJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
-                            File.WriteAllText(metadataPath, newJson);
+                            SafeFileService.WriteJsonAtomic(metadataPath, metadata);
                         }
                     }
                     catch (Exception ex) { LoggingService.LogError("TemplateService.SaveTagPositions.Metadata", ex); }
@@ -594,14 +697,12 @@ namespace Win11DesktopApp.Services
                 {
                     try
                     {
-                        var json = File.ReadAllText(indexFile);
-                        var index = JsonSerializer.Deserialize<List<TemplateIndexEntry>>(json);
+                        var index = SafeFileService.ReadJson<List<TemplateIndexEntry>>(indexFile);
                         var entry = index?.FirstOrDefault(x => x.Path == template.FilePath);
                         if (entry != null)
                         {
                             entry.Updated = DateTime.Now;
-                            var newJson = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true });
-                            File.WriteAllText(indexFile, newJson);
+                            SafeFileService.WriteJsonAtomic(indexFile, index);
                         }
                     }
                     catch (Exception ex) { LoggingService.LogError("TemplateService.SaveTagPositions.Index", ex); }

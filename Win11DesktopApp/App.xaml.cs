@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Markup;
 using PdfSharp.Fonts;
 using Win11DesktopApp.Helpers;
+using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
@@ -20,6 +21,7 @@ namespace Win11DesktopApp
         public static TagCatalogService TagCatalogService { get; private set; } = null!;
         public static CompanyService CompanyService { get; private set; } = null!;
         public static TemplateService TemplateService { get; private set; } = null!;
+        public static StarterTemplateCatalogService StarterTemplateCatalogService { get; private set; } = null!;
         public static PersistenceService PersistenceService { get; private set; } = null!;
         public static EmployeeService EmployeeService { get; private set; } = null!;
         public static DocumentGenerationService DocumentGenerationService { get; private set; } = null!;
@@ -29,6 +31,15 @@ namespace Win11DesktopApp
         public static ActivityLogService ActivityLogService { get; private set; } = null!;
         public static CandidateService CandidateService { get; private set; } = null!;
         public static GeminiApiService GeminiApiService { get; private set; } = null!;
+        public static NewsService NewsService { get; private set; } = null!;
+        public static ProfileAuthService ProfileAuthService { get; private set; } = null!;
+        public static ProfileSessionService ProfileSessionService { get; private set; } = null!;
+        public static ClientProfileRecord? CurrentProfile { get; private set; }
+
+        public static void SetCurrentProfile(ClientProfileRecord? profile)
+        {
+            CurrentProfile = profile;
+        }
 
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -81,11 +92,15 @@ namespace Win11DesktopApp
             TagCatalogService = new TagCatalogService();
             CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
             TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
+            StarterTemplateCatalogService = new StarterTemplateCatalogService();
             EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService);
             FinanceService = new FinanceService(FolderService);
             ActivityLogService = new ActivityLogService(FolderService);
             CandidateService = new CandidateService(FolderService);
             GeminiApiService = new GeminiApiService();
+            NewsService = new NewsService();
+            ProfileAuthService = new ProfileAuthService();
+            ProfileSessionService = new ProfileSessionService(AppSettingsService);
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiApiKey))
                 GeminiApiService.SetApiKey(AppSettingsService.Settings.GeminiApiKey);
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiModel))
@@ -136,6 +151,89 @@ namespace Win11DesktopApp
                 }
             }
 
+            var startupClientTask = TelemetryService.EnsureStartupClientIdAsync();
+            string? startupClientId = null;
+            var startupTelemetryCompleted = await Task.WhenAny(startupClientTask, Task.Delay(3500)) == startupClientTask;
+            if (startupTelemetryCompleted)
+            {
+                startupClientId = await startupClientTask;
+            }
+            else
+            {
+                LoggingService.LogWarning("App.ProfileGate",
+                    "Telemetry startup sync timed out. Continuing without profile gate.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(startupClientId))
+            {
+                var profileCheck = await ProfileAuthService.CheckProfileAsync(startupClientId);
+                if (profileCheck.IsFeatureAvailable && profileCheck.RequiresSetup)
+                {
+                    var profileWindow = new Views.ProfileSetupWindow(ProfileAuthService, startupClientId);
+                    MainWindow = profileWindow;
+                    var profileAccepted = profileWindow.ShowDialog() == true && profileWindow.IsProfileCreated;
+                    MainWindow = null;
+
+                    if (!profileAccepted)
+                    {
+                        Shutdown();
+                        return;
+                    }
+
+                    SetCurrentProfile(await ProfileAuthService.GetProfileByClientIdAsync(startupClientId));
+                }
+                else if (profileCheck.IsFeatureAvailable && profileCheck.Profile != null)
+                {
+                    var profile = profileCheck.Profile;
+                    if (profile.MustResetPassword)
+                    {
+                        ProfileSessionService.ClearRememberedSession();
+
+                        var resetWindow = new Views.ProfileResetPasswordWindow(ProfileAuthService, profile);
+                        MainWindow = resetWindow;
+                        var resetAccepted = resetWindow.ShowDialog() == true && resetWindow.IsPasswordReset;
+                        MainWindow = null;
+
+                        if (!resetAccepted || resetWindow.ResetProfile == null)
+                        {
+                            Shutdown();
+                            return;
+                        }
+
+                        SetCurrentProfile(resetWindow.ResetProfile);
+                    }
+                    else if (ProfileSessionService.TryRestoreRememberedSession(profile))
+                    {
+                        SetCurrentProfile(profile);
+                    }
+                    else
+                    {
+                        var loginWindow = new Views.ProfileLoginWindow(ProfileAuthService, ProfileSessionService, profile);
+                        MainWindow = loginWindow;
+                        var loginAccepted = loginWindow.ShowDialog() == true && loginWindow.IsAuthenticated;
+                        MainWindow = null;
+
+                        if (!loginAccepted || loginWindow.AuthenticatedProfile == null)
+                        {
+                            Shutdown();
+                            return;
+                        }
+
+                        SetCurrentProfile(loginWindow.AuthenticatedProfile);
+                    }
+                }
+                else if (!profileCheck.IsFeatureAvailable)
+                {
+                    LoggingService.LogWarning("App.ProfileGate",
+                        $"Profile gate skipped: {profileCheck.ErrorMessage}");
+                }
+            }
+            else
+            {
+                LoggingService.LogWarning("App.ProfileGate",
+                    "Client ID unavailable during startup. Continuing without profile gate.");
+            }
+
             NavigationService.NavigateTo(new MainViewModel());
             
             var mainWindow = new MainWindow
@@ -145,7 +243,6 @@ namespace Win11DesktopApp
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
-
         }
     }
 }

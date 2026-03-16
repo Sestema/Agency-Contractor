@@ -12,6 +12,10 @@ namespace Win11DesktopApp.Services
     {
         private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(3) };
         private const string BaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
+        public const string ApiKeyNotSetResponse = "[Gemini API key not set]";
+        public const string ParseFailureResponse = "[Failed to parse Gemini response]";
+        public const string TimeoutResponse = "[Error: Request timed out]";
+        public const string NetworkErrorResponse = "[Error: Network error]";
 
         public static readonly string[] AvailableModels = {
             "gemini-2.5-flash",
@@ -45,7 +49,7 @@ namespace Win11DesktopApp.Services
             System.Collections.Generic.List<(string role, string text)>? history,
             string message, string? systemPrompt = null, CancellationToken ct = default)
         {
-            if (!IsConfigured) return "[Gemini API key not set]";
+            if (!IsConfigured) return ApiKeyNotSetResponse;
 
             try
             {
@@ -68,6 +72,16 @@ namespace Win11DesktopApp.Services
                 var body = new { contents };
                 return await SendRequest(body, ct);
             }
+            catch (HttpRequestException ex)
+            {
+                LoggingService.LogWarning("GeminiApiService.Chat", ex.Message);
+                return NetworkErrorResponse;
+            }
+            catch (OperationCanceledException ex)
+            {
+                LoggingService.LogWarning("GeminiApiService.Chat", ex.Message);
+                return TimeoutResponse;
+            }
             catch (Exception ex)
             {
                 LoggingService.LogError("GeminiApiService.Chat", ex);
@@ -77,7 +91,7 @@ namespace Win11DesktopApp.Services
 
         public async Task<string> ChatWithImageAsync(string imagePath, string message, string? systemPrompt = null, CancellationToken ct = default)
         {
-            if (!IsConfigured) return "[Gemini API key not set]";
+            if (!IsConfigured) return ApiKeyNotSetResponse;
             if (!File.Exists(imagePath)) return "[Image not found]";
 
             try
@@ -109,6 +123,16 @@ namespace Win11DesktopApp.Services
                 var body = new { contents };
                 return await SendRequest(body, ct);
             }
+            catch (HttpRequestException ex)
+            {
+                LoggingService.LogWarning("GeminiApiService.ChatWithImage", ex.Message);
+                return NetworkErrorResponse;
+            }
+            catch (OperationCanceledException ex)
+            {
+                LoggingService.LogWarning("GeminiApiService.ChatWithImage", ex.Message);
+                return TimeoutResponse;
+            }
             catch (Exception ex)
             {
                 LoggingService.LogError("GeminiApiService.ChatWithImage", ex);
@@ -118,7 +142,7 @@ namespace Win11DesktopApp.Services
 
         public async Task<string> ChatWithFileAsync(string filePath, string message, string? systemPrompt = null, CancellationToken ct = default)
         {
-            if (!IsConfigured) return "[Gemini API key not set]";
+            if (!IsConfigured) return ApiKeyNotSetResponse;
             if (!File.Exists(filePath)) return "[File not found]";
 
             try
@@ -150,6 +174,16 @@ namespace Win11DesktopApp.Services
                 var body = new { contents };
                 return await SendRequest(body, ct);
             }
+            catch (HttpRequestException ex)
+            {
+                LoggingService.LogWarning("GeminiApiService.ChatWithFile", ex.Message);
+                return NetworkErrorResponse;
+            }
+            catch (OperationCanceledException ex)
+            {
+                LoggingService.LogWarning("GeminiApiService.ChatWithFile", ex.Message);
+                return TimeoutResponse;
+            }
             catch (Exception ex)
             {
                 LoggingService.LogError("GeminiApiService.ChatWithFile", ex);
@@ -164,7 +198,7 @@ namespace Win11DesktopApp.Services
             try
             {
                 var result = await ChatAsync("Reply with exactly: OK", ct: ct);
-                if (result.StartsWith("[Error")) return (false, result);
+                if (IsFailureResponse(result)) return (false, result);
                 return (true, "Gemini connected: " + result.Trim());
             }
             catch (Exception ex)
@@ -231,9 +265,25 @@ namespace Win11DesktopApp.Services
             }
             catch
             {
-                return "[Failed to parse Gemini response]";
+                return ParseFailureResponse;
             }
         }
+
+        public static bool IsFailureResponse(string? response)
+        {
+            if (string.IsNullOrWhiteSpace(response))
+                return true;
+
+            return response.StartsWith("[Error:", StringComparison.OrdinalIgnoreCase)
+                || response.StartsWith(ApiKeyNotSetResponse, StringComparison.OrdinalIgnoreCase)
+                || response.StartsWith(ParseFailureResponse, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsTimeoutResponse(string? response)
+            => string.Equals(response?.Trim(), TimeoutResponse, StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsNetworkErrorResponse(string? response)
+            => string.Equals(response?.Trim(), NetworkErrorResponse, StringComparison.OrdinalIgnoreCase);
 
         private static string? TryExtractError(string json)
         {

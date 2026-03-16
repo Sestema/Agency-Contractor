@@ -31,12 +31,14 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{DynamicResource CardHoverBrush}"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                CornerRadius="9" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -53,12 +55,14 @@
         <Style x:Key="DarkAwareDeleteBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="#EF5350"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{DynamicResource CardHoverBrush}"
                                 BorderBrush="#EF5350" BorderThickness="1"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                CornerRadius="9" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -70,6 +74,45 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="EmployeeMetaIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TertiaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="EmployeeMetaText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="EmployeeDocChipBorder" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="0,0,4,4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#E8F5E9"/>
+            <Setter Property="BorderBrush" Value="#C8E6C9"/>
+        </Style>
+
+        <Style x:Key="EmployeeDocChipText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="Foreground" Value="#2E7D32"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="EmployeeCardIconBtn" TargetType="Button" BasedOn="{StaticResource CardActionBtn}">
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+        </Style>
+
+        <Style x:Key="EmployeeCardDeleteIconBtn" TargetType="Button" BasedOn="{StaticResource DarkAwareDeleteBtn}">
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
         </Style>
     </UserControl.Resources>
 
@@ -632,16 +675,15 @@
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS11}" Foreground="#888" Margin="0,0,0,4"/>
                                                     <WrapPanel>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding StartDate}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding Phone}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
-                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding Email}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
-                                                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Foreground="#999" Margin="0,0,3,0" VerticalAlignment="Center"/><TextBlock Text="{Binding ContractType}" FontSize="{DynamicResource FS11}" Foreground="#666"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE787;" Style="{StaticResource EmployeeMetaIcon}"/><TextBlock Text="{Binding StartDate}" Style="{StaticResource EmployeeMetaText}"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE717;" Style="{StaticResource EmployeeMetaIcon}"/><TextBlock Text="{Binding Phone}" Style="{StaticResource EmployeeMetaText}"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE715;" Style="{StaticResource EmployeeMetaIcon}"/><TextBlock Text="{Binding Email}" Style="{StaticResource EmployeeMetaText}"/></StackPanel>
+                                                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE821;" Style="{StaticResource EmployeeMetaIcon}"/><TextBlock Text="{Binding ContractType}" Style="{StaticResource EmployeeMetaText}"/></StackPanel>
                                                     </WrapPanel>
-                                                    <WrapPanel Margin="0,4,0,0">
-                                                        <Border CornerRadius="8" Padding="5,2" Margin="0,0,4,0" BorderThickness="1">
+                                                    <WrapPanel Margin="0,6,0,0">
+                                                        <Border>
                                                             <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                <Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}">
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
                                                                         <DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
@@ -650,10 +692,9 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                            <TextBlock>
                                                                 <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}">
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
                                                                             <DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
@@ -665,10 +706,9 @@
                                                                 <Run Text="{DynamicResource EmpBadgePassport}"/><Run Text=" "/><Run Text="{Binding PassportExpiry, Mode=OneWay}"/>
                                                             </TextBlock>
                                                         </Border>
-                                                        <Border CornerRadius="8" Padding="5,2" Margin="0,0,4,0" BorderThickness="1">
+                                                        <Border>
                                                             <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                <Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}">
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
                                                                         <DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
@@ -678,10 +718,9 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                            <TextBlock>
                                                                 <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}">
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
                                                                             <DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
@@ -693,10 +732,9 @@
                                                                 <Run Text="{DynamicResource EmpBadgeVisa}"/><Run Text=" "/><Run Text="{Binding VisaExpiry, Mode=OneWay}"/>
                                                             </TextBlock>
                                                         </Border>
-                                                        <Border CornerRadius="8" Padding="5,2" BorderThickness="1">
+                                                        <Border>
                                                             <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                <Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}">
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
                                                                         <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger>
@@ -706,10 +744,9 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                            <TextBlock>
                                                                 <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}">
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
                                                                             <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
@@ -721,10 +758,9 @@
                                                                 <Run Text="{DynamicResource EmpBadgeInsurance}"/><Run Text=" "/><Run Text="{Binding InsuranceExpiry, Mode=OneWay}"/>
                                                             </TextBlock>
                                                         </Border>
-                                                        <Border CornerRadius="8" Padding="5,2" Margin="4,0,0,0" BorderThickness="1">
+                                                        <Border Margin="4,0,0,4">
                                                             <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/>
+                                                                <Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding EmployeeType}" Value="work_permit"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
@@ -735,10 +771,9 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock FontSize="{DynamicResource FS10}">
+                                                            <TextBlock>
                                                                 <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}">
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
                                                                             <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger>
@@ -794,7 +829,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border CornerRadius="8" Padding="10" Margin="6,14,8,8" Width="260" BorderThickness="1" RenderTransformOrigin="0.5,0.5" Cursor="Hand"
+                                        <Border CornerRadius="12" Padding="10" Margin="6,14,8,8" Width="260" BorderThickness="1" RenderTransformOrigin="0.5,0.5" Cursor="Hand"
                                                 h:StaggerAnimation.Enable="True">
                                             <Border.InputBindings>
                                                 <MouseBinding MouseAction="LeftClick"
@@ -808,7 +843,7 @@
                                                 </TransformGroup>
                                             </Border.RenderTransform>
                                             <Border.Effect>
-                                                <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.08"/>
+                                                <DropShadowEffect BlurRadius="10" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.1"/>
                                             </Border.Effect>
                                             <Border.Style>
                                                 <Style TargetType="Border">
@@ -833,24 +868,24 @@
                                                     </Border>
                                                     <StackPanel VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"/>
-                                                        <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS10}" Foreground="#888"/>
+                                                        <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,0"/>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <Border CornerRadius="6" Padding="4,2" Margin="0,0,0,4" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                                <Border CornerRadius="8" Padding="6,2" Margin="0,0,0,4" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
                                                     <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
                                                 </Border>
-                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#666" TextWrapping="Wrap"><Run Text="&#xE787; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding StartDate, Mode=OneWay}"/><Run Text="  &#xE717; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Phone, Mode=OneWay}"/></TextBlock>
-                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="#666" TextWrapping="Wrap"><Run Text="&#xE715; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Email, Mode=OneWay}"/><Run Text="  &#xE821; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding ContractType, Mode=OneWay}"/></TextBlock>
-                                                <WrapPanel Margin="0,4,0,4">
-                                                    <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding PassportExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgePassport}"/></TextBlock></Border>
-                                                    <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding EmployeeType}" Value="passport_only"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding VisaExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeVisa}"/></TextBlock></Border>
-                                                    <Border CornerRadius="6" Padding="4,1" Margin="0,0,3,0" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding EmployeeType}" Value="passport_only"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding InsuranceExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeInsurance}"/></TextBlock></Border>
-                                                    <Border CornerRadius="6" Padding="4,1" BorderThickness="1"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#E8F5E9"/><Setter Property="BorderBrush" Value="#C8E6C9"/><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EmployeeType}" Value="work_permit"><Setter Property="Visibility" Value="Visible"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock FontSize="{DynamicResource FS9}" ToolTip="{Binding WorkPermitExpiry}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2E7D32"/><Style.Triggers><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeWorkPermit}"/></TextBlock></Border>
+                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap"><Run Text="&#xE787; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding StartDate, Mode=OneWay}"/><Run Text="  &#xE717; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Phone, Mode=OneWay}"/></TextBlock>
+                                                <TextBlock FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap"><Run Text="&#xE715; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding Email, Mode=OneWay}"/><Run Text="  &#xE821; " FontFamily="Segoe MDL2 Assets"/><Run Text="{Binding ContractType, Mode=OneWay}"/></TextBlock>
+                                                <WrapPanel Margin="0,5,0,6">
+                                                    <Border><Border.Style><Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}"><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock ToolTip="{Binding PassportExpiry}"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}"><Style.Triggers><DataTrigger Binding="{Binding PassportSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgePassport}"/></TextBlock></Border>
+                                                    <Border><Border.Style><Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}"><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding EmployeeType}" Value="passport_only"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock ToolTip="{Binding VisaExpiry}"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}"><Style.Triggers><DataTrigger Binding="{Binding VisaSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeVisa}"/></TextBlock></Border>
+                                                    <Border><Border.Style><Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}"><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding EmployeeType}" Value="passport_only"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock ToolTip="{Binding InsuranceExpiry}"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}"><Style.Triggers><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeInsurance}"/></TextBlock></Border>
+                                                    <Border><Border.Style><Style TargetType="Border" BasedOn="{StaticResource EmployeeDocChipBorder}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EmployeeType}" Value="work_permit"><Setter Property="Visibility" Value="Visible"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical"><Setter Property="Background" Value="#FFCDD2"/><Setter Property="BorderBrush" Value="#EF9A9A"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Warning"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Unknown"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#FFE0B2"/></DataTrigger></Style.Triggers></Style></Border.Style><TextBlock ToolTip="{Binding WorkPermitExpiry}"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource EmployeeDocChipText}"><Style.Triggers><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical"><Setter Property="Foreground" Value="#C62828"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Warning"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger><DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Unknown"><Setter Property="Foreground" Value="#EF6C00"/></DataTrigger></Style.Triggers></Style></TextBlock.Style><Run Text="{DynamicResource EmpBadgeWorkPermit}"/></TextBlock></Border>
                                                 </WrapPanel>
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                    <Button Padding="4,2" Margin="0,0,2,0" Style="{StaticResource CardActionBtn}" Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
-                                                    <Button Padding="4,2" Margin="0,0,2,0" Style="{StaticResource CardActionBtn}" Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
-                                                    <Button Padding="4,2" Style="{StaticResource DarkAwareDeleteBtn}" Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
+                                                    <Button Margin="0,0,4,0" Style="{StaticResource EmployeeCardIconBtn}" Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpBtnEdit}"><TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
+                                                    <Button Margin="0,0,4,0" Style="{StaticResource EmployeeCardIconBtn}" Command="{Binding DataContext.OpenEmployeeFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpTooltipFolder}"><TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
+                                                    <Button Style="{StaticResource EmployeeCardDeleteIconBtn}" Command="{Binding DataContext.DeleteEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" ToolTip="{DynamicResource EmpTooltipDelete}"><TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"/></Button>
                                                 </StackPanel>
                                             </StackPanel>
                                             <Border.Triggers>

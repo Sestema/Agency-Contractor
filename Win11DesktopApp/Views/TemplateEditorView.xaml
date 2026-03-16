@@ -7,18 +7,49 @@
              d:DesignHeight="600" d:DesignWidth="1000">
     <UserControl.Resources>
         <Style x:Key="ToolbarBtn" TargetType="Button">
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="34"/>
-            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="1"/>
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <Style x:Key="ToolbarGroupBorder" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="4,4,4,3"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+        <Style x:Key="ToolbarGroupTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+        </Style>
+        <Style x:Key="ToolbarFieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
         <Style x:Key="ToolbarSeparator" TargetType="Border">
             <Setter Property="Width" Value="1"/>
             <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="Margin" Value="6,4"/>
+        </Style>
+        <Style x:Key="ToolbarMenuButton" TargetType="Button">
+            <Setter Property="Width" Value="74"/>
+            <Setter Property="Height" Value="58"/>
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         </Style>
     </UserControl.Resources>
 
@@ -81,140 +112,522 @@
 
         <!-- TOOLBAR -->
         <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" 
-                CornerRadius="12" Padding="12,10" Margin="0,0,0,12"
+                CornerRadius="12" Padding="6,6" Margin="0,0,0,12"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-            <WrapPanel VerticalAlignment="Center">
-                <TextBlock Text="{DynamicResource EditorFormatting}"
-                           FontSize="{DynamicResource FS12}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Margin="0,0,10,0"
-                           VerticalAlignment="Center"/>
-
-                <Button Style="{StaticResource ToolbarBtn}" 
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          Focusable="False"
+                          Style="{StaticResource ThinScroll}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                    <Border Style="{StaticResource ToolbarGroupBorder}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ComboBox x:Name="FontSizeCombo" Width="68" Height="26" Margin="0,0,4,0"
+                                          VerticalContentAlignment="Center" FontSize="{DynamicResource FS11}"
+                                          SelectionChanged="FontSizeCombo_SelectionChanged"
+                                          ToolTip="{DynamicResource EditorFontSize}">
+                                    <ComboBoxItem Content="8"/>
+                                    <ComboBoxItem Content="9"/>
+                                    <ComboBoxItem Content="10"/>
+                                    <ComboBoxItem Content="11"/>
+                                    <ComboBoxItem Content="12" IsSelected="True"/>
+                                    <ComboBoxItem Content="14"/>
+                                    <ComboBoxItem Content="16"/>
+                                    <ComboBoxItem Content="18"/>
+                                    <ComboBoxItem Content="20"/>
+                                    <ComboBoxItem Content="24"/>
+                                    <ComboBoxItem Content="28"/>
+                                    <ComboBoxItem Content="36"/>
+                                </ComboBox>
+                                <Button x:Name="BoldButton"
+                                        Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.ToggleBold" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorBold}">
-                    <TextBlock Text="B" FontWeight="Bold" FontSize="{DynamicResource FS14}" 
+                                    <TextBlock Text="B" FontWeight="Bold" FontSize="{DynamicResource FS13}" 
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <Button Style="{StaticResource ToolbarBtn}" 
+                                <Button x:Name="ItalicButton"
+                                        Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.ToggleItalic" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorItalic}">
-                    <TextBlock Text="I" FontStyle="Italic" FontSize="{DynamicResource FS14}" 
+                                    <TextBlock Text="I" FontStyle="Italic" FontSize="{DynamicResource FS13}" 
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <Button Style="{StaticResource ToolbarBtn}" 
+                                <Button x:Name="UnderlineButton"
+                                        Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.ToggleUnderline" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorUnderline}">
-                    <TextBlock FontSize="{DynamicResource FS14}" Foreground="{DynamicResource ForegroundBrush}">
+                                    <TextBlock FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}">
                         <Underline>U</Underline>
                     </TextBlock>
                 </Button>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource EditorFont}" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
 
-                <Border Style="{StaticResource ToolbarSeparator}"/>
-
-                <TextBlock Text="{DynamicResource EditorFontSize}"
-                           FontSize="{DynamicResource FS12}"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Margin="2,0,6,0"
-                           VerticalAlignment="Center"/>
-                <ComboBox x:Name="FontSizeCombo" Width="60" Height="28" Margin="2,0"
-                          VerticalContentAlignment="Center" FontSize="{DynamicResource FS12}"
-                          SelectionChanged="FontSizeCombo_SelectionChanged"
-                          ToolTip="{DynamicResource EditorFontSize}">
-                    <ComboBoxItem Content="8"/>
-                    <ComboBoxItem Content="9"/>
-                    <ComboBoxItem Content="10"/>
-                    <ComboBoxItem Content="11"/>
-                    <ComboBoxItem Content="12" IsSelected="True"/>
-                    <ComboBoxItem Content="14"/>
-                    <ComboBoxItem Content="16"/>
-                    <ComboBoxItem Content="18"/>
-                    <ComboBoxItem Content="20"/>
-                    <ComboBoxItem Content="24"/>
-                    <ComboBoxItem Content="28"/>
-                    <ComboBoxItem Content="36"/>
-                </ComboBox>
-
-                <Border Style="{StaticResource ToolbarSeparator}"/>
-
-                <TextBlock Text="{DynamicResource EditorAlignment}"
-                           FontSize="{DynamicResource FS12}"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Margin="2,0,6,0"
-                           VerticalAlignment="Center"/>
-                <Button Style="{StaticResource ToolbarBtn}" 
+                    <Border Style="{StaticResource ToolbarGroupBorder}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="AlignLeftButton"
+                                        Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.AlignLeft" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorAlignLeft}">
-                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <Button Style="{StaticResource ToolbarBtn}" 
+                                <Button x:Name="AlignCenterButton"
+                                        Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.AlignCenter" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorAlignCenter}">
-                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-                <Button Style="{StaticResource ToolbarBtn}" 
+                                <Button x:Name="AlignRightButton"
+                                        Style="{StaticResource ToolbarBtn}" 
                         Command="EditingCommands.AlignRight" 
                         CommandTarget="{Binding ElementName=Editor}"
                         ToolTip="{DynamicResource EditorAlignRight}">
-                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
-
-                <Border Style="{StaticResource ToolbarSeparator}"/>
-
-                <TextBlock Text="{DynamicResource EditorSpacing}"
-                           FontSize="{DynamicResource FS12}"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Margin="2,0,6,0"
+                                <Button x:Name="BulletListButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="BulletListButton_Click"
+                                        ToolTip="{DynamicResource EditorBullets}">
+                                    <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="NumberedListButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="NumberedListButton_Click"
+                                        ToolTip="{DynamicResource EditorNumbering}">
+                                    <TextBlock Text="&#xF246;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="SpacingMenuButton"
+                                            Style="{StaticResource ToolbarBtn}"
+                                            Width="34"
+                                            Padding="0"
+                                            Click="SpacingMenuButton_Click"
+                                            ToolTipService.InitialShowDelay="250">
+                                        <Button.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel MaxWidth="220">
+                                                    <TextBlock Text="{DynamicResource EditorSpacingTooltipTitle}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                                    <TextBlock Text="{DynamicResource EditorSpacingTooltipDescription}"
+                                                               Margin="0,4,0,0"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </Button.ToolTip>
+                                        <Button.ContextMenu>
+                                            <ContextMenu x:Name="SpacingContextMenu" Placement="Bottom">
+                                                <MenuItem x:Name="LineSpacing100MenuItem" Header="1.0" Tag="1.0" IsCheckable="True" Click="LineSpacingMenuItem_Click"/>
+                                                <MenuItem x:Name="LineSpacing115MenuItem" Header="1.15" Tag="1.15" IsCheckable="True" Click="LineSpacingMenuItem_Click"/>
+                                                <MenuItem x:Name="LineSpacing150MenuItem" Header="1.5" Tag="1.5" IsCheckable="True" Click="LineSpacingMenuItem_Click"/>
+                                                <MenuItem x:Name="LineSpacing200MenuItem" Header="2.0" Tag="2.0" IsCheckable="True" Click="LineSpacingMenuItem_Click"/>
+                                                <MenuItem x:Name="LineSpacing250MenuItem" Header="2.5" Tag="2.5" IsCheckable="True" Click="LineSpacingMenuItem_Click"/>
+                                                <MenuItem x:Name="LineSpacing300MenuItem" Header="3.0" Tag="3.0" IsCheckable="True" Click="LineSpacingMenuItem_Click"/>
+                                                <Separator/>
+                                                <MenuItem Header="{DynamicResource EditorMoreLineSpacingOptions}">
+                                                    <MenuItem Header="{DynamicResource EditorSpacingBefore}">
+                                                        <MenuItem Header="0" Tag="0" Click="SpacingBeforeMenuItem_Click"/>
+                                                        <MenuItem Header="4" Tag="4" Click="SpacingBeforeMenuItem_Click"/>
+                                                        <MenuItem Header="8" Tag="8" Click="SpacingBeforeMenuItem_Click"/>
+                                                        <MenuItem Header="12" Tag="12" Click="SpacingBeforeMenuItem_Click"/>
+                                                        <MenuItem Header="16" Tag="16" Click="SpacingBeforeMenuItem_Click"/>
+                                                    </MenuItem>
+                                                    <MenuItem Header="{DynamicResource EditorSpacingAfter}">
+                                                        <MenuItem Header="0" Tag="0" Click="SpacingAfterMenuItem_Click"/>
+                                                        <MenuItem Header="4" Tag="4" Click="SpacingAfterMenuItem_Click"/>
+                                                        <MenuItem Header="8" Tag="8" Click="SpacingAfterMenuItem_Click"/>
+                                                        <MenuItem Header="12" Tag="12" Click="SpacingAfterMenuItem_Click"/>
+                                                        <MenuItem Header="16" Tag="16" Click="SpacingAfterMenuItem_Click"/>
+                                                    </MenuItem>
+                                                    <MenuItem Header="{DynamicResource EditorIndentFirstLine}">
+                                                        <MenuItem Header="0" Tag="0" Click="FirstLineIndentMenuItem_Click"/>
+                                                        <MenuItem Header="12" Tag="12" Click="FirstLineIndentMenuItem_Click"/>
+                                                        <MenuItem Header="24" Tag="24" Click="FirstLineIndentMenuItem_Click"/>
+                                                        <MenuItem Header="36" Tag="36" Click="FirstLineIndentMenuItem_Click"/>
+                                                        <MenuItem Header="-12" Tag="-12" Click="FirstLineIndentMenuItem_Click"/>
+                                                        <MenuItem Header="-24" Tag="-24" Click="FirstLineIndentMenuItem_Click"/>
+                                                    </MenuItem>
+                                                </MenuItem>
+                                                <Separator/>
+                                                <MenuItem x:Name="QuickSpacingBeforeMenuItem" Click="QuickSpacingBeforeMenuItem_Click">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="↥"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem x:Name="QuickSpacingAfterMenuItem" Click="QuickSpacingAfterMenuItem_Click">
+                                                    <MenuItem.Icon>
+                                                        <TextBlock Text="↧"
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                        <Grid Width="18" Height="16">
+                                            <TextBlock Text="☰"
+                                                       FontSize="12"
+                                                       Margin="0,-2,0,0"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       HorizontalAlignment="Left"
+                                                       VerticalAlignment="Top"/>
+                                            <TextBlock Text="↕"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource AccentBrush}"
+                                                       HorizontalAlignment="Right"
                            VerticalAlignment="Center"/>
-                <TextBlock Text="{DynamicResource EditorLineSpacing}"
-                           FontSize="{DynamicResource FS11}"
-                           Foreground="{DynamicResource SecondaryForegroundBrush}"
-                           Margin="2,0,4,0"
-                           VerticalAlignment="Center"/>
-                <ComboBox x:Name="LineSpacingCombo"
-                          Width="78"
-                          Height="28"
-                          Margin="0,0,6,0"
-                          SelectionChanged="LineSpacingCombo_SelectionChanged"
-                          ToolTip="{DynamicResource EditorLineSpacing}">
-                    <ComboBoxItem Content="1.0" Tag="1.0" IsSelected="True"/>
-                    <ComboBoxItem Content="1.15" Tag="1.15"/>
-                    <ComboBoxItem Content="1.5" Tag="1.5"/>
-                    <ComboBoxItem Content="2.0" Tag="2.0"/>
+                                            <TextBlock Text="&#xE70D;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="8"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                                       HorizontalAlignment="Right"
+                                                       VerticalAlignment="Bottom"/>
+                                        </Grid>
+                                    </Button>
+                                    <ComboBox x:Name="LeftIndentCombo"
+                                              Width="54"
+                                              Height="26"
+                                              Margin="0,0,2,0"
+                                              SelectionChanged="LeftIndentCombo_SelectionChanged"
+                                              ToolTip="{DynamicResource EditorIndentLeft}">
+                                        <ComboBoxItem Content="0" Tag="0" IsSelected="True"/>
+                                        <ComboBoxItem Content="12" Tag="12"/>
+                                        <ComboBoxItem Content="24" Tag="24"/>
+                                        <ComboBoxItem Content="36" Tag="36"/>
+                                        <ComboBoxItem Content="48" Tag="48"/>
+                                        <ComboBoxItem Content="72" Tag="72"/>
+                                        <ComboBoxItem Content="96" Tag="96"/>
                 </ComboBox>
-                <TextBlock Text="{DynamicResource EditorParagraphSpacing}"
-                           FontSize="{DynamicResource FS11}"
-                           Foreground="{DynamicResource SecondaryForegroundBrush}"
-                           Margin="2,0,4,0"
-                           VerticalAlignment="Center"/>
-                <ComboBox x:Name="ParagraphSpacingCombo"
-                          Width="68"
-                          Height="28"
-                          Margin="0,0,6,0"
-                          SelectionChanged="ParagraphSpacingCombo_SelectionChanged"
-                          ToolTip="{DynamicResource EditorParagraphSpacing}">
+                                    <ComboBox x:Name="RightIndentCombo"
+                                              Width="54"
+                                              Height="26"
+                                              SelectionChanged="RightIndentCombo_SelectionChanged"
+                                              ToolTip="{DynamicResource EditorIndentRight}">
                     <ComboBoxItem Content="0" Tag="0" IsSelected="True"/>
-                    <ComboBoxItem Content="4" Tag="4"/>
-                    <ComboBoxItem Content="8" Tag="8"/>
                     <ComboBoxItem Content="12" Tag="12"/>
-                    <ComboBoxItem Content="16" Tag="16"/>
+                                        <ComboBoxItem Content="24" Tag="24"/>
+                                        <ComboBoxItem Content="36" Tag="36"/>
+                                        <ComboBoxItem Content="48" Tag="48"/>
+                                        <ComboBoxItem Content="72" Tag="72"/>
+                                        <ComboBoxItem Content="96" Tag="96"/>
                 </ComboBox>
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource EditorParagraph}" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
 
-                <Border Style="{StaticResource ToolbarSeparator}"/>
+                    <Border Style="{StaticResource ToolbarGroupBorder}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="PageOrientationMenuButton"
+                                        Style="{StaticResource ToolbarMenuButton}"
+                                        Margin="1,1,3,1"
+                                        Click="PageOrientationMenuButton_Click"
+                                        ToolTip="{DynamicResource EditorPageOrientation}">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="PageOrientationContextMenu" Placement="Bottom">
+                                            <MenuItem x:Name="PortraitOrientationMenuItem"
+                                                      Header="{DynamicResource EditorOrientationPortrait}"
+                                                      Tag="portrait"
+                                                      IsCheckable="True"
+                                                      Click="PageOrientationMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Rectangle Width="18" Height="24"
+                                                               Stroke="{DynamicResource AccentBrush}"
+                                                               Fill="{DynamicResource CardBackgroundBrush}"
+                                                               StrokeThickness="1.2"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem x:Name="LandscapeOrientationMenuItem"
+                                                      Header="{DynamicResource EditorOrientationLandscape}"
+                                                      Tag="landscape"
+                                                      IsCheckable="True"
+                                                      Click="PageOrientationMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Rectangle Width="24" Height="18"
+                                                               Stroke="{DynamicResource AccentBrush}"
+                                                               Fill="{DynamicResource CardBackgroundBrush}"
+                                                               StrokeThickness="1.2"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid>
+                                            <Rectangle Width="20" Height="26"
+                                                       Stroke="{DynamicResource AccentBrush}"
+                                                       Fill="{DynamicResource CardBackgroundBrush}"
+                                                       StrokeThickness="1.2"
+                                                       RadiusX="1" RadiusY="1"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                            <Line X1="0" Y1="0" X2="0" Y2="18"
+                                                  Stroke="{DynamicResource AccentBrush}"
+                                                  StrokeThickness="1.2"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="-7,0,0,0"/>
+                                        </Grid>
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource EditorPageOrientation}"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="&#xE70D;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="8"
+                                                       Margin="4,1,0,0"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                                <Button x:Name="PageSizeMenuButton"
+                                        Style="{StaticResource ToolbarMenuButton}"
+                                        Margin="1,1,3,1"
+                                        Click="PageSizeMenuButton_Click"
+                                        ToolTip="{DynamicResource EditorPageSize}">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="PageSizeContextMenu" Placement="Bottom">
+                                            <MenuItem x:Name="A4PageSizeMenuItem"
+                                                      Header="A4"
+                                                      InputGestureText="210 × 297 mm"
+                                                      Tag="a4"
+                                                      IsCheckable="True"
+                                                      Click="PageSizeMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Rectangle Width="18" Height="24"
+                                                               Stroke="{DynamicResource AccentBrush}"
+                                                               Fill="{DynamicResource CardBackgroundBrush}"
+                                                               StrokeThickness="1.2"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem x:Name="LetterPageSizeMenuItem"
+                                                      Header="Letter"
+                                                      InputGestureText="8.5 × 11 in"
+                                                      Tag="letter"
+                                                      IsCheckable="True"
+                                                      Click="PageSizeMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Rectangle Width="18" Height="24"
+                                                               Stroke="{DynamicResource AccentBrush}"
+                                                               Fill="{DynamicResource CardBackgroundBrush}"
+                                                               StrokeThickness="1.2"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid>
+                                            <Rectangle Width="20" Height="26"
+                                                       Stroke="{DynamicResource AccentBrush}"
+                                                       Fill="{DynamicResource CardBackgroundBrush}"
+                                                       StrokeThickness="1.2"
+                                                       RadiusX="1" RadiusY="1"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                            <Line X1="0" Y1="0" X2="16" Y2="0"
+                                                  Stroke="{DynamicResource AccentBrush}"
+                                                  StrokeThickness="1.2"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,7,0,0"/>
+                                        </Grid>
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource EditorPageSize}"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="&#xE70D;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="8"
+                                                       Margin="4,1,0,0"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                                <Button x:Name="PageMarginsMenuButton"
+                                        Style="{StaticResource ToolbarMenuButton}"
+                                        Click="PageMarginsMenuButton_Click"
+                                        ToolTip="{DynamicResource EditorPageMargins}">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="PageMarginsContextMenu" Placement="Bottom">
+                                            <MenuItem x:Name="NormalMarginsMenuItem"
+                                                      Header="{DynamicResource EditorMarginsNormal}"
+                                                      InputGestureText="2.54 / 2.54 / 2.54 / 2.54"
+                                                      Tag="normal"
+                                                      IsCheckable="True"
+                                                      Click="PageMarginsMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Grid Width="28" Height="38">
+                                                        <Rectangle Width="24" Height="34"
+                                                                   Stroke="{DynamicResource AccentBrush}"
+                                                                   Fill="{DynamicResource CardBackgroundBrush}"
+                                                                   StrokeThickness="1"
+                                                                   RadiusX="1" RadiusY="1"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Line X1="0" Y1="0" X2="0" Y2="26"
+                                                              Stroke="{DynamicResource AccentBrush}"
+                                                              StrokeThickness="1"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="-6,0,0,0"/>
+                                                        <Line X1="0" Y1="0" X2="0" Y2="26"
+                                                              Stroke="{DynamicResource AccentBrush}"
+                                                              StrokeThickness="1"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="6,0,0,0"/>
+                                                    </Grid>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem x:Name="NarrowMarginsMenuItem"
+                                                      Header="{DynamicResource EditorMarginsNarrow}"
+                                                      InputGestureText="1.27 / 1.27 / 1.27 / 1.27"
+                                                      Tag="narrow"
+                                                      IsCheckable="True"
+                                                      Click="PageMarginsMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Grid Width="28" Height="38">
+                                                        <Rectangle Width="24" Height="34"
+                                                                   Stroke="{DynamicResource AccentBrush}"
+                                                                   Fill="{DynamicResource CardBackgroundBrush}"
+                                                                   StrokeThickness="1"
+                                                                   RadiusX="1" RadiusY="1"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Line X1="0" Y1="0" X2="0" Y2="26"
+                                                              Stroke="{DynamicResource AccentBrush}"
+                                                              StrokeThickness="1"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="-8,0,0,0"/>
+                                                        <Line X1="0" Y1="0" X2="0" Y2="26"
+                                                              Stroke="{DynamicResource AccentBrush}"
+                                                              StrokeThickness="1"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="8,0,0,0"/>
+                                                    </Grid>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem x:Name="WideMarginsMenuItem"
+                                                      Header="{DynamicResource EditorMarginsWide}"
+                                                      InputGestureText="2.54 / 5.08 / 2.54 / 5.08"
+                                                      Tag="wide"
+                                                      IsCheckable="True"
+                                                      Click="PageMarginsMenuItem_Click">
+                                                <MenuItem.Icon>
+                                                    <Grid Width="28" Height="38">
+                                                        <Rectangle Width="24" Height="34"
+                                                                   Stroke="{DynamicResource AccentBrush}"
+                                                                   Fill="{DynamicResource CardBackgroundBrush}"
+                                                                   StrokeThickness="1"
+                                                                   RadiusX="1" RadiusY="1"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Line X1="0" Y1="0" X2="0" Y2="26"
+                                                              Stroke="{DynamicResource AccentBrush}"
+                                                              StrokeThickness="1"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="-3,0,0,0"/>
+                                                        <Line X1="0" Y1="0" X2="0" Y2="26"
+                                                              Stroke="{DynamicResource AccentBrush}"
+                                                              StrokeThickness="1"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="3,0,0,0"/>
+                                                    </Grid>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid>
+                                            <Rectangle Width="22" Height="26"
+                                                       Stroke="{DynamicResource AccentBrush}"
+                                                       Fill="{DynamicResource CardBackgroundBrush}"
+                                                       StrokeThickness="1.2"
+                                                       RadiusX="1" RadiusY="1"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                            <Line X1="0" Y1="0" X2="0" Y2="18"
+                                                  Stroke="{DynamicResource AccentBrush}"
+                                                  StrokeThickness="1"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="-6,0,0,0"/>
+                                            <Line X1="0" Y1="0" X2="0" Y2="18"
+                                                  Stroke="{DynamicResource AccentBrush}"
+                                                  StrokeThickness="1"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="6,0,0,0"/>
+                                        </Grid>
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource EditorPageMargins}"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="&#xE70D;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="8"
+                                                       Margin="4,1,0,0"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource EditorLayout}" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
 
+                    <Border Style="{StaticResource ToolbarGroupBorder}" Margin="0">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="8,0"
+                                        Command="{Binding OpenStarterTemplatesCommand}"
+                                        ToolTip="{DynamicResource EditorSamplesButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                   VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="{DynamicResource EditorSamplesButton}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                 <Button x:Name="BtnAIOverlay" Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="8,0"
                         Click="AIOverlay_Click" ToolTip="{DynamicResource AIOverlayBtn}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
+                                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" 
                                    VerticalAlignment="Center" Margin="0,0,4,0">
                             <TextBlock.Foreground>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -223,24 +636,26 @@
                                 </LinearGradientBrush>
                             </TextBlock.Foreground>
                         </TextBlock>
-                        <TextBlock Text="AI" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                        <TextBlock Text="AI" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-
-                <Border Style="{StaticResource ToolbarSeparator}"/>
-
-                <Button Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="10,0"
+                                <Button Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="8,0"
                         Command="{Binding AIInsertTagsCommand}"
                         ToolTip="✨ AI автоматично вставить теги в потрібні місця документа">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                   VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#388E3C"/>
-                        <TextBlock Text="✨ AI теги" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                                   VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#388E3C"/>
+                                        <TextBlock Text="✨ AI теги" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                    Foreground="#388E3C" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-            </WrapPanel>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource EditorTools}" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- MAIN: Editor + Tags -->
@@ -259,7 +674,9 @@
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto"
                               Focusable="False">
-                    <Border x:Name="PageBorder" Width="794" MinHeight="1123"
+                    <Border x:Name="PageBorder"
+                            Width="{Binding PagePreviewWidth}"
+                            MinHeight="{Binding PagePreviewHeight}"
                             Background="White" Margin="30,24"
                             HorizontalAlignment="Center"
                             SnapsToDevicePixels="True">
@@ -268,11 +685,22 @@
                                               Opacity="0.22" Color="#000000"/>
                         </Border.Effect>
                         <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="28"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0"
+                                    Background="#FAFAFA"
+                                    BorderBrush="#E2E2E2"
+                                    BorderThickness="0,0,0,1">
+                                <Canvas x:Name="RulerCanvas" Height="27"/>
+                            </Border>
+                            <Grid Grid.Row="1">
                             <RichTextBox x:Name="Editor"
                                          AcceptsTab="True" AcceptsReturn="True"
                                          VerticalScrollBarVisibility="Disabled"
                                          HorizontalScrollBarVisibility="Disabled"
-                                         Padding="48"
+                                             Padding="0"
                                          FontSize="{DynamicResource FS12}" FontFamily="Segoe UI"
                                          BorderThickness="0" Background="Transparent"
                                          SpellCheck.IsEnabled="False"
@@ -282,6 +710,7 @@
                             <Canvas x:Name="PageBreakCanvas" IsHitTestVisible="False"
                                     Width="{Binding ActualWidth, ElementName=Editor}"
                                     Height="{Binding ActualHeight, ElementName=Editor}"/>
+                            </Grid>
                         </Grid>
                     </Border>
                 </ScrollViewer>
@@ -433,6 +862,160 @@
             </Grid>
         </Grid>
 
+        <!-- ===== Starter Templates Overlay ===== -->
+        <Grid Grid.RowSpan="4"
+              Visibility="{Binding IsStarterTemplatesOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="#50000000">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseStarterTemplatesCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                    MaxWidth="1080" MaxHeight="700" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320"/>
+                        <ColumnDefinition Width="18"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,16">
+                        <TextBlock Text="{DynamicResource EditorSamplesTitle}" FontSize="{DynamicResource FS18}"
+                                   FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource EditorSamplesDescription}" FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Grid.Column="0"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="8">
+                        <ListBox ItemsSource="{Binding StarterTemplates}"
+                                 SelectedItem="{Binding SelectedStarterTemplate}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10" Margin="0,0,0,6" CornerRadius="8"
+                                            Background="{DynamicResource ContentBackgroundBrush}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS13}"
+                                                       FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                                       Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                            <TextBlock FontSize="{DynamicResource FS10}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       Margin="0,6,0,0">
+                                                <Run Text="{Binding PartyModel}"/>
+                                                <Run Text=" | "/>
+                                                <Run Text="{Binding ContractType}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="2"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0">
+                                <TextBlock Text="{Binding SelectedStarterTemplate.Title}" FontSize="{DynamicResource FS16}"
+                                           FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock Text="{Binding SelectedStarterTemplate.PreviewText}" FontSize="{DynamicResource FS12}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,6,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="1" Text="{DynamicResource EditorSamplesPreview}" FontSize="{DynamicResource FS12}"
+                                       FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                       Margin="0,16,0,8"/>
+
+                            <Grid Grid.Row="2">
+                                <RichTextBox x:Name="SamplesPreviewBox"
+                                             IsReadOnly="True"
+                                             IsDocumentEnabled="False"
+                                             Padding="24"
+                                             FontSize="{DynamicResource FS12}"
+                                             FontFamily="Segoe UI"
+                                             BorderBrush="{DynamicResource CardBorderBrush}"
+                                             BorderThickness="1"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Background="White"/>
+                                <Border Background="{DynamicResource ContentBackgroundBrush}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedStarterTemplate}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding StarterTemplatesStatus}"
+                                               Foreground="{DynamicResource MutedForegroundBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="2" Grid.ColumnSpan="3" Margin="0,18,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="{Binding StarterTemplatesStatus}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0"/>
+
+                        <Button Grid.Column="1" Command="{Binding CloseStarterTemplatesCommand}"
+                                Padding="18,10" Margin="0,0,10,0" Cursor="Hand"
+                                Background="{DynamicResource ContentBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                Foreground="{DynamicResource ForegroundBrush}">
+                            <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+
+                        <Button Grid.Column="2" Command="{Binding ApplySelectedStarterTemplateCommand}"
+                                Padding="18,10" Cursor="Hand" FontWeight="SemiBold"
+                                Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0">
+                            <TextBlock Text="{DynamicResource EditorSamplesApply}" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- ===== AI Insert Tags Overlay ===== -->
         <Grid Grid.RowSpan="4"
               Visibility="{Binding IsAITagsOpen, Converter={StaticResource BoolToVis}}">
@@ -537,7 +1120,11 @@
         </Grid>
 
         <!-- FOOTER -->
-        <Grid Grid.Row="3" Margin="0,12,0,0">
+        <Border Grid.Row="3"
+                Margin="0,8,0,0"
+                Padding="0"
+                Background="Transparent">
+            <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -545,23 +1132,24 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" 
-                       VerticalAlignment="Center" FontSize="{DynamicResource FS12}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FS11}"
                        Foreground="{DynamicResource AccentBrush}"
-                       TextWrapping="Wrap"
-                       Margin="0,0,12,0"/>
+                       TextTrimming="CharacterEllipsis"
+                       Margin="0,0,10,0"/>
 
             <Button Grid.Column="1" Content="{DynamicResource BtnCancel}" 
                     Command="{Binding GoBackCommand}"
-                    Padding="16,8" Margin="0,0,8,0"
+                    Padding="12,6" MinHeight="32" Margin="0,0,6,0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Foreground="{DynamicResource ForegroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
 
             <Button Grid.Column="2" Content="{DynamicResource DetBtnSave}" 
                     Command="{Binding SaveCommand}"
-                    Padding="16,8"
+                    Padding="12,6" MinHeight="32"
                     Style="{StaticResource FilledActionButton}"
                     FontWeight="SemiBold"/>
         </Grid>
+        </Border>
     </Grid>
 </UserControl>

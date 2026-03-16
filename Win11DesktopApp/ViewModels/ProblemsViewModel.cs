@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -512,21 +513,84 @@ namespace Win11DesktopApp.ViewModels
             return s == "Expired" || s == "Critical" || s == "Warning";
         }
 
+        private bool EnsureExportPathReady(string? filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return false;
+
+            try
+            {
+                var fullPath = Path.GetFullPath(filePath);
+                if (Directory.Exists(fullPath))
+                    throw new IOException("Selected path is a directory.");
+
+                var outputDirectory = Path.GetDirectoryName(fullPath);
+                if (string.IsNullOrWhiteSpace(outputDirectory))
+                    throw new DirectoryNotFoundException("Export folder not found.");
+
+                if (!Directory.Exists(outputDirectory))
+                    Directory.CreateDirectory(outputDirectory);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ProblemsViewModel.EnsureExportPathReady", ex.Message);
+                MessageBox.Show(ResF("ProbPdfExportError", ex.Message), Res("ProbPdfError") ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
         private void ExportToPdf()
         {
             try
             {
+                var exportFilterLabel = ActiveFilter switch
+                {
+                    "Expired" => DocRes("ProbPdfExpired") ?? "Expired",
+                    "Warning" => DocRes("ProbPdfWarning") ?? "Warning",
+                    _ => DocRes("ProbPdfTotal") ?? "Total"
+                };
+
+                var exportTitle = ActiveFilter switch
+                {
+                    "Expired" => $"{DocRes("ProbPdfTitle") ?? "Problems — report"} - {exportFilterLabel}",
+                    "Warning" => $"{DocRes("ProbPdfTitle") ?? "Problems — report"} - {exportFilterLabel}",
+                    _ => DocRes("ProbPdfTitle") ?? "Problems — report"
+                };
+
+                static bool IsExpiredSeverity(DocumentExpiryInfo issue) =>
+                    issue.Severity == "Expired" || issue.Severity == "Critical";
+
+                var exportGroups = ProblemGroups.ToList();
+                var exportIgnored = ActiveFilter switch
+                {
+                    "Expired" => IgnoredProblems.Where(IsExpiredSeverity).ToList(),
+                    "Warning" => IgnoredProblems.Where(i => i.Severity == "Warning").ToList(),
+                    _ => IgnoredProblems.ToList()
+                };
+
+                var exportTotalPeople = exportGroups.Count;
+                var exportTotalProblems = exportGroups.Sum(g => g.Issues.Count);
+                var exportExpiredCount = exportGroups.Sum(g => g.Issues.Count(IsExpiredSeverity));
+                var exportExpiredPeople = exportGroups.Count(g => g.Issues.Any(IsExpiredSeverity));
+                var exportWarningCount = exportGroups.Sum(g => g.Issues.Count(i => i.Severity == "Warning"));
+                var exportWarningPeople = exportGroups.Count(g => g.Issues.Any(i => i.Severity == "Warning"));
+                var exportIgnoredCount = exportIgnored.Count;
+
                 var dialog = new SaveFileDialog
                 {
                     Filter = "PDF (*.pdf)|*.pdf",
-                    FileName = $"{DocRes("ProbPdfTitle") ?? "Problems"}_{DateTime.Now:yyyy-MM-dd}.pdf",
+                    FileName = $"{exportTitle}_{DateTime.Now:yyyy-MM-dd}.pdf",
                     Title = Res("ProbPdfSaveTitle") ?? "Save problems report"
                 };
 
                 if (dialog.ShowDialog() != true) return;
+                if (!EnsureExportPathReady(dialog.FileName)) return;
 
                 var doc = new PdfDocument();
-                doc.Info.Title = DocRes("ProbPdfTitle") ?? "Problems — report";
+                doc.Info.Title = exportTitle;
 
                 var page = doc.AddPage();
                 page.Width = XUnit.FromMillimeter(210);
@@ -563,7 +627,7 @@ namespace Win11DesktopApp.ViewModels
                 var penBorder = new XPen(XColor.FromArgb(200, 200, 200), 0.5);
 
                 // --- Title ---
-                gfx.DrawString(DocRes("ProbPdfTitle") ?? "Problems — report", fontTitle, brushBlack,
+                gfx.DrawString(exportTitle, fontTitle, brushBlack,
                     new XPoint(marginLeft, y), topLeftFormat);
                 y += 26;
 
@@ -581,10 +645,10 @@ namespace Win11DesktopApp.ViewModels
 
                 var statItems = new[]
                 {
-                    (Label: DocRes("ProbPdfExpired") ?? "Expired", Value: $"{ExpiredPeople} / {ExpiredCount}", Bg: XColor.FromArgb(255, 235, 238), Fg: XColor.FromArgb(198, 40, 40)),
-                    (Label: DocRes("ProbPdfWarning") ?? "Warning", Value: $"{WarningPeople} / {WarningCount}", Bg: XColor.FromArgb(255, 243, 224), Fg: XColor.FromArgb(239, 108, 0)),
-                    (Label: DocRes("ProbPdfTotal") ?? "Total", Value: $"{TotalPeople} / {TotalProblems}", Bg: XColor.FromArgb(240, 240, 240), Fg: XColor.FromArgb(50, 50, 50)),
-                    (Label: DocRes("ProbPdfIgnored") ?? "Ignored", Value: $"{IgnoredCount}", Bg: XColor.FromArgb(232, 245, 253), Fg: XColor.FromArgb(30, 90, 150)),
+                    (Label: DocRes("ProbPdfExpired") ?? "Expired", Value: $"{exportExpiredPeople} / {exportExpiredCount}", Bg: XColor.FromArgb(255, 235, 238), Fg: XColor.FromArgb(198, 40, 40)),
+                    (Label: DocRes("ProbPdfWarning") ?? "Warning", Value: $"{exportWarningPeople} / {exportWarningCount}", Bg: XColor.FromArgb(255, 243, 224), Fg: XColor.FromArgb(239, 108, 0)),
+                    (Label: DocRes("ProbPdfTotal") ?? "Total", Value: $"{exportTotalPeople} / {exportTotalProblems}", Bg: XColor.FromArgb(240, 240, 240), Fg: XColor.FromArgb(50, 50, 50)),
+                    (Label: DocRes("ProbPdfIgnored") ?? "Ignored", Value: $"{exportIgnoredCount}", Bg: XColor.FromArgb(232, 245, 253), Fg: XColor.FromArgb(30, 90, 150)),
                 };
 
                 for (int si = 0; si < statItems.Length; si++)
@@ -600,7 +664,7 @@ namespace Win11DesktopApp.ViewModels
                 y = statY + statBoxH + 12;
 
                 // --- Employee groups ---
-                foreach (var group in ProblemGroups)
+                foreach (var group in exportGroups)
                 {
                     double blockHeight = 24 + group.Issues.Count * 20 + 14;
                     if (y + blockHeight > pageHeight - 40)
@@ -668,7 +732,7 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 // --- Ignored section ---
-                if (IgnoredProblems.Count > 0)
+                if (exportIgnored.Count > 0)
                 {
                     if (y + 40 > pageHeight - 40)
                     {
@@ -682,11 +746,11 @@ namespace Win11DesktopApp.ViewModels
                     var brushIndigo = new XSolidBrush(XColor.FromArgb(57, 73, 171));
 
                     y += 6;
-                    gfx.DrawString(DocResF("ProbPdfIgnoredSection", IgnoredProblems.Count), fontEmployeeName, brushIndigo,
+                    gfx.DrawString(DocResF("ProbPdfIgnoredSection", exportIgnored.Count), fontEmployeeName, brushIndigo,
                         new XPoint(marginLeft, y), topLeftFormat);
                     y += 20;
 
-                    foreach (var ign in IgnoredProblems)
+                    foreach (var ign in exportIgnored)
                     {
                         if (y > pageHeight - 40)
                         {
@@ -708,7 +772,8 @@ namespace Win11DesktopApp.ViewModels
 
                 doc.Save(dialog.FileName);
                 App.ActivityLogService?.Log("ExportPdf", "Export", "", "",
-                    $"Експортовано звіт проблем → PDF");
+                    $"Експортовано звіт проблем → PDF",
+                    details: BuildProblemsExportDetails(dialog.FileName, exportFilterLabel, exportTotalPeople, exportTotalProblems, exportIgnoredCount));
                 DocumentGenerationService.OpenFile(dialog.FileName);
             }
             catch (Exception ex)
@@ -716,6 +781,12 @@ namespace Win11DesktopApp.ViewModels
                 MessageBox.Show(ResF("ProbPdfExportError", ex.Message), Res("ProbPdfError") ?? "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private string BuildProblemsExportDetails(string outputPath, string filterLabel, int peopleCount, int problemCount, int ignoredCount)
+        {
+            return $"Фільтр: {filterLabel}; Людей: {peopleCount}; Проблем: {problemCount}; " +
+                   $"Ігнорованих: {ignoredCount}; Файл: {Path.GetFileName(outputPath)}";
         }
     }
 }

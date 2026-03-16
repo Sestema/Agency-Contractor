@@ -36,6 +36,7 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrEmpty(path)) return;
 
                 var entries = LoadEntries(path);
+                var actorName = GetCurrentActorName();
                 entries.Insert(0, new ActivityLogEntry
                 {
                     ActionType = actionType,
@@ -46,7 +47,8 @@ namespace Win11DesktopApp.Services
                     Description = description,
                     OldValue = oldValue,
                     NewValue = newValue,
-                    Details = details
+                    Details = details,
+                    ActorName = actorName
                 });
 
                 if (entries.Count > MaxEntries)
@@ -58,6 +60,15 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogWarning("ActivityLogService.Log", ex.Message);
             }
+        }
+
+        private static string GetCurrentActorName()
+        {
+            var profile = App.CurrentProfile;
+            if (profile == null)
+                return string.Empty;
+
+            return $"{profile.FirstName} {profile.LastName}".Trim();
         }
 
         public List<ActivityLogEntry> GetAll()

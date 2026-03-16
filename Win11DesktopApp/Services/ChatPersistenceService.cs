@@ -44,8 +44,7 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    var json = File.ReadAllText(file, Encoding.UTF8);
-                    var session = JsonSerializer.Deserialize<ChatSession>(json);
+                    var session = SafeFileService.ReadJson<ChatSession>(file, _json, Encoding.UTF8);
                     if (session != null)
                         sessions.Add(session);
                 }
@@ -62,17 +61,13 @@ namespace Win11DesktopApp.Services
         public void SaveSession(ChatSession session)
         {
             var path = Path.Combine(_chatsFolder, session.Id + ".json");
-            var tempPath = path + ".tmp";
             try
             {
-                var json = JsonSerializer.Serialize(session, _json);
-                File.WriteAllText(tempPath, json, Encoding.UTF8);
-                File.Move(tempPath, path, true);
+                SafeFileService.WriteJsonAtomic(path, session, _json, Encoding.UTF8);
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("ChatPersistence.Save", ex);
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception delEx) { LoggingService.LogWarning("ChatPersistence.CleanupTemp", delEx.Message); }
             }
         }
 

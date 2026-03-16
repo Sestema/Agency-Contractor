@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Windows;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -37,6 +38,21 @@ namespace Win11DesktopApp.Services
             MigrateIfNeeded();
         }
 
+        private static T? ReadJson<T>(string path)
+        {
+            return SafeFileService.ReadJson<T>(path, _jsonOptions);
+        }
+
+        private static T ReadJsonOrDefault<T>(string path, T fallback)
+        {
+            return SafeFileService.ReadJsonOrDefault(path, fallback, _jsonOptions);
+        }
+
+        private static void WriteJsonAtomic<T>(string path, T value)
+        {
+            SafeFileService.WriteJsonAtomic(path, value, _jsonOptions);
+        }
+
         private void MigrateFromAppDataIfNeeded(string rootPath)
         {
             try
@@ -60,15 +76,26 @@ namespace Win11DesktopApp.Services
 
         private FinanceDatabase Load()
         {
-            if (!File.Exists(_filePath)) return new FinanceDatabase();
+            if (!File.Exists(_filePath))
+            {
+                if (TryRestoreFromBackup(out var restoredFromBackup))
+                    return restoredFromBackup;
+
+                return new FinanceDatabase();
+            }
+
             try
             {
-                var json = File.ReadAllText(_filePath);
-                return JsonSerializer.Deserialize<FinanceDatabase>(json) ?? new FinanceDatabase();
+                return ReadJsonOrDefault(_filePath, new FinanceDatabase());
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("FinanceService.Load", ex);
+                BackupUnreadableFile(_filePath, "finance");
+                if (TryRestoreFromBackup(out var restoredFromBackup))
+                    return restoredFromBackup;
+
+                NotifyWarning(Res("MsgFinanceResetToDefaults"));
                 return new FinanceDatabase();
             }
         }
@@ -140,23 +167,7 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogInfo("FinanceService", "Saving finance database");
                 CreateBackupIfNeeded();
-                var json = JsonSerializer.Serialize(_db, _jsonOptions);
-                var tmp = _filePath + ".tmp";
-                File.WriteAllText(tmp, json);
-                try
-                {
-                    File.Move(tmp, _filePath, true);
-                }
-                catch (Exception moveEx)
-                {
-                    LoggingService.LogError("FinanceService.Save", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, _filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.Save", $"Cleanup failed: {ex.Message}"); }
-                    throw;
-                }
-                finally
-                {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.Save", $"Cleanup failed: {ex.Message}"); }
-                }
+                WriteJsonAtomic(_filePath, _db);
             }
             catch (Exception ex)
             {
@@ -191,6 +202,97 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogWarning("FinanceService.CreateBackup", ex.Message);
             }
+        }
+
+        private bool TryRestoreFromBackup(out FinanceDatabase database)
+        {
+            database = new FinanceDatabase();
+
+            try
+            {
+                var backupPath = GetLatestBackupPath();
+                if (string.IsNullOrWhiteSpace(backupPath) || !File.Exists(backupPath))
+                    return false;
+
+                database = ReadJsonOrDefault(backupPath, new FinanceDatabase());
+                WriteJsonAtomic(_filePath, database);
+                LoggingService.LogWarning("FinanceService", $"Restored finance data from backup: {backupPath}");
+                NotifyWarning(Res("MsgFinanceRecoveredFromBackup"));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.TryRestoreFromBackup", ex.Message);
+                return false;
+            }
+        }
+
+        private string? GetLatestBackupPath()
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(_filePath);
+                if (string.IsNullOrWhiteSpace(dir))
+                    return null;
+
+                var backupDir = Path.Combine(dir, "backups");
+                if (!Directory.Exists(backupDir))
+                    return null;
+
+                return new DirectoryInfo(backupDir)
+                    .GetFiles("finance_data_*.json.bak")
+                    .OrderByDescending(f => f.CreationTimeUtc)
+                    .Select(f => f.FullName)
+                    .FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.GetLatestBackupPath", ex.Message);
+                return null;
+            }
+        }
+
+        private static void BackupUnreadableFile(string path, string label)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                    return;
+
+                var directory = Path.GetDirectoryName(path);
+                var fileName = Path.GetFileName(path);
+                var quarantineName = $"{fileName}.corrupt.{DateTime.Now:yyyyMMdd_HHmmss}";
+                var quarantinePath = string.IsNullOrWhiteSpace(directory)
+                    ? quarantineName
+                    : Path.Combine(directory, quarantineName);
+                File.Move(path, quarantinePath, true);
+                LoggingService.LogWarning("FinanceService.BackupUnreadableFile",
+                    $"Moved unreadable {label} file to {quarantinePath}");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.BackupUnreadableFile", ex.Message);
+            }
+        }
+
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
+
+        private static void NotifyWarning(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            Application.Current?.Dispatcher?.BeginInvoke(() =>
+            {
+                if (Application.Current?.MainWindow?.IsVisible == true)
+                {
+                    ToastService.Instance.Warning(message);
+                    return;
+                }
+
+                MessageBox.Show(message, Res("TitleWarning"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            });
         }
 
         #region Custom Fields
@@ -588,23 +690,7 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var json = JsonSerializer.Serialize(data, _jsonOptions);
-                var tmp = filePath + ".tmp";
-                File.WriteAllText(tmp, json);
-                try
-                {
-                    File.Move(tmp, filePath, true);
-                }
-                catch (Exception moveEx)
-                {
-                    LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveFirmPaymentToFolder", $"Cleanup failed: {ex.Message}"); }
-                    throw;
-                }
-                finally
-                {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveFirmPaymentToFolder", $"Cleanup failed: {ex.Message}"); }
-                }
+                WriteJsonAtomic(filePath, data);
             }
             catch (Exception ex)
             {
@@ -628,8 +714,7 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var json = File.ReadAllText(filePath);
-                return JsonSerializer.Deserialize<FirmPaymentData>(json);
+                return ReadJson<FirmPaymentData>(filePath);
             }
             catch (Exception ex)
             {
@@ -659,8 +744,7 @@ namespace Win11DesktopApp.Services
 
                 try
                 {
-                    var json = File.ReadAllText(file);
-                    var data = JsonSerializer.Deserialize<FirmPaymentData>(json, _jsonOptions);
+                    var data = ReadJson<FirmPaymentData>(file);
                     if (data == null) continue;
 
                     bool changed = false;
@@ -673,23 +757,7 @@ namespace Win11DesktopApp.Services
 
                     if (changed)
                     {
-                        var newJson = JsonSerializer.Serialize(data, _jsonOptions);
-                        var tmp = file + ".tmp";
-                        File.WriteAllText(tmp, newJson);
-                        try
-                        {
-                            File.Move(tmp, file, true);
-                        }
-                        catch (Exception moveEx)
-                        {
-                            LoggingService.LogError("FinanceService.UpdateHourlyRateForward", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                            try { if (File.Exists(tmp)) File.Copy(tmp, file, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward", $"Cleanup failed: {ex.Message}"); }
-                            throw;
-                        }
-                        finally
-                        {
-                            try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward", $"Cleanup failed: {ex.Message}"); }
-                        }
+                        WriteJsonAtomic(file, data);
                     }
                 }
                 catch (Exception ex) { LoggingService.LogError("FinanceService.UpdateHourlyRateForward", ex); }
@@ -741,8 +809,7 @@ namespace Win11DesktopApp.Services
 
                     try
                     {
-                        var json = File.ReadAllText(filePath);
-                        var data = JsonSerializer.Deserialize<FirmPaymentData>(json);
+                        var data = ReadJson<FirmPaymentData>(filePath);
                         if (data != null)
                         {
                             foreach (var e in data.Entries.Where(e => !entries.Any(x => x.EmployeeFolder == e.EmployeeFolder && x.FirmName == e.FirmName)))
@@ -783,8 +850,7 @@ namespace Win11DesktopApp.Services
             if (!File.Exists(jsonPath)) return false;
             try
             {
-                var json = File.ReadAllText(jsonPath);
-                var data = JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(json);
+                var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
                 return data != null && data.IsArchived;
             }
             catch (Exception ex) { LoggingService.LogError("FinanceService.IsGhostFolder", ex); return false; }
@@ -813,8 +879,7 @@ namespace Win11DesktopApp.Services
                         if (!File.Exists(jsonPath)) continue;
                         try
                         {
-                            var json = File.ReadAllText(jsonPath);
-                            var data = JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(json);
+                            var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
                             if (data == null) continue;
                             if (data.IsArchived)
                             {
@@ -840,8 +905,7 @@ namespace Win11DesktopApp.Services
                         if (!File.Exists(jsonPath)) continue;
                         try
                         {
-                            var json = File.ReadAllText(jsonPath);
-                            var data = JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(json);
+                            var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
                             if (data != null && !string.IsNullOrEmpty(data.UniqueId) && !_idToFolderCache.ContainsKey(data.UniqueId))
                                 _idToFolderCache[data.UniqueId] = dir;
                         }
@@ -889,7 +953,7 @@ namespace Win11DesktopApp.Services
                                 {
                                     try
                                     {
-                                        var d = JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(File.ReadAllText(cJson));
+                                        var d = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(cJson);
                                         if (d != null && !d.IsArchived) { existsElsewhere = true; break; }
                                     }
                                     catch (Exception innerEx) { LoggingService.LogError("FinanceService.CleanupGhostFolders", innerEx); }
@@ -983,23 +1047,7 @@ namespace Win11DesktopApp.Services
                 records.Add(record);
                 records = records.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ToList();
 
-                var json = JsonSerializer.Serialize(records, new JsonSerializerOptions { WriteIndented = true });
-                var tmp = filePath + ".tmp";
-                File.WriteAllText(tmp, json);
-                try
-                {
-                    File.Move(tmp, filePath, true);
-                }
-                catch (Exception moveEx)
-                {
-                    LoggingService.LogError("FinanceService.SaveSalaryHistoryRecord", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
-                    throw;
-                }
-                finally
-                {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.SaveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
-                }
+                WriteJsonAtomic(filePath, records);
             }
             catch (Exception ex)
             {
@@ -1020,23 +1068,7 @@ namespace Win11DesktopApp.Services
                 records.RemoveAll(r => r.Year == year && r.Month == month && r.FirmName == firmName);
                 if (records.Count == before) return;
 
-                var json = JsonSerializer.Serialize(records, new JsonSerializerOptions { WriteIndented = true });
-                var tmp = filePath + ".tmp";
-                File.WriteAllText(tmp, json);
-                try
-                {
-                    File.Move(tmp, filePath, true);
-                }
-                catch (Exception moveEx)
-                {
-                    LoggingService.LogError("FinanceService.RemoveSalaryHistoryRecord", $"File.Move failed: {moveEx.Message}. Attempting rollback.");
-                    try { if (File.Exists(tmp)) File.Copy(tmp, filePath, true); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.RemoveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
-                    throw;
-                }
-                finally
-                {
-                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.RemoveSalaryHistoryRecord", $"Cleanup failed: {ex.Message}"); }
-                }
+                WriteJsonAtomic(filePath, records);
             }
             catch (Exception ex)
             {
@@ -1052,8 +1084,7 @@ namespace Win11DesktopApp.Services
                 employeeFolder = ResolveEmployeeFolder(employeeFolder);
                 var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
                 if (!File.Exists(filePath)) return new List<SalaryHistoryRecord>();
-                var json = File.ReadAllText(filePath);
-                return JsonSerializer.Deserialize<List<SalaryHistoryRecord>>(json) ?? new List<SalaryHistoryRecord>();
+                return ReadJsonOrDefault(filePath, new List<SalaryHistoryRecord>());
             }
             catch (Exception ex)
             {

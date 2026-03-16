@@ -120,6 +120,37 @@ namespace Win11DesktopApp.Tests
             Assert.Empty(result.Employees);
         }
 
+        [Fact]
+        public async Task AddHistoryEntry_ShouldStoreActorNameFromCurrentProfile()
+        {
+            var employeeFolder = Path.Combine(_testRootPath, "TestFirm", "Employees", "John_Doe - 2026-03-01");
+            Directory.CreateDirectory(employeeFolder);
+
+            App.SetCurrentProfile(new ClientProfileRecord
+            {
+                FirstName = "Ivan",
+                LastName = "Petrenko"
+            });
+
+            try
+            {
+                await _employeeService.AddHistoryEntry(employeeFolder, new EmployeeHistoryEntry
+                {
+                    EventType = "ProfileChanged",
+                    Action = "Updated",
+                    Description = "Changed phone"
+                });
+
+                var history = _employeeService.LoadHistory(employeeFolder);
+                Assert.Single(history);
+                Assert.Equal("Ivan Petrenko", history[0].ActorName);
+            }
+            finally
+            {
+                App.SetCurrentProfile(null);
+            }
+        }
+
         public void Dispose()
         {
             try { Directory.Delete(_testRootPath, true); } catch { }

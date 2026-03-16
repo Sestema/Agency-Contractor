@@ -2,21 +2,23 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=0}"
-            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
         <ScrollViewer x:Name="DocScroll" Style="{StaticResource ThinScroll}" PreviewMouseWheel="InnerScrollViewer_PreviewMouseWheel">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="36" Height="36">
-                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                   Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource AccentBrush}">
+                        <TextBlock Text="&#xE8B7;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
-                    <TextBlock Text="{DynamicResource StepDocuments}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource StepDocuments}" FontSize="{DynamicResource FS18}" Style="{StaticResource PageHeaderTitleText}"/>
+                        <TextBlock Text="{DynamicResource ReplDocUploadHint}" FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- 1. Passport (always on) -->
-                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="10" Padding="16" Margin="0,0,0,8"
+                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="16" Margin="0,0,0,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         AllowDrop="True" Drop="PassportDrop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
                     <Grid>
@@ -25,12 +27,12 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Background="{DynamicResource SuccessLightBrush}" CornerRadius="8" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border Grid.Column="0" Background="{DynamicResource SuccessLightBrush}" CornerRadius="10" Width="44" Height="44" Margin="0,0,14,0">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
                                        Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource BtnUploadPassport}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                            <TextBlock Text="{Binding PrimaryDocument1Label}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                             <TextBlock Text="{Binding PassportPreviewPath}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                        TextTrimming="CharacterEllipsis" MaxWidth="350"/>
@@ -45,7 +47,7 @@
                 </Border>
 
                 <!-- 2. Passport Page 2 (checkbox row) -->
-                <Border CornerRadius="10" Padding="16" Margin="0,0,0,8"
+                <Border CornerRadius="12" Padding="16" Margin="0,0,0,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         AllowDrop="True" Drop="PassportPage2Drop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
                     <Border.Style>
@@ -67,12 +69,12 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <CheckBox Grid.Column="0" IsChecked="{Binding HasPassportPage2}" VerticalAlignment="Center" Margin="0,0,10,0" Cursor="Hand"/>
-                        <Border Grid.Column="1" Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border Grid.Column="1" Background="{DynamicResource AccentLightBrush}" CornerRadius="10" Width="44" Height="44" Margin="0,0,14,0">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
                                        Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource ChkPassportPage2}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                            <TextBlock Text="{Binding PrimaryDocument2Label}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                             <TextBlock Text="{Binding PassportPage2PreviewPath}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                        TextTrimming="CharacterEllipsis" MaxWidth="300"/>
@@ -87,7 +89,7 @@
                 </Border>
 
                 <!-- 3. Visa (checkbox row) -->
-                <Border CornerRadius="10" Padding="16" Margin="0,0,0,0"
+                <Border CornerRadius="12" Padding="16" Margin="0,0,0,0"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         AllowDrop="True" Drop="VisaDrop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
                     <Border.Style>
@@ -109,7 +111,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <CheckBox Grid.Column="0" IsChecked="{Binding HasVisa}" VerticalAlignment="Center" Margin="0,0,10,0" Cursor="Hand"/>
-                        <Border Grid.Column="1" Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border Grid.Column="1" Background="{DynamicResource AccentLightBrush}" CornerRadius="10" Width="44" Height="44" Margin="0,0,14,0">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
                                        Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -129,7 +131,7 @@
                 </Border>
 
                 <!-- Visa doc type selector (Visa sticker / ID-card) -->
-                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="0,0,10,10" Padding="12,8" Margin="0,0,0,8"
+                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="0,0,12,12" Padding="12,10" Margin="0,0,0,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,1,1"
                         Visibility="{Binding ShowVisaDocTypeSelector, Converter={StaticResource BoolToVis}}">
                     <StackPanel>
@@ -138,62 +140,39 @@
                         <StackPanel Orientation="Horizontal">
                             <Button Command="{Binding SetVisaDocTypeCommand}" CommandParameter="visa_sticker" Cursor="Hand" Margin="0,0,8,0">
                                 <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" CornerRadius="8" Padding="12,6" Background="Transparent"
-                                                            BorderBrush="Transparent" BorderThickness="2">
-                                                        <TextBlock Text="{DynamicResource VisaDocTypeSticker}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding IsVisaIdCard}" Value="False">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                        </DataTrigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SelectorButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsVisaIdCard}" Value="False">
+                                                <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </Button.Style>
+                                <TextBlock Text="{DynamicResource VisaDocTypeSticker}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" HorizontalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SetVisaDocTypeCommand}" CommandParameter="id_card" Cursor="Hand">
                                 <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" CornerRadius="8" Padding="12,6" Background="Transparent"
-                                                            BorderBrush="Transparent" BorderThickness="2">
-                                                        <TextBlock Text="{DynamicResource VisaDocTypeIdCard}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding IsVisaIdCard}" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#E8F5E9"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4CAF50"/>
-                                                        </DataTrigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SelectorButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsVisaIdCard}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </Button.Style>
+                                <TextBlock Text="{DynamicResource VisaDocTypeIdCard}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" HorizontalAlignment="Center"/>
                             </Button>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- 3b. Visa Page 2 / ID-card back side (only when ID-card selected) -->
-                <Border CornerRadius="10" Padding="16" Margin="0,0,0,8"
+                <Border CornerRadius="12" Padding="16" Margin="0,0,0,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         Visibility="{Binding CanToggleVisaPage2, Converter={StaticResource BoolToVis}}"
                         AllowDrop="True" Drop="VisaPage2Drop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
@@ -216,9 +195,9 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <CheckBox Grid.Column="0" IsChecked="{Binding HasVisaPage2}" VerticalAlignment="Center" Margin="0,0,10,0" Cursor="Hand"/>
-                        <Border Grid.Column="1" Background="#E8F5E9" CornerRadius="8" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border Grid.Column="1" Background="{DynamicResource SuccessLightBrush}" CornerRadius="10" Width="44" Height="44" Margin="0,0,14,0">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
-                                       Foreground="#4CAF50" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
                             <TextBlock Text="{DynamicResource ChkVisaPage2}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
@@ -236,7 +215,7 @@
                 </Border>
 
                 <!-- 4. Insurance (checkbox row) -->
-                <Border CornerRadius="10" Padding="16" Margin="0,0,0,8"
+                <Border CornerRadius="12" Padding="16" Margin="0,0,0,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         AllowDrop="True" Drop="InsuranceDrop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
                     <Border.Style>
@@ -258,7 +237,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <CheckBox Grid.Column="0" IsChecked="{Binding HasInsurance}" VerticalAlignment="Center" Margin="0,0,10,0" Cursor="Hand"/>
-                        <Border Grid.Column="1" Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border Grid.Column="1" Background="{DynamicResource WarningLightBrush}" CornerRadius="10" Width="44" Height="44" Margin="0,0,14,0">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
                                        Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -278,7 +257,7 @@
                 </Border>
 
                 <!-- 5. Work Permit (checkbox row) -->
-                <Border CornerRadius="10" Padding="16"
+                <Border CornerRadius="12" Padding="16"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         AllowDrop="True" Drop="WorkPermitDrop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
                     <Border.Style>
@@ -300,7 +279,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <CheckBox Grid.Column="0" IsChecked="{Binding HasWorkPermit}" VerticalAlignment="Center" Margin="0,0,10,0" Cursor="Hand"/>
-                        <Border Grid.Column="1" Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border Grid.Column="1" Background="{DynamicResource ErrorLightBrush}" CornerRadius="10" Width="44" Height="44" Margin="0,0,14,0">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
                                        Foreground="{DynamicResource ErrorBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -330,7 +309,7 @@
                 </Border>
 
                 <!-- EU Doc Type selector (only when visa is unchecked) -->
-                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="10" Padding="14,10" Margin="0,12,0,0"
+                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="14,12" Margin="0,14,0,0"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         Visibility="{Binding ShowEuDocTypeSelector, Converter={StaticResource BoolToVis}}">
                     <StackPanel>
@@ -339,63 +318,43 @@
                         <UniformGrid Columns="2">
                             <Button Command="{Binding SetEuDocTypeCommand}" CommandParameter="passport" Cursor="Hand" Margin="4,0">
                                 <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" CornerRadius="8" Padding="10,8" Background="Transparent"
-                                                            BorderBrush="Transparent" BorderThickness="2">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBlock Text="{DynamicResource EuDocTypePassport}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding IsEuPassport}" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#E8F5E9"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4CAF50"/>
-                                                        </DataTrigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SelectorButton}">
+                                        <Setter Property="MinWidth" Value="0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEuPassport}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </Button.Style>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{DynamicResource EuDocTypePassport}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Button>
                             <Button Command="{Binding SetEuDocTypeCommand}" CommandParameter="id_card" Cursor="Hand" Margin="4,0">
                                 <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border x:Name="Bd" CornerRadius="8" Padding="10,8" Background="Transparent"
-                                                            BorderBrush="Transparent" BorderThickness="2">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBlock Text="{DynamicResource EuDocTypeIdCard}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding IsEuIdCard}" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#E8F5E9"/>
-                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4CAF50"/>
-                                                        </DataTrigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SelectorButton}">
+                                        <Setter Property="MinWidth" Value="0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEuIdCard}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </Button.Style>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{DynamicResource EuDocTypeIdCard}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Button>
                         </UniformGrid>
                     </StackPanel>

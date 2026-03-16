@@ -119,12 +119,22 @@
                             <TextBlock Text="{DynamicResource BtnBack}" FontSize="{DynamicResource FS13}" FontWeight="Medium"/>
                         </StackPanel>
                     </Button>
-                    <Button Command="{Binding NextCommand}" Cursor="Hand" Style="{StaticResource FilledActionButton}">
+                    <Button Command="{Binding NextCommand}" Cursor="Hand" Style="{StaticResource FilledActionButton}"
+                            Visibility="{Binding IsLastStep, Converter={StaticResource InverseBoolToVis}}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{DynamicResource BtnNext}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                        Foreground="White" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                        Foreground="White" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding SaveCommand}" Cursor="Hand" Style="{StaticResource FilledActionButton}"
+                            Visibility="{Binding IsLastStep, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource BtnSaveEmployee}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                       Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

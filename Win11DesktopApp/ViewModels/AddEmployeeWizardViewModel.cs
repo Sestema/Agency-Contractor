@@ -56,6 +56,7 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _stepIndex, value))
                 {
                     OnPropertyChanged(nameof(CurrentStepDisplay));
+                    OnPropertyChanged(nameof(IsLastStep));
                     RefreshCarousel();
                     AutoSelectCarouselForStep(value);
                 }
@@ -63,6 +64,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public int CurrentStepDisplay => ActiveSteps.IndexOf(StepIndex) + 1;
+        public bool IsLastStep => ActiveSteps.IndexOf(StepIndex) == ActiveSteps.Count - 1;
 
         public EmployeeModels.EmployeeData Data { get; } = new EmployeeModels.EmployeeData();
 
@@ -158,6 +160,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(ShowWorkPermitUpload));
             OnPropertyChanged(nameof(ShowPassportUpload));
             OnPropertyChanged(nameof(ShowPassportPage2Upload));
+            OnPropertyChanged(nameof(ShowIdCardFallbackFields));
             OnPropertyChanged(nameof(ShowInsuranceUpload));
             OnPropertyChanged(nameof(ShowEuDocTypeSelector));
             OnPropertyChanged(nameof(ShowVisaDocTypeSelector));
@@ -166,6 +169,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(IsVisaIdCard));
             OnPropertyChanged(nameof(ActiveSteps));
             OnPropertyChanged(nameof(TotalSteps));
+            OnPropertyChanged(nameof(IsLastStep));
             OnPropertyChanged(nameof(PersonalDocPreviewPath));
         }
 
@@ -192,20 +196,33 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _euDocumentType, value))
                 {
                     Data.EuDocumentType = value;
-                    if (value == "id_card")
-                        Data.WorkPermitName = "Osvědčení o registraci občana EU";
                     OnPropertyChanged(nameof(IsEuIdCard));
                     OnPropertyChanged(nameof(IsEuPassport));
                     OnPropertyChanged(nameof(ShowPassportPage2Upload));
+                    OnPropertyChanged(nameof(ShowIdCardFallbackFields));
                     OnPropertyChanged(nameof(ActiveSteps));
                     OnPropertyChanged(nameof(TotalSteps));
+                    OnPropertyChanged(nameof(IsLastStep));
+                    OnPropertyChanged(nameof(PrimaryDocument1Label));
+                    OnPropertyChanged(nameof(PrimaryDocument2Label));
+                    OnPropertyChanged(nameof(PrimaryDocumentStepTitle));
+                    OnPropertyChanged(nameof(SecondaryDocumentStepTitle));
+                    OnPropertyChanged(nameof(SecondaryDocumentStepHint));
+                    RefreshCarousel();
+                    UpdateCropTargets();
                 }
             }
         }
 
         public bool IsEuPassport => _euDocumentType == "passport";
         public bool IsEuIdCard => _euDocumentType == "id_card";
+        public bool ShowIdCardFallbackFields => IsEuIdCard && !ShowPassportPage2Upload;
         public bool ShowEuDocTypeSelector => !_hasVisa;
+        public string PrimaryDocument1Label => IsEuIdCard ? Res("WizardIdCard1") : Res("WizardPassport1");
+        public string PrimaryDocument2Label => IsEuIdCard ? Res("WizardIdCard2") : Res("WizardPassport2");
+        public string PrimaryDocumentStepTitle => IsEuIdCard ? Res("StepIdCardData") : Res("StepPassportData");
+        public string SecondaryDocumentStepTitle => IsEuIdCard ? Res("StepIdCardPage2Data") : Res("StepPassportPage2Data");
+        public string SecondaryDocumentStepHint => IsEuIdCard ? Res("StepIdCardPage2Hint") : Res("StepPassportPage2Hint");
 
         public bool IsGenderMale
         {
@@ -346,9 +363,9 @@ namespace Win11DesktopApp.ViewModels
             CarouselItems.Clear();
 
             if (!string.IsNullOrEmpty(PassportPreviewPath))
-                CarouselItems.Add(new CarouselDocItem { Key = "passport", Label = Res("CarouselPassport"), ImagePath = PassportPreviewPath });
+                CarouselItems.Add(new CarouselDocItem { Key = "passport", Label = GetPrimaryCarouselLabel(), ImagePath = PassportPreviewPath });
             if (!string.IsNullOrEmpty(PassportPage2PreviewPath))
-                CarouselItems.Add(new CarouselDocItem { Key = "passport2", Label = Res("CarouselPassport2"), ImagePath = PassportPage2PreviewPath });
+                CarouselItems.Add(new CarouselDocItem { Key = "passport2", Label = GetSecondaryCarouselLabel(), ImagePath = PassportPage2PreviewPath });
             if (!string.IsNullOrEmpty(VisaPreviewPath))
                 CarouselItems.Add(new CarouselDocItem { Key = "visa", Label = Res("CarouselVisa"), ImagePath = VisaPreviewPath });
             if (!string.IsNullOrEmpty(VisaPage2PreviewPath))
@@ -449,7 +466,7 @@ namespace Win11DesktopApp.ViewModels
                 if (_selectedCropTarget == Res("CropVisa")) return VisaPreviewPath;
                 if (_selectedCropTarget == Res("CropVisaPage2")) return VisaPage2PreviewPath;
                 if (_selectedCropTarget == Res("CropInsurance")) return InsurancePreviewPath;
-                if (_selectedCropTarget == Res("CropPassport2")) return PassportPage2PreviewPath;
+                if (_selectedCropTarget == GetSecondaryCropLabel()) return PassportPage2PreviewPath;
                 if (_selectedCropTarget == Res("CropPhoto")) return PassportPreviewPath;
                 if (_selectedCropTarget == Res("CropPermit")) return WorkPermitPreviewPath;
                 return PassportPreviewPath;
@@ -581,9 +598,9 @@ namespace Win11DesktopApp.ViewModels
         private void UpdateCropTargets()
         {
             CropTargets.Clear();
-            CropTargets.Add(Res("CropPassport"));
+            CropTargets.Add(GetPrimaryCropLabel());
 
-            if (ShowPassportPage2Upload) CropTargets.Add(Res("CropPassport2"));
+            if (ShowPassportPage2Upload) CropTargets.Add(GetSecondaryCropLabel());
             if (ShowVisaUpload) CropTargets.Add(Res("CropVisa"));
             if (ShowVisaPage2Upload) CropTargets.Add(Res("CropVisaPage2"));
             CropTargets.Add(Res("CropInsurance"));
@@ -596,16 +613,99 @@ namespace Win11DesktopApp.ViewModels
         private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
             { ".jpg", ".jpeg", ".png", ".heic", ".pdf" };
 
+        private bool TryNormalizeUploadedFilePath(string filePath, string type, out string normalizedPath)
+        {
+            normalizedPath = string.Empty;
+            if (string.IsNullOrWhiteSpace(filePath))
+                return false;
+
+            try
+            {
+                normalizedPath = Path.GetFullPath(filePath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.UploadDocument",
+                    $"Invalid path for '{type}': {ex.Message}");
+                MessageBox.Show(string.Format(Res("MsgOpenFileError"), ex.Message),
+                    Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            if (!File.Exists(normalizedPath))
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.UploadDocument",
+                    $"Source file not found for '{type}': {normalizedPath}");
+                MessageBox.Show(Res("MsgFileNotFound"), Res("TitleWarning"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            try
+            {
+                if (new FileInfo(normalizedPath).Length <= 0)
+                {
+                    LoggingService.LogWarning("AddEmployeeWizardViewModel.UploadDocument",
+                        $"Source file is empty for '{type}': {normalizedPath}");
+                    MessageBox.Show(Res("MsgOpenFileFail"), Res("TitleError"),
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.UploadDocument",
+                    $"Cannot inspect source file for '{type}': {ex.Message}");
+                MessageBox.Show(string.Format(Res("MsgOpenFileError"), ex.Message),
+                    Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void EnsurePreparedDocumentReady(EmployeeModels.EmployeeDocumentTemp temp, string type)
+        {
+            var preparedPath = temp.IsPdf ? temp.PdfPath : temp.ImagePath;
+            if (string.IsNullOrWhiteSpace(preparedPath) || !File.Exists(preparedPath))
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.ProcessUploadedFile",
+                    $"Prepared temp file is missing for '{type}'.");
+                throw new IOException("Could not open file.");
+            }
+
+            if (new FileInfo(preparedPath).Length <= 0)
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.ProcessUploadedFile",
+                    $"Prepared temp file is empty for '{type}': {preparedPath}");
+                throw new IOException("Could not open file.");
+            }
+        }
+
+        private static string FormatAiServiceMessage(string response)
+        {
+            if (GeminiApiService.IsTimeoutResponse(response))
+                return Res("AIChatTimeout");
+
+            if (GeminiApiService.IsNetworkErrorResponse(response))
+                return Res("AIChatNetworkError");
+
+            return response;
+        }
+
         public void UploadDocumentFromPath(string filePath, string type)
         {
             if (string.IsNullOrEmpty(filePath)) return;
-            var ext = Path.GetExtension(filePath);
+            if (!TryNormalizeUploadedFilePath(filePath, type, out var normalizedPath))
+                return;
+
+            var ext = Path.GetExtension(normalizedPath);
             if (!AllowedExtensions.Contains(ext))
             {
                 MessageBox.Show(Res("DragDropInvalidFormat"), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            ProcessUploadedFile(filePath, type);
+            ProcessUploadedFile(normalizedPath, type);
         }
 
         private void UploadDocument(string type)
@@ -613,7 +713,10 @@ namespace Win11DesktopApp.ViewModels
             var dialog = new OpenFileDialog();
             dialog.Filter = "Documents|*.jpg;*.jpeg;*.png;*.heic;*.pdf";
             if (dialog.ShowDialog() != true) return;
-            ProcessUploadedFile(dialog.FileName, type);
+            if (!TryNormalizeUploadedFilePath(dialog.FileName, type, out var normalizedPath))
+                return;
+
+            ProcessUploadedFile(normalizedPath, type);
         }
 
         private void ProcessUploadedFile(string filePath, string type)
@@ -621,6 +724,7 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var temp = _employeeService.PrepareTempDocument(filePath, _tempFolder, type);
+                EnsurePreparedDocumentReady(temp, type);
                 switch (type)
                 {
                     case "passport":
@@ -655,6 +759,12 @@ namespace Win11DesktopApp.ViewModels
                         {
                             WorkPermitFileName = Path.GetFileName(filePath);
                             var pages = _employeeService.RenderPdfPages(temp.PdfPath, _tempFolder, "wp_preview");
+                            if (pages.Count == 0)
+                            {
+                                LoggingService.LogWarning("AddEmployeeWizardViewModel.ProcessUploadedFile",
+                                    $"PDF preview generation returned no pages for '{filePath}'.");
+                                throw new IOException("Could not open file.");
+                            }
                             foreach (var p in pages)
                                 WorkPermitPagePreviews.Add(p);
                             WorkPermitPreviewPath = pages.Count > 0 ? pages[0] : string.Empty;
@@ -681,8 +791,10 @@ namespace Win11DesktopApp.ViewModels
         private void RotateCurrentImage(int angle)
         {
             var sourcePath = CurrentCropImagePath;
-            if (string.IsNullOrEmpty(sourcePath))
+            if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath))
             {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.RotateCurrentImage",
+                    $"Image not found for rotate: {sourcePath}");
                 MessageBox.Show(Res("MsgNoImageRotate"), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -707,7 +819,7 @@ namespace Win11DesktopApp.ViewModels
                     WorkPermitPreviewPath = rotatedPath;
                     if (WorkPermitDoc != null) WorkPermitDoc.ImagePath = rotatedPath;
                 }
-                else if (_selectedCropTarget == Res("CropPassport2"))
+                else if (_selectedCropTarget == GetSecondaryCropLabel())
                 {
                     PassportPage2PreviewPath = rotatedPath;
                     if (PassportPage2Doc != null) PassportPage2Doc.ImagePath = rotatedPath;
@@ -737,8 +849,10 @@ namespace Win11DesktopApp.ViewModels
             if (_selectedCropTarget == Res("CropPhoto"))
             {
                 var photoSource = PassportPreviewPath;
-                if (string.IsNullOrEmpty(photoSource))
+                if (string.IsNullOrEmpty(photoSource) || !File.Exists(photoSource))
                 {
+                    LoggingService.LogWarning("AddEmployeeWizardViewModel.ApplyCrop",
+                        $"Photo source not available for crop: {photoSource}");
                     MessageBox.Show(Res("MsgDocNotLoaded"), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -766,7 +880,7 @@ namespace Win11DesktopApp.ViewModels
             if (_selectedCropTarget == Res("CropVisa")) currentPath = VisaPreviewPath;
             else if (_selectedCropTarget == Res("CropVisaPage2")) currentPath = VisaPage2PreviewPath;
             else if (_selectedCropTarget == Res("CropInsurance")) currentPath = InsurancePreviewPath;
-            else if (_selectedCropTarget == Res("CropPassport2")) currentPath = PassportPage2PreviewPath;
+            else if (_selectedCropTarget == GetSecondaryCropLabel()) currentPath = PassportPage2PreviewPath;
             else if (_selectedCropTarget == Res("CropPermit")) currentPath = WorkPermitPreviewPath;
             else currentPath = PassportPreviewPath;
 
@@ -820,7 +934,7 @@ namespace Win11DesktopApp.ViewModels
                     WorkPermitPreviewPath = newPath;
                     if (WorkPermitDoc != null) WorkPermitDoc.ImagePath = newPath;
                 }
-                else if (_selectedCropTarget == Res("CropPassport2"))
+                else if (_selectedCropTarget == GetSecondaryCropLabel())
                 {
                     PassportPage2PreviewPath = newPath;
                     if (PassportPage2Doc != null) PassportPage2Doc.ImagePath = newPath;
@@ -936,6 +1050,12 @@ namespace Win11DesktopApp.ViewModels
             if (!(App.GeminiApiService?.IsConfigured ?? false))
                 return;
 
+            if (StepIndex == 8 && IsEuIdCard)
+            {
+                await AIScanEuIdCardStepAsync();
+                return;
+            }
+
             if (_selectedCarouselIndex < 0 || _selectedCarouselIndex >= CarouselItems.Count)
             {
                 ToastService.Instance.Warning(Res("MsgUploadFirst"));
@@ -975,7 +1095,7 @@ namespace Win11DesktopApp.ViewModels
 
                 if (result.StartsWith("["))
                 {
-                    AIScanStatus = result;
+                    AIScanStatus = FormatAiServiceMessage(result);
                     return;
                 }
 
@@ -996,12 +1116,79 @@ namespace Win11DesktopApp.ViewModels
             catch (Exception ex)
             {
                 LoggingService.LogError("AIScanDocument", ex);
+                AIScanStatus = FormatAiServiceMessage($"[Error: {ex.Message}]");
+            }
+            finally
+            {
+                IsAIScanning = false;
+            }
+        }
+
+        private async Task AIScanEuIdCardStepAsync()
+        {
+            if (string.IsNullOrWhiteSpace(PassportPreviewPath) || !File.Exists(PassportPreviewPath))
+            {
+                ToastService.Instance.Warning(Res("MsgUploadFirst"));
+                return;
+            }
+
+            _cts.Cancel();
+            _cts = new CancellationTokenSource();
+            var token = _cts.Token;
+
+            IsAIScanning = true;
+            AIScanStatus = Res("AIScanWorking");
+
+            try
+            {
+                var totalFields = 0;
+
+                var primaryParsed = await ScanImageDocumentAsync("id_card", PassportPreviewPath, token);
+                token.ThrowIfCancellationRequested();
+                if (primaryParsed.Count > 0)
+                {
+                    totalFields += primaryParsed.Count;
+                    Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("id_card", primaryParsed));
+                }
+
+                if (!string.IsNullOrWhiteSpace(PassportPage2PreviewPath) && File.Exists(PassportPage2PreviewPath))
+                {
+                    var secondaryParsed = await ScanImageDocumentAsync("passport2", PassportPage2PreviewPath, token);
+                    token.ThrowIfCancellationRequested();
+                    if (secondaryParsed.Count > 0)
+                    {
+                        totalFields += secondaryParsed.Count;
+                        Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("passport2", secondaryParsed));
+                    }
+                }
+
+                AIScanStatus = totalFields > 0
+                    ? string.Format(Res("AIScanDone"), totalFields)
+                    : Res("AIScanNoData");
+            }
+            catch (OperationCanceledException)
+            {
+                AIScanStatus = "";
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("AIScanEuIdCardStep", ex);
                 AIScanStatus = $"Error: {ex.Message}";
             }
             finally
             {
                 IsAIScanning = false;
             }
+        }
+
+        private async Task<Dictionary<string, string>> ScanImageDocumentAsync(string docKey, string imagePath, CancellationToken token)
+        {
+            var prompt = AIScanPrompts.GetPrompt(docKey);
+            var result = await (App.GeminiApiService?.ChatWithImageAsync(imagePath, prompt, null, token) ?? Task.FromResult(""));
+            if (result.StartsWith("["))
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            return AIScanPrompts.ParseResponse(result);
         }
 
         private static string ToTitleCase(string s)
@@ -1083,6 +1270,11 @@ namespace Win11DesktopApp.ViewModels
             return s;
         }
 
+        private string GetPrimaryCropLabel() => IsEuIdCard ? Res("CropIdCard1") : Res("CropPassport");
+        private string GetSecondaryCropLabel() => IsEuIdCard ? Res("CropIdCard2") : Res("CropPassport2");
+        private string GetPrimaryCarouselLabel() => IsEuIdCard ? Res("CarouselIdCard1") : Res("CarouselPassport");
+        private string GetSecondaryCarouselLabel() => IsEuIdCard ? Res("CarouselIdCard2") : Res("CarouselPassport2");
+
         private void ApplyParsedDataByKey(string docKey, Dictionary<string, string> data)
         {
             void Set(string key, Action<string> setter)
@@ -1112,7 +1304,6 @@ namespace Win11DesktopApp.ViewModels
                     Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
                     Set("PassportExpiry", v => Data.PassportExpiry = v);
                     Set("PassportExpiry", v => Data.VisaExpiry = v);
-                    Data.WorkPermitName = "Osvědčení o registraci občana EU";
                     break;
 
                 case "insurance":

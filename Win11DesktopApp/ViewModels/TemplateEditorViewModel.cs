@@ -21,6 +21,10 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
         private readonly TagCatalogService? _tagCatalogService;
+        private readonly StarterTemplateCatalogService? _starterTemplateCatalogService;
+        private bool _templateUnavailable;
+        private bool _templateUnavailableNotified;
+        private bool _navigateBackScheduled;
 
         private static new string Res(string key)
         {
@@ -37,7 +41,10 @@ namespace Win11DesktopApp.ViewModels
 
         public string Title => ResF("EditorTitleFmt", _template.Name);
         public string RtfFilePath { get; }
+        public string NativeDocumentPath { get; }
         public string TemplateFolderPath { get; }
+        public string LayoutSettingsPath { get; }
+        public string OriginalTemplatePath { get; }
 
         public ObservableCollection<TagGroupViewModel> TagGroups { get; }
 
@@ -61,10 +68,20 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CopyTagCommand { get; }
         public ICommand AIInsertTagsCommand { get; private set; }
         public ICommand CloseAITagsCommand { get; private set; }
+        public ICommand OpenStarterTemplatesCommand { get; }
+        public ICommand CloseStarterTemplatesCommand { get; }
+        public ICommand ApplySelectedStarterTemplateCommand { get; }
+        public ICommand SelectStarterTemplateCommand { get; }
+
+        public ObservableCollection<TemplateEditorPageSizeOption> AvailablePageSizes { get; } = new();
+        public ObservableCollection<TemplateEditorPageOrientationOption> AvailablePageOrientations { get; } = new();
+        public ObservableCollection<TemplateEditorPageMarginOption> AvailablePageMargins { get; } = new();
 
         public event Action<string>? RequestInsertTag;
+        public event Action<string>? RequestApplyStarterTemplate;
         public event Action<List<(string ContextBefore, string ReplaceWhat, string Tag)>>? RequestReplaceTagsInDocument;
         public Func<string?>? RequestGetRtfContent { get; set; }
+        public Func<byte[]?>? RequestGetXamlPackageContent { get; set; }
         public Func<string?>? RequestGetPlainText { get; set; }
 
         private bool _isEditorLoading = true;
@@ -163,18 +180,124 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _aiTagsStatus, value);
         }
 
+        private bool _isStarterTemplatesOpen;
+        public bool IsStarterTemplatesOpen
+        {
+            get => _isStarterTemplatesOpen;
+            set => SetProperty(ref _isStarterTemplatesOpen, value);
+        }
+
+        private ObservableCollection<StarterTemplateCatalogEntry> _starterTemplates = new();
+        public ObservableCollection<StarterTemplateCatalogEntry> StarterTemplates
+        {
+            get => _starterTemplates;
+            set => SetProperty(ref _starterTemplates, value);
+        }
+
+        private StarterTemplateCatalogEntry? _selectedStarterTemplate;
+        public StarterTemplateCatalogEntry? SelectedStarterTemplate
+        {
+            get => _selectedStarterTemplate;
+            set
+            {
+                if (!SetProperty(ref _selectedStarterTemplate, value))
+                    return;
+
+                LoadSelectedStarterTemplatePreview();
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private string _selectedStarterTemplateRtf = string.Empty;
+        public string SelectedStarterTemplateRtf
+        {
+            get => _selectedStarterTemplateRtf;
+            set => SetProperty(ref _selectedStarterTemplateRtf, value);
+        }
+
+        private string _starterTemplatesStatus = string.Empty;
+        public string StarterTemplatesStatus
+        {
+            get => _starterTemplatesStatus;
+            set => SetProperty(ref _starterTemplatesStatus, value);
+        }
+
+        private TemplateEditorPageSizeOption? _selectedPageSize;
+        public TemplateEditorPageSizeOption? SelectedPageSize
+        {
+            get => _selectedPageSize;
+            set
+            {
+                if (!SetProperty(ref _selectedPageSize, value))
+                    return;
+
+                RecalculatePageLayout();
+            }
+        }
+
+        private TemplateEditorPageOrientationOption? _selectedPageOrientation;
+        public TemplateEditorPageOrientationOption? SelectedPageOrientation
+        {
+            get => _selectedPageOrientation;
+            set
+            {
+                if (!SetProperty(ref _selectedPageOrientation, value))
+                    return;
+
+                RecalculatePageLayout();
+            }
+        }
+
+        private TemplateEditorPageMarginOption? _selectedPageMargin;
+        public TemplateEditorPageMarginOption? SelectedPageMargin
+        {
+            get => _selectedPageMargin;
+            set
+            {
+                if (!SetProperty(ref _selectedPageMargin, value))
+                    return;
+
+                RecalculatePageLayout();
+            }
+        }
+
+        private double _pagePreviewWidth = 794;
+        public double PagePreviewWidth
+        {
+            get => _pagePreviewWidth;
+            set => SetProperty(ref _pagePreviewWidth, value);
+        }
+
+        private double _pagePreviewHeight = 1123;
+        public double PagePreviewHeight
+        {
+            get => _pagePreviewHeight;
+            set => SetProperty(ref _pagePreviewHeight, value);
+        }
+
+        private Thickness _pagePadding = new(96);
+        public Thickness PagePadding
+        {
+            get => _pagePadding;
+            set => SetProperty(ref _pagePadding, value);
+        }
+
         public TemplateEditorViewModel(string firmName, TemplateEntry template, TemplateService? templateService = null)
         {
             _firmName = firmName;
             _template = template;
             _templateService = templateService ?? App.TemplateService;
             _tagCatalogService = App.TagCatalogService;
+            _starterTemplateCatalogService = App.StarterTemplateCatalogService;
 
             try
             {
                 var fullPath = _templateService.GetTemplateFullPath(firmName, template.FilePath);
+                OriginalTemplatePath = fullPath;
                 TemplateFolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 RtfFilePath = Path.Combine(TemplateFolderPath, "content.rtf");
+                NativeDocumentPath = Path.Combine(TemplateFolderPath, "content.xamlpackage");
+                LayoutSettingsPath = Path.Combine(TemplateFolderPath, "editor-layout.json");
                 if (File.Exists(RtfFilePath))
                     LastSavedAt = File.GetLastWriteTime(RtfFilePath);
             }
@@ -182,6 +305,9 @@ namespace Win11DesktopApp.ViewModels
             {
                 TemplateFolderPath = string.Empty;
                 RtfFilePath = string.Empty;
+                NativeDocumentPath = string.Empty;
+                LayoutSettingsPath = string.Empty;
+                OriginalTemplatePath = string.Empty;
             }
 
             try
@@ -195,12 +321,20 @@ namespace Win11DesktopApp.ViewModels
                 TagGroups = new ObservableCollection<TagGroupViewModel>();
             }
 
+            InitializePageLayoutOptions();
+            LoadPersistedPageLayout();
+            EnsureTemplateSourceAvailable();
+
             GoBackCommand = new RelayCommand(o => NavigateBack());
             SaveCommand = new AsyncRelayCommand(_ => SaveAsync(), _ => !IsSaving && !IsEditorLoading);
             InsertTagCommand = new RelayCommand(o => InsertTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
             CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
+            OpenStarterTemplatesCommand = new RelayCommand(o => OpenStarterTemplates());
+            CloseStarterTemplatesCommand = new RelayCommand(o => IsStarterTemplatesOpen = false);
+            ApplySelectedStarterTemplateCommand = new RelayCommand(o => ApplySelectedStarterTemplate(), o => SelectedStarterTemplate != null);
+            SelectStarterTemplateCommand = new RelayCommand(o => SelectStarterTemplate(o));
             StatusMessage = Res("EditorLoading");
         }
 
@@ -210,12 +344,16 @@ namespace Win11DesktopApp.ViewModels
             _template = template;
             _templateService = templateService;
             _tagCatalogService = tagCatalogService;
+            _starterTemplateCatalogService = App.StarterTemplateCatalogService ?? new StarterTemplateCatalogService();
 
             try
             {
                 var fullPath = _templateService.GetTemplateFullPath(firmName, template.FilePath);
+                OriginalTemplatePath = fullPath;
                 TemplateFolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 RtfFilePath = Path.Combine(TemplateFolderPath, "content.rtf");
+                NativeDocumentPath = Path.Combine(TemplateFolderPath, "content.xamlpackage");
+                LayoutSettingsPath = Path.Combine(TemplateFolderPath, "editor-layout.json");
                 if (File.Exists(RtfFilePath))
                     LastSavedAt = File.GetLastWriteTime(RtfFilePath);
             }
@@ -223,6 +361,9 @@ namespace Win11DesktopApp.ViewModels
             {
                 TemplateFolderPath = string.Empty;
                 RtfFilePath = string.Empty;
+                NativeDocumentPath = string.Empty;
+                LayoutSettingsPath = string.Empty;
+                OriginalTemplatePath = string.Empty;
             }
 
             try
@@ -236,13 +377,165 @@ namespace Win11DesktopApp.ViewModels
                 TagGroups = new ObservableCollection<TagGroupViewModel>();
             }
 
+            InitializePageLayoutOptions();
+            LoadPersistedPageLayout();
+            EnsureTemplateSourceAvailable();
+
             GoBackCommand = new RelayCommand(o => NavigateBack());
             SaveCommand = new AsyncRelayCommand(_ => SaveAsync(), _ => !IsSaving && !IsEditorLoading);
             InsertTagCommand = new RelayCommand(o => InsertTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
             CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
+            OpenStarterTemplatesCommand = new RelayCommand(o => OpenStarterTemplates());
+            CloseStarterTemplatesCommand = new RelayCommand(o => IsStarterTemplatesOpen = false);
+            ApplySelectedStarterTemplateCommand = new RelayCommand(o => ApplySelectedStarterTemplate(), o => SelectedStarterTemplate != null);
+            SelectStarterTemplateCommand = new RelayCommand(o => SelectStarterTemplate(o));
             StatusMessage = Res("EditorLoading");
+        }
+
+        private void InitializePageLayoutOptions()
+        {
+            if (AvailablePageSizes.Count == 0)
+            {
+                AvailablePageSizes.Add(new TemplateEditorPageSizeOption("a4", "A4", 794, 1123));
+                AvailablePageSizes.Add(new TemplateEditorPageSizeOption("letter", "Letter", 816, 1056));
+            }
+
+            if (AvailablePageOrientations.Count == 0)
+            {
+                AvailablePageOrientations.Add(new TemplateEditorPageOrientationOption("portrait", Res("EditorOrientationPortrait"), false));
+                AvailablePageOrientations.Add(new TemplateEditorPageOrientationOption("landscape", Res("EditorOrientationLandscape"), true));
+            }
+
+            if (AvailablePageMargins.Count == 0)
+            {
+                AvailablePageMargins.Add(new TemplateEditorPageMarginOption("normal", Res("EditorMarginsNormal"), new Thickness(96, 96, 96, 96)));
+                AvailablePageMargins.Add(new TemplateEditorPageMarginOption("narrow", Res("EditorMarginsNarrow"), new Thickness(48, 48, 48, 48)));
+                AvailablePageMargins.Add(new TemplateEditorPageMarginOption("wide", Res("EditorMarginsWide"), new Thickness(192, 96, 192, 96)));
+            }
+
+            SelectedPageSize ??= AvailablePageSizes.FirstOrDefault();
+            SelectedPageOrientation ??= AvailablePageOrientations.FirstOrDefault();
+            SelectedPageMargin ??= AvailablePageMargins.FirstOrDefault();
+
+            RecalculatePageLayout();
+        }
+
+        private void RecalculatePageLayout()
+        {
+            var selectedSize = SelectedPageSize ?? AvailablePageSizes.FirstOrDefault();
+            var selectedOrientation = SelectedPageOrientation ?? AvailablePageOrientations.FirstOrDefault();
+            var selectedMargin = SelectedPageMargin ?? AvailablePageMargins.FirstOrDefault();
+
+            if (selectedSize == null || selectedOrientation == null || selectedMargin == null)
+                return;
+
+            PagePreviewWidth = selectedOrientation.IsLandscape ? selectedSize.HeightPx : selectedSize.WidthPx;
+            PagePreviewHeight = selectedOrientation.IsLandscape ? selectedSize.WidthPx : selectedSize.HeightPx;
+            PagePadding = selectedMargin.Padding;
+        }
+
+        private void LoadPersistedPageLayout()
+        {
+            if (string.IsNullOrWhiteSpace(LayoutSettingsPath) || !File.Exists(LayoutSettingsPath))
+                return;
+
+            try
+            {
+                var settings = SafeFileService.ReadJsonOrDefault(LayoutSettingsPath, new TemplateEditorLayoutSettings());
+                SelectedPageSize = AvailablePageSizes.FirstOrDefault(x => x.Key == settings.PageSizeKey) ?? SelectedPageSize;
+                SelectedPageOrientation = AvailablePageOrientations.FirstOrDefault(x => x.Key == settings.OrientationKey) ?? SelectedPageOrientation;
+                SelectedPageMargin = AvailablePageMargins.FirstOrDefault(x => x.Key == settings.MarginKey) ?? SelectedPageMargin;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateEditorViewModel.LoadPersistedPageLayout", ex.Message);
+            }
+        }
+
+        private void SavePersistedPageLayout()
+        {
+            if (string.IsNullOrWhiteSpace(LayoutSettingsPath))
+                return;
+
+            var settings = new TemplateEditorLayoutSettings
+            {
+                PageSizeKey = SelectedPageSize?.Key ?? "a4",
+                OrientationKey = SelectedPageOrientation?.Key ?? "portrait",
+                MarginKey = SelectedPageMargin?.Key ?? "normal"
+            };
+
+            SafeFileService.WriteJsonAtomic(LayoutSettingsPath, settings);
+        }
+
+        private void OpenStarterTemplates()
+        {
+            LoadStarterTemplatesIfNeeded();
+            IsStarterTemplatesOpen = true;
+        }
+
+        private void LoadStarterTemplatesIfNeeded()
+        {
+            if (StarterTemplates.Count > 0)
+                return;
+
+            var templates = _starterTemplateCatalogService?.GetContractTemplates() ?? Array.Empty<StarterTemplateCatalogEntry>();
+            StarterTemplates = new ObservableCollection<StarterTemplateCatalogEntry>(templates);
+
+            if (StarterTemplates.Count == 0)
+            {
+                StarterTemplatesStatus = Res("EditorSamplesEmpty");
+                SelectedStarterTemplate = null;
+                SelectedStarterTemplateRtf = string.Empty;
+                return;
+            }
+
+            StarterTemplatesStatus = Res("EditorSamplesHint");
+            SelectedStarterTemplate = StarterTemplates[0];
+        }
+
+        private void SelectStarterTemplate(object? parameter)
+        {
+            if (parameter is StarterTemplateCatalogEntry entry)
+                SelectedStarterTemplate = entry;
+        }
+
+        private void LoadSelectedStarterTemplatePreview()
+        {
+            if (SelectedStarterTemplate == null)
+            {
+                SelectedStarterTemplateRtf = string.Empty;
+                return;
+            }
+
+            var rtf = _starterTemplateCatalogService?.LoadTemplateRtf(SelectedStarterTemplate);
+            if (string.IsNullOrWhiteSpace(rtf))
+            {
+                SelectedStarterTemplateRtf = string.Empty;
+                StarterTemplatesStatus = Res("EditorSamplesLoadError");
+                return;
+            }
+
+            SelectedStarterTemplateRtf = rtf;
+            StarterTemplatesStatus = Res("EditorSamplesHint");
+        }
+
+        private void ApplySelectedStarterTemplate()
+        {
+            if (SelectedStarterTemplate == null)
+                return;
+
+            var rtf = _starterTemplateCatalogService?.LoadTemplateRtf(SelectedStarterTemplate);
+            if (string.IsNullOrWhiteSpace(rtf))
+            {
+                StarterTemplatesStatus = Res("EditorSamplesLoadError");
+                return;
+            }
+
+            RequestApplyStarterTemplate?.Invoke(rtf);
+            IsStarterTemplatesOpen = false;
+            StatusMessage = ResF("EditorStarterApplied", SelectedStarterTemplate.Title);
         }
 
         private void NavigateBack()
@@ -266,12 +559,56 @@ namespace Win11DesktopApp.ViewModels
                 App.NavigationService?.NavigateTo(new MainViewModel());
         }
 
+        internal void HandleTemplateOpenFailure(string? details = null)
+        {
+            var message = string.IsNullOrWhiteSpace(details)
+                ? Res("MsgTemplateNotFound")
+                : ResF("MsgOpenFileError", details);
+            MarkTemplateUnavailable(message);
+        }
+
+        private void EnsureTemplateSourceAvailable()
+        {
+            if (!string.IsNullOrWhiteSpace(NativeDocumentPath) && File.Exists(NativeDocumentPath))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(RtfFilePath) && File.Exists(RtfFilePath))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(OriginalTemplatePath) && File.Exists(OriginalTemplatePath))
+                return;
+
+            MarkTemplateUnavailable(Res("MsgTemplateNotFound"));
+        }
+
+        private void MarkTemplateUnavailable(string message)
+        {
+            _templateUnavailable = true;
+            StatusMessage = message;
+            if (_templateUnavailableNotified)
+                return;
+
+            _templateUnavailableNotified = true;
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+            {
+                ToastService.Instance.Warning(message);
+                if (_navigateBackScheduled)
+                    return;
+
+                _navigateBackScheduled = true;
+                NavigateBack();
+            }));
+        }
+
         private async Task SaveAsync()
         {
             await Task.Yield();
 
             try
             {
+                if (_templateUnavailable)
+                    return;
+
                 IsSaving = true;
                 StatusMessage = Res("EditorSaving");
                 CommandManager.InvalidateRequerySuggested();
@@ -283,14 +620,22 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 Directory.CreateDirectory(TemplateFolderPath);
+                var xamlPackageContent = RequestGetXamlPackageContent?.Invoke();
                 var rtfContent = RequestGetRtfContent?.Invoke();
-                if (string.IsNullOrEmpty(rtfContent))
+                if ((xamlPackageContent == null || xamlPackageContent.Length == 0)
+                    && string.IsNullOrEmpty(rtfContent))
                 {
                     StatusMessage = Res("EditorErrEmpty");
                     return;
                 }
 
-                File.WriteAllText(RtfFilePath, rtfContent);
+                if (xamlPackageContent != null && xamlPackageContent.Length > 0)
+                    SafeFileService.WriteBytesAtomic(NativeDocumentPath, xamlPackageContent);
+
+                if (!string.IsNullOrEmpty(rtfContent))
+                    File.WriteAllText(RtfFilePath, rtfContent);
+
+                SavePersistedPageLayout();
                 StatusMessage = Res("EditorSaved");
                 LastSavedAt = DateTime.Now;
                 IsDirty = false;
@@ -496,5 +841,49 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex) { LoggingService.LogWarning("TemplateEditorViewModel.CopyTag", ex.Message); }
         }
+    }
+
+    public sealed class TemplateEditorPageSizeOption
+    {
+        public TemplateEditorPageSizeOption(string key, string displayName, double widthPx, double heightPx)
+        {
+            Key = key;
+            DisplayName = displayName;
+            WidthPx = widthPx;
+            HeightPx = heightPx;
+        }
+
+        public string Key { get; }
+        public string DisplayName { get; }
+        public double WidthPx { get; }
+        public double HeightPx { get; }
+    }
+
+    public sealed class TemplateEditorPageOrientationOption
+    {
+        public TemplateEditorPageOrientationOption(string key, string displayName, bool isLandscape)
+        {
+            Key = key;
+            DisplayName = displayName;
+            IsLandscape = isLandscape;
+        }
+
+        public string Key { get; }
+        public string DisplayName { get; }
+        public bool IsLandscape { get; }
+    }
+
+    public sealed class TemplateEditorPageMarginOption
+    {
+        public TemplateEditorPageMarginOption(string key, string displayName, Thickness padding)
+        {
+            Key = key;
+            DisplayName = displayName;
+            Padding = padding;
+        }
+
+        public string Key { get; }
+        public string DisplayName { get; }
+        public Thickness Padding { get; }
     }
 }

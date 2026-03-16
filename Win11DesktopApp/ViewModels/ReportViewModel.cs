@@ -722,6 +722,16 @@ namespace Win11DesktopApp.ViewModels
             var financeService = App.FinanceService;
             if (financeService == null) return;
             var resolvedFolder = financeService.ResolveEmployeeFolder(row.EmployeeFolder);
+            if (!Directory.Exists(resolvedFolder))
+            {
+                MessageBox.Show(
+                    $"{GetString("MsgOpenFolderFail")}\n\n{resolvedFolder}",
+                    GetString("TitleWarning"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             CleanupDetailsVm();
             EmployeeDetailsVm = new EmployeeDetailsViewModel(row.FirmName, resolvedFolder, _employeeService);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
@@ -872,6 +882,66 @@ namespace Win11DesktopApp.ViewModels
             return ExportSheets.FirstOrDefault(s => s.SheetKey == key)?.IsSelected ?? true;
         }
 
+        private static string SummarizeForLog(IEnumerable<string> items, string emptyFallback)
+        {
+            var values = items
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
+
+            if (values.Count == 0)
+                return emptyFallback;
+
+            if (values.Count <= 5)
+                return string.Join(", ", values);
+
+            return $"{string.Join(", ", values.Take(5))} +{values.Count - 5}";
+        }
+
+        private string BuildReportExportDetails(string outputPath)
+        {
+            var selectedSheets = ExportSheets.Where(s => s.IsSelected).Select(s => s.DisplayName);
+            var selectedFirms = CompanyFilters.Where(f => f.IsChecked).Select(f => f.CompanyName);
+            var selectedAgencies = AgencyFilters.Where(f => f.IsChecked).Select(f => f.CompanyName);
+
+            return $"Період: {DateFrom:dd.MM.yyyy} - {DateTo:dd.MM.yyyy}; " +
+                   $"Листи: {SummarizeForLog(selectedSheets, "не вибрано")}; " +
+                   $"Фірми: {SummarizeForLog(selectedFirms, "усі")}; " +
+                   $"Агентури: {SummarizeForLog(selectedAgencies, "усі")}; " +
+                   $"Працівників: {_allEmployees.Count}; " +
+                   $"Файл: {Path.GetFileName(outputPath)}";
+        }
+
+        private bool EnsureExportPathReady(string? filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return false;
+
+            try
+            {
+                var fullPath = Path.GetFullPath(filePath);
+                if (Directory.Exists(fullPath))
+                    throw new IOException("Selected path is a directory.");
+
+                var outputDirectory = Path.GetDirectoryName(fullPath);
+                if (string.IsNullOrWhiteSpace(outputDirectory))
+                    throw new DirectoryNotFoundException("Export folder not found.");
+
+                if (!Directory.Exists(outputDirectory))
+                    Directory.CreateDirectory(outputDirectory);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ReportViewModel.EnsureExportPathReady", ex.Message);
+                MessageBox.Show(string.Format(GetString("ReportExportError"), ex.Message),
+                    GetString("ReportExportErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
         private void ExportToExcel()
         {
             try
@@ -882,6 +952,7 @@ namespace Win11DesktopApp.ViewModels
                     FileName = $"Report_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
                 };
                 if (dialog.ShowDialog() != true) return;
+                if (!EnsureExportPathReady(dialog.FileName)) return;
 
                 using var workbook = new XLWorkbook();
 
@@ -1074,7 +1145,7 @@ namespace Win11DesktopApp.ViewModels
                 workbook.SaveAs(dialog.FileName);
                 StatusMessage = GetString("ReportExported");
                 App.ActivityLogService?.Log("ExportExcel", "Export", "", "",
-                    $"Експортовано звіт → Excel");
+                    $"Експортовано звіт → Excel", details: BuildReportExportDetails(dialog.FileName));
 
                 try { Process.Start(new ProcessStartInfo(dialog.FileName) { UseShellExecute = true }); }
                 catch (Exception ex2) { LoggingService.LogWarning("ReportViewModel.ExportExcel", $"Open file failed: {ex2.Message}"); }
@@ -1095,6 +1166,7 @@ namespace Win11DesktopApp.ViewModels
                     FileName = $"Report_{DateTime.Now:yyyyMMdd_HHmm}.pdf"
                 };
                 if (dialog.ShowDialog() != true) return;
+                if (!EnsureExportPathReady(dialog.FileName)) return;
 
                 var doc = new PdfDocument();
                 doc.Info.Title = "Report";
@@ -1343,7 +1415,7 @@ namespace Win11DesktopApp.ViewModels
                 doc.Save(dialog.FileName);
                 StatusMessage = GetString("ReportExportedPdf");
                 App.ActivityLogService?.Log("ExportPdf", "Export", "", "",
-                    $"Експортовано звіт → PDF");
+                    $"Експортовано звіт → PDF", details: BuildReportExportDetails(dialog.FileName));
 
                 try { Process.Start(new ProcessStartInfo(dialog.FileName) { UseShellExecute = true }); }
                 catch (Exception ex2) { LoggingService.LogWarning("ReportViewModel.ExportPdf", $"Open file failed: {ex2.Message}"); }

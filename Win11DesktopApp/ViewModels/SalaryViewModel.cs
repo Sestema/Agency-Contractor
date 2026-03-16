@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Data;
@@ -215,6 +216,7 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _selectedFirmFilter, value))
                 {
                     ApplyFilter();
+                    LoadExpenses();
                     OnPropertyChanged(nameof(IsFirmFiltered));
                 }
             }
@@ -226,6 +228,15 @@ namespace Win11DesktopApp.ViewModels
             {
                 var allLabel = L("FinFilterAll") ?? "All";
                 return !string.IsNullOrEmpty(_selectedFirmFilter) && _selectedFirmFilter != allLabel;
+            }
+        }
+
+        public string ExpenseHeaderText
+        {
+            get
+            {
+                var title = L("FinFirmExpenses") ?? "Firm Expenses";
+                return FirmExpenses.Count > 0 ? $"{title} ({FirmExpenses.Count})" : title;
             }
         }
 
@@ -1056,6 +1067,36 @@ namespace Win11DesktopApp.ViewModels
                 RefreshActiveFields();
         }
 
+        private static string SummarizeForLog(IEnumerable<string> items, string emptyFallback)
+        {
+            var values = items
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
+
+            if (values.Count == 0)
+                return emptyFallback;
+
+            if (values.Count <= 5)
+                return string.Join(", ", values);
+
+            return $"{string.Join(", ", values.Take(5))} +{values.Count - 5}";
+        }
+
+        private string BuildSalaryExportDetails(IEnumerable<string> selectedFirms, List<SalaryEntry> exportEntries, List<CustomSalaryField> fields, string outputPath)
+        {
+            var fieldNames = fields.Select(f => f.Name);
+            var paidCount = exportEntries.Count(e => e.IsPaid);
+
+            return $"Місяць: {MonthDisplay}; " +
+                   $"Фірми: {SummarizeForLog(selectedFirms, "не вибрано")}; " +
+                   $"Працівників: {exportEntries.Count}; " +
+                   $"Оплачено: {paidCount}; " +
+                   $"Кастомні колонки: {SummarizeForLog(fieldNames, "немає")}; " +
+                   $"Файл: {Path.GetFileName(outputPath)}";
+        }
+
         private void ExportToExcel()
         {
             if (Entries.Count == 0)
@@ -1125,12 +1166,15 @@ namespace Win11DesktopApp.ViewModels
                 ws.SheetView.FreezeRows(headerRow);
                 wb.SaveAs(dlg.FileName);
                 StatusMessage = L("FinSalaryExported") is string ex && ex.Length > 0 ? ex : "Exported!";
+                ToastService.Instance.Success(StatusMessage);
                 App.ActivityLogService?.Log("ExportExcel", "Export", "", "",
-                    $"Експортовано зарплату {MonthDisplay} → Excel");
+                    $"Експортовано виплату {MonthDisplay} → Excel",
+                    details: BuildSalaryExportDetails(selectedFirms, exportEntries, fields, dlg.FileName));
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Export error: {ex.Message}";
+                ToastService.Instance.Error(StatusMessage);
             }
         }
 
@@ -1225,6 +1269,7 @@ namespace Win11DesktopApp.ViewModels
                     col++;
 
                     ws.Cell(row, col).Value = entry.FullName;
+                    ws.Cell(row, col).Style.Font.Bold = true;
                     if (entry.GrossSalary > 0)
                         ws.Cell(row, col).Style.Fill.BackgroundColor = lightGreen;
                     col++;
@@ -1232,21 +1277,25 @@ namespace Win11DesktopApp.ViewModels
                     ws.Cell(row, col).Value = entry.HoursWorked;
                     ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.0";
                     ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Cell(row, col).Style.Font.Bold = true;
                     col++;
 
                     ws.Cell(row, col).Value = entry.HourlyRate;
                     ws.Cell(row, col).Style.NumberFormat.Format = "#,##0";
                     ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Cell(row, col).Style.Font.Bold = true;
                     col++;
 
                     ws.Cell(row, col).Value = entry.GrossSalary;
                     ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
                     ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Cell(row, col).Style.Font.Bold = true;
                     col++;
 
                     ws.Cell(row, col).Value = entry.Advance;
                     ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
                     ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Cell(row, col).Style.Font.Bold = true;
                     if (entry.Advance > 0)
                         ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#C62828");
                     col++;
@@ -1257,6 +1306,7 @@ namespace Win11DesktopApp.ViewModels
                         ws.Cell(row, col).Value = val;
                         ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
                         ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        ws.Cell(row, col).Style.Font.Bold = true;
                         col++;
                     }
 
@@ -1269,6 +1319,7 @@ namespace Win11DesktopApp.ViewModels
 
                     ws.Cell(row, col).Value = entry.Note;
                     ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#888888");
+                    ws.Cell(row, col).Style.Font.Bold = true;
                     ws.Cell(row, col).Style.Font.Italic = true;
                     col++;
 
@@ -1448,10 +1499,12 @@ namespace Win11DesktopApp.ViewModels
             var colHours = DocL("FinColHours") ?? "Hours";
             int firmTableHeaderRow = row;
 
-            ws.Cell(row, 2).Value = DocL("FinColFirm") ?? "Firm";
-            ws.Cell(row, 3).Value = DocL("FinColAmount") ?? "Amount";
-            ws.Cell(row, 4).Value = colHours;
-            var firmHeaderRange2 = ws.Range(row, 2, row, 4);
+            var firmHeaderCell = ws.Range(row, 2, row, 3);
+            firmHeaderCell.Merge();
+            firmHeaderCell.Value = DocL("FinColFirm") ?? "Firm";
+            ws.Cell(row, 4).Value = DocL("FinColAmount") ?? "Amount";
+            ws.Cell(row, 5).Value = colHours;
+            var firmHeaderRange2 = ws.Range(row, 2, row, 5);
             firmHeaderRange2.Style.Font.Bold = true;
             firmHeaderRange2.Style.Font.FontSize = 13;
             firmHeaderRange2.Style.Fill.BackgroundColor = accentBlue;
@@ -1469,15 +1522,20 @@ namespace Win11DesktopApp.ViewModels
             foreach (var g in expFirmSummaries)
             {
                 var firmAltColor = firmAlt ? XLColor.FromHtml("#F7F9FC") : XLColor.White;
-                ws.Cell(row, 2).Value = g.Key;
-                ws.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#2F5496");
-                ws.Cell(row, 3).Value = g.Sum(e => e.NetSalary);
-                ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0 \"Kč\"";
-                ws.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                ws.Cell(row, 4).Value = g.Sum(e => e.HoursWorked);
-                ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0.0";
+                var firmNameCell = ws.Range(row, 2, row, 3);
+                firmNameCell.Merge();
+                firmNameCell.Value = g.Key;
+                firmNameCell.Style.Font.FontColor = XLColor.FromHtml("#2F5496");
+                firmNameCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                firmNameCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                ws.Cell(row, 4).Value = g.Sum(e => e.NetSalary);
+                ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0 \"Kč\"";
                 ws.Cell(row, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                for (int bc = 2; bc <= 4; bc++)
+                ws.Cell(row, 5).Value = g.Sum(e => e.HoursWorked);
+                ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0.0";
+                ws.Cell(row, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                for (int bc = 2; bc <= 5; bc++)
                 {
                     ws.Cell(row, bc).Style.Fill.BackgroundColor = firmAltColor;
                     ws.Cell(row, bc).Style.Border.BottomBorder = XLBorderStyleValues.Hair;
@@ -1487,9 +1545,17 @@ namespace Win11DesktopApp.ViewModels
                 firmAlt = !firmAlt;
             }
 
-            var firmTableRange = ws.Range(firmTableHeaderRow, 2, row - 1, 4);
+            var firmTableRange = ws.Range(firmTableHeaderRow, 2, row - 1, 5);
             firmTableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
             firmTableRange.Style.Border.OutsideBorderColor = accentBlue;
+
+            var firmNameBlock = ws.Range(firmTableHeaderRow, 2, row - 1, 3);
+            firmNameBlock.Style.Border.RightBorder = XLBorderStyleValues.Medium;
+            firmNameBlock.Style.Border.RightBorderColor = accentBlue;
+
+            var amountBlock = ws.Range(firmTableHeaderRow, 4, row - 1, 4);
+            amountBlock.Style.Border.RightBorder = XLBorderStyleValues.Medium;
+            amountBlock.Style.Border.RightBorderColor = accentBlue;
             return row;
         }
 
@@ -1572,12 +1638,14 @@ namespace Win11DesktopApp.ViewModels
                 exp.PropertyChanged += OnExpenseChanged;
                 FirmExpenses.Add(exp);
             }
+            OnPropertyChanged(nameof(ExpenseHeaderText));
             RecalcTotals();
         }
 
         private void OnExpenseChanged(object? sender, PropertyChangedEventArgs e)
         {
             RecalcTotals();
+            OnPropertyChanged(nameof(ExpenseHeaderText));
             if (sender is FirmExpense exp)
                 _financeService.UpdateFirmExpense(exp);
         }
@@ -1604,6 +1672,7 @@ namespace Win11DesktopApp.ViewModels
             _financeService.AddFirmExpense(exp);
             exp.PropertyChanged += OnExpenseChanged;
             FirmExpenses.Add(exp);
+            OnPropertyChanged(nameof(ExpenseHeaderText));
             RecalcTotals();
         }
 
@@ -1616,6 +1685,7 @@ namespace Win11DesktopApp.ViewModels
                 item.PropertyChanged -= OnExpenseChanged;
                 FirmExpenses.Remove(item);
                 _financeService.RemoveFirmExpense(expenseId);
+                OnPropertyChanged(nameof(ExpenseHeaderText));
                 RecalcTotals();
             }
         }
@@ -1706,6 +1776,16 @@ namespace Win11DesktopApp.ViewModels
             var resolvedFolder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
             if (resolvedFolder != entry.EmployeeFolder)
                 entry.EmployeeFolder = resolvedFolder;
+            if (!Directory.Exists(resolvedFolder))
+            {
+                MessageBox.Show(
+                    $"{L("MsgOpenFolderFail") ?? "Could not open folder."}\n\n{resolvedFolder}",
+                    L("TitleWarning") ?? "Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             if (EmployeeDetailsVm != null)
                 EmployeeDetailsVm.RequestClose -= OnSalaryDetailsClose;
             EmployeeDetailsVm = new EmployeeDetailsViewModel(entry.FirmName, resolvedFolder, _employeeService);

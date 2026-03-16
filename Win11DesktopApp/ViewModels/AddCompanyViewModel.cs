@@ -114,6 +114,7 @@ namespace Win11DesktopApp.ViewModels
                 // Apply changes from the working copy to the original
                 _originalCompany.Name = Employer.Name;
                 _originalCompany.ICO = Employer.ICO;
+                _originalCompany.LegalAddress = Employer.LegalAddress;
 
                 _originalCompany.Addresses.Clear();
                 foreach (var addr in Employer.Addresses)
@@ -183,6 +184,7 @@ namespace Win11DesktopApp.ViewModels
                 LastModified = src.LastModified,
                 Name = src.Name,
                 ICO = src.ICO,
+                LegalAddress = src.LegalAddress,
                 WeeklyWorkHours = src.WeeklyWorkHours,
                 DailyWorkHours = src.DailyWorkHours,
                 ShiftCount = src.ShiftCount

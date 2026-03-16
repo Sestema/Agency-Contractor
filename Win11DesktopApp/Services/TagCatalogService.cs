@@ -38,6 +38,7 @@ namespace Win11DesktopApp.Services
         {
             AddTag("COMPANY_Name", "Company", employer.Name, Res("TagDescCompanyName"), employer.Name);
             AddTag("COMPANY_ICO", "Company", employer.Name, Res("TagDescCompanyICO"), employer.ICO);
+            AddTag("COMPANY_LegalAddress", "Company", employer.Name, Res("TagDescCompanyLegalAddress"), employer.LegalAddress);
             AddTag("COMPANY_WeeklyWorkHours", "Company", employer.Name, Res("TagDescCompanyWeeklyHours"), employer.WeeklyWorkHours.ToString());
             AddTag("COMPANY_DailyWorkHours", "Company", employer.Name, Res("TagDescCompanyDailyHours"), employer.DailyWorkHours.ToString());
             AddTag("COMPANY_ShiftCount", "Company", employer.Name, Res("TagDescCompanyShiftCount"), employer.ShiftCount.ToString());
@@ -230,6 +231,7 @@ namespace Win11DesktopApp.Services
         {
             { "COMPANY_Name", "TagDescCompanyName" },
             { "COMPANY_ICO", "TagDescCompanyICO" },
+            { "COMPANY_LegalAddress", "TagDescCompanyLegalAddress" },
             { "COMPANY_WeeklyWorkHours", "TagDescCompanyWeeklyHours" },
             { "COMPANY_DailyWorkHours", "TagDescCompanyDailyHours" },
             { "COMPANY_ShiftCount", "TagDescCompanyShiftCount" },
