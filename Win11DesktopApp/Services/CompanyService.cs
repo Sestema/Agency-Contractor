@@ -31,16 +31,57 @@ namespace Win11DesktopApp.Services
         public event Action? VisibilityChanged;
 
         public bool IsCompanyVisible(EmployerCompany company)
-            => !_appSettingsService.Settings.HiddenCompanyIds.Contains(company.Id.ToString());
+            => !HasHideSchedule(company);
+
+        public bool IsCompanyVisibleForPeriod(EmployerCompany company, int year, int month)
+        {
+            if (!HasHideSchedule(company))
+                return true;
+
+            if (year <= 0 || month < 1 || month > 12)
+                return true;
+
+            return CompareYearMonth(year, month, company.HiddenFromYear, company.HiddenFromMonth) < 0;
+        }
+
+        public bool IsCompanyVisibleForPeriod(string companyName, int year, int month)
+        {
+            var company = _companies.FirstOrDefault(c => string.Equals(c.Name, companyName, StringComparison.OrdinalIgnoreCase));
+            return company == null || IsCompanyVisibleForPeriod(company, year, month);
+        }
+
+        public bool IsCompanyVisibleForRange(EmployerCompany company, DateTime from, DateTime to)
+        {
+            if (!HasHideSchedule(company))
+                return true;
+
+            var start = from <= to ? from : to;
+            return CompareYearMonth(start.Year, start.Month, company.HiddenFromYear, company.HiddenFromMonth) < 0;
+        }
 
         public void SetCompanyVisible(EmployerCompany company, bool visible)
         {
             var id = company.Id.ToString();
             var list = _appSettingsService.Settings.HiddenCompanyIds;
-            if (!visible && !list.Contains(id))
-                list.Add(id);
-            else if (visible)
+
+            if (visible)
+            {
+                company.HiddenFromYear = 0;
+                company.HiddenFromMonth = 0;
                 list.Remove(id);
+            }
+            else
+            {
+                var hiddenFrom = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                company.HiddenFromYear = hiddenFrom.Year;
+                company.HiddenFromMonth = hiddenFrom.Month;
+                list.Remove(id);
+
+                if (_selectedCompany == company)
+                    SelectedCompany = null;
+            }
+
+            _persistenceService.SaveCompanies(_companies);
             _appSettingsService.SaveSettings();
             VisibilityChanged?.Invoke();
         }
@@ -86,7 +127,41 @@ namespace Win11DesktopApp.Services
             _folderService = folderService;
 
             LoadCompanies();
+            MigrateLegacyHiddenCompanies();
             ApplySavedSelection();
+        }
+
+        private static bool HasHideSchedule(EmployerCompany company)
+            => company.HiddenFromYear > 0 && company.HiddenFromMonth is >= 1 and <= 12;
+
+        private static int CompareYearMonth(int yearA, int monthA, int yearB, int monthB)
+            => yearA != yearB ? yearA.CompareTo(yearB) : monthA.CompareTo(monthB);
+
+        private void MigrateLegacyHiddenCompanies()
+        {
+            var legacyHidden = _appSettingsService.Settings.HiddenCompanyIds;
+            if (legacyHidden == null || legacyHidden.Count == 0)
+                return;
+
+            var hiddenFrom = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(1);
+            bool changed = false;
+
+            foreach (var company in _companies)
+            {
+                if (!legacyHidden.Contains(company.Id.ToString()) || HasHideSchedule(company))
+                    continue;
+
+                company.HiddenFromYear = hiddenFrom.Year;
+                company.HiddenFromMonth = hiddenFrom.Month;
+                changed = true;
+            }
+
+            legacyHidden.Clear();
+
+            if (changed)
+                _persistenceService.SaveCompanies(_companies);
+
+            _appSettingsService.SaveSettings();
         }
 
         private void LoadCompanies()
@@ -106,7 +181,7 @@ namespace Win11DesktopApp.Services
         {
             var selectedId = _appSettingsService.Settings.SelectedCompanyId;
             if (string.IsNullOrWhiteSpace(selectedId)) return;
-            var match = _companies.FirstOrDefault(c => c.Id.ToString() == selectedId);
+            var match = _companies.FirstOrDefault(c => c.Id.ToString() == selectedId && IsCompanyVisible(c));
             if (match != null) _selectedCompany = match;
         }
 

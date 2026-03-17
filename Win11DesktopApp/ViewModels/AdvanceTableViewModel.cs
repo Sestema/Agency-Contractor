@@ -60,7 +60,7 @@ namespace Win11DesktopApp.ViewModels
         private void LoadFirms()
         {
             Firms.Clear();
-            foreach (var company in App.CompanyService.Companies)
+            foreach (var company in App.CompanyService.VisibleCompanies)
             {
                 var employees = _employeeService.GetEmployeesForFirm(company.Name);
                 Firms.Add(new FirmCheckItem

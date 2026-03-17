@@ -76,13 +76,14 @@ namespace Win11DesktopApp.ViewModels
             Firms.Clear();
 
             var financeService = App.FinanceService;
+            var companyService = App.CompanyService;
             var (salaryEntries, _) = financeService.LoadAllFirmPayments(_selectedYear, _selectedMonth);
 
             var countByFirm = salaryEntries
                 .GroupBy(e => e.FirmName)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            foreach (var company in App.CompanyService.Companies)
+            foreach (var company in companyService.Companies.Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth)))
             {
                 countByFirm.TryGetValue(company.Name, out int count);
                 Firms.Add(new FirmCheckItem

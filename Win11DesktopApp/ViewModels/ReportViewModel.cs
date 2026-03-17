@@ -130,6 +130,8 @@ namespace Win11DesktopApp.ViewModels
                         App.AppSettingsService.Settings.ReportDateFrom = value.ToString("yyyy-MM-dd");
                         App.AppSettingsService.SaveSettings();
                     }
+
+                    LoadFilters();
                 }
             }
         }
@@ -147,6 +149,8 @@ namespace Win11DesktopApp.ViewModels
                         App.AppSettingsService.Settings.ReportDateTo = value.ToString("yyyy-MM-dd");
                         App.AppSettingsService.SaveSettings();
                     }
+
+                    LoadFilters();
                 }
             }
         }
@@ -293,18 +297,30 @@ namespace Win11DesktopApp.ViewModels
 
         private void LoadFilters()
         {
+            var selectedCompanies = CompanyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
+            var selectedAgencies = AgencyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
+
             CompanyFilters.Clear();
             AgencyFilters.Clear();
 
             var agencyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var archiveLog = TryLoadArchiveLog();
+            var archivedEmployees = _employeeService.GetArchivedEmployees();
+            var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
 
             var cs = App.CompanyService;
             var companies = cs?.Companies;
             if (companies == null) return;
 
-            foreach (var company in companies.Where(c => cs!.IsCompanyVisible(c)))
+            foreach (var company in companies.Where(c =>
+                         cs!.IsCompanyVisibleForRange(c, DateFrom, DateTo)
+                         && HasFirmDataInRange(c.Name, archiveLog, archivedEmployees, activeFirmHistory)))
             {
-                CompanyFilters.Add(new CompanyFilter { CompanyName = company.Name, IsChecked = true });
+                CompanyFilters.Add(new CompanyFilter
+                {
+                    CompanyName = company.Name,
+                    IsChecked = selectedCompanies.TryGetValue(company.Name, out var isChecked) ? isChecked : true
+                });
 
                 if (company.Agency != null && !string.IsNullOrWhiteSpace(company.Agency.Name))
                 {
@@ -314,8 +330,17 @@ namespace Win11DesktopApp.ViewModels
 
             foreach (var agencyName in agencyNames.OrderBy(n => n))
             {
-                AgencyFilters.Add(new CompanyFilter { CompanyName = agencyName, IsChecked = true });
+                AgencyFilters.Add(new CompanyFilter
+                {
+                    CompanyName = agencyName,
+                    IsChecked = selectedAgencies.TryGetValue(agencyName, out var isChecked) ? isChecked : true
+                });
             }
+
+            _allCompaniesSelected = CompanyFilters.Count > 0 && CompanyFilters.All(f => f.IsChecked);
+            _allAgenciesSelected = AgencyFilters.Count > 0 && AgencyFilters.All(f => f.IsChecked);
+            OnPropertyChanged(nameof(AllCompaniesSelected));
+            OnPropertyChanged(nameof(AllAgenciesSelected));
         }
 
         private async Task GenerateReportAsync()
@@ -344,12 +369,17 @@ namespace Win11DesktopApp.ViewModels
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 var effectiveFirms = new List<string>();
+                var archiveLog = TryLoadArchiveLog();
+                var archivedEmployees = _employeeService.GetArchivedEmployees();
+                var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
 
                 var csReport = App.CompanyService;
                 var companiesForReport = csReport?.Companies;
                 if (companiesForReport != null)
                 {
-                foreach (var company in companiesForReport.Where(c => csReport!.IsCompanyVisible(c)))
+                foreach (var company in companiesForReport.Where(c =>
+                             csReport!.IsCompanyVisibleForRange(c, DateFrom, DateTo)
+                             && HasFirmDataInRange(c.Name, archiveLog, archivedEmployees, activeFirmHistory)))
                 {
                     if (!selectedFirms.Contains(company.Name)) continue;
 
@@ -370,12 +400,9 @@ namespace Win11DesktopApp.ViewModels
                 }
                 }
 
-                var archiveLog = new List<ArchiveLogEntry>();
-                try { archiveLog = _employeeService.LoadArchiveLog(); } catch (Exception ex) { LoggingService.LogError("ReportViewModel.LoadArchiveLog", ex); }
-
                 var effectiveFirmsSet = effectiveFirms.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var archivedByFirm = LoadArchivedEmployeesForReport(effectiveFirmsSet);
+                var archivedByFirm = LoadArchivedEmployeesForReport(effectiveFirmsSet, activeFirmHistory);
 
                 var agencyData = new Dictionary<string, (int firms, int total, int active)>(StringComparer.OrdinalIgnoreCase);
 
@@ -525,7 +552,71 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private Dictionary<string, List<EmployeeReportRow>> LoadArchivedEmployeesForReport(HashSet<string> firmFilter)
+        private List<ArchiveLogEntry> TryLoadArchiveLog()
+        {
+            try
+            {
+                return _employeeService.LoadArchiveLog();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ReportViewModel.LoadArchiveLog", ex);
+                return new List<ArchiveLogEntry>();
+            }
+        }
+
+        private bool HasFirmDataInRange(
+            string firmName,
+            List<ArchiveLogEntry> archiveLog,
+            List<ArchivedEmployeeSummary> archivedEmployees,
+            List<ArchivedEmployeeSummary> activeFirmHistory)
+        {
+            var employees = _employeeService.GetEmployeesForFirm(firmName);
+            if (FilterByDateRange(employees).Count > 0)
+                return true;
+
+            foreach (var archived in archivedEmployees.Where(a => string.Equals(a.FirmName, firmName, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (IsHistoricalRecordInRange(archived.StartDate, archived.EndDate))
+                    return true;
+            }
+
+            foreach (var history in activeFirmHistory.Where(a => string.Equals(a.FirmName, firmName, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (IsHistoricalRecordInRange(history.StartDate, history.EndDate))
+                    return true;
+            }
+
+            return archiveLog.Any(l =>
+                string.Equals(l.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
+                && IsArchiveLogDateInRange(l.Date));
+        }
+
+        private bool IsHistoricalRecordInRange(string startDateRaw, string endDateRaw)
+        {
+            var endDate = DateParsingHelper.TryParseDate(endDateRaw);
+            if (endDate != null && endDate.Value.Date < DateFrom.Date)
+                return false;
+
+            var startDate = DateParsingHelper.TryParseDate(startDateRaw);
+            if (startDate != null && startDate.Value.Date > DateTo.Date)
+                return false;
+
+            return true;
+        }
+
+        private bool IsArchiveLogDateInRange(string dateRaw)
+        {
+            var date = DateParsingHelper.TryParseDate(dateRaw);
+            if (date == null)
+                return false;
+
+            return date.Value.Date >= DateFrom.Date && date.Value.Date <= DateTo.Date;
+        }
+
+        private Dictionary<string, List<EmployeeReportRow>> LoadArchivedEmployeesForReport(
+            HashSet<string> firmFilter,
+            List<ArchivedEmployeeSummary> activeFirmHistory)
         {
             var result = new Dictionary<string, List<EmployeeReportRow>>(StringComparer.OrdinalIgnoreCase);
             var financeService = App.FinanceService;
@@ -566,11 +657,7 @@ namespace Win11DesktopApp.ViewModels
                     var dedupKey = arch.FullName + "|" + arch.FirmName + "|" + arch.EndDate;
                     if (alreadyAdded.Contains(dedupKey)) continue;
 
-                    var endDate = DateParsingHelper.TryParseDate(arch.EndDate);
-                    if (endDate != null && endDate.Value.Date < DateFrom.Date) continue;
-
-                    var archStart = DateParsingHelper.TryParseDate(arch.StartDate);
-                    if (archStart != null && archStart.Value.Date > DateTo.Date) continue;
+                    if (!IsHistoricalRecordInRange(arch.StartDate, arch.EndDate)) continue;
 
                     alreadyAdded.Add(dedupKey);
 
@@ -587,6 +674,34 @@ namespace Win11DesktopApp.ViewModels
                         StartDate = arch.StartDate,
                         EndDate = arch.EndDate,
                         Position = arch.PositionTitle,
+                        IsArchived = true
+                    });
+                }
+
+                foreach (var history in activeFirmHistory)
+                {
+                    if (string.IsNullOrWhiteSpace(history.FirmName) || !firmFilter.Contains(history.FirmName)) continue;
+
+                    var dedupKey = history.FullName + "|" + history.FirmName + "|" + history.EndDate;
+                    if (alreadyAdded.Contains(dedupKey)) continue;
+
+                    if (!IsHistoricalRecordInRange(history.StartDate, history.EndDate)) continue;
+
+                    alreadyAdded.Add(dedupKey);
+
+                    var resolvedFolder = financeService.ResolveEmployeeFolder(history.EmployeeFolder);
+
+                    if (!result.ContainsKey(history.FirmName))
+                        result[history.FirmName] = new List<EmployeeReportRow>();
+                    result[history.FirmName].Add(new EmployeeReportRow
+                    {
+                        FullName = history.FullName,
+                        FirmName = history.FirmName,
+                        EmployeeFolder = resolvedFolder,
+                        EmployeeType = "—",
+                        StartDate = history.StartDate,
+                        EndDate = history.EndDate,
+                        Position = history.PositionTitle,
                         IsArchived = true
                     });
                 }

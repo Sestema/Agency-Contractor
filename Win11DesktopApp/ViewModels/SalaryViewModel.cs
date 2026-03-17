@@ -370,8 +370,11 @@ namespace Win11DesktopApp.ViewModels
             var year = _selectedYear;
             var month = _selectedMonth;
             var monthEnd = new DateTime(year, month, 1).AddMonths(1).AddDays(-1);
-            var companiesSnapshot = App.CompanyService?.Companies?.ToList()
-                                    ?? new List<EmployerCompany>();
+            var companyService = App.CompanyService;
+            var companiesSnapshot = companyService?.Companies?
+                .Where(c => companyService.IsCompanyVisibleForPeriod(c, year, month))
+                .ToList()
+                ?? new List<EmployerCompany>();
 
             // Build all entries in background — no UI thread blocking
             var (newEntries, needResave, activeFoldersByFirm) = await Task.Run(() =>
@@ -661,7 +664,10 @@ namespace Win11DesktopApp.ViewModels
             var fieldList = ActiveCustomFields.ToList();
             var initMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
 
-            var companiesInit = App.CompanyService?.Companies;
+            var companyService = App.CompanyService;
+            var companiesInit = companyService?.Companies?
+                .Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
+                .ToList();
             if (companiesInit != null)
             {
                 foreach (var company in companiesInit)
@@ -714,7 +720,10 @@ namespace Win11DesktopApp.ViewModels
             var existingKeys = new HashSet<string>();
 
             var nextMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
-            var companiesCreate = App.CompanyService?.Companies;
+            var companyService = App.CompanyService;
+            var companiesCreate = companyService?.Companies?
+                .Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
+                .ToList();
             if (companiesCreate != null)
             {
                 foreach (var company in companiesCreate)

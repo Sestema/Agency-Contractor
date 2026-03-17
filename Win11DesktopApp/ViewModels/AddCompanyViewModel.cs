@@ -182,6 +182,8 @@ namespace Win11DesktopApp.ViewModels
                 Id = src.Id,
                 CreatedAt = src.CreatedAt,
                 LastModified = src.LastModified,
+                HiddenFromYear = src.HiddenFromYear,
+                HiddenFromMonth = src.HiddenFromMonth,
                 Name = src.Name,
                 ICO = src.ICO,
                 LegalAddress = src.LegalAddress,

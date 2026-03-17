@@ -9,6 +9,8 @@ namespace Win11DesktopApp.Models
         public Guid Id { get; set; } = Guid.NewGuid();
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime LastModified { get; set; } = DateTime.Now;
+        public int HiddenFromYear { get; set; }
+        public int HiddenFromMonth { get; set; }
 
         private string _name = string.Empty;
         public string Name
