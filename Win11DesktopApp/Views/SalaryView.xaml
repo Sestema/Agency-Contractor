@@ -1085,7 +1085,8 @@
 
                             <!-- Extra stats toggle -->
                             <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,8,0,4"/>
-                            <Button Command="{Binding ToggleStatsSettingsCommand}" Background="Transparent" BorderThickness="0"
+                            <Button x:Name="StatsSettingsButton"
+                                    Command="{Binding ToggleStatsSettingsCommand}" Background="Transparent" BorderThickness="0"
                                     Cursor="Hand" HorizontalAlignment="Left" Padding="4,2" Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
@@ -1096,23 +1097,41 @@
                             </Button>
 
                             <!-- Stats settings popup -->
-                            <Border CornerRadius="6" Padding="8,6" Margin="0,0,0,6"
-                                    Background="{DynamicResource WindowBackgroundBrush}"
-                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                    Visibility="{Binding IsStatsSettingsOpen, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <CheckBox Content="{DynamicResource FinStatPaid}" IsChecked="{Binding ShowStatPaid}"
-                                              Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
-                                    <CheckBox Content="{DynamicResource FinStatRemaining}" IsChecked="{Binding ShowStatRemaining}"
-                                              Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
-                                    <CheckBox Content="{DynamicResource FinStatAdvances}" IsChecked="{Binding ShowStatAdvances}"
-                                              Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
-                                    <CheckBox Content="{DynamicResource FinStatCustomAdd}" IsChecked="{Binding ShowStatCustomAdd}"
-                                              Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
-                                    <CheckBox Content="{DynamicResource FinStatCustomSub}" IsChecked="{Binding ShowStatCustomSub}"
-                                              Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
-                                </StackPanel>
-                            </Border>
+                            <Popup IsOpen="{Binding IsStatsSettingsOpen, Mode=TwoWay}"
+                                   Placement="Top"
+                                   PlacementTarget="{Binding ElementName=StatsSettingsButton}"
+                                   VerticalOffset="-4"
+                                   StaysOpen="False"
+                                   AllowsTransparency="True"
+                                   PopupAnimation="Fade">
+                                <Border CornerRadius="8"
+                                        Padding="8,6"
+                                        MinWidth="210"
+                                        MaxWidth="260"
+                                        Background="{DynamicResource WindowBackgroundBrush}"
+                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                        BorderThickness="1">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.18"/>
+                                    </Border.Effect>
+                                    <ScrollViewer Style="{StaticResource ThinScroll}"
+                                                  MaxHeight="180"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <StackPanel>
+                                            <CheckBox Content="{DynamicResource FinStatPaid}" IsChecked="{Binding ShowStatPaid}"
+                                                      Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
+                                            <CheckBox Content="{DynamicResource FinStatRemaining}" IsChecked="{Binding ShowStatRemaining}"
+                                                      Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
+                                            <CheckBox Content="{DynamicResource FinStatAdvances}" IsChecked="{Binding ShowStatAdvances}"
+                                                      Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
+                                            <CheckBox Content="{DynamicResource FinStatCustomAdd}" IsChecked="{Binding ShowStatCustomAdd}"
+                                                      Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
+                                            <CheckBox Content="{DynamicResource FinStatCustomSub}" IsChecked="{Binding ShowStatCustomSub}"
+                                                      Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,2"/>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
 
                             <!-- Extra stat: Paid -->
                             <Border Background="{DynamicResource SuccessLightBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,3"

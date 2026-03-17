@@ -25,6 +25,8 @@ Desktop.ini
 ## Build output
 publish/
 Releases/
+backup_uploaded_release/
+backup_current_working_build/
 
 ## Secrets
 activator.key

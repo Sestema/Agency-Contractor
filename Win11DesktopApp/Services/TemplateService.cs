@@ -15,6 +15,7 @@ namespace Win11DesktopApp.Services
         private readonly TagCatalogService? _tagCatalogService;
         private readonly FolderService _folderService;
         private const string LogFileName = "template-errors.log";
+        private const string EmptyTemplateRtf = @"{\rtf1\ansi\deff0{\fonttbl{\f0 Segoe UI;}}\fs22\pard\f0\par}";
 
         public TemplateService(AppSettingsService appSettingsService, FolderService folderService, TagCatalogService? tagCatalogService = null)
         {
@@ -147,8 +148,9 @@ namespace Win11DesktopApp.Services
             }
             Directory.CreateDirectory(templateFolder);
 
-            // No file to copy — create a placeholder for the path
+            // New DOCX templates start with an empty RTF so the editor can open immediately.
             var destFileName = "template.docx";
+            SafeFileService.WriteTextAtomic(Path.Combine(templateFolder, "content.rtf"), EmptyTemplateRtf);
 
             // Create metadata.json
             var now = DateTime.Now;

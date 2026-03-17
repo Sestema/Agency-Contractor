@@ -1091,35 +1091,77 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource SettingsProfileAssignedUserTitle}"
-                                               FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <TextBlock FontSize="{DynamicResource FS11}"
-                                               Foreground="{DynamicResource MutedForegroundBrush}"
-                                               Margin="0,4,0,0">
-                                        <Run Text="{DynamicResource SettingsProfileClientIdLabel}"/>
-                                        <Run Text="{Binding ProfileClientId, Mode=OneWay}"/>
-                                    </TextBlock>
-                                </StackPanel>
+                                <Grid Margin="0,0,16,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="24"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <CheckBox Grid.Column="1"
-                                          VerticalAlignment="Center"
-                                          Margin="16,0,0,0"
-                                          Content="{DynamicResource ProfileRememberMe}"
-                                          IsChecked="{Binding ProfileRememberMeEnabled}"/>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{DynamicResource ProfileFirstNameLabel}"
+                                                   FontSize="{DynamicResource FS11}"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        <TextBlock Text="{Binding ProfileFirstName}"
+                                                   FontSize="{DynamicResource FS15}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   Margin="0,4,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="{DynamicResource ProfileLastNameLabel}"
+                                                   FontSize="{DynamicResource FS11}"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        <TextBlock Text="{Binding ProfileLastName}"
+                                                   FontSize="{DynamicResource FS15}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Vertical"
+                                            HorizontalAlignment="Right">
+                                    <CheckBox Content="{DynamicResource ProfileRememberMe}"
+                                              IsChecked="{Binding ProfileRememberMeEnabled}"
+                                              Margin="0,0,0,10"/>
+
+                                    <Button Command="{Binding EditProfileCommand}"
+                                            Padding="14,8"
+                                            HorizontalAlignment="Right"
+                                            Style="{StaticResource FilledActionButton}"
+                                            Visibility="{Binding IsProfileEditMode, Converter={StaticResource InverseBoolToVis}}">
+                                        <TextBlock Text="{DynamicResource EmpBtnEdit}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="White"/>
+                                    </Button>
+
+                                    <Button Command="{Binding CancelProfileEditCommand}"
+                                            Padding="14,8"
+                                            HorizontalAlignment="Right"
+                                            Style="{StaticResource SelectorButton}"
+                                            Visibility="{Binding IsProfileEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="{DynamicResource BtnCancel}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   FontWeight="SemiBold"/>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                         </Border>
 
-                        <Grid Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14" Margin="0,0,0,14"
+                                Visibility="{Binding IsProfileEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                            <Border Grid.Column="0" Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
-                                <StackPanel>
+                                <StackPanel Grid.Column="0">
                                     <TextBlock Text="{DynamicResource SettingsProfileDetailsTitle}"
                                                FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
@@ -1152,10 +1194,8 @@
                                                    Foreground="White"/>
                                     </Button>
                                 </StackPanel>
-                            </Border>
 
-                            <Border Grid.Column="2" Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
-                                <StackPanel>
+                                <StackPanel Grid.Column="2">
                                     <TextBlock Text="{DynamicResource SettingsProfileChangePasswordTitle}"
                                                FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
@@ -1185,8 +1225,8 @@
                                                    Foreground="White"/>
                                     </Button>
                                 </StackPanel>
-                            </Border>
-                        </Grid>
+                            </Grid>
+                        </Border>
 
                         <Border Style="{StaticResource DialogPreviewSurface}" Padding="12,10"
                                 Visibility="{Binding ProfileStatusMessage, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}">

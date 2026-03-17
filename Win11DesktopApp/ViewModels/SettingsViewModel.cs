@@ -71,6 +71,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CheckForUpdatesCommand { get; }
         public ICommand SaveProfileCommand { get; }
         public ICommand ChangeProfilePasswordCommand { get; }
+        public ICommand EditProfileCommand { get; }
+        public ICommand CancelProfileEditCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -114,6 +116,7 @@ namespace Win11DesktopApp.ViewModels
         private bool _profileStatusIsError;
         private bool _isInitializingProfileFields;
         private bool _isSyncingRememberMe;
+        private bool _isProfileEditMode;
 
         public string RootFolderPath
         {
@@ -194,6 +197,12 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _profileStatusIsError;
             set => SetProperty(ref _profileStatusIsError, value);
+        }
+
+        public bool IsProfileEditMode
+        {
+            get => _isProfileEditMode;
+            set => SetProperty(ref _isProfileEditMode, value);
         }
 
         private string GetLocalizedLicenseStatus()
@@ -471,6 +480,20 @@ namespace Win11DesktopApp.ViewModels
 
             SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync(), _ => HasProfile);
             ChangeProfilePasswordCommand = new AsyncRelayCommand(_ => ChangeProfilePasswordAsync(), _ => HasProfile);
+            EditProfileCommand = new RelayCommand(_ =>
+            {
+                InitializeProfileFields();
+                ClearProfilePasswordFields();
+                SetProfileStatus(string.Empty, false);
+                IsProfileEditMode = true;
+            }, _ => HasProfile);
+            CancelProfileEditCommand = new RelayCommand(_ =>
+            {
+                InitializeProfileFields();
+                ClearProfilePasswordFields();
+                SetProfileStatus(string.Empty, false);
+                IsProfileEditMode = false;
+            }, _ => HasProfile);
         }
 
         public static double GetInterfaceSizeMultiplier(string size) => size switch
@@ -710,6 +733,13 @@ namespace Win11DesktopApp.ViewModels
         {
             ProfileStatusMessage = message;
             ProfileStatusIsError = isError;
+        }
+
+        private void ClearProfilePasswordFields()
+        {
+            ProfileCurrentPassword = string.Empty;
+            ProfileNewPassword = string.Empty;
+            ProfileConfirmPassword = string.Empty;
         }
     }
 }
