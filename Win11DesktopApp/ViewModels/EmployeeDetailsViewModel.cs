@@ -716,7 +716,13 @@ namespace Win11DesktopApp.ViewModels
                 TabIndex = 3;
                 EnsureSalaryHistoryLoaded();
             });
-            EditProfileCommand = new RelayCommand(o => IsEditMode = true);
+            EditProfileCommand = new RelayCommand(o =>
+            {
+                if (!PolicyService.EnsureWriteAllowed("Редагувати профіль працівника"))
+                    return;
+
+                IsEditMode = true;
+            });
             SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync());
             CancelEditCommand = new RelayCommand(o => CancelEdit());
 
@@ -775,6 +781,9 @@ namespace Win11DesktopApp.ViewModels
 
             AddCustomDocCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Додати підписаний документ"))
+                    return;
+
                 NewCustomDocName = string.Empty;
                 NewCustomDocSignDate = DateTime.Today.ToString("dd.MM.yyyy");
                 NewCustomDocExpiryDate = string.Empty;
@@ -865,6 +874,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task ConfirmExtendAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("Продовжити документ"))
+                return;
+
             if (string.IsNullOrWhiteSpace(NewExpiryDate))
             {
                 StatusMessage = Res("MsgEnterNewDate");
@@ -923,6 +935,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task ConfirmArchiveAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("Архівувати працівника"))
+                return;
+
             if (string.IsNullOrWhiteSpace(ArchiveEndDate))
             {
                 ArchiveStatus = Res("MsgEnterArchiveDate");
@@ -999,6 +1014,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task SaveProfileAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("Зберегти профіль працівника"))
+                return;
+
             try
             {
                 SetBusyState(true, Res("EditorSaving") ?? "Збереження...");
@@ -1049,6 +1067,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task ReplaceDocumentAsync(string type)
         {
+            if (!PolicyService.EnsureWriteAllowed("Оновити документ працівника"))
+                return;
+
             try
             {
                 SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
@@ -1551,6 +1572,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task ConfirmRenewWorkPermitAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("Оновити дозвіл на роботу"))
+                return;
+
             if (string.IsNullOrWhiteSpace(RenewWpFilePath) || !File.Exists(RenewWpFilePath))
             {
                 StatusMessage = Res("MsgFileNotFound");
@@ -1796,6 +1820,9 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         private async Task ConfirmAddCustomDocAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("Додати підписаний документ"))
+                return;
+
             AddCustomDocError = string.Empty;
 
             if (string.IsNullOrWhiteSpace(NewCustomDocName))
@@ -1879,6 +1906,9 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         private async Task DeleteCustomDocAsync(CustomSignedDocument doc)
         {
+            if (!PolicyService.EnsureWriteAllowed("Видалити підписаний документ"))
+                return;
+
             var docs = Data.CustomDocuments;
             if (docs == null)
                 return;

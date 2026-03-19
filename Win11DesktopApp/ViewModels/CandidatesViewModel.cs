@@ -111,6 +111,9 @@ namespace Win11DesktopApp.ViewModels
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             AddCandidateCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Додати кандидата"))
+                    return;
+
                 AddCandidateVm = new AddCandidateViewModel();
                 AddCandidateVm.RequestClose += () =>
                 {

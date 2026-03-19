@@ -271,6 +271,9 @@ namespace Win11DesktopApp.ViewModels
                 try
                 {
                     if (_company == null) return;
+                    if (!PolicyService.EnsureWriteAllowed("Додати працівника"))
+                        return;
+
                     CleanupAddEmployeeVm();
                     AddEmployeeVm = new AddEmployeeWizardViewModel(_company);
                     AddEmployeeVm.RequestClose += OnAddEmployeeClose;
@@ -501,6 +504,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void EditEmployee(EmployeeModels.EmployeeSummary? employee)
         {
+            if (!PolicyService.EnsureWriteAllowed("Редагувати працівника"))
+                return;
             if (employee == null || _company == null) return;
             CleanupDetailsVm();
             EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService);
@@ -513,6 +518,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void AskDeleteEmployee(EmployeeModels.EmployeeSummary? employee)
         {
+            if (!PolicyService.EnsureWriteAllowed("Видалити працівника"))
+                return;
             if (employee == null) return;
             EmployeeToDelete = employee;
             IsDeleteConfirmOpen = true;
@@ -520,6 +527,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void ConfirmDelete()
         {
+            if (!PolicyService.EnsureWriteAllowed("Видалити працівника"))
+                return;
             if (EmployeeToDelete == null) return;
             Debug.WriteLine($"EmployeesViewModel.ConfirmDelete: Deleting employee '{EmployeeToDelete.FullName}' from folder '{EmployeeToDelete.EmployeeFolder}'");
             _employeeService.DeleteEmployee(EmployeeToDelete.EmployeeFolder);
@@ -560,6 +569,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void ExportToExcel()
         {
+            if (!PolicyService.EnsureExportsAllowed("Експорт працівників в Excel"))
+                return;
             if (_company == null) return;
             try
             {
@@ -649,6 +660,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void OpenBatchGenerate()
         {
+            if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
+                return;
             if (_company == null) return;
             var selected = Employees.Where(e => e.IsSelected).ToList();
             if (selected.Count == 0) return;
@@ -661,6 +674,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void BatchGenerate(TemplateEntry? template)
         {
+            if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
+                return;
             if (template == null || _company == null) return;
             if (App.DocumentGenerationService == null) return;
             try

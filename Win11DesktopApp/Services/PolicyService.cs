@@ -101,11 +101,12 @@ namespace Win11DesktopApp.Services
 
         public static bool IsFeatureVisible(string featureId)
         {
+            var settings = App.AppSettingsService?.Settings;
             return featureId switch
             {
-                "templates" => !CurrentPolicy.HideTemplates,
-                "finances" => !CurrentPolicy.HideFinance,
-                "aichat" => !CurrentPolicy.DisableAI,
+                "templates" => !CurrentPolicy.HideTemplates && !(settings?.AdminHideTemplates ?? false),
+                "finances" => !CurrentPolicy.HideFinance && !(settings?.AdminHideFinance ?? false),
+                "aichat" => !CurrentPolicy.DisableAI && !(settings?.AdminDisableAI ?? false),
                 _ => true
             };
         }

@@ -14,7 +14,8 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.24";
+        public const string CurrentAppVersion = "0.1.26";
+        private readonly bool _suppressStartupNotifications;
         private string _settingsPath;
         private string _backupPath;
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { WriteIndented = true };
@@ -87,9 +88,12 @@ namespace Win11DesktopApp.Services
         }
 
         public AppSettings Settings { get; private set; } = new AppSettings();
+        public bool WasRecoveredFromBackupOnLoad { get; private set; }
+        public bool WasResetToDefaultsOnLoad { get; private set; }
 
-        public AppSettingsService()
+        public AppSettingsService(bool suppressStartupNotifications = false)
         {
+            _suppressStartupNotifications = suppressStartupNotifications;
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var appFolder = Path.Combine(appData, "AgencyContractor");
             Directory.CreateDirectory(appFolder);
@@ -117,8 +121,9 @@ namespace Win11DesktopApp.Services
                         return;
 
                     Settings = new AppSettings();
+                    WasResetToDefaultsOnLoad = true;
                     shouldPersistDefaults = true;
-                    NotifyWarning(Res("MsgSettingsResetToDefaults"));
+                    NotifyStartupWarning(Res("MsgSettingsResetToDefaults"));
                 }
             }
             else
@@ -146,8 +151,9 @@ namespace Win11DesktopApp.Services
             {
                 if (!File.Exists(_backupPath)) return false;
                 Settings = SafeFileService.ReadJsonOrDefault(_backupPath, new AppSettings(), _jsonOptions, Encoding.UTF8);
+                WasRecoveredFromBackupOnLoad = true;
                 LoggingService.LogWarning("AppSettingsService", "Restored settings from backup");
-                NotifyWarning(Res("MsgSettingsRecoveredFromBackup"));
+                NotifyStartupWarning(Res("MsgSettingsRecoveredFromBackup"));
                 _ = SaveSettingsImmediate();
                 return true;
             }
@@ -183,6 +189,14 @@ namespace Win11DesktopApp.Services
 
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
+
+        private void NotifyStartupWarning(string message)
+        {
+            if (_suppressStartupNotifications)
+                return;
+
+            NotifyWarning(message);
+        }
 
         private static void NotifyWarning(string message)
         {

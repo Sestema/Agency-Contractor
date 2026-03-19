@@ -145,6 +145,9 @@
     <sys:String x:Key="MsgSettingsResetToDefaults">The settings file is damaged and the backup could not be restored. Default settings are being used.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">The finance data file was damaged or missing. Finance data was restored from backup.</sys:String>
     <sys:String x:Key="MsgFinanceResetToDefaults">The finance data file is damaged and the backup could not be restored. An empty finance database is being used.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecovered">Some data was automatically recovered during startup.</sys:String>
+    <sys:String x:Key="MsgStartupHealthWarnings">Data issues were found during startup. Details were written to error.log.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecoveredAndWarnings">Some data was recovered during startup, and additional issues were written to error.log.</sys:String>
     <sys:String x:Key="MsgLicenseBlocked">License is blocked. Contact the administrator.</sys:String>
     <sys:String x:Key="MsgEditorOpenError">Could not open editor:
 {0}</sys:String>
@@ -1064,6 +1067,18 @@
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. All rights reserved.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">This software is proprietary and confidential. Unauthorized copying, distribution, or modification is strictly prohibited.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">License</sys:String>
+    <sys:String x:Key="SettingsAccessTitle">Access status</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Trial active</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">{0} days left, until {1}</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Application activated</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Unlimited access is active.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Read-only mode</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">The trial period ended. Full access requires activation.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedTitle">Access blocked</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">This client was blocked by the administrator.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Access status unknown</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Could not determine the current access state.</sys:String>
+    <sys:String x:Key="AccessStatusAdminMessageLabel">Administrator message</sys:String>
     <sys:String x:Key="LicenseNotActivated">Not activated</sys:String>
     <sys:String x:Key="LicenseOtherPC">License for another PC</sys:String>
     <sys:String x:Key="LicenseDamaged">License is damaged</sys:String>

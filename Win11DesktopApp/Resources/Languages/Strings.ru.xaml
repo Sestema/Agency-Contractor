@@ -145,6 +145,9 @@
     <sys:String x:Key="MsgSettingsResetToDefaults">Файл настроек поврежден, а резервную копию восстановить не удалось. Используются настройки по умолчанию.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">Файл финансовых данных был поврежден или отсутствовал. Данные финансов восстановлены из резервной копии.</sys:String>
     <sys:String x:Key="MsgFinanceResetToDefaults">Файл финансовых данных поврежден, а резервную копию восстановить не удалось. Используется пустая база финансов.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecovered">Во время запуска часть данных была автоматически восстановлена.</sys:String>
+    <sys:String x:Key="MsgStartupHealthWarnings">Во время запуска обнаружены проблемы с данными. Подробности записаны в error.log.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecoveredAndWarnings">Во время запуска часть данных была восстановлена, а другие проблемы записаны в error.log.</sys:String>
     <sys:String x:Key="MsgLicenseBlocked">Лицензия заблокирована. Обратитесь к администратору.</sys:String>
     <sys:String x:Key="MsgEditorOpenError">Не удалось открыть редактор:
 {0}</sys:String>
@@ -1061,6 +1064,18 @@
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. Все права защищены.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">Данное программное обеспечение является собственностью автора. Несанкционированное копирование, распространение или модификация строго запрещены.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Лицензия</sys:String>
+    <sys:String x:Key="SettingsAccessTitle">Статус доступа</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Пробный период активен</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">Осталось {0} дн., до {1}</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Приложение активировано</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Бессрочный доступ активен.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Режим просмотра</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Пробный период завершился. Для полного доступа нужна активация.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedTitle">Доступ заблокирован</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">Этот клиент заблокирован администратором.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Статус доступа неизвестен</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Не удалось определить текущее состояние доступа.</sys:String>
+    <sys:String x:Key="AccessStatusAdminMessageLabel">Сообщение администратора</sys:String>
     <sys:String x:Key="LicenseNotActivated">Не активировано</sys:String>
     <sys:String x:Key="LicenseOtherPC">Лицензия для другого ПК</sys:String>
     <sys:String x:Key="LicenseDamaged">Лицензия повреждена</sys:String>

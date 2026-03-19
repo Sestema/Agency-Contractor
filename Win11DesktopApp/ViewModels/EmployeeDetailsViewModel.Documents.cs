@@ -17,6 +17,9 @@ namespace Win11DesktopApp.ViewModels
     {
         private void OpenGenerateDialog()
         {
+            if (!PolicyService.EnsureWriteAllowed("Генерація документа"))
+                return;
+
             GenerateStatusMessage = string.Empty;
             var templates = App.TemplateService?.GetTemplates(_firmName);
             AvailableTemplates = new ObservableCollection<TemplateEntry>(templates ?? new List<TemplateEntry>());
@@ -25,6 +28,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void GenerateDocument(TemplateEntry? template)
         {
+            if (!PolicyService.EnsureWriteAllowed("Генерація документа"))
+                return;
             if (template == null) return;
             if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.GenerateDocument", notifyUser: true))
             {
@@ -136,6 +141,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ExportProfilePdf()
         {
+            if (!PolicyService.EnsureExportsAllowed("Експорт профілю в PDF"))
+                return;
+
             var dlg = new SaveFileDialog
             {
                 Filter = "PDF|*.pdf",

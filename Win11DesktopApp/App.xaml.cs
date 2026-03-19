@@ -34,6 +34,7 @@ namespace Win11DesktopApp
         public static NewsService NewsService { get; private set; } = null!;
         public static ProfileAuthService ProfileAuthService { get; private set; } = null!;
         public static ProfileSessionService ProfileSessionService { get; private set; } = null!;
+        public static AccessStatusService AccessStatusService { get; private set; } = null!;
         public static ClientProfileRecord? CurrentProfile { get; private set; }
 
         public static void SetCurrentProfile(ClientProfileRecord? profile)
@@ -80,7 +81,8 @@ namespace Win11DesktopApp
             NavigationService = new NavigationService();
             ThemeService = new ThemeService();
             LanguageService = new LanguageService();
-            AppSettingsService = new AppSettingsService();
+            AppSettingsService = new AppSettingsService(suppressStartupNotifications: true);
+            AccessStatusService = new AccessStatusService();
             FolderService = new FolderService(AppSettingsService);
 
             if (!string.IsNullOrEmpty(FolderService.RootPath))
@@ -89,12 +91,16 @@ namespace Win11DesktopApp
             LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
 
             PersistenceService = new PersistenceService(AppSettingsService, FolderService);
+            var startupIntegrityService = new StartupIntegrityService(FolderService, PersistenceService);
+            startupIntegrityService.IncludeSettingsStartupState(AppSettingsService);
+            startupIntegrityService.RunQuickCheck();
             TagCatalogService = new TagCatalogService();
             CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
             TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
             StarterTemplateCatalogService = new StarterTemplateCatalogService();
             EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService);
-            FinanceService = new FinanceService(FolderService);
+            FinanceService = new FinanceService(FolderService, suppressStartupNotifications: true);
+            startupIntegrityService.IncludeFinanceStartupState(FinanceService);
             ActivityLogService = new ActivityLogService(FolderService);
             CandidateService = new CandidateService(FolderService);
             GeminiApiService = new GeminiApiService();
@@ -137,26 +143,15 @@ namespace Win11DesktopApp
                 Debugger.IsAttached;
 #endif
 
-            if (!skipLicenseGate && !LicenseService.IsLicenseValid())
-            {
-                var licenseWindow = new Views.LicenseWindow();
-                MainWindow = licenseWindow;
-                var licenseAccepted = licenseWindow.ShowDialog() == true && licenseWindow.IsActivated;
-                MainWindow = null;
-
-                if (!licenseAccepted)
-                {
-                    Shutdown();
-                    return;
-                }
-            }
-
-            var startupClientTask = TelemetryService.EnsureStartupClientIdAsync();
+            var hasValidLocalLicense = LicenseService.IsLicenseValid();
+            var startupClientTask = TelemetryService.GetStartupAccessStateAsync();
+            var startupAccess = new ClientAccessState();
             string? startupClientId = null;
             var startupTelemetryCompleted = await Task.WhenAny(startupClientTask, Task.Delay(3500)) == startupClientTask;
             if (startupTelemetryCompleted)
             {
-                startupClientId = await startupClientTask;
+                startupAccess = await startupClientTask;
+                startupClientId = startupAccess.ClientId;
             }
             else
             {
@@ -234,6 +229,62 @@ namespace Win11DesktopApp
                     "Client ID unavailable during startup. Continuing without profile gate.");
             }
 
+            if (startupAccess.IsBlocked)
+            {
+                MessageBox.Show(
+                    "Доступ до програми заблоковано адміністратором.",
+                    "Agency Contractor",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                Shutdown();
+                return;
+            }
+
+            var startupPolicy = !string.IsNullOrWhiteSpace(startupClientId)
+                ? await PolicyService.FetchPolicyAsync(startupClientId)
+                : null;
+
+            var isRemoteTrialExpired = !hasValidLocalLicense && startupAccess.IsExpired;
+            if (isRemoteTrialExpired)
+            {
+                startupPolicy ??= new RemotePolicy
+                {
+                    ClientId = startupClientId ?? string.Empty
+                };
+
+                startupPolicy.ReadOnlyMode = true;
+                startupPolicy.DisableAI = true;
+                startupPolicy.DisableExports = true;
+                startupPolicy.HideTemplates = true;
+                startupPolicy.HideFinance = true;
+
+                if (string.IsNullOrWhiteSpace(startupPolicy.AdminMessage))
+                {
+                    startupPolicy.AdminMessage =
+                        "Пробний період завершився. Доступ переведено в режим перегляду до активації через AdminPanel.";
+                }
+            }
+
+            await PolicyService.ApplyPolicyAsync(startupPolicy);
+
+            if (!skipLicenseGate && !hasValidLocalLicense && !startupAccess.HasRemoteAccessWindow && !isRemoteTrialExpired)
+            {
+                var licenseWindow = new Views.LicenseWindow();
+                MainWindow = licenseWindow;
+                var licenseAccepted = licenseWindow.ShowDialog() == true && licenseWindow.IsActivated;
+                MainWindow = null;
+
+                if (!licenseAccepted)
+                {
+                    Shutdown();
+                    return;
+                }
+
+                hasValidLocalLicense = LicenseService.IsLicenseValid();
+            }
+
+            AccessStatusService.Initialize(hasValidLocalLicense, startupAccess, startupPolicy);
+
             NavigationService.NavigateTo(new MainViewModel());
             
             var mainWindow = new MainWindow
@@ -243,6 +294,14 @@ namespace Win11DesktopApp
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+
+            if (isRemoteTrialExpired)
+            {
+                ToastService.Instance.Warning(
+                    "Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel.");
+            }
+
+            _ = Task.Run(() => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies));
         }
     }
 }

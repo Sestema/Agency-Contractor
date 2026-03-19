@@ -93,20 +93,10 @@ namespace Win11DesktopApp.Services
                 }
 
                 var encryptedData = Encrypt(json);
-                var tempPath = dbPath + ".tmp";
-                RetryHelper.Execute(() =>
-                {
-                    File.WriteAllBytes(tempPath, encryptedData);
-                    File.Move(tempPath, dbPath, true);
-                });
+                SafeFileService.WriteBytesAtomic(dbPath, encryptedData);
 
                 var checksum = ComputeHash(encryptedData);
-                var checksumTemp = _folderService.DatabaseChecksumPath + ".tmp";
-                RetryHelper.Execute(() =>
-                {
-                    File.WriteAllText(checksumTemp, checksum, Encoding.UTF8);
-                    File.Move(checksumTemp, _folderService.DatabaseChecksumPath, true);
-                });
+                SafeFileService.WriteTextAtomic(_folderService.DatabaseChecksumPath, checksum, Encoding.UTF8);
             }
             catch (Exception ex)
             {
@@ -137,24 +127,40 @@ namespace Win11DesktopApp.Services
                 try
                 {
                     var encryptedData = File.ReadAllBytes(dbPath);
+                    var currentChecksum = ComputeHash(encryptedData);
 
                     // Verify integrity
                     var checksumPath = _folderService.DatabaseChecksumPath;
                     if (File.Exists(checksumPath))
                     {
-                        var storedChecksum = File.ReadAllText(checksumPath, Encoding.UTF8);
-                        var currentChecksum = ComputeHash(encryptedData);
+                        var storedChecksum = File.ReadAllText(checksumPath, Encoding.UTF8).Trim();
                         if (storedChecksum != currentChecksum)
                         {
-                            Debug.WriteLine("PersistenceService: database.json integrity check failed, attempting backup restore...");
-                            return TryRestoreFromBackup();
+                            Debug.WriteLine("PersistenceService: database.json checksum mismatch detected, validating current file...");
                         }
+                    }
+                    else
+                    {
+                        SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
+                        LoggingService.LogWarning("PersistenceService.LoadDatabase",
+                            "database.json.sha256 was missing and has been recreated.");
                     }
 
                     var json = Decrypt(encryptedData);
                     var db = JsonSerializer.Deserialize<DatabaseRoot>(json);
                     if (db != null)
                     {
+                        if (File.Exists(checksumPath))
+                        {
+                            var storedChecksum = File.ReadAllText(checksumPath, Encoding.UTF8).Trim();
+                            if (!string.Equals(storedChecksum, currentChecksum, StringComparison.Ordinal))
+                            {
+                                SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
+                                LoggingService.LogWarning("PersistenceService.LoadDatabase",
+                                    "database.json checksum was stale and has been refreshed from the current valid file.");
+                            }
+                        }
+
                         Debug.WriteLine($"PersistenceService.LoadDatabase: loaded {db.Companies.Count} companies (v{db.Version})");
                         return db;
                     }
@@ -212,7 +218,7 @@ namespace Win11DesktopApp.Services
                 Debug.WriteLine($"PersistenceService: migrating {oldCompanies.Count} companies from old format");
 
                 // 3. Migrate folder structure for each company
-                var langCode = _appSettingsService.Settings.LanguageCode ?? "uk";
+                var langCode = _folderService.FolderLanguageCode;
                 foreach (var company in oldCompanies)
                 {
                     MigrateCompanyFolders(rootPath, company.Name, langCode);
@@ -390,27 +396,35 @@ namespace Win11DesktopApp.Services
                 var indexPath = Path.Combine(templatesFolder, "index.json");
                 if (!File.Exists(indexPath)) return;
 
-                var json = File.ReadAllText(indexPath, Encoding.UTF8);
                 var currentFolderName = Path.GetFileName(templatesFolder);
-
-                // Replace old "Templates/" prefix with current folder name
+                var index = SafeFileService.ReadJsonOrDefault(indexPath, new List<TemplateIndexEntry>());
                 bool changed = false;
-                if (currentFolderName != "Templates" && json.Contains("\"Templates/"))
+
+                foreach (var entry in index)
                 {
-                    json = json.Replace("\"Templates/", $"\"{currentFolderName}/");
-                    changed = true;
-                }
-                else if (currentFolderName != "Шаблони" && json.Contains("\"Шаблони/"))
-                {
-                    json = json.Replace("\"Шаблони/", $"\"{currentFolderName}/");
+                    var parts = (entry.Path ?? string.Empty)
+                        .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parts.Length == 0)
+                        continue;
+
+                    if (!FolderNames.AllTemplatesFolderNames.Contains(parts[0], StringComparer.OrdinalIgnoreCase))
+                        continue;
+
+                    parts[0] = currentFolderName;
+                    var normalizedPath = Path.Combine(parts);
+                    if (string.Equals(entry.Path, normalizedPath, StringComparison.Ordinal))
+                        continue;
+
+                    entry.Path = normalizedPath;
                     changed = true;
                 }
 
-                if (changed)
-                {
-                    File.WriteAllText(indexPath, json, Encoding.UTF8);
-                    Debug.WriteLine($"Migration: updated template index paths in {indexPath}");
-                }
+                if (!changed)
+                    return;
+
+                SafeFileService.WriteJsonAtomic(indexPath, index, encoding: Encoding.UTF8);
+                Debug.WriteLine($"Migration: updated template index paths in {indexPath}");
             }
             catch (Exception ex)
             {

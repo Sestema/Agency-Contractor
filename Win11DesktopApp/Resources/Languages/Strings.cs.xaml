@@ -145,6 +145,9 @@
     <sys:String x:Key="MsgSettingsResetToDefaults">Soubor nastavení je poškozený a zálohu se nepodařilo obnovit. Použije se výchozí nastavení.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">Soubor financí byl poškozen nebo chyběl. Finanční data byla obnovena ze zálohy.</sys:String>
     <sys:String x:Key="MsgFinanceResetToDefaults">Soubor financí je poškozený a zálohu se nepodařilo obnovit. Použije se prázdná databáze financí.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecovered">Během spuštění byla část dat automaticky obnovena.</sys:String>
+    <sys:String x:Key="MsgStartupHealthWarnings">Během spuštění byly nalezeny problémy s daty. Podrobnosti byly zapsány do error.log.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecoveredAndWarnings">Během spuštění byla část dat obnovena a další problémy byly zapsány do error.log.</sys:String>
     <sys:String x:Key="MsgLicenseBlocked">Licence je zablokována. Kontaktujte administrátora.</sys:String>
     <sys:String x:Key="MsgEditorOpenError">Nepodařilo se otevřít editor:
 {0}</sys:String>
@@ -1061,6 +1064,18 @@
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. Všechna práva vyhrazena.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">Tento software je vlastnictvím autora. Neoprávněné kopírování, šíření nebo úpravy jsou přísně zakázány.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Licence</sys:String>
+    <sys:String x:Key="SettingsAccessTitle">Stav přístupu</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Zkušební období je aktivní</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">Zbývá {0} dní, do {1}</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Aplikace je aktivována</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Neomezený přístup je aktivní.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Režim pouze pro čtení</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Zkušební období skončilo. Plný přístup vyžaduje aktivaci.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedTitle">Přístup zablokován</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">Tento klient byl zablokován administrátorem.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Stav přístupu neznámý</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Nepodařilo se určit aktuální stav přístupu.</sys:String>
+    <sys:String x:Key="AccessStatusAdminMessageLabel">Zpráva administrátora</sys:String>
     <sys:String x:Key="LicenseNotActivated">Neaktivováno</sys:String>
     <sys:String x:Key="LicenseOtherPC">Licence pro jiný počítač</sys:String>
     <sys:String x:Key="LicenseDamaged">Licence je poškozená</sys:String>

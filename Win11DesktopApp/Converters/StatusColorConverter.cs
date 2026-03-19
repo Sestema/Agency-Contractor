@@ -71,7 +71,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotSupportedException();
+            => Binding.DoNothing;
     }
 
     /// <summary>
@@ -97,7 +97,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ namespace Win11DesktopApp.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             => _inner.Convert(value, targetType, "Background", culture);
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ namespace Win11DesktopApp.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             => _inner.Convert(value, targetType, "Background", culture);
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     public class IntToVisibilityConverter : IValueConverter
@@ -159,7 +159,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     public class RatioToWidthConverter : IMultiValueConverter
@@ -174,7 +174,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Array.ConvertAll<Type, object>(targetTypes, _ => Binding.DoNothing);
     }
 
     public class NameToColorConverter : IValueConverter
@@ -195,7 +195,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     public class IconKeyToGeometryConverter : IValueConverter
@@ -208,7 +208,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     public class ResourceKeyConverter : IValueConverter
@@ -221,7 +221,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     public class FirstCharConverter : IValueConverter
@@ -233,7 +233,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 
     public class HexToBrushConverter : IValueConverter
@@ -256,6 +256,6 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => Binding.DoNothing;
     }
 }

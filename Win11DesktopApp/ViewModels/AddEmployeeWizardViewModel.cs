@@ -961,6 +961,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task SaveEmployeeAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("Зберегти працівника"))
+                return;
+
             if (string.IsNullOrWhiteSpace(Data.FirstName) || string.IsNullOrWhiteSpace(Data.LastName))
             {
                 ToastService.Instance.Warning(Res("MsgFillRequiredFields"));

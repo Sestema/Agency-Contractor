@@ -11,15 +11,19 @@ namespace Win11DesktopApp.Services
     public class FinanceService
     {
         private const string FinanceFileName = "finance_data.json";
+        private readonly bool _suppressStartupNotifications;
         private readonly string _filePath;
         private FinanceDatabase _db;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         public const string GlobalKey = "__GLOBAL__";
         public const string AllFirmsKey = "__ALL__";
+        public bool WasRecoveredFromBackupOnLoad { get; private set; }
+        public bool WasResetToDefaultsOnLoad { get; private set; }
 
-        public FinanceService(FolderService folderService)
+        public FinanceService(FolderService folderService, bool suppressStartupNotifications = false)
         {
+            _suppressStartupNotifications = suppressStartupNotifications;
             var rootPath = folderService.RootPath;
             if (!string.IsNullOrEmpty(rootPath))
             {
@@ -95,7 +99,8 @@ namespace Win11DesktopApp.Services
                 if (TryRestoreFromBackup(out var restoredFromBackup))
                     return restoredFromBackup;
 
-                NotifyWarning(Res("MsgFinanceResetToDefaults"));
+                WasResetToDefaultsOnLoad = true;
+                NotifyStartupWarning(Res("MsgFinanceResetToDefaults"));
                 return new FinanceDatabase();
             }
         }
@@ -215,9 +220,10 @@ namespace Win11DesktopApp.Services
                     return false;
 
                 database = ReadJsonOrDefault(backupPath, new FinanceDatabase());
+                WasRecoveredFromBackupOnLoad = true;
                 WriteJsonAtomic(_filePath, database);
                 LoggingService.LogWarning("FinanceService", $"Restored finance data from backup: {backupPath}");
-                NotifyWarning(Res("MsgFinanceRecoveredFromBackup"));
+                NotifyStartupWarning(Res("MsgFinanceRecoveredFromBackup"));
                 return true;
             }
             catch (Exception ex)
@@ -277,6 +283,14 @@ namespace Win11DesktopApp.Services
 
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
+
+        private void NotifyStartupWarning(string message)
+        {
+            if (_suppressStartupNotifications)
+                return;
+
+            NotifyWarning(message);
+        }
 
         private static void NotifyWarning(string message)
         {

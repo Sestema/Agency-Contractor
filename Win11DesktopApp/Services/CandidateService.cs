@@ -84,10 +84,7 @@ namespace Win11DesktopApp.Services
             {
                 Directory.CreateDirectory(candidateFolder);
                 var path = Path.Combine(candidateFolder, "candidate.json");
-                var json = JsonSerializer.Serialize(data, _json);
-                var tmp = path + ".tmp";
-                File.WriteAllText(tmp, json);
-                File.Move(tmp, path, true);
+                SafeFileService.WriteJsonAtomic(path, data, _json);
                 return true;
             }
             catch (Exception ex)

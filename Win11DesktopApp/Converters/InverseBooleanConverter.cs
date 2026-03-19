@@ -33,7 +33,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotSupportedException();
+            => Binding.DoNothing;
     }
 
     public class ExpiryWarningToColorConverter : IValueConverter
@@ -50,7 +50,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotSupportedException();
+            => Binding.DoNothing;
     }
 
     public class ExpiryWarningToBgConverter : IValueConverter
@@ -67,7 +67,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotSupportedException();
+            => Binding.DoNothing;
     }
 
     public class ExpiryWarningToVisConverter : IValueConverter
@@ -79,7 +79,7 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotSupportedException();
+            => Binding.DoNothing;
     }
 
     public class StringEqualConverter : IValueConverter
@@ -112,6 +112,6 @@ namespace Win11DesktopApp.Converters
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => throw new NotSupportedException();
+            => Binding.DoNothing;
     }
 }

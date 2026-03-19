@@ -393,7 +393,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-            => throw new NotImplementedException();
+            => System.Windows.Data.Binding.DoNothing;
     }
 
     public class EqualityConverter : IMultiValueConverter
@@ -409,6 +409,6 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, System.Globalization.CultureInfo culture)
-            => throw new NotImplementedException();
+            => Array.ConvertAll<Type, object>(targetTypes, _ => System.Windows.Data.Binding.DoNothing);
     }
 }

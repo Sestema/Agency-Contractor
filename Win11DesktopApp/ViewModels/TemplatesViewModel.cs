@@ -136,6 +136,9 @@ namespace Win11DesktopApp.ViewModels
 
             AddTemplateCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Додати шаблон"))
+                    return;
+
                 CleanupAddTemplateVm();
                 AddTemplateVm = new AddTemplateViewModel(_firmName);
                 AddTemplateVm.RequestClose += OnAddTemplateClose;
@@ -144,6 +147,9 @@ namespace Win11DesktopApp.ViewModels
 
             EditTemplateCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Редагувати шаблон"))
+                    return;
+
                 if (o is TemplateEntry template)
                 {
                     var fullPath = _templateService.GetTemplateFullPath(_firmName, template.FilePath);
@@ -188,6 +194,9 @@ namespace Win11DesktopApp.ViewModels
 
             DeleteTemplateCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Видалити шаблон"))
+                    return;
+
                 if (o is TemplateEntry template)
                 {
                     var msgFormat = GetString("MsgConfirmDeleteTemplate") ?? "Ви впевнені, що хочете видалити шаблон '{0}'?";
@@ -224,6 +233,9 @@ namespace Win11DesktopApp.ViewModels
 
             RenameTemplateCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Перейменувати шаблон"))
+                    return;
+
                 if (o is TemplateEntry template)
                 {
                     _renamingTemplate = template;
@@ -234,6 +246,9 @@ namespace Win11DesktopApp.ViewModels
 
             ConfirmRenameCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Перейменувати шаблон"))
+                    return;
+
                 if (_renamingTemplate == null || string.IsNullOrWhiteSpace(RenameText)) return;
                 var newName = RenameText.Trim();
                 if (newName == _renamingTemplate.Name)
@@ -265,6 +280,9 @@ namespace Win11DesktopApp.ViewModels
 
             CopyTemplateToCompanyCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Копіювати шаблон"))
+                    return;
+
                 if (o is not TemplateEntry template)
                     return;
 
@@ -292,6 +310,9 @@ namespace Win11DesktopApp.ViewModels
 
             ConfirmCopyTemplateCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Копіювати шаблон"))
+                    return;
+
                 if (_copyingTemplate == null)
                 {
                     IsCopyDialogOpen = false;

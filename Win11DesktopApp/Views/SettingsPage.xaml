@@ -999,11 +999,33 @@
                             <StackPanel>
                                 <TextBlock Text="{DynamicResource AIGeminiApiKey}" FontSize="{DynamicResource FS12}"
                                            Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,6"/>
-                                <TextBox Text="{Binding GeminiApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                         FontSize="{DynamicResource FS12}" Padding="8,6"
-                                         Background="{DynamicResource ContentBackgroundBrush}"
-                                         Foreground="{DynamicResource ForegroundBrush}"
-                                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
+                                <Grid>
+                                    <Border Visibility="{Binding ShowMaskedGeminiApiKey, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Background="{DynamicResource ContentBackgroundBrush}"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="8,6"
+                                            Cursor="IBeam"
+                                            MouseLeftButtonDown="GeminiApiKeyMaskedBorder_OnMouseLeftButtonDown">
+                                        <TextBlock Text="{Binding GeminiApiKeyMaskedDisplay}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                    </Border>
+
+                                    <PasswordBox x:Name="GeminiApiKeyPasswordBox"
+                                                 Visibility="{Binding ShowGeminiApiKeyEditor, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                 FontSize="{DynamicResource FS12}"
+                                                 Padding="8,6"
+                                                 Background="{DynamicResource ContentBackgroundBrush}"
+                                                 Foreground="{DynamicResource ForegroundBrush}"
+                                                 BorderBrush="{DynamicResource CardBorderBrush}"
+                                                 BorderThickness="1"
+                                                 ContextMenu="{x:Null}"
+                                                 PasswordChanged="GeminiApiKeyPasswordBox_OnPasswordChanged"
+                                                 LostFocus="GeminiApiKeyPasswordBox_OnLostFocus"
+                                                 PreviewKeyDown="GeminiApiKeyPasswordBox_OnPreviewKeyDown"/>
+                                </Grid>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                                     <Button Command="{Binding TestGeminiCommand}"
@@ -1285,13 +1307,19 @@
                                                    Foreground="#388E3C" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{DynamicResource SettingsLicenseTitle}"
+                                        <TextBlock Text="{DynamicResource SettingsAccessTitle}"
                                                    FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource ForegroundBrush}"/>
-                                        <TextBlock Text="{Binding LicenseStatus}"
+                                        <TextBlock Text="{Binding AccessStatusTitle}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   Margin="0,2,0,0"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding AccessStatusDetail}"
                                                    FontSize="{DynamicResource FS11}"
                                                    Foreground="{DynamicResource MutedForegroundBrush}"
-                                                   Margin="0,2,0,0"
+                                                   Margin="0,4,0,0"
                                                    TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -1299,10 +1327,29 @@
                                 <Border Background="{DynamicResource WindowBackgroundBrush}"
                                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                         CornerRadius="8" Padding="10,8">
-                                    <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}">
-                                        <Run Text="ID: "/>
-                                        <Run Text="{Binding MachineId, Mode=OneWay}"/>
-                                    </TextBlock>
+                                    <StackPanel>
+                                        <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                            <Run Text="ID: "/>
+                                            <Run Text="{Binding MachineId, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <Border Margin="0,8,0,0"
+                                                Padding="8,6"
+                                                CornerRadius="6"
+                                                Background="{DynamicResource CardBackgroundBrush}"
+                                                Visibility="{Binding HasAccessStatusAdminMessage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="{DynamicResource AccessStatusAdminMessageLabel}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                <TextBlock Text="{Binding AccessStatusAdminMessage}"
+                                                           Margin="0,2,0,0"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </Border>

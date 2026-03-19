@@ -117,6 +117,8 @@ namespace Win11DesktopApp.ViewModels
         private bool _isInitializingProfileFields;
         private bool _isSyncingRememberMe;
         private bool _isProfileEditMode;
+        private bool _isEditingGeminiApiKey;
+        private string _geminiApiKeyDraft = string.Empty;
 
         public string RootFolderPath
         {
@@ -137,7 +139,11 @@ namespace Win11DesktopApp.ViewModels
 
         public string AppVersion => AppSettingsService.CurrentAppVersion;
 
-        public string LicenseStatus => GetLocalizedLicenseStatus();
+        public string AccessStatusTitle => App.AccessStatusService?.Title ?? string.Empty;
+        public string AccessStatusDetail => App.AccessStatusService?.Detail ?? string.Empty;
+        public string AccessStatusAdminMessage => App.AccessStatusService?.AdminMessage ?? string.Empty;
+        public bool HasAccessStatusAdminMessage => App.AccessStatusService?.HasAdminMessage == true;
+        public string AccessStatusSeverity => App.AccessStatusService?.Severity ?? "Info";
         public string MachineId => Services.LicenseService.GetMachineId();
         public bool HasProfile => App.CurrentProfile != null;
         public string ProfileClientId => App.CurrentProfile?.ClientId ?? string.Empty;
@@ -205,31 +211,6 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isProfileEditMode, value);
         }
 
-        private string GetLocalizedLicenseStatus()
-        {
-            try
-            {
-                var daysLeft = Services.LicenseService.GetDaysLeft();
-
-                if (!Services.LicenseService.IsLicenseValid())
-                {
-                    if (daysLeft == -1)
-                        return Res("LicenseNotActivated");
-                    return Res("LicenseExpired");
-                }
-
-                if (daysLeft == 99999)
-                    return Res("LicenseUnlimited");
-
-                var expires = DateTime.Now.AddDays(daysLeft);
-                return $"{Res("LicenseActiveUntil")} {expires:dd.MM.yyyy} ({daysLeft} {Res("LicenseDaysLeft")})";
-            }
-            catch
-            {
-                return Res("LicenseCheckError");
-            }
-        }
-
         public string GeminiApiKey
         {
             get => _appSettingsService.Settings.GeminiApiKey;
@@ -241,9 +222,41 @@ namespace Win11DesktopApp.ViewModels
                     _appSettingsService.SaveSettings();
                     App.GeminiApiService?.SetApiKey(value);
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(HasGeminiApiKey));
+                    OnPropertyChanged(nameof(GeminiApiKeyMaskedDisplay));
+                    OnPropertyChanged(nameof(ShowMaskedGeminiApiKey));
+                    OnPropertyChanged(nameof(ShowGeminiApiKeyEditor));
                     OnPropertyChanged(nameof(IsGeminiConfigured));
+                    CommandManager.InvalidateRequerySuggested();
                 }
             }
+        }
+
+        public bool HasGeminiApiKey => !string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
+
+        public string GeminiApiKeyMaskedDisplay => HasGeminiApiKey ? "************" : string.Empty;
+
+        public bool IsEditingGeminiApiKey
+        {
+            get => _isEditingGeminiApiKey;
+            set
+            {
+                if (!SetProperty(ref _isEditingGeminiApiKey, value))
+                    return;
+
+                OnPropertyChanged(nameof(ShowMaskedGeminiApiKey));
+                OnPropertyChanged(nameof(ShowGeminiApiKeyEditor));
+            }
+        }
+
+        public bool ShowMaskedGeminiApiKey => HasGeminiApiKey && !IsEditingGeminiApiKey;
+
+        public bool ShowGeminiApiKeyEditor => !HasGeminiApiKey || IsEditingGeminiApiKey;
+
+        public string GeminiApiKeyDraft
+        {
+            get => _geminiApiKeyDraft;
+            set => SetProperty(ref _geminiApiKeyDraft, value);
         }
 
         public bool IsGeminiConfigured => App.GeminiApiService?.IsConfigured ?? false;
@@ -325,6 +338,7 @@ namespace Win11DesktopApp.ViewModels
             _currentInterfaceSize = _appSettingsService.Settings.InterfaceSize ?? "Medium";
             _currentTextSize = _appSettingsService.Settings.TextSize ?? "Medium";
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
+            _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
             InitializeProfileFields();
 
             GoBackCommand = new RelayCommand(o =>
@@ -337,7 +351,13 @@ namespace Win11DesktopApp.ViewModels
                 if (param is string code)
                 {
                     LanguageService.SetLanguage(code);
+                    App.AccessStatusService?.RefreshPresentation();
                     CurrentLanguage = code;
+                    OnPropertyChanged(nameof(AccessStatusTitle));
+                    OnPropertyChanged(nameof(AccessStatusDetail));
+                    OnPropertyChanged(nameof(AccessStatusAdminMessage));
+                    OnPropertyChanged(nameof(HasAccessStatusAdminMessage));
+                    OnPropertyChanged(nameof(AccessStatusSeverity));
                 }
             });
 
@@ -546,6 +566,30 @@ namespace Win11DesktopApp.ViewModels
                 }
             }
             return "Light";
+        }
+
+        public void BeginGeminiApiKeyEdit()
+        {
+            GeminiApiKeyDraft = string.Empty;
+            IsEditingGeminiApiKey = true;
+        }
+
+        public void CommitGeminiApiKeyEdit()
+        {
+            var newValue = GeminiApiKeyDraft?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(newValue))
+                GeminiApiKey = newValue;
+
+            GeminiApiKeyDraft = string.Empty;
+            if (HasGeminiApiKey)
+                IsEditingGeminiApiKey = false;
+        }
+
+        public void CancelGeminiApiKeyEdit()
+        {
+            GeminiApiKeyDraft = string.Empty;
+            if (HasGeminiApiKey)
+                IsEditingGeminiApiKey = false;
         }
 
         private void InitializeProfileFields()

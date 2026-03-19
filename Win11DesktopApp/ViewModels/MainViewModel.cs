@@ -185,6 +185,9 @@ namespace Win11DesktopApp.ViewModels
 
             OpenAddCompanyDialogCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed(Res("CompanyDialogTitleAdd") ?? "Додати фірму"))
+                    return;
+
                 CleanupAddCompanyVm();
                 AddCompanyVm = new AddCompanyViewModel();
                 AddCompanyVm.RequestClose += OnAddCompanyClose;
@@ -196,6 +199,9 @@ namespace Win11DesktopApp.ViewModels
             {
                 var company = o as EmployerCompany ?? SelectedCompany;
                 if (company == null) return;
+                if (!PolicyService.EnsureWriteAllowed(Res("CompanyDialogTitleEdit") ?? "Редагувати фірму"))
+                    return;
+
                 CleanupAddCompanyVm();
                 AddCompanyVm = new AddCompanyViewModel(company);
                 AddCompanyVm.RequestClose += OnEditCompanyClose;
@@ -205,10 +211,14 @@ namespace Win11DesktopApp.ViewModels
 
             MoveCompanyUpCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
+                    return;
                 if (o is EmployerCompany c) App.CompanyService?.MoveCompanyUp(c);
             });
             MoveCompanyDownCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
+                    return;
                 if (o is EmployerCompany c) App.CompanyService?.MoveCompanyDown(c);
             });
 
@@ -222,7 +232,10 @@ namespace Win11DesktopApp.ViewModels
                 HasNoSearchResults = false;
             });
 
-            AISearchCommand = new RelayCommand(o => RunAISearch(), o => !IsAISearching && !string.IsNullOrWhiteSpace(SearchQuery));
+            AISearchCommand = new RelayCommand(o => RunAISearch(), o =>
+                !PolicyService.IsAIDisabled &&
+                !IsAISearching &&
+                !string.IsNullOrWhiteSpace(SearchQuery));
 
             NavigateToSearchResultCommand = new RelayCommand(o =>
             {
@@ -318,6 +331,10 @@ namespace Win11DesktopApp.ViewModels
                 }
                 allCards = ordered;
             }
+
+            allCards = allCards
+                .Where(card => PolicyService.IsFeatureVisible(card.Id))
+                .ToList();
 
             MenuCards = new ObservableCollection<MenuCardItem>(allCards);
         }

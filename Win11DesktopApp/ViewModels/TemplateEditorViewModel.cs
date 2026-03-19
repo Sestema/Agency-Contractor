@@ -633,7 +633,11 @@ namespace Win11DesktopApp.ViewModels
                     SafeFileService.WriteBytesAtomic(NativeDocumentPath, xamlPackageContent);
 
                 if (!string.IsNullOrEmpty(rtfContent))
-                    File.WriteAllText(RtfFilePath, rtfContent);
+                {
+                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                    var ansiEncoding = Encoding.GetEncoding(1252);
+                    SafeFileService.WriteTextAtomic(RtfFilePath, rtfContent, ansiEncoding);
+                }
 
                 SavePersistedPageLayout();
                 StatusMessage = Res("EditorSaved");

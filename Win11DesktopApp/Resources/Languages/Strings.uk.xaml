@@ -145,6 +145,9 @@
     <sys:String x:Key="MsgSettingsResetToDefaults">Файл налаштувань пошкоджено, резервну копію не вдалося відновити. Використано стандартні налаштування.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">Файл фінансів було пошкоджено або втрачено. Дані фінансів відновлено з резервної копії.</sys:String>
     <sys:String x:Key="MsgFinanceResetToDefaults">Файл фінансів пошкоджено, резервну копію не вдалося відновити. Використано порожню базу фінансів.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecovered">Під час запуску частину даних було автоматично відновлено.</sys:String>
+    <sys:String x:Key="MsgStartupHealthWarnings">Під час запуску виявлено проблеми з даними. Деталі записано в error.log.</sys:String>
+    <sys:String x:Key="MsgStartupHealthRecoveredAndWarnings">Під час запуску частину даних було відновлено, а інші проблеми записано в error.log.</sys:String>
     <sys:String x:Key="MsgErrorDeleteTemplate">Помилка видалення шаблону: {0}</sys:String>
 
     <!-- Employees Module -->
@@ -1057,6 +1060,18 @@
     <sys:String x:Key="SettingsCopyrightText">© 2026 Oleksandr Kachalin. Всі права захищені.</sys:String>
     <sys:String x:Key="SettingsCopyrightDesc">Це програмне забезпечення є власністю автора. Несанкціоноване копіювання, розповсюдження або модифікація суворо заборонені.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Ліцензія</sys:String>
+    <sys:String x:Key="SettingsAccessTitle">Статус доступу</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Пробний період активний</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">Залишилось {0} дн., до {1}</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Програму активовано</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Безстроковий доступ активний.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Режим перегляду</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Пробний період завершився. Для повного доступу потрібна активація.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedTitle">Доступ заблоковано</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">Цього клієнта заблоковано адміністратором.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Статус доступу невідомий</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Не вдалося визначити поточний стан доступу.</sys:String>
+    <sys:String x:Key="AccessStatusAdminMessageLabel">Повідомлення адміністратора</sys:String>
     <sys:String x:Key="LicenseNotActivated">Не активовано</sys:String>
     <sys:String x:Key="LicenseOtherPC">Ліцензія для іншого ПК</sys:String>
     <sys:String x:Key="LicenseDamaged">Ліцензія пошкоджена</sys:String>

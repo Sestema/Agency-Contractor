@@ -213,7 +213,7 @@
                             Background="#A6E3A1" Foreground="#1E1E2E" Click="BtnUnblock_Click" Margin="0,0,6,0" IsEnabled="False"/>
                     <Button x:Name="BtnBlockIp" Content="🌐 Блокувати IP" Style="{StaticResource ActionBtn}"
                             Background="#FAB387" Foreground="#1E1E2E" Click="BtnBlockIp_Click" Margin="0,0,6,0" IsEnabled="False"/>
-                    <Button x:Name="BtnExtend" Content="📅 Продовжити" Style="{StaticResource ActionBtn}"
+                    <Button x:Name="BtnExtend" Content="📅 Активувати / продовжити" Style="{StaticResource ActionBtn}"
                             Background="#89B4FA" Foreground="#1E1E2E" Click="BtnExtend_Click" Margin="0,0,6,0" IsEnabled="False"/>
                     <Button x:Name="BtnDelete" Content="🗑 Видалити" Style="{StaticResource ActionBtn}"
                             Background="#F38BA8" Click="BtnDelete_Click" Margin="0,0,12,0" IsEnabled="False"/>
@@ -229,7 +229,9 @@
                     <ComboBox x:Name="CmbClientStatus" Width="140" Style="{StaticResource FilterComboBox}"
                               SelectionChanged="ClientFilter_Changed" Margin="0,0,8,0">
                         <ComboBoxItem Tag="all" IsSelected="True">Усі статуси</ComboBoxItem>
-                        <ComboBoxItem Tag="active">Активні</ComboBoxItem>
+                        <ComboBoxItem Tag="trial">Trial</ComboBoxItem>
+                        <ComboBoxItem Tag="activated">Activated</ComboBoxItem>
+                        <ComboBoxItem Tag="readonly">Read-only</ComboBoxItem>
                         <ComboBoxItem Tag="blocked">Заблоковані</ComboBoxItem>
                     </ComboBox>
                     <ComboBox x:Name="CmbLicenseFilter" Width="170" Style="{StaticResource FilterComboBox}"
@@ -337,25 +339,51 @@
                         <DataGridTextColumn Header="Останній вхід" Binding="{Binding LastSeen, StringFormat=dd.MM.yyyy HH:mm}" Width="145"/>
                         <DataGridTextColumn Header="Активовано" Binding="{Binding ActivatedAt, StringFormat=dd.MM.yyyy}" Width="100"/>
                         <DataGridTextColumn Header="Діє до" Binding="{Binding ExpiresAt, StringFormat=dd.MM.yyyy}" Width="100"/>
-                        <DataGridTemplateColumn Header="Статус" Width="100">
+                        <DataGridTemplateColumn Header="Статус доступу" Width="120">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding IsBlocked}" FontWeight="SemiBold" Padding="4,2">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
+                                    <Border Padding="8,3" CornerRadius="12" HorizontalAlignment="Left">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#45475A"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsBlocked}" Value="True">
-                                                        <Setter Property="Text" Value="⛔ Blocked"/>
-                                                        <Setter Property="Foreground" Value="#F38BA8"/>
+                                                    <DataTrigger Binding="{Binding AccessStateCode}" Value="blocked">
+                                                        <Setter Property="Background" Value="#5A2D3D"/>
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsBlocked}" Value="False">
-                                                        <Setter Property="Text" Value="✅ Active"/>
-                                                        <Setter Property="Foreground" Value="#A6E3A1"/>
+                                                    <DataTrigger Binding="{Binding AccessStateCode}" Value="readonly">
+                                                        <Setter Property="Background" Value="#5C4A22"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding AccessStateCode}" Value="trial">
+                                                        <Setter Property="Background" Value="#4E3F20"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding AccessStateCode}" Value="activated">
+                                                        <Setter Property="Background" Value="#21493D"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding AccessStateLabel}" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#CDD6F4"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AccessStateCode}" Value="blocked">
+                                                            <Setter Property="Foreground" Value="#F38BA8"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccessStateCode}" Value="readonly">
+                                                            <Setter Property="Foreground" Value="#FAB387"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccessStateCode}" Value="trial">
+                                                            <Setter Property="Foreground" Value="#F9E2AF"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccessStateCode}" Value="activated">
+                                                            <Setter Property="Foreground" Value="#A6E3A1"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

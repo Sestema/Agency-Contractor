@@ -26,11 +26,11 @@ namespace Win11DesktopApp.Services
         public string RootPath => _appSettingsService.Settings.RootFolderPath;
 
         /// <summary>
-        /// Language code for folder names: prefers DocumentLanguage, falls back to LanguageCode.
+        /// Language code used for physical folder names on disk.
+        /// Folder structure must stay aligned with the UI language only; document language
+        /// may change independently and must not redirect file-system paths.
         /// </summary>
-        public string LangCode => !string.IsNullOrEmpty(_appSettingsService.Settings.DocumentLanguage)
-            ? _appSettingsService.Settings.DocumentLanguage
-            : _appSettingsService.Settings.LanguageCode ?? "uk";
+        public string FolderLanguageCode => _appSettingsService.Settings.LanguageCode ?? "uk";
 
         // ============ PATH CONSTRUCTION ============
 
@@ -52,7 +52,7 @@ namespace Win11DesktopApp.Services
         {
             var companyFolder = GetCompanyFolder(companyName);
             if (string.IsNullOrEmpty(companyFolder)) return string.Empty;
-            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetEmployeesFolder(LangCode), FolderNames.AllEmployeesFolderNames);
+            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetEmployeesFolder(FolderLanguageCode), FolderNames.AllEmployeesFolderNames);
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace Win11DesktopApp.Services
         {
             var companyFolder = GetCompanyFolder(companyName);
             if (string.IsNullOrEmpty(companyFolder)) return string.Empty;
-            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(LangCode), FolderNames.AllTemplatesFolderNames);
+            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(FolderLanguageCode), FolderNames.AllTemplatesFolderNames);
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace Win11DesktopApp.Services
         {
             var companyFolder = GetCompanyFolder(companyName);
             if (string.IsNullOrEmpty(companyFolder)) return string.Empty;
-            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(LangCode), FolderNames.AllPaymentFolderNames);
+            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(FolderLanguageCode), FolderNames.AllPaymentFolderNames);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Win11DesktopApp.Services
         public string GetArchiveFolder()
         {
             if (string.IsNullOrEmpty(RootPath)) return string.Empty;
-            return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetArchiveFolder(LangCode), FolderNames.AllArchiveFolderNames);
+            return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetArchiveFolder(FolderLanguageCode), FolderNames.AllArchiveFolderNames);
         }
 
         /// <summary>
@@ -137,9 +137,9 @@ namespace Win11DesktopApp.Services
                 var companyFolder = GetCompanyFolder(companyName);
                 Directory.CreateDirectory(companyFolder);
 
-                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetEmployeesFolder(LangCode), FolderNames.AllEmployeesFolderNames);
-                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(LangCode), FolderNames.AllTemplatesFolderNames);
-                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(LangCode), FolderNames.AllPaymentFolderNames);
+                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetEmployeesFolder(FolderLanguageCode), FolderNames.AllEmployeesFolderNames);
+                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(FolderLanguageCode), FolderNames.AllTemplatesFolderNames);
+                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(FolderLanguageCode), FolderNames.AllPaymentFolderNames);
 
                 Debug.WriteLine($"FolderService.EnsureCompanyStructure: {companyFolder}");
             }
@@ -184,7 +184,7 @@ namespace Win11DesktopApp.Services
         public string GetCandidatesFolder()
         {
             if (string.IsNullOrEmpty(RootPath)) return string.Empty;
-            return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetCandidatesFolder(LangCode), FolderNames.AllCandidatesFolderNames);
+            return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetCandidatesFolder(FolderLanguageCode), FolderNames.AllCandidatesFolderNames);
         }
 
         public void EnsureArchiveFolder()
@@ -192,7 +192,7 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(RootPath)) return;
             try
             {
-                EnsureLocalizedSubfolder(RootPath, FolderNames.GetArchiveFolder(LangCode), FolderNames.AllArchiveFolderNames);
+                EnsureLocalizedSubfolder(RootPath, FolderNames.GetArchiveFolder(FolderLanguageCode), FolderNames.AllArchiveFolderNames);
             }
             catch (Exception ex)
             {

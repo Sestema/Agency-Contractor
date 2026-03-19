@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -14,6 +15,25 @@ namespace Win11DesktopApp.Services
         public string? ClientId { get; set; }
         public RemotePolicy? Policy { get; set; }
         public List<RemoteCommand> PendingCommands { get; set; } = new();
+    }
+
+    public sealed class ClientAccessState
+    {
+        public string? ClientId { get; set; }
+        public bool ClientExists { get; set; }
+        public bool IsBlocked { get; set; }
+        public DateTime? ExpiresAtUtc { get; set; }
+
+        public bool HasRemoteAccessWindow =>
+            !IsBlocked && ExpiresAtUtc.HasValue && ExpiresAtUtc.Value > DateTime.UtcNow;
+
+        public bool IsExpired =>
+            !IsBlocked && ExpiresAtUtc.HasValue && ExpiresAtUtc.Value <= DateTime.UtcNow;
+
+        public int DaysRemaining =>
+            !ExpiresAtUtc.HasValue
+                ? 0
+                : Math.Max(0, (int)Math.Ceiling((ExpiresAtUtc.Value - DateTime.UtcNow).TotalDays));
     }
 
     public static class TelemetryService
@@ -83,7 +103,6 @@ namespace Win11DesktopApp.Services
                 var machineId = LicenseService.GetMachineId();
                 var machineName = Environment.MachineName;
                 var appVersion = AppSettingsService.CurrentAppVersion;
-                var expiresAt = LicenseService.GetExpiresAt();
                 var stats = CollectStats();
 
                 string ip = await GetIpSilentAsync().ConfigureAwait(false);
@@ -97,12 +116,12 @@ namespace Win11DesktopApp.Services
                     _clientId = existing.Value.GetProperty("id").GetString();
                     _isBlocked = existing.Value.TryGetProperty("is_blocked", out var b) && b.GetBoolean();
 
-                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName, expiresAt).ConfigureAwait(false);
+                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName).ConfigureAwait(false);
                     await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "heartbeat", stats).ConfigureAwait(false);
                 }
                 else
                 {
-                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, expiresAt).ConfigureAwait(false);
+                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, GetInitialRemoteExpiry()).ConfigureAwait(false);
                     if (_clientId != null)
                         await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
                 }
@@ -136,7 +155,6 @@ namespace Win11DesktopApp.Services
                 var machineId = LicenseService.GetMachineId();
                 var machineName = Environment.MachineName;
                 var appVersion = AppSettingsService.CurrentAppVersion;
-                var expiresAt = LicenseService.GetExpiresAt();
                 var stats = CollectStats();
 
                 string ip = await GetIpSilentAsync().ConfigureAwait(false);
@@ -150,12 +168,12 @@ namespace Win11DesktopApp.Services
                     _clientId = existing.Value.GetProperty("id").GetString();
                     _isBlocked = existing.Value.TryGetProperty("is_blocked", out var b) && b.GetBoolean();
 
-                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName, expiresAt).ConfigureAwait(false);
+                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName).ConfigureAwait(false);
                     await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "app_started", stats).ConfigureAwait(false);
                 }
                 else
                 {
-                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, expiresAt).ConfigureAwait(false);
+                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, GetInitialRemoteExpiry()).ConfigureAwait(false);
                     if (_clientId != null)
                         await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
                 }
@@ -173,6 +191,55 @@ namespace Win11DesktopApp.Services
 
             await ReportStartupSnapshotAsync().ConfigureAwait(false);
             return _clientId;
+        }
+
+        public static async Task<ClientAccessState> GetStartupAccessStateAsync()
+        {
+            var accessState = new ClientAccessState();
+
+            try
+            {
+                var machineId = LicenseService.GetMachineId();
+                var machineName = Environment.MachineName;
+                var appVersion = AppSettingsService.CurrentAppVersion;
+                var stats = CollectStats();
+                var ip = await GetIpSilentAsync().ConfigureAwait(false);
+
+                ConfigureHeaders();
+
+                var existing = await FindClientAsync(machineId).ConfigureAwait(false);
+                if (existing != null)
+                {
+                    accessState = BuildAccessState(existing.Value);
+                    _clientId = accessState.ClientId;
+                    _isBlocked = accessState.IsBlocked;
+
+                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName).ConfigureAwait(false);
+                    await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "app_started", stats).ConfigureAwait(false);
+                    return accessState;
+                }
+
+                var initialExpiry = GetInitialRemoteExpiry();
+                _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, initialExpiry).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(_clientId))
+                {
+                    await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
+                    accessState = new ClientAccessState
+                    {
+                        ClientId = _clientId,
+                        ClientExists = true,
+                        IsBlocked = false,
+                        ExpiresAtUtc = ParseExpiresAt(initialExpiry)
+                    };
+                }
+
+                return accessState;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.GetStartupAccessState", ex.Message);
+                return accessState;
+            }
         }
 
         /// <summary>
@@ -212,7 +279,7 @@ namespace Win11DesktopApp.Services
 
         private static async Task<JsonElement?> FindClientAsync(string machineId)
         {
-            var url = $"{_baseUrl}/rest/v1/clients?machine_id=eq.{Uri.EscapeDataString(machineId)}&select=id,is_blocked";
+            var url = $"{_baseUrl}/rest/v1/clients?machine_id=eq.{Uri.EscapeDataString(machineId)}&select=id,is_blocked,expires_at";
             var resp = await _http.GetAsync(url).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return null;
 
@@ -224,15 +291,14 @@ namespace Win11DesktopApp.Services
             return null;
         }
 
-        private static async Task UpdateClientAsync(string clientId, string ip, string version, string name, string expiresAt)
+        private static async Task UpdateClientAsync(string clientId, string ip, string version, string name)
         {
             var payload = new
             {
                 last_seen = DateTime.UtcNow.ToString("o"),
                 ip_address = ip,
                 app_version = version,
-                machine_name = name,
-                expires_at = expiresAt
+                machine_name = name
             };
             var body = JsonSerializer.Serialize(payload);
             var req = new HttpRequestMessage(new HttpMethod("PATCH"),
@@ -272,6 +338,41 @@ namespace Win11DesktopApp.Services
             if (doc.RootElement.GetArrayLength() > 0)
                 return doc.RootElement[0].GetProperty("id").GetString();
             return null;
+        }
+
+        private static ClientAccessState BuildAccessState(JsonElement client)
+        {
+            return new ClientAccessState
+            {
+                ClientId = client.GetProperty("id").GetString(),
+                ClientExists = true,
+                IsBlocked = client.TryGetProperty("is_blocked", out var blocked) && blocked.GetBoolean(),
+                ExpiresAtUtc = client.TryGetProperty("expires_at", out var expiresAt)
+                    ? ParseExpiresAt(expiresAt.GetString())
+                    : null
+            };
+        }
+
+        private static DateTime? ParseExpiresAt(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            return DateTime.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed)
+                ? parsed
+                : null;
+        }
+
+        private static string GetInitialRemoteExpiry()
+        {
+            if (LicenseService.IsLicenseValid())
+                return LicenseService.GetExpiresAt();
+
+            return DateTime.UtcNow.AddDays(14).ToString("o");
         }
 
         private static async Task InsertTelemetryAsync(string clientId, string machineId, string ip, string version, string eventType, Dictionary<string, object>? eventData = null)

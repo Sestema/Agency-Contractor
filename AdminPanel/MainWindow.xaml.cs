@@ -128,7 +128,9 @@ namespace AdminPanel
             var clientStatus = GetSelectedComboTag(CmbClientStatus);
             filtered = clientStatus switch
             {
-                "active" => filtered.Where(c => !c.IsBlocked),
+                "trial" => filtered.Where(c => string.Equals(c.AccessStateCode, "trial", StringComparison.Ordinal)),
+                "activated" => filtered.Where(c => string.Equals(c.AccessStateCode, "activated", StringComparison.Ordinal)),
+                "readonly" => filtered.Where(c => string.Equals(c.AccessStateCode, "readonly", StringComparison.Ordinal)),
                 "blocked" => filtered.Where(c => c.IsBlocked),
                 _ => filtered
             };
@@ -430,7 +432,15 @@ namespace AdminPanel
             }
 
             TxtDetailHeader.Text = client.MachineName;
-            TxtDetailStatus.Text = client.IsBlocked ? "⛔ Заблокований" : "✅ Активний";
+            TxtDetailStatus.Text = client.AccessStateLabel;
+            TxtDetailStatus.Foreground = client.AccessStateCode switch
+            {
+                "blocked" => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F38BA8")),
+                "readonly" => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FAB387")),
+                "trial" => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F9E2AF")),
+                "activated" => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A6E3A1")),
+                _ => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CDD6F4"))
+            };
             TxtDetailMachine.Text = client.MachineName;
             TxtDetailMachineId.Text = client.MachineId;
             TxtDetailIp.Text = string.IsNullOrWhiteSpace(client.IpAddress) ? "—" : client.IpAddress;
@@ -441,7 +451,7 @@ namespace AdminPanel
             TxtDetailExpires.Text = FormatDate(client.ExpiresAt, "dd.MM.yyyy");
             TxtDetailLastSeen.Text = FormatDate(client.LastSeen?.ToLocalTime(), "dd.MM.yyyy HH:mm");
             TxtDetailBlockReason.Text = string.IsNullOrWhiteSpace(client.BlockReason) ? "—" : client.BlockReason;
-            TxtDetailLicense.Text = GetLicenseStateLabel(client);
+            TxtDetailLicense.Text = client.AccessStateDetail;
             TxtDetailHeartbeat.Text = BuildLatestStateSummary();
             TxtDetailRisk.Text = $"{client.RiskLevel} ({client.RiskScore})";
             TxtDetailErrors.Text = client.ErrorLikeCount == 0 ? "Немає error-like подій" : $"{client.ErrorLikeCount} error-like подій";
@@ -470,20 +480,6 @@ namespace AdminPanel
         private static string FormatDate(DateTime? value, string format)
         {
             return value.HasValue ? value.Value.ToString(format) : "—";
-        }
-
-        private string GetLicenseStateLabel(ClientRecord client)
-        {
-            var days = GetDaysUntilExpiry(client);
-            if (client.IsBlocked)
-                return "Заблокований";
-            if (!client.ExpiresAt.HasValue)
-                return "Без строку";
-            if (days < 0)
-                return $"Протерміновано на {Math.Abs(days)} дн.";
-            if (days <= 30)
-                return $"Закінчується через {days} дн.";
-            return $"Активна, ще {days} дн.";
         }
 
         private static bool IsErrorLikeEvent(TelemetryRecord telemetry)
@@ -816,17 +812,20 @@ namespace AdminPanel
             if (_selected == null)
                 return;
 
-            var input = PromptInput("На скільки днів продовжити (від сьогодні):", "Продовжити ліцензію", "365");
+            var input = PromptInput("На скільки днів активувати або продовжити доступ:", "Активувати доступ", "365");
             if (input == null || !int.TryParse(input, out var days) || days <= 0)
                 return;
 
             try
             {
-                var newExpiry = DateTime.UtcNow.AddDays(days);
+                var baseDate = _selected.ExpiresAt.HasValue && _selected.ExpiresAt.Value > DateTime.UtcNow
+                    ? _selected.ExpiresAt.Value
+                    : DateTime.UtcNow;
+                var newExpiry = baseDate.AddDays(days);
                 await _svc.ExtendLicenseAsync(_selected.Id, newExpiry);
                 await _svc.TryWriteAuditAsync(_selected.Id, "license_extended",
-                    new { expires_at = _selected.ExpiresAt }, new { expires_at = newExpiry }, $"Продовжено на {days} днів");
-                MessageBox.Show($"Ліцензію продовжено до {newExpiry:dd.MM.yyyy}", "Готово",
+                    new { expires_at = _selected.ExpiresAt }, new { expires_at = newExpiry }, $"Доступ активовано/продовжено на {days} днів");
+                MessageBox.Show($"Доступ активовано до {newExpiry:dd.MM.yyyy}", "Готово",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 await RefreshAsync(_selected.Id);
             }

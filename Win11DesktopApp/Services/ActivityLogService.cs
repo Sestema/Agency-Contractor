@@ -109,10 +109,7 @@ namespace Win11DesktopApp.Services
 
         private static void SaveEntries(string path, List<ActivityLogEntry> entries)
         {
-            var json = JsonSerializer.Serialize(entries, _jsonOptions);
-            var tmp = path + ".tmp";
-            File.WriteAllText(tmp, json);
-            File.Move(tmp, path, true);
+            SafeFileService.WriteJsonAtomic(path, entries, _jsonOptions);
         }
     }
 }

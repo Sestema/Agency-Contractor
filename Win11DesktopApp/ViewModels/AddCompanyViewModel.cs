@@ -100,6 +100,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void Save()
         {
+            if (!PolicyService.EnsureWriteAllowed(IsEditMode ? "Зберегти фірму" : "Додати фірму"))
+                return;
+
             if (string.IsNullOrWhiteSpace(Employer.Name))
             {
                 MessageBox.Show(
@@ -146,6 +149,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void DeleteCompany()
         {
+            if (!PolicyService.EnsureWriteAllowed("Видалити фірму"))
+                return;
+
             if (_originalCompany == null) return;
 
             var employees = App.EmployeeService.GetEmployeesForFirm(_originalCompany.Name);

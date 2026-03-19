@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.IO.Compression;
 using System.Threading;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -38,6 +39,7 @@ namespace Win11DesktopApp.Services
             try
             {
                 var indexEntries = SafeFileService.ReadJsonOrDefault(templatesIndexFile, new List<TemplateIndexEntry>());
+                NormalizeTemplateIndexPaths(templatesFolder, indexEntries, templatesIndexFile);
 
                 return indexEntries?.Select(e => new TemplateEntry
                 {
@@ -276,18 +278,51 @@ namespace Win11DesktopApp.Services
 
         public string GetTemplateFullPath(string firmName, string relativePath)
         {
-            if (string.IsNullOrEmpty(_folderService.RootPath)) return string.Empty;
+            if (string.IsNullOrEmpty(_folderService.RootPath) || string.IsNullOrWhiteSpace(relativePath))
+                return string.Empty;
 
             var companyFolder = _folderService.GetCompanyFolder(firmName);
-            return Path.Combine(companyFolder, relativePath);
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return string.Empty;
+
+            var directPath = Path.Combine(companyFolder, relativePath);
+            if (TemplatePathExists(directPath))
+                return directPath;
+
+            var templatesFolder = _folderService.GetTemplatesFolder(firmName);
+            var currentFolderName = Path.GetFileName(templatesFolder);
+            var normalizedRelativePath = NormalizeTemplateRelativePath(relativePath, currentFolderName);
+            var normalizedPath = Path.Combine(companyFolder, normalizedRelativePath);
+            if (TemplatePathExists(normalizedPath))
+            {
+                HealTemplateIndexPath(firmName, relativePath, normalizedRelativePath);
+                return normalizedPath;
+            }
+
+            var segments = SplitRelativePath(relativePath);
+            if (segments.Length >= 2)
+            {
+                var pathInsideTemplates = segments.Skip(1).ToArray();
+                foreach (var folderName in FolderNames.AllTemplatesFolderNames)
+                {
+                    var candidatePath = Path.Combine(companyFolder, folderName, Path.Combine(pathInsideTemplates));
+                    if (!TemplatePathExists(candidatePath))
+                        continue;
+
+                    var healedRelativePath = Path.Combine(folderName, Path.Combine(pathInsideTemplates));
+                    HealTemplateIndexPath(firmName, relativePath, healedRelativePath);
+                    return candidatePath;
+                }
+            }
+
+            return normalizedPath;
         }
 
         public string GenerateDocumentFromTemplate(string firmName, TemplateEntry template)
         {
             if (string.IsNullOrEmpty(_folderService.RootPath)) return string.Empty;
 
-            var companyFolder = _folderService.GetCompanyFolder(firmName);
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
             if (templateDirectory == null || !Directory.Exists(templateDirectory)) return string.Empty;
 
@@ -312,7 +347,6 @@ namespace Win11DesktopApp.Services
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null || string.IsNullOrWhiteSpace(newName)) return;
 
-            var companyFolder = _folderService.GetCompanyFolder(firmName);
             var templatesRoot = _folderService.GetTemplatesFolder(firmName);
             var indexFile = Path.Combine(templatesRoot, "index.json");
 
@@ -328,7 +362,7 @@ namespace Win11DesktopApp.Services
                 }
             }
 
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
             if (templateDirectory != null)
             {
@@ -358,11 +392,10 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrWhiteSpace(newName))
                 throw new ArgumentException("Template name is required.", nameof(newName));
 
-            var sourceCompanyFolder = _folderService.GetCompanyFolder(sourceFirmName);
             var targetTemplatesRoot = _folderService.GetTemplatesFolder(targetFirmName);
             Directory.CreateDirectory(targetTemplatesRoot);
 
-            var sourceFullPath = Path.Combine(sourceCompanyFolder, template.FilePath);
+            var sourceFullPath = GetTemplateFullPath(sourceFirmName, template.FilePath);
             var sourceTemplateDirectory = Path.GetDirectoryName(sourceFullPath);
             if (string.IsNullOrEmpty(sourceTemplateDirectory) || !Directory.Exists(sourceTemplateDirectory))
                 throw new DirectoryNotFoundException("Source template folder was not found.");
@@ -443,12 +476,11 @@ namespace Win11DesktopApp.Services
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null) return;
 
-            var companyFolder = _folderService.GetCompanyFolder(firmName);
             var templatesRoot = _folderService.GetTemplatesFolder(firmName);
             var indexFile = Path.Combine(templatesRoot, "index.json");
 
             // 1. Delete the template folder FIRST
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
 
             if (!string.IsNullOrEmpty(templateDirectory) && Directory.Exists(templateDirectory))
@@ -629,8 +661,7 @@ namespace Win11DesktopApp.Services
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null) return;
 
-            var companyFolder = _folderService.GetCompanyFolder(firmName);
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
             if (templateDirectory == null || !Directory.Exists(templateDirectory)) return;
 
@@ -642,8 +673,7 @@ namespace Win11DesktopApp.Services
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null) return new List<TagPosition>();
 
-            var companyFolder = _folderService.GetCompanyFolder(firmName);
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
             if (templateDirectory == null || !Directory.Exists(templateDirectory)) return new List<TagPosition>();
 
@@ -664,8 +694,7 @@ namespace Win11DesktopApp.Services
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null) return;
 
-            var companyFolder = _folderService.GetCompanyFolder(firmName);
-            var fullPath = Path.Combine(companyFolder, template.FilePath);
+            var fullPath = GetTemplateFullPath(firmName, template.FilePath);
             var templateDirectory = Path.GetDirectoryName(fullPath);
 
             if (templateDirectory != null && Directory.Exists(templateDirectory))
@@ -709,6 +738,94 @@ namespace Win11DesktopApp.Services
                     }
                     catch (Exception ex) { LoggingService.LogError("TemplateService.SaveTagPositions.Index", ex); }
                 }
+            }
+        }
+
+        private static string[] SplitRelativePath(string relativePath)
+        {
+            return (relativePath ?? string.Empty)
+                .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private static string NormalizeTemplateRelativePath(string relativePath, string? currentTemplatesFolderName)
+        {
+            var segments = SplitRelativePath(relativePath);
+            if (segments.Length == 0)
+                return relativePath ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(currentTemplatesFolderName)
+                && FolderNames.AllTemplatesFolderNames.Contains(segments[0], StringComparer.OrdinalIgnoreCase))
+            {
+                segments[0] = currentTemplatesFolderName;
+            }
+
+            return Path.Combine(segments);
+        }
+
+        private static bool TemplatePathExists(string fullPath)
+        {
+            if (string.IsNullOrWhiteSpace(fullPath))
+                return false;
+
+            if (File.Exists(fullPath))
+                return true;
+
+            var templateDirectory = Path.GetDirectoryName(fullPath);
+            return !string.IsNullOrWhiteSpace(templateDirectory) && Directory.Exists(templateDirectory);
+        }
+
+        private void NormalizeTemplateIndexPaths(string templatesFolder, List<TemplateIndexEntry>? indexEntries, string indexFile)
+        {
+            if (indexEntries == null || indexEntries.Count == 0)
+                return;
+
+            var currentFolderName = Path.GetFileName(templatesFolder);
+            var changed = false;
+
+            foreach (var entry in indexEntries)
+            {
+                var normalizedPath = NormalizeTemplateRelativePath(entry.Path, currentFolderName);
+                if (string.Equals(entry.Path, normalizedPath, StringComparison.Ordinal))
+                    continue;
+
+                entry.Path = normalizedPath;
+                changed = true;
+            }
+
+            if (changed)
+                SafeFileService.WriteJsonAtomic(indexFile, indexEntries);
+        }
+
+        private void HealTemplateIndexPath(string firmName, string oldRelativePath, string newRelativePath)
+        {
+            if (string.IsNullOrWhiteSpace(oldRelativePath)
+                || string.IsNullOrWhiteSpace(newRelativePath)
+                || string.Equals(oldRelativePath, newRelativePath, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            try
+            {
+                var templatesRoot = _folderService.GetTemplatesFolder(firmName);
+                var indexFile = Path.Combine(templatesRoot, "index.json");
+                if (!File.Exists(indexFile))
+                    return;
+
+                var index = SafeFileService.ReadJsonOrDefault(indexFile, new List<TemplateIndexEntry>());
+                var changed = false;
+                foreach (var entry in index.Where(e => string.Equals(e.Path, oldRelativePath, StringComparison.Ordinal)))
+                {
+                    entry.Path = newRelativePath;
+                    changed = true;
+                }
+
+                if (changed)
+                    SafeFileService.WriteJsonAtomic(indexFile, index);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateService.HealTemplateIndexPath", ex.Message);
             }
         }
     }

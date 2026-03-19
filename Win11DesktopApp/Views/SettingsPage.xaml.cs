@@ -9,6 +9,7 @@ namespace Win11DesktopApp.Views
     public partial class SettingsPage : UserControl
     {
         private SettingsViewModel? _subscribedViewModel;
+        private bool _isSyncingGeminiApiKeyPasswordBox;
 
         public SettingsPage()
         {
@@ -25,7 +26,10 @@ namespace Win11DesktopApp.Views
 
             _subscribedViewModel = e.NewValue as SettingsViewModel;
             if (_subscribedViewModel != null)
+            {
                 _subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+                SyncGeminiApiKeyPasswordBox();
+            }
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -50,6 +54,12 @@ namespace Win11DesktopApp.Views
             {
                 ProfileConfirmPasswordBox.Password = string.Empty;
             }
+
+            if (e.PropertyName == nameof(SettingsViewModel.GeminiApiKeyDraft)
+                || e.PropertyName == nameof(SettingsViewModel.IsEditingGeminiApiKey))
+            {
+                SyncGeminiApiKeyPasswordBox();
+            }
         }
 
         private void ProfileCurrentPasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
@@ -68,6 +78,67 @@ namespace Win11DesktopApp.Views
         {
             if (ViewModel != null)
                 ViewModel.ProfileConfirmPassword = ((PasswordBox)sender).Password;
+        }
+
+        private void GeminiApiKeyMaskedBorder_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            ViewModel.BeginGeminiApiKeyEdit();
+            SyncGeminiApiKeyPasswordBox();
+            GeminiApiKeyPasswordBox.Focus();
+            e.Handled = true;
+        }
+
+        private void GeminiApiKeyPasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null || _isSyncingGeminiApiKeyPasswordBox)
+                return;
+
+            ViewModel.GeminiApiKeyDraft = ((PasswordBox)sender).Password;
+        }
+
+        private void GeminiApiKeyPasswordBox_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(ViewModel.GeminiApiKeyDraft))
+                ViewModel.CancelGeminiApiKeyEdit();
+            else
+                ViewModel.CommitGeminiApiKeyEdit();
+        }
+
+        private void GeminiApiKeyPasswordBox_OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control
+                && (e.Key == Key.C || e.Key == Key.X))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (ViewModel == null)
+                return;
+
+            if (e.Key == Key.Escape)
+            {
+                ViewModel.CancelGeminiApiKeyEdit();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Enter)
+            {
+                if (string.IsNullOrWhiteSpace(ViewModel.GeminiApiKeyDraft))
+                    ViewModel.CancelGeminiApiKeyEdit();
+                else
+                    ViewModel.CommitGeminiApiKeyEdit();
+
+                MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                e.Handled = true;
+            }
         }
 
         private void LatinNameTextBox_OnPreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -102,6 +173,13 @@ namespace Win11DesktopApp.Views
             }
 
             return true;
+        }
+
+        private void SyncGeminiApiKeyPasswordBox()
+        {
+            _isSyncingGeminiApiKeyPasswordBox = true;
+            GeminiApiKeyPasswordBox.Password = ViewModel?.GeminiApiKeyDraft ?? string.Empty;
+            _isSyncingGeminiApiKeyPasswordBox = false;
         }
     }
 }

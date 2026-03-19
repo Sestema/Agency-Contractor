@@ -294,15 +294,12 @@ namespace Win11DesktopApp.Services
             var encrypted = ProtectedData.Protect(
                 Encoding.UTF8.GetBytes(json), GetEntropy(), DataProtectionScope.CurrentUser);
 
-            var tempPath = LicensePath + ".tmp";
-            File.WriteAllBytes(tempPath, encrypted);
-
             if (File.Exists(LicensePath))
             {
                 try { File.Copy(LicensePath, BackupPath, true); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.SaveLicense", $"Backup copy failed: {ex.Message}"); }
             }
 
-            File.Move(tempPath, LicensePath, true);
+            SafeFileService.WriteBytesAtomic(LicensePath, encrypted);
         }
 
         private static LicenseInfo? LoadLicense()

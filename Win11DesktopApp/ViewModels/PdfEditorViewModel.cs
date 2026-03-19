@@ -532,8 +532,11 @@ namespace Win11DesktopApp.ViewModels
                     Placements = AllPlacements.Select(p => p.Model).ToList()
                 };
 
-                var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_tagMapPath, json, System.Text.Encoding.UTF8);
+                SafeFileService.WriteJsonAtomic(
+                    _tagMapPath,
+                    map,
+                    new JsonSerializerOptions { WriteIndented = true },
+                    System.Text.Encoding.UTF8);
                 StatusMessage = Res("EditorSaved");
             }
             catch (Exception ex)

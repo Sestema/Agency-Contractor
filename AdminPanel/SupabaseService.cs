@@ -29,6 +29,65 @@ namespace AdminPanel
         public bool IsOutdatedVersion { get; set; }
         public int ErrorLikeCount { get; set; }
         public DateTime? LatestHeartbeatAt { get; set; }
+
+        public int AccessDaysRemaining =>
+            !ExpiresAt.HasValue
+                ? int.MaxValue
+                : (int)(ExpiresAt.Value.Date - DateTime.UtcNow.Date).TotalDays;
+
+        public string AccessStateCode
+        {
+            get
+            {
+                if (IsBlocked)
+                    return "blocked";
+                if (!ExpiresAt.HasValue)
+                    return "unknown";
+                if (AccessDaysRemaining < 0)
+                    return "readonly";
+                if (LooksLikeTrialWindow())
+                    return "trial";
+                return "activated";
+            }
+        }
+
+        public string AccessStateLabel => AccessStateCode switch
+        {
+            "blocked" => "⛔ Blocked",
+            "readonly" => "👁 Read-only",
+            "trial" => "⏳ Trial",
+            "activated" => "✅ Activated",
+            _ => "❔ Unknown"
+        };
+
+        public string AccessStateDetail => AccessStateCode switch
+        {
+            "blocked" => string.IsNullOrWhiteSpace(BlockReason)
+                ? "Клієнт заблокований адміністратором."
+                : $"Заблоковано: {BlockReason}",
+            "readonly" => $"Пробний період завершився {Math.Abs(AccessDaysRemaining)} дн. тому.",
+            "trial" => $"Пробний період, ще {AccessDaysRemaining} дн.",
+            "activated" => ExpiresAt.HasValue
+                ? $"Активовано до {ExpiresAt.Value.ToLocalTime():dd.MM.yyyy}"
+                : "Активовано",
+            _ => "Статус потребує перевірки."
+        };
+
+        private bool LooksLikeTrialWindow()
+        {
+            if (!ExpiresAt.HasValue)
+                return false;
+
+            if (ActivatedAt.HasValue)
+            {
+                var activatedUtc = ActivatedAt.Value.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(ActivatedAt.Value, DateTimeKind.Utc)
+                    : ActivatedAt.Value.ToUniversalTime();
+                return ExpiresAt.Value.Date <= activatedUtc.Date.AddDays(14);
+            }
+
+            return AccessDaysRemaining <= 14;
+        }
     }
 
     public class TelemetryRecord

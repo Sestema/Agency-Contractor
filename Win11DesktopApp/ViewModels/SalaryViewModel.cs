@@ -635,14 +635,17 @@ namespace Win11DesktopApp.ViewModels
                 var jsonPath = System.IO.Path.Combine(entry.EmployeeFolder, "employee.json");
                 if (System.IO.File.Exists(jsonPath))
                 {
-                    var json = System.IO.File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
+                    var json = SafeFileService.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
                     var data = System.Text.Json.JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(json);
                     if (data != null)
                     {
                         oldRate = data.HourlySalary;
                         data.HourlySalary = newRate;
-                        var newJson = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                        System.IO.File.WriteAllText(jsonPath, newJson, System.Text.Encoding.UTF8);
+                        SafeFileService.WriteJsonAtomic(
+                            jsonPath,
+                            data,
+                            new System.Text.Json.JsonSerializerOptions { WriteIndented = true },
+                            System.Text.Encoding.UTF8);
                     }
                 }
             }

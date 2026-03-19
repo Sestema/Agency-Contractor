@@ -221,6 +221,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void Save()
         {
+            if (!PolicyService.EnsureWriteAllowed("Зберегти кандидата"))
+                return;
+
             Data.DateAdded = DateTime.Now.ToString("yyyy-MM-dd");
 
             string? passportPath = null;
