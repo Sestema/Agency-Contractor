@@ -12,6 +12,7 @@ namespace Win11DesktopApp.Views
         public LicenseWindow()
         {
             InitializeComponent();
+            TxtVersion.Text = $"Agency Contractor - {AppSettingsService.CurrentAppVersion}";
             RefreshStatus();
         }
 

@@ -126,6 +126,25 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
+        <Style x:Key="DetailValueBox" TargetType="TextBox">
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Background" Value="#1E1E2E"/>
+            <Setter Property="BorderBrush" Value="#585B70"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="InlineDetailValueBox" TargetType="TextBox" BasedOn="{StaticResource DetailValueBox}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinWidth" Value="140"/>
+        </Style>
+
         <Style x:Key="PanelCheckBox" TargetType="CheckBox">
             <Setter Property="Foreground" Value="#CDD6F4"/>
             <Setter Property="Margin" Value="0,0,10,8"/>
@@ -171,24 +190,6 @@
                     <TextBlock x:Name="TxtStatEvents" Text="Подій: —" Foreground="#FAB387" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Button Style="{StaticResource DashboardCardButton}" Tag="risk:high" Click="DashboardFilterCard_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⚠ " FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TxtStatHighRisk" Text="High risk: —" Foreground="#F38BA8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-            <Button Style="{StaticResource DashboardCardButton}" Tag="risk:warning" Click="DashboardFilterCard_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="△ " FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TxtStatWarnings" Text="Warning: —" Foreground="#F9E2AF" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-            <Button Style="{StaticResource DashboardCardButton}" Tag="risk:outdated" Click="DashboardFilterCard_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⬆ " FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TxtStatOutdated" Text="Outdated: —" Foreground="#74C7EC" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
             <Button Style="{StaticResource DashboardCardButton}" Margin="0" Tag="license:7" Click="DashboardFilterCard_Click">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="📅 " FontSize="14" VerticalAlignment="Center"/>
@@ -249,13 +250,6 @@
                         <ComboBoxItem Tag="stale30">Неактивні 30+ днів</ComboBoxItem>
                         <ComboBoxItem Tag="never">Без активності</ComboBoxItem>
                     </ComboBox>
-                    <ComboBox x:Name="CmbRiskFilter" Width="150" Style="{StaticResource FilterComboBox}"
-                              SelectionChanged="ClientFilter_Changed" Margin="0,0,8,0">
-                        <ComboBoxItem Tag="all" IsSelected="True">Усі ризики</ComboBoxItem>
-                        <ComboBoxItem Tag="high">High risk</ComboBoxItem>
-                        <ComboBoxItem Tag="warning">Warning</ComboBoxItem>
-                        <ComboBoxItem Tag="outdated">Outdated</ComboBoxItem>
-                    </ComboBox>
                     <ComboBox x:Name="CmbVersionFilter" Width="150" Style="{StaticResource FilterComboBox}"
                               SelectionChanged="ClientFilter_Changed" Margin="0,0,8,0"/>
                     <Button Content="Скинути фільтри" Style="{StaticResource ActionBtn}" Background="#585B70"
@@ -291,49 +285,7 @@
                         </Style>
                     </DataGrid.ColumnHeaderStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Ім'я ПК" Binding="{Binding MachineName}" Width="150"/>
-                        <DataGridTemplateColumn Header="Risk" Width="110">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Border Padding="8,3" CornerRadius="12" HorizontalAlignment="Left">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#585B70"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding RiskLevel}" Value="High risk">
-                                                        <Setter Property="Background" Value="#5A2D3D"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding RiskLevel}" Value="Warning">
-                                                        <Setter Property="Background" Value="#5C4A22"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding RiskLevel}" Value="OK">
-                                                        <Setter Property="Background" Value="#21493D"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="{Binding RiskLevel}" FontWeight="SemiBold">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#CDD6F4"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding RiskLevel}" Value="High risk">
-                                                            <Setter Property="Foreground" Value="#F38BA8"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding RiskLevel}" Value="Warning">
-                                                            <Setter Property="Foreground" Value="#F9E2AF"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding RiskLevel}" Value="OK">
-                                                            <Setter Property="Foreground" Value="#A6E3A1"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Border>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Ім'я та прізвище" Binding="{Binding DisplayName}" Width="220"/>
                         <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="120"/>
                         <DataGridTextColumn Header="Версія" Binding="{Binding AppVersion}" Width="90"/>
                         <DataGridTextColumn Header="Останній вхід" Binding="{Binding LastSeen, StringFormat=dd.MM.yyyy HH:mm}" Width="145"/>
@@ -402,63 +354,57 @@
                         <Border Background="#45475A" CornerRadius="6" Padding="10" Margin="0,0,0,12">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Статус: " Foreground="#A6ADC8" FontSize="12"/>
-                                <TextBlock x:Name="TxtDetailStatus" Text="—" Foreground="#CDD6F4" FontSize="12" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Background="#3A3048" CornerRadius="6" Padding="10" Margin="0,0,0,12">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Risk: " Foreground="#A6ADC8" FontSize="12"/>
-                                    <TextBlock x:Name="TxtDetailRisk" Text="—" Foreground="#F9E2AF" FontSize="12" FontWeight="SemiBold"/>
-                                </StackPanel>
-                                <TextBlock x:Name="TxtDetailErrors" Text="—" Foreground="#BAC2DE" FontSize="11.5" Margin="0,6,0,0"/>
+                                <TextBox x:Name="TxtDetailStatus" Text="—" Style="{StaticResource InlineDetailValueBox}" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Border>
 
                         <UniformGrid Columns="2" Margin="0,0,0,12">
                             <StackPanel Margin="0,0,10,10">
+                                <TextBlock Text="Client ID" Style="{StaticResource DetailLabel}"/>
+                                <TextBox x:Name="TxtDetailClientId" Text="—" Style="{StaticResource DetailValueBox}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Ім'я ПК" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailMachine" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailMachine" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Machine ID" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailMachineId" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailMachineId" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,10,10">
                                 <TextBlock Text="IP адреса" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailIp" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailIp" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Версія" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailVersion" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailVersion" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,10,10">
                                 <TextBlock Text="Активовано" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailActivated" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailActivated" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Останній вхід" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailLastSeen" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailLastSeen" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,10,10">
                                 <TextBlock Text="Ліцензія до" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailExpires" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailExpires" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Стан ліцензії" Style="{StaticResource DetailLabel}"/>
-                                <TextBlock x:Name="TxtDetailLicense" Text="—" Style="{StaticResource DetailValue}"/>
+                                <TextBox x:Name="TxtDetailLicense" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                         </UniformGrid>
 
                     <StackPanel Margin="0,0,0,12">
                         <TextBlock Text="Останній стан" Style="{StaticResource DetailLabel}"/>
-                        <TextBlock x:Name="TxtDetailHeartbeat" Text="—" Style="{StaticResource DetailValue}"/>
+                        <TextBox x:Name="TxtDetailHeartbeat" Text="—" Style="{StaticResource DetailValueBox}"/>
                     </StackPanel>
 
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Причина блокування" Style="{StaticResource DetailLabel}"/>
-                            <TextBlock x:Name="TxtDetailBlockReason" Text="—" Style="{StaticResource DetailValue}"/>
+                            <TextBox x:Name="TxtDetailBlockReason" Text="—" Style="{StaticResource DetailValueBox}"/>
                         </StackPanel>
 
                         <Border Background="#2F364D" CornerRadius="6" Padding="10" Margin="0,0,0,12">
@@ -467,19 +413,19 @@
                                 <UniformGrid Columns="2">
                                     <StackPanel Margin="0,0,10,10">
                                         <TextBlock Text="Ім'я та прізвище" Style="{StaticResource DetailLabel}"/>
-                                        <TextBlock x:Name="TxtDetailProfileName" Text="—" Style="{StaticResource DetailValue}"/>
+                                        <TextBox x:Name="TxtDetailProfileName" Text="—" Style="{StaticResource DetailValueBox}"/>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,0,10">
                                         <TextBlock Text="Статус профілю" Style="{StaticResource DetailLabel}"/>
-                                        <TextBlock x:Name="TxtDetailProfileStatus" Text="—" Style="{StaticResource DetailValue}"/>
+                                        <TextBox x:Name="TxtDetailProfileStatus" Text="—" Style="{StaticResource DetailValueBox}"/>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,10,0">
                                         <TextBlock Text="Remember me" Style="{StaticResource DetailLabel}"/>
-                                        <TextBlock x:Name="TxtDetailRememberMe" Text="—" Style="{StaticResource DetailValue}"/>
+                                        <TextBox x:Name="TxtDetailRememberMe" Text="—" Style="{StaticResource DetailValueBox}"/>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,0,0">
                                         <TextBlock Text="Оновлено" Style="{StaticResource DetailLabel}"/>
-                                        <TextBlock x:Name="TxtDetailProfileUpdatedAt" Text="—" Style="{StaticResource DetailValue}"/>
+                                        <TextBox x:Name="TxtDetailProfileUpdatedAt" Text="—" Style="{StaticResource DetailValueBox}"/>
                                     </StackPanel>
                                 </UniformGrid>
                             </StackPanel>
@@ -515,7 +461,57 @@
 
         <Border Grid.Row="5" Style="{StaticResource CardBorder}" Padding="12">
             <TabControl Background="#313244" BorderThickness="0">
-                <TabItem Header="Telemetry">
+                <TabItem Header="Сесії">
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Підсумок сесій" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="#A6ADC8"/>
+                            <TextBlock Grid.Column="1" x:Name="TxtSessionsSummary" Text="Виберіть клієнта"
+                                       FontSize="11.5" Foreground="#BAC2DE"/>
+                        </Grid>
+
+                        <DataGrid Grid.Row="1" x:Name="DgSessions"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  Background="#313244" Foreground="#CDD6F4"
+                                  BorderThickness="0" GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#45475A"
+                                  RowBackground="#313244" AlternatingRowBackground="#363849"
+                                  HeadersVisibility="Column" FontSize="11.5">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#45475A"/>
+                                    <Setter Property="Foreground" Value="#BAC2DE"/>
+                                    <Setter Property="Padding" Value="6,4"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                    <Setter Property="BorderBrush" Value="#585B70"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Початок" Binding="{Binding StartedAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="150"/>
+                                <DataGridTextColumn Header="Остання активність" Binding="{Binding LastActivityAt, StringFormat=dd.MM.yyyy HH:mm:ss}" Width="165"/>
+                                <DataGridTextColumn Header="Тривалість" Binding="{Binding DurationDisplay}" Width="95"/>
+                                <DataGridTextColumn Header="Версія" Binding="{Binding AppVersion}" Width="85"/>
+                                <DataGridTextColumn Header="Оновлення" Binding="{Binding UpdateDisplay}" Width="110"/>
+                                <DataGridTextColumn Header="+ Фірм" Binding="{Binding FirmsAdded}" Width="70"/>
+                                <DataGridTextColumn Header="+ Працівників" Binding="{Binding EmployeesAdded}" Width="95"/>
+                                <DataGridTextColumn Header="Помилки" Binding="{Binding ErrorCount}" Width="70"/>
+                                <DataGridTextColumn Header="Підсумок" Binding="{Binding SessionSummary}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Події">
                     <Grid Margin="8">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

@@ -469,9 +469,9 @@ namespace Win11DesktopApp.ViewModels
                     workAddress
                 );
 
-                if (!string.IsNullOrEmpty(result))
+                if (result.Success)
                 {
-                    await _employeeService.AddHistoryEntry(result, new EmployeeModels.EmployeeHistoryEntry
+                    await _employeeService.AddHistoryEntry(result.RestoredFolder, new EmployeeModels.EmployeeHistoryEntry
                     {
                         EventType = "Restored",
                         Action = Res("HistoryActionRestored"),
@@ -483,7 +483,8 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeToRestore.FullName,
                         $"Відновлено {EmployeeToRestore.FullName} до {SelectedCompany.Name}, дата початку: {NewStartDate}",
                         EmployeeToRestore.FirmName, SelectedCompany.Name,
-                        employeeFolder: EmployeeToRestore.EmployeeFolder);
+                        employeeFolder: result.RestoredFolder,
+                        relatedOperationId: result.OperationId);
 
                     IsRestoreDialogOpen = false;
                     await LoadArchiveAsync();

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -26,6 +27,7 @@ namespace Win11DesktopApp.ViewModels
     {
         private readonly ActivityLogService _logService;
         private List<ActivityLogEntry> _allEntries = new();
+        private HashSet<string> _undoableArchiveOperationIds = new(StringComparer.OrdinalIgnoreCase);
 
         private static readonly Dictionary<string, (string colorHex, string icon, string resKey)> CategoryMeta = new()
         {
@@ -45,6 +47,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ClearFilterCommand { get; }
         public ICommand FilterByCategoryCommand { get; }
         public ICommand OpenEmployeeCommand { get; }
+        public ICommand UndoCommand { get; }
         public ICommand ExportCommand { get; }
         public ICommand ClearAllCommand { get; }
 
@@ -135,6 +138,7 @@ namespace Win11DesktopApp.ViewModels
                     SelectedCategory = SelectedCategory == cat ? "" : cat;
             });
             OpenEmployeeCommand = new RelayCommand(OpenEmployeeProfile, CanOpenEmployeeProfile);
+            UndoCommand = new AsyncRelayCommand(UndoArchiveAsync, CanUndoArchive);
             ExportCommand = new RelayCommand(o => ExportToExcel());
             ClearAllCommand = new RelayCommand(o => ClearAllHistory());
 
@@ -162,17 +166,37 @@ namespace Win11DesktopApp.ViewModels
 
             var folder = entry.EmployeeFolder;
             var firmName = entry.FirmName;
+            var isReadOnlyPreview = false;
 
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
             {
-                var resolved = ResolveEmployeeFolder(entry.FirmName, entry.EmployeeName);
-                if (resolved == null) return;
-                folder = resolved.Value.folder;
-                firmName = resolved.Value.firm;
+                var recentlyDeleted = App.RecentlyDeletedService?.FindItem(entry.EmployeeFolder, entry.FirmName, entry.EmployeeName);
+                if (recentlyDeleted != null && Directory.Exists(recentlyDeleted.DeletedEmployeeFolder))
+                {
+                    folder = recentlyDeleted.DeletedEmployeeFolder;
+                    firmName = recentlyDeleted.FirmName;
+                    isReadOnlyPreview = true;
+                }
+                else
+                {
+                    var resolved = ResolveEmployeeFolder(entry.FirmName, entry.EmployeeName);
+                    if (resolved == null)
+                    {
+                        MessageBox.Show(
+                            Res("MsgEmployeeProfileMissing"),
+                            Res("TitleWarning"),
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        return;
+                    }
+
+                    folder = resolved.Value.folder;
+                    firmName = resolved.Value.firm;
+                }
             }
 
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(firmName, folder);
+            EmployeeDetailsVm = new EmployeeDetailsViewModel(firmName, folder, employeeService: null, isReadOnlyMode: isReadOnlyPreview);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
@@ -221,6 +245,13 @@ namespace Win11DesktopApp.ViewModels
         private void LoadEntries()
         {
             _allEntries = _logService.GetAll();
+            _undoableArchiveOperationIds = App.EmployeeService.LoadArchiveLog()
+                .Where(entry =>
+                    string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                    && !entry.IsReverted
+                    && !string.IsNullOrWhiteSpace(entry.OperationId))
+                .Select(entry => entry.OperationId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             TotalCount = _allEntries.Count;
 
             var cats = _allEntries.Select(e => e.Category)
@@ -245,6 +276,7 @@ namespace Win11DesktopApp.ViewModels
             foreach (var f in firms) FirmNames.Add(f);
 
             ApplyFilter();
+            CommandManager.InvalidateRequerySuggested();
         }
 
         private void ApplyFilter()
@@ -287,6 +319,113 @@ namespace Win11DesktopApp.ViewModels
 
             FilteredCount = Entries.Count;
             HasEntries = Entries.Count > 0;
+        }
+
+        private bool CanUndoArchive(object? parameter)
+        {
+            return IsUndoEligible(parameter as ActivityLogEntry, _undoableArchiveOperationIds, DateTime.Now);
+        }
+
+        internal static bool IsUndoEligible(ActivityLogEntry? entry, ISet<string> undoableArchiveOperationIds, DateTime now)
+        {
+            if (entry == null)
+                return false;
+
+            if (!string.Equals(entry.ActionType, "EmployeeArchived", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(entry.RelatedOperationId))
+                return false;
+
+            if (!undoableArchiveOperationIds.Contains(entry.RelatedOperationId))
+                return false;
+
+            if (!DateTime.TryParse(entry.Timestamp, out var ts))
+                return false;
+
+            return now - ts <= TimeSpan.FromHours(24);
+        }
+
+        private async Task UndoArchiveAsync(object? parameter)
+        {
+            if (parameter is not ActivityLogEntry entry)
+                return;
+
+            if (!CanUndoArchive(entry))
+            {
+                MessageBox.Show(
+                    Res("ActLogUndoUnavailable"),
+                    Res("TitleWarning"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var currentProfile = App.CurrentProfile;
+            if (currentProfile == null || string.IsNullOrWhiteSpace(currentProfile.ClientId))
+            {
+                MessageBox.Show(
+                    Res("ConfirmPasswordNoProfile"),
+                    Res("ConfirmPasswordTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var passwordWindow = new Views.ConfirmPasswordWindow
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (passwordWindow.ShowDialog() != true || !passwordWindow.IsConfirmed)
+                return;
+
+            var authResult = await App.ProfileAuthService.AuthenticateAsync(currentProfile.ClientId, passwordWindow.EnteredPassword);
+            if (!authResult.Success)
+            {
+                MessageBox.Show(
+                    Res("ConfirmPasswordFailed"),
+                    Res("ConfirmPasswordTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                Res("ActLogUndoConfirm"),
+                Res("TitleWarning"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            var result = await App.EmployeeService.UndoArchiveAsync(entry.RelatedOperationId);
+            if (!result.Success)
+            {
+                MessageBox.Show(
+                    Res("ActLogUndoFailed"),
+                    Res("TitleError"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
+            App.ActivityLogService?.Log(
+                "ArchiveUndone",
+                "Archive",
+                entry.FirmName,
+                entry.EmployeeName,
+                Res("ActLogUndoSuccess"),
+                entry.NewValue,
+                entry.OldValue,
+                employeeFolder: result.RestoredFolder,
+                relatedOperationId: result.UndoOperationId);
+
+            LoadEntries();
+            MessageBox.Show(
+                Res("ActLogUndoSuccess"),
+                Res("TitleSuccess"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         private void ExportToExcel()

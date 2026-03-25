@@ -23,12 +23,22 @@ namespace AdminPanel
         public DateTime? LastSeen { get; set; }
         public DateTime? CreatedAt { get; set; }
         public string? Notes { get; set; }
+        public string ProfileFirstName { get; set; } = "";
+        public string ProfileLastName { get; set; } = "";
         public string RiskLevel { get; set; } = "OK";
         public int RiskScore { get; set; }
         public List<string> RiskReasons { get; set; } = new();
         public bool IsOutdatedVersion { get; set; }
         public int ErrorLikeCount { get; set; }
         public DateTime? LatestHeartbeatAt { get; set; }
+
+        public string ProfileFullName =>
+            string.Join(" ", new[] { ProfileFirstName, ProfileLastName }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim()));
+
+        public string DisplayName =>
+            string.IsNullOrWhiteSpace(ProfileFullName) ? MachineName : ProfileFullName;
 
         public int AccessDaysRemaining =>
             !ExpiresAt.HasValue
@@ -396,6 +406,24 @@ namespace AdminPanel
 
             var profiles = JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
             return profiles.Count == 0 ? null : profiles[0];
+        }
+
+        public async Task<List<ClientProfileRecord>> GetClientProfilesAsync()
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get,
+                $"{_baseUrl}/rest/v1/client_profiles?select=*");
+            SetHeaders(req);
+
+            var resp = await _http.SendAsync(req);
+            var json = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode)
+            {
+                if (LooksLikeMissingTable(json))
+                    return new List<ClientProfileRecord>();
+                resp.EnsureSuccessStatusCode();
+            }
+
+            return JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
         }
 
         public async Task<ClientProfileRecord?> ResetClientProfilePasswordAsync(string clientId)

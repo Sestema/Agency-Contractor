@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using PdfSharp.Fonts;
+using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.Helpers
 {
@@ -22,7 +23,7 @@ namespace Win11DesktopApp.Helpers
             string? fileName = MapToFileName(faceName);
             if (fileName == null) return null;
             string path = Path.Combine(FontsDir, fileName);
-            return File.Exists(path) ? File.ReadAllBytes(path) : null;
+            return File.Exists(path) ? SafeFileService.ReadAllBytes(path) : null;
         }
 
         private static string? MapToFileName(string faceName)

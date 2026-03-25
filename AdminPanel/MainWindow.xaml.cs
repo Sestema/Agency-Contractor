@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -11,6 +12,49 @@ namespace AdminPanel
 {
     public partial class MainWindow : Window
     {
+        private sealed class GridColumnLayout
+        {
+            public string Key { get; set; } = string.Empty;
+            public double Width { get; set; }
+            public int DisplayIndex { get; set; }
+        }
+
+        private sealed class AdminPanelLayoutSettings
+        {
+            public List<GridColumnLayout> ClientGridColumns { get; set; } = new();
+            public double WindowWidth { get; set; }
+            public double WindowHeight { get; set; }
+            public double WindowLeft { get; set; }
+            public double WindowTop { get; set; }
+            public string WindowState { get; set; } = nameof(System.Windows.WindowState.Normal);
+        }
+
+        private sealed class SessionSummaryRow
+        {
+            public DateTime StartedAt { get; set; }
+            public DateTime LastActivityAt { get; set; }
+            public string AppVersion { get; set; } = "";
+            public string UpdateDisplay { get; set; } = "—";
+            public int FirmsAdded { get; set; }
+            public int EmployeesAdded { get; set; }
+            public int ErrorCount { get; set; }
+            public int EventCount { get; set; }
+            public string SessionSummary { get; set; } = "—";
+
+            public string DurationDisplay
+            {
+                get
+                {
+                    var duration = LastActivityAt - StartedAt;
+                    if (duration.TotalMinutes < 1)
+                        return "<1 хв";
+                    if (duration.TotalHours < 1)
+                        return $"{Math.Max(1, (int)Math.Round(duration.TotalMinutes))} хв";
+                    return $"{(int)duration.TotalHours} г {duration.Minutes} хв";
+                }
+            }
+        }
+
         private readonly SupabaseService _svc;
         private ClientRecord? _selected;
         private ClientProfileRecord? _selectedProfile;
@@ -18,6 +62,7 @@ namespace AdminPanel
         private List<TelemetryRecord> _allTelemetry = new();
         private List<TelemetryRecord> _activeTelemetry = new();
         private bool _isUpdatingTelemetryEventFilter;
+        private WindowState _lastNonMinimizedWindowState = WindowState.Normal;
 
         private const string BaseUrl = "https://tssgxhatnjvqthdiyuwo.supabase.co";
         private const string ServiceKey =
@@ -25,12 +70,23 @@ namespace AdminPanel
             "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzc2d4aGF0bmp2cXRoZGl5dXdvIiwi" +
             "cm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjY3NTE4MSwiZXhwIjoyMDg4MjUxMTgxfQ." +
             "3FvcQIgE8617lsBaLgbbjWSsLD9Uug_lDQ-D03QZofA";
+        private static readonly JsonSerializerOptions LayoutJsonOptions = new() { WriteIndented = true };
 
         public MainWindow()
         {
             InitializeComponent();
             _svc = new SupabaseService(BaseUrl, ServiceKey);
-            Loaded += async (_, _) => await RefreshAsync();
+            StateChanged += (_, _) =>
+            {
+                if (WindowState != WindowState.Minimized)
+                    _lastNonMinimizedWindowState = WindowState;
+            };
+            Loaded += async (_, _) =>
+            {
+                RestoreClientGridLayout();
+                await RefreshAsync();
+            };
+            Closing += (_, _) => SaveClientGridLayout();
         }
 
         private async Task RefreshAsync(string? preferredClientId = null)
@@ -40,8 +96,14 @@ namespace AdminPanel
                 TxtStatus.Text = "Завантаження...";
 
                 var selectedId = preferredClientId ?? _selected?.Id;
-                _allClients = await _svc.GetClientsAsync();
-                _allTelemetry = await _svc.GetTelemetryAsync(limit: 500);
+                var clientsTask = _svc.GetClientsAsync();
+                var telemetryTask = _svc.GetTelemetryAsync(limit: 500);
+                var profilesTask = _svc.GetClientProfilesAsync();
+                await Task.WhenAll(clientsTask, telemetryTask, profilesTask);
+
+                _allClients = clientsTask.Result;
+                _allTelemetry = telemetryTask.Result;
+                ApplyProfilesToClients(profilesTask.Result);
                 EnrichClientsWithRiskSignals();
 
                 PopulateVersionFilter();
@@ -52,6 +114,7 @@ namespace AdminPanel
                 {
                     _selectedProfile = null;
                     _activeTelemetry = _allTelemetry;
+                    RefreshSessionSummaries();
                     PopulateTelemetryEventFilter();
                     ApplyTelemetryFilters();
                     UpdateStats(_allTelemetry, null);
@@ -67,6 +130,162 @@ namespace AdminPanel
                 MessageBox.Show($"Не вдалося завантажити дані:\n{ex.Message}", "Помилка",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void ApplyProfilesToClients(List<ClientProfileRecord> profiles)
+        {
+            var profilesByClientId = profiles
+                .Where(profile => !string.IsNullOrWhiteSpace(profile.ClientId))
+                .GroupBy(profile => profile.ClientId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+            foreach (var client in _allClients)
+            {
+                if (!profilesByClientId.TryGetValue(client.Id, out var profile))
+                    continue;
+
+                client.ProfileFirstName = profile.FirstName ?? string.Empty;
+                client.ProfileLastName = profile.LastName ?? string.Empty;
+            }
+        }
+
+        private static string GetClientGridLayoutPath()
+        {
+            var settingsDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AgencyContractorAdmin");
+            Directory.CreateDirectory(settingsDir);
+            return Path.Combine(settingsDir, "layout.json");
+        }
+
+        private void RestoreClientGridLayout()
+        {
+            try
+            {
+                var path = GetClientGridLayoutPath();
+                if (!File.Exists(path))
+                    return;
+
+                var json = File.ReadAllText(path);
+                var settings = JsonSerializer.Deserialize<AdminPanelLayoutSettings>(json, LayoutJsonOptions);
+                RestoreWindowLayout(settings);
+                var layouts = settings?.ClientGridColumns;
+                if (layouts == null || layouts.Count == 0)
+                    return;
+
+                var byKey = layouts
+                    .Where(layout => !string.IsNullOrWhiteSpace(layout.Key))
+                    .ToDictionary(layout => layout.Key, StringComparer.Ordinal);
+
+                foreach (var column in DgClients.Columns)
+                {
+                    var key = column.Header?.ToString();
+                    if (string.IsNullOrWhiteSpace(key) || !byKey.TryGetValue(key, out var layout))
+                        continue;
+
+                    if (layout.Width > 0)
+                        column.Width = new DataGridLength(layout.Width);
+                }
+
+                foreach (var layout in layouts.OrderBy(layout => layout.DisplayIndex))
+                {
+                    var column = DgClients.Columns.FirstOrDefault(col =>
+                        string.Equals(col.Header?.ToString(), layout.Key, StringComparison.Ordinal));
+                    if (column == null)
+                        continue;
+
+                    var safeIndex = Math.Max(0, Math.Min(layout.DisplayIndex, DgClients.Columns.Count - 1));
+                    column.DisplayIndex = safeIndex;
+                }
+            }
+            catch
+            {
+                // Layout restore should never block panel startup.
+            }
+        }
+
+        private void SaveClientGridLayout()
+        {
+            try
+            {
+                var windowStateToSave = WindowState == WindowState.Minimized
+                    ? _lastNonMinimizedWindowState
+                    : WindowState;
+                var bounds = windowStateToSave == WindowState.Normal
+                    ? new Rect(Left, Top, Width, Height)
+                    : RestoreBounds;
+                var settings = new AdminPanelLayoutSettings
+                {
+                    WindowWidth = bounds.Width,
+                    WindowHeight = bounds.Height,
+                    WindowLeft = bounds.Left,
+                    WindowTop = bounds.Top,
+                    WindowState = windowStateToSave == WindowState.Maximized
+                        ? nameof(System.Windows.WindowState.Maximized)
+                        : nameof(System.Windows.WindowState.Normal),
+                    ClientGridColumns = DgClients.Columns
+                        .Where(column => !string.IsNullOrWhiteSpace(column.Header?.ToString()))
+                        .Select(column => new GridColumnLayout
+                        {
+                            Key = column.Header?.ToString() ?? string.Empty,
+                            Width = column.ActualWidth > 0 ? column.ActualWidth : column.Width.DisplayValue,
+                            DisplayIndex = column.DisplayIndex
+                        })
+                        .ToList()
+                };
+
+                var json = JsonSerializer.Serialize(settings, LayoutJsonOptions);
+                File.WriteAllText(GetClientGridLayoutPath(), json);
+            }
+            catch
+            {
+                // Layout save should never block window closing.
+            }
+        }
+
+        private void RestoreWindowLayout(AdminPanelLayoutSettings? settings)
+        {
+            if (settings == null)
+                return;
+
+            var savedBounds = new Rect(
+                settings.WindowLeft,
+                settings.WindowTop,
+                settings.WindowWidth,
+                settings.WindowHeight);
+
+            if (IsVisibleOnAnyScreen(savedBounds))
+            {
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Width = Math.Max(MinWidth, settings.WindowWidth);
+                Height = Math.Max(MinHeight, settings.WindowHeight);
+                Left = settings.WindowLeft;
+                Top = settings.WindowTop;
+            }
+
+            if (!Enum.TryParse(settings.WindowState, out WindowState savedState))
+                return;
+
+            if (savedState == WindowState.Minimized)
+                savedState = WindowState.Normal;
+
+            _lastNonMinimizedWindowState = savedState;
+            if (savedState == WindowState.Maximized)
+                WindowState = WindowState.Maximized;
+        }
+
+        private static bool IsVisibleOnAnyScreen(Rect bounds)
+        {
+            if (bounds.Width < 100 || bounds.Height < 100)
+                return false;
+
+            var desktopBounds = new Rect(
+                SystemParameters.VirtualScreenLeft,
+                SystemParameters.VirtualScreenTop,
+                SystemParameters.VirtualScreenWidth,
+                SystemParameters.VirtualScreenHeight);
+
+            return desktopBounds.IntersectsWith(bounds);
         }
 
         private void RestoreClientSelection(string? selectedId)
@@ -118,6 +337,9 @@ namespace AdminPanel
             if (!string.IsNullOrWhiteSpace(query))
             {
                 filtered = filtered.Where(c =>
+                    (c.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (c.ProfileFirstName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (c.ProfileLastName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (c.MachineName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (c.MachineId?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (c.IpAddress?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
@@ -154,23 +376,13 @@ namespace AdminPanel
                 _ => filtered
             };
 
-            var riskFilter = GetSelectedComboTag(CmbRiskFilter);
-            filtered = riskFilter switch
-            {
-                "high" => filtered.Where(c => string.Equals(c.RiskLevel, "High risk", StringComparison.Ordinal)),
-                "warning" => filtered.Where(c => string.Equals(c.RiskLevel, "Warning", StringComparison.Ordinal)),
-                "outdated" => filtered.Where(c => c.IsOutdatedVersion),
-                _ => filtered
-            };
-
             var version = CmbVersionFilter.SelectedItem as string;
             if (!string.IsNullOrWhiteSpace(version) && !string.Equals(version, "Усі версії", StringComparison.Ordinal))
                 filtered = filtered.Where(c => string.Equals(c.AppVersion, version, StringComparison.OrdinalIgnoreCase));
 
             var filteredList = filtered
-                .OrderByDescending(c => c.RiskScore)
-                .ThenByDescending(c => c.LastSeen ?? DateTime.MinValue)
-                .ThenBy(c => c.MachineName, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(c => c.LastSeen ?? DateTime.MinValue)
+                .ThenBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             var selectedId = restoreSelection ? _selected?.Id : null;
@@ -184,17 +396,7 @@ namespace AdminPanel
         private void UpdateClientCounters(List<ClientRecord> filtered)
         {
             var expiringSoon = filtered.Count(c => IsExpiringWithin(c, 7));
-            var highRisk = filtered.Count(c => string.Equals(c.RiskLevel, "High risk", StringComparison.Ordinal));
-            var warnings = filtered.Count(c => string.Equals(c.RiskLevel, "Warning", StringComparison.Ordinal));
-            TxtCount.Text = $"Показано: {filtered.Count}/{_allClients.Count} | High risk: {highRisk} | Warning: {warnings} | Заблокованих: {filtered.Count(c => c.IsBlocked)} | <=7 днів: {expiringSoon}";
-        }
-
-        private void UpdateRiskDashboard()
-        {
-            TxtStatHighRisk.Text = $"High risk: {_allClients.Count(c => string.Equals(c.RiskLevel, "High risk", StringComparison.Ordinal))}";
-            TxtStatWarnings.Text = $"Warning: {_allClients.Count(c => string.Equals(c.RiskLevel, "Warning", StringComparison.Ordinal))}";
-            TxtStatOutdated.Text = $"Outdated: {_allClients.Count(c => c.IsOutdatedVersion)}";
-            TxtStatExpiring.Text = $"<=7 днів: {_allClients.Count(c => IsExpiringWithin(c, 7))}";
+            TxtCount.Text = $"Показано: {filtered.Count}/{_allClients.Count} | Заблокованих: {filtered.Count(c => c.IsBlocked)} | <=7 днів: {expiringSoon}";
         }
 
         private void UpdateStats(List<TelemetryRecord> telemetry, string? clientId)
@@ -284,6 +486,7 @@ namespace AdminPanel
                 {
                     _selectedProfile = null;
                     _activeTelemetry = _allTelemetry;
+                    RefreshSessionSummaries();
                     PopulateTelemetryEventFilter();
                     ApplyTelemetryFilters();
                     UpdateStats(_allTelemetry, null);
@@ -302,6 +505,7 @@ namespace AdminPanel
                 _activeTelemetry = telemetryTask.Result;
                 _selectedProfile = profileTask.Result;
 
+                RefreshSessionSummaries();
                 UpdateStats(_activeTelemetry, selectedId);
                 PopulateClientDetails(_selected);
                 PopulateTelemetryEventFilter();
@@ -404,12 +608,121 @@ namespace AdminPanel
             TxtTelemetrySummary.Text = $"Показано: {telemetry.Count} | Типів: {telemetry.Select(t => t.EventType).Distinct(StringComparer.OrdinalIgnoreCase).Count()} | Error-like: {errorLike} | Остання: {latestText}";
         }
 
+        private void RefreshSessionSummaries()
+        {
+            if (_selected == null)
+            {
+                DgSessions.ItemsSource = new List<SessionSummaryRow>();
+                TxtSessionsSummary.Text = "Виберіть клієнта";
+                return;
+            }
+
+            var sessions = BuildSessionSummaries(_activeTelemetry);
+            DgSessions.ItemsSource = sessions;
+
+            var firmsTotal = sessions.Sum(session => session.FirmsAdded);
+            var employeesTotal = sessions.Sum(session => session.EmployeesAdded);
+            TxtSessionsSummary.Text = $"Сесій: {sessions.Count} | +Фірм: {firmsTotal} | +Працівників: {employeesTotal}";
+        }
+
+        private List<SessionSummaryRow> BuildSessionSummaries(IEnumerable<TelemetryRecord> telemetry)
+        {
+            var ordered = telemetry
+                .Where(item => item.CreatedAt.HasValue)
+                .OrderBy(item => item.CreatedAt!.Value)
+                .ToList();
+
+            if (ordered.Count == 0)
+                return new List<SessionSummaryRow>();
+
+            var sessions = new List<SessionSummaryRow>();
+            SessionSummaryRow? current = null;
+
+            foreach (var item in ordered)
+            {
+                var createdAt = item.CreatedAt!.Value.ToLocalTime();
+                var hasLargeGap = current != null
+                    && (createdAt - current.LastActivityAt).TotalMinutes > 10;
+                var startsSession = string.Equals(item.EventType, "app_started", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(item.EventType, "first_launch", StringComparison.OrdinalIgnoreCase)
+                    || hasLargeGap;
+
+                if (current == null || startsSession)
+                {
+                    if (current != null)
+                        sessions.Add(current);
+
+                    current = new SessionSummaryRow
+                    {
+                        StartedAt = createdAt,
+                        LastActivityAt = createdAt,
+                        AppVersion = item.AppVersion ?? string.Empty
+                    };
+                }
+
+                current.LastActivityAt = createdAt;
+                if (string.IsNullOrWhiteSpace(current.AppVersion) && !string.IsNullOrWhiteSpace(item.AppVersion))
+                    current.AppVersion = item.AppVersion;
+
+                current.EventCount++;
+
+                if (string.Equals(item.EventType, "firm_created", StringComparison.OrdinalIgnoreCase))
+                    current.FirmsAdded++;
+
+                if (string.Equals(item.EventType, "employee_added", StringComparison.OrdinalIgnoreCase))
+                    current.EmployeesAdded++;
+
+                if (IsErrorLikeEvent(item))
+                    current.ErrorCount++;
+            }
+
+            if (current != null)
+                sessions.Add(current);
+
+            string previousVersion = string.Empty;
+            foreach (var session in sessions)
+            {
+                session.UpdateDisplay = string.IsNullOrWhiteSpace(previousVersion) || string.Equals(previousVersion, session.AppVersion, StringComparison.OrdinalIgnoreCase)
+                    ? "—"
+                    : $"{previousVersion} -> {session.AppVersion}";
+
+                session.SessionSummary = BuildSessionSummary(session);
+                previousVersion = session.AppVersion;
+            }
+
+            sessions.Reverse();
+            return sessions;
+        }
+
+        private static string BuildSessionSummary(SessionSummaryRow session)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(session.UpdateDisplay) && session.UpdateDisplay != "—")
+                parts.Add($"оновлено {session.UpdateDisplay}");
+            else
+                parts.Add("вхід у програму");
+
+            if (session.FirmsAdded > 0)
+                parts.Add($"+{session.FirmsAdded} фірм");
+
+            if (session.EmployeesAdded > 0)
+                parts.Add($"+{session.EmployeesAdded} працівників");
+
+            if (session.ErrorCount > 0)
+                parts.Add($"помилок: {session.ErrorCount}");
+
+            parts.Add($"подій: {session.EventCount}");
+            return string.Join(" | ", parts);
+        }
+
         private void PopulateClientDetails(ClientRecord? client)
         {
             if (client == null)
             {
                 TxtDetailHeader.Text = "Клієнт не вибраний";
                 TxtDetailStatus.Text = "—";
+                TxtDetailClientId.Text = "—";
                 TxtDetailMachine.Text = "—";
                 TxtDetailMachineId.Text = "—";
                 TxtDetailIp.Text = "—";
@@ -420,8 +733,6 @@ namespace AdminPanel
                 TxtDetailBlockReason.Text = "—";
                 TxtDetailLicense.Text = "—";
                 TxtDetailHeartbeat.Text = "—";
-                TxtDetailRisk.Text = "—";
-                TxtDetailErrors.Text = "—";
                 TxtDetailProfileName.Text = "—";
                 TxtDetailProfileStatus.Text = "—";
                 TxtDetailRememberMe.Text = "—";
@@ -431,7 +742,7 @@ namespace AdminPanel
                 return;
             }
 
-            TxtDetailHeader.Text = client.MachineName;
+            TxtDetailHeader.Text = client.DisplayName;
             TxtDetailStatus.Text = client.AccessStateLabel;
             TxtDetailStatus.Foreground = client.AccessStateCode switch
             {
@@ -441,6 +752,7 @@ namespace AdminPanel
                 "activated" => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A6E3A1")),
                 _ => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CDD6F4"))
             };
+            TxtDetailClientId.Text = client.Id;
             TxtDetailMachine.Text = client.MachineName;
             TxtDetailMachineId.Text = client.MachineId;
             TxtDetailIp.Text = string.IsNullOrWhiteSpace(client.IpAddress) ? "—" : client.IpAddress;
@@ -453,10 +765,8 @@ namespace AdminPanel
             TxtDetailBlockReason.Text = string.IsNullOrWhiteSpace(client.BlockReason) ? "—" : client.BlockReason;
             TxtDetailLicense.Text = client.AccessStateDetail;
             TxtDetailHeartbeat.Text = BuildLatestStateSummary();
-            TxtDetailRisk.Text = $"{client.RiskLevel} ({client.RiskScore})";
-            TxtDetailErrors.Text = client.ErrorLikeCount == 0 ? "Немає error-like подій" : $"{client.ErrorLikeCount} error-like подій";
             TxtDetailProfileName.Text = _selectedProfile == null
-                ? "Профіль не створено"
+                ? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "Профіль не створено" : client.ProfileFullName)
                 : $"{_selectedProfile.FirstName} {_selectedProfile.LastName}".Trim();
             TxtDetailProfileStatus.Text = _selectedProfile == null
                 ? "Відсутній"
@@ -583,7 +893,6 @@ namespace AdminPanel
                 client.LatestHeartbeatAt = latestHeartbeat?.CreatedAt;
             }
 
-            UpdateRiskDashboard();
         }
 
         private static int GetDaysSinceLastSeen(DateTime? lastSeen)
@@ -655,9 +964,6 @@ namespace AdminPanel
 
             switch (parts[0])
             {
-                case "risk":
-                    ToggleComboTag(CmbRiskFilter, parts[1], "all");
-                    break;
                 case "license":
                     ToggleComboTag(CmbLicenseFilter, parts[1], "all");
                     break;
@@ -675,7 +981,6 @@ namespace AdminPanel
             SelectComboTag(CmbClientStatus, "all");
             SelectComboTag(CmbLicenseFilter, "all");
             SelectComboTag(CmbActivityFilter, "all");
-            SelectComboTag(CmbRiskFilter, "all");
             if (CmbVersionFilter.Items.Count > 0)
                 CmbVersionFilter.SelectedIndex = 0;
             ApplyClientFilters();
@@ -972,9 +1277,6 @@ namespace AdminPanel
         {
             return tag switch
             {
-                "risk:high" => "High risk",
-                "risk:warning" => "Warning",
-                "risk:outdated" => "Outdated version",
                 "license:7" => "Ліцензія <= 7 днів",
                 _ => "Оновлено"
             };

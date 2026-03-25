@@ -19,8 +19,23 @@ namespace Win11DesktopApp.Services
     public sealed class ArchiveEmployeeResult
     {
         public string ArchiveFolder { get; init; } = string.Empty;
+        public string OperationId { get; init; } = string.Empty;
         public bool SourceCleanupDeferred { get; init; }
         public bool Success => !string.IsNullOrEmpty(ArchiveFolder);
+    }
+
+    public sealed class RestoreEmployeeResult
+    {
+        public string RestoredFolder { get; init; } = string.Empty;
+        public string OperationId { get; init; } = string.Empty;
+        public bool Success => !string.IsNullOrEmpty(RestoredFolder);
+    }
+
+    public sealed class UndoArchiveResult
+    {
+        public string RestoredFolder { get; init; } = string.Empty;
+        public string UndoOperationId { get; init; } = string.Empty;
+        public bool Success => !string.IsNullOrEmpty(RestoredFolder);
     }
 
     public class EmployeeService
@@ -85,7 +100,7 @@ namespace Win11DesktopApp.Services
             {
                 foreach (var file in Directory.GetFiles(tempFolder, "*", SearchOption.AllDirectories))
                 {
-                    try { File.Delete(file); }
+                    try { SafeFileService.DeleteFile(file); }
                     catch (Exception ex) { LoggingService.LogWarning("EmployeeService.CleanupTempFolder", ex.Message); }
                 }
 
@@ -128,7 +143,7 @@ namespace Win11DesktopApp.Services
                 if (ext == ".pdf")
                 {
                     var destPdf = Path.Combine(tempFolder, $"{baseName}.pdf");
-                    File.Copy(sourcePath, destPdf, true);
+                    SafeFileService.CopyFile(sourcePath, destPdf);
                     temp.PdfPath = destPdf;
                     temp.IsPdf = true;
                     return temp;
@@ -233,7 +248,7 @@ namespace Win11DesktopApp.Services
                     else
                     {
                         var photoDest = Path.Combine(employeeFolder, $"{data.FirstName} {data.LastName} - Photo.jpg");
-                        File.Copy(photoPath, photoDest, true);
+                        SafeFileService.CopyFile(photoPath, photoDest);
                         data.Files.Photo = Path.GetFileName(photoDest);
                     }
                 }
@@ -573,7 +588,7 @@ namespace Win11DesktopApp.Services
                 if (ext == ".pdf")
                 {
                     var destPdf = Path.Combine(customDocsFolder, $"{baseName}.pdf");
-                    File.Copy(sourcePath, destPdf, true);
+                    SafeFileService.CopyFile(sourcePath, destPdf);
                     return Path.GetFileName(destPdf);
                 }
                 var destImage = Path.Combine(customDocsFolder, $"{baseName}.jpg");
@@ -600,7 +615,7 @@ namespace Win11DesktopApp.Services
             try
             {
                 var path = Path.Combine(employeeFolder, "CustomDocs", fileName);
-                if (File.Exists(path)) File.Delete(path);
+                SafeFileService.DeleteFile(path);
             }
             catch (Exception ex)
             {
@@ -614,7 +629,7 @@ namespace Win11DesktopApp.Services
             if (ext == ".pdf")
             {
                 var destPdf = Path.Combine(employeeFolder, $"{baseName}.pdf");
-                File.Copy(sourcePath, destPdf, true);
+                SafeFileService.CopyFile(sourcePath, destPdf);
                 return Path.GetFileName(destPdf);
             }
 
@@ -653,7 +668,7 @@ namespace Win11DesktopApp.Services
                     return string.Empty;
                 }
                 var pdfPath = Path.Combine(employeeFolder, $"{baseName}.pdf");
-                File.Copy(doc.PdfPath, pdfPath, true);
+                SafeFileService.CopyFile(doc.PdfPath, pdfPath);
                 return Path.GetFileName(pdfPath);
             }
 
@@ -665,7 +680,7 @@ namespace Win11DesktopApp.Services
                 return string.Empty;
             }
             var jpgPath = Path.Combine(employeeFolder, $"{baseName}.jpg");
-            File.Copy(doc.ImagePath, jpgPath, true);
+            SafeFileService.CopyFile(doc.ImagePath, jpgPath);
             return Path.GetFileName(jpgPath);
         }
 
@@ -679,7 +694,7 @@ namespace Win11DesktopApp.Services
                 if (File.Exists(Path.Combine(employeeFolder, "employee.json")))
                     return;
 
-                Directory.Delete(employeeFolder, true);
+                TryDeleteDirectory(employeeFolder);
             }
             catch (Exception ex)
             {
@@ -867,6 +882,9 @@ namespace Win11DesktopApp.Services
             await _historyLock.WaitAsync();
             try
             {
+                if (string.IsNullOrWhiteSpace(entry.OperationId))
+                    entry.OperationId = Guid.NewGuid().ToString();
+
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrEmpty(path)) return;
                 var entries = LoadArchiveLog();
@@ -1002,125 +1020,261 @@ namespace Win11DesktopApp.Services
             return result;
         }
 
-        public async Task<string> RestoreFromArchive(string archiveEmployeeFolder, string newFirmName, string newStartDate, string newContractSignDate, string positionTag, string positionNumber, string workAddressTag)
+        public async Task<RestoreEmployeeResult> RestoreFromArchive(string archiveEmployeeFolder, string newFirmName, string newStartDate, string newContractSignDate, string positionTag, string positionNumber, string workAddressTag)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(archiveEmployeeFolder) || !Directory.Exists(archiveEmployeeFolder))
-                {
-                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
-                        $"Archive employee folder not found: {archiveEmployeeFolder}");
-                    NotifyOperationFailure(Res("MsgRestoreSourceMissing"));
-                    return string.Empty;
-                }
+                var destFolder = await RestoreArchivedEmployeeCore(
+                    archiveEmployeeFolder,
+                    newFirmName,
+                    newStartDate,
+                    newContractSignDate,
+                    positionTag,
+                    positionNumber,
+                    workAddressTag);
 
-                var jsonPath = Path.Combine(archiveEmployeeFolder, "employee.json");
-                if (!File.Exists(jsonPath))
-                {
-                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
-                        $"Archive employee.json not found: {jsonPath}");
-                    NotifyOperationFailure(Res("MsgRestoreSourceMissing"));
-                    return string.Empty;
-                }
-
-                var data = ReadJson<EmployeeData>(jsonPath);
-                if (data == null)
-                {
-                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
-                        $"Could not read archived employee data: {jsonPath}");
-                    NotifyOperationFailure(Res("MsgRestoreError"));
-                    return string.Empty;
-                }
-
-                if (string.IsNullOrWhiteSpace(data.UniqueId))
-                    data.UniqueId = Guid.NewGuid().ToString();
-
-                data.StartDate = newStartDate;
-                data.ContractSignDate = newContractSignDate;
-                data.PositionTag = positionTag;
-                data.PositionNumber = positionNumber;
-                data.WorkAddressTag = workAddressTag;
-                data.EndDate = string.Empty;
-                data.IsArchived = false;
-                data.ArchivedFromFirm = string.Empty;
-                data.Status = "Active";
-
-                var employeesFolder = _folderService.GetEmployeesFolder(newFirmName);
-                if (string.IsNullOrEmpty(employeesFolder))
-                {
-                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
-                        $"Employees folder path is empty for firm '{newFirmName}'");
-                    NotifyOperationFailure(Res("MsgEmployeesRootMissing"));
-                    return string.Empty;
-                }
-
-                Directory.CreateDirectory(employeesFolder);
-
-                var existingFolderWithSameId = FindEmployeeFolderByUniqueId(employeesFolder, data.UniqueId);
-                if (!string.IsNullOrWhiteSpace(existingFolderWithSameId))
-                {
-                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
-                        $"Restore blocked because employee with the same UniqueId already exists: {existingFolderWithSameId}");
-                    NotifyOperationFailure(Res("MsgRestoreConflict"));
-                    return string.Empty;
-                }
-
-                var destFolder = ResolveAvailableFolder(employeesFolder,
-                    NormalizeFolderName($"{data.FirstName}_{data.LastName} - {data.StartDate}"));
                 if (string.IsNullOrWhiteSpace(destFolder))
-                {
-                    LoggingService.LogWarning("EmployeeService.RestoreFromArchive",
-                        $"Could not resolve destination folder for {data.FirstName} {data.LastName} in {employeesFolder}");
-                    NotifyOperationFailure(Res("MsgRestoreError"));
-                    return string.Empty;
-                }
+                    return new RestoreEmployeeResult();
 
-                CopyDirectory(archiveEmployeeFolder, destFolder);
-
-                var restoredJsonPath = Path.Combine(destFolder, "employee.json");
-                WriteJsonAtomic(restoredJsonPath, data);
-
-                var verify = ReadJson<EmployeeData>(restoredJsonPath);
-                if (verify == null || string.IsNullOrEmpty(verify.FirstName) || !string.Equals(verify.UniqueId, data.UniqueId, StringComparison.OrdinalIgnoreCase))
-                {
-                    LoggingService.LogError("RestoreFromArchive", new InvalidOperationException(
-                        $"Restored employee.json validation failed for {restoredJsonPath}"));
-                    TryDeleteDirectory(destFolder);
-                    NotifyOperationFailure(Res("MsgRestoreError"));
-                    return string.Empty;
-                }
-
-                TryCleanupDeferredDirectory(archiveEmployeeFolder);
-                if (Directory.Exists(archiveEmployeeFolder))
-                {
-                    LoggingService.LogWarning("RestoreFromArchive",
-                        $"Archive folder still exists after restore, scheduling cleanup: {archiveEmployeeFolder}");
-                    await PendingCleanupService.EnqueueAsync(archiveEmployeeFolder, "restore-archive-folder");
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(15000);
-                        if (TryCleanupDeferredDirectory(archiveEmployeeFolder))
-                            await PendingCleanupService.RemoveAsync(archiveEmployeeFolder);
-                    });
-                }
-
+                var restoredData = LoadEmployeeData(destFolder);
+                var opId = Guid.NewGuid().ToString();
                 await AppendArchiveLog(new ArchiveLogEntry
                 {
-                    EmployeeName = $"{data.FirstName} {data.LastName}",
+                    OperationId = opId,
+                    EmployeeName = restoredData == null
+                        ? Path.GetFileName(destFolder)
+                        : $"{restoredData.FirstName} {restoredData.LastName}",
                     FirmName = newFirmName,
+                    EmployeeFolder = destFolder,
                     Action = "Restored",
                     Date = newStartDate,
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 });
 
-                LoggingService.LogInfo("EmployeeService", $"Employee restored: {data.FirstName} {data.LastName} to {newFirmName}");
-                return destFolder;
+                LoggingService.LogInfo("EmployeeService", $"Employee restored to {newFirmName}: {destFolder}");
+                return new RestoreEmployeeResult
+                {
+                    RestoredFolder = destFolder,
+                    OperationId = opId
+                };
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"RestoreFromArchive error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.RestoreFromArchive", ex);
+                return new RestoreEmployeeResult();
+            }
+        }
+
+        public async Task<UndoArchiveResult> UndoArchiveAsync(string operationId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(operationId))
+                    return new UndoArchiveResult();
+
+                var archiveEntries = LoadArchiveLog();
+                var target = archiveEntries.FirstOrDefault(entry =>
+                    string.Equals(entry.OperationId, operationId, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                    && !entry.IsReverted);
+                if (target == null)
+                    return new UndoArchiveResult();
+
+                var archiveFolderPath = !string.IsNullOrWhiteSpace(target.EmployeeFolder) && Directory.Exists(target.EmployeeFolder)
+                    ? target.EmployeeFolder
+                    : Path.Combine(_folderService.GetArchiveFolder(), Path.GetFileName(target.EmployeeFolder ?? string.Empty));
+                if (string.IsNullOrWhiteSpace(archiveFolderPath) || !Directory.Exists(archiveFolderPath))
+                {
+                    LoggingService.LogWarning("EmployeeService.UndoArchiveAsync",
+                        $"Archive folder was not found for operation {operationId}");
+                    return new UndoArchiveResult();
+                }
+
+                var restoredFolder = await RestoreArchivedEmployeeCore(
+                    archiveFolderPath,
+                    target.FirmName,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    isUndo: true);
+                if (string.IsNullOrWhiteSpace(restoredFolder))
+                    return new UndoArchiveResult();
+
+                var undoOperationId = Guid.NewGuid().ToString();
+                await MarkArchiveLogReverted(operationId, undoOperationId);
+
+                await AddHistoryEntry(restoredFolder, new EmployeeHistoryEntry
+                {
+                    EventType = "ArchiveUndone",
+                    Action = Res("HistoryActionArchiveUndone"),
+                    Field = target.FirmName,
+                    Description = string.Format(Res("HistoryDescArchiveUndone"), target.FirmName)
+                });
+
+                return new UndoArchiveResult
+                {
+                    RestoredFolder = restoredFolder,
+                    UndoOperationId = undoOperationId
+                };
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.UndoArchiveAsync", ex);
+                return new UndoArchiveResult();
+            }
+        }
+
+        private async Task<string> RestoreArchivedEmployeeCore(
+            string archiveEmployeeFolder,
+            string targetFirmName,
+            string newStartDate,
+            string newContractSignDate,
+            string positionTag,
+            string positionNumber,
+            string workAddressTag,
+            bool isUndo = false)
+        {
+            if (string.IsNullOrWhiteSpace(archiveEmployeeFolder) || !Directory.Exists(archiveEmployeeFolder))
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Archive employee folder not found: {archiveEmployeeFolder}");
+                NotifyOperationFailure(Res("MsgRestoreSourceMissing"));
                 return string.Empty;
+            }
+
+            var jsonPath = Path.Combine(archiveEmployeeFolder, "employee.json");
+            if (!File.Exists(jsonPath))
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Archive employee.json not found: {jsonPath}");
+                NotifyOperationFailure(Res("MsgRestoreSourceMissing"));
+                return string.Empty;
+            }
+
+            var data = ReadJson<EmployeeData>(jsonPath);
+            if (data == null)
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Could not read archived employee data: {jsonPath}");
+                NotifyOperationFailure(Res("MsgRestoreError"));
+                return string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(data.UniqueId))
+                data.UniqueId = Guid.NewGuid().ToString();
+
+            if (!isUndo)
+            {
+                data.StartDate = newStartDate;
+                data.ContractSignDate = newContractSignDate;
+                data.PositionTag = positionTag;
+                data.PositionNumber = positionNumber;
+                data.WorkAddressTag = workAddressTag;
+            }
+
+            data.EndDate = string.Empty;
+            data.IsArchived = false;
+            data.ArchivedFromFirm = string.Empty;
+            data.Status = "Active";
+
+            if (isUndo && !string.IsNullOrWhiteSpace(targetFirmName))
+            {
+                data.FirmHistory ??= new List<FirmHistoryEntry>();
+                var latestFirmEntry = data.FirmHistory.LastOrDefault(fh =>
+                    string.Equals(fh.FirmName, targetFirmName, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(fh.StartDate, data.StartDate, StringComparison.OrdinalIgnoreCase));
+                if (latestFirmEntry != null)
+                    latestFirmEntry.EndDate = string.Empty;
+            }
+
+            var employeesFolder = _folderService.GetEmployeesFolder(targetFirmName);
+            if (string.IsNullOrEmpty(employeesFolder))
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Employees folder path is empty for firm '{targetFirmName}'");
+                NotifyOperationFailure(Res("MsgEmployeesRootMissing"));
+                return string.Empty;
+            }
+
+            Directory.CreateDirectory(employeesFolder);
+
+            var existingFolderWithSameId = FindEmployeeFolderByUniqueId(employeesFolder, data.UniqueId);
+            if (!string.IsNullOrWhiteSpace(existingFolderWithSameId))
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Restore blocked because employee with the same UniqueId already exists: {existingFolderWithSameId}");
+                NotifyOperationFailure(Res("MsgRestoreConflict"));
+                return string.Empty;
+            }
+
+            var destFolder = ResolveAvailableFolder(employeesFolder,
+                NormalizeFolderName($"{data.FirstName}_{data.LastName} - {data.StartDate}"));
+            if (string.IsNullOrWhiteSpace(destFolder))
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Could not resolve destination folder for {data.FirstName} {data.LastName} in {employeesFolder}");
+                NotifyOperationFailure(Res("MsgRestoreError"));
+                return string.Empty;
+            }
+
+            CopyDirectory(archiveEmployeeFolder, destFolder);
+
+            var restoredJsonPath = Path.Combine(destFolder, "employee.json");
+            WriteJsonAtomic(restoredJsonPath, data);
+
+            var verify = ReadJson<EmployeeData>(restoredJsonPath);
+            if (verify == null || string.IsNullOrEmpty(verify.FirstName) || !string.Equals(verify.UniqueId, data.UniqueId, StringComparison.OrdinalIgnoreCase))
+            {
+                LoggingService.LogError("EmployeeService.RestoreArchivedEmployeeCore", new InvalidOperationException(
+                    $"Restored employee.json validation failed for {restoredJsonPath}"));
+                TryDeleteDirectory(destFolder);
+                NotifyOperationFailure(Res("MsgRestoreError"));
+                return string.Empty;
+            }
+
+            TryCleanupDeferredDirectory(archiveEmployeeFolder);
+            if (Directory.Exists(archiveEmployeeFolder))
+            {
+                LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
+                    $"Archive folder still exists after restore, scheduling cleanup: {archiveEmployeeFolder}");
+                await PendingCleanupService.EnqueueAsync(archiveEmployeeFolder, isUndo ? "undo-archive-folder" : "restore-archive-folder");
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(15000);
+                    if (TryCleanupDeferredDirectory(archiveEmployeeFolder))
+                        await PendingCleanupService.RemoveAsync(archiveEmployeeFolder);
+                });
+            }
+
+            return destFolder;
+        }
+
+        private async Task MarkArchiveLogReverted(string operationId, string undoOperationId)
+        {
+            await _historyLock.WaitAsync();
+            try
+            {
+                var path = GetArchiveLogPath();
+                if (string.IsNullOrWhiteSpace(path))
+                    return;
+
+                var entries = LoadArchiveLog();
+                var target = entries.FirstOrDefault(entry =>
+                    string.Equals(entry.OperationId, operationId, StringComparison.OrdinalIgnoreCase));
+                if (target == null)
+                    return;
+
+                target.IsReverted = true;
+                target.RevertedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                target.RevertedByOperationId = undoOperationId;
+                WriteJsonAtomic(path, entries);
+            }
+            finally
+            {
+                _historyLock.Release();
             }
         }
 
@@ -1262,10 +1416,13 @@ namespace Win11DesktopApp.Services
                     });
                 }
 
+                var opId = Guid.NewGuid().ToString();
                 await AppendArchiveLog(new ArchiveLogEntry
                 {
+                    OperationId = opId,
                     EmployeeName = employeeName,
                     FirmName = firmName,
+                    EmployeeFolder = destFolder,
                     Action = "Archived",
                     Date = endDate,
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
@@ -1275,6 +1432,7 @@ namespace Win11DesktopApp.Services
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
+                    OperationId = opId,
                     SourceCleanupDeferred = sourceCleanupDeferred
                 };
             }
@@ -1282,6 +1440,166 @@ namespace Win11DesktopApp.Services
             {
                 Debug.WriteLine($"ArchiveEmployee error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.ArchiveEmployee", ex);
+                return new ArchiveEmployeeResult();
+            }
+        }
+
+        public async Task<ArchiveEmployeeResult> ArchiveEmployeeFromPathAsync(string sourceEmployeeFolder, string firmName, string endDate)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(sourceEmployeeFolder) || !Directory.Exists(sourceEmployeeFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployeeFromPathAsync",
+                        $"Employee folder not found: {sourceEmployeeFolder}");
+                    NotifyOperationFailure(Res("MsgArchiveSourceMissing"));
+                    return new ArchiveEmployeeResult();
+                }
+
+                var archiveFolder = _folderService.GetArchiveFolder();
+                if (string.IsNullOrEmpty(archiveFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployeeFromPathAsync", "Archive folder path is empty.");
+                    NotifyOperationFailure(Res("MsgArchiveError"));
+                    return new ArchiveEmployeeResult();
+                }
+
+                Directory.CreateDirectory(archiveFolder);
+
+                var jsonPath = Path.Combine(sourceEmployeeFolder, "employee.json");
+                if (!File.Exists(jsonPath))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployeeFromPathAsync",
+                        $"employee.json not found: {jsonPath}");
+                    NotifyOperationFailure(Res("MsgArchiveSourceMissing"));
+                    return new ArchiveEmployeeResult();
+                }
+
+                string employeeName = "";
+                string? originalJson = null;
+                string? employeeUniqueId = null;
+
+                originalJson = SafeFileService.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
+                var data = JsonSerializer.Deserialize<EmployeeData>(originalJson);
+                if (data != null)
+                {
+                    if (string.IsNullOrWhiteSpace(data.UniqueId))
+                        data.UniqueId = Guid.NewGuid().ToString();
+
+                    employeeUniqueId = data.UniqueId;
+                    employeeName = $"{data.FirstName} {data.LastName}";
+                    data.FirmHistory ??= new List<FirmHistoryEntry>();
+
+                    var alreadyExists = data.FirmHistory.Any(fh =>
+                        fh.FirmName == firmName && fh.StartDate == data.StartDate);
+                    if (!alreadyExists)
+                    {
+                        data.FirmHistory.Add(new FirmHistoryEntry
+                        {
+                            FirmName = firmName,
+                            StartDate = data.StartDate,
+                            EndDate = endDate
+                        });
+                    }
+                    else
+                    {
+                        var existing = data.FirmHistory.Last(fh =>
+                            fh.FirmName == firmName && fh.StartDate == data.StartDate);
+                        existing.EndDate = endDate;
+                    }
+
+                    data.EndDate = endDate;
+                    data.IsArchived = true;
+                    data.ArchivedFromFirm = firmName;
+                    data.Status = "Dismissed";
+                    WriteJsonAtomic(jsonPath, data);
+                }
+
+                var folderName = Path.GetFileName(sourceEmployeeFolder);
+                var destFolder = ResolveArchiveDestinationFolder(archiveFolder, folderName, employeeUniqueId);
+                if (string.IsNullOrWhiteSpace(destFolder))
+                {
+                    LoggingService.LogWarning("EmployeeService.ArchiveEmployeeFromPathAsync",
+                        $"Archive blocked because conflicting archive folder already exists for '{sourceEmployeeFolder}'");
+                    if (originalJson != null)
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    NotifyOperationFailure(Res("MsgArchiveConflict"));
+                    return new ArchiveEmployeeResult();
+                }
+
+                CopyDirectory(sourceEmployeeFolder, destFolder);
+
+                var archivedJsonPath = Path.Combine(destFolder, "employee.json");
+                if (!Directory.Exists(destFolder) || !File.Exists(archivedJsonPath))
+                {
+                    LoggingService.LogError("ArchiveEmployeeFromPathAsync",
+                        new IOException($"Copy to archive failed for {sourceEmployeeFolder}"));
+                    if (originalJson != null)
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    return new ArchiveEmployeeResult();
+                }
+
+                var verifyData = ReadJson<EmployeeData>(archivedJsonPath);
+                if (verifyData == null || string.IsNullOrEmpty(verifyData.FirstName))
+                {
+                    LoggingService.LogError("ArchiveEmployeeFromPathAsync",
+                        new InvalidOperationException($"Archive verification failed for {destFolder}"));
+                    if (originalJson != null)
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    TryDeleteDirectory(destFolder);
+                    return new ArchiveEmployeeResult();
+                }
+
+                if (!string.IsNullOrWhiteSpace(employeeUniqueId)
+                    && !string.Equals(verifyData.UniqueId, employeeUniqueId, StringComparison.OrdinalIgnoreCase))
+                {
+                    LoggingService.LogError("ArchiveEmployeeFromPathAsync",
+                        new InvalidOperationException($"Archive UniqueId mismatch for {destFolder}"));
+                    if (originalJson != null)
+                        SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
+                    TryDeleteDirectory(destFolder);
+                    NotifyOperationFailure(Res("MsgArchiveError"));
+                    return new ArchiveEmployeeResult();
+                }
+
+                var sourceCleanupDeferred = !CleanupArchivedSourceFolder(sourceEmployeeFolder);
+                if (sourceCleanupDeferred)
+                {
+                    LoggingService.LogWarning("ArchiveEmployeeFromPathAsync",
+                        $"Employee folder still exists after archive, scheduling cleanup: {sourceEmployeeFolder}");
+                    await PendingCleanupService.EnqueueAsync(sourceEmployeeFolder, "archive-rd-source-folder");
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(15000);
+                        if (TryCleanupDeferredDirectory(sourceEmployeeFolder))
+                            await PendingCleanupService.RemoveAsync(sourceEmployeeFolder);
+                    });
+                }
+
+                var opId = Guid.NewGuid().ToString();
+                await AppendArchiveLog(new ArchiveLogEntry
+                {
+                    OperationId = opId,
+                    EmployeeName = employeeName,
+                    FirmName = firmName,
+                    EmployeeFolder = destFolder,
+                    Action = "Archived",
+                    Date = endDate,
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                });
+
+                LoggingService.LogInfo("EmployeeService", $"Employee archived from Recently Deleted: {employeeName} from {firmName}");
+                return new ArchiveEmployeeResult
+                {
+                    ArchiveFolder = destFolder,
+                    OperationId = opId,
+                    SourceCleanupDeferred = sourceCleanupDeferred
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ArchiveEmployeeFromPathAsync error: {ex.Message}");
+                LoggingService.LogError("EmployeeService.ArchiveEmployeeFromPathAsync", ex);
                 return new ArchiveEmployeeResult();
             }
         }
@@ -1426,7 +1744,7 @@ namespace Win11DesktopApp.Services
             foreach (var file in Directory.GetFiles(sourceDir))
             {
                 var destFile = Path.Combine(destDir, Path.GetFileName(file));
-                File.Copy(file, destFile, true);
+                SafeFileService.CopyFile(file, destFile);
             }
             foreach (var dir in Directory.GetDirectories(sourceDir))
             {
@@ -1494,8 +1812,7 @@ namespace Win11DesktopApp.Services
                 {
                     try
                     {
-                        File.SetAttributes(file, FileAttributes.Normal);
-                        File.Delete(file);
+                        SafeFileService.DeleteFile(file);
                     }
                     catch (Exception ex)
                     {

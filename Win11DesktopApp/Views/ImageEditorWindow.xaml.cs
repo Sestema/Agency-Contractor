@@ -92,9 +92,13 @@ namespace Win11DesktopApp.Views
                 {
                     return _service.LoadImage(path);
                 }
-                catch when (i < maxAttempts)
+                catch (IOException) when (i < maxAttempts)
                 {
-                    Thread.Sleep(500 * i);
+                    Thread.Sleep(150 * i);
+                }
+                catch (UnauthorizedAccessException) when (i < maxAttempts)
+                {
+                    Thread.Sleep(150 * i);
                 }
             }
             return _service.LoadImage(path);

@@ -79,7 +79,7 @@ namespace Win11DesktopApp.Services
             var ext = Path.GetExtension(sourceFilePath).ToLower();
             var destFileName = $"template{ext}";
             var destPath = Path.Combine(templateFolder, destFileName);
-            File.Copy(sourceFilePath, destPath);
+            SafeFileService.CopyFile(sourceFilePath, destPath);
 
             // Create metadata.json
             var now = DateTime.Now;
@@ -578,8 +578,7 @@ namespace Win11DesktopApp.Services
                 {
                     try
                     {
-                        File.SetAttributes(file, FileAttributes.Normal);
-                        File.Delete(file);
+                        SafeFileService.DeleteFile(file);
                     }
                     catch (Exception ex)
                     {

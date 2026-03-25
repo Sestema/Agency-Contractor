@@ -126,14 +126,14 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    var encryptedData = File.ReadAllBytes(dbPath);
+                    var encryptedData = SafeFileService.ReadAllBytes(dbPath);
                     var currentChecksum = ComputeHash(encryptedData);
 
                     // Verify integrity
                     var checksumPath = _folderService.DatabaseChecksumPath;
                     if (File.Exists(checksumPath))
                     {
-                        var storedChecksum = File.ReadAllText(checksumPath, Encoding.UTF8).Trim();
+                        var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
                         if (storedChecksum != currentChecksum)
                         {
                             Debug.WriteLine("PersistenceService: database.json checksum mismatch detected, validating current file...");
@@ -152,7 +152,7 @@ namespace Win11DesktopApp.Services
                     {
                         if (File.Exists(checksumPath))
                         {
-                            var storedChecksum = File.ReadAllText(checksumPath, Encoding.UTF8).Trim();
+                            var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
                             if (!string.Equals(storedChecksum, currentChecksum, StringComparison.Ordinal))
                             {
                                 SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
@@ -195,13 +195,13 @@ namespace Win11DesktopApp.Services
             try
             {
                 // 1. Read old encrypted data
-                var encryptedData = File.ReadAllBytes(oldFilePath);
+                var encryptedData = SafeFileService.ReadAllBytes(oldFilePath);
 
                 // Verify old checksum if exists
                 var oldChecksumPath = oldFilePath + OldChecksumExtension;
                 if (File.Exists(oldChecksumPath))
                 {
-                    var storedChecksum = File.ReadAllText(oldChecksumPath, Encoding.UTF8);
+                    var storedChecksum = SafeFileService.ReadAllText(oldChecksumPath, Encoding.UTF8);
                     var currentChecksum = ComputeHash(encryptedData);
                     if (storedChecksum != currentChecksum)
                     {
@@ -243,16 +243,17 @@ namespace Win11DesktopApp.Services
                 // 6. Save new database.json
                 var newJson = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
                 var newEncrypted = Encrypt(newJson);
-                var newDbPath = Path.Combine(rootPath, "database.json");
-                File.WriteAllBytes(newDbPath, newEncrypted);
-                File.WriteAllText(newDbPath + ".sha256", ComputeHash(newEncrypted), Encoding.UTF8);
+                var newDbPath = _folderService.DatabaseFilePath;
+                var newChecksumPath = _folderService.DatabaseChecksumPath;
+                SafeFileService.WriteBytesAtomic(newDbPath, newEncrypted);
+                SafeFileService.WriteTextAtomic(newChecksumPath, ComputeHash(newEncrypted), Encoding.UTF8);
 
                 // 7. Rename old files (keep as backup, don't delete)
                 try
                 {
-                    File.Move(oldFilePath, oldFilePath + ".migrated");
+                    SafeFileService.MoveFile(oldFilePath, oldFilePath + ".migrated");
                     if (File.Exists(oldChecksumPath))
-                        File.Move(oldChecksumPath, oldChecksumPath + ".migrated");
+                        SafeFileService.MoveFile(oldChecksumPath, oldChecksumPath + ".migrated");
                 }
                 catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Rename error: {ex.Message}"); }
 
@@ -443,7 +444,7 @@ namespace Win11DesktopApp.Services
 
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var backupPath = Path.Combine(backupsFolder, $"database_{timestamp}.json.bak");
-                File.Copy(sourceFilePath, backupPath, true);
+                SafeFileService.CopyFile(sourceFilePath, backupPath);
 
                 CleanupOldBackups(backupsFolder);
             }
@@ -482,7 +483,7 @@ namespace Win11DesktopApp.Services
                 if (latestBackup == null) return new DatabaseRoot();
 
                 Debug.WriteLine($"PersistenceService: restoring from backup {latestBackup.Name}");
-                var encryptedData = File.ReadAllBytes(latestBackup.FullName);
+                var encryptedData = SafeFileService.ReadAllBytes(latestBackup.FullName);
                 var json = Decrypt(encryptedData);
                 var db = JsonSerializer.Deserialize<DatabaseRoot>(json);
                 return db ?? new DatabaseRoot();
@@ -568,7 +569,7 @@ namespace Win11DesktopApp.Services
             Directory.CreateDirectory(destDir);
             foreach (var file in Directory.GetFiles(sourceDir))
             {
-                File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)), true);
+                SafeFileService.CopyFile(file, Path.Combine(destDir, Path.GetFileName(file)));
             }
             foreach (var dir in Directory.GetDirectories(sourceDir))
             {

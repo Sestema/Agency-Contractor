@@ -162,7 +162,8 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Agency Contractor - 0.1.17"
+                    <TextBlock x:Name="TxtVersion"
+                               Text="Agency Contractor"
                                FontSize="{DynamicResource FS11}"
                                Foreground="{DynamicResource TertiaryForegroundBrush}"/>
                     <TextBlock Text="Продовження доступне після успішної перевірки ліцензії."

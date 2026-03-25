@@ -806,7 +806,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 try
                 {
-                    var json = System.IO.File.ReadAllText(jsonPath);
+                    var json = SafeFileService.ReadAllText(jsonPath);
                     var data = System.Text.Json.JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(json);
                     if (data != null && data.HourlySalary > 0)
                         return data.HourlySalary;
@@ -920,10 +920,16 @@ namespace Win11DesktopApp.ViewModels
 
         private void SaveReport()
         {
+            if (!_financeService.SaveAllFirmPayments(_selectedYear, _selectedMonth, Entries.ToList(), FirmExpenses.ToList()))
+            {
+                StatusMessage = string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
+                    ? "Salary save blocked until duplicate OneDrive files are resolved."
+                    : _financeService.LastSalaryConflictMessage;
+                return;
+            }
+
             foreach (var entry in Entries)
                 entry.SavedNetSalary = entry.NetSalary;
-
-            _financeService.SaveAllFirmPayments(_selectedYear, _selectedMonth, Entries.ToList(), FirmExpenses.ToList());
 
             // Propagate note changes forward
             PropagateNoteChangesForward();
@@ -970,8 +976,8 @@ namespace Win11DesktopApp.ViewModels
                     }
                 }
 
-                if (anyUpdated)
-                    _financeService.SaveAllFirmPayments(date.Year, date.Month, futureEntries, futureExpenses);
+                if (anyUpdated && !_financeService.SaveAllFirmPayments(date.Year, date.Month, futureEntries, futureExpenses))
+                    break;
 
                 date = date.AddMonths(1);
             }

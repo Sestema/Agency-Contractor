@@ -1,0 +1,402 @@
+<UserControl x:Class="Win11DesktopApp.Invoices.Views.InvoicesDocumentsSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:invModels="clr-namespace:Win11DesktopApp.Invoices.Models"
+             mc:Ignorable="d"
+             d:DesignHeight="760"
+             d:DesignWidth="1100">
+    <UserControl.Resources>
+        <Style x:Key="InvoicesSurfaceCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="18"/>
+            <Setter Property="Effect" Value="{DynamicResource CardShadow}"/>
+        </Style>
+
+        <Style x:Key="InvoicesSurfacePanel" TargetType="Border">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+
+        <Style x:Key="InvoicesTabItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="TabBorder"
+                                Background="#0A26A69A"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="{TemplateBinding Margin}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#1426A69A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="InvoicesGridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#F3F8F7"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+        </Style>
+
+        <Style x:Key="InvoicesGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="InvoicesActionMiniButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="MinWidth" Value="0"/>
+        </Style>
+
+        <Style x:Key="InvoicesGridRowStyle" TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="MinHeight" Value="42"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#0D26A69A"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#1426A69A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="InvoicesHeaderStatCard" TargetType="Border">
+            <Setter Property="Background" Value="#80FFFFFF"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="MinWidth" Value="150"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Margin="0,0,0,12"
+                CornerRadius="18"
+                BorderBrush="Transparent"
+                BorderThickness="0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#FFF7FBFA" Offset="0"/>
+                    <GradientStop Color="#FFF1F8F6" Offset="0.6"/>
+                    <GradientStop Color="#FFEAF4F1" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid Margin="14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <Border Background="#1426A69A"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            CornerRadius="999"
+                            Padding="10,5"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource InvoicesSectionDocuments}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="{DynamicResource InvoicesSectionDocuments}" FontSize="{DynamicResource FS28}" Style="{StaticResource PageHeaderTitleText}" Margin="0,12,0,0"/>
+                    <TextBlock Text="{DynamicResource InvoicesDocumentsSubtitle}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    <WrapPanel Margin="0,10,0,0">
+                        <Border Style="{StaticResource InvoicesHeaderStatCard}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource InvoicesStatTotal}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                <TextBlock Text="{Binding TotalCount}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource InvoicesHeaderStatCard}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource InvoicesStatDrafts}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                <TextBlock Text="{Binding DraftCount}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource InvoicesHeaderStatCard}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource InvoicesStatOverdue}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                <TextBlock Text="{Binding OverdueCount}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource InvoicesHeaderStatCard}" Margin="0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource ArchiveResultsLabel}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                <TextBlock Text="{Binding FilteredCount}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button Command="{Binding ClearFiltersCommand}" Style="{StaticResource HeaderGhostButton}" Margin="0,0,8,0">
+                        <TextBlock Text="{DynamicResource InvoicesClearFilters}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                    </Button>
+                    <Button Command="{Binding RefreshCommand}" Style="{StaticResource FilledActionButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource NewsRefresh}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Style="{StaticResource InvoicesSurfacePanel}"
+                Margin="0,0,0,10"
+                Padding="0">
+            <StackPanel>
+                <ListBox ItemsSource="{Binding DocumentTabs}"
+                         SelectedItem="{Binding SelectedDocumentTab}"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <StaticResource ResourceKey="InvoicesTabItemStyle"/>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="170"/>
+                        <ColumnDefinition Width="170"/>
+                        <ColumnDefinition Width="150"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource ToolbarSearchContainer}" CornerRadius="12" Padding="8,6" Margin="0,0,10,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE721;" Grid.Column="0" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox Grid.Column="1"
+                                     Height="32"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     VerticalContentAlignment="Center"
+                                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </Border>
+
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding SupplierFilters}"
+                              SelectedItem="{Binding SelectedSupplierFilter}"
+                              DisplayMemberPath="Label"
+                              Height="34"
+                              Margin="0,0,10,8"/>
+
+                    <ComboBox Grid.Column="2"
+                              ItemsSource="{Binding CustomerFilters}"
+                              SelectedItem="{Binding SelectedCustomerFilter}"
+                              DisplayMemberPath="Label"
+                              Height="34"
+                              Margin="0,0,10,8"/>
+
+                    <ComboBox Grid.Column="3"
+                              ItemsSource="{Binding StatusFilters}"
+                              SelectedItem="{Binding SelectedStatusFilter}"
+                              DisplayMemberPath="Label"
+                              Height="34"
+                              Margin="0,0,0,8"/>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="170"/>
+                        <ColumnDefinition Width="170"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ComboBox Grid.Column="0"
+                              ItemsSource="{Binding CurrencyFilters}"
+                              SelectedItem="{Binding SelectedCurrencyFilter}"
+                              DisplayMemberPath="Label"
+                              Height="34"
+                              Margin="0,0,10,0"/>
+
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding YearFilters}"
+                              SelectedItem="{Binding SelectedYearFilter}"
+                              DisplayMemberPath="Label"
+                              Height="34"
+                              Margin="0,0,10,0"/>
+
+                    <DatePicker Grid.Column="2"
+                                SelectedDate="{Binding DateFrom}"
+                                Height="34"
+                                Margin="0,0,10,0"/>
+
+                    <DatePicker Grid.Column="3"
+                                SelectedDate="{Binding DateTo}"
+                                Height="34"
+                                Margin="0,0,10,0"/>
+
+                    <Border Grid.Column="4" Background="#80FFFFFF" BorderBrush="Transparent" BorderThickness="0" CornerRadius="12" Padding="10,8" Margin="0,0,10,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource InvoicesFilterYear}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            <TextBlock Text="{Binding FilteredCount}" FontSize="{DynamicResource FS14}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Text="{DynamicResource InvoicesFilterDateFrom}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding DateFrom, StringFormat={}{0:dd.MM.yyyy}}" FontSize="{DynamicResource FS11}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <TextBlock Text="{DynamicResource InvoicesFilterDateTo}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding DateTo, StringFormat={}{0:dd.MM.yyyy}}" FontSize="{DynamicResource FS11}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Border Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVis}}"
+                    Style="{StaticResource InvoicesSurfaceCard}"
+                    Padding="0">
+                <DataGrid ItemsSource="{Binding Documents}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserResizeRows="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          RowHeaderWidth="0"
+                          RowStyle="{StaticResource InvoicesGridRowStyle}"
+                          AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}">
+                    <DataGrid.ColumnHeaderStyle>
+                        <StaticResource ResourceKey="InvoicesGridHeaderStyle"/>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.CellStyle>
+                        <StaticResource ResourceKey="InvoicesGridCellStyle"/>
+                    </DataGrid.CellStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnNumber}" Binding="{Binding Number}" Width="150"/>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnSupplier}" Binding="{Binding SupplierName}" Width="*"/>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnCustomer}" Binding="{Binding CustomerName}" Width="*"/>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnAmount}" Binding="{Binding TotalLabel}" Width="130"/>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnIssueDate}" Binding="{Binding IssueDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnDueDate}" Binding="{Binding DueDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnStatus}" Binding="{Binding StatusLabel}" Width="120"/>
+                        <DataGridTemplateColumn Header="{DynamicResource InvoicesColumnActions}" Width="340">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <WrapPanel>
+                                        <Button Command="{Binding DataContext.OpenDocumentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource InvoicesActionMiniButton}">
+                                            <TextBlock Text="{DynamicResource InvoicesActionEdit}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"/>
+                                        </Button>
+                                        <Button Command="{Binding DataContext.PreviewDocumentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource InvoicesActionMiniButton}">
+                                            <TextBlock Text="{DynamicResource InvoicesActionPreviewPdf}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"/>
+                                        </Button>
+                                        <Button Command="{Binding DataContext.DuplicateDocumentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource InvoicesActionMiniButton}">
+                                            <TextBlock Text="{DynamicResource InvoicesActionCopy}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"/>
+                                        </Button>
+                                        <Button Command="{Binding DataContext.MoveToTrashCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource InvoicesActionMiniButton}">
+                                            <TextBlock Text="{DynamicResource InvoicesActionTrash}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"/>
+                                        </Button>
+                                        <Button Command="{Binding DataContext.DeleteForeverCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource InvoicesActionMiniButton}">
+                                            <TextBlock Text="{DynamicResource InvoicesActionDeleteForever}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"/>
+                                        </Button>
+                                    </WrapPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <Border Visibility="{Binding HasDocuments, Converter={StaticResource InverseBoolToVis}}"
+                    Style="{StaticResource InvoicesSurfaceCard}"
+                    Padding="32"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="460">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource InvoicesEmptyTitle}" FontSize="{DynamicResource FS20}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource InvoicesEmptyDescription}" FontSize="{DynamicResource FS13}" TextAlignment="Center"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

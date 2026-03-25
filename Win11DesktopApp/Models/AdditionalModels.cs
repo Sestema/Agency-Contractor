@@ -89,6 +89,7 @@ namespace Win11DesktopApp.EmployeeModels
             "DocumentExtended" => "\uE8AB",
             "StatusChanged" => "\uE8B5",
             "Archived" => "\uE7B8",
+            "ArchiveUndone" => "\uE777",
             "Restored" => "\uE72C",
             _ => "\uE70F"
         };
@@ -100,6 +101,7 @@ namespace Win11DesktopApp.EmployeeModels
             "DocumentExtended" => "#FF9800",
             "StatusChanged" => "#2196F3",
             "Archived" => "#9E9E9E",
+            "ArchiveUndone" => "#1976D2",
             "Restored" => "#8BC34A",
             _ => "#2196F3"
         };
@@ -161,11 +163,16 @@ namespace Win11DesktopApp.EmployeeModels
     /// </summary>
     public class ArchiveLogEntry
     {
+        public string OperationId { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;
+        public string EmployeeFolder { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty;
         public string Date { get; set; } = string.Empty;
         public string Timestamp { get; set; } = string.Empty;
+        public bool IsReverted { get; set; }
+        public string? RevertedAt { get; set; }
+        public string? RevertedByOperationId { get; set; }
     }
 
     public class EmployeeReportRow
@@ -222,6 +229,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string OldValue { get; set; } = string.Empty;
         public string NewValue { get; set; } = string.Empty;
         public string Details { get; set; } = string.Empty;
+        public string RelatedOperationId { get; set; } = string.Empty;
         public string ActorName { get; set; } = string.Empty;
         public string TimeDisplay => DateTime.TryParse(Timestamp, out var dt) ? dt.ToString("HH:mm") : Timestamp;
     }

@@ -33,6 +33,7 @@ namespace Win11DesktopApp.ViewModels
         public event Action? DataChanged;
 
         public EmployeeData Data { get; private set; }
+        public string EmployeeFolderPath => _employeeFolder;
 
         private int _tabIndex;
         public int TabIndex
@@ -57,12 +58,31 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _isArchiveMode, value))
                 {
                     OnPropertyChanged(nameof(IsNotArchiveMode));
+                    OnPropertyChanged(nameof(ShowGenerateActions));
                     OnPropertyChanged(nameof(HeaderSubtitle));
                     OnPropertyChanged(nameof(ShowArchiveModeChip));
                 }
             }
         }
-        public bool IsNotArchiveMode => !IsArchiveMode;
+        private bool _isReadOnlyMode;
+        public bool IsReadOnlyMode
+        {
+            get => _isReadOnlyMode;
+            set
+            {
+                if (SetProperty(ref _isReadOnlyMode, value))
+                {
+                    if (value && IsEditMode)
+                        IsEditMode = false;
+                    OnPropertyChanged(nameof(IsNotArchiveMode));
+                    OnPropertyChanged(nameof(ShowGenerateActions));
+                    OnPropertyChanged(nameof(HeaderSubtitle));
+                }
+            }
+        }
+
+        public bool IsNotArchiveMode => !IsArchiveMode && !IsReadOnlyMode;
+        public bool ShowGenerateActions => !IsReadOnlyMode;
 
         public bool IsGenderMale
         {
@@ -135,7 +155,9 @@ namespace Win11DesktopApp.ViewModels
 
         public string HeaderSubtitle => IsArchiveMode
             ? $"{_firmName} · {Res("BtnArchive") ?? "Архів"}"
-            : _firmName;
+            : IsReadOnlyMode
+                ? $"{_firmName} · {Res("BtnRecentlyDeleted") ?? "Недавно видалені"}"
+                : _firmName;
 
         public bool ShowArchiveModeChip => IsArchiveMode;
 
@@ -690,11 +712,12 @@ namespace Win11DesktopApp.ViewModels
         // Export PDF
         public ICommand ExportProfilePdfCommand { get; }
 
-        public EmployeeDetailsViewModel(string firmName, string employeeFolder, EmployeeService? employeeService = null)
+        public EmployeeDetailsViewModel(string firmName, string employeeFolder, EmployeeService? employeeService = null, bool isReadOnlyMode = false)
         {
             _firmName = firmName;
             _employeeFolder = employeeFolder;
             _employeeService = employeeService ?? App.EmployeeService;
+            _isReadOnlyMode = isReadOnlyMode;
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
@@ -722,23 +745,23 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 IsEditMode = true;
-            });
-            SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync());
-            CancelEditCommand = new RelayCommand(o => CancelEdit());
+            }, _ => !IsReadOnlyMode && !IsArchiveMode);
+            SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync(), _ => !IsReadOnlyMode);
+            CancelEditCommand = new RelayCommand(o => CancelEdit(), _ => !IsReadOnlyMode);
 
-            ReplacePassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport"));
-            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("visa"));
-            ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"));
-            ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"));
+            ReplacePassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport"), _ => !IsReadOnlyMode);
+            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("visa"), _ => !IsReadOnlyMode);
+            ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"), _ => !IsReadOnlyMode);
+            ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"), _ => !IsReadOnlyMode);
 
             OpenPassportCommand = new RelayCommand(o => OpenFile(PassportFilePath), o => HasPassport);
             OpenVisaCommand = new RelayCommand(o => OpenFile(VisaFilePath), o => HasVisa);
             OpenInsuranceCommand = new RelayCommand(o => OpenFile(InsuranceFilePath), o => HasInsurance);
             OpenPhotoCommand = new RelayCommand(o => OpenFile(PhotoFilePath), o => HasPhoto);
 
-            OpenGenerateDialogCommand = new RelayCommand(o => OpenGenerateDialog());
+            OpenGenerateDialogCommand = new RelayCommand(o => OpenGenerateDialog(), _ => !IsReadOnlyMode);
             CloseGenerateDialogCommand = new RelayCommand(o => IsGenerateDialogOpen = false);
-            GenerateFromTemplateCommand = new RelayCommand(o => GenerateDocument(o as TemplateEntry));
+            GenerateFromTemplateCommand = new RelayCommand(o => GenerateDocument(o as TemplateEntry), _ => !IsReadOnlyMode);
 
             OpenFolderCommand = new RelayCommand(o =>
             {
@@ -756,24 +779,24 @@ namespace Win11DesktopApp.ViewModels
                 catch (Exception ex) { LoggingService.LogError("EmployeeDetailsViewModel.OpenFolder", ex); StatusMessage = Res("MsgOpenFolderFail"); }
             });
 
-            ExtendVisaCommand = new RelayCommand(o => ShowExtendDialog("visa"));
-            ExtendInsuranceCommand = new RelayCommand(o => ShowExtendDialog("insurance"));
-            ConfirmExtendCommand = new AsyncRelayCommand(_ => ConfirmExtendAsync());
-            CancelExtendCommand = new RelayCommand(o => IsExtendDialogOpen = false);
+            ExtendVisaCommand = new RelayCommand(o => ShowExtendDialog("visa"), _ => !IsReadOnlyMode);
+            ExtendInsuranceCommand = new RelayCommand(o => ShowExtendDialog("insurance"), _ => !IsReadOnlyMode);
+            ConfirmExtendCommand = new AsyncRelayCommand(_ => ConfirmExtendAsync(), _ => !IsReadOnlyMode);
+            CancelExtendCommand = new RelayCommand(o => IsExtendDialogOpen = false, _ => !IsReadOnlyMode);
 
             OpenWorkPermitCommand = new RelayCommand(o => OpenFile(WorkPermitFilePath), o => HasWorkPermit);
-            RenewWorkPermitCommand = new RelayCommand(o => StartRenewWorkPermit(), o => IsWorkPermitType);
-            ConfirmRenewWpCommand = new AsyncRelayCommand(_ => ConfirmRenewWorkPermitAsync());
-            CancelRenewWpCommand = new RelayCommand(o => IsRenewWpDialogOpen = false);
+            RenewWorkPermitCommand = new RelayCommand(o => StartRenewWorkPermit(), o => IsWorkPermitType && !IsReadOnlyMode);
+            ConfirmRenewWpCommand = new AsyncRelayCommand(_ => ConfirmRenewWorkPermitAsync(), _ => !IsReadOnlyMode);
+            CancelRenewWpCommand = new RelayCommand(o => IsRenewWpDialogOpen = false, _ => !IsReadOnlyMode);
 
             ArchiveEmployeeCommand = new RelayCommand(o =>
             {
                 ArchiveEndDate = DateTime.Today.ToString("dd.MM.yyyy");
                 ArchiveStatus = string.Empty;
                 IsArchiveDialogOpen = true;
-            });
-            ConfirmArchiveCommand = new AsyncRelayCommand(_ => ConfirmArchiveAsync());
-            CancelArchiveCommand = new RelayCommand(o => IsArchiveDialogOpen = false);
+            }, _ => !IsReadOnlyMode);
+            ConfirmArchiveCommand = new AsyncRelayCommand(_ => ConfirmArchiveAsync(), _ => !IsReadOnlyMode);
+            CancelArchiveCommand = new RelayCommand(o => IsArchiveDialogOpen = false, _ => !IsReadOnlyMode);
             ExportProfilePdfCommand = new RelayCommand(o => ExportProfilePdf());
             AIValidateCommand = new AsyncRelayCommand(_ => RunAIValidationAsync(), _ => !IsAIValidating);
             CloseAIValidationCommand = new RelayCommand(o => IsAIValidationOpen = false);
@@ -790,10 +813,10 @@ namespace Win11DesktopApp.ViewModels
                 NewCustomDocFilePath = string.Empty;
                 AddCustomDocError = string.Empty;
                 IsAddCustomDocOpen = true;
-            });
-            CancelAddCustomDocCommand = new RelayCommand(o => IsAddCustomDocOpen = false);
-            ConfirmAddCustomDocCommand = new AsyncRelayCommand(_ => ConfirmAddCustomDocAsync());
-            BrowseCustomDocFileCommand = new RelayCommand(o => BrowseCustomDocFile());
+            }, _ => !IsReadOnlyMode);
+            CancelAddCustomDocCommand = new RelayCommand(o => IsAddCustomDocOpen = false, _ => !IsReadOnlyMode);
+            ConfirmAddCustomDocCommand = new AsyncRelayCommand(_ => ConfirmAddCustomDocAsync(), _ => !IsReadOnlyMode);
+            BrowseCustomDocFileCommand = new RelayCommand(o => BrowseCustomDocFile(), _ => !IsReadOnlyMode);
             OpenCustomDocCommand = new RelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd)
@@ -814,11 +837,11 @@ namespace Win11DesktopApp.ViewModels
             HideCustomDocCommand = new RelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd) ToggleHideDoc(cd, true);
-            });
+            }, _ => !IsReadOnlyMode);
             UnhideCustomDocCommand = new RelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd) ToggleHideDoc(cd, false);
-            });
+            }, _ => !IsReadOnlyMode);
             ToggleHiddenDocsSectionCommand = new RelayCommand(o =>
                 IsHiddenSectionVisible = !IsHiddenSectionVisible);
 
@@ -843,12 +866,12 @@ namespace Win11DesktopApp.ViewModels
             ToggleHideCustomDocCommand = new RelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd) ToggleHideDoc(cd, !cd.IsHidden);
-            });
+            }, _ => !IsReadOnlyMode);
             DeleteCustomDocCommand = new AsyncRelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd) return DeleteCustomDocAsync(cd);
                 return Task.CompletedTask;
-            });
+            }, _ => !IsReadOnlyMode);
 
             LoadCustomDocuments();
 
@@ -982,7 +1005,8 @@ namespace Win11DesktopApp.ViewModels
                 {
                     App.ActivityLogService?.Log("EmployeeArchived", "Archive", _firmName, FullName,
                         $"Архівовано {FullName} з {_firmName}, дата закінчення: {ArchiveEndDate}",
-                        _firmName, ArchiveEndDate, employeeFolder: _employeeFolder);
+                        _firmName, ArchiveEndDate, employeeFolder: _employeeFolder,
+                        relatedOperationId: result.OperationId);
 
                     if (result.SourceCleanupDeferred)
                         ToastService.Instance.Warning(Res("MsgArchiveCleanupDeferred"));
@@ -1146,7 +1170,7 @@ namespace Win11DesktopApp.ViewModels
                 if (!string.IsNullOrEmpty(path) && File.Exists(path)
                     && path.StartsWith(Path.GetTempPath(), StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Delete(path);
+                    SafeFileService.DeleteFile(path);
                 }
             }
             catch (Exception ex) { LoggingService.LogWarning("CleanupTempFile", ex.Message); }
@@ -1213,7 +1237,7 @@ namespace Win11DesktopApp.ViewModels
                     }
                 }
 
-                File.Move(oldFullPath, destPath);
+                SafeFileService.MoveFile(oldFullPath, destPath);
                 LoggingService.LogInfo("EmployeeDetailsViewModel.ArchiveOldDocument",
                     $"Archived old {type} → {Path.GetFileName(destPath)}");
             }
@@ -1593,11 +1617,11 @@ namespace Win11DesktopApp.ViewModels
                     var oldPath = Path.Combine(_employeeFolder, Data.Files.WorkPermit);
                     if (File.Exists(oldPath))
                     {
-                        try { File.Delete(oldPath); } catch (Exception ex) { LoggingService.LogWarning("EmployeeDetailsViewModel", $"Failed to delete old file: {ex.Message}"); }
+                        try { SafeFileService.DeleteFile(oldPath); } catch (Exception ex) { LoggingService.LogWarning("EmployeeDetailsViewModel", $"Failed to delete old file: {ex.Message}"); }
                     }
                 }
 
-                File.Copy(RenewWpFilePath, destPath, true);
+                SafeFileService.CopyFile(RenewWpFilePath, destPath);
                 Data.Files.WorkPermit = destName;
 
                 var oldNumber = Data.WorkPermitNumber;

@@ -75,7 +75,7 @@ namespace Win11DesktopApp.Services
                 if (!File.Exists(activatorKeyPath))
                     return (false, "Файл активації не знайдено.");
 
-                var keyContent = File.ReadAllText(activatorKeyPath).Trim();
+                var keyContent = SafeFileService.ReadAllText(activatorKeyPath).Trim();
                 if (!ValidateActivatorKey(keyContent))
                     return (false, "Невірний файл активації.");
 
@@ -296,7 +296,7 @@ namespace Win11DesktopApp.Services
 
             if (File.Exists(LicensePath))
             {
-                try { File.Copy(LicensePath, BackupPath, true); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.SaveLicense", $"Backup copy failed: {ex.Message}"); }
+                try { SafeFileService.CopyFile(LicensePath, BackupPath); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.SaveLicense", $"Backup copy failed: {ex.Message}"); }
             }
 
             SafeFileService.WriteBytesAtomic(LicensePath, encrypted);
@@ -312,7 +312,7 @@ namespace Win11DesktopApp.Services
             result = TryLoadFromPath(BackupPath);
             if (result != null)
             {
-                try { File.Copy(BackupPath, LicensePath, true); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.LoadLicense", $"Restore from backup failed: {ex.Message}"); }
+                try { SafeFileService.CopyFile(BackupPath, LicensePath); } catch (Exception ex) { LoggingService.LogWarning("LicenseService.LoadLicense", $"Restore from backup failed: {ex.Message}"); }
             }
             return result;
         }
@@ -329,11 +329,11 @@ namespace Win11DesktopApp.Services
                 if (File.Exists(OldLicensePath))
                 {
                     Directory.CreateDirectory(LicenseFolder);
-                    File.Copy(OldLicensePath, LicensePath, true);
+                    SafeFileService.CopyFile(OldLicensePath, LicensePath);
 
                     var oldBackup = Path.Combine(OldLicenseFolder, ".license.bak");
                     if (File.Exists(oldBackup))
-                        File.Copy(oldBackup, BackupPath, true);
+                        SafeFileService.CopyFile(oldBackup, BackupPath);
                 }
             }
             catch (Exception ex) { LoggingService.LogWarning("LicenseService.Migrate", ex.Message); }
@@ -343,7 +343,7 @@ namespace Win11DesktopApp.Services
         {
             if (!File.Exists(path)) return null;
 
-            var rawBytes = File.ReadAllBytes(path);
+            var rawBytes = SafeFileService.ReadAllBytes(path);
 
             try
             {

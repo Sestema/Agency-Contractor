@@ -172,7 +172,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 var ext = Path.GetExtension(dlg.FileName);
                 var dest = Path.Combine(_folder, $"photo{ext}");
-                File.Copy(dlg.FileName, dest, true);
+                SafeFileService.CopyFile(dlg.FileName, dest);
                 Data.Files.Photo = $"photo{ext}";
                 _service.SaveData(_folder, Data);
                 PhotoImage = LoadBitmap(dest);
@@ -196,7 +196,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 var ext = Path.GetExtension(dlg.FileName);
                 var dest = Path.Combine(_folder, $"passport{ext}");
-                File.Copy(dlg.FileName, dest, true);
+                SafeFileService.CopyFile(dlg.FileName, dest);
                 Data.Files.Passport = $"passport{ext}";
                 _service.SaveData(_folder, Data);
                 PassportPreviewPath = dest;

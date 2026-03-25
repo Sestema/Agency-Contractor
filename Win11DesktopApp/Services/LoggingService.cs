@@ -152,8 +152,8 @@ namespace Win11DesktopApp.Services
                 if (info.Length > MaxLogSizeBytes)
                 {
                     var backup = _logPath + ".old";
-                    if (File.Exists(backup)) File.Delete(backup);
-                    File.Move(_logPath, backup);
+                    SafeFileService.DeleteFile(backup);
+                    SafeFileService.MoveFile(_logPath, backup);
                 }
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"LogRotation error: {ex.Message}"); }

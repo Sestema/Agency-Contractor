@@ -444,7 +444,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (File.Exists(_tagMapPath))
                 {
-                    var json = File.ReadAllText(_tagMapPath, System.Text.Encoding.UTF8);
+                    var json = SafeFileService.ReadAllText(_tagMapPath, System.Text.Encoding.UTF8);
                     var map = JsonSerializer.Deserialize<PdfTagMap>(json);
                     if (map?.Placements != null)
                     {

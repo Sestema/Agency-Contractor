@@ -10,7 +10,7 @@ namespace Win11DesktopApp.Services
     {
         public Mat LoadImage(string path)
         {
-            var bytes = File.ReadAllBytes(path);
+            var bytes = SafeFileService.ReadAllBytes(path);
             return Cv2.ImDecode(bytes, ImreadModes.Color);
         }
 
@@ -18,7 +18,7 @@ namespace Win11DesktopApp.Services
         {
             var ext = Path.GetExtension(outputPath).ToLowerInvariant();
             Cv2.ImEncode(string.IsNullOrEmpty(ext) ? ".jpg" : ext, image, out var buf);
-            File.WriteAllBytes(outputPath, buf);
+            SafeFileService.WriteBytesAtomic(outputPath, buf);
         }
 
         public Mat AdjustBrightnessContrast(Mat src, int brightness, int contrast)

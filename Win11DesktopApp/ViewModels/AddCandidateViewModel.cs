@@ -355,8 +355,8 @@ namespace Win11DesktopApp.ViewModels
                 var newPath = Path.Combine(_tempFolder, $"enh_{Guid.NewGuid():N}{Path.GetExtension(PassportPreviewPath)}");
                 try
                 {
-                    File.Copy(editor.ResultPath, newPath, true);
-                    File.Delete(editor.ResultPath);
+                    SafeFileService.CopyFile(editor.ResultPath, newPath);
+                    SafeFileService.DeleteFile(editor.ResultPath);
                 }
                 catch (Exception ex) { LoggingService.LogWarning("AddCandidateViewModel.EnhanceCurrentDocument", $"Copy enhanced image failed: {ex.Message}"); newPath = editor.ResultPath; }
 

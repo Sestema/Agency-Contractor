@@ -14,7 +14,8 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.26";
+        public const string CurrentAppVersion = "0.1.31";
+        public static string? PendingUpdateFrom { get; set; }
         private readonly bool _suppressStartupNotifications;
         private string _settingsPath;
         private string _backupPath;
@@ -136,6 +137,7 @@ namespace Win11DesktopApp.Services
 
             if (Settings.AppVersion != CurrentAppVersion)
             {
+                PendingUpdateFrom = Settings.AppVersion;
                 Settings.AppVersion = CurrentAppVersion;
                 _ = SaveSettingsImmediate();
             }
@@ -178,12 +180,13 @@ namespace Win11DesktopApp.Services
                 var quarantinePath = string.IsNullOrWhiteSpace(directory)
                     ? quarantineName
                     : Path.Combine(directory, quarantineName);
-                File.Move(path, quarantinePath, true);
+                SafeFileService.MoveFile(path, quarantinePath);
                 LoggingService.LogWarning("AppSettingsService.BackupUnreadableFile",
                     $"Moved unreadable {label} file to {quarantinePath}");
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning("AppSettingsService.BackupUnreadableFile", ex.Message);
             }
         }
 

@@ -76,8 +76,7 @@ namespace Win11DesktopApp.Services
             try
             {
                 var path = Path.Combine(_chatsFolder, sessionId + ".json");
-                if (File.Exists(path))
-                    File.Delete(path);
+                SafeFileService.DeleteFile(path);
             }
             catch (Exception ex)
             {

@@ -307,6 +307,18 @@ namespace Win11DesktopApp.ViewModels
             var archiveLog = TryLoadArchiveLog();
             var archivedEmployees = _employeeService.GetArchivedEmployees();
             var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
+            var employeesCache = new Dictionary<string, List<EmployeeSummary>>(StringComparer.OrdinalIgnoreCase);
+
+            List<EmployeeSummary> GetEmployeesCached(string firmName)
+            {
+                if (!employeesCache.TryGetValue(firmName, out var employees))
+                {
+                    employees = _employeeService.GetEmployeesForFirm(firmName);
+                    employeesCache[firmName] = employees;
+                }
+
+                return employees;
+            }
 
             var cs = App.CompanyService;
             var companies = cs?.Companies;
@@ -314,7 +326,7 @@ namespace Win11DesktopApp.ViewModels
 
             foreach (var company in companies.Where(c =>
                          cs!.IsCompanyVisibleForRange(c, DateFrom, DateTo)
-                         && HasFirmDataInRange(c.Name, archiveLog, archivedEmployees, activeFirmHistory)))
+                         && HasFirmDataInRange(c.Name, archiveLog, archivedEmployees, activeFirmHistory, GetEmployeesCached)))
             {
                 CompanyFilters.Add(new CompanyFilter
                 {
@@ -370,8 +382,21 @@ namespace Win11DesktopApp.ViewModels
 
                 var effectiveFirms = new List<string>();
                 var archiveLog = TryLoadArchiveLog();
+                var visibleArchiveLog = GetVisibleArchiveLogEntries(archiveLog);
                 var archivedEmployees = _employeeService.GetArchivedEmployees();
                 var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
+                var employeesCache = new Dictionary<string, List<EmployeeSummary>>(StringComparer.OrdinalIgnoreCase);
+
+                List<EmployeeSummary> GetEmployeesCached(string firmName)
+                {
+                    if (!employeesCache.TryGetValue(firmName, out var employees))
+                    {
+                        employees = _employeeService.GetEmployeesForFirm(firmName);
+                        employeesCache[firmName] = employees;
+                    }
+
+                    return employees;
+                }
 
                 var csReport = App.CompanyService;
                 var companiesForReport = csReport?.Companies;
@@ -379,7 +404,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                 foreach (var company in companiesForReport.Where(c =>
                              csReport!.IsCompanyVisibleForRange(c, DateFrom, DateTo)
-                             && HasFirmDataInRange(c.Name, archiveLog, archivedEmployees, activeFirmHistory)))
+                             && HasFirmDataInRange(c.Name, archiveLog, archivedEmployees, activeFirmHistory, GetEmployeesCached)))
                 {
                     if (!selectedFirms.Contains(company.Name)) continue;
 
@@ -402,7 +427,12 @@ namespace Win11DesktopApp.ViewModels
 
                 var effectiveFirmsSet = effectiveFirms.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var archivedByFirm = LoadArchivedEmployeesForReport(effectiveFirmsSet, activeFirmHistory);
+                var archivedByFirm = LoadArchivedEmployeesForReport(
+                    effectiveFirmsSet,
+                    visibleArchiveLog,
+                    archivedEmployees,
+                    activeFirmHistory,
+                    GetEmployeesCached);
 
                 var agencyData = new Dictionary<string, (int firms, int total, int active)>(StringComparer.OrdinalIgnoreCase);
 
@@ -410,7 +440,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     try
                     {
-                        var employees = _employeeService.GetEmployeesForFirm(firmName);
+                        var employees = GetEmployeesCached(firmName);
                         var filtered = FilterByDateRange(employees);
 
                         int firmActive = filtered.Count(x =>
@@ -511,14 +541,14 @@ namespace Win11DesktopApp.ViewModels
                     });
                 }
 
-                int archivedPeriod = archiveLog.Count(l =>
+                int archivedPeriod = visibleArchiveLog.Count(l =>
                     l.Action == "Archived" && IsTimestampInRange(l.Timestamp)
                     && (effectiveFirmsSet.Contains(l.FirmName) || string.IsNullOrEmpty(l.FirmName)));
 
-                int restoredPeriod = archiveLog.Count(l =>
+                int restoredPeriod = visibleArchiveLog.Count(l =>
                     l.Action == "Restored" && IsTimestampInRange(l.Timestamp));
 
-                int totalActions = archiveLog.Count(l => IsTimestampInRange(l.Timestamp));
+                int totalActions = visibleArchiveLog.Count(l => IsTimestampInRange(l.Timestamp));
 
                 TotalEmployees = totalEmp;
                 ActiveEmployees = activeEmp;
@@ -533,14 +563,14 @@ namespace Win11DesktopApp.ViewModels
                 SummaryPassportOnly = FirmDetails.Sum(f => f.PassportOnlyCount);
                 SummaryArchived = FirmDetails.Sum(f => f.ArchivedEmployees);
 
-                var filteredLog = archiveLog
+                var filteredLog = visibleArchiveLog
                     .Where(l => IsTimestampInRange(l.Timestamp))
                     .OrderByDescending(l => l.Timestamp)
                     .ToList();
                 foreach (var entry in filteredLog)
                     ArchiveHistory.Add(entry);
 
-                BuildArchiveChart(archiveLog);
+                BuildArchiveChart(visibleArchiveLog);
                 FilterEmployees();
 
                 HasData = totalEmp > 0 || endedInPeriod > 0;
@@ -565,13 +595,21 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        internal static List<ArchiveLogEntry> GetVisibleArchiveLogEntries(IEnumerable<ArchiveLogEntry> archiveLog)
+        {
+            return archiveLog
+                .Where(l => !l.IsReverted)
+                .ToList();
+        }
+
         private bool HasFirmDataInRange(
             string firmName,
             List<ArchiveLogEntry> archiveLog,
             List<ArchivedEmployeeSummary> archivedEmployees,
-            List<ArchivedEmployeeSummary> activeFirmHistory)
+            List<ArchivedEmployeeSummary> activeFirmHistory,
+            Func<string, List<EmployeeSummary>> getEmployeesCached)
         {
-            var employees = _employeeService.GetEmployeesForFirm(firmName);
+            var employees = getEmployeesCached(firmName);
             if (FilterByDateRange(employees).Count > 0)
                 return true;
 
@@ -616,7 +654,10 @@ namespace Win11DesktopApp.ViewModels
 
         private Dictionary<string, List<EmployeeReportRow>> LoadArchivedEmployeesForReport(
             HashSet<string> firmFilter,
-            List<ArchivedEmployeeSummary> activeFirmHistory)
+            List<ArchiveLogEntry> archiveLog,
+            List<ArchivedEmployeeSummary> archivedList,
+            List<ArchivedEmployeeSummary> activeFirmHistory,
+            Func<string, List<EmployeeSummary>> getEmployeesCached)
         {
             var result = new Dictionary<string, List<EmployeeReportRow>>(StringComparer.OrdinalIgnoreCase);
             var financeService = App.FinanceService;
@@ -625,8 +666,6 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var archiveLog = _employeeService.LoadArchiveLog();
-
                 var archivedEvents = archiveLog
                     .Where(l => l.Action == "Archived" && firmFilter.Contains(l.FirmName))
                     .ToList();
@@ -636,11 +675,13 @@ namespace Win11DesktopApp.ViewModels
                     var endDate = DateParsingHelper.TryParseDate(evt.Date);
                     if (endDate != null && endDate.Value.Date < DateFrom.Date) continue;
 
-                    var dedupKey = evt.EmployeeName + "|" + evt.FirmName + "|" + evt.Date;
+                    var dedupKey = evt.EmployeeName + "|" + evt.FirmName + "|" + evt.Date + "|" + (evt.EmployeeFolder ?? string.Empty);
                     if (alreadyAdded.Contains(dedupKey)) continue;
                     alreadyAdded.Add(dedupKey);
 
-                    var folder = ResolveEmployeeFolderByName(evt.EmployeeName, financeService);
+                    var folder = !string.IsNullOrEmpty(evt.EmployeeFolder)
+                        ? evt.EmployeeFolder
+                        : ResolveEmployeeFolderByName(evt.FirmName, evt.EmployeeName, financeService, archivedList, getEmployeesCached);
                     var row = BuildArchivedRowFromLog(evt, folder);
                     if (row == null) continue;
 
@@ -649,19 +690,18 @@ namespace Win11DesktopApp.ViewModels
                     result[evt.FirmName].Add(row);
                 }
 
-                var archivedList = _employeeService.GetArchivedEmployees();
                 foreach (var arch in archivedList)
                 {
                     if (string.IsNullOrWhiteSpace(arch.FirmName) || !firmFilter.Contains(arch.FirmName)) continue;
 
-                    var dedupKey = arch.FullName + "|" + arch.FirmName + "|" + arch.EndDate;
+                    var dedupKey = arch.FullName + "|" + arch.FirmName + "|" + arch.EndDate + "|" + (arch.EmployeeFolder ?? string.Empty);
                     if (alreadyAdded.Contains(dedupKey)) continue;
 
                     if (!IsHistoricalRecordInRange(arch.StartDate, arch.EndDate)) continue;
 
                     alreadyAdded.Add(dedupKey);
 
-                    var resolvedFolder = financeService.ResolveEmployeeFolder(arch.EmployeeFolder);
+                    var resolvedFolder = financeService.ResolveEmployeeFolder(arch.EmployeeFolder ?? string.Empty);
 
                     if (!result.ContainsKey(arch.FirmName))
                         result[arch.FirmName] = new List<EmployeeReportRow>();
@@ -682,14 +722,14 @@ namespace Win11DesktopApp.ViewModels
                 {
                     if (string.IsNullOrWhiteSpace(history.FirmName) || !firmFilter.Contains(history.FirmName)) continue;
 
-                    var dedupKey = history.FullName + "|" + history.FirmName + "|" + history.EndDate;
+                    var dedupKey = history.FullName + "|" + history.FirmName + "|" + history.EndDate + "|" + (history.EmployeeFolder ?? string.Empty);
                     if (alreadyAdded.Contains(dedupKey)) continue;
 
                     if (!IsHistoricalRecordInRange(history.StartDate, history.EndDate)) continue;
 
                     alreadyAdded.Add(dedupKey);
 
-                    var resolvedFolder = financeService.ResolveEmployeeFolder(history.EmployeeFolder);
+                    var resolvedFolder = financeService.ResolveEmployeeFolder(history.EmployeeFolder ?? string.Empty);
 
                     if (!result.ContainsKey(history.FirmName))
                         result[history.FirmName] = new List<EmployeeReportRow>();
@@ -714,22 +754,42 @@ namespace Win11DesktopApp.ViewModels
             return result;
         }
 
-        private string ResolveEmployeeFolderByName(string employeeName, FinanceService financeService)
+        private string ResolveEmployeeFolderByName(
+            string firmName,
+            string employeeName,
+            FinanceService financeService,
+            List<ArchivedEmployeeSummary> archivedEmployees,
+            Func<string, List<EmployeeSummary>> getEmployeesCached)
         {
+            var employeesInFirm = getEmployeesCached(firmName);
+            var directMatch = employeesInFirm.FirstOrDefault(e =>
+                string.Equals(e.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
+            if (directMatch != null)
+                return directMatch.EmployeeFolder;
+
             var companies = App.CompanyService?.Companies;
             if (companies != null)
             {
-            foreach (var company in companies)
-            {
-                var employees = _employeeService.GetEmployeesForFirm(company.Name);
-                var match = employees.FirstOrDefault(e =>
-                    string.Equals(e.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
-                if (match != null) return match.EmployeeFolder;
-            }
+                foreach (var company in companies)
+                {
+                    if (string.Equals(company.Name, firmName, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var employees = getEmployeesCached(company.Name);
+                    var match = employees.FirstOrDefault(e =>
+                        string.Equals(e.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        return match.EmployeeFolder;
+                }
             }
 
-            var archived = _employeeService.GetArchivedEmployees();
-            var archMatch = archived.FirstOrDefault(a =>
+            var archivedMatchInFirm = archivedEmployees.FirstOrDefault(a =>
+                string.Equals(a.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(a.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
+            if (archivedMatchInFirm != null)
+                return financeService.ResolveEmployeeFolder(archivedMatchInFirm.EmployeeFolder);
+
+            var archMatch = archivedEmployees.FirstOrDefault(a =>
                 string.Equals(a.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
             if (archMatch != null)
                 return financeService.ResolveEmployeeFolder(archMatch.EmployeeFolder);
@@ -751,7 +811,7 @@ namespace Win11DesktopApp.ViewModels
                 var jsonPath = !string.IsNullOrEmpty(resolvedFolder) ? Path.Combine(resolvedFolder, "employee.json") : "";
                 if (!string.IsNullOrEmpty(jsonPath) && File.Exists(jsonPath))
                 {
-                    var json = File.ReadAllText(jsonPath);
+                    var json = SafeFileService.ReadAllText(jsonPath);
                     var data = JsonSerializer.Deserialize<EmployeeData>(json);
                     if (data != null)
                     {
@@ -783,8 +843,9 @@ namespace Win11DesktopApp.ViewModels
                     IsArchived = true
                 };
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogError("ReportViewModel.BuildArchivedRowFromLog", ex);
                 return null;
             }
         }
@@ -885,10 +946,7 @@ namespace Win11DesktopApp.ViewModels
                 if (startDate != null && startDate.Value.Date > DateTo.Date)
                     continue;
 
-                string endDate = "";
-                var data = _employeeService.LoadEmployeeData(e.EmployeeFolder);
-                if (data != null)
-                    endDate = data.EndDate;
+                var endDate = e.EndDate ?? string.Empty;
 
                 var ed = DateParsingHelper.TryParseDate(endDate);
                 if (ed != null && ed.Value.Date < DateFrom.Date)

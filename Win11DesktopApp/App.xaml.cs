@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using PdfSharp.Fonts;
+using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -13,6 +16,7 @@ namespace Win11DesktopApp
 {
     public partial class App : Application
     {
+        private static CancellationTokenSource? _heartbeatCts;
         public static NavigationService NavigationService { get; private set; } = null!;
         public static ThemeService ThemeService { get; private set; } = null!;
         public static LanguageService LanguageService { get; private set; } = null!;
@@ -24,8 +28,13 @@ namespace Win11DesktopApp
         public static StarterTemplateCatalogService StarterTemplateCatalogService { get; private set; } = null!;
         public static PersistenceService PersistenceService { get; private set; } = null!;
         public static EmployeeService EmployeeService { get; private set; } = null!;
+        public static RecentlyDeletedService RecentlyDeletedService { get; private set; } = null!;
         public static DocumentGenerationService DocumentGenerationService { get; private set; } = null!;
         public static DocumentLocalizationService DocumentLocalizationService { get; private set; } = null!;
+        public static InvoiceStorageService InvoiceStorageService { get; private set; } = null!;
+        public static AresLookupService AresLookupService { get; private set; } = null!;
+        public static InvoiceQrPaymentService InvoiceQrPaymentService { get; private set; } = null!;
+        public static InvoicePdfRenderService InvoicePdfRenderService { get; private set; } = null!;
 
         public static FinanceService FinanceService { get; private set; } = null!;
         public static ActivityLogService ActivityLogService { get; private set; } = null!;
@@ -99,7 +108,12 @@ namespace Win11DesktopApp
             TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
             StarterTemplateCatalogService = new StarterTemplateCatalogService();
             EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService);
+            RecentlyDeletedService = new RecentlyDeletedService(FolderService, EmployeeService);
             FinanceService = new FinanceService(FolderService, suppressStartupNotifications: true);
+            InvoiceStorageService = new InvoiceStorageService(FolderService);
+            AresLookupService = new AresLookupService(InvoiceStorageService);
+            InvoiceQrPaymentService = new InvoiceQrPaymentService();
+            InvoicePdfRenderService = new InvoicePdfRenderService(InvoiceStorageService, InvoiceQrPaymentService);
             startupIntegrityService.IncludeFinanceStartupState(FinanceService);
             ActivityLogService = new ActivityLogService(FolderService);
             CandidateService = new CandidateService(FolderService);
@@ -133,6 +147,8 @@ namespace Win11DesktopApp
             {
                 ThemeService.SetTheme(AppSettingsService.Settings.ThemeName);
             }
+
+            RecentlyDeletedService.EnsureStorage();
 
             LoggingService.LogInfo("App", "All services initialized");
 
@@ -295,6 +311,18 @@ namespace Win11DesktopApp
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
 
+            _heartbeatCts = new CancellationTokenSource();
+            _ = StartHeartbeatLoopAsync(_heartbeatCts.Token);
+            if (!string.IsNullOrEmpty(AppSettingsService.PendingUpdateFrom))
+            {
+                TelemetryService.TrackEvent("app_updated", new Dictionary<string, object>
+                {
+                    ["from_version"] = AppSettingsService.PendingUpdateFrom,
+                    ["to_version"] = AppSettingsService.CurrentAppVersion
+                });
+                AppSettingsService.PendingUpdateFrom = null;
+            }
+
             if (isRemoteTrialExpired)
             {
                 ToastService.Instance.Warning(
@@ -302,6 +330,38 @@ namespace Win11DesktopApp
             }
 
             _ = Task.Run(() => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies));
+            _ = Task.Run(() => RecentlyDeletedService.PurgeExpired());
+        }
+
+        private static async Task StartHeartbeatLoopAsync(CancellationToken ct)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(1), ct);
+                while (!ct.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await TelemetryService.SendHeartbeatAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("App.HeartbeatLoop", ex.Message);
+                    }
+
+                    await Task.Delay(TimeSpan.FromMinutes(3), ct);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _heartbeatCts?.Cancel();
+            _heartbeatCts?.Dispose();
+            base.OnExit(e);
         }
     }
 }

@@ -15,11 +15,13 @@ namespace Win11DesktopApp.Services
         private readonly string _filePath;
         private FinanceDatabase _db;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+        private readonly HashSet<string> _reportedSalaryConflictKeys = new(StringComparer.OrdinalIgnoreCase);
 
         public const string GlobalKey = "__GLOBAL__";
         public const string AllFirmsKey = "__ALL__";
         public bool WasRecoveredFromBackupOnLoad { get; private set; }
         public bool WasResetToDefaultsOnLoad { get; private set; }
+        public string LastSalaryConflictMessage { get; private set; } = string.Empty;
 
         public FinanceService(FolderService folderService, bool suppressStartupNotifications = false)
         {
@@ -67,8 +69,8 @@ namespace Win11DesktopApp.Services
 
                 if (File.Exists(oldPath) && !File.Exists(newPath))
                 {
-                    File.Copy(oldPath, newPath);
-                    File.Move(oldPath, oldPath + ".migrated", true);
+                    SafeFileService.CopyFile(oldPath, newPath, overwrite: false);
+                    SafeFileService.MoveFile(oldPath, oldPath + ".migrated");
                     LoggingService.LogInfo("FinanceService", $"Migrated {FinanceFileName} from AppData to RootPath");
                 }
             }
@@ -192,7 +194,7 @@ namespace Win11DesktopApp.Services
                 Directory.CreateDirectory(backupDir);
 
                 var backupFile = Path.Combine(backupDir, $"finance_data_{DateTime.Now:yyyyMMdd_HHmmss}.json.bak");
-                File.Copy(_filePath, backupFile, true);
+                SafeFileService.CopyFile(_filePath, backupFile);
 
                 var files = new DirectoryInfo(backupDir)
                     .GetFiles("finance_data_*.json.bak")
@@ -271,7 +273,7 @@ namespace Win11DesktopApp.Services
                 var quarantinePath = string.IsNullOrWhiteSpace(directory)
                     ? quarantineName
                     : Path.Combine(directory, quarantineName);
-                File.Move(path, quarantinePath, true);
+                SafeFileService.MoveFile(path, quarantinePath);
                 LoggingService.LogWarning("FinanceService.BackupUnreadableFile",
                     $"Moved unreadable {label} file to {quarantinePath}");
             }
@@ -477,6 +479,39 @@ namespace Win11DesktopApp.Services
             Save();
         }
 
+        public void RemoveEmployeeReferences(string originalFolder, string deletedFolder, string? employeeId = null)
+        {
+            bool Matches(string? folder, string? id = null)
+            {
+                if (!string.IsNullOrWhiteSpace(employeeId) && !string.IsNullOrWhiteSpace(id)
+                    && string.Equals(id, employeeId, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                return (!string.IsNullOrWhiteSpace(originalFolder) && string.Equals(folder, originalFolder, StringComparison.OrdinalIgnoreCase))
+                    || (!string.IsNullOrWhiteSpace(deletedFolder) && string.Equals(folder, deletedFolder, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var changed = false;
+
+            changed |= _db.Advances.RemoveAll(a => Matches(a.EmployeeFolder)) > 0;
+            changed |= _db.Accommodations.RemoveAll(a => Matches(a.EmployeeFolder)) > 0;
+
+            foreach (var report in _db.Reports)
+            {
+                var removed = report.Entries.RemoveAll(e => Matches(e.EmployeeFolder, e.EmployeeId));
+                if (removed > 0)
+                {
+                    report.UpdatedAt = DateTime.Now;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+                Save();
+
+            CleanupPaymentFiles(Matches);
+        }
+
         public List<AdvancePayment> GetAdvancesForEmployeeMonth(string employeeFolder, string monthKey)
         {
             return _db.Advances
@@ -678,16 +713,104 @@ namespace Win11DesktopApp.Services
 
         #region Per-Firm Shared Folder
 
-        public void SaveFirmPaymentToFolder(string firmName, int year, int month,
+        private static string BuildSalaryFileName(int year, int month)
+            => $"salary_{year}_{month:D2}.json";
+
+        private static List<string> FindSalaryMonthFileVariants(string paymentFolder, int year, int month)
+        {
+            if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
+                return new List<string>();
+
+            var canonicalName = BuildSalaryFileName(year, month);
+            var baseName = Path.GetFileNameWithoutExtension(canonicalName);
+
+            return Directory.GetFiles(paymentFolder, $"{baseName}*.json")
+                .Where(path =>
+                {
+                    var name = Path.GetFileName(path);
+                    if (string.Equals(name, canonicalName, StringComparison.OrdinalIgnoreCase))
+                        return true;
+
+                    var fileBase = Path.GetFileNameWithoutExtension(name);
+                    return fileBase.StartsWith(baseName + "-", StringComparison.OrdinalIgnoreCase)
+                           || fileBase.StartsWith(baseName + " ", StringComparison.OrdinalIgnoreCase)
+                           || fileBase.StartsWith(baseName + "(", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static List<string> FindSalaryConflictFiles(string paymentFolder, int year, int month)
+        {
+            var canonicalName = BuildSalaryFileName(year, month);
+            return FindSalaryMonthFileVariants(paymentFolder, year, month)
+                .Where(path => !string.Equals(Path.GetFileName(path), canonicalName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        private void ReportSalaryConflict(string firmName, int year, int month, IReadOnlyList<string> conflictFiles)
+        {
+            if (conflictFiles.Count == 0)
+                return;
+
+            var key = $"{firmName}|{year:D4}-{month:D2}|{string.Join("|", conflictFiles.Select(Path.GetFileName))}";
+            var monthLabel = $"{month:D2}.{year:D4}";
+            var filesLabel = string.Join(", ", conflictFiles.Select(Path.GetFileName));
+            LastSalaryConflictMessage =
+                $"OneDrive conflict detected for salary files {monthLabel} ({firmName}). Resolve duplicate files first: {filesLabel}";
+
+            if (_reportedSalaryConflictKeys.Add(key))
+                NotifyWarning(LastSalaryConflictMessage);
+
+            LoggingService.LogWarning("FinanceService.SalaryConflict", LastSalaryConflictMessage);
+        }
+
+        private string? ResolveSalaryMonthFilePath(string paymentFolder, string firmName, int year, int month)
+        {
+            if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
+                return null;
+
+            var canonicalName = BuildSalaryFileName(year, month);
+            var canonicalPath = Path.Combine(paymentFolder, canonicalName);
+            var variants = FindSalaryMonthFileVariants(paymentFolder, year, month);
+            var conflicts = variants
+                .Where(path => !string.Equals(Path.GetFileName(path), canonicalName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (conflicts.Count > 0)
+                ReportSalaryConflict(firmName, year, month, conflicts);
+
+            if (File.Exists(canonicalPath))
+                return canonicalPath;
+
+            return variants
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+        }
+
+        private bool HasBlockingSalaryConflicts(string paymentFolder, string firmName, int year, int month)
+        {
+            var conflicts = FindSalaryConflictFiles(paymentFolder, year, month);
+            if (conflicts.Count == 0)
+                return false;
+
+            ReportSalaryConflict(firmName, year, month, conflicts);
+            return true;
+        }
+
+        public bool SaveFirmPaymentToFolder(string firmName, int year, int month,
             List<SalaryEntry> entries, List<FirmExpense> expenses)
         {
             var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return;
+            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return false;
 
             var paymentFolder = folderService.GetPaymentFolder(firmName);
-            if (string.IsNullOrEmpty(paymentFolder)) return;
+            if (string.IsNullOrEmpty(paymentFolder)) return false;
 
             Directory.CreateDirectory(paymentFolder);
+
+            if (HasBlockingSalaryConflicts(paymentFolder, firmName, year, month))
+                return false;
 
             var data = new FirmPaymentData
             {
@@ -705,11 +828,14 @@ namespace Win11DesktopApp.Services
             try
             {
                 WriteJsonAtomic(filePath, data);
+                LastSalaryConflictMessage = string.Empty;
+                return true;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"SaveFirmPayment error ({firmName}): {ex.Message}");
                 LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder", ex);
+                return false;
             }
         }
 
@@ -721,10 +847,9 @@ namespace Win11DesktopApp.Services
             var paymentFolder = folderService.GetPaymentFolder(firmName);
             if (string.IsNullOrEmpty(paymentFolder)) return null;
 
-            var fileName = $"salary_{year}_{month:D2}.json";
-            var filePath = Path.Combine(paymentFolder, fileName);
-
-            if (!File.Exists(filePath)) return null;
+            var filePath = ResolveSalaryMonthFilePath(paymentFolder, firmName, year, month);
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return null;
 
             try
             {
@@ -778,14 +903,33 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        public void SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
+        public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
         {
+            var folderService = App.FolderService;
+            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath))
+                return false;
+
             var firmGroups = allEntries.GroupBy(e => e.FirmName);
             foreach (var group in firmGroups)
             {
-                var firmExpenses = allExpenses.Where(e => e.FirmName == group.Key).ToList();
-                SaveFirmPaymentToFolder(group.Key, year, month, group.ToList(), firmExpenses);
+                var paymentFolder = folderService.GetPaymentFolder(group.Key);
+                if (string.IsNullOrEmpty(paymentFolder))
+                    return false;
+
+                Directory.CreateDirectory(paymentFolder);
+                if (HasBlockingSalaryConflicts(paymentFolder, group.Key, year, month))
+                    return false;
             }
+
+            foreach (var group in firmGroups)
+            {
+                var firmExpenses = allExpenses.Where(e => e.FirmName == group.Key).ToList();
+                if (!SaveFirmPaymentToFolder(group.Key, year, month, group.ToList(), firmExpenses))
+                    return false;
+            }
+
+            LastSalaryConflictMessage = string.Empty;
+            return true;
         }
 
         public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month)
@@ -817,9 +961,8 @@ namespace Win11DesktopApp.Services
                     var paymentFolder = FindPaymentFolder(dir);
                     if (string.IsNullOrEmpty(paymentFolder)) continue;
 
-                    var fileName = $"salary_{year}_{month:D2}.json";
-                    var filePath = Path.Combine(paymentFolder, fileName);
-                    if (!File.Exists(filePath)) continue;
+                    var filePath = ResolveSalaryMonthFilePath(paymentFolder, firmName, year, month);
+                    if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) continue;
 
                     try
                     {
@@ -837,6 +980,71 @@ namespace Win11DesktopApp.Services
             }
 
             return (entries, expenses);
+        }
+
+        private void CleanupPaymentFiles(Func<string?, string?, bool> matches)
+        {
+            var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var paymentFolder in EnumeratePaymentFolders())
+            {
+                if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
+                    continue;
+
+                foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
+                {
+                    if (!processedFiles.Add(file))
+                        continue;
+
+                    try
+                    {
+                        var data = ReadJson<FirmPaymentData>(file);
+                        if (data == null)
+                            continue;
+
+                        var removed = data.Entries.RemoveAll(e => matches(e.EmployeeFolder, e.EmployeeId));
+                        if (removed <= 0)
+                            continue;
+
+                        data.UpdatedAt = DateTime.Now;
+                        WriteJsonAtomic(file, data);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError("FinanceService.CleanupPaymentFiles", ex);
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<string> EnumeratePaymentFolders()
+        {
+            var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var folderService = App.FolderService;
+            var companies = App.CompanyService?.Companies;
+
+            if (folderService == null || companies == null)
+                return folders;
+
+            foreach (var company in companies)
+            {
+                var paymentFolder = folderService.GetPaymentFolder(company.Name);
+                if (!string.IsNullOrWhiteSpace(paymentFolder))
+                    folders.Add(paymentFolder);
+            }
+
+            var archiveFolder = folderService.GetArchiveFolder();
+            if (!string.IsNullOrWhiteSpace(archiveFolder) && Directory.Exists(archiveFolder))
+            {
+                foreach (var dir in Directory.GetDirectories(archiveFolder))
+                {
+                    var paymentFolder = FindPaymentFolder(dir);
+                    if (!string.IsNullOrWhiteSpace(paymentFolder))
+                        folders.Add(paymentFolder);
+                }
+            }
+
+            return folders;
         }
 
         private static string? FindPaymentFolder(string parentDir)

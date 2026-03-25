@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using Win11DesktopApp.Helpers;
+using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -60,6 +61,8 @@ namespace Win11DesktopApp.Services
 
                 EnsureRootFolders();
                 EnsureDatabaseChecksumOrRestore();
+                EnsureArchiveLogIsReadableOrRepair();
+                EnsureActivityLogIsReadableOrRepair();
 
                 var database = _persistenceService.LoadDatabase();
                 LoggingService.LogInfo("StartupIntegrityService.QuickCheck",
@@ -114,6 +117,99 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        private void EnsureArchiveLogIsReadableOrRepair()
+        {
+            try
+            {
+                var archiveFolder = _folderService.GetArchiveFolder();
+                if (string.IsNullOrWhiteSpace(archiveFolder))
+                    return;
+
+                var archiveLogPath = Path.Combine(archiveFolder, "archive_log.json");
+                if (!File.Exists(archiveLogPath))
+                    return;
+
+                var strictOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                try
+                {
+                    SafeFileService.ReadJsonOrDefault(archiveLogPath, new List<ArchiveLogEntry>(), strictOptions, Encoding.UTF8);
+                    return;
+                }
+                catch (JsonException)
+                {
+                    // The file may still be recoverable, e.g. a trailing comma in the array.
+                }
+
+                var tolerantOptions = new JsonSerializerOptions
+                {
+                    AllowTrailingCommas = true
+                };
+
+                var entries = SafeFileService.ReadJson<List<ArchiveLogEntry>>(archiveLogPath, tolerantOptions, Encoding.UTF8)
+                    ?? new List<ArchiveLogEntry>();
+
+                SafeFileService.WriteJsonAtomic(archiveLogPath, entries, strictOptions, Encoding.UTF8);
+                RegisterRecovery();
+                LoggingService.LogWarning("StartupIntegrityService.ArchiveLog",
+                    $"archive_log.json was auto-repaired during startup. Entries preserved: {entries.Count}.");
+            }
+            catch (Exception ex)
+            {
+                RegisterWarning();
+                LoggingService.LogError("StartupIntegrityService.ArchiveLog", ex);
+            }
+        }
+
+        private void EnsureActivityLogIsReadableOrRepair()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_folderService.RootPath))
+                    return;
+
+                var activityLogPath = Path.Combine(_folderService.RootPath, "activity_log.json");
+                if (!File.Exists(activityLogPath))
+                    return;
+
+                var strictOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                try
+                {
+                    SafeFileService.ReadJsonOrDefault(activityLogPath, new List<ActivityLogEntry>(), strictOptions, Encoding.UTF8);
+                    return;
+                }
+                catch (JsonException)
+                {
+                    // The file may still be recoverable, e.g. a trailing comma in the array.
+                }
+
+                var tolerantOptions = new JsonSerializerOptions
+                {
+                    AllowTrailingCommas = true
+                };
+
+                var entries = SafeFileService.ReadJson<List<ActivityLogEntry>>(activityLogPath, tolerantOptions, Encoding.UTF8)
+                    ?? new List<ActivityLogEntry>();
+
+                SafeFileService.WriteJsonAtomic(activityLogPath, entries, strictOptions, Encoding.UTF8);
+                RegisterRecovery();
+                LoggingService.LogWarning("StartupIntegrityService.ActivityLog",
+                    $"activity_log.json was auto-repaired during startup. Entries preserved: {entries.Count}.");
+            }
+            catch (Exception ex)
+            {
+                RegisterWarning();
+                LoggingService.LogError("StartupIntegrityService.ActivityLog", ex);
+            }
+        }
+
         private void EnsureRootFolders()
         {
             Directory.CreateDirectory(_folderService.RootPath);
@@ -140,7 +236,7 @@ namespace Win11DesktopApp.Services
                 return;
             }
 
-            var encryptedData = File.ReadAllBytes(databasePath);
+            var encryptedData = SafeFileService.ReadAllBytes(databasePath);
             var currentChecksum = ComputeHash(encryptedData);
             var checksumPath = _folderService.DatabaseChecksumPath;
 
@@ -193,7 +289,7 @@ namespace Win11DesktopApp.Services
                 if (latestBackup == null)
                     return false;
 
-                var restoredData = File.ReadAllBytes(latestBackup.FullName);
+                var restoredData = SafeFileService.ReadAllBytes(latestBackup.FullName);
                 SafeFileService.WriteBytesAtomic(databasePath, restoredData);
                 SafeFileService.WriteTextAtomic(checksumPath, ComputeHash(restoredData), Encoding.UTF8);
                 RegisterRecovery();

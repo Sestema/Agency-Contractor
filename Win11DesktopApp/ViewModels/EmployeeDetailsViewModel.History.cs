@@ -43,7 +43,7 @@ namespace Win11DesktopApp.ViewModels
                 "Profile" => _allHistoryEntries.Where(e => e.EventType == "ProfileChanged"),
                 "Documents" => _allHistoryEntries.Where(e => e.EventType is "DocumentUpdated" or "DocumentExtended"),
                 "Status" => _allHistoryEntries.Where(e => e.EventType == "StatusChanged"),
-                "Archive" => _allHistoryEntries.Where(e => e.EventType is "Archived" or "Restored"),
+                "Archive" => _allHistoryEntries.Where(e => e.EventType is "Archived" or "Restored" or "ArchiveUndone"),
                 _ => _allHistoryEntries.AsEnumerable()
             };
             HistoryEntries = new ObservableCollection<EmployeeHistoryEntry>(filtered);

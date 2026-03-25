@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.IO;
 using System.Text.Json;
 using Win11DesktopApp.EmployeeModels;
@@ -149,6 +150,91 @@ namespace Win11DesktopApp.Tests
             {
                 App.SetCurrentProfile(null);
             }
+        }
+
+        [Fact]
+        public async Task ArchiveEmployee_ShouldReturnOperationId_AndWriteArchiveLogEntry()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "John", "Doe", "2026-03-01", uniqueId: "emp-1");
+
+            var result = await _employeeService.ArchiveEmployee(employeeFolder, firmName, "2026-03-20");
+
+            Assert.True(result.Success);
+            Assert.False(string.IsNullOrWhiteSpace(result.OperationId));
+
+            var archiveLog = _employeeService.LoadArchiveLog();
+            var logEntry = Assert.Single(archiveLog);
+            Assert.Equal(result.OperationId, logEntry.OperationId);
+            Assert.Equal("Archived", logEntry.Action);
+            Assert.False(logEntry.IsReverted);
+        }
+
+        [Fact]
+        public async Task UndoArchiveAsync_ShouldRestoreEmployee_AndMarkArchiveEntryReverted()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Anna", "Smith", "2026-03-01", uniqueId: "emp-2");
+
+            var archiveResult = await _employeeService.ArchiveEmployee(employeeFolder, firmName, "2026-03-20");
+            Assert.True(archiveResult.Success);
+
+            var undoResult = await _employeeService.UndoArchiveAsync(archiveResult.OperationId);
+
+            Assert.True(undoResult.Success);
+            Assert.False(string.IsNullOrWhiteSpace(undoResult.UndoOperationId));
+            Assert.True(Directory.Exists(undoResult.RestoredFolder));
+
+            var restoredData = _employeeService.LoadEmployeeData(undoResult.RestoredFolder);
+            Assert.NotNull(restoredData);
+            Assert.False(restoredData!.IsArchived);
+            Assert.Equal("Active", restoredData.Status);
+            Assert.Equal(string.Empty, restoredData.EndDate);
+
+            var restoredEmployees = _employeeService.GetEmployeesForFirm(firmName);
+            Assert.Single(restoredEmployees);
+            Assert.Equal("emp-2", restoredEmployees[0].UniqueId);
+
+            var archiveLog = _employeeService.LoadArchiveLog();
+            var archivedEntry = Assert.Single(archiveLog, entry => entry.Action == "Archived");
+            Assert.True(archivedEntry.IsReverted);
+            Assert.Equal(undoResult.UndoOperationId, archivedEntry.RevertedByOperationId);
+            Assert.False(string.IsNullOrWhiteSpace(archivedEntry.RevertedAt));
+
+            var history = _employeeService.LoadHistory(undoResult.RestoredFolder);
+            Assert.Contains(history, entry => entry.EventType == "ArchiveUndone");
+        }
+
+        private string CreateEmployee(string firmName, string firstName, string lastName, string startDate, string uniqueId)
+        {
+            var employeesFolder = _folderService.GetEmployeesFolder(firmName);
+            Directory.CreateDirectory(employeesFolder);
+
+            var employeeFolder = Path.Combine(employeesFolder, $"{firstName}_{lastName} - {startDate}");
+            Directory.CreateDirectory(employeeFolder);
+
+            var data = new EmployeeData
+            {
+                UniqueId = uniqueId,
+                FirstName = firstName,
+                LastName = lastName,
+                StartDate = startDate,
+                ContractSignDate = startDate,
+                PositionTag = "Operator",
+                Status = "Active",
+                FirmHistory = new()
+                {
+                    new FirmHistoryEntry
+                    {
+                        FirmName = firmName,
+                        StartDate = startDate,
+                        EndDate = string.Empty
+                    }
+                }
+            };
+
+            File.WriteAllText(Path.Combine(employeeFolder, "employee.json"), JsonSerializer.Serialize(data));
+            return employeeFolder;
         }
 
         public void Dispose()

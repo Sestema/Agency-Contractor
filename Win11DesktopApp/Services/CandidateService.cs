@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Media.Imaging;
@@ -68,8 +69,7 @@ namespace Win11DesktopApp.Services
             {
                 var path = Path.Combine(candidateFolder, "candidate.json");
                 if (!File.Exists(path)) return null;
-                var json = File.ReadAllText(path);
-                return JsonSerializer.Deserialize<CandidateData>(json);
+                return SafeFileService.ReadJsonOrDefault<CandidateData?>(path, null, _json, Encoding.UTF8);
             }
             catch (Exception ex)
             {
@@ -111,7 +111,7 @@ namespace Win11DesktopApp.Services
                 {
                     var ext = Path.GetExtension(photoPath);
                     var dest = Path.Combine(folder, $"photo{ext}");
-                    File.Copy(photoPath, dest, true);
+                    SafeFileService.CopyFile(photoPath, dest);
                     data.Files.Photo = $"photo{ext}";
                 }
 
@@ -119,7 +119,7 @@ namespace Win11DesktopApp.Services
                 {
                     var ext = Path.GetExtension(passportPath);
                     var dest = Path.Combine(folder, $"passport{ext}");
-                    File.Copy(passportPath, dest, true);
+                    SafeFileService.CopyFile(passportPath, dest);
                     data.Files.Passport = $"passport{ext}";
                 }
 

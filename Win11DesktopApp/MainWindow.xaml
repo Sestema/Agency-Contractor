@@ -6,6 +6,8 @@
         xmlns:local="clr-namespace:Win11DesktopApp"
         xmlns:views="clr-namespace:Win11DesktopApp.Views"
         xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
+        xmlns:invViews="clr-namespace:Win11DesktopApp.Invoices.Views"
+        xmlns:invVm="clr-namespace:Win11DesktopApp.Invoices.ViewModels"
         mc:Ignorable="d"
         Title="{DynamicResource AppTitle}" Height="600" Width="900"
         MinWidth="750" MinHeight="480"
@@ -42,6 +44,9 @@
         <DataTemplate DataType="{x:Type vm:ArchiveViewModel}">
             <views:ArchiveView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RecentlyDeletedViewModel}">
+            <views:RecentlyDeletedView/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PdfEditorViewModel}">
             <views:PdfEditorView/>
         </DataTemplate>
@@ -77,6 +82,12 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:NewsViewModel}">
             <views:NewsView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type invVm:InvoicesViewModel}">
+            <invViews:InvoicesView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type invVm:InvoiceEditorViewModel}">
+            <invViews:InvoiceEditorView/>
         </DataTemplate>
     </Window.Resources>
 

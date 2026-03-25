@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
+using Win11DesktopApp.Invoices.ViewModels;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -299,9 +300,15 @@ namespace Win11DesktopApp.ViewModels
                 new() { Id = "finances", TitleKey = "BtnFinances", IconKey = "IconFinances",
                     GradientStart = "#A18CD1", GradientEnd = "#FBC2EB",
                     Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new FinanceTablesViewModel())) },
+                new() { Id = "invoices", TitleKey = "BtnInvoices", IconKey = "IconInvoices",
+                    GradientStart = "#26A69A", GradientEnd = "#66BB6A",
+                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new InvoicesViewModel())) },
                 new() { Id = "archive", TitleKey = "BtnArchive", IconKey = "IconArchive",
                     GradientStart = "#89F7FE", GradientEnd = "#66A6FF",
                     Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ArchiveViewModel())) },
+                new() { Id = "recentlydeleted", TitleKey = "BtnRecentlyDeleted", IconKey = "IconRecentlyDeleted",
+                    GradientStart = "#FF9A9E", GradientEnd = "#FAD0C4",
+                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new RecentlyDeletedViewModel())) },
                 new() { Id = "activitylog", TitleKey = "BtnActivityLog", IconKey = "IconActivityLog",
                     GradientStart = "#FFD54F", GradientEnd = "#FF8A65",
                     Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ActivityLogViewModel())) },

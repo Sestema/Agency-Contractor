@@ -21,6 +21,11 @@ namespace Win11DesktopApp.Services
 {
     public class DocumentGenerationService
     {
+        private static readonly JsonSerializerOptions PdfTagMapJsonOptions = new()
+        {
+            AllowTrailingCommas = true
+        };
+
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
 
@@ -51,7 +56,7 @@ namespace Win11DesktopApp.Services
             EnsureTemplateExists(templatePath);
             EnsureOutputDirectory(outputPath);
 
-            File.Copy(templatePath, outputPath, true);
+            SafeFileService.CopyFile(templatePath, outputPath);
 
             using (var doc = WordprocessingDocument.Open(outputPath, true))
             {
@@ -209,7 +214,7 @@ namespace Win11DesktopApp.Services
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var ansiEncoding = Encoding.GetEncoding(1252);
 
-            var rtfContent = File.ReadAllText(rtfTemplatePath, ansiEncoding);
+            var rtfContent = SafeFileService.ReadAllText(rtfTemplatePath, ansiEncoding);
 
             foreach (var kvp in tagValues)
             {
@@ -218,7 +223,7 @@ namespace Win11DesktopApp.Services
                 rtfContent = rtfContent.Replace(rtfTag, safeValue);
             }
 
-            File.WriteAllText(outputPath, rtfContent, ansiEncoding);
+            SafeFileService.WriteTextAtomic(outputPath, rtfContent, ansiEncoding);
             return outputPath;
         }
 
@@ -234,7 +239,7 @@ namespace Win11DesktopApp.Services
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var ansiEncoding = Encoding.GetEncoding(1252);
 
-            var rtfContent = File.ReadAllText(rtfTemplatePath, ansiEncoding);
+            var rtfContent = SafeFileService.ReadAllText(rtfTemplatePath, ansiEncoding);
 
             rtfContent = ReplaceRtfTags(rtfContent, tagValues);
 
@@ -346,7 +351,7 @@ namespace Win11DesktopApp.Services
             EnsureTemplateExists(templatePath);
             EnsureOutputDirectory(outputPath);
 
-            File.Copy(templatePath, outputPath, true);
+            SafeFileService.CopyFile(templatePath, outputPath);
 
             var tagPattern = new Regex(@"\$\{([^}]+)\}", RegexOptions.None, TimeSpan.FromSeconds(5));
 
@@ -396,27 +401,26 @@ namespace Win11DesktopApp.Services
             if (!File.Exists(tagMapPath))
             {
                 // No tag map — just copy
-                File.Copy(templatePath, outputPath, true);
+                SafeFileService.CopyFile(templatePath, outputPath);
                 return outputPath;
             }
 
             PdfTagMap? tagMap;
             try
             {
-                var json = File.ReadAllText(tagMapPath);
-                tagMap = JsonSerializer.Deserialize<PdfTagMap>(json);
+                tagMap = SafeFileService.ReadJson<PdfTagMap>(tagMapPath, PdfTagMapJsonOptions, Encoding.UTF8);
             }
             catch (Exception ex)
             {
                 LoggingService.LogWarning("DocumentGenerationService.GeneratePdf",
                     $"Tag map could not be read, copying original PDF instead: {ex.Message}");
-                File.Copy(templatePath, outputPath, true);
+                SafeFileService.CopyFile(templatePath, outputPath);
                 return outputPath;
             }
 
             if (tagMap?.Placements == null || tagMap.Placements.Count == 0)
             {
-                File.Copy(templatePath, outputPath, true);
+                SafeFileService.CopyFile(templatePath, outputPath);
                 return outputPath;
             }
 

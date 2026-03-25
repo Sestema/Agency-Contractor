@@ -1,0 +1,234 @@
+<UserControl x:Class="Win11DesktopApp.Invoices.Views.InvoicesDashboardSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="720"
+             d:DesignWidth="1100">
+    <UserControl.Resources>
+        <Style x:Key="DashboardSectionCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Effect" Value="{DynamicResource CardShadow}"/>
+        </Style>
+
+        <Style x:Key="DashboardGhostActionButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="MinWidth" Value="110"/>
+        </Style>
+
+        <Style x:Key="DashboardQuickButtonBase" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#1FFFFFFF"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DashboardQuickPrimaryButton" TargetType="Button" BasedOn="{StaticResource DashboardQuickButtonBase}">
+            <Setter Property="Background" Value="#FF0F7AE5"/>
+        </Style>
+
+        <Style x:Key="DashboardQuickSecondaryButton" TargetType="Button" BasedOn="{StaticResource DashboardQuickButtonBase}">
+            <Setter Property="Background" Value="#1FFFFFFF"/>
+        </Style>
+
+        <Style x:Key="DashboardNavCardButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,10,10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DashboardNavCardBodyStyle" TargetType="Border" BasedOn="{StaticResource DashboardSectionCard}">
+            <Setter Property="MinHeight" Value="126"/>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <Border CornerRadius="16"
+                    Padding="16"
+                    Margin="0,0,0,12"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF1FA082" Offset="0"/>
+                        <GradientStop Color="#FF26A69A" Offset="0.45"/>
+                        <GradientStop Color="#FF58C0B1" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="280"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource InvoicesWelcomeTitle}"
+                                   FontSize="{DynamicResource FS22}"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+                        <TextBlock Text="{DynamicResource InvoicesWelcomeSubtitle}"
+                                   FontSize="{DynamicResource FS12}"
+                                   Foreground="#EFFFFFFF"
+                                   Margin="0,4,0,0"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="560"/>
+
+                        <UniformGrid Columns="3" Margin="0,12,0,0">
+                            <Button Command="{Binding CreateInvoiceCommand}" Style="{StaticResource DashboardQuickPrimaryButton}">
+                                <TextBlock Text="{DynamicResource InvoicesQuickNewInvoice}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"/>
+                            </Button>
+                            <Button Command="{Binding CreateCashReceiptCommand}" Style="{StaticResource DashboardQuickSecondaryButton}">
+                                <TextBlock Text="{DynamicResource InvoicesTypeCashReceiptIncome}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"/>
+                            </Button>
+                            <Button Command="{Binding OpenDocumentsCommand}" Style="{StaticResource DashboardQuickSecondaryButton}" Margin="0">
+                                <TextBlock Text="{DynamicResource InvoicesSectionDocuments}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"/>
+                            </Button>
+                        </UniformGrid>
+                    </StackPanel>
+
+                    <Border Grid.Column="1"
+                            Margin="16,0,0,0"
+                            Background="#14FFFFFF"
+                            CornerRadius="14"
+                            Padding="14">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource InvoicesSectionHome}"
+                                       FontSize="{DynamicResource FS13}"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"/>
+                            <TextBlock Text="{DynamicResource InvoicesTitle}"
+                                       FontSize="{DynamicResource FS24}"
+                                       FontWeight="Bold"
+                                       Foreground="White"
+                                       Margin="0,4,0,0"/>
+                            <TextBlock Text="{DynamicResource InvoicesDashboardHomeHint}"
+                                       FontSize="{DynamicResource FS11}"
+                                       Foreground="#EFFFFFFF"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource DashboardSectionCard}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource InvoicesDashboardSectionsTitle}"
+                               FontSize="{DynamicResource FS19}"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{DynamicResource InvoicesDashboardSectionsHint}"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               Margin="0,4,0,14"
+                               TextWrapping="Wrap"/>
+
+                    <UniformGrid Columns="3">
+                        <Button Command="{Binding OpenDocumentsCommand}" Style="{StaticResource DashboardNavCardButton}">
+                            <Border Style="{StaticResource DashboardNavCardBodyStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{DynamicResource InvoicesSectionDocuments}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                                    <TextBlock Text="{DynamicResource InvoicesDashboardCardDocumentsHint}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                        <Button Command="{Binding OpenCompaniesCommand}" Style="{StaticResource DashboardNavCardButton}">
+                            <Border Style="{StaticResource DashboardNavCardBodyStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{DynamicResource InvoicesSectionCompanies}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                                    <TextBlock Text="{DynamicResource InvoicesPlaceholderCompaniesHint}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                        <Button Command="{Binding OpenCustomersCommand}" Style="{StaticResource DashboardNavCardButton}">
+                            <Border Style="{StaticResource DashboardNavCardBodyStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{DynamicResource InvoicesSectionCustomers}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                                    <TextBlock Text="{DynamicResource InvoicesPlaceholderCustomersHint}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                        <Button Command="{Binding OpenItemsCommand}" Style="{StaticResource DashboardNavCardButton}">
+                            <Border Style="{StaticResource DashboardNavCardBodyStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE14C;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{DynamicResource InvoicesSectionItems}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                                    <TextBlock Text="{DynamicResource InvoicesPlaceholderItemsHint}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                        <Button Command="{Binding OpenBankAccountsCommand}" Style="{StaticResource DashboardNavCardButton}">
+                            <Border Style="{StaticResource DashboardNavCardBodyStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE825;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{DynamicResource InvoicesSectionBankAccounts}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                                    <TextBlock Text="{DynamicResource InvoicesPlaceholderBankAccountsHint}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                        <Button Command="{Binding OpenTrashCommand}" Style="{StaticResource DashboardNavCardButton}" Margin="0,0,0,10">
+                            <Border Style="{StaticResource DashboardNavCardBodyStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{DynamicResource InvoicesSectionTrash}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                                    <TextBlock Text="{DynamicResource InvoicesPlaceholderTrashHint}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

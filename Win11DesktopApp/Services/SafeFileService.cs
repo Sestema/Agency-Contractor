@@ -91,6 +91,34 @@ namespace Win11DesktopApp.Services
             });
         }
 
+        public static void CopyFile(string source, string dest, bool overwrite = true)
+        {
+            EnsureDestinationDirectory(dest);
+            RetryHelper.Execute(() => File.Copy(source, dest, overwrite));
+        }
+
+        public static void MoveFile(string source, string dest)
+        {
+            EnsureDestinationDirectory(dest);
+            RetryHelper.Execute(() =>
+            {
+                PrepareFileForOverwrite(dest);
+                File.Move(source, dest, overwrite: true);
+            });
+        }
+
+        public static void DeleteFile(string path)
+        {
+            if (!File.Exists(path))
+                return;
+
+            RetryHelper.Execute(() =>
+            {
+                PrepareFileForOverwrite(path);
+                File.Delete(path);
+            });
+        }
+
         private static void ReplaceFile(string sourcePath, string destinationPath)
         {
             PrepareFileForOverwrite(destinationPath);
@@ -113,6 +141,13 @@ namespace Win11DesktopApp.Services
 
             var fileName = Path.GetFileName(destinationPath);
             return Path.Combine(directory, $"{fileName}.{Guid.NewGuid():N}.tmp");
+        }
+
+        private static void EnsureDestinationDirectory(string path)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
         }
 
         private static void CleanupTempFile(string path)

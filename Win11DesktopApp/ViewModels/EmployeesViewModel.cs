@@ -11,6 +11,7 @@ using ClosedXML.Excel;
 using Win11DesktopApp.Models;
 using EmployeeModels = Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Services;
+using Win11DesktopApp.Views;
 
 namespace Win11DesktopApp.ViewModels
 {
@@ -296,7 +297,7 @@ namespace Win11DesktopApp.ViewModels
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as EmployeeModels.EmployeeSummary), o => o is EmployeeModels.EmployeeSummary);
             EditEmployeeCommand = new RelayCommand(o => EditEmployee(o as EmployeeModels.EmployeeSummary), o => o is EmployeeModels.EmployeeSummary);
             DeleteEmployeeCommand = new RelayCommand(o => AskDeleteEmployee(o as EmployeeModels.EmployeeSummary), o => o is EmployeeModels.EmployeeSummary);
-            ConfirmDeleteCommand = new RelayCommand(o => ConfirmDelete());
+            ConfirmDeleteCommand = new AsyncRelayCommand(_ => ConfirmDeleteAsync());
             CancelDeleteCommand = new RelayCommand(o => IsDeleteConfirmOpen = false);
 
             OpenEmployeeFolderCommand = new RelayCommand(o =>
@@ -525,16 +526,71 @@ namespace Win11DesktopApp.ViewModels
             IsDeleteConfirmOpen = true;
         }
 
-        private void ConfirmDelete()
+        private async System.Threading.Tasks.Task ConfirmDeleteAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("Видалити працівника"))
                 return;
             if (EmployeeToDelete == null) return;
-            Debug.WriteLine($"EmployeesViewModel.ConfirmDelete: Deleting employee '{EmployeeToDelete.FullName}' from folder '{EmployeeToDelete.EmployeeFolder}'");
-            _employeeService.DeleteEmployee(EmployeeToDelete.EmployeeFolder);
+
+            var currentProfile = App.CurrentProfile;
+            if (currentProfile == null || string.IsNullOrWhiteSpace(currentProfile.ClientId))
+            {
+                MessageBox.Show(
+                    GetString("ConfirmPasswordNoProfile") ?? "User profile was not found. Deletion is blocked.",
+                    GetString("ConfirmPasswordTitle") ?? "Confirm password",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var passwordDialog = new ConfirmPasswordWindow
+            {
+                Owner = Application.Current?.MainWindow
+            };
+
+            var confirmed = passwordDialog.ShowDialog() == true && passwordDialog.IsConfirmed;
+            if (!confirmed)
+                return;
+
+            var authResult = await App.ProfileAuthService.AuthenticateAsync(currentProfile.ClientId, passwordDialog.EnteredPassword);
+            if (!authResult.Success)
+            {
+                MessageBox.Show(
+                    GetString("ConfirmPasswordFailed") ?? "Wrong password.",
+                    GetString("ConfirmPasswordTitle") ?? "Confirm password",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var employee = EmployeeToDelete;
+            Debug.WriteLine($"EmployeesViewModel.ConfirmDelete: Moving employee '{employee.FullName}' to recently deleted from folder '{employee.EmployeeFolder}'");
+
+            var recycleResult = App.RecentlyDeletedService.MoveEmployeeToRecentlyDeleted(employee);
+            if (!recycleResult.Success)
+            {
+                MessageBox.Show(
+                    string.Format(GetString("RecentlyDeletedMoveFailed") ?? "Failed to move employee to Recently Deleted: {0}", recycleResult.Message),
+                    GetString("TitleError") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
+            App.ActivityLogService?.Log(
+                "EmployeeMovedToRecentlyDeleted",
+                "Employee",
+                employee.FirmName,
+                employee.FullName,
+                string.Format(GetString("RecentlyDeletedActionMovedDescription") ?? "Employee {0} was moved to Recently Deleted.", employee.FullName),
+                employeeFolder: recycleResult.Item?.DeletedEmployeeFolder ?? string.Empty);
+
             IsDeleteConfirmOpen = false;
             EmployeeToDelete = null;
             LoadEmployees();
+            ToastService.Instance.Success(string.Format(
+                GetString("RecentlyDeletedMoveSuccess") ?? "Employee {0} was moved to Recently Deleted.",
+                employee.FullName));
         }
 
         private void RefreshStats()
@@ -731,7 +787,7 @@ namespace Win11DesktopApp.ViewModels
                         {
                             var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.pdf");
                             var outPath = Path.Combine(emp.EmployeeFolder, outName);
-                            File.Copy(templateFullPath, outPath, true);
+                            SafeFileService.CopyFile(templateFullPath, outPath);
                         }
 
                         success++;

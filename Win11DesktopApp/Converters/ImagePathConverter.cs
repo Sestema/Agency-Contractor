@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 
@@ -24,15 +25,31 @@ namespace Win11DesktopApp.Converters
                 if (_cache.TryGetValue(path, out var cached) && cached.lastWrite == lastWrite)
                     return cached.image;
 
-                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var decoder = BitmapDecoder.Create(stream,
-                    BitmapCreateOptions.IgnoreImageCache,
-                    BitmapCacheOption.OnLoad);
-                var frame = decoder.Frames[0];
-                frame.Freeze();
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    try
+                    {
+                        using var stream = new FileStream(
+                            path,
+                            FileMode.Open,
+                            FileAccess.Read,
+                            FileShare.ReadWrite | FileShare.Delete);
+                        var decoder = BitmapDecoder.Create(stream,
+                            BitmapCreateOptions.IgnoreImageCache,
+                            BitmapCacheOption.OnLoad);
+                        var frame = decoder.Frames[0];
+                        frame.Freeze();
 
-                _cache[path] = (frame, lastWrite);
-                return frame;
+                        _cache[path] = (frame, lastWrite);
+                        return frame;
+                    }
+                    catch when (attempt < 2)
+                    {
+                        Thread.Sleep(50);
+                    }
+                }
+
+                return null;
             }
             catch
             {

@@ -187,6 +187,12 @@ namespace Win11DesktopApp.Services
             return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetCandidatesFolder(FolderLanguageCode), FolderNames.AllCandidatesFolderNames);
         }
 
+        public string GetRecentlyDeletedFolder()
+        {
+            if (string.IsNullOrEmpty(RootPath)) return string.Empty;
+            return FindOrCreateLocalizedSubfolder(RootPath, FolderNames.GetRecentlyDeletedFolder(FolderLanguageCode), FolderNames.AllRecentlyDeletedFolderNames);
+        }
+
         public void EnsureArchiveFolder()
         {
             if (string.IsNullOrEmpty(RootPath)) return;
@@ -197,6 +203,19 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"FolderService.EnsureArchiveFolder error: {ex.Message}");
+            }
+        }
+
+        public void EnsureRecentlyDeletedFolder()
+        {
+            if (string.IsNullOrEmpty(RootPath)) return;
+            try
+            {
+                EnsureLocalizedSubfolder(RootPath, FolderNames.GetRecentlyDeletedFolder(FolderLanguageCode), FolderNames.AllRecentlyDeletedFolderNames);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"FolderService.EnsureRecentlyDeletedFolder error: {ex.Message}");
             }
         }
 

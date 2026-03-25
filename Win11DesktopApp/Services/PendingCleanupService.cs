@@ -177,8 +177,7 @@ namespace Win11DesktopApp.Services
             var path = StoragePath;
             if (items.Count == 0)
             {
-                if (File.Exists(path))
-                    File.Delete(path);
+                SafeFileService.DeleteFile(path);
                 return;
             }
 

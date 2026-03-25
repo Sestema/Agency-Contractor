@@ -59,6 +59,7 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(IsLastStep));
                     RefreshCarousel();
                     AutoSelectCarouselForStep(value);
+                    OnPropertyChanged(nameof(CarouselPreviewPath));
                 }
             }
         }
@@ -360,6 +361,11 @@ namespace Win11DesktopApp.ViewModels
 
         private void RefreshCarousel()
         {
+            var previousKey =
+                _selectedCarouselIndex >= 0 && _selectedCarouselIndex < CarouselItems.Count
+                    ? CarouselItems[_selectedCarouselIndex].Key
+                    : null;
+
             CarouselItems.Clear();
 
             if (!string.IsNullOrEmpty(PassportPreviewPath))
@@ -375,13 +381,26 @@ namespace Win11DesktopApp.ViewModels
             if (!string.IsNullOrEmpty(WorkPermitPreviewPath))
                 CarouselItems.Add(new CarouselDocItem { Key = "permit", Label = Res("CarouselPermit"), ImagePath = WorkPermitPreviewPath });
 
-            OnPropertyChanged(nameof(HasCarouselItems));
+            var restoredIndex = -1;
+            if (!string.IsNullOrEmpty(previousKey))
+                restoredIndex = CarouselItems.ToList().FindIndex(x => x.Key == previousKey);
 
-            if (CarouselItems.Count > 0 && (_selectedCarouselIndex < 0 || _selectedCarouselIndex >= CarouselItems.Count))
-                SelectedCarouselIndex = 0;
+            if (restoredIndex >= 0)
+                _selectedCarouselIndex = restoredIndex;
+            else if (CarouselItems.Count > 0)
+                _selectedCarouselIndex = 0;
+            else
+                _selectedCarouselIndex = -1;
+
+            for (int i = 0; i < CarouselItems.Count; i++)
+                CarouselItems[i].IsSelected = i == _selectedCarouselIndex;
+
+            OnPropertyChanged(nameof(SelectedCarouselIndex));
+            OnPropertyChanged(nameof(CarouselPreviewPath));
+            OnPropertyChanged(nameof(HasCarouselItems));
         }
 
-        private void AutoSelectCarouselForStep(int step)
+        private bool AutoSelectCarouselForStep(int step)
         {
             string targetKey = step switch
             {
@@ -392,15 +411,16 @@ namespace Win11DesktopApp.ViewModels
                 8 => "passport2",
                 _ => ""
             };
-            if (string.IsNullOrEmpty(targetKey)) return;
+            if (string.IsNullOrEmpty(targetKey)) return false;
             for (int i = 0; i < CarouselItems.Count; i++)
             {
                 if (CarouselItems[i].Key == targetKey)
                 {
                     SelectedCarouselIndex = i;
-                    return;
+                    return true;
                 }
             }
+            return false;
         }
 
         private void CarouselPrev()
@@ -778,6 +798,7 @@ namespace Win11DesktopApp.ViewModels
                         break;
                 }
 
+                Converters.ImagePathConverter.InvalidateCache();
                 OnPropertyChanged(nameof(CurrentCropImagePath));
                 RefreshCarousel();
                 CropSourceChanged?.Invoke();
@@ -835,7 +856,12 @@ namespace Win11DesktopApp.ViewModels
                     if (PassportDoc != null) PassportDoc.ImagePath = rotatedPath;
                 }
 
+                Converters.ImagePathConverter.InvalidateCache(sourcePath);
+                Converters.ImagePathConverter.InvalidateCache(rotatedPath);
                 OnPropertyChanged(nameof(CurrentCropImagePath));
+                if (_selectedCarouselIndex >= 0 && _selectedCarouselIndex < CarouselItems.Count)
+                    CarouselItems[_selectedCarouselIndex].ImagePath = rotatedPath;
+                OnPropertyChanged(nameof(CarouselPreviewPath));
                 CropSourceChanged?.Invoke();
             }
             catch (Exception ex)
@@ -911,10 +937,14 @@ namespace Win11DesktopApp.ViewModels
                 var newPath = Path.Combine(_tempFolder, $"enh_{Guid.NewGuid():N}{Path.GetExtension(currentPath)}");
                 try
                 {
-                    File.Copy(editor.ResultPath, newPath, true);
-                    File.Delete(editor.ResultPath);
+                    SafeFileService.CopyFile(editor.ResultPath, newPath);
+                    SafeFileService.DeleteFile(editor.ResultPath);
                 }
-                catch
+                catch (IOException)
+                {
+                    newPath = editor.ResultPath;
+                }
+                catch (UnauthorizedAccessException)
                 {
                     newPath = editor.ResultPath;
                 }
@@ -950,6 +980,8 @@ namespace Win11DesktopApp.ViewModels
                     if (PassportDoc != null) PassportDoc.ImagePath = newPath;
                 }
 
+                Converters.ImagePathConverter.InvalidateCache(currentPath);
+                Converters.ImagePathConverter.InvalidateCache(newPath);
                 OnPropertyChanged(nameof(CurrentCropImagePath));
                 CropSourceChanged?.Invoke();
 
@@ -1001,6 +1033,12 @@ namespace Win11DesktopApp.ViewModels
                     $"{Data.FirstName} {Data.LastName}",
                     $"Додано працівника {Data.FirstName} {Data.LastName} до {_company.Name}",
                     employeeFolder: folder);
+
+                TelemetryService.TrackEvent("employee_added", new Dictionary<string, object>
+                {
+                    ["employee_name"] = $"{Data.FirstName} {Data.LastName}",
+                    ["firm_name"] = _company.Name
+                });
 
                 ToastService.Instance.Success($"{Data.FirstName} {Data.LastName}");
                 Close();

@@ -423,6 +423,7 @@
 
                                 <!-- Generate button -->
                                 <Button Command="{Binding OpenGenerateDialogCommand}"
+                                        Visibility="{Binding ShowGenerateActions, Converter={StaticResource BoolToVis}}"
                                         Style="{StaticResource FilledActionButton}"
                                         Padding="12,9"
                                         FontWeight="SemiBold">
@@ -1120,6 +1121,9 @@
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding IsArchiveMode}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsReadOnlyMode}" Value="True">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>

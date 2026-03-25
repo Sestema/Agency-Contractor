@@ -1,0 +1,102 @@
+<UserControl x:Class="Win11DesktopApp.Invoices.Views.InvoicesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:invVm="clr-namespace:Win11DesktopApp.Invoices.ViewModels"
+             xmlns:invViews="clr-namespace:Win11DesktopApp.Invoices.Views"
+             mc:Ignorable="d"
+             d:DesignHeight="760"
+             d:DesignWidth="1200">
+    <UserControl.Resources>
+        <DataTemplate DataType="{x:Type invVm:InvoicesDashboardViewModel}">
+            <invViews:InvoicesDashboardSectionView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type invVm:InvoicesDocumentsViewModel}">
+            <invViews:InvoicesDocumentsSectionView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type invVm:InvoicesTrashViewModel}">
+            <invViews:InvoicesTrashSectionView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type invVm:InvoicesPlaceholderSectionViewModel}">
+            <invViews:InvoicesPlaceholderSectionView/>
+        </DataTemplate>
+
+    </UserControl.Resources>
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Margin="0,0,0,12"
+                        CornerRadius="16"
+                        BorderBrush="Transparent"
+                        BorderThickness="0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#FFF7FBFA" Offset="0"/>
+                            <GradientStop Color="#FFF0F8F6" Offset="0.55"/>
+                            <GradientStop Color="#FFEAF4F1" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid Margin="12,10">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,8,0">
+                                    <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                                </Button>
+                                <Border Width="30"
+                                        Height="30"
+                                        CornerRadius="8"
+                                        Background="#26A69A"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0">
+                                    <TextBlock Text="&#xE8C7;"
+                                               Style="{StaticResource PageHeaderIconText}"
+                                               FontSize="{DynamicResource FS14}"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{DynamicResource InvoicesTitle}"
+                                               FontSize="{DynamicResource FS22}"
+                                               Style="{StaticResource PageHeaderTitleText}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Margin="0,0,0,12"
+                        Padding="0,2,0,4"
+                        CornerRadius="14"
+                        BorderBrush="Transparent"
+                        BorderThickness="0"
+                        Background="Transparent"
+                        Visibility="{Binding ShowSectionShortcut, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding OpenDashboardCommand}" Style="{StaticResource HeaderGhostButton}" Margin="0,0,10,0">
+                            <TextBlock Text="{DynamicResource InvoicesSectionHome}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                        </Button>
+                        <TextBlock Text="›"
+                                   FontSize="{DynamicResource FS16}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding CurrentSectionTitle}"
+                                   FontSize="{DynamicResource FS14}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <ContentControl Grid.Row="2"
+                                Content="{Binding CurrentSection}"/>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

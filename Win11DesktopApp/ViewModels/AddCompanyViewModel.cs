@@ -143,6 +143,10 @@ namespace Win11DesktopApp.ViewModels
                 App.CompanyService.AddCompany(Employer, Agency);
                 App.ActivityLogService.Log("CompanyAdded", "Company", Employer.Name, "",
                     $"Додано фірму: {Employer.Name}");
+                TelemetryService.TrackEvent("firm_created", new Dictionary<string, object>
+                {
+                    ["firm_name"] = Employer.Name
+                });
             }
             RequestClose?.Invoke();
         }
