@@ -9,7 +9,7 @@ namespace Win11DesktopApp.Invoices.Services;
 public sealed class InvoiceStorageService
 {
     private const string ModuleFolderName = "Faktury";
-    private const string DefaultModuleLanguage = "cs";
+    private const string DefaultModuleLanguage = "uk";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -86,7 +86,7 @@ public sealed class InvoiceStorageService
     {
         var fallback = new InvoiceModuleSettings
         {
-            Language = DefaultModuleLanguage
+            Language = NormalizeLanguage(App.AppSettingsService?.Settings.LanguageCode)
         };
         var settings = SafeFileService.ReadJsonOrDefault(_settingsFilePath, fallback, JsonOptions);
         settings.Language = NormalizeLanguage(settings.Language);
@@ -157,7 +157,7 @@ public sealed class InvoiceStorageService
             DeliveryDate = issueDate,
             DueDate = issueDate.AddDays(14),
             CashReceiptDocumentVariant = "cashdesk",
-            CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(type, "cashdesk"),
+            CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(type, "cashdesk", resourceResolver: CreateLanguageResolver(settings.Language)),
             CashReceiptPaymentDate = issueDate,
             Items = type is InvoiceDocumentType.CashReceiptIncome or InvoiceDocumentType.CashReceiptExpense
                 ? new List<InvoiceLineItem>()
@@ -172,7 +172,7 @@ public sealed class InvoiceStorageService
     {
         if (_pendingDocuments.TryGetValue(id, out var pending))
         {
-            InvoiceCashReceiptHelper.NormalizeDocument(pending);
+            NormalizeCashReceiptDocument(pending);
             return pending;
         }
 
@@ -183,7 +183,7 @@ public sealed class InvoiceStorageService
         var path = Path.Combine(_basePath, summary.RelativeJsonPath);
         var document = SafeFileService.ReadJsonOrDefault<InvoiceDocument?>(path, null, JsonOptions);
         if (document != null)
-            InvoiceCashReceiptHelper.NormalizeDocument(document);
+            NormalizeCashReceiptDocument(document);
         return document;
     }
 
@@ -244,7 +244,7 @@ public sealed class InvoiceStorageService
             ? document.Type is InvoiceDocumentType.CashReceiptIncome or InvoiceDocumentType.CashReceiptExpense ? "cash1" : "style1"
             : document.SelectedTemplateId;
         document.RoundingMode = string.IsNullOrWhiteSpace(document.RoundingMode) ? "none" : document.RoundingMode;
-        InvoiceCashReceiptHelper.NormalizeDocument(document);
+        NormalizeCashReceiptDocument(document);
         document.QrPaymentFormat = string.IsNullOrWhiteSpace(document.QrPaymentFormat) ? "spayd" : document.QrPaymentFormat;
         document.Tags = document.Tags
             .Where(static tag => !string.IsNullOrWhiteSpace(tag))
@@ -907,6 +907,16 @@ public sealed class InvoiceStorageService
         var normalized = languageCode.Trim().ToLowerInvariant();
         return SupportedLanguages.Contains(normalized) ? normalized : DefaultModuleLanguage;
     }
+
+    private static Func<string, string> CreateLanguageResolver(string? languageCode)
+    {
+        var localizer = new DocumentLocalizationService();
+        localizer.LoadLanguage((languageCode ?? string.Empty).Trim().ToLowerInvariant());
+        return localizer.Get;
+    }
+
+    private static void NormalizeCashReceiptDocument(InvoiceDocument document)
+        => InvoiceCashReceiptHelper.NormalizeDocument(document, CreateLanguageResolver(document.Language));
 
     private static string NormalizeIco(string? ico)
         => new string((ico ?? string.Empty).Where(char.IsDigit).ToArray());

@@ -2589,7 +2589,7 @@ public sealed class InvoicePdfRenderService
         => $"{value.ToString("0.00", CultureInfo.InvariantCulture)} {currency}";
 
     private static string GetCashReceiptTitle(InvoiceDocument document)
-        => InvoiceCashReceiptHelper.GetTitle(document.Type, document.CashReceiptDocumentVariant, document.CashReceiptTitle);
+        => InvoiceCashReceiptHelper.GetTitle(document.Type, document.CashReceiptDocumentVariant, document.CashReceiptTitle, Res);
 
     private static decimal CalculateCashReceiptTotalWithVat(InvoiceDocument document)
     {

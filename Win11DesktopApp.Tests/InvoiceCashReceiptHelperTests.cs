@@ -24,7 +24,16 @@ public class InvoiceCashReceiptHelperTests
     [InlineData(InvoiceDocumentType.CashReceiptExpense, "cashdesk", "Výdajový pokladní doklad")]
     public void GetTitle_ShouldReturnExpectedTitle(InvoiceDocumentType type, string variant, string expected)
     {
-        var actual = InvoiceCashReceiptHelper.GetTitle(type, variant);
+        var resolver = (string key) => key switch
+        {
+            "InvoicesCashReceiptIncomeTitleSimple" => "Príjmový doklad",
+            "InvoicesCashReceiptIncomeTitleCashdesk" => "Príjmový pokladničný doklad",
+            "InvoicesCashReceiptExpenseTitleSimple" => "Výdajový doklad",
+            "InvoicesCashReceiptExpenseTitleCashdesk" => "Výdajový pokladní doklad",
+            _ => key
+        };
+
+        var actual = InvoiceCashReceiptHelper.GetTitle(type, variant, resourceResolver: resolver);
         Assert.Equal(expected, actual);
     }
 }

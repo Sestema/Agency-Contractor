@@ -139,6 +139,10 @@
     <sys:String x:Key="InvoicesTypeDeliveryNote">Delivery note</sys:String>
     <sys:String x:Key="InvoicesTypeCashReceiptIncome">Cash receipt income</sys:String>
     <sys:String x:Key="InvoicesTypeCashReceiptExpense">Cash receipt expense</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptIncomeTitleSimple">Income receipt</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptIncomeTitleCashdesk">Income cash receipt</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptExpenseTitleSimple">Expense receipt</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptExpenseTitleCashdesk">Expense cash receipt</sys:String>
     <sys:String x:Key="InvoicesStatusDraft">Draft</sys:String>
     <sys:String x:Key="InvoicesStatusIssued">Issued</sys:String>
     <sys:String x:Key="InvoicesStatusPaid">Paid</sys:String>

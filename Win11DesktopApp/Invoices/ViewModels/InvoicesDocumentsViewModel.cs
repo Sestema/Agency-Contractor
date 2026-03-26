@@ -359,7 +359,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
 
     private void CreateDocument(object? parameter)
     {
-        if (!PolicyService.EnsureWriteAllowed("Створити документ Faktury"))
+        if (!PolicyService.EnsureWriteAllowed("Створити документ Фактур"))
             return;
 
         var type = parameter is InvoiceDocumentType documentType
@@ -383,7 +383,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
         if (parameter is not InvoiceDocumentSummary summary)
             return;
 
-        if (!PolicyService.EnsureWriteAllowed("Сформувати PDF Faktury"))
+        if (!PolicyService.EnsureWriteAllowed("Сформувати PDF Фактур"))
             return;
 
         var document = _storageService.LoadDocument(summary.Id);
@@ -413,7 +413,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
         if (parameter is not InvoiceDocumentSummary summary)
             return;
 
-        if (!PolicyService.EnsureWriteAllowed("Скопіювати документ Faktury"))
+        if (!PolicyService.EnsureWriteAllowed("Скопіювати документ Фактур"))
             return;
 
         var clone = _storageService.DuplicateDocumentAsNew(summary.Id);
@@ -434,7 +434,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
         if (parameter is not InvoiceDocumentSummary summary)
             return;
 
-        if (!PolicyService.EnsureWriteAllowed("Перемістити документ Faktury в кошик"))
+        if (!PolicyService.EnsureWriteAllowed("Перемістити документ Фактур у кошик"))
             return;
 
         var title = Res("InvoicesTitle");
@@ -459,7 +459,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
         if (parameter is not InvoiceDocumentSummary summary)
             return;
 
-        if (!PolicyService.EnsureWriteAllowed("Видалити документ Faktury назавжди"))
+        if (!PolicyService.EnsureWriteAllowed("Видалити документ Фактур назавжди"))
             return;
 
         var title = Res("InvoicesTitle");

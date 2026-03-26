@@ -14,7 +14,7 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.31";
+        public const string CurrentAppVersion = "0.1.32";
         public static string? PendingUpdateFrom { get; set; }
         private readonly bool _suppressStartupNotifications;
         private string _settingsPath;

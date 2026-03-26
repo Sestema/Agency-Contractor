@@ -174,7 +174,7 @@ public sealed class InvoiceDocument
     public string LinkedExpenseReceiptNumber { get; set; } = string.Empty;
     public string LinkedExpenseReceiptPurpose { get; set; } = string.Empty;
     public string CashReceiptDocumentVariant { get; set; } = "cashdesk";
-    public string CashReceiptTitle { get; set; } = "Příjmový pokladní doklad";
+    public string CashReceiptTitle { get; set; } = string.Empty;
     public DateTime CashReceiptPaymentDate { get; set; } = DateTime.Today;
     public string CashReceiptPlace { get; set; } = string.Empty;
     public string CashReceiptLedgerNumber { get; set; } = string.Empty;

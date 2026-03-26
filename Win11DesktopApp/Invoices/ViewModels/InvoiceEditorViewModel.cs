@@ -348,7 +348,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
             _document.Type = value;
             _document.SelectedTemplateId = NormalizeTemplateId(_document.SelectedTemplateId, value);
             _document.CashReceiptDocumentVariant = InvoiceCashReceiptHelper.NormalizeVariant(_document.CashReceiptDocumentVariant, value, _document.CashReceiptTitle);
-            _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(value, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle);
+            _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(value, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle, Res);
 
             if (_document.IsCashReceiptDocument && _document.CashReceiptAmount <= 0m && previousTotal > 0m)
                 _document.CashReceiptAmount = previousTotal;
@@ -701,7 +701,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
                 return;
 
             _document.CashReceiptDocumentVariant = normalized;
-            _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, normalized, _document.CashReceiptTitle);
+            _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, normalized, _document.CashReceiptTitle, Res);
             OnPropertyChanged();
             OnPropertyChanged(nameof(CashReceiptTitle));
             OnPropertyChanged(nameof(EditorTitle));
@@ -711,11 +711,11 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
 
     public string CashReceiptTitle
     {
-        get => InvoiceCashReceiptHelper.GetTitle(_document.Type, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle);
+        get => InvoiceCashReceiptHelper.GetTitle(_document.Type, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle, Res);
         set
         {
             var normalizedVariant = InvoiceCashReceiptHelper.NormalizeVariant(_document.CashReceiptDocumentVariant, _document.Type, value);
-            var normalizedTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, normalizedVariant, value);
+            var normalizedTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, normalizedVariant, value, Res);
             if (string.Equals(_document.CashReceiptDocumentVariant, normalizedVariant, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(_document.CashReceiptTitle, normalizedTitle, StringComparison.Ordinal))
                 return;
@@ -1228,7 +1228,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
             _document.QrPaymentFormat = "spayd";
         _document.SelectedTemplateId = NormalizeTemplateId(_document.SelectedTemplateId, _document.Type);
         _document.CashReceiptDocumentVariant = InvoiceCashReceiptHelper.NormalizeVariant(_document.CashReceiptDocumentVariant, _document.Type, _document.CashReceiptTitle);
-        _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle);
+        _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle, Res);
         Items.Clear();
         foreach (var item in _document.Items)
         {
@@ -1271,7 +1271,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         _document.UpdatedAtUtc = DateTime.UtcNow;
         _document.SelectedTemplateId = NormalizeTemplateId(_document.SelectedTemplateId, _document.Type);
         _document.CashReceiptDocumentVariant = InvoiceCashReceiptHelper.NormalizeVariant(_document.CashReceiptDocumentVariant, _document.Type, _document.CashReceiptTitle);
-        _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle);
+        _document.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(_document.Type, _document.CashReceiptDocumentVariant, _document.CashReceiptTitle, Res);
 
         _storageService.SaveDocument(_document);
         _storageService.SaveModuleLanguage(_document.Language);
@@ -1386,7 +1386,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         linked.CashReceiptPaymentDate = _document.IssueDate;
         linked.CashReceiptAccountingDate = _document.IssueDate;
         linked.CashReceiptDocumentVariant = "simple";
-        linked.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(receiptType, "simple");
+        linked.CashReceiptTitle = InvoiceCashReceiptHelper.GetTitle(receiptType, "simple", resourceResolver: Res);
         linked.CashReceiptPurpose = purpose;
         linked.SelectedTemplateId = NormalizeTemplateId(linked.SelectedTemplateId, linked.Type);
         linked.SupplierCatalogId = _document.SupplierCatalogId;

@@ -139,6 +139,10 @@
     <sys:String x:Key="InvoicesTypeDeliveryNote">Dodací list</sys:String>
     <sys:String x:Key="InvoicesTypeCashReceiptIncome">Приходный кассовый документ</sys:String>
     <sys:String x:Key="InvoicesTypeCashReceiptExpense">Расходный кассовый документ</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptIncomeTitleSimple">Приходный документ</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptIncomeTitleCashdesk">Приходный кассовый документ</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptExpenseTitleSimple">Расходный документ</sys:String>
+    <sys:String x:Key="InvoicesCashReceiptExpenseTitleCashdesk">Расходный кассовый документ</sys:String>
     <sys:String x:Key="InvoicesStatusDraft">Черновик</sys:String>
     <sys:String x:Key="InvoicesStatusIssued">Выставлено</sys:String>
     <sys:String x:Key="InvoicesStatusPaid">Оплачено</sys:String>

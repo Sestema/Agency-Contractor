@@ -54,7 +54,7 @@ public sealed class InvoicesTrashViewModel : ViewModelBase
         if (parameter is not InvoiceTrashSummary item)
             return;
 
-        if (!PolicyService.EnsureWriteAllowed("Повернути документ Faktury з кошика"))
+        if (!PolicyService.EnsureWriteAllowed("Повернути документ Фактур з кошика"))
             return;
 
         var title = Res("InvoicesTitle");
@@ -79,7 +79,7 @@ public sealed class InvoicesTrashViewModel : ViewModelBase
         if (parameter is not InvoiceTrashSummary item)
             return;
 
-        if (!PolicyService.EnsureWriteAllowed("Видалити документ Faktury з кошика назавжди"))
+        if (!PolicyService.EnsureWriteAllowed("Видалити документ Фактур з кошика назавжди"))
             return;
 
         var title = Res("InvoicesTitle");
