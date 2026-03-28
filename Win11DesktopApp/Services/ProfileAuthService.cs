@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -38,12 +37,25 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var profile = await GetProfileAsync(clientId).ConfigureAwait(false);
+                var response = await CallAuthAsync("check", new Dictionary<string, object?>
+                {
+                    ["client_id"] = clientId
+                }).ConfigureAwait(false);
+
+                if (response == null)
+                {
+                    return new ProfileCheckResult
+                    {
+                        IsFeatureAvailable = false,
+                        ErrorMessage = Res("ProfileErrStorageUnavailable", "Profile storage is not available yet in Supabase.")
+                    };
+                }
+
                 return new ProfileCheckResult
                 {
                     IsFeatureAvailable = true,
-                    RequiresSetup = profile == null,
-                    Profile = profile
+                    RequiresSetup = !response.Exists,
+                    Profile = response.Profile
                 };
             }
             catch (Exception ex)
@@ -80,46 +92,27 @@ namespace Win11DesktopApp.Services
             if (!IsValidProfileName(normalizedLastName))
                 return (false, Res("ProfileErrLastNameLatin", "Last name must use Latin letters in Abc format."));
 
-            var salt = PasswordHashService.CreateSalt();
-            var hash = PasswordHashService.HashPassword(password, salt);
-
-            var payload = new Dictionary<string, object?>
+            var response = await CallAuthAsync("create", new Dictionary<string, object?>
             {
                 ["client_id"] = clientId,
                 ["first_name"] = normalizedFirstName,
                 ["last_name"] = normalizedLastName,
-                ["password_hash"] = hash,
-                ["password_salt"] = salt,
-                ["must_reset_password"] = false,
-                ["remember_me_enabled"] = false,
-                ["session_version"] = 1
-            };
+                ["password"] = password
+            }).ConfigureAwait(false);
 
-            var request = CreateRequest(HttpMethod.Post, $"{TelemetryService.BaseUrl}/rest/v1/client_profiles");
-            request.Headers.Add("Prefer", "return=representation");
-            request.Content = new StringContent(
-                JsonSerializer.Serialize(payload, _jsonOptions),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await TelemetryService.HttpClient.SendAsync(request).ConfigureAwait(false);
-            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
+            if (response?.Ok == true)
                 return (true, string.Empty);
 
-            if (response.StatusCode == HttpStatusCode.Conflict || body.Contains("duplicate", StringComparison.OrdinalIgnoreCase))
-                return (false, Res("ProfileErrAlreadyExists", "A profile for this app already exists."));
-
-            if (IsSchemaUnavailable(response.StatusCode, body))
-                return (false, Res("ProfileErrStorageUnavailable", "Profile storage is not available yet in Supabase."));
-
-            return (false, BuildErrorMessage(body, Res("ProfileErrCreateFailed", "Failed to create profile.")));
+            return (false, BuildErrorMessage(response?.Error, Res("ProfileErrCreateFailed", "Failed to create profile.")));
         }
 
-        public Task<ClientProfileRecord?> GetProfileByClientIdAsync(string clientId)
+        public async Task<ClientProfileRecord?> GetProfileByClientIdAsync(string clientId)
         {
-            return GetProfileAsync(clientId);
+            var response = await CallAuthAsync("check", new Dictionary<string, object?>
+            {
+                ["client_id"] = clientId
+            }).ConfigureAwait(false);
+            return response?.Profile;
         }
 
         public async Task<ProfileOperationResult> AuthenticateAsync(string clientId, string password)
@@ -134,28 +127,24 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var profile = await GetProfileAsync(clientId).ConfigureAwait(false);
-                if (profile == null)
+                var response = await CallAuthAsync("login", new Dictionary<string, object?>
                 {
-                    return new ProfileOperationResult
-                    {
-                        ErrorMessage = Res("ProfileErrNotFound", "Profile was not found.")
-                    };
-                }
+                    ["client_id"] = clientId,
+                    ["password"] = password
+                }).ConfigureAwait(false);
 
-                var isValid = PasswordHashService.VerifyPassword(password, profile.PasswordSalt, profile.PasswordHash);
-                if (!isValid)
+                if (response?.Ok != true || response.Profile == null)
                 {
                     return new ProfileOperationResult
                     {
-                        ErrorMessage = Res("ProfileErrWrongPassword", "Wrong password.")
+                        ErrorMessage = BuildErrorMessage(response?.Error, Res("ProfileErrWrongPassword", "Wrong password."))
                     };
                 }
 
                 return new ProfileOperationResult
                 {
                     Success = true,
-                    Profile = profile
+                    Profile = response.Profile
                 };
             }
             catch (Exception ex)
@@ -185,11 +174,12 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                return await PatchProfileAsync(clientId, new Dictionary<string, object?>
+                return await MapProfileResponseAsync(CallAuthAsync("update_name", new Dictionary<string, object?>
                 {
+                    ["client_id"] = clientId,
                     ["first_name"] = normalizedFirstName,
                     ["last_name"] = normalizedLastName
-                }).ConfigureAwait(false);
+                }), Res("ProfileErrUpdateFailed", "Failed to update profile.")).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -202,10 +192,11 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                return await PatchProfileAsync(clientId, new Dictionary<string, object?>
+                return await MapProfileResponseAsync(CallAuthAsync("update_remember", new Dictionary<string, object?>
                 {
+                    ["client_id"] = clientId,
                     ["remember_me_enabled"] = enabled
-                }).ConfigureAwait(false);
+                }), Res("ProfileErrUpdateFailed", "Failed to update profile.")).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -223,24 +214,12 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var profile = await GetProfileAsync(clientId).ConfigureAwait(false);
-                if (profile == null)
-                    return new ProfileOperationResult { ErrorMessage = Res("ProfileErrNotFound", "Profile was not found.") };
-
-                var isCurrentValid = PasswordHashService.VerifyPassword(currentPassword, profile.PasswordSalt, profile.PasswordHash);
-                if (!isCurrentValid)
-                    return new ProfileOperationResult { ErrorMessage = Res("ProfileErrCurrentPasswordWrong", "Current password is wrong.") };
-
-                var newSalt = PasswordHashService.CreateSalt();
-                var newHash = PasswordHashService.HashPassword(newPassword, newSalt);
-
-                return await PatchProfileAsync(clientId, new Dictionary<string, object?>
+                return await MapProfileResponseAsync(CallAuthAsync("change_password", new Dictionary<string, object?>
                 {
-                    ["password_hash"] = newHash,
-                    ["password_salt"] = newSalt,
-                    ["must_reset_password"] = false,
-                    ["session_version"] = profile.SessionVersion + 1
-                }).ConfigureAwait(false);
+                    ["client_id"] = clientId,
+                    ["current_password"] = currentPassword,
+                    ["new_password"] = newPassword
+                }), Res("ProfileErrUpdateFailed", "Failed to update profile.")).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -256,20 +235,11 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var profile = await GetProfileAsync(clientId).ConfigureAwait(false);
-                if (profile == null)
-                    return new ProfileOperationResult { ErrorMessage = Res("ProfileErrNotFound", "Profile was not found.") };
-
-                var newSalt = PasswordHashService.CreateSalt();
-                var newHash = PasswordHashService.HashPassword(newPassword, newSalt);
-
-                return await PatchProfileAsync(clientId, new Dictionary<string, object?>
+                return await MapProfileResponseAsync(CallAuthAsync("forced_reset", new Dictionary<string, object?>
                 {
-                    ["password_hash"] = newHash,
-                    ["password_salt"] = newSalt,
-                    ["must_reset_password"] = false,
-                    ["remember_me_enabled"] = false
-                }).ConfigureAwait(false);
+                    ["client_id"] = clientId,
+                    ["new_password"] = newPassword
+                }), Res("ProfileErrUpdateFailed", "Failed to update profile.")).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -278,80 +248,61 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private static async Task<ClientProfileRecord?> GetProfileAsync(string clientId)
+        private static async Task<ProfileOperationResult> MapProfileResponseAsync(Task<AuthResponse?> responseTask, string fallbackError)
         {
-            var request = CreateRequest(
-                HttpMethod.Get,
-                $"{TelemetryService.BaseUrl}/rest/v1/client_profiles?client_id=eq.{Uri.EscapeDataString(clientId)}&select=*");
-
-            var response = await TelemetryService.HttpClient.SendAsync(request).ConfigureAwait(false);
-            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var profiles = JsonSerializer.Deserialize<List<ClientProfileApiResponse>>(body, _jsonOptions) ?? new List<ClientProfileApiResponse>();
-                return profiles.Count == 0 ? null : profiles[0].ToRecord();
-            }
-
-            if (IsSchemaUnavailable(response.StatusCode, body))
-                throw new InvalidOperationException("Profile storage is not available yet.");
-
-            throw new InvalidOperationException(BuildErrorMessage(body, Res("ProfileErrLoadFailed", "Failed to load profile.")));
-        }
-
-        private static async Task<ProfileOperationResult> PatchProfileAsync(string clientId, Dictionary<string, object?> payload)
-        {
-            var request = CreateRequest(
-                new HttpMethod("PATCH"),
-                $"{TelemetryService.BaseUrl}/rest/v1/client_profiles?client_id=eq.{Uri.EscapeDataString(clientId)}");
-            request.Headers.Add("Prefer", "return=representation");
-            request.Content = new StringContent(
-                JsonSerializer.Serialize(payload, _jsonOptions),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await TelemetryService.HttpClient.SendAsync(request).ConfigureAwait(false);
-            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return new ProfileOperationResult
-                {
-                    ErrorMessage = BuildErrorMessage(body, Res("ProfileErrUpdateFailed", "Failed to update profile."))
-                };
-            }
-
-            var profiles = JsonSerializer.Deserialize<List<ClientProfileApiResponse>>(body, _jsonOptions) ?? new List<ClientProfileApiResponse>();
+            var response = await responseTask.ConfigureAwait(false);
             return new ProfileOperationResult
             {
-                Success = profiles.Count > 0,
-                ErrorMessage = profiles.Count > 0 ? string.Empty : Res("ProfileErrEmptyServerResponse", "Empty response from server."),
-                Profile = profiles.Count > 0 ? profiles[0].ToRecord() : null
+                Success = response?.Ok == true && response.Profile != null,
+                ErrorMessage = response?.Ok == true
+                    ? string.Empty
+                    : BuildErrorMessage(response?.Error, fallbackError),
+                Profile = response?.Profile
             };
         }
 
-        private static HttpRequestMessage CreateRequest(HttpMethod method, string url)
+        private static async Task<AuthResponse?> CallAuthAsync(string action, Dictionary<string, object?> payload)
         {
-            TelemetryService.ConfigureHeaders();
-            return new HttpRequestMessage(method, url);
+            payload["action"] = action;
+            payload["machine_id"] = LicenseService.GetMachineId();
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{TelemetryService.BaseUrl}/functions/v1/client-auth")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json")
+            };
+            TelemetryService.ApplyHeaders(request);
+
+            var response = await TelemetryService.HttpClient.SendAsync(request).ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                LoggingService.LogWarning("ProfileAuthService.Http",
+                    $"{action}: {(int)response.StatusCode} {body}");
+                return new AuthResponse
+                {
+                    Ok = false,
+                    Error = BuildErrorMessage(body, Res("ProfileErrStorageUnavailable", "Profile storage is not available yet in Supabase."))
+                };
+            }
+
+            return JsonSerializer.Deserialize<AuthResponse>(body, _jsonOptions);
         }
 
-        private static bool IsSchemaUnavailable(HttpStatusCode statusCode, string body)
-        {
-            return statusCode == HttpStatusCode.NotFound
-                || body.Contains("client_profiles", StringComparison.OrdinalIgnoreCase)
-                || body.Contains("42P01", StringComparison.OrdinalIgnoreCase)
-                || body.Contains("relation", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string BuildErrorMessage(string body, string fallback)
+        private static string BuildErrorMessage(string? body, string fallback)
         {
             if (string.IsNullOrWhiteSpace(body))
                 return fallback;
 
+            var trimmed = body.Trim();
             try
             {
-                using var doc = JsonDocument.Parse(body);
+                using var doc = JsonDocument.Parse(trimmed);
+                if (doc.RootElement.TryGetProperty("error", out var error))
+                {
+                    var text = error.GetString();
+                    if (!string.IsNullOrWhiteSpace(text))
+                        return text!;
+                }
+
                 if (doc.RootElement.TryGetProperty("message", out var message))
                 {
                     var text = message.GetString();
@@ -363,7 +314,7 @@ namespace Win11DesktopApp.Services
             {
             }
 
-            return fallback;
+            return string.IsNullOrWhiteSpace(trimmed) ? fallback : trimmed;
         }
 
         private static string Res(string key, string fallback)

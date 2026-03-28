@@ -64,9 +64,8 @@ namespace Win11DesktopApp.Services
                 EnsureArchiveLogIsReadableOrRepair();
                 EnsureActivityLogIsReadableOrRepair();
 
-                var database = _persistenceService.LoadDatabase();
                 LoggingService.LogInfo("StartupIntegrityService.QuickCheck",
-                    $"Completed in {stopwatch.ElapsedMilliseconds} ms. Companies={database.Companies.Count}.");
+                    $"Completed in {stopwatch.ElapsedMilliseconds} ms.");
             }
             catch (Exception ex)
             {

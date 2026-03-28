@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Win11DesktopApp.Services
@@ -29,12 +26,6 @@ namespace Win11DesktopApp.Services
 
     public static class PolicyService
     {
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            PropertyNameCaseInsensitive = true
-        };
-
         public static RemotePolicy CurrentPolicy { get; private set; } = new();
 
         public static bool IsReadOnlyMode => CurrentPolicy.ReadOnlyMode || (App.AppSettingsService?.Settings.AdminReadOnlyMode ?? false);
@@ -43,35 +34,15 @@ namespace Win11DesktopApp.Services
 
         public static async Task<RemotePolicy?> FetchPolicyAsync(string? clientId)
         {
+            await Task.Yield();
             if (string.IsNullOrWhiteSpace(clientId))
                 return null;
 
-            try
-            {
-                TelemetryService.ConfigureHeaders();
-                var url = $"{TelemetryService.BaseUrl}/rest/v1/client_policies?client_id=eq.{Uri.EscapeDataString(clientId)}&select=*&limit=1";
-                var response = await TelemetryService.HttpClient.GetAsync(url).ConfigureAwait(false);
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    return null;
+            var cached = TelemetryService.GetCachedPolicy();
+            if (cached != null && string.Equals(cached.ClientId, clientId, StringComparison.OrdinalIgnoreCase))
+                return cached;
 
-                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                {
-                    if (LooksLikeMissingTable(json))
-                        return null;
-
-                    LoggingService.LogWarning("PolicyService.FetchPolicy", json);
-                    return null;
-                }
-
-                var items = JsonSerializer.Deserialize<List<RemotePolicy>>(json, JsonOptions);
-                return items?.Count > 0 ? items[0] : null;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("PolicyService.FetchPolicy", ex.Message);
-                return null;
-            }
+            return cached;
         }
 
         public static async Task ApplyPolicyAsync(RemotePolicy? policy, bool saveSettings = true)
@@ -170,12 +141,6 @@ namespace Win11DesktopApp.Services
 
             parsed = parsedVersion;
             return true;
-        }
-
-        private static bool LooksLikeMissingTable(string payload)
-        {
-            return payload.Contains("relation", StringComparison.OrdinalIgnoreCase) &&
-                   payload.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

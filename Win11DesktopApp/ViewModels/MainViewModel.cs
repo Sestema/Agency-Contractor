@@ -443,7 +443,7 @@ namespace Win11DesktopApp.ViewModels
         {
             var results = new List<SearchResultItem>();
             var q = query;
-            var companies = App.CompanyService?.Companies;
+            var companies = App.CompanyService?.Companies?.ToList();
             if (companies == null) return results;
 
             foreach (var company in companies)
@@ -661,7 +661,7 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
             var all = new List<EmployeeSummary>();
             var sb = new StringBuilder();
             int idx = 0;
-            var companies = App.CompanyService?.Companies;
+            var companies = App.CompanyService?.Companies?.ToList();
             if (companies == null) return (sb.ToString(), all);
 
             foreach (var company in companies)

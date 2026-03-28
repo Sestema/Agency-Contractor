@@ -1430,6 +1430,8 @@
     <sys:String x:Key="AccessStatusTrialDetail">Zbývá {0} dní, do {1}</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Aplikace je aktivována</sys:String>
     <sys:String x:Key="AccessStatusUnlimitedDetail">Neomezený přístup je aktivní.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Dočasný offline přístup</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">Pracujeme podle naposledy potvrzeného stavu přístupu. Ověření serverem není dostupné, zbývá {0} dnů offline tolerance. Kešovaný přístup do {1}.</sys:String>
     <sys:String x:Key="AccessStatusReadOnlyTitle">Režim pouze pro čtení</sys:String>
     <sys:String x:Key="AccessStatusReadOnlyDetail">Zkušební období skončilo. Plný přístup vyžaduje aktivaci.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Přístup zablokován</sys:String>
@@ -1490,11 +1492,11 @@
     <sys:String x:Key="CompanyDialogTitleEdit">Upravit firmu</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Přidat novou firmu</sys:String>
     <sys:String x:Key="CompanyDialogSubtitle">Základní údaje, adresy a pozice firmy</sys:String>
-    <sys:String x:Key="MsgCompanyHasEmployees">Tato firma má {0} zaměstnanc(ů). Smazat přesto?</sys:String>
+    <sys:String x:Key="MsgCompanyHasEmployees">Tato firma má {0} zaměstnanc(ů). Nejprve smažte zaměstnance a potom firmu.</sys:String>
     <sys:String x:Key="TitleWarning">Upozornění</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Opravdu chcete smazat firmu "{0}"?
 
-Složka na disku NEBUDE smazána.</sys:String>
+Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:String>
     <sys:String x:Key="TitleDeleteCompany">Smazat firmu</sys:String>
 
     <!-- Template errors -->

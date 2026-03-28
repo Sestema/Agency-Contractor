@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Win11DesktopApp.Models;
@@ -78,9 +80,9 @@ namespace Win11DesktopApp.ViewModels
                     Employer.Positions.Remove(pos);
             }, o => Employer.Positions.Count > 1);
 
-            SaveCommand = new RelayCommand(o => Save());
+            SaveCommand = new AsyncRelayCommand(_ => SaveAsync());
             CancelCommand = new RelayCommand(o => RequestClose?.Invoke());
-            DeleteCompanyCommand = new RelayCommand(o => DeleteCompany(), o => IsEditMode);
+            DeleteCompanyCommand = new AsyncRelayCommand(_ => DeleteCompanyAsync(), _ => IsEditMode);
         }
 
         /// <summary>
@@ -98,7 +100,7 @@ namespace Win11DesktopApp.ViewModels
             Agency = CloneAgency(existingCompany.Agency);
         }
 
-        private void Save()
+        private async Task SaveAsync()
         {
             if (!PolicyService.EnsureWriteAllowed(IsEditMode ? "Зберегти фірму" : "Додати фірму"))
                 return;
@@ -136,11 +138,11 @@ namespace Win11DesktopApp.ViewModels
                 _originalCompany.Agency.ICO = Agency.ICO;
                 _originalCompany.Agency.FullAddress = Agency.FullAddress;
 
-                App.CompanyService.UpdateCompany(_originalCompany, _originalCompanyName);
+                await App.CompanyService.UpdateCompanyAsync(_originalCompany, _originalCompanyName);
             }
             else
             {
-                App.CompanyService.AddCompany(Employer, Agency);
+                await App.CompanyService.AddCompanyAsync(Employer, Agency);
                 App.ActivityLogService.Log("CompanyAdded", "Company", Employer.Name, "",
                     $"Додано фірму: {Employer.Name}");
                 TelemetryService.TrackEvent("firm_created", new Dictionary<string, object>
@@ -151,7 +153,7 @@ namespace Win11DesktopApp.ViewModels
             RequestClose?.Invoke();
         }
 
-        private void DeleteCompany()
+        private async Task DeleteCompanyAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("Видалити фірму"))
                 return;
@@ -159,12 +161,16 @@ namespace Win11DesktopApp.ViewModels
             if (_originalCompany == null) return;
 
             var employees = App.EmployeeService.GetEmployeesForFirm(_originalCompany.Name);
-            if (employees.Count > 0)
+            var employeeFolderCount = App.FolderService.GetCompanyEmployeeFolderCount(_originalCompany.Name);
+            var employeeCount = Math.Max(employees.Count, employeeFolderCount);
+            if (employeeCount > 0)
             {
-                var empResult = MessageBox.Show(
-                    string.Format(Res("MsgCompanyHasEmployees"), employees.Count),
-                    Res("TitleWarning"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                if (empResult != MessageBoxResult.Yes) return;
+                MessageBox.Show(
+                    string.Format(Res("MsgCompanyHasEmployees"), employeeCount),
+                    Res("TitleWarning"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
             }
 
             var result = MessageBox.Show(
@@ -176,10 +182,12 @@ namespace Win11DesktopApp.ViewModels
             if (result == MessageBoxResult.Yes)
             {
                 var name = _originalCompany.Name;
-                App.CompanyService.DeleteCompany(_originalCompany);
-                App.ActivityLogService.Log("CompanyDeleted", "Company", name, "",
-                    $"Видалено фірму: {name}");
-                RequestClose?.Invoke();
+                if (await App.CompanyService.DeleteCompanyAsync(_originalCompany))
+                {
+                    App.ActivityLogService.Log("CompanyDeleted", "Company", name, "",
+                        $"Видалено фірму: {name}");
+                    RequestClose?.Invoke();
+                }
             }
         }
 

@@ -185,18 +185,19 @@ namespace Win11DesktopApp.Services
             if (match != null) _selectedCompany = match;
         }
 
-        public void AddCompany(EmployerCompany employer, AgencyCompany agency)
+        public async Task AddCompanyAsync(EmployerCompany employer, AgencyCompany agency)
         {
             employer.Agency = agency;
             _companies.Add(employer);
             _tagCatalogService.AddTagsForCompany(employer, agency);
             _folderService.EnsureCompanyStructure(employer.Name);
-            _persistenceService.SaveCompanies(_companies);
+            await _persistenceService.SaveCompaniesAsync(_companies);
+            App.AdminMirrorSyncService?.EnqueueEmployerUpsert(employer);
             LoggingService.LogInfo("CompanyService", $"Company added: {employer.Name}");
             VisibilityChanged?.Invoke();
         }
 
-        public void UpdateCompany(EmployerCompany company, string oldName)
+        public async Task UpdateCompanyAsync(EmployerCompany company, string oldName)
         {
             try
             {
@@ -213,7 +214,8 @@ namespace Win11DesktopApp.Services
                 else
                     _tagCatalogService.AddTagsForEmployerOnly(company);
 
-                _persistenceService.SaveCompanies(_companies);
+                await _persistenceService.SaveCompaniesAsync(_companies);
+                App.AdminMirrorSyncService?.EnqueueEmployerUpsert(company);
                 LoggingService.LogInfo("CompanyService", $"Company updated: {company.Name} (was: {oldName})");
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
                 VisibilityChanged?.Invoke();
@@ -225,14 +227,25 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        public bool DeleteCompany(EmployerCompany company)
+        public async Task<bool> DeleteCompanyAsync(EmployerCompany company)
         {
             try
             {
+                if (_folderService.GetCompanyEmployeeFolderCount(company.Name) > 0)
+                {
+                    LoggingService.LogWarning("CompanyService.DeleteCompany", $"Deletion blocked because employee folders still exist for {company.Name}.");
+                    return false;
+                }
+
                 _tagCatalogService.RemoveTagsForCompany(company.Name);
                 if (_selectedCompany == company) SelectedCompany = null;
                 _companies.Remove(company);
-                _persistenceService.SaveCompanies(_companies);
+                await _persistenceService.SaveCompaniesAsync(_companies);
+                if (!_folderService.DeleteCompanyFolder(company.Name))
+                {
+                    LoggingService.LogWarning("CompanyService.DeleteCompany", $"Company deleted, but folder cleanup failed for {company.Name}.");
+                }
+                App.AdminMirrorSyncService?.EnqueueEmployerDelete(company);
                 LoggingService.LogInfo("CompanyService", $"Company deleted: {company.Name}");
                 VisibilityChanged?.Invoke();
                 return true;

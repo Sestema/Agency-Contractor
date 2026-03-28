@@ -10,6 +10,7 @@ namespace Win11DesktopApp.Services
         Unknown,
         TrialActive,
         Activated,
+        OfflineGrace,
         ReadOnly,
         Blocked
     }
@@ -29,7 +30,7 @@ namespace Win11DesktopApp.Services
 
     public sealed class AccessStatusService : INotifyPropertyChanged
     {
-        private bool _hasValidLocalLicense;
+        private LocalLicenseStatus _localLicenseStatus = new();
         private ClientAccessState _clientAccessState = new();
         private RemotePolicy? _remotePolicy;
         private AccessStatusSnapshot _current = new();
@@ -65,11 +66,19 @@ namespace Win11DesktopApp.Services
         public bool HasStatus => Current.HasStatus;
         public bool HasAdminMessage => Current.HasAdminMessage;
 
-        public void Initialize(bool hasValidLocalLicense, ClientAccessState clientAccessState, RemotePolicy? remotePolicy)
+        public void Initialize(LocalLicenseStatus localLicenseStatus, ClientAccessState clientAccessState, RemotePolicy? remotePolicy)
         {
-            _hasValidLocalLicense = hasValidLocalLicense;
+            _localLicenseStatus = localLicenseStatus ?? new LocalLicenseStatus();
             _clientAccessState = clientAccessState ?? new ClientAccessState();
             _remotePolicy = remotePolicy;
+            RefreshPresentation();
+        }
+
+        public void UpdateRemoteState(ClientAccessState clientAccessState, RemotePolicy? remotePolicy)
+        {
+            _clientAccessState = clientAccessState ?? new ClientAccessState();
+            _remotePolicy = remotePolicy ?? _remotePolicy;
+            _localLicenseStatus = LicenseService.GetLocalLicenseStatus();
             RefreshPresentation();
         }
 
@@ -96,7 +105,7 @@ namespace Win11DesktopApp.Services
 
             var isReadOnly = (_remotePolicy?.ReadOnlyMode ?? false)
                              || (App.AppSettingsService?.Settings.AdminReadOnlyMode ?? false)
-                             || (!_hasValidLocalLicense && _clientAccessState.IsExpired);
+                             || (_clientAccessState.HasKnownState && _clientAccessState.IsExpired);
             if (isReadOnly)
             {
                 return new AccessStatusSnapshot
@@ -111,11 +120,52 @@ namespace Win11DesktopApp.Services
                 };
             }
 
-            if (_hasValidLocalLicense)
+            if (_clientAccessState.IsOfflineGraceActive && _clientAccessState.HasRemoteAccessWindow)
             {
-                var localDaysLeft = LicenseService.GetDaysLeft();
-                var localExpiresUtc = ParseUtc(LicenseService.GetExpiresAt());
-                if (localDaysLeft == 99999)
+                var cachedExpiry = FormatLocalDate(_clientAccessState.ExpiresAtUtc);
+                return new AccessStatusSnapshot
+                {
+                    Mode = AccessStatusMode.OfflineGrace,
+                    Title = Res("AccessStatusOfflineGraceTitle", "Offline access"),
+                    Detail = string.Format(
+                        CultureInfo.CurrentCulture,
+                        Res("AccessStatusOfflineGraceDetail", "Working from the last confirmed access state. Server check is unavailable, {0} day(s) of offline grace remain. Cached access until {1}."),
+                        _clientAccessState.OfflineGraceDaysRemaining,
+                        cachedExpiry),
+                    AdminMessage = adminMessage,
+                    Severity = "Warning",
+                    ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
+                    DaysLeft = _clientAccessState.DaysRemaining
+                };
+            }
+
+            if (_clientAccessState.HasRemoteAccessWindow && _clientAccessState.ExpiresAtUtc.HasValue)
+            {
+                var localExpiry = _clientAccessState.ExpiresAtUtc.Value.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture);
+                var isTrialWindow = _clientAccessState.DaysRemaining <= 14;
+                return new AccessStatusSnapshot
+                {
+                    Mode = isTrialWindow ? AccessStatusMode.TrialActive : AccessStatusMode.Activated,
+                    Title = isTrialWindow
+                        ? Res("AccessStatusTrialTitle", "Trial active")
+                        : Res("AccessStatusActivatedTitle", "Activated"),
+                    Detail = isTrialWindow
+                        ? string.Format(
+                            CultureInfo.CurrentCulture,
+                            Res("AccessStatusTrialDetail", "{0} days left, until {1}"),
+                            _clientAccessState.DaysRemaining,
+                            localExpiry)
+                        : $"{Res("LicenseActiveUntil", "Active until")} {localExpiry} ({_clientAccessState.DaysRemaining} {Res("LicenseDaysLeft", "days")})",
+                    AdminMessage = adminMessage,
+                    Severity = isTrialWindow ? "Warning" : "Success",
+                    ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
+                    DaysLeft = _clientAccessState.DaysRemaining
+                };
+            }
+
+            if (_localLicenseStatus.IsValid)
+            {
+                if (_localLicenseStatus.IsUnlimited)
                 {
                     return new AccessStatusSnapshot
                     {
@@ -127,10 +177,10 @@ namespace Win11DesktopApp.Services
                     };
                 }
 
-                var localExpiresText = FormatLocalDate(localExpiresUtc);
+                var localExpiresText = FormatLocalDate(_localLicenseStatus.ExpiresAtUtc);
                 var detail = $"{Res("LicenseActiveUntil", "Active until")} {localExpiresText}";
-                if (localDaysLeft >= 0)
-                    detail += $" ({localDaysLeft} {Res("LicenseDaysLeft", "days")})";
+                if (_localLicenseStatus.DaysLeft >= 0)
+                    detail += $" ({_localLicenseStatus.DaysLeft} {Res("LicenseDaysLeft", "days")})";
 
                 return new AccessStatusSnapshot
                 {
@@ -139,27 +189,8 @@ namespace Win11DesktopApp.Services
                     Detail = detail,
                     AdminMessage = adminMessage,
                     Severity = "Success",
-                    ExpiresAtUtc = localExpiresUtc,
-                    DaysLeft = localDaysLeft >= 0 ? localDaysLeft : null
-                };
-            }
-
-            if (_clientAccessState.HasRemoteAccessWindow && _clientAccessState.ExpiresAtUtc.HasValue)
-            {
-                var localExpiry = _clientAccessState.ExpiresAtUtc.Value.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture);
-                return new AccessStatusSnapshot
-                {
-                    Mode = AccessStatusMode.TrialActive,
-                    Title = Res("AccessStatusTrialTitle", "Trial active"),
-                    Detail = string.Format(
-                        CultureInfo.CurrentCulture,
-                        Res("AccessStatusTrialDetail", "{0} days left, until {1}"),
-                        _clientAccessState.DaysRemaining,
-                        localExpiry),
-                    AdminMessage = adminMessage,
-                    Severity = "Warning",
-                    ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
-                    DaysLeft = _clientAccessState.DaysRemaining
+                    ExpiresAtUtc = _localLicenseStatus.ExpiresAtUtc,
+                    DaysLeft = _localLicenseStatus.DaysLeft >= 0 ? _localLicenseStatus.DaysLeft : null
                 };
             }
 
@@ -179,20 +210,6 @@ namespace Win11DesktopApp.Services
                 return "—";
 
             return utcDate.Value.ToLocalTime().ToString("dd.MM.yyyy", CultureInfo.CurrentCulture);
-        }
-
-        private static DateTime? ParseUtc(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return null;
-
-            return DateTime.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var parsed)
-                ? parsed
-                : null;
         }
 
         private static string Res(string key, string fallback)

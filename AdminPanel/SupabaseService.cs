@@ -31,6 +31,8 @@ namespace AdminPanel
         public bool IsOutdatedVersion { get; set; }
         public int ErrorLikeCount { get; set; }
         public DateTime? LatestHeartbeatAt { get; set; }
+        public int FirmsCount { get; set; }
+        public int EmployeesCount { get; set; }
 
         public string ProfileFullName =>
             string.Join(" ", new[] { ProfileFirstName, ProfileLastName }
@@ -260,11 +262,33 @@ namespace AdminPanel
         public DateTime? UpdatedAt { get; set; }
     }
 
+    internal sealed class AdminGatewayEnvelope<T>
+    {
+        public bool Ok { get; set; }
+        public string Error { get; set; } = string.Empty;
+        public T? Data { get; set; }
+    }
+
+    internal sealed class AdminGatewayLoginResponse
+    {
+        public bool Ok { get; set; }
+        public string Error { get; set; } = string.Empty;
+        public string AdminToken { get; set; } = string.Empty;
+    }
+
+    public sealed class TelemetryPageResult
+    {
+        public List<TelemetryRecord> Items { get; set; } = new();
+        public string NextCursor { get; set; } = string.Empty;
+        public bool HasMore { get; set; }
+    }
+
     public class SupabaseService
     {
         private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(15) };
         private readonly string _baseUrl;
-        private readonly string _serviceKey;
+        private readonly string _publicKey;
+        private string _adminToken = string.Empty;
 
         private static readonly JsonSerializerOptions _jsonOpts = new()
         {
@@ -272,218 +296,210 @@ namespace AdminPanel
             PropertyNameCaseInsensitive = true
         };
 
-        public SupabaseService(string baseUrl, string serviceKey)
+        public SupabaseService(string baseUrl)
         {
             _baseUrl = baseUrl.TrimEnd('/');
-            _serviceKey = serviceKey;
+            _publicKey = BuildPublicKey();
         }
 
-        private void SetHeaders(HttpRequestMessage req)
+        public async Task<bool> AuthenticateAsync(string password)
         {
-            req.Headers.TryAddWithoutValidation("apikey", _serviceKey);
-            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_serviceKey}");
-        }
-
-        public async Task<List<ClientRecord>> GetClientsAsync()
-        {
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/clients?select=*&order=last_seen.desc");
-            SetHeaders(req);
-
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
-            var json = await resp.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<List<ClientRecord>>(json, _jsonOpts) ?? new();
-        }
-
-        public async Task<List<TelemetryRecord>> GetTelemetryAsync(string? clientId = null, int limit = 200)
-        {
-            var filter = clientId != null ? $"&client_id=eq.{clientId}" : "";
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/telemetry?select=*&order=created_at.desc&limit={limit}{filter}");
-            SetHeaders(req);
-
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
-            var json = await resp.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<List<TelemetryRecord>>(json, _jsonOpts) ?? new();
-        }
-
-        public async Task BlockClientAsync(string clientId, string reason)
-        {
-            var payload = JsonSerializer.Serialize(new { is_blocked = true, block_reason = reason }, _jsonOpts);
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/clients?id=eq.{clientId}")
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/functions/v1/admin-gateway")
             {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    action = "login",
+                    admin_password = password
+                }, _jsonOpts), Encoding.UTF8, "application/json")
             };
-            SetHeaders(req);
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
+            SetHeaders(request, requireAuth: false);
+
+            var response = await _http.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                return false;
+
+            var payload = JsonSerializer.Deserialize<AdminGatewayLoginResponse>(json, _jsonOpts);
+            if (payload?.Ok != true || string.IsNullOrWhiteSpace(payload.AdminToken))
+                return false;
+
+            _adminToken = payload.AdminToken;
+            return true;
         }
 
-        public async Task UnblockClientAsync(string clientId)
+        private static string BuildPublicKey()
         {
-            var payload = JsonSerializer.Serialize(new { is_blocked = false, block_reason = (string?)null }, _jsonOpts);
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/clients?id=eq.{clientId}")
+            var parts = new[]
             {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+                "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzc2d4aGF0bmp2cXRoZGl5dXdvIiwi" +
+                "cm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NzUxODEsImV4cCI6MjA4ODI1MTE4MX0",
+                "90eAJDS-zPA1Jlni_Lp2DdIrDxj_lMLn6AlKzJkW1kc"
             };
-            SetHeaders(req);
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
+            return string.Join(".", parts);
         }
 
-        public async Task BlockByIpAsync(string ip, string reason)
+        private void SetHeaders(HttpRequestMessage req, bool requireAuth = true)
         {
-            var payload = JsonSerializer.Serialize(new { is_blocked = true, block_reason = reason }, _jsonOpts);
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/clients?ip_address=eq.{Uri.EscapeDataString(ip)}")
-            {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
-            };
-            SetHeaders(req);
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
+            req.Headers.TryAddWithoutValidation("apikey", _publicKey);
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {(requireAuth ? _adminToken : _publicKey)}");
         }
 
-        public async Task ExtendLicenseAsync(string clientId, DateTime newExpiry)
+        private async Task<T?> CallAsync<T>(string action, object? payload = null)
         {
-            var payload = JsonSerializer.Serialize(new { expires_at = newExpiry.ToUniversalTime().ToString("o") }, _jsonOpts);
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/clients?id=eq.{clientId}")
-            {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
-            };
-            SetHeaders(req);
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
-        }
+            if (string.IsNullOrWhiteSpace(_adminToken))
+                throw new InvalidOperationException("Admin session is not initialized.");
 
-        public async Task UpdateNotesAsync(string clientId, string notes)
-        {
-            var payload = JsonSerializer.Serialize(new { notes }, _jsonOpts);
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/clients?id=eq.{clientId}")
-            {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
-            };
-            SetHeaders(req);
-            var resp = await _http.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
-        }
+            var body = payload == null
+                ? JsonSerializer.Serialize(new { action }, _jsonOpts)
+                : JsonSerializer.Serialize(new { action, payload }, _jsonOpts);
 
-        public async Task DeleteClientAsync(string clientId)
-        {
-            var req1 = new HttpRequestMessage(HttpMethod.Delete,
-                $"{_baseUrl}/rest/v1/telemetry?client_id=eq.{clientId}");
-            SetHeaders(req1);
-            var resp1 = await _http.SendAsync(req1);
-            resp1.EnsureSuccessStatusCode();
-
-            var req2 = new HttpRequestMessage(HttpMethod.Delete,
-                $"{_baseUrl}/rest/v1/clients?id=eq.{clientId}");
-            SetHeaders(req2);
-            var resp2 = await _http.SendAsync(req2);
-            resp2.EnsureSuccessStatusCode();
-        }
-
-        public async Task<ClientProfileRecord?> GetClientProfileAsync(string clientId)
-        {
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/client_profiles?client_id=eq.{Uri.EscapeDataString(clientId)}&select=*");
-            SetHeaders(req);
-
-            var resp = await _http.SendAsync(req);
-            var json = await resp.Content.ReadAsStringAsync();
-            if (!resp.IsSuccessStatusCode)
-            {
-                if (LooksLikeMissingTable(json))
-                    return null;
-                resp.EnsureSuccessStatusCode();
-            }
-
-            var profiles = JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
-            return profiles.Count == 0 ? null : profiles[0];
-        }
-
-        public async Task<List<ClientProfileRecord>> GetClientProfilesAsync()
-        {
-            var req = new HttpRequestMessage(HttpMethod.Get,
-                $"{_baseUrl}/rest/v1/client_profiles?select=*");
-            SetHeaders(req);
-
-            var resp = await _http.SendAsync(req);
-            var json = await resp.Content.ReadAsStringAsync();
-            if (!resp.IsSuccessStatusCode)
-            {
-                if (LooksLikeMissingTable(json))
-                    return new List<ClientProfileRecord>();
-                resp.EnsureSuccessStatusCode();
-            }
-
-            return JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
-        }
-
-        public async Task<ClientProfileRecord?> ResetClientProfilePasswordAsync(string clientId)
-        {
-            var profile = await GetClientProfileAsync(clientId);
-            if (profile == null)
-                return null;
-
-            var randomPassword = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-            var newSalt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
-            var newHash = Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(
-                randomPassword,
-                Convert.FromBase64String(newSalt),
-                100_000,
-                HashAlgorithmName.SHA256,
-                32));
-
-            var payload = JsonSerializer.Serialize(new
-            {
-                password_hash = newHash,
-                password_salt = newSalt,
-                must_reset_password = true,
-                remember_me_enabled = false,
-                session_version = profile.SessionVersion + 1
-            }, _jsonOpts);
-
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/client_profiles?client_id=eq.{Uri.EscapeDataString(clientId)}")
-            {
-                Content = new StringContent(payload, Encoding.UTF8, "application/json")
-            };
-            req.Headers.Add("Prefer", "return=representation");
-            SetHeaders(req);
-
-            var resp = await _http.SendAsync(req);
-            var json = await resp.Content.ReadAsStringAsync();
-            resp.EnsureSuccessStatusCode();
-
-            var profiles = JsonSerializer.Deserialize<List<ClientProfileRecord>>(json, _jsonOpts) ?? new();
-            return profiles.Count == 0 ? null : profiles[0];
-        }
-
-        public async Task WriteAuditAsync(string? clientId, string actionType, object? oldValue, object? newValue, string? note, string actor = "admin-panel")
-        {
-            var body = JsonSerializer.Serialize(new
-            {
-                target_client_id = clientId,
-                action_type = actionType,
-                old_value_json = oldValue,
-                new_value_json = newValue,
-                note,
-                actor
-            }, _jsonOpts);
-
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/rest/v1/admin_audit_log")
+            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/functions/v1/admin-gateway")
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json")
             };
             SetHeaders(req);
-            await SendMutationAsync(req);
+            var resp = await _http.SendAsync(req);
+            var json = await resp.Content.ReadAsStringAsync();
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(json) ? $"Admin gateway failed for {action}." : json);
+
+            var envelope = JsonSerializer.Deserialize<AdminGatewayEnvelope<T>>(json, _jsonOpts);
+            if (envelope?.Ok != true)
+                throw new InvalidOperationException(envelope?.Error ?? $"Admin gateway action '{action}' failed.");
+
+            return envelope.Data;
+        }
+
+        public async Task<List<ClientRecord>> GetClientsAsync()
+        {
+            return await CallAsync<List<ClientRecord>>("list_clients") ?? new List<ClientRecord>();
+        }
+
+        public async Task<TelemetryPageResult> GetTelemetryPageAsync(string? clientId = null, int limit = 200, string? beforeCreatedAt = null)
+        {
+            return await CallAsync<TelemetryPageResult>("get_telemetry", new
+            {
+                client_id = clientId,
+                limit,
+                before_created_at = beforeCreatedAt
+            }) ?? new TelemetryPageResult();
+        }
+
+        public async Task<List<TelemetryRecord>> GetTelemetryAsync(string? clientId = null, int limit = 200, string? beforeCreatedAt = null)
+        {
+            var page = await GetTelemetryPageAsync(clientId, limit, beforeCreatedAt);
+            return page.Items;
+        }
+
+        public async Task BlockClientAsync(string clientId, string reason)
+        {
+            await CallAsync<object>("block_client", new { client_id = clientId, reason });
+        }
+
+        public async Task UnblockClientAsync(string clientId)
+        {
+            await CallAsync<object>("unblock_client", new { client_id = clientId });
+        }
+
+        public async Task BlockByIpAsync(string ip, string reason)
+        {
+            await CallAsync<object>("block_by_ip", new { ip_address = ip, reason });
+        }
+
+        public async Task ExtendLicenseAsync(string clientId, DateTime newExpiry)
+        {
+            await CallAsync<object>("extend_license", new
+            {
+                client_id = clientId,
+                expires_at = newExpiry.ToUniversalTime().ToString("o")
+            });
+        }
+
+        public async Task UpdateNotesAsync(string clientId, string notes)
+        {
+            await CallAsync<object>("update_notes", new { client_id = clientId, notes });
+        }
+
+        public async Task DeleteClientAsync(string clientId)
+        {
+            await CallAsync<object>("delete_client", new { client_id = clientId });
+        }
+
+        public async Task<ClientProfileRecord?> GetClientProfileAsync(string clientId)
+        {
+            return await CallAsync<ClientProfileRecord>("get_profile", new { client_id = clientId });
+        }
+
+        public async Task<List<ClientProfileRecord>> GetClientProfilesAsync()
+        {
+            return await CallAsync<List<ClientProfileRecord>>("get_profiles") ?? new List<ClientProfileRecord>();
+        }
+
+        public async Task<ClientMirrorStateRecord?> GetClientMirrorStateAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.State;
+        }
+
+        public async Task<List<AdminMirrorAgencyRecord>> GetMirrorAgenciesAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.Agencies;
+        }
+
+        public async Task<List<AdminMirrorEmployerRecord>> GetMirrorEmployersAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.Employers;
+        }
+
+        public async Task<List<AdminMirrorEmployerAddressRecord>> GetMirrorEmployerAddressesAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.Employers.SelectMany(item => item.Addresses).ToList();
+        }
+
+        public async Task<List<AdminMirrorEmployerPositionRecord>> GetMirrorEmployerPositionsAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.Employers.SelectMany(item => item.Positions).ToList();
+        }
+
+        public async Task<List<AdminMirrorEmployeeRecord>> GetMirrorEmployeesAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.Employees;
+        }
+
+        public async Task<List<AdminMirrorEmployeeFirmHistoryRecord>> GetMirrorEmployeeHistoryAsync(string clientId)
+        {
+            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
+            return snapshot.Employees.SelectMany(item => item.FirmHistory).ToList();
+        }
+
+        public async Task<ClientMirrorSnapshot> GetClientMirrorSnapshotAsync(string clientId)
+        {
+            return await CallAsync<ClientMirrorSnapshot>("get_mirror_snapshot", new { client_id = clientId })
+                   ?? new ClientMirrorSnapshot();
+        }
+
+        public async Task<ClientProfileRecord?> ResetClientProfilePasswordAsync(string clientId)
+        {
+            return await CallAsync<ClientProfileRecord>("reset_password", new { client_id = clientId });
+        }
+
+        public async Task WriteAuditAsync(string? clientId, string actionType, object? oldValue, object? newValue, string? note, string actor = "admin-panel")
+        {
+            await CallAsync<object>("write_audit", new
+            {
+                client_id = clientId,
+                action_type = actionType,
+                old_value = oldValue,
+                new_value = newValue,
+                note,
+                actor
+            });
         }
 
         public async Task TryWriteAuditAsync(string? clientId, string actionType, object? oldValue, object? newValue, string? note, string actor = "admin-panel")
@@ -498,20 +514,5 @@ namespace AdminPanel
             }
         }
 
-        private async Task SendMutationAsync(HttpRequestMessage request)
-        {
-            var response = await _http.SendAsync(request);
-            var json = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode && !LooksLikeMissingTable(json))
-                response.EnsureSuccessStatusCode();
-        }
-
-        private static bool LooksLikeMissingTable(string payload)
-        {
-            return (payload.Contains("relation", StringComparison.OrdinalIgnoreCase) &&
-                    payload.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
-                   || payload.Contains("schema cache", StringComparison.OrdinalIgnoreCase)
-                   || payload.Contains("client_profiles", StringComparison.OrdinalIgnoreCase);
-        }
     }
 }

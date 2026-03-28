@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -33,36 +30,9 @@ namespace Win11DesktopApp.Services
             PropertyNameCaseInsensitive = true
         };
 
-        public static async Task<List<RemoteCommand>> GetPendingCommandsAsync(string? clientId)
+        public static Task<List<RemoteCommand>> GetPendingCommandsAsync(string? clientId)
         {
-            if (string.IsNullOrWhiteSpace(clientId))
-                return new List<RemoteCommand>();
-
-            try
-            {
-                TelemetryService.ConfigureHeaders();
-                var url = $"{TelemetryService.BaseUrl}/rest/v1/admin_commands?client_id=eq.{Uri.EscapeDataString(clientId)}&status=eq.pending&select=*&order=created_at.asc";
-                var response = await TelemetryService.HttpClient.GetAsync(url).ConfigureAwait(false);
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    return new List<RemoteCommand>();
-
-                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                {
-                    if (LooksLikeMissingTable(json))
-                        return new List<RemoteCommand>();
-
-                    LoggingService.LogWarning("CommandService.GetPending", json);
-                    return new List<RemoteCommand>();
-                }
-
-                return JsonSerializer.Deserialize<List<RemoteCommand>>(json, JsonOptions) ?? new List<RemoteCommand>();
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("CommandService.GetPending", ex.Message);
-                return new List<RemoteCommand>();
-            }
+            return Task.FromResult(new List<RemoteCommand>());
         }
 
         public static async Task ExecutePendingCommandsAsync(IEnumerable<RemoteCommand> commands, string? clientId)
@@ -198,25 +168,9 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var payload = JsonSerializer.Serialize(new Dictionary<string, object?>
-                {
-                    ["status"] = status,
-                    ["executed_at"] = DateTime.UtcNow.ToString("o"),
-                    ["result_json"] = result,
-                    ["error_text"] = errorText
-                }, JsonOptions);
-
-                TelemetryService.ConfigureHeaders();
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"),
-                    $"{TelemetryService.BaseUrl}/rest/v1/admin_commands?id=eq.{Uri.EscapeDataString(commandId)}")
-                {
-                    Content = new StringContent(payload, Encoding.UTF8, "application/json")
-                };
-
-                var response = await TelemetryService.HttpClient.SendAsync(request).ConfigureAwait(false);
-                var text = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode && !LooksLikeMissingTable(text))
-                    LoggingService.LogWarning("CommandService.Acknowledge", text);
+                var acked = await TelemetryService.AcknowledgeCommandAsync(commandId, status, result, errorText).ConfigureAwait(false);
+                if (!acked)
+                    LoggingService.LogWarning("CommandService.Acknowledge", $"Gateway ack failed for command {commandId}.");
             }
             catch (Exception ex)
             {
@@ -247,12 +201,6 @@ namespace Win11DesktopApp.Services
             }
 
             return false;
-        }
-
-        private static bool LooksLikeMissingTable(string payload)
-        {
-            return payload.Contains("relation", StringComparison.OrdinalIgnoreCase) &&
-                   payload.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

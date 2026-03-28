@@ -1413,6 +1413,8 @@
     <sys:String x:Key="AccessStatusTrialDetail">Осталось {0} дн., до {1}</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Приложение активировано</sys:String>
     <sys:String x:Key="AccessStatusUnlimitedDetail">Бессрочный доступ активен.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Временный офлайн-доступ</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">Работаем по последнему подтверждённому состоянию доступа. Связь с сервером недоступна, осталось {0} дн. офлайн-льготы. Кэшированный доступ до {1}.</sys:String>
     <sys:String x:Key="AccessStatusReadOnlyTitle">Режим просмотра</sys:String>
     <sys:String x:Key="AccessStatusReadOnlyDetail">Пробный период завершился. Для полного доступа нужна активация.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Доступ заблокирован</sys:String>
@@ -1473,11 +1475,11 @@
     <sys:String x:Key="CompanyDialogTitleEdit">Редактировать фирму</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Добавить новую фирму</sys:String>
     <sys:String x:Key="CompanyDialogSubtitle">Основные данные, адреса и позиции компании</sys:String>
-    <sys:String x:Key="MsgCompanyHasEmployees">Эта фирма имеет {0} сотрудник(ов). Удалить всё равно?</sys:String>
+    <sys:String x:Key="MsgCompanyHasEmployees">У этой фирмы {0} сотрудник(ов). Сначала удалите сотрудников, а затем фирму.</sys:String>
     <sys:String x:Key="TitleWarning">Внимание</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Вы уверены, что хотите удалить фирму "{0}"?
 
-Папка на диске НЕ будет удалена.</sys:String>
+Папка фирмы на диске будет удалена вместе со всем её содержимым.</sys:String>
     <sys:String x:Key="TitleDeleteCompany">Удалить фирму</sys:String>
 
     <!-- Template errors -->

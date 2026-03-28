@@ -28,6 +28,7 @@ namespace Win11DesktopApp
         public static StarterTemplateCatalogService StarterTemplateCatalogService { get; private set; } = null!;
         public static PersistenceService PersistenceService { get; private set; } = null!;
         public static EmployeeService EmployeeService { get; private set; } = null!;
+        public static AdminMirrorSyncService AdminMirrorSyncService { get; private set; } = null!;
         public static RecentlyDeletedService RecentlyDeletedService { get; private set; } = null!;
         public static DocumentGenerationService DocumentGenerationService { get; private set; } = null!;
         public static DocumentLocalizationService DocumentLocalizationService { get; private set; } = null!;
@@ -98,6 +99,10 @@ namespace Win11DesktopApp
                 LoggingService.Initialize(FolderService.RootPath);
 
             LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
+            var startupStopwatch = Stopwatch.StartNew();
+            void LogStartupPhase(string phase) =>
+                LoggingService.LogInfo("App.Startup", $"{phase} at {startupStopwatch.ElapsedMilliseconds} ms");
+            LogStartupPhase("startup_begin");
 
             PersistenceService = new PersistenceService(AppSettingsService, FolderService);
             var startupIntegrityService = new StartupIntegrityService(FolderService, PersistenceService);
@@ -108,6 +113,7 @@ namespace Win11DesktopApp
             TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
             StarterTemplateCatalogService = new StarterTemplateCatalogService();
             EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService);
+            AdminMirrorSyncService = new AdminMirrorSyncService();
             RecentlyDeletedService = new RecentlyDeletedService(FolderService, EmployeeService);
             FinanceService = new FinanceService(FolderService, suppressStartupNotifications: true);
             InvoiceStorageService = new InvoiceStorageService(FolderService);
@@ -127,7 +133,17 @@ namespace Win11DesktopApp
                 GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
             DocumentGenerationService = new DocumentGenerationService();
             DocumentLocalizationService = new DocumentLocalizationService();
-            _ = Task.Run(() => PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory));
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("App.PendingCleanupStartup", ex.Message);
+                }
+            });
 
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
@@ -151,6 +167,7 @@ namespace Win11DesktopApp
             RecentlyDeletedService.EnsureStorage();
 
             LoggingService.LogInfo("App", "All services initialized");
+            LogStartupPhase("services_initialized");
 
             var skipLicenseGate =
 #if DEBUG
@@ -159,7 +176,7 @@ namespace Win11DesktopApp
                 Debugger.IsAttached;
 #endif
 
-            var hasValidLocalLicense = LicenseService.IsLicenseValid();
+            var localLicenseStatus = LicenseService.GetLocalLicenseStatus();
             var startupClientTask = TelemetryService.GetStartupAccessStateAsync();
             var startupAccess = new ClientAccessState();
             string? startupClientId = null;
@@ -168,15 +185,22 @@ namespace Win11DesktopApp
             {
                 startupAccess = await startupClientTask;
                 startupClientId = startupAccess.ClientId;
+                LogStartupPhase("telemetry_completed");
             }
             else
             {
+                startupAccess = TelemetryService.GetCachedAccessStateSnapshot();
+                startupClientId = startupAccess.ClientId;
                 LoggingService.LogWarning("App.ProfileGate",
-                    "Telemetry startup sync timed out. Continuing without profile gate.");
+                    startupAccess.IsOfflineGraceActive
+                        ? "Telemetry startup sync timed out. Continuing with cached offline access state."
+                        : "Telemetry startup sync timed out. Continuing without profile gate.");
+                LogStartupPhase("telemetry_timeout");
             }
 
             if (!string.IsNullOrWhiteSpace(startupClientId))
             {
+                AdminMirrorSyncService.Start(startupClientId);
                 var profileCheck = await ProfileAuthService.CheckProfileAsync(startupClientId);
                 if (profileCheck.IsFeatureAvailable && profileCheck.RequiresSetup)
                 {
@@ -238,11 +262,35 @@ namespace Win11DesktopApp
                     LoggingService.LogWarning("App.ProfileGate",
                         $"Profile gate skipped: {profileCheck.ErrorMessage}");
                 }
+            LogStartupPhase("profile_gate_completed");
             }
             else
             {
+                AdminMirrorSyncService.Start();
                 LoggingService.LogWarning("App.ProfileGate",
                     "Client ID unavailable during startup. Continuing without profile gate.");
+            LogStartupPhase("profile_gate_skipped");
+            }
+
+            if (startupAccess.IsLive
+                && !startupAccess.IsBlocked
+                && localLicenseStatus.IsValid
+                && string.IsNullOrWhiteSpace(AppSettingsService.Settings.LegacyLicenseMigratedAtUtc)
+                && LocalLicenseIsStronger(localLicenseStatus, startupAccess))
+            {
+                var migrated = await TelemetryService.MigrateLegacyLicenseAsync(
+                    localLicenseStatus.Plan,
+                    localLicenseStatus.ExpiresOn,
+                    localLicenseStatus.ActivatedOn,
+                    localLicenseStatus.IsUnlimited);
+                if (migrated != null)
+                {
+                    startupAccess = migrated;
+                    startupClientId = migrated.ClientId;
+                    AppSettingsService.Settings.LegacyLicenseMigratedAtUtc = DateTime.UtcNow.ToString("o");
+                    AppSettingsService.SaveSettings();
+                    LogStartupPhase("legacy_license_migrated");
+                }
             }
 
             if (startupAccess.IsBlocked)
@@ -256,34 +304,14 @@ namespace Win11DesktopApp
                 return;
             }
 
-            var startupPolicy = !string.IsNullOrWhiteSpace(startupClientId)
-                ? await PolicyService.FetchPolicyAsync(startupClientId)
-                : null;
+            var startupPolicy = startupAccess.Policy;
 
-            var isRemoteTrialExpired = !hasValidLocalLicense && startupAccess.IsExpired;
-            if (isRemoteTrialExpired)
-            {
-                startupPolicy ??= new RemotePolicy
-                {
-                    ClientId = startupClientId ?? string.Empty
-                };
-
-                startupPolicy.ReadOnlyMode = true;
-                startupPolicy.DisableAI = true;
-                startupPolicy.DisableExports = true;
-                startupPolicy.HideTemplates = true;
-                startupPolicy.HideFinance = true;
-
-                if (string.IsNullOrWhiteSpace(startupPolicy.AdminMessage))
-                {
-                    startupPolicy.AdminMessage =
-                        "Пробний період завершився. Доступ переведено в режим перегляду до активації через AdminPanel.";
-                }
-            }
+            var isRemoteTrialExpired = startupAccess.HasKnownState && startupAccess.IsExpired;
+            startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupPolicy);
 
             await PolicyService.ApplyPolicyAsync(startupPolicy);
 
-            if (!skipLicenseGate && !hasValidLocalLicense && !startupAccess.HasRemoteAccessWindow && !isRemoteTrialExpired)
+            if (!skipLicenseGate && !localLicenseStatus.IsValid && !startupAccess.HasKnownState)
             {
                 var licenseWindow = new Views.LicenseWindow();
                 MainWindow = licenseWindow;
@@ -296,10 +324,11 @@ namespace Win11DesktopApp
                     return;
                 }
 
-                hasValidLocalLicense = LicenseService.IsLicenseValid();
+                localLicenseStatus = LicenseService.GetLocalLicenseStatus();
             }
+        LogStartupPhase("license_gate_completed");
 
-            AccessStatusService.Initialize(hasValidLocalLicense, startupAccess, startupPolicy);
+            AccessStatusService.Initialize(localLicenseStatus, startupAccess, startupPolicy);
 
             NavigationService.NavigateTo(new MainViewModel());
             
@@ -310,6 +339,10 @@ namespace Win11DesktopApp
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+        LogStartupPhase("main_window_shown");
+
+            if (startupAccess.PendingCommands.Count > 0)
+                await CommandService.ExecutePendingCommandsAsync(startupAccess.PendingCommands, startupClientId);
 
             _heartbeatCts = new CancellationTokenSource();
             _ = StartHeartbeatLoopAsync(_heartbeatCts.Token);
@@ -342,7 +375,15 @@ namespace Win11DesktopApp
                 {
                     try
                     {
-                        await TelemetryService.SendHeartbeatAsync().ConfigureAwait(false);
+                        var heartbeat = await TelemetryService.SendHeartbeatAsync().ConfigureAwait(false);
+                        if (heartbeat.AccessState.HasKnownState || heartbeat.Policy != null)
+                        {
+                            var effectivePolicy = BuildEffectivePolicy(LicenseService.GetLocalLicenseStatus(), heartbeat.AccessState, heartbeat.Policy);
+                            await PolicyService.ApplyPolicyAsync(effectivePolicy).ConfigureAwait(false);
+                            AccessStatusService.UpdateRemoteState(heartbeat.AccessState, effectivePolicy);
+                        }
+                        if (heartbeat.PendingCommands.Count > 0)
+                            await CommandService.ExecutePendingCommandsAsync(heartbeat.PendingCommands, heartbeat.ClientId).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -362,6 +403,117 @@ namespace Win11DesktopApp
             _heartbeatCts?.Cancel();
             _heartbeatCts?.Dispose();
             base.OnExit(e);
+        }
+
+        private static RemotePolicy? BuildEffectivePolicy(LocalLicenseStatus localLicenseStatus, ClientAccessState accessState, RemotePolicy? policy)
+        {
+            var effective = ClonePolicy(policy) ?? (accessState.IsOfflineGraceActive ? BuildPolicyFromSettings() : null);
+            if (accessState.HasKnownState && accessState.IsExpired)
+            {
+                effective ??= new RemotePolicy
+                {
+                    ClientId = accessState.ClientId ?? string.Empty
+                };
+
+                effective.ReadOnlyMode = true;
+                effective.DisableAI = true;
+                effective.DisableExports = true;
+                effective.HideTemplates = true;
+                effective.HideFinance = true;
+
+                if (string.IsNullOrWhiteSpace(effective.AdminMessage))
+                {
+                    effective.AdminMessage = localLicenseStatus.IsValid
+                        ? "Локальна ліцензія більше не є головним джерелом доступу. Поновіть серверний доступ через AdminPanel."
+                        : "Пробний період завершився. Доступ переведено в режим перегляду до активації через AdminPanel.";
+                }
+            }
+
+            return effective;
+        }
+
+        private static RemotePolicy? BuildPolicyFromSettings()
+        {
+            var settings = AppSettingsService?.Settings;
+            if (settings == null)
+                return null;
+
+            if (!settings.AdminReadOnlyMode
+                && !settings.AdminDisableAI
+                && !settings.AdminDisableExports
+                && !settings.AdminMaintenanceMode
+                && !settings.AdminHideTemplates
+                && !settings.AdminHideFinance
+                && !settings.AdminForceUpdate
+                && string.IsNullOrWhiteSpace(settings.AdminMessage)
+                && string.IsNullOrWhiteSpace(settings.AdminMinimumSupportedVersion)
+                && string.IsNullOrWhiteSpace(settings.AdminRecommendedVersion)
+                && string.IsNullOrWhiteSpace(settings.RemotePolicyVersion))
+            {
+                return null;
+            }
+
+            return new RemotePolicy
+            {
+                ClientId = settings.CachedAccessClientId,
+                MinimumSupportedVersion = settings.AdminMinimumSupportedVersion,
+                RecommendedVersion = settings.AdminRecommendedVersion,
+                UpdateChannel = settings.AdminUpdateChannel,
+                ForceUpdate = settings.AdminForceUpdate,
+                MaintenanceMode = settings.AdminMaintenanceMode,
+                ReadOnlyMode = settings.AdminReadOnlyMode,
+                DisableAI = settings.AdminDisableAI,
+                DisableExports = settings.AdminDisableExports,
+                HideTemplates = settings.AdminHideTemplates,
+                HideFinance = settings.AdminHideFinance,
+                AdminMessage = settings.AdminMessage,
+                PolicyVersion = settings.RemotePolicyVersion
+            };
+        }
+
+        private static RemotePolicy? ClonePolicy(RemotePolicy? policy)
+        {
+            if (policy == null)
+                return null;
+
+            return new RemotePolicy
+            {
+                ClientId = policy.ClientId,
+                MinimumSupportedVersion = policy.MinimumSupportedVersion,
+                RecommendedVersion = policy.RecommendedVersion,
+                UpdateChannel = policy.UpdateChannel,
+                ForceUpdate = policy.ForceUpdate,
+                MaintenanceMode = policy.MaintenanceMode,
+                ReadOnlyMode = policy.ReadOnlyMode,
+                DisableAI = policy.DisableAI,
+                DisableExports = policy.DisableExports,
+                HideTemplates = policy.HideTemplates,
+                HideFinance = policy.HideFinance,
+                RequireOnlineCheck = policy.RequireOnlineCheck,
+                AdminMessage = policy.AdminMessage,
+                PolicyVersion = policy.PolicyVersion,
+                UpdatedAt = policy.UpdatedAt
+            };
+        }
+
+        private static bool LocalLicenseIsStronger(LocalLicenseStatus local, ClientAccessState server)
+        {
+            if (server.IsBlocked)
+                return false;
+
+            if (local.IsUnlimited && !server.ExpiresAtUtc.HasValue)
+                return true;
+
+            if (!server.ExpiresAtUtc.HasValue)
+                return true;
+
+            if (local.IsUnlimited && server.ExpiresAtUtc.Value < new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc))
+                return true;
+
+            if (local.ExpiresAtUtc.HasValue && local.ExpiresAtUtc.Value > server.ExpiresAtUtc.Value)
+                return true;
+
+            return false;
         }
     }
 }

@@ -486,8 +486,9 @@ namespace Win11DesktopApp.ViewModels
                 var empService = App.EmployeeService;
                 if (companies == null || empService == null) return 0;
 
+                var visibleCompanies = companies.Where(c => cs2!.IsCompanyVisible(c)).ToList();
                 int count = 0;
-                foreach (var company in companies.Where(c => cs2!.IsCompanyVisible(c)))
+                foreach (var company in visibleCompanies)
                 {
                     try
                     {

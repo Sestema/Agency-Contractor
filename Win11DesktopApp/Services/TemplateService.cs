@@ -472,7 +472,7 @@ namespace Win11DesktopApp.Services
             };
         }
 
-        public void DeleteTemplate(string firmName, TemplateEntry template)
+        public async Task DeleteTemplateAsync(string firmName, TemplateEntry template)
         {
             if (string.IsNullOrEmpty(_folderService.RootPath) || template == null) return;
 
@@ -490,12 +490,19 @@ namespace Win11DesktopApp.Services
                 {
                     var message = $"Folder still exists after delete, scheduling deferred cleanup: {templateDirectory}";
                     LoggingService.LogWarning("TemplateService.DeleteTemplate", message);
-                    PendingCleanupService.EnqueueAsync(templateDirectory, "template-delete-folder").GetAwaiter().GetResult();
+                    await PendingCleanupService.EnqueueAsync(templateDirectory, "template-delete-folder");
                     _ = System.Threading.Tasks.Task.Run(async () =>
                     {
-                        await System.Threading.Tasks.Task.Delay(15000);
-                        if (TryDeleteTemplateDirectory(templateDirectory))
-                            await PendingCleanupService.RemoveAsync(templateDirectory);
+                        try
+                        {
+                            await System.Threading.Tasks.Task.Delay(15000);
+                            if (TryDeleteTemplateDirectory(templateDirectory))
+                                await PendingCleanupService.RemoveAsync(templateDirectory);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogWarning("TemplateService.DeleteTemplateCleanup", ex.Message);
+                        }
                     });
                 }
             }

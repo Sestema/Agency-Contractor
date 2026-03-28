@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace AdminPanel
@@ -59,23 +60,20 @@ namespace AdminPanel
         private ClientRecord? _selected;
         private ClientProfileRecord? _selectedProfile;
         private List<ClientRecord> _allClients = new();
-        private List<TelemetryRecord> _allTelemetry = new();
         private List<TelemetryRecord> _activeTelemetry = new();
+        private string? _telemetryNextCursor;
+        private bool _telemetryHasMore;
+        private string? _telemetryClientId;
         private bool _isUpdatingTelemetryEventFilter;
         private WindowState _lastNonMinimizedWindowState = WindowState.Normal;
 
         private const string BaseUrl = "https://tssgxhatnjvqthdiyuwo.supabase.co";
-        private const string ServiceKey =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-            "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzc2d4aGF0bmp2cXRoZGl5dXdvIiwi" +
-            "cm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjY3NTE4MSwiZXhwIjoyMDg4MjUxMTgxfQ." +
-            "3FvcQIgE8617lsBaLgbbjWSsLD9Uug_lDQ-D03QZofA";
         private static readonly JsonSerializerOptions LayoutJsonOptions = new() { WriteIndented = true };
 
         public MainWindow()
         {
             InitializeComponent();
-            _svc = new SupabaseService(BaseUrl, ServiceKey);
+            _svc = new SupabaseService(BaseUrl);
             StateChanged += (_, _) =>
             {
                 if (WindowState != WindowState.Minimized)
@@ -83,10 +81,40 @@ namespace AdminPanel
             };
             Loaded += async (_, _) =>
             {
+                if (!await EnsureAdminSessionAsync())
+                {
+                    Close();
+                    return;
+                }
                 RestoreClientGridLayout();
                 await RefreshAsync();
             };
             Closing += (_, _) => SaveClientGridLayout();
+        }
+
+        private async Task<bool> EnsureAdminSessionAsync()
+        {
+            while (true)
+            {
+                var login = new AdminLoginWindow
+                {
+                    Owner = this
+                };
+
+                if (login.ShowDialog() != true)
+                    return false;
+
+                TxtStatus.Text = "Авторизація...";
+                if (await _svc.AuthenticateAsync(login.Password))
+                    return true;
+
+                MessageBox.Show(
+                    this,
+                    "Невірний пароль адміністратора або admin-gateway недоступний.",
+                    "Admin login",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
         private async Task RefreshAsync(string? preferredClientId = null)
@@ -97,14 +125,9 @@ namespace AdminPanel
 
                 var selectedId = preferredClientId ?? _selected?.Id;
                 var clientsTask = _svc.GetClientsAsync();
-                var telemetryTask = _svc.GetTelemetryAsync(limit: 500);
-                var profilesTask = _svc.GetClientProfilesAsync();
-                await Task.WhenAll(clientsTask, telemetryTask, profilesTask);
+                await Task.WhenAll(clientsTask);
 
                 _allClients = clientsTask.Result;
-                _allTelemetry = telemetryTask.Result;
-                ApplyProfilesToClients(profilesTask.Result);
-                EnrichClientsWithRiskSignals();
 
                 PopulateVersionFilter();
                 ApplyClientFilters(restoreSelection: false);
@@ -113,11 +136,14 @@ namespace AdminPanel
                 if (_selected == null)
                 {
                     _selectedProfile = null;
-                    _activeTelemetry = _allTelemetry;
+                    _activeTelemetry = new List<TelemetryRecord>();
+                    _telemetryNextCursor = null;
+                    _telemetryHasMore = false;
+                    _telemetryClientId = null;
                     RefreshSessionSummaries();
                     PopulateTelemetryEventFilter();
                     ApplyTelemetryFilters();
-                    UpdateStats(_allTelemetry, null);
+                    UpdateStats(_activeTelemetry, null);
                     PopulateClientDetails(null);
                     UpdateActionButtons();
                 }
@@ -305,10 +331,13 @@ namespace AdminPanel
             {
                 _selected = null;
                 _selectedProfile = null;
-                _activeTelemetry = _allTelemetry;
+                _activeTelemetry = new List<TelemetryRecord>();
+                _telemetryNextCursor = null;
+                _telemetryHasMore = false;
+                _telemetryClientId = null;
                 PopulateTelemetryEventFilter();
                 ApplyTelemetryFilters();
-                UpdateStats(_allTelemetry, null);
+                UpdateStats(_activeTelemetry, null);
                 PopulateClientDetails(null);
                 UpdateActionButtons();
             }
@@ -413,27 +442,28 @@ namespace AdminPanel
             if (clientId != null)
             {
                 var latestStats = GetLatestStatsTelemetry(filtered);
-                ExtractStats(latestStats, out totalFirms, out totalEmployees);
+                if (latestStats != null)
+                {
+                    ExtractStats(latestStats, out totalFirms, out totalEmployees);
+                }
+                else if (_selected != null)
+                {
+                    totalFirms = _selected.FirmsCount;
+                    totalEmployees = _selected.EmployeesCount;
+                }
             }
             else
             {
-                var byClient = telemetry
-                    .Where(t => t.ClientId != null)
-                    .GroupBy(t => t.ClientId);
-
-                foreach (var group in byClient)
-                {
-                    var latest = GetLatestStatsTelemetry(group);
-                    ExtractStats(latest, out var firms, out var employees);
-                    totalFirms += firms;
-                    totalEmployees += employees;
-                }
+                totalFirms = _allClients.Sum(c => c.FirmsCount);
+                totalEmployees = _allClients.Sum(c => c.EmployeesCount);
             }
 
             var label = clientId != null ? " (клієнт)" : " (всі)";
             TxtStatFirms.Text = $"Фірм: {totalFirms} (створено: +{firmsCreated}){label}";
             TxtStatEmployees.Text = $"Працівників: {totalEmployees} (додано: +{employeesAdded}){label}";
-            TxtStatEvents.Text = $"Подій: {filtered.Count}";
+            TxtStatEvents.Text = clientId != null
+                ? $"Подій: {filtered.Count}"
+                : "Подій: завантажуються лише для вибраного клієнта";
         }
 
         private static void ExtractStats(TelemetryRecord? hb, out int firms, out int employees)
@@ -466,6 +496,18 @@ namespace AdminPanel
             _ = LoadSelectedClientDataAsync();
         }
 
+        private void DgClients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (_selected == null)
+                return;
+
+            var mirrorWindow = new ClientMirrorWindow(_svc, _selected)
+            {
+                Owner = this
+            };
+            mirrorWindow.Show();
+        }
+
         private void UpdateActionButtons()
         {
             var hasSelection = _selected != null;
@@ -485,24 +527,32 @@ namespace AdminPanel
                 if (_selected == null)
                 {
                     _selectedProfile = null;
-                    _activeTelemetry = _allTelemetry;
+                    _activeTelemetry = new List<TelemetryRecord>();
+                    _telemetryNextCursor = null;
+                    _telemetryHasMore = false;
+                    _telemetryClientId = null;
                     RefreshSessionSummaries();
                     PopulateTelemetryEventFilter();
                     ApplyTelemetryFilters();
-                    UpdateStats(_allTelemetry, null);
+                    UpdateStats(_activeTelemetry, null);
                     PopulateClientDetails(null);
+                    UpdateActionButtons();
                     return;
                 }
 
                 var selectedId = _selected.Id;
-                var telemetryTask = _svc.GetTelemetryAsync(selectedId, 500);
+                var telemetryTask = _svc.GetTelemetryPageAsync(selectedId, 200);
                 var profileTask = _svc.GetClientProfileAsync(selectedId);
                 await Task.WhenAll(telemetryTask, profileTask);
 
                 if (_selected?.Id != selectedId)
                     return;
 
-                _activeTelemetry = telemetryTask.Result;
+                var telemetryPage = telemetryTask.Result;
+                _activeTelemetry = telemetryPage.Items;
+                _telemetryNextCursor = string.IsNullOrWhiteSpace(telemetryPage.NextCursor) ? null : telemetryPage.NextCursor;
+                _telemetryHasMore = telemetryPage.HasMore;
+                _telemetryClientId = selectedId;
                 _selectedProfile = profileTask.Result;
 
                 RefreshSessionSummaries();
@@ -606,6 +656,48 @@ namespace AdminPanel
             var latest = telemetry.OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue).FirstOrDefault()?.CreatedAt;
             var latestText = latest.HasValue ? latest.Value.ToLocalTime().ToString("dd.MM HH:mm") : "—";
             TxtTelemetrySummary.Text = $"Показано: {telemetry.Count} | Типів: {telemetry.Select(t => t.EventType).Distinct(StringComparer.OrdinalIgnoreCase).Count()} | Error-like: {errorLike} | Остання: {latestText}";
+            UpdateTelemetryPaginationButton();
+        }
+
+        private void UpdateTelemetryPaginationButton()
+        {
+            if (BtnLoadMoreTelemetry == null)
+                return;
+
+            BtnLoadMoreTelemetry.IsEnabled = _selected != null && _telemetryHasMore && !string.IsNullOrWhiteSpace(_telemetryClientId);
+            BtnLoadMoreTelemetry.Visibility = BtnLoadMoreTelemetry.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private async void BtnLoadMoreTelemetry_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selected == null || !_telemetryHasMore || string.IsNullOrWhiteSpace(_telemetryNextCursor))
+                return;
+
+            try
+            {
+                BtnLoadMoreTelemetry.IsEnabled = false;
+                var selectedId = _selected.Id;
+                var page = await _svc.GetTelemetryPageAsync(selectedId, 200, _telemetryNextCursor);
+                if (_selected?.Id != selectedId)
+                    return;
+
+                _activeTelemetry.AddRange(page.Items);
+                _telemetryNextCursor = string.IsNullOrWhiteSpace(page.NextCursor) ? null : page.NextCursor;
+                _telemetryHasMore = page.HasMore;
+                _telemetryClientId = selectedId;
+                RefreshSessionSummaries();
+                UpdateStats(_activeTelemetry, selectedId);
+                PopulateTelemetryEventFilter();
+                ApplyTelemetryFilters();
+            }
+            catch (Exception ex)
+            {
+                TxtStatus.Text = $"Telemetry paging error: {ex.Message}";
+            }
+            finally
+            {
+                UpdateTelemetryPaginationButton();
+            }
         }
 
         private void RefreshSessionSummaries()
@@ -784,6 +876,9 @@ namespace AdminPanel
             var latestStats = GetLatestStatsTelemetry(_activeTelemetry);
 
             ExtractStats(latestStats, out var firms, out var employees);
+            if (latestStats == null && _selected != null)
+                return $"Фірм: {_selected.FirmsCount}, працівників: {_selected.EmployeesCount}";
+
             return latestStats == null ? "—" : $"Фірм: {firms}, працівників: {employees}";
         }
 
@@ -801,98 +896,7 @@ namespace AdminPanel
 
         private void EnrichClientsWithRiskSignals()
         {
-            var latestVersion = GetLatestKnownVersion(_allClients);
-            var telemetryByClient = _allTelemetry
-                .Where(t => !string.IsNullOrWhiteSpace(t.ClientId))
-                .GroupBy(t => t.ClientId!, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
-
-            foreach (var client in _allClients)
-            {
-                telemetryByClient.TryGetValue(client.Id, out var clientTelemetry);
-                clientTelemetry ??= new List<TelemetryRecord>();
-
-                var latestHeartbeat = clientTelemetry
-                    .Where(t => string.Equals(t.EventType, "heartbeat", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue)
-                    .FirstOrDefault();
-
-                var reasons = new List<string>();
-                var score = 0;
-                var daysToExpiry = GetDaysUntilExpiry(client);
-                var daysSinceLastSeen = GetDaysSinceLastSeen(client.LastSeen);
-                var errorLikeCount = clientTelemetry.Count(IsErrorLikeEvent);
-                var isOutdatedVersion = IsOutdatedVersion(client.AppVersion, latestVersion);
-
-                if (client.IsBlocked)
-                {
-                    score += 100;
-                    reasons.Add("Клієнт заблокований");
-                }
-
-                if (daysToExpiry < 0)
-                {
-                    score += 80;
-                    reasons.Add($"Ліцензія протермінована на {Math.Abs(daysToExpiry)} дн.");
-                }
-                else if (daysToExpiry <= 7)
-                {
-                    score += 35;
-                    reasons.Add($"Ліцензія закінчується через {daysToExpiry} дн.");
-                }
-                else if (daysToExpiry <= 30)
-                {
-                    score += 15;
-                    reasons.Add($"Ліцензія закінчується через {daysToExpiry} дн.");
-                }
-
-                if (!client.LastSeen.HasValue)
-                {
-                    score += 35;
-                    reasons.Add("Немає активності");
-                }
-                else if (daysSinceLastSeen > 30)
-                {
-                    score += 50;
-                    reasons.Add($"Неактивний {daysSinceLastSeen} дн.");
-                }
-                else if (daysSinceLastSeen > 7)
-                {
-                    score += 25;
-                    reasons.Add($"Неактивний {daysSinceLastSeen} дн.");
-                }
-
-                if (isOutdatedVersion)
-                {
-                    score += 20;
-                    reasons.Add($"Стара версія {client.AppVersion}");
-                }
-
-                if (errorLikeCount >= 5)
-                {
-                    score += 30;
-                    reasons.Add($"Багато error-like подій ({errorLikeCount})");
-                }
-                else if (errorLikeCount > 0)
-                {
-                    score += 10;
-                    reasons.Add($"Є error-like події ({errorLikeCount})");
-                }
-
-                if (latestHeartbeat?.CreatedAt == null)
-                {
-                    score += 10;
-                    reasons.Add("Немає heartbeat");
-                }
-
-                client.RiskScore = score;
-                client.RiskLevel = score >= 60 ? "High risk" : score >= 20 ? "Warning" : "OK";
-                client.RiskReasons = reasons.Count == 0 ? new List<string> { "Сигналів ризику не виявлено" } : reasons;
-                client.IsOutdatedVersion = isOutdatedVersion;
-                client.ErrorLikeCount = errorLikeCount;
-                client.LatestHeartbeatAt = latestHeartbeat?.CreatedAt;
-            }
-
+            // Risk enrichment now comes from admin-gateway summary responses.
         }
 
         private static int GetDaysSinceLastSeen(DateTime? lastSeen)

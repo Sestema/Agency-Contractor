@@ -70,7 +70,7 @@ namespace Win11DesktopApp.Services
             var dbPath = _folderService.DatabaseFilePath;
             if (string.IsNullOrEmpty(dbPath)) return;
 
-            await _saveLock.WaitAsync();
+            await _saveLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 var db = new DatabaseRoot
@@ -108,6 +108,11 @@ namespace Win11DesktopApp.Services
             {
                 _saveLock.Release();
             }
+        }
+
+        public Task SaveCompaniesAsync(IEnumerable<EmployerCompany> companies)
+        {
+            return SaveDatabaseAsync(companies);
         }
 
         /// <summary>

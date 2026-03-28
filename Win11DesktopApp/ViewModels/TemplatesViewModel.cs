@@ -192,7 +192,7 @@ namespace Win11DesktopApp.ViewModels
                 }
             });
 
-            DeleteTemplateCommand = new RelayCommand(o =>
+            DeleteTemplateCommand = new AsyncRelayCommand(async o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Видалити шаблон"))
                     return;
@@ -212,7 +212,7 @@ namespace Win11DesktopApp.ViewModels
                         try
                         {
                             var tName = template.Name;
-                            _templateService.DeleteTemplate(_firmName, template);
+                            await _templateService.DeleteTemplateAsync(_firmName, template);
                             Templates.Remove(template);
                             App.ActivityLogService?.Log("TemplateDeleted", "Template", _firmName, "",
                                 $"Видалено шаблон «{tName}» з {_firmName}");

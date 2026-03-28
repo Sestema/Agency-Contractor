@@ -15,6 +15,20 @@ namespace Win11DesktopApp.Services
         public string Plan { get; set; } = string.Empty;
         public string LastChecked { get; set; } = string.Empty;
         public string Signature { get; set; } = string.Empty;
+        public int SignatureVersion { get; set; }
+        public string SignatureSecret { get; set; } = string.Empty;
+    }
+
+    public sealed class LocalLicenseStatus
+    {
+        public bool IsValid { get; init; }
+        public string StatusText { get; init; } = string.Empty;
+        public bool IsUnlimited { get; init; }
+        public int DaysLeft { get; init; } = -1;
+        public DateTime? ExpiresAtUtc { get; init; }
+        public string Plan { get; init; } = string.Empty;
+        public string ActivatedOn { get; init; } = string.Empty;
+        public string ExpiresOn { get; init; } = string.Empty;
     }
 
     public static class LicenseService
@@ -32,40 +46,11 @@ namespace Win11DesktopApp.Services
 
         private static string? _cachedMachineId;
         private static bool _migrationDone;
+        private static bool _legacyWarningLogged;
 
         public static bool IsLicenseValid()
         {
-            try
-            {
-                var info = LoadLicense();
-                if (info == null) return false;
-
-                if (info.MachineId != GetMachineId()) return false;
-
-                if (!VerifySignature(info)) return false;
-
-                if (info.Plan == "unlimited")
-                {
-                    UpdateLastCheckedIfNeeded(info);
-                    return true;
-                }
-
-                if (!DateTime.TryParse(info.ExpiresOn, out var expires)) return false;
-                if (DateTime.Now > expires) return false;
-
-                if (DateTime.TryParse(info.LastChecked, out var lastChecked))
-                {
-                    if (DateTime.Now.AddDays(7) < lastChecked) return false;
-                }
-
-                UpdateLastCheckedIfNeeded(info);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("LicenseService.IsLicenseValid", ex);
-                return false;
-            }
+            return GetLocalLicenseStatus().IsValid;
         }
 
         public static (bool Success, string Message) Activate(string activatorKeyPath, int days)
@@ -90,7 +75,9 @@ namespace Win11DesktopApp.Services
                     ActivatedOn = now.ToString("yyyy-MM-dd"),
                     ExpiresOn = expiresOn,
                     Plan = plan,
-                    LastChecked = now.ToString("yyyy-MM-dd HH:mm:ss")
+                    LastChecked = now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    SignatureVersion = 2,
+                    SignatureSecret = keyContent
                 };
                 info.Signature = ComputeSignature(info, keyContent);
 
@@ -108,30 +95,7 @@ namespace Win11DesktopApp.Services
 
         public static string GetLicenseStatus()
         {
-            try
-            {
-                var info = LoadLicense();
-                if (info == null) return "Не активовано";
-
-                if (info.MachineId != GetMachineId()) return "Ліцензія для іншого ПК";
-                if (!VerifySignature(info)) return "Ліцензія пошкоджена";
-
-                if (info.Plan == "unlimited") return "Безлімітна ліцензія";
-
-                if (!DateTime.TryParse(info.ExpiresOn, out var expires))
-                    return "Ліцензія пошкоджена";
-
-                if (DateTime.Now > expires)
-                    return $"Ліцензія закінчилась {expires:dd.MM.yyyy}";
-
-                var daysLeft = (expires - DateTime.Now).Days;
-                return $"Активна до {expires:dd.MM.yyyy} ({daysLeft} дн.)";
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("LicenseService.GetLicenseStatus", ex);
-                return "Помилка перевірки";
-            }
+            return GetLocalLicenseStatus().StatusText;
         }
 
         public static string GetExpiresAt()
@@ -150,15 +114,109 @@ namespace Win11DesktopApp.Services
 
         public static int GetDaysLeft()
         {
+            return GetLocalLicenseStatus().DaysLeft;
+        }
+
+        public static LocalLicenseStatus GetLocalLicenseStatus()
+        {
             try
             {
                 var info = LoadLicense();
-                if (info == null) return -1;
-                if (info.Plan == "unlimited") return 99999;
-                if (!DateTime.TryParse(info.ExpiresOn, out var expires)) return -1;
-                return Math.Max(0, (expires - DateTime.Now).Days);
+                if (info == null)
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = "Не активовано"
+                    };
+                }
+
+                if (info.MachineId != GetMachineId())
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = "Ліцензія для іншого ПК"
+                    };
+                }
+
+                if (!VerifySignature(info))
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = "Ліцензія пошкоджена"
+                    };
+                }
+
+                if (info.Plan == "unlimited")
+                {
+                    UpdateLastCheckedIfNeeded(info);
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = true,
+                        StatusText = "Безлімітна ліцензія",
+                        IsUnlimited = true,
+                        DaysLeft = 99999,
+                        ExpiresAtUtc = DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc),
+                        Plan = info.Plan,
+                        ActivatedOn = info.ActivatedOn,
+                        ExpiresOn = info.ExpiresOn
+                    };
+                }
+
+                if (!DateTime.TryParse(info.ExpiresOn, out var expires))
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = "Ліцензія пошкоджена"
+                    };
+                }
+
+                if (DateTime.Now > expires)
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = $"Ліцензія закінчилась {expires:dd.MM.yyyy}",
+                        DaysLeft = 0,
+                        ExpiresAtUtc = expires.ToUniversalTime()
+                    };
+                }
+
+                if (DateTime.TryParse(info.LastChecked, out var lastChecked) && DateTime.Now.AddDays(7) < lastChecked)
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = "Ліцензія пошкоджена",
+                        ExpiresAtUtc = expires.ToUniversalTime()
+                    };
+                }
+
+                UpdateLastCheckedIfNeeded(info);
+                var daysLeft = Math.Max(0, (expires - DateTime.Now).Days);
+                return new LocalLicenseStatus
+                {
+                    IsValid = true,
+                    StatusText = $"Активна до {expires:dd.MM.yyyy} ({daysLeft} дн.)",
+                    DaysLeft = daysLeft,
+                    ExpiresAtUtc = expires.ToUniversalTime(),
+                    Plan = info.Plan,
+                    ActivatedOn = info.ActivatedOn,
+                    ExpiresOn = info.ExpiresOn
+                };
             }
-            catch (Exception ex) { LoggingService.LogWarning("LicenseService.GetDaysLeft", ex.Message); return -1; }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("LicenseService.GetLocalLicenseStatus", ex);
+                return new LocalLicenseStatus
+                {
+                    IsValid = false,
+                    StatusText = "Помилка перевірки"
+                };
+            }
         }
 
         public static string GetMachineId()
@@ -267,7 +325,21 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(info.MachineId)) return false;
             if (string.IsNullOrEmpty(info.ActivatedOn)) return false;
             if (string.IsNullOrEmpty(info.ExpiresOn)) return false;
-            return true;
+            if (info.SignatureVersion < 2 || string.IsNullOrWhiteSpace(info.SignatureSecret))
+            {
+                if (!_legacyWarningLogged)
+                {
+                    LoggingService.LogWarning("LicenseService.VerifySignature", "Legacy license format detected; cryptographic verification is unavailable.");
+                    _legacyWarningLogged = true;
+                }
+                return true;
+            }
+
+            var expected = ComputeSignature(info, info.SignatureSecret);
+            var expectedBytes = Encoding.UTF8.GetBytes(expected);
+            var actualBytes = Encoding.UTF8.GetBytes(info.Signature);
+            return expectedBytes.Length == actualBytes.Length &&
+                   CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
         }
 
         private static void UpdateLastCheckedIfNeeded(LicenseInfo info)

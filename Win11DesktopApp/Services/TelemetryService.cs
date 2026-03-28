@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
@@ -15,14 +14,23 @@ namespace Win11DesktopApp.Services
         public string? ClientId { get; set; }
         public RemotePolicy? Policy { get; set; }
         public List<RemoteCommand> PendingCommands { get; set; } = new();
+        public ClientAccessState AccessState { get; set; } = new();
     }
 
     public sealed class ClientAccessState
     {
+        private static readonly TimeSpan OfflineGraceWindow = TimeSpan.FromDays(7);
+
         public string? ClientId { get; set; }
         public bool ClientExists { get; set; }
         public bool IsBlocked { get; set; }
         public DateTime? ExpiresAtUtc { get; set; }
+        public RemotePolicy? Policy { get; set; }
+        public List<RemoteCommand> PendingCommands { get; set; } = new();
+        public bool IsLive { get; set; }
+        public bool IsFromCache { get; set; }
+        public DateTime? LastServerCheckUtc { get; set; }
+        public string Source { get; set; } = string.Empty;
 
         public bool HasRemoteAccessWindow =>
             !IsBlocked && ExpiresAtUtc.HasValue && ExpiresAtUtc.Value > DateTime.UtcNow;
@@ -30,23 +38,43 @@ namespace Win11DesktopApp.Services
         public bool IsExpired =>
             !IsBlocked && ExpiresAtUtc.HasValue && ExpiresAtUtc.Value <= DateTime.UtcNow;
 
+        public bool HasKnownState =>
+            IsBlocked || ExpiresAtUtc.HasValue || !string.IsNullOrWhiteSpace(ClientId);
+
+        public bool IsOfflineGraceActive =>
+            IsFromCache
+            && LastServerCheckUtc.HasValue
+            && DateTime.UtcNow - LastServerCheckUtc.Value <= OfflineGraceWindow;
+
         public int DaysRemaining =>
             !ExpiresAtUtc.HasValue
                 ? 0
                 : Math.Max(0, (int)Math.Ceiling((ExpiresAtUtc.Value - DateTime.UtcNow).TotalDays));
+
+        public int OfflineGraceDaysRemaining =>
+            !LastServerCheckUtc.HasValue
+                ? 0
+                : Math.Max(0, (int)Math.Ceiling((LastServerCheckUtc.Value.Add(OfflineGraceWindow) - DateTime.UtcNow).TotalDays));
     }
 
     public static class TelemetryService
     {
         private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            PropertyNameCaseInsensitive = true
+        };
         private static readonly string _baseUrl = Encoding.UTF8.GetString(Convert.FromBase64String(
             "aHR0cHM6Ly90c3NneGhhdG5qdnF0aGRpeXV3by5zdXBhYmFzZS5jbw=="));
 
         private static bool _isBlocked;
         private static string? _clientId;
+        private static RemotePolicy? _cachedPolicy;
 
         public static bool IsBlocked => _isBlocked;
         public static string? GetCurrentClientId() => _clientId;
+        internal static RemotePolicy? GetCachedPolicy() => _cachedPolicy;
         internal static HttpClient HttpClient => _http;
         internal static string BaseUrl => _baseUrl;
 
@@ -62,30 +90,35 @@ namespace Win11DesktopApp.Services
             return string.Join(".", p);
         }
 
-        internal static void ConfigureHeaders()
+        internal static void ApplyHeaders(HttpRequestMessage request)
         {
             var key = GetKey();
-            _http.DefaultRequestHeaders.Clear();
-            _http.DefaultRequestHeaders.TryAddWithoutValidation("apikey", key);
-            _http.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {key}");
+            request.Headers.Remove("apikey");
+            request.Headers.Remove("Authorization");
+            request.Headers.TryAddWithoutValidation("apikey", key);
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {key}");
         }
 
-        private static Dictionary<string, object> CollectStats()
+        private static Dictionary<string, object> CollectStats(bool includeEmployeeCounts = true)
         {
             var stats = new Dictionary<string, object>();
             try
             {
-                var companies = App.CompanyService?.Companies;
+                var companies = App.CompanyService?.Companies?.ToList();
                 if (companies != null)
                 {
                     stats["firms_count"] = companies.Count;
-                    int totalEmployees = 0;
-                    foreach (var c in companies)
+                    if (includeEmployeeCounts)
                     {
-                        try { totalEmployees += App.CompanyService!.GetActiveEmployeeCount(c); }
-                        catch (Exception ex) { LoggingService.LogWarning("Telemetry.CountEmployees", ex.Message); }
+                        int totalEmployees = 0;
+                        foreach (var c in companies)
+                        {
+                            try { totalEmployees += App.CompanyService!.GetActiveEmployeeCount(c); }
+                            catch (Exception ex) { LoggingService.LogWarning("Telemetry.CountEmployees", ex.Message); }
+                        }
+
+                        stats["employees_count"] = totalEmployees;
                     }
-                    stats["employees_count"] = totalEmployees;
                 }
             }
             catch (Exception ex) { LoggingService.LogWarning("Telemetry.CollectStats", ex.Message); }
@@ -100,40 +133,24 @@ namespace Win11DesktopApp.Services
             var result = new HeartbeatResult();
             try
             {
-                var machineId = LicenseService.GetMachineId();
-                var machineName = Environment.MachineName;
-                var appVersion = AppSettingsService.CurrentAppVersion;
                 var stats = CollectStats();
-
-                string ip = await GetIpSilentAsync().ConfigureAwait(false);
-
-                ConfigureHeaders();
-
-                var existing = await FindClientAsync(machineId).ConfigureAwait(false);
-
-                if (existing != null)
+                var gateway = await CallGatewayAsync("heartbeat", new Dictionary<string, object?>
                 {
-                    _clientId = existing.Value.GetProperty("id").GetString();
-                    _isBlocked = existing.Value.TryGetProperty("is_blocked", out var b) && b.GetBoolean();
+                    ["event_type"] = "heartbeat",
+                    ["event_data"] = stats,
+                    ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
+                }).ConfigureAwait(false);
 
-                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName).ConfigureAwait(false);
-                    await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "heartbeat", stats).ConfigureAwait(false);
-                }
-                else
-                {
-                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, GetInitialRemoteExpiry()).ConfigureAwait(false);
-                    if (_clientId != null)
-                        await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
-                }
+                if (gateway == null || !gateway.Ok)
+                    return result;
 
-                result.ClientId = _clientId;
-                result.IsAllowed = !_isBlocked;
-
-                if (!string.IsNullOrWhiteSpace(_clientId))
-                {
-                    result.Policy = await PolicyService.FetchPolicyAsync(_clientId).ConfigureAwait(false);
-                    result.PendingCommands = await CommandService.GetPendingCommandsAsync(_clientId).ConfigureAwait(false);
-                }
+                var accessState = BuildAccessState(gateway, isFromCache: false);
+                UpdateCachedGatewayState(gateway, accessState);
+                result.ClientId = accessState.ClientId;
+                result.IsAllowed = !accessState.IsBlocked;
+                result.Policy = gateway.Policy;
+                result.PendingCommands = gateway.PendingCommands ?? new List<RemoteCommand>();
+                result.AccessState = accessState;
 
                 return result;
             }
@@ -152,31 +169,15 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                var machineId = LicenseService.GetMachineId();
-                var machineName = Environment.MachineName;
-                var appVersion = AppSettingsService.CurrentAppVersion;
-                var stats = CollectStats();
-
-                string ip = await GetIpSilentAsync().ConfigureAwait(false);
-
-                ConfigureHeaders();
-
-                var existing = await FindClientAsync(machineId).ConfigureAwait(false);
-
-                if (existing != null)
+                var stats = CollectStats(includeEmployeeCounts: false);
+                var gateway = await CallGatewayAsync("startup", new Dictionary<string, object?>
                 {
-                    _clientId = existing.Value.GetProperty("id").GetString();
-                    _isBlocked = existing.Value.TryGetProperty("is_blocked", out var b) && b.GetBoolean();
-
-                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName).ConfigureAwait(false);
-                    await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "app_started", stats).ConfigureAwait(false);
-                }
-                else
-                {
-                    _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, GetInitialRemoteExpiry()).ConfigureAwait(false);
-                    if (_clientId != null)
-                        await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
-                }
+                    ["event_type"] = "app_started",
+                    ["event_data"] = stats,
+                    ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
+                }).ConfigureAwait(false);
+                if (gateway != null && gateway.Ok)
+                    UpdateCachedGatewayState(gateway, BuildAccessState(gateway, isFromCache: false));
             }
             catch (Exception ex)
             {
@@ -193,52 +194,79 @@ namespace Win11DesktopApp.Services
             return _clientId;
         }
 
+        internal static ClientAccessState GetCachedAccessStateSnapshot()
+        {
+            return LoadCachedAccessState();
+        }
+
         public static async Task<ClientAccessState> GetStartupAccessStateAsync()
         {
-            var accessState = new ClientAccessState();
+            var accessState = LoadCachedAccessState();
 
             try
             {
-                var machineId = LicenseService.GetMachineId();
-                var machineName = Environment.MachineName;
-                var appVersion = AppSettingsService.CurrentAppVersion;
-                var stats = CollectStats();
-                var ip = await GetIpSilentAsync().ConfigureAwait(false);
-
-                ConfigureHeaders();
-
-                var existing = await FindClientAsync(machineId).ConfigureAwait(false);
-                if (existing != null)
+                var stats = CollectStats(includeEmployeeCounts: false);
+                var gateway = await CallGatewayAsync("startup", new Dictionary<string, object?>
                 {
-                    accessState = BuildAccessState(existing.Value);
-                    _clientId = accessState.ClientId;
-                    _isBlocked = accessState.IsBlocked;
-
-                    await UpdateClientAsync(_clientId!, ip, appVersion, machineName).ConfigureAwait(false);
-                    await InsertTelemetryAsync(_clientId!, machineId, ip, appVersion, "app_started", stats).ConfigureAwait(false);
+                    ["event_type"] = "app_started",
+                    ["event_data"] = stats,
+                    ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
+                }).ConfigureAwait(false);
+                if (gateway == null || !gateway.Ok)
                     return accessState;
-                }
 
-                var initialExpiry = GetInitialRemoteExpiry();
-                _clientId = await RegisterClientAsync(machineId, machineName, ip, appVersion, initialExpiry).ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(_clientId))
-                {
-                    await InsertTelemetryAsync(_clientId, machineId, ip, appVersion, "first_launch", stats).ConfigureAwait(false);
-                    accessState = new ClientAccessState
-                    {
-                        ClientId = _clientId,
-                        ClientExists = true,
-                        IsBlocked = false,
-                        ExpiresAtUtc = ParseExpiresAt(initialExpiry)
-                    };
-                }
-
+                accessState = BuildAccessState(gateway, isFromCache: false);
+                UpdateCachedGatewayState(gateway, accessState);
                 return accessState;
             }
             catch (Exception ex)
             {
                 LoggingService.LogWarning("TelemetryService.GetStartupAccessState", ex.Message);
+                return accessState.IsOfflineGraceActive ? accessState : new ClientAccessState();
+            }
+        }
+
+        public static async Task<ClientAccessState?> MigrateLegacyLicenseAsync(
+            string plan,
+            string expiresOn,
+            string activatedOn,
+            bool isUnlimited)
+        {
+            try
+            {
+                var gateway = await CallGatewayAsync("migrate_legacy_license", new Dictionary<string, object?>
+                {
+                    ["plan"] = plan,
+                    ["expires_on"] = expiresOn,
+                    ["activated_on"] = activatedOn,
+                    ["is_unlimited"] = isUnlimited,
+                    ["source"] = "local_file"
+                }).ConfigureAwait(false);
+
+                if (gateway == null)
+                {
+                    LoggingService.LogWarning("TelemetryService.MigrateLegacyLicense", "gateway_failed");
+                    return null;
+                }
+
+                if (!gateway.Ok)
+                {
+                    var reason = string.IsNullOrWhiteSpace(gateway.Error) ? "gateway_failed" : gateway.Error;
+                    LoggingService.LogWarning("TelemetryService.MigrateLegacyLicense", reason);
+                    return null;
+                }
+
+                if (string.Equals(gateway.MigrationResult, "noop", StringComparison.OrdinalIgnoreCase))
+                    LoggingService.LogWarning("TelemetryService.MigrateLegacyLicense", "noop_server_newer");
+
+                var accessState = BuildAccessState(gateway, isFromCache: false);
+                UpdateCachedGatewayState(gateway, accessState);
                 return accessState;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.MigrateLegacyLicense", $"gateway_failed: {ex.Message}");
+                return null;
             }
         }
 
@@ -251,15 +279,16 @@ namespace Win11DesktopApp.Services
             {
                 try
                 {
-                    if (string.IsNullOrEmpty(_clientId)) return;
-                    var machineId = LicenseService.GetMachineId();
-                    var appVersion = AppSettingsService.CurrentAppVersion;
-                    ConfigureHeaders();
                     var eventData = data ?? new Dictionary<string, object>();
                     var allStats = CollectStats();
                     foreach (var kv in allStats)
                         eventData.TryAdd(kv.Key, kv.Value);
-                    await InsertTelemetryAsync(_clientId, machineId, "", appVersion, eventType, eventData).ConfigureAwait(false);
+                    await CallGatewayAsync("track_event", new Dictionary<string, object?>
+                    {
+                        ["event_type"] = eventType,
+                        ["event_data"] = eventData,
+                        ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
+                    }).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -277,123 +306,143 @@ namespace Win11DesktopApp.Services
             catch (Exception ex) { LoggingService.LogWarning("Telemetry.GetIp", ex.Message); return ""; }
         }
 
-        private static async Task<JsonElement?> FindClientAsync(string machineId)
+        internal static async Task<bool> AcknowledgeCommandAsync(string commandId, string status, Dictionary<string, object?>? result, string? errorText)
         {
-            var url = $"{_baseUrl}/rest/v1/clients?machine_id=eq.{Uri.EscapeDataString(machineId)}&select=id,is_blocked,expires_at";
-            var resp = await _http.GetAsync(url).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode) return null;
+            if (string.IsNullOrWhiteSpace(commandId))
+                return false;
 
-            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(json);
-            var arr = doc.RootElement.Clone();
-            if (arr.GetArrayLength() > 0)
-                return arr[0];
-            return null;
+            var gateway = await CallGatewayAsync("ack_command", new Dictionary<string, object?>
+            {
+                ["command_id"] = commandId,
+                ["command_status"] = status,
+                ["command_result"] = result,
+                ["command_error"] = errorText
+            }).ConfigureAwait(false);
+
+            return gateway?.Ok == true;
         }
 
-        private static async Task UpdateClientAsync(string clientId, string ip, string version, string name)
+        private static async Task<GatewayResponse?> CallGatewayAsync(string action, Dictionary<string, object?>? extras = null)
         {
-            var payload = new
+            var body = new Dictionary<string, object?>
             {
-                last_seen = DateTime.UtcNow.ToString("o"),
-                ip_address = ip,
-                app_version = version,
-                machine_name = name
+                ["action"] = action,
+                ["machine_id"] = LicenseService.GetMachineId(),
+                ["machine_name"] = Environment.MachineName,
+                ["app_version"] = AppSettingsService.CurrentAppVersion
             };
-            var body = JsonSerializer.Serialize(payload);
-            var req = new HttpRequestMessage(new HttpMethod("PATCH"),
-                $"{_baseUrl}/rest/v1/clients?id=eq.{clientId}")
+            if (extras != null)
             {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            await _http.SendAsync(req).ConfigureAwait(false);
-        }
+                foreach (var kv in extras)
+                    body[kv.Key] = kv.Value;
+            }
 
-        private static async Task<string?> RegisterClientAsync(string machineId, string machineName, string ip, string version, string expiresAt)
-        {
-            var licenseKey = $"AC-{machineId}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-            var payload = new
+            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/functions/v1/client-gateway")
             {
-                license_key = licenseKey,
-                machine_id = machineId,
-                machine_name = machineName,
-                ip_address = ip,
-                app_version = version,
-                activated_at = DateTime.UtcNow.ToString("o"),
-                expires_at = expiresAt,
-                last_seen = DateTime.UtcNow.ToString("o"),
-                is_blocked = false
+                Content = new StringContent(JsonSerializer.Serialize(body, _jsonOptions), Encoding.UTF8, "application/json")
             };
-            var body = JsonSerializer.Serialize(payload);
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/rest/v1/clients")
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            req.Headers.Add("Prefer", "return=representation");
+            ApplyHeaders(req);
+
             var resp = await _http.SendAsync(req).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode) return null;
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+            {
+                LoggingService.LogWarning("TelemetryService.Gateway", $"{action}: {(int)resp.StatusCode} {json}");
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<GatewayResponse>(json, _jsonOptions);
+                    if (errorResponse != null)
+                    {
+                        errorResponse.Ok = false;
+                        if (string.IsNullOrWhiteSpace(errorResponse.Error))
+                            errorResponse.Error = resp.StatusCode.ToString();
+                        return errorResponse;
+                    }
+                }
+                catch
+                {
+                }
 
-            var respJson = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(respJson);
-            if (doc.RootElement.GetArrayLength() > 0)
-                return doc.RootElement[0].GetProperty("id").GetString();
-            return null;
+                return new GatewayResponse
+                {
+                    Ok = false,
+                    Error = string.IsNullOrWhiteSpace(json) ? resp.StatusCode.ToString() : json
+                };
+            }
+
+            return JsonSerializer.Deserialize<GatewayResponse>(json, _jsonOptions);
         }
 
-        private static ClientAccessState BuildAccessState(JsonElement client)
+        private static ClientAccessState BuildAccessState(GatewayResponse gateway, bool isFromCache)
         {
             return new ClientAccessState
             {
-                ClientId = client.GetProperty("id").GetString(),
-                ClientExists = true,
-                IsBlocked = client.TryGetProperty("is_blocked", out var blocked) && blocked.GetBoolean(),
-                ExpiresAtUtc = client.TryGetProperty("expires_at", out var expiresAt)
-                    ? ParseExpiresAt(expiresAt.GetString())
-                    : null
+                ClientId = gateway.ClientId,
+                ClientExists = !string.IsNullOrWhiteSpace(gateway.ClientId),
+                IsBlocked = gateway.IsBlocked,
+                ExpiresAtUtc = gateway.ExpiresAt,
+                Policy = gateway.Policy,
+                PendingCommands = gateway.PendingCommands ?? new List<RemoteCommand>(),
+                IsLive = !isFromCache,
+                IsFromCache = isFromCache,
+                LastServerCheckUtc = DateTime.UtcNow,
+                Source = isFromCache ? "cache" : "server"
             };
         }
 
-        private static DateTime? ParseExpiresAt(string? value)
+        private static ClientAccessState LoadCachedAccessState()
         {
-            if (string.IsNullOrWhiteSpace(value))
-                return null;
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return new ClientAccessState();
 
-            return DateTime.TryParse(
-                value,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var parsed)
-                ? parsed
-                : null;
-        }
+            if (string.IsNullOrWhiteSpace(settings.CachedAccessLastCheckedAtUtc))
+                return new ClientAccessState();
 
-        private static string GetInitialRemoteExpiry()
-        {
-            if (LicenseService.IsLicenseValid())
-                return LicenseService.GetExpiresAt();
+            if (!DateTime.TryParse(settings.CachedAccessLastCheckedAtUtc, out var lastCheckedUtc))
+                return new ClientAccessState();
 
-            return DateTime.UtcNow.AddDays(14).ToString("o");
-        }
-
-        private static async Task InsertTelemetryAsync(string clientId, string machineId, string ip, string version, string eventType, Dictionary<string, object>? eventData = null)
-        {
-            var dict = new Dictionary<string, object?>
+            DateTime? expiresAtUtc = null;
+            if (!string.IsNullOrWhiteSpace(settings.CachedAccessExpiresAtUtc)
+                && DateTime.TryParse(settings.CachedAccessExpiresAtUtc, out var parsedExpires))
             {
-                ["client_id"] = clientId,
-                ["machine_id"] = machineId,
-                ["ip_address"] = ip,
-                ["app_version"] = version,
-                ["event_type"] = eventType
-            };
-            if (eventData != null && eventData.Count > 0)
-                dict["event_data"] = eventData;
+                expiresAtUtc = parsedExpires.Kind == DateTimeKind.Utc
+                    ? parsedExpires
+                    : parsedExpires.ToUniversalTime();
+            }
 
-            var body = JsonSerializer.Serialize(dict);
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/rest/v1/telemetry")
+            return new ClientAccessState
             {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
+                ClientId = settings.CachedAccessClientId,
+                ClientExists = !string.IsNullOrWhiteSpace(settings.CachedAccessClientId),
+                IsBlocked = settings.CachedAccessIsBlocked,
+                ExpiresAtUtc = expiresAtUtc,
+                Policy = _cachedPolicy,
+                IsLive = false,
+                IsFromCache = true,
+                LastServerCheckUtc = lastCheckedUtc.Kind == DateTimeKind.Utc
+                    ? lastCheckedUtc
+                    : lastCheckedUtc.ToUniversalTime(),
+                Source = string.IsNullOrWhiteSpace(settings.CachedAccessSource) ? "cache" : settings.CachedAccessSource
             };
-            await _http.SendAsync(req).ConfigureAwait(false);
+        }
+
+        private static void UpdateCachedGatewayState(GatewayResponse gateway, ClientAccessState accessState)
+        {
+            _clientId = string.IsNullOrWhiteSpace(gateway.ClientId) ? _clientId : gateway.ClientId;
+            _isBlocked = gateway.IsBlocked;
+            _cachedPolicy = gateway.Policy;
+
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            settings.CachedAccessClientId = accessState.ClientId ?? string.Empty;
+            settings.CachedAccessIsBlocked = accessState.IsBlocked;
+            settings.CachedAccessExpiresAtUtc = accessState.ExpiresAtUtc?.ToString("o") ?? string.Empty;
+            settings.CachedAccessLastCheckedAtUtc = accessState.LastServerCheckUtc?.ToString("o") ?? DateTime.UtcNow.ToString("o");
+            settings.CachedAccessSource = "server";
+            App.AppSettingsService?.SaveSettings();
         }
     }
 }

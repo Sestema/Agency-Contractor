@@ -1,0 +1,582 @@
+<Window x:Class="AdminPanel.ClientMirrorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Client Mirror"
+        Width="1380" Height="900"
+        MinWidth="1180" MinHeight="760"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E2E">
+    <Window.Resources>
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="CaptionText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#A6ADC8"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+
+        <Style x:Key="ActionBtn" TargetType="Button">
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ValueTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#1E1E2E"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderBrush" Value="#585B70"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+
+        <Style x:Key="MirrorDataGrid" TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="RowBackground" Value="#313244"/>
+            <Setter Property="AlternatingRowBackground" Value="#363849"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#45475A"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+        </Style>
+
+        <Style x:Key="MirrorListBox" TargetType="ListBox">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#3A3D52"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#45475A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="TxtHeader" Text="Mirror viewer" Foreground="#CDD6F4" FontSize="24" FontWeight="Bold"/>
+            <TextBlock x:Name="TxtSubHeader" Text="Read-only synchronized snapshot" Foreground="#A6ADC8" FontSize="12.5" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <WrapPanel Grid.Row="1" Margin="0,0,0,12">
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Mirror status" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtMirrorStatus" Text="Loading..." Foreground="#89B4FA" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Agencies" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtAgencyCount" Text="0" Foreground="#74C7EC" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Employers" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtEmployerCount" Text="0" Foreground="#A6E3A1" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Employees" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtEmployeeCount" Text="0" Foreground="#FAB387" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8">
+                <StackPanel>
+                    <TextBlock Text="Last sync" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtLastSync" Text="—" Foreground="#CDD6F4" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="8,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Full sync" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtFullSync" Text="—" Foreground="#A6E3A1" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="8,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Schema" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtSchemaVersion" Text="—" Foreground="#74C7EC" FontSize="13" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource CardBorder}" Padding="12,8" Margin="8,0,0,0" Width="340">
+                <StackPanel>
+                    <TextBlock Text="Last error" Foreground="#A6ADC8" FontSize="11"/>
+                    <TextBlock x:Name="TxtLastError" Text="—" Foreground="#F38BA8" FontSize="12.5" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <Button x:Name="BtnRefreshMirror"
+                    Content="Refresh mirror"
+                    Style="{StaticResource ActionBtn}"
+                    Background="#89B4FA"
+                    Foreground="#1E1E2E"
+                    Margin="8,0,0,0"
+                    Click="BtnRefreshMirror_Click"/>
+        </WrapPanel>
+
+        <TabControl Grid.Row="2" Background="#1E1E2E" BorderThickness="0">
+            <TabItem Header="Agency">
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="10">
+                        <ListBox x:Name="LstAgencies"
+                                 Style="{StaticResource MirrorListBox}"
+                                 DisplayMemberPath="DisplayName"
+                                 SelectionChanged="LstAgencies_SelectionChanged"/>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Agency details" Style="{StaticResource SectionHeader}"/>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Margin="0,0,10,10">
+                                        <TextBlock Text="Name" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtAgencyName" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="ICO" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtAgencyIco" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="Full address" Style="{StaticResource CaptionText}"/>
+                                    <TextBox x:Name="TxtAgencyAddress" Style="{StaticResource ValueTextBox}" MinHeight="70"/>
+                                </StackPanel>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Source updated" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtAgencySourceUpdated" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Mirror status" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtAgencyState" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Employers">
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="330"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="10">
+                        <ListBox x:Name="LstEmployers"
+                                 Style="{StaticResource MirrorListBox}"
+                                 DisplayMemberPath="DisplayName"
+                                 SelectionChanged="LstEmployers_SelectionChanged"/>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Employer details" Style="{StaticResource SectionHeader}"/>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Margin="0,0,10,10">
+                                        <TextBlock Text="Name" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployerName" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="ICO" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployerIco" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="Legal address" Style="{StaticResource CaptionText}"/>
+                                    <TextBox x:Name="TxtEmployerLegalAddress" Style="{StaticResource ValueTextBox}" MinHeight="70"/>
+                                </StackPanel>
+                                <UniformGrid Columns="4" Margin="0,0,0,12">
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Weekly hours" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployerWeeklyHours" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Daily hours" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployerDailyHours" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Shifts" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployerShiftCount" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Mirror state" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployerState" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+
+                                <TextBlock Text="Addresses" Style="{StaticResource SectionHeader}"/>
+                                <DataGrid x:Name="DgEmployerAddresses" Style="{StaticResource MirrorDataGrid}" Height="170" Margin="0,0,0,12">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="#" Binding="{Binding SortOrder}" Width="50"/>
+                                        <DataGridTextColumn Header="Address" Binding="{Binding FullAddress}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock Text="Positions" Style="{StaticResource SectionHeader}"/>
+                                <DataGrid x:Name="DgEmployerPositions" Style="{StaticResource MirrorDataGrid}" Height="190">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="#" Binding="{Binding SortOrder}" Width="50"/>
+                                        <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
+                                        <DataGridTextColumn Header="Number" Binding="{Binding PositionNumber}" Width="120"/>
+                                        <DataGridTextColumn Header="Monthly brutto" Binding="{Binding MonthlySalaryBrutto}" Width="120"/>
+                                        <DataGridTextColumn Header="Hourly" Binding="{Binding HourlySalary}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Employees">
+                <Grid Margin="0,12,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="12"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource CardBorder}" Padding="10">
+                        <DockPanel>
+                            <TextBlock Text="Search" Foreground="#A6ADC8" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox x:Name="TxtEmployeeSearch"
+                                     Width="260"
+                                     Background="#1E1E2E"
+                                     Foreground="#CDD6F4"
+                                     BorderBrush="#585B70"
+                                     BorderThickness="1"
+                                     Padding="8,6"
+                                     TextChanged="TxtEmployeeSearch_TextChanged"/>
+                            <TextBlock Text="Status" Foreground="#A6ADC8" VerticalAlignment="Center" Margin="18,0,8,0"/>
+                            <ComboBox x:Name="CmbEmployeeStatusFilter"
+                                      Width="180"
+                                      Background="#1E1E2E"
+                                      Foreground="#CDD6F4"
+                                      BorderBrush="#585B70"
+                                      BorderThickness="1"
+                                      Padding="8,5"
+                                      SelectionChanged="CmbEmployeeStatusFilter_SelectionChanged">
+                                <ComboBoxItem Tag="all" IsSelected="True">All employees</ComboBoxItem>
+                                <ComboBoxItem Tag="active">Only active</ComboBoxItem>
+                                <ComboBoxItem Tag="archived">Only archived</ComboBoxItem>
+                                <ComboBoxItem Tag="deleted">Only deleted</ComboBoxItem>
+                            </ComboBox>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2.2*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="1.25*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="10">
+                            <DataGrid x:Name="DgEmployees"
+                                      Style="{StaticResource MirrorDataGrid}"
+                                      SelectionChanged="DgEmployees_SelectionChanged">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="220"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding DisplayStatus}" Width="100"/>
+                                    <DataGridTextColumn Header="Employer" Binding="{Binding EmployerDisplayName}" Width="220"/>
+                                    <DataGridTextColumn Header="Position" Binding="{Binding PositionTag}" Width="160"/>
+                                    <DataGridTextColumn Header="Visa" Binding="{Binding VisaTitleDisplay}" Width="140"/>
+                                    <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Employee details" Style="{StaticResource SectionHeader}"/>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Full name" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeName" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Status" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeStatus" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Position" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeePosition" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Employer" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeEmployerName" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Phone" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeePhone" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Email" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeEmail" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Birth date" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeBirthDate" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Gender" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeGender" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Employee type" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeType" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="EU document type" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeEuDocumentType" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Department" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeDepartment" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Contract type" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeContractType" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Monthly brutto" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeMonthlySalary" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Hourly salary" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeHourlySalary" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="Local address" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployeeLocalAddress" Style="{StaticResource ValueTextBox}" MinHeight="60"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="Abroad address" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployeeAbroadAddress" Style="{StaticResource ValueTextBox}" MinHeight="60"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Document health" Style="{StaticResource SectionHeader}"/>
+                                    <UniformGrid Columns="2" Margin="0,0,0,10">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Passport" Style="{StaticResource CaptionText}"/>
+                                            <Border x:Name="BdPassportState" Background="#45475A" CornerRadius="6" Padding="8,4">
+                                                <TextBlock x:Name="TxtPassportState" Text="—" Foreground="#CDD6F4" FontWeight="SemiBold"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Visa" Style="{StaticResource CaptionText}"/>
+                                            <Border x:Name="BdVisaState" Background="#45475A" CornerRadius="6" Padding="8,4">
+                                                <TextBlock x:Name="TxtVisaState" Text="—" Foreground="#CDD6F4" FontWeight="SemiBold"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Insurance" Style="{StaticResource CaptionText}"/>
+                                            <Border x:Name="BdInsuranceState" Background="#45475A" CornerRadius="6" Padding="8,4">
+                                                <TextBlock x:Name="TxtInsuranceState" Text="—" Foreground="#CDD6F4" FontWeight="SemiBold"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Work permit" Style="{StaticResource CaptionText}"/>
+                                            <Border x:Name="BdWorkPermitState" Background="#45475A" CornerRadius="6" Padding="8,4">
+                                                <TextBlock x:Name="TxtWorkPermitState" Text="—" Foreground="#CDD6F4" FontWeight="SemiBold"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <TextBlock Text="Passport" Style="{StaticResource SectionHeader}"/>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Passport number" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeePassportNumber" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Passport expiry" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeePassportExpiry" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Passport city" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeePassportCity" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Passport country" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeePassportCountry" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <TextBlock Text="Visa" Style="{StaticResource SectionHeader}"/>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Visa title" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeVisaTitle" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Visa expiry" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeVisaExpiry" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Visa type" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeVisaType" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Visa doc type" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeVisaDocType" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <TextBlock Text="Insurance" Style="{StaticResource SectionHeader}"/>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Insurance company" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeInsuranceCompany" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Insurance number" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeInsuranceNumber" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="Insurance expiry" Style="{StaticResource CaptionText}"/>
+                                        <TextBox x:Name="TxtEmployeeInsuranceExpiry" Style="{StaticResource ValueTextBox}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Work permit" Style="{StaticResource SectionHeader}"/>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Permit name" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeWorkPermitName" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Permit number" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeWorkPermitNumber" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Permit type" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeWorkPermitType" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Permit expiry" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeWorkPermitExpiry" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="0,0,10,10">
+                                            <TextBlock Text="Permit issue date" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeWorkPermitIssueDate" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="Authority" Style="{StaticResource CaptionText}"/>
+                                            <TextBox x:Name="TxtEmployeeWorkPermitAuthority" Style="{StaticResource ValueTextBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <TextBlock Text="Firm history" Style="{StaticResource SectionHeader}"/>
+                                    <DataGrid x:Name="DgEmployeeHistory" Style="{StaticResource MirrorDataGrid}" Height="190">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="#" Binding="{Binding SortOrder}" Width="50"/>
+                                            <DataGridTextColumn Header="Firm" Binding="{Binding FirmName}" Width="*"/>
+                                            <DataGridTextColumn Header="Start" Binding="{Binding StartDate}" Width="100"/>
+                                            <DataGridTextColumn Header="End" Binding="{Binding EndDate}" Width="100"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

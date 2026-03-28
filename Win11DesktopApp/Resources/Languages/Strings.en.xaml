@@ -1416,6 +1416,8 @@
     <sys:String x:Key="AccessStatusTrialDetail">{0} days left, until {1}</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Application activated</sys:String>
     <sys:String x:Key="AccessStatusUnlimitedDetail">Unlimited access is active.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Offline access</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">Working from the last confirmed access state. Server check is unavailable, {0} day(s) of offline grace remain. Cached access until {1}.</sys:String>
     <sys:String x:Key="AccessStatusReadOnlyTitle">Read-only mode</sys:String>
     <sys:String x:Key="AccessStatusReadOnlyDetail">The trial period ended. Full access requires activation.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Access blocked</sys:String>
@@ -1476,11 +1478,11 @@
     <sys:String x:Key="CompanyDialogTitleEdit">Edit Company</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Add New Company</sys:String>
     <sys:String x:Key="CompanyDialogSubtitle">Company details, addresses, and positions</sys:String>
-    <sys:String x:Key="MsgCompanyHasEmployees">This company has {0} employee(s). Delete anyway?</sys:String>
+    <sys:String x:Key="MsgCompanyHasEmployees">This company has {0} employee(s). Delete the employees first, then delete the company.</sys:String>
     <sys:String x:Key="TitleWarning">Warning</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Are you sure you want to delete company "{0}"?
 
-The folder on disk will NOT be deleted.</sys:String>
+The company folder on disk will be deleted together with all its contents.</sys:String>
     <sys:String x:Key="TitleDeleteCompany">Delete Company</sys:String>
 
     <!-- Template errors -->

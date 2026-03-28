@@ -219,6 +219,46 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public int GetCompanyEmployeeFolderCount(string companyName)
+        {
+            try
+            {
+                var employeesFolder = GetEmployeesFolder(companyName);
+                if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
+                    return 0;
+
+                return Directory.GetDirectories(employeesFolder).Length;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"FolderService.GetCompanyEmployeeFolderCount error: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public bool DeleteCompanyFolder(string companyName)
+        {
+            if (string.IsNullOrWhiteSpace(RootPath) || string.IsNullOrWhiteSpace(companyName))
+                return true;
+
+            var companyFolder = GetCompanyFolder(companyName);
+            if (string.IsNullOrWhiteSpace(companyFolder) || !Directory.Exists(companyFolder))
+                return true;
+
+            try
+            {
+                NormalizeAttributesRecursive(companyFolder);
+                Directory.Delete(companyFolder, true);
+                Debug.WriteLine($"FolderService.DeleteCompanyFolder: {companyFolder}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"FolderService.DeleteCompanyFolder error: {ex.Message}");
+                return false;
+            }
+        }
+
         // ============ NORMALIZATION ============
 
         /// <summary>
@@ -289,6 +329,42 @@ namespace Win11DesktopApp.Services
             }
 
             Directory.CreateDirectory(preferredPath);
+        }
+
+        private static void NormalizeAttributesRecursive(string directory)
+        {
+            if (!Directory.Exists(directory))
+                return;
+
+            foreach (var filePath in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(filePath, FileAttributes.Normal);
+                }
+                catch
+                {
+                }
+            }
+
+            foreach (var dirPath in Directory.GetDirectories(directory, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(dirPath, FileAttributes.Normal);
+                }
+                catch
+                {
+                }
+            }
+
+            try
+            {
+                File.SetAttributes(directory, FileAttributes.Normal);
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>

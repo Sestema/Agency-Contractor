@@ -513,6 +513,8 @@ namespace Win11DesktopApp.Services
                 Directory.CreateDirectory(employeeFolder);
                 var jsonPath = Path.Combine(employeeFolder, "employee.json");
                 WriteJsonAtomic(jsonPath, data);
+                var firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
+                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, employeeFolder, data);
                 return true;
             }
             catch (Exception ex)
@@ -564,10 +566,13 @@ namespace Win11DesktopApp.Services
         {
             try
             {
+                var data = LoadEmployeeData(employeeFolder);
+                var firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
                 if (Directory.Exists(employeeFolder))
                 {
                     Directory.Delete(employeeFolder, true);
                 }
+                App.AdminMirrorSyncService?.EnqueueEmployeeDelete(firmName, data);
                 LoggingService.LogInfo("EmployeeService", $"Employee deleted: {employeeFolder}");
                 return true;
             }
@@ -1052,6 +1057,7 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee restored to {newFirmName}: {destFolder}");
+                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(newFirmName, destFolder, restoredData);
                 return new RestoreEmployeeResult
                 {
                     RestoredFolder = destFolder,
@@ -1114,6 +1120,8 @@ namespace Win11DesktopApp.Services
                     Description = string.Format(Res("HistoryDescArchiveUndone"), target.FirmName)
                 });
 
+                var restoredData = LoadEmployeeData(restoredFolder);
+                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(target.FirmName, restoredFolder, restoredData);
                 return new UndoArchiveResult
                 {
                     RestoredFolder = restoredFolder,
@@ -1241,12 +1249,7 @@ namespace Win11DesktopApp.Services
                 LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
                     $"Archive folder still exists after restore, scheduling cleanup: {archiveEmployeeFolder}");
                 await PendingCleanupService.EnqueueAsync(archiveEmployeeFolder, isUndo ? "undo-archive-folder" : "restore-archive-folder");
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(15000);
-                    if (TryCleanupDeferredDirectory(archiveEmployeeFolder))
-                        await PendingCleanupService.RemoveAsync(archiveEmployeeFolder);
-                });
+                ScheduleDeferredCleanupRetry(archiveEmployeeFolder, "EmployeeService.RestoreArchivedEmployeeCore");
             }
 
             return destFolder;
@@ -1408,12 +1411,7 @@ namespace Win11DesktopApp.Services
                     LoggingService.LogWarning("ArchiveEmployee",
                         $"Employee folder still exists after archive, scheduling cleanup: {employeeFolder}");
                     await PendingCleanupService.EnqueueAsync(employeeFolder, "archive-source-folder");
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(15000);
-                        if (TryCleanupDeferredDirectory(employeeFolder))
-                            await PendingCleanupService.RemoveAsync(employeeFolder);
-                    });
+                    ScheduleDeferredCleanupRetry(employeeFolder, "EmployeeService.ArchiveEmployee");
                 }
 
                 var opId = Guid.NewGuid().ToString();
@@ -1429,6 +1427,7 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived: {employeeName} from {firmName}");
+                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
@@ -1568,12 +1567,7 @@ namespace Win11DesktopApp.Services
                     LoggingService.LogWarning("ArchiveEmployeeFromPathAsync",
                         $"Employee folder still exists after archive, scheduling cleanup: {sourceEmployeeFolder}");
                     await PendingCleanupService.EnqueueAsync(sourceEmployeeFolder, "archive-rd-source-folder");
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(15000);
-                        if (TryCleanupDeferredDirectory(sourceEmployeeFolder))
-                            await PendingCleanupService.RemoveAsync(sourceEmployeeFolder);
-                    });
+                    ScheduleDeferredCleanupRetry(sourceEmployeeFolder, "EmployeeService.ArchiveEmployeeFromPathAsync");
                 }
 
                 var opId = Guid.NewGuid().ToString();
@@ -1589,6 +1583,7 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived from Recently Deleted: {employeeName} from {firmName}");
+                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
@@ -1904,6 +1899,23 @@ namespace Win11DesktopApp.Services
             if (TryBulkDelete(dir)) return true;
 
             return TryForceDeleteViaCmd(dir);
+        }
+
+        private static void ScheduleDeferredCleanupRetry(string directory, string context)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(15000);
+                    if (TryCleanupDeferredDirectory(directory))
+                        await PendingCleanupService.RemoveAsync(directory);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning(context, $"Deferred cleanup retry failed: {ex.Message}");
+                }
+            });
         }
 
         private static bool TryForceDeleteViaCmd(string dir)

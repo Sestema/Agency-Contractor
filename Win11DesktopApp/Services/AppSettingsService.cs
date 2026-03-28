@@ -14,7 +14,7 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.32";
+        public const string CurrentAppVersion = "0.1.37";
         public static string? PendingUpdateFrom { get; set; }
         private readonly bool _suppressStartupNotifications;
         private string _settingsPath;
@@ -86,6 +86,12 @@ namespace Win11DesktopApp.Services
             public string EncryptedProfileSessionToken { get; set; } = string.Empty;
             public int ProfileSessionVersion { get; set; } = 0;
             public string ProfileClientId { get; set; } = string.Empty;
+            public string CachedAccessClientId { get; set; } = string.Empty;
+            public string CachedAccessExpiresAtUtc { get; set; } = string.Empty;
+            public string CachedAccessLastCheckedAtUtc { get; set; } = string.Empty;
+            public bool CachedAccessIsBlocked { get; set; } = false;
+            public string CachedAccessSource { get; set; } = string.Empty;
+            public string LegacyLicenseMigratedAtUtc { get; set; } = string.Empty;
         }
 
         public AppSettings Settings { get; private set; } = new AppSettings();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Xunit;
@@ -86,7 +87,7 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public void DeleteTemplate_ShouldRemoveFilesAndIndexEntry()
+        public async Task DeleteTemplate_ShouldRemoveFilesAndIndexEntry()
         {
             var firmName = "TestFirm";
             var sourceFile = Path.Combine(_testRootPath, "source.docx");
@@ -98,7 +99,7 @@ namespace Win11DesktopApp.Tests
             var templateToDelete = templates[0];
 
             // Act
-            _templateService.DeleteTemplate(firmName, templateToDelete);
+            await _templateService.DeleteTemplateAsync(firmName, templateToDelete);
 
             // Assert
             var remainingTemplates = _templateService.GetTemplates(firmName);
@@ -112,7 +113,7 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public void DeleteTemplate_ShouldRemoveReadOnlyFilesAndFolder()
+        public async Task DeleteTemplate_ShouldRemoveReadOnlyFilesAndFolder()
         {
             var firmName = "TestFirm";
             var sourceFile = Path.Combine(_testRootPath, "source.docx");
@@ -126,7 +127,7 @@ namespace Win11DesktopApp.Tests
 
             File.SetAttributes(templateFile, FileAttributes.ReadOnly);
 
-            _templateService.DeleteTemplate(firmName, template);
+            await _templateService.DeleteTemplateAsync(firmName, template);
 
             Assert.False(Directory.Exists(templateFolder));
             Assert.Empty(_templateService.GetTemplates(firmName));
