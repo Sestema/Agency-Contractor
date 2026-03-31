@@ -459,6 +459,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void OnPlaceTag(object? param)
         {
+            if (!PolicyService.EnsureWriteAllowed("додати тег у PDF-шаблон"))
+                return;
+
             if (param is TagEntry tag)
             {
                 RequestPlaceTagOnClick?.Invoke(tag);
@@ -467,6 +470,9 @@ namespace Win11DesktopApp.ViewModels
 
         public void PlaceTagAtPosition(TagEntry tag, double xPercent, double yPercent)
         {
+            if (!PolicyService.EnsureWriteAllowed("розмістити тег у PDF-шаблоні"))
+                return;
+
             var placement = new PdfTagPlacement
             {
                 Tag = tag.Tag,
@@ -493,6 +499,9 @@ namespace Win11DesktopApp.ViewModels
         /// </summary>
         public void UpdatePlacementPosition(PdfPlacementViewModel placement, double newXPercent, double newYPercent)
         {
+            if (!PolicyService.EnsureWriteAllowed("змінити розташування тегу в PDF-шаблоні"))
+                return;
+
             placement.X = Math.Clamp(newXPercent, 0, 1);
             placement.Y = Math.Clamp(newYPercent, 0, 1);
             RequestRenderOverlays?.Invoke();
@@ -500,6 +509,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void RemovePlacement(object? param)
         {
+            if (!PolicyService.EnsureWriteAllowed("видалити тег із PDF-шаблону"))
+                return;
+
             if (param is PdfPlacementViewModel p)
             {
                 AllPlacements.Remove(p);
@@ -522,6 +534,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void Save()
         {
+            if (!PolicyService.EnsureWriteAllowed("зберегти PDF-шаблон"))
+                return;
+
             try
             {
                 if (_templateUnavailable)

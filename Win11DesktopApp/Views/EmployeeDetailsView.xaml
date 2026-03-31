@@ -643,11 +643,25 @@
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
-                                                        <Image Source="{Binding PassportFilePath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                                                               Visibility="{Binding PassportIsPdf, Converter={StaticResource InverseBoolToVis}}"/>
-                                                        <TextBlock Text="PDF" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                                                                   FontSize="{DynamicResource FS16}" FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                   Visibility="{Binding PassportIsPdf, Converter={StaticResource BoolToVis}}"/>
+                                                        <Image Source="{Binding PassportPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
+                                                               Visibility="{Binding PassportPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}"/>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding PassportPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
+                                                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS20}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewLoading}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
+                                                        </StackPanel>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding PassportPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
+                                                            <TextBlock Text="PDF" HorizontalAlignment="Center" FontSize="{DynamicResource FS16}"
+                                                                       FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewFailed}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,6"/>
+                                                            <Button Style="{StaticResource DocCardBtn}" Command="{Binding RetryPreviewCommand}" CommandParameter="passport">
+                                                                <TextBlock Text="{DynamicResource PreviewRetry}" FontSize="{DynamicResource FS10}"/>
+                                                            </Button>
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Border>
                                                 <Grid>
@@ -702,11 +716,25 @@
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
-                                                        <Image Source="{Binding VisaFilePath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                                                               Visibility="{Binding VisaIsPdf, Converter={StaticResource InverseBoolToVis}}"/>
-                                                        <TextBlock Text="PDF" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                                                                   FontSize="{DynamicResource FS16}" FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                   Visibility="{Binding VisaIsPdf, Converter={StaticResource BoolToVis}}"/>
+                                                        <Image Source="{Binding VisaPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
+                                                               Visibility="{Binding VisaPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}"/>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding VisaPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
+                                                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS20}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewLoading}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
+                                                        </StackPanel>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding VisaPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
+                                                            <TextBlock Text="PDF" HorizontalAlignment="Center" FontSize="{DynamicResource FS16}"
+                                                                       FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewFailed}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,6"/>
+                                                            <Button Style="{StaticResource DocCardBtn}" Command="{Binding RetryPreviewCommand}" CommandParameter="visa">
+                                                                <TextBlock Text="{DynamicResource PreviewRetry}" FontSize="{DynamicResource FS10}"/>
+                                                            </Button>
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Border>
                                                 <Grid>
@@ -769,11 +797,25 @@
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
-                                                        <Image Source="{Binding InsuranceFilePath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                                                               Visibility="{Binding InsuranceIsPdf, Converter={StaticResource InverseBoolToVis}}"/>
-                                                        <TextBlock Text="PDF" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                                                                   FontSize="{DynamicResource FS16}" FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                   Visibility="{Binding InsuranceIsPdf, Converter={StaticResource BoolToVis}}"/>
+                                                        <Image Source="{Binding InsurancePreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
+                                                               Visibility="{Binding InsurancePreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}"/>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding InsurancePreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
+                                                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS20}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewLoading}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
+                                                        </StackPanel>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding InsurancePreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
+                                                            <TextBlock Text="PDF" HorizontalAlignment="Center" FontSize="{DynamicResource FS16}"
+                                                                       FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewFailed}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,6"/>
+                                                            <Button Style="{StaticResource DocCardBtn}" Command="{Binding RetryPreviewCommand}" CommandParameter="insurance">
+                                                                <TextBlock Text="{DynamicResource PreviewRetry}" FontSize="{DynamicResource FS10}"/>
+                                                            </Button>
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Border>
                                                 <Grid>
@@ -830,11 +872,25 @@
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
-                                                        <Image Source="{Binding WorkPermitFilePath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                                                               Visibility="{Binding WorkPermitIsPdf, Converter={StaticResource InverseBoolToVis}}"/>
-                                                        <TextBlock Text="PDF" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                                                                   FontSize="{DynamicResource FS16}" FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                   Visibility="{Binding WorkPermitIsPdf, Converter={StaticResource BoolToVis}}"/>
+                                                        <Image Source="{Binding WorkPermitPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
+                                                               Visibility="{Binding WorkPermitPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}"/>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding WorkPermitPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
+                                                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS20}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewLoading}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
+                                                        </StackPanel>
+                                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    Visibility="{Binding WorkPermitPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
+                                                            <TextBlock Text="PDF" HorizontalAlignment="Center" FontSize="{DynamicResource FS16}"
+                                                                       FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource PreviewFailed}" HorizontalAlignment="Center"
+                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,6"/>
+                                                            <Button Style="{StaticResource DocCardBtn}" Command="{Binding RetryPreviewCommand}" CommandParameter="work_permit">
+                                                                <TextBlock Text="{DynamicResource PreviewRetry}" FontSize="{DynamicResource FS10}"/>
+                                                            </Button>
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Border>
                                                 <Grid>

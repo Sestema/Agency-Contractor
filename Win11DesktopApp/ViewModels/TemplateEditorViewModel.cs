@@ -523,6 +523,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ApplySelectedStarterTemplate()
         {
+            if (!PolicyService.EnsureWriteAllowed("застосувати стартовий шаблон"))
+                return;
+
             if (SelectedStarterTemplate == null)
                 return;
 
@@ -602,6 +605,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task SaveAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("зберегти шаблон"))
+                return;
+
             await Task.Yield();
 
             try
@@ -657,6 +663,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void InsertTag(object? parameter)
         {
+            if (!PolicyService.EnsureWriteAllowed("вставити тег у шаблон"))
+                return;
+
             if (parameter is string tag)
             {
                 var tagText = $"${{{tag}}}";
@@ -691,6 +700,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async void RunAIInsertTags()
         {
+            if (!PolicyService.EnsureWriteAllowed("змінити шаблон через AI"))
+                return;
+
             var geminiService = App.GeminiApiService;
             if (geminiService == null || !geminiService.IsConfigured)
             {

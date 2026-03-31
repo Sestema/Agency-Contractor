@@ -31,7 +31,7 @@ namespace Win11DesktopApp.Services
                 return new ProfileCheckResult
                 {
                     IsFeatureAvailable = false,
-                    ErrorMessage = "Client ID is not available."
+                    ErrorMessage = Res("ProfileErrClientIdMissing", "Client ID is not available.")
                 };
             }
 
@@ -64,7 +64,7 @@ namespace Win11DesktopApp.Services
                 return new ProfileCheckResult
                 {
                     IsFeatureAvailable = false,
-                    ErrorMessage = ex.Message
+                    ErrorMessage = NormalizeProfileException(ex, Res("ProfileErrLoadFailed", "Failed to load profile."))
                 };
             }
         }
@@ -152,7 +152,7 @@ namespace Win11DesktopApp.Services
                 LoggingService.LogWarning("ProfileAuthService.Authenticate", ex.Message);
                 return new ProfileOperationResult
                 {
-                    ErrorMessage = ex.Message
+                    ErrorMessage = NormalizeProfileException(ex, Res("ProfileErrServiceUnavailable", "Could not contact the profile service. Try again."))
                 };
             }
         }
@@ -184,7 +184,10 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("ProfileAuthService.UpdateProfileName", ex.Message);
-                return new ProfileOperationResult { ErrorMessage = ex.Message };
+                return new ProfileOperationResult
+                {
+                    ErrorMessage = NormalizeProfileException(ex, Res("ProfileErrUpdateFailed", "Failed to update profile."))
+                };
             }
         }
 
@@ -201,7 +204,10 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("ProfileAuthService.UpdateRememberMe", ex.Message);
-                return new ProfileOperationResult { ErrorMessage = ex.Message };
+                return new ProfileOperationResult
+                {
+                    ErrorMessage = NormalizeProfileException(ex, Res("ProfileErrUpdateFailed", "Failed to update profile."))
+                };
             }
         }
 
@@ -224,7 +230,10 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("ProfileAuthService.ChangePassword", ex.Message);
-                return new ProfileOperationResult { ErrorMessage = ex.Message };
+                return new ProfileOperationResult
+                {
+                    ErrorMessage = NormalizeProfileException(ex, Res("ProfileErrUpdateFailed", "Failed to update profile."))
+                };
             }
         }
 
@@ -244,7 +253,10 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("ProfileAuthService.CompleteForcedReset", ex.Message);
-                return new ProfileOperationResult { ErrorMessage = ex.Message };
+                return new ProfileOperationResult
+                {
+                    ErrorMessage = NormalizeProfileException(ex, Res("ProfileErrUpdateFailed", "Failed to update profile."))
+                };
             }
         }
 
@@ -293,28 +305,82 @@ namespace Win11DesktopApp.Services
                 return fallback;
 
             var trimmed = body.Trim();
+            if (!trimmed.StartsWith("{", StringComparison.Ordinal))
+                return MapProfileErrorCode(trimmed, null, fallback);
+
             try
             {
                 using var doc = JsonDocument.Parse(trimmed);
-                if (doc.RootElement.TryGetProperty("error", out var error))
+                var root = doc.RootElement;
+                if (root.TryGetProperty("error", out var error))
                 {
                     var text = error.GetString();
                     if (!string.IsNullOrWhiteSpace(text))
-                        return text!;
+                        return MapProfileErrorCode(text!, root, fallback);
                 }
 
-                if (doc.RootElement.TryGetProperty("message", out var message))
+                if (root.TryGetProperty("message", out var message))
                 {
                     var text = message.GetString();
                     if (!string.IsNullOrWhiteSpace(text))
-                        return text!;
+                        return MapProfileErrorCode(text!, root, fallback);
                 }
             }
             catch
             {
             }
 
-            return string.IsNullOrWhiteSpace(trimmed) ? fallback : trimmed;
+            return fallback;
+        }
+
+        private static string MapProfileErrorCode(string code, JsonElement? root, string fallback)
+        {
+            var normalized = (code ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                return fallback;
+
+            return normalized switch
+            {
+                "machine_id_required" => Res("ProfileErrClientIdMissing", "Client ID is not available."),
+                "client_not_found" => Res("ProfileErrNotFound", "Profile was not found."),
+                "client_blocked" => Res("MsgLicenseBlocked", "License is blocked. Contact the administrator."),
+                "profile_exists" => Res("ProfileErrAlreadyExists", "A profile for this app already exists."),
+                "password_required" => Res("ProfileErrPasswordRequired", "Enter password."),
+                "profile_not_found" => Res("ProfileErrNotFound", "Profile was not found."),
+                "wrong_password" => Res("ProfileErrWrongPassword", "Wrong password."),
+                "current_password_wrong" => Res("ProfileErrCurrentPasswordWrong", "Current password is wrong."),
+                "cooldown_active" => string.Format(
+                    Res("ProfileErrCooldownActive", "Too many attempts. Try again in {0} sec."),
+                    TryGetCooldownSeconds(root)),
+                "method_not_allowed" => Res("ProfileErrServiceUnavailable", "Could not contact the profile service. Try again."),
+                "unknown_action" => fallback,
+                "client_auth_failed" => fallback,
+                _ => fallback
+            };
+        }
+
+        private static int TryGetCooldownSeconds(JsonElement? root)
+        {
+            if (root.HasValue
+                && root.Value.TryGetProperty("cooldown_seconds", out var cooldown)
+                && cooldown.TryGetInt32(out var seconds)
+                && seconds > 0)
+            {
+                return seconds;
+            }
+
+            return 30;
+        }
+
+        private static string NormalizeProfileException(Exception ex, string fallback)
+        {
+            return ex switch
+            {
+                TaskCanceledException => Res("ProfileErrRequestTimedOut", "The profile service did not respond in time. Try again."),
+                HttpRequestException => Res("ProfileErrServiceUnavailable", "Could not contact the profile service. Try again."),
+                JsonException => Res("ProfileErrInvalidResponse", "Received an invalid response from the profile service."),
+                _ => fallback
+            };
         }
 
         private static string Res(string key, string fallback)

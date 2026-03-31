@@ -298,7 +298,7 @@ namespace Win11DesktopApp.Services
                     {
                         var payload = JsonSerializer.Deserialize<AdminMirrorEmployerPayload>(entry.PayloadJson, _jsonOptions);
                         if (payload == null)
-                            return;
+                            throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
                         await SyncEmployerUpsertAsync(clientId, payload).ConfigureAwait(false);
                         return;
@@ -308,7 +308,7 @@ namespace Win11DesktopApp.Services
                     {
                         var payload = JsonSerializer.Deserialize<AdminMirrorEmployerDeletePayload>(entry.PayloadJson, _jsonOptions);
                         if (payload == null)
-                            return;
+                            throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
                         await SyncEmployerDeleteAsync(clientId, payload).ConfigureAwait(false);
                         return;
@@ -318,7 +318,7 @@ namespace Win11DesktopApp.Services
                     {
                         var payload = JsonSerializer.Deserialize<AdminMirrorEmployeePayload>(entry.PayloadJson, _jsonOptions);
                         if (payload == null)
-                            return;
+                            throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
                         await SyncEmployeeUpsertAsync(clientId, payload).ConfigureAwait(false);
                         return;
@@ -328,7 +328,7 @@ namespace Win11DesktopApp.Services
                     {
                         var payload = JsonSerializer.Deserialize<AdminMirrorEmployeeDeletePayload>(entry.PayloadJson, _jsonOptions);
                         if (payload == null)
-                            return;
+                            throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
                         await SyncEmployeeDeleteAsync(clientId, payload).ConfigureAwait(false);
                         return;

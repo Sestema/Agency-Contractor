@@ -1,10 +1,15 @@
 using System.Security.Cryptography;
 using System.Text;
 
+// Deprecated: keep only as a legacy fallback for old file-based activation flows.
+// The primary access model is now server-driven via AdminPanel.
 Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("═══════════════════════════════════════════");
 Console.WriteLine("  Agency Contractor — Key Generator");
 Console.WriteLine("═══════════════════════════════════════════");
+Console.WriteLine();
+Console.WriteLine("УВАГА: цей інструмент deprecated і потрібен лише для legacy-активації.");
+Console.WriteLine("Основний доступ зараз надається адміністратором через AdminPanel.");
 Console.WriteLine();
 
 var outputDir = Path.Combine(AppContext.BaseDirectory, "keys");

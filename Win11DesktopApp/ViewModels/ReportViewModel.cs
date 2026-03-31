@@ -255,6 +255,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void OpenExportDialog()
         {
+            if (!PolicyService.EnsureExportsAllowed("відкрити експорт звіту"))
+                return;
+
             InitExportSheets();
             IsExportDialogOpen = true;
         }
@@ -1117,6 +1120,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ExportToExcel()
         {
+            if (!PolicyService.EnsureExportsAllowed("експортувати звіт в Excel"))
+                return;
+
             try
             {
                 var dialog = new SaveFileDialog
@@ -1331,6 +1337,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ExportToPdf()
         {
+            if (!PolicyService.EnsureExportsAllowed("експортувати звіт в PDF"))
+                return;
+
             try
             {
                 var dialog = new SaveFileDialog

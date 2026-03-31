@@ -477,6 +477,9 @@
     <sys:String x:Key="TitleSuccess">Úspěch</sys:String>
     <sys:String x:Key="TitleError">Chyba</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Došlo k neočekávané chybě:</sys:String>
+    <sys:String x:Key="MsgNetworkUnavailable">Nepodařilo se spojit se serverem. Zkontrolujte připojení a zkuste to znovu.</sys:String>
+    <sys:String x:Key="MsgRequestTimedOut">Server neodpověděl včas. Zkuste to znovu.</sys:String>
+    <sys:String x:Key="MsgInvalidServerResponse">Byla přijata neplatná odpověď ze serveru.</sys:String>
     <sys:String x:Key="MsgSettingsRecoveredFromBackup">Soubor nastavení byl poškozen nebo chyběl. Nastavení bylo obnoveno ze zálohy.</sys:String>
     <sys:String x:Key="MsgSettingsResetToDefaults">Soubor nastavení je poškozený a zálohu se nepodařilo obnovit. Použije se výchozí nastavení.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">Soubor financí byl poškozen nebo chyběl. Finanční data byla obnovena ze zálohy.</sys:String>
@@ -1426,19 +1429,22 @@
     <sys:String x:Key="SettingsCopyrightDesc">Tento software je vlastnictvím autora. Neoprávněné kopírování, šíření nebo úpravy jsou přísně zakázány.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Licence</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Stav přístupu</sys:String>
-    <sys:String x:Key="AccessStatusTrialTitle">Zkušební období je aktivní</sys:String>
-    <sys:String x:Key="AccessStatusTrialDetail">Zbývá {0} dní, do {1}</sys:String>
-    <sys:String x:Key="AccessStatusActivatedTitle">Aplikace je aktivována</sys:String>
-    <sys:String x:Key="AccessStatusUnlimitedDetail">Neomezený přístup je aktivní.</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceTitle">Dočasný offline přístup</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceDetail">Pracujeme podle naposledy potvrzeného stavu přístupu. Ověření serverem není dostupné, zbývá {0} dnů offline tolerance. Kešovaný přístup do {1}.</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyTitle">Režim pouze pro čtení</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyDetail">Zkušební období skončilo. Plný přístup vyžaduje aktivaci.</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Zkušební přístup je aktivní</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">Plný přístup trvá ještě {0} dnů, do {1}.</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Plný přístup je aktivní</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Plný přístup je aktivní bez časového omezení.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Pracujeme offline</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">Server je dočasně nedostupný. Aplikace používá naposledy potvrzený stav přístupu. Offline tolerance: ještě {0} dnů. Kešovaný přístup do {1}.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Přístup jen pro čtení</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Plný přístup není dostupný. Pro obnovení úprav a exportů kontaktujte administrátora.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Přístup zablokován</sys:String>
-    <sys:String x:Key="AccessStatusBlockedDetail">Tento klient byl zablokován administrátorem.</sys:String>
-    <sys:String x:Key="AccessStatusUnknownTitle">Stav přístupu neznámý</sys:String>
-    <sys:String x:Key="AccessStatusUnknownDetail">Nepodařilo se určit aktuální stav přístupu.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">Tento klient byl zablokován administrátorem. Pro obnovení přístupu kontaktujte administrátora.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Stav přístupu se ověřuje</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Nepodařilo se potvrdit aktuální stav přístupu. Zkontrolujte připojení nebo kontaktujte administrátora.</sys:String>
+    <sys:String x:Key="AccessStatusStaleDetailSuffix">Potvrzení ze serveru selhalo, takže tento kešovaný stav už může být neaktuální.</sys:String>
     <sys:String x:Key="AccessStatusAdminMessageLabel">Zpráva administrátora</sys:String>
+    <sys:String x:Key="AccessStatusAdminRenewRequired">Přístup na serveru je potřeba obnovit v AdminPanelu. Lokální licence už sama plný přístup neobnoví.</sys:String>
+    <sys:String x:Key="AccessStatusTrialEndedAdminPanel">Zkušební období skončilo. Aktivujte tohoto klienta v AdminPanelu, aby se obnovil plný přístup.</sys:String>
     <sys:String x:Key="LicenseNotActivated">Neaktivováno</sys:String>
     <sys:String x:Key="LicenseOtherPC">Licence pro jiný počítač</sys:String>
     <sys:String x:Key="LicenseDamaged">Licence je poškozená</sys:String>
@@ -1732,11 +1738,16 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
 
     <!-- Replace Document Window -->
     <sys:String x:Key="ReplDocTitle">Výměna dokumentu</sys:String>
-    <sys:String x:Key="ReplDocUploadHint">Nahrajte foto nebo sken dokumentu</sys:String>
+    <sys:String x:Key="ReplDocUploadHint">Nahrajte obrázek nebo PDF dokumentu</sys:String>
     <sys:String x:Key="ReplDocUpload">Nahrát</sys:String>
     <sys:String x:Key="ReplDocEdit">Editor</sys:String>
     <sys:String x:Key="ReplDocOldValue">Bylo</sys:String>
-    <sys:String x:Key="ReplDocLoadError">Nepodařilo se načíst obrázek</sys:String>
+    <sys:String x:Key="ReplDocLoadError">Nepodařilo se načíst náhled dokumentu</sys:String>
+    <sys:String x:Key="ReplDocEditorNotForPdf">Editor je dostupný pouze pro obrázky</sys:String>
+    <sys:String x:Key="PreviewLoading">Načítání...</sys:String>
+    <sys:String x:Key="PreviewFailed">Nepodařilo se zobrazit</sys:String>
+    <sys:String x:Key="PreviewRetry">Zkusit znovu</sys:String>
+    <sys:String x:Key="PreviewOpenFile">Otevřít soubor</sys:String>
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">Žádné šablony. Klikněte na + pro vytvoření první.</sys:String>
@@ -1778,7 +1789,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="ConfirmPasswordFailed">Neplatné heslo.</sys:String>
     <sys:String x:Key="ConfirmPasswordNoProfile">Profil nebyl nalezen. Smazání je zablokováno.</sys:String>
     <sys:String x:Key="ProfileNameLatinHint">Použijte jen latinku ve formátu Abc, například: Ivan, Petrenko.</sys:String>
-    <sys:String x:Key="ProfileErrClientIdMissing">Client ID is not available.</sys:String>
+    <sys:String x:Key="ProfileErrClientIdMissing">Identifikátor klienta není k dispozici.</sys:String>
     <sys:String x:Key="ProfileErrFirstNameRequired">Zadejte jméno.</sys:String>
     <sys:String x:Key="ProfileErrLastNameRequired">Zadejte příjmení.</sys:String>
     <sys:String x:Key="ProfileErrPasswordRequired">Zadejte heslo.</sys:String>
@@ -1797,6 +1808,10 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="ProfileErrLoadFailed">Profil se nepodařilo načíst.</sys:String>
     <sys:String x:Key="ProfileErrUpdateFailed">Profil se nepodařilo aktualizovat.</sys:String>
     <sys:String x:Key="ProfileErrEmptyServerResponse">Prázdná odpověď ze serveru.</sys:String>
+    <sys:String x:Key="ProfileErrServiceUnavailable">Nepodařilo se spojit se službou profilů. Zkuste to znovu.</sys:String>
+    <sys:String x:Key="ProfileErrRequestTimedOut">Služba profilů neodpověděla včas. Zkuste to znovu.</sys:String>
+    <sys:String x:Key="ProfileErrInvalidResponse">Byla přijata neplatná odpověď ze služby profilů.</sys:String>
+    <sys:String x:Key="ProfileErrCooldownActive">Příliš mnoho pokusů. Opakujte akci za {0} s.</sys:String>
     <sys:String x:Key="SettingsProfileTitle">Profil</sys:String>
     <sys:String x:Key="SettingsProfileSubtitle">Zde můžete změnit jméno, příjmení, heslo a nastavení zapamatování přihlášení.</sys:String>
     <sys:String x:Key="SettingsProfileNotLoaded">Uživatelský profil zatím nebyl načten.</sys:String>

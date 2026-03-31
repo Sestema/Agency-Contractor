@@ -74,13 +74,14 @@ namespace Win11DesktopApp.Services
                 case "open_license_window":
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
+                        // Backward-compatible command name: now opens the server-first access window.
                         var window = new LicenseWindow
                         {
                             Owner = Application.Current.MainWindow
                         };
                         window.ShowDialog();
                     });
-                    return new Dictionary<string, object?> { ["opened"] = true };
+                    return new Dictionary<string, object?> { ["opened"] = true, ["window"] = "access" };
 
                 case "enter_readonly_mode":
                     {

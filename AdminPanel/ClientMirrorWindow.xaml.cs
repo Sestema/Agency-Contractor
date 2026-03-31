@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -33,9 +35,9 @@ namespace AdminPanel
             BtnRefreshMirror.IsEnabled = false;
             try
             {
-                TxtHeader.Text = $"Mirror: {_client.DisplayName}";
+                TxtHeader.Text = $"Дзеркало даних: {_client.DisplayName}";
                 TxtSubHeader.Text = $"Client ID: {_client.Id}";
-                TxtMirrorStatus.Text = "Loading...";
+                TxtMirrorStatus.Text = "Завантаження...";
 
                 var snapshot = await _svc.GetClientMirrorSnapshotAsync(_client.Id);
 
@@ -70,8 +72,8 @@ namespace AdminPanel
             }
             catch (Exception ex)
             {
-                TxtMirrorStatus.Text = "Load failed";
-                MessageBox.Show(this, $"Не вдалося завантажити mirror snapshot:\n{ex.Message}", "Mirror error",
+                TxtMirrorStatus.Text = "Не вдалося завантажити";
+                MessageBox.Show(this, $"Не вдалося завантажити стан дзеркала.\n\n{DescribeMirrorError(ex)}", "Помилка дзеркала",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -83,12 +85,12 @@ namespace AdminPanel
         private static string BuildStatusText(ClientMirrorStateRecord? state)
         {
             if (state == null)
-                return "Mirror not initialized";
+                return "Дзеркало ще не ініціалізовано";
             if (!string.IsNullOrWhiteSpace(state.LastErrorText))
-                return $"Error: {state.LastErrorText}";
+                return $"Помилка: {state.LastErrorText}";
             if (state.LastDeltaSyncAt.HasValue)
-                return "Synchronized";
-            return "Waiting for first sync";
+                return "Синхронізовано";
+            return "Очікується перша синхронізація";
         }
 
         private static string FormatDate(DateTime? value)
@@ -240,7 +242,7 @@ namespace AdminPanel
             TxtAgencyIco.Text = agency?.Ico ?? "—";
             TxtAgencyAddress.Text = agency?.FullAddress ?? "—";
             TxtAgencySourceUpdated.Text = FormatDate(agency?.SourceUpdatedAt);
-            TxtAgencyState.Text = agency == null ? "—" : agency.IsDeleted ? "Deleted" : "Active";
+            TxtAgencyState.Text = agency == null ? "—" : agency.IsDeleted ? "Видалено" : "Активно";
         }
 
         private void PopulateEmployerDetails(AdminMirrorEmployerRecord? employer)
@@ -251,7 +253,7 @@ namespace AdminPanel
             TxtEmployerWeeklyHours.Text = employer == null ? "—" : employer.WeeklyWorkHours.ToString("0.##");
             TxtEmployerDailyHours.Text = employer == null ? "—" : employer.DailyWorkHours.ToString("0.##");
             TxtEmployerShiftCount.Text = employer == null ? "—" : employer.ShiftCount.ToString();
-            TxtEmployerState.Text = employer == null ? "—" : employer.IsDeleted ? "Deleted" : "Active";
+            TxtEmployerState.Text = employer == null ? "—" : employer.IsDeleted ? "Видалено" : "Активно";
             DgEmployerAddresses.ItemsSource = employer?.Addresses.OrderBy(item => item.SortOrder).ToList();
             DgEmployerPositions.ItemsSource = employer?.Positions.OrderBy(item => item.SortOrder).ToList();
         }
@@ -342,7 +344,7 @@ namespace AdminPanel
         {
             TxtLastSync.Text = FormatDate(state?.LastDeltaSyncAt);
             TxtMirrorStatus.Text = BuildStatusText(state);
-            TxtFullSync.Text = state?.LastFullSyncAt.HasValue == true ? "Completed" : "Pending";
+            TxtFullSync.Text = state?.LastFullSyncAt.HasValue == true ? "Завершено" : "Очікується";
             TxtSchemaVersion.Text = string.IsNullOrWhiteSpace(state?.SchemaVersion) ? "—" : state.SchemaVersion;
             TxtLastError.Text = string.IsNullOrWhiteSpace(state?.LastErrorText) ? "—" : state.LastErrorText;
         }
@@ -373,21 +375,21 @@ namespace AdminPanel
             if (string.IsNullOrWhiteSpace(expiry))
             {
                 return required
-                    ? ("Missing", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5A2D3D")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F38BA8")))
-                    : ("Not required", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#45475A")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CDD6F4")));
+                    ? ("Відсутній", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5A2D3D")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F38BA8")))
+                    : ("Не потрібен", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#45475A")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CDD6F4")));
             }
 
             if (!TryParseDate(expiry, out var parsed))
-                return ("Unknown", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5C4A22")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F9E2AF")));
+                return ("Невідомо", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5C4A22")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F9E2AF")));
 
             var daysLeft = (parsed.Date - DateTime.Today).TotalDays;
             if (daysLeft < 0)
-                return ("Expired", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5A2D3D")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F38BA8")));
+                return ("Прострочено", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5A2D3D")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F38BA8")));
 
             if (daysLeft <= 30)
-                return ("Expiring soon", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5C4A22")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FAB387")));
+                return ("Скоро закінчиться", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#5C4A22")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FAB387")));
 
-            return ("OK", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#21493D")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A6E3A1")));
+            return ("Гаразд", new SolidColorBrush((Color)ColorConverter.ConvertFromString("#21493D")), new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A6E3A1")));
         }
 
         private static void SetStatusBadge(Border border, TextBlock textBlock, (string Label, Brush Background, Brush Foreground) status)
@@ -419,8 +421,8 @@ namespace AdminPanel
         {
             return (value ?? string.Empty).Trim().ToLowerInvariant() switch
             {
-                "male" => "Male",
-                "female" => "Female",
+                "male" => "Чоловіча",
+                "female" => "Жіноча",
                 _ => string.IsNullOrWhiteSpace(value) ? "—" : value
             };
         }
@@ -429,9 +431,9 @@ namespace AdminPanel
         {
             return (value ?? string.Empty).Trim().ToLowerInvariant() switch
             {
-                "visa" => "Visa",
-                "eu_citizen" => "EU citizen",
-                "work_permit" => "Visa + work permit",
+                "visa" => "Віза",
+                "eu_citizen" => "Громадянин ЄС",
+                "work_permit" => "Віза + дозвіл на роботу",
                 _ => string.IsNullOrWhiteSpace(value) ? "—" : value
             };
         }
@@ -440,9 +442,22 @@ namespace AdminPanel
         {
             return (value ?? string.Empty).Trim().ToLowerInvariant() switch
             {
-                "passport" => "Passport",
-                "id_card" => "ID card",
+                "passport" => "Паспорт",
+                "id_card" => "ID-карта",
                 _ => string.IsNullOrWhiteSpace(value) ? "—" : value
+            };
+        }
+
+        private static string DescribeMirrorError(Exception ex)
+        {
+            return ex switch
+            {
+                TaskCanceledException => "Сервер не відповів вчасно. Спробуйте ще раз.",
+                HttpRequestException => "Не вдалося зв'язатися із сервером. Перевірте підключення та повторіть спробу.",
+                JsonException => "Отримано некоректну відповідь від сервера. Оновіть дані ще раз.",
+                _ => string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Сталася внутрішня помилка. Перевірте журнал і повторіть спробу."
+                    : ex.Message
             };
         }
 

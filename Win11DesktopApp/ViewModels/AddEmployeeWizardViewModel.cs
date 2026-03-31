@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -353,6 +354,13 @@ namespace Win11DesktopApp.ViewModels
                 ? CarouselItems[_selectedCarouselIndex].ImagePath
                 : string.Empty;
 
+        private DocPreviewState _carouselPreviewState = DocPreviewState.Empty;
+        public DocPreviewState CarouselPreviewState
+        {
+            get => _carouselPreviewState;
+            set => SetProperty(ref _carouselPreviewState, value);
+        }
+
         public bool HasCarouselItems => CarouselItems.Count > 1;
 
         public ICommand CarouselPrevCommand { get; }
@@ -398,6 +406,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(SelectedCarouselIndex));
             OnPropertyChanged(nameof(CarouselPreviewPath));
             OnPropertyChanged(nameof(HasCarouselItems));
+            CarouselPreviewState = CarouselItems.Count > 0 ? DocPreviewState.Ready : DocPreviewState.Empty;
         }
 
         private bool AutoSelectCarouselForStep(int step)
@@ -433,6 +442,69 @@ namespace Win11DesktopApp.ViewModels
         {
             if (_selectedCarouselIndex < CarouselItems.Count - 1)
                 SelectedCarouselIndex = _selectedCarouselIndex + 1;
+        }
+
+        private void OpenCurrentPreviewFile()
+        {
+            var path = GetCurrentDocumentOpenPath();
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                ToastService.Instance.Warning(Res("MsgUploadFirst"));
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.OpenCurrentPreviewFile", ex.Message);
+                MessageBox.Show(Res("MsgOpenFileFail"), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private string GetCurrentDocumentOpenPath()
+        {
+            var docKey = _selectedCarouselIndex >= 0 && _selectedCarouselIndex < CarouselItems.Count
+                ? CarouselItems[_selectedCarouselIndex].Key
+                : GetStepPreviewDocumentKey(StepIndex);
+
+            return docKey switch
+            {
+                "passport" => GetDocumentSourcePath(PassportDoc),
+                "passport2" => GetDocumentSourcePath(PassportPage2Doc),
+                "visa" => GetDocumentSourcePath(VisaDoc),
+                "visa2" => GetDocumentSourcePath(VisaPage2Doc),
+                "insurance" => GetDocumentSourcePath(InsuranceDoc),
+                "permit" => GetDocumentSourcePath(WorkPermitDoc),
+                _ => string.Empty
+            };
+        }
+
+        private static string GetDocumentSourcePath(EmployeeModels.EmployeeDocumentTemp? temp)
+        {
+            if (temp == null)
+                return string.Empty;
+
+            return temp.IsPdf ? temp.PdfPath : temp.ImagePath;
+        }
+
+        private static string GetStepPreviewDocumentKey(int step)
+        {
+            return step switch
+            {
+                2 => "passport",
+                3 => "insurance",
+                4 => "visa",
+                7 => "permit",
+                8 => "passport2",
+                _ => string.Empty
+            };
         }
 
         private string _workPermitFileName = string.Empty;
@@ -527,6 +599,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand EnhanceDocumentCommand { get; }
         public ICommand SetEuDocTypeCommand { get; }
         public ICommand AIScanDocumentCommand { get; }
+        public ICommand OpenCurrentPreviewFileCommand { get; }
 
         private bool _isAIScanning;
         public bool IsAIScanning
@@ -570,6 +643,7 @@ namespace Win11DesktopApp.ViewModels
             SetEuDocTypeCommand = new RelayCommand(o => EuDocumentType = o?.ToString() ?? "passport");
             AIScanDocumentCommand = new AsyncRelayCommand(_ => AIScanCurrentStepAsync(),
                 _ => !_isAIScanning && App.GeminiApiService?.IsConfigured == true);
+            OpenCurrentPreviewFileCommand = new RelayCommand(_ => OpenCurrentPreviewFile());
             CarouselPrevCommand = new RelayCommand(o => CarouselPrev(), o => _selectedCarouselIndex > 0);
             CarouselNextCommand = new RelayCommand(o => CarouselNext(), o => _selectedCarouselIndex < CarouselItems.Count - 1);
             SelectCarouselTabCommand = new RelayCommand(o =>
@@ -739,37 +813,54 @@ namespace Win11DesktopApp.ViewModels
             ProcessUploadedFile(normalizedPath, type);
         }
 
+        private string BuildPdfFirstPagePreview(EmployeeModels.EmployeeDocumentTemp temp, string baseName, string filePath)
+        {
+            if (!temp.IsPdf)
+                return temp.ImagePath;
+
+            var pages = _employeeService.RenderPdfPages(temp.PdfPath, _tempFolder, baseName, maxPages: 1);
+            if (pages.Count == 0)
+            {
+                LoggingService.LogWarning("AddEmployeeWizardViewModel.ProcessUploadedFile",
+                    $"PDF preview generation returned no pages for '{filePath}'.");
+                throw new IOException("Could not open file.");
+            }
+
+            return pages[0];
+        }
+
         private void ProcessUploadedFile(string filePath, string type)
         {
             try
             {
                 var temp = _employeeService.PrepareTempDocument(filePath, _tempFolder, type);
                 EnsurePreparedDocumentReady(temp, type);
+                CarouselPreviewState = temp.IsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
                 switch (type)
                 {
                     case "passport":
                         PassportDoc = temp;
-                        PassportPreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
+                        PassportPreviewPath = BuildPdfFirstPagePreview(temp, "pass_preview", filePath);
                         OnPropertyChanged(nameof(PassportDoc));
                         break;
                     case "visa":
                         VisaDoc = temp;
-                        VisaPreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
+                        VisaPreviewPath = BuildPdfFirstPagePreview(temp, "visa_preview", filePath);
                         OnPropertyChanged(nameof(VisaDoc));
                         break;
                     case "insurance":
                         InsuranceDoc = temp;
-                        InsurancePreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
+                        InsurancePreviewPath = BuildPdfFirstPagePreview(temp, "ins_preview", filePath);
                         OnPropertyChanged(nameof(InsuranceDoc));
                         break;
                     case "passport_page2":
                         PassportPage2Doc = temp;
-                        PassportPage2PreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
+                        PassportPage2PreviewPath = BuildPdfFirstPagePreview(temp, "pass2_preview", filePath);
                         OnPropertyChanged(nameof(PassportPage2Doc));
                         break;
                     case "visa_page2":
                         VisaPage2Doc = temp;
-                        VisaPage2PreviewPath = temp.IsPdf ? string.Empty : temp.ImagePath;
+                        VisaPage2PreviewPath = BuildPdfFirstPagePreview(temp, "visa2_preview", filePath);
                         OnPropertyChanged(nameof(VisaPage2Doc));
                         break;
                     case "work_permit":
@@ -801,11 +892,13 @@ namespace Win11DesktopApp.ViewModels
                 Converters.ImagePathConverter.InvalidateCache();
                 OnPropertyChanged(nameof(CurrentCropImagePath));
                 RefreshCarousel();
+                CarouselPreviewState = DocPreviewState.Ready;
                 CropSourceChanged?.Invoke();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                CarouselPreviewState = DocPreviewState.Error;
+                ShowDocumentProcessingError("Не вдалося оновити документ.", ex);
             }
         }
 
@@ -866,7 +959,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowDocumentProcessingError("Не вдалося повернути зображення.", ex);
             }
         }
 
@@ -891,7 +984,7 @@ namespace Win11DesktopApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                    ShowDocumentProcessingError("Не вдалося застосувати обрізання.", ex);
                 }
             }
             else
@@ -1376,6 +1469,11 @@ namespace Win11DesktopApp.ViewModels
             }
 
             OnPropertyChanged(nameof(Data));
+        }
+
+        private static void ShowDocumentProcessingError(string prefix, Exception ex)
+        {
+            MessageBox.Show($"{prefix}\n\n{ex.Message}", Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

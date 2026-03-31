@@ -239,6 +239,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ApplyCellValueFromFormulaBar(string value)
         {
+            if (!PolicyService.EnsureWriteAllowed("змінити Excel-шаблон"))
+                return;
+
             int row = _selectedRow;
             int col = _selectedCol;
 
@@ -389,6 +392,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void Save()
         {
+            if (!PolicyService.EnsureWriteAllowed("зберегти Excel-шаблон"))
+                return;
+
             try
             {
                 if (_templateUnavailable)
@@ -455,6 +461,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void InsertTag(object? param)
         {
+            if (!PolicyService.EnsureWriteAllowed("додати тег у Excel-шаблон"))
+                return;
+
             if (param is not TagEntry tag) return;
 
             try

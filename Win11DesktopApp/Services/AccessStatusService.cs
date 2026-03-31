@@ -84,7 +84,15 @@ namespace Win11DesktopApp.Services
 
         public void RefreshPresentation()
         {
-            Current = BuildSnapshot();
+            var snapshot = BuildSnapshot();
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                Current = snapshot;
+                return;
+            }
+
+            dispatcher.Invoke(() => Current = snapshot);
         }
 
         private AccessStatusSnapshot BuildSnapshot()
@@ -112,7 +120,7 @@ namespace Win11DesktopApp.Services
                 {
                     Mode = AccessStatusMode.ReadOnly,
                     Title = Res("AccessStatusReadOnlyTitle", "Read-only mode"),
-                    Detail = Res("AccessStatusReadOnlyDetail", "The trial period ended. Full access requires activation."),
+                    Detail = WithStaleMarker(Res("AccessStatusReadOnlyDetail", "The trial period ended. Full access requires activation.")),
                     AdminMessage = adminMessage,
                     Severity = "Error",
                     ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
@@ -150,12 +158,12 @@ namespace Win11DesktopApp.Services
                         ? Res("AccessStatusTrialTitle", "Trial active")
                         : Res("AccessStatusActivatedTitle", "Activated"),
                     Detail = isTrialWindow
-                        ? string.Format(
+                        ? WithStaleMarker(string.Format(
                             CultureInfo.CurrentCulture,
                             Res("AccessStatusTrialDetail", "{0} days left, until {1}"),
                             _clientAccessState.DaysRemaining,
-                            localExpiry)
-                        : $"{Res("LicenseActiveUntil", "Active until")} {localExpiry} ({_clientAccessState.DaysRemaining} {Res("LicenseDaysLeft", "days")})",
+                            localExpiry))
+                        : WithStaleMarker($"{Res("LicenseActiveUntil", "Active until")} {localExpiry} ({_clientAccessState.DaysRemaining} {Res("LicenseDaysLeft", "days")})"),
                     AdminMessage = adminMessage,
                     Severity = isTrialWindow ? "Warning" : "Success",
                     ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
@@ -215,6 +223,15 @@ namespace Win11DesktopApp.Services
         private static string Res(string key, string fallback)
         {
             return Application.Current?.TryFindResource(key) as string ?? fallback;
+        }
+
+        private string WithStaleMarker(string detail)
+        {
+            if (!_clientAccessState.IsStale)
+                return detail;
+
+            var suffix = Res("AccessStatusStaleDetailSuffix", "Server confirmation failed, so this cached status may be outdated.");
+            return string.IsNullOrWhiteSpace(detail) ? suffix : $"{detail} {suffix}";
         }
 
         private void OnPropertyChanged(string propertyName)

@@ -460,6 +460,9 @@
     <sys:String x:Key="TitleSuccess">Success</sys:String>
     <sys:String x:Key="TitleError">Error</sys:String>
     <sys:String x:Key="MsgUnexpectedError">An unexpected error occurred:</sys:String>
+    <sys:String x:Key="MsgNetworkUnavailable">Could not reach the server. Check the connection and try again.</sys:String>
+    <sys:String x:Key="MsgRequestTimedOut">The server did not respond in time. Try again.</sys:String>
+    <sys:String x:Key="MsgInvalidServerResponse">Received an invalid response from the server.</sys:String>
     <sys:String x:Key="MsgSettingsRecoveredFromBackup">The settings file was damaged or missing. Settings were restored from backup.</sys:String>
     <sys:String x:Key="MsgSettingsResetToDefaults">The settings file is damaged and the backup could not be restored. Default settings are being used.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">The finance data file was damaged or missing. Finance data was restored from backup.</sys:String>
@@ -1412,19 +1415,22 @@
     <sys:String x:Key="SettingsCopyrightDesc">This software is proprietary and confidential. Unauthorized copying, distribution, or modification is strictly prohibited.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">License</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Access status</sys:String>
-    <sys:String x:Key="AccessStatusTrialTitle">Trial active</sys:String>
-    <sys:String x:Key="AccessStatusTrialDetail">{0} days left, until {1}</sys:String>
-    <sys:String x:Key="AccessStatusActivatedTitle">Application activated</sys:String>
-    <sys:String x:Key="AccessStatusUnlimitedDetail">Unlimited access is active.</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceTitle">Offline access</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceDetail">Working from the last confirmed access state. Server check is unavailable, {0} day(s) of offline grace remain. Cached access until {1}.</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyTitle">Read-only mode</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyDetail">The trial period ended. Full access requires activation.</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Trial access is active</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">{0} day(s) of full access remain, until {1}.</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Full access is active</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Full access is active with no end date.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Working offline</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">The server is temporarily unavailable. The app is using the last confirmed access state. Offline grace remaining: {0} day(s). Cached access until {1}.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">View-only mode</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Full access is unavailable. Contact the administrator to restore editing and exports.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Access blocked</sys:String>
-    <sys:String x:Key="AccessStatusBlockedDetail">This client was blocked by the administrator.</sys:String>
-    <sys:String x:Key="AccessStatusUnknownTitle">Access status unknown</sys:String>
-    <sys:String x:Key="AccessStatusUnknownDetail">Could not determine the current access state.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">This client was blocked by the administrator. Contact the administrator to restore access.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Access status is being checked</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">The app could not confirm the current access state. Check the connection or contact the administrator.</sys:String>
+    <sys:String x:Key="AccessStatusStaleDetailSuffix">Server confirmation failed, so this cached status may be outdated.</sys:String>
     <sys:String x:Key="AccessStatusAdminMessageLabel">Administrator message</sys:String>
+    <sys:String x:Key="AccessStatusAdminRenewRequired">Server access needs to be renewed in AdminPanel. The local license no longer restores full access on its own.</sys:String>
+    <sys:String x:Key="AccessStatusTrialEndedAdminPanel">The trial period has ended. Activate this client in AdminPanel to restore full access.</sys:String>
     <sys:String x:Key="LicenseNotActivated">Not activated</sys:String>
     <sys:String x:Key="LicenseOtherPC">License for another PC</sys:String>
     <sys:String x:Key="LicenseDamaged">License is damaged</sys:String>
@@ -1718,11 +1724,16 @@ The company folder on disk will be deleted together with all its contents.</sys:
 
     <!-- Replace Document Window -->
     <sys:String x:Key="ReplDocTitle">Replace Document</sys:String>
-    <sys:String x:Key="ReplDocUploadHint">Upload a photo or scan of the document</sys:String>
+    <sys:String x:Key="ReplDocUploadHint">Upload an image or PDF of the document</sys:String>
     <sys:String x:Key="ReplDocUpload">Upload</sys:String>
     <sys:String x:Key="ReplDocEdit">Editor</sys:String>
     <sys:String x:Key="ReplDocOldValue">Was</sys:String>
-    <sys:String x:Key="ReplDocLoadError">Failed to load image</sys:String>
+    <sys:String x:Key="ReplDocLoadError">Could not load document preview</sys:String>
+    <sys:String x:Key="ReplDocEditorNotForPdf">Editor is available for images only</sys:String>
+    <sys:String x:Key="PreviewLoading">Loading...</sys:String>
+    <sys:String x:Key="PreviewFailed">Preview failed</sys:String>
+    <sys:String x:Key="PreviewRetry">Retry</sys:String>
+    <sys:String x:Key="PreviewOpenFile">Open file</sys:String>
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">No templates yet. Click + to create the first one.</sys:String>
@@ -1783,6 +1794,10 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="ProfileErrLoadFailed">Failed to load profile.</sys:String>
     <sys:String x:Key="ProfileErrUpdateFailed">Failed to update profile.</sys:String>
     <sys:String x:Key="ProfileErrEmptyServerResponse">Empty response from server.</sys:String>
+    <sys:String x:Key="ProfileErrServiceUnavailable">Could not contact the profile service. Try again.</sys:String>
+    <sys:String x:Key="ProfileErrRequestTimedOut">The profile service did not respond in time. Try again.</sys:String>
+    <sys:String x:Key="ProfileErrInvalidResponse">Received an invalid response from the profile service.</sys:String>
+    <sys:String x:Key="ProfileErrCooldownActive">Too many attempts. Try again in {0} sec.</sys:String>
     <sys:String x:Key="SettingsProfileTitle">Profile</sys:String>
     <sys:String x:Key="SettingsProfileSubtitle">Here you can change the name, surname, password, and remembered login setting.</sys:String>
     <sys:String x:Key="SettingsProfileNotLoaded">User profile has not been loaded yet.</sys:String>

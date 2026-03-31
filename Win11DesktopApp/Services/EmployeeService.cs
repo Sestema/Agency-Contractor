@@ -162,15 +162,18 @@ namespace Win11DesktopApp.Services
             return temp;
         }
 
-        public List<string> RenderPdfPages(string pdfPath, string tempFolder, string baseName)
+        public List<string> RenderPdfPages(string pdfPath, string tempFolder, string baseName, int? maxPages = null)
         {
             var result = new List<string>();
             try
             {
                 using var docReader = DocLib.Instance.GetDocReader(pdfPath, new PageDimensions(2));
                 int pageCount = docReader.GetPageCount();
+                int pagesToRender = maxPages.HasValue
+                    ? Math.Min(pageCount, Math.Max(0, maxPages.Value))
+                    : pageCount;
 
-                for (int i = 0; i < pageCount; i++)
+                for (int i = 0; i < pagesToRender; i++)
                 {
                     using var pageReader = docReader.GetPageReader(i);
                     var rawBytes = pageReader.GetImage();

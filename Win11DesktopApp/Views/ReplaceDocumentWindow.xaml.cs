@@ -16,6 +16,9 @@ namespace Win11DesktopApp.Views
         private readonly EmployeeData _data;
         private string? _selectedFilePath;
         private readonly Dictionary<string, (TextBox newBox, string oldValue)> _fields = new();
+        private readonly List<string> _pdfPreviewPages = new();
+        private int _currentPdfPageIndex;
+        private string? _pdfPreviewTempFolder;
 
         public bool Saved { get; private set; }
         public string? ResultFilePath => _selectedFilePath;
@@ -143,12 +146,74 @@ namespace Win11DesktopApp.Views
                 Filter = "Documents|*.jpg;*.jpeg;*.png;*.heic;*.pdf"
             };
             if (dialog.ShowDialog() != true) return;
-            LoadImage(dialog.FileName);
+            LoadPreview(dialog.FileName);
         }
 
-        private void LoadImage(string path)
+        private void LoadPreview(string path)
         {
             _selectedFilePath = path;
+            CleanupPdfTemp();
+            PreviewImage.Source = null;
+            NoImageText.Text = Res("ReplDocUploadHint");
+            NoImageText.Visibility = Visibility.Visible;
+            PagerPanel.Visibility = Visibility.Collapsed;
+            _pdfPreviewPages.Clear();
+            _currentPdfPageIndex = 0;
+
+            if (IsPdfFile(path))
+            {
+                LoadPdfPreview(path);
+                return;
+            }
+
+            LoadBitmapPreview(path);
+        }
+
+        private void LoadPdfPreview(string path)
+        {
+            try
+            {
+                NoImageText.Text = Res("PreviewLoading");
+                NoImageText.Visibility = Visibility.Visible;
+                _pdfPreviewTempFolder = Path.Combine(Path.GetTempPath(), "AC_ReplDoc_" + Guid.NewGuid().ToString("N")[..8]);
+                Directory.CreateDirectory(_pdfPreviewTempFolder);
+
+                var pages = App.EmployeeService?.RenderPdfPages(path, _pdfPreviewTempFolder, "preview") ?? new List<string>();
+                if (pages.Count == 0)
+                {
+                    CleanupPdfTemp();
+                    NoImageText.Text = Res("ReplDocLoadError");
+                    NoImageText.Visibility = Visibility.Visible;
+                    PagerPanel.Visibility = Visibility.Collapsed;
+                    return;
+                }
+
+                _pdfPreviewPages.AddRange(pages);
+                PagerPanel.Visibility = pages.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+                ShowPdfPage(0);
+                UpdatePager();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ReplaceDoc.LoadPdfPreview", ex);
+                NoImageText.Text = Res("ReplDocLoadError");
+                NoImageText.Visibility = Visibility.Visible;
+                PagerPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void ShowPdfPage(int index)
+        {
+            if (index < 0 || index >= _pdfPreviewPages.Count)
+                return;
+
+            _currentPdfPageIndex = index;
+            LoadBitmapPreview(_pdfPreviewPages[index]);
+            UpdatePager();
+        }
+
+        private void LoadBitmapPreview(string path)
+        {
             try
             {
                 var bi = new BitmapImage();
@@ -160,18 +225,29 @@ namespace Win11DesktopApp.Views
                 PreviewImage.Source = bi;
                 NoImageText.Visibility = Visibility.Collapsed;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogError("ReplaceDoc.LoadBitmapPreview", ex);
                 NoImageText.Text = Res("ReplDocLoadError");
                 NoImageText.Visibility = Visibility.Visible;
             }
         }
+
+        private static bool IsPdfFile(string? path) =>
+            !string.IsNullOrEmpty(path)
+            && string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
 
         private void BtnEditor_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(_selectedFilePath) || !File.Exists(_selectedFilePath))
             {
                 MessageBox.Show(Res("MsgUploadFirst"), Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (IsPdfFile(_selectedFilePath))
+            {
+                MessageBox.Show(Res("ReplDocEditorNotForPdf"), Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -185,7 +261,7 @@ namespace Win11DesktopApp.Views
                 if (editor.Saved && !string.IsNullOrEmpty(editor.ResultPath) && File.Exists(editor.ResultPath))
                 {
                     _selectedFilePath = editor.ResultPath;
-                    LoadImage(_selectedFilePath);
+                    LoadPreview(_selectedFilePath);
                 }
             }
             catch (Exception ex)
@@ -259,6 +335,39 @@ namespace Win11DesktopApp.Views
             }
         }
 
+        private void BtnPrevPage_Click(object sender, RoutedEventArgs e)
+        {
+            ShowPdfPage(_currentPdfPageIndex - 1);
+        }
+
+        private void BtnNextPage_Click(object sender, RoutedEventArgs e)
+        {
+            ShowPdfPage(_currentPdfPageIndex + 1);
+        }
+
+        private void UpdatePager()
+        {
+            PageText.Text = $"{_currentPdfPageIndex + 1} / {_pdfPreviewPages.Count}";
+            BtnPrevPage.IsEnabled = _currentPdfPageIndex > 0;
+            BtnNextPage.IsEnabled = _currentPdfPageIndex < _pdfPreviewPages.Count - 1;
+        }
+
+        private void CleanupPdfTemp()
+        {
+            if (!string.IsNullOrWhiteSpace(_pdfPreviewTempFolder) && Directory.Exists(_pdfPreviewTempFolder))
+            {
+                try
+                {
+                    Directory.Delete(_pdfPreviewTempFolder, true);
+                }
+                catch
+                {
+                }
+            }
+
+            _pdfPreviewTempFolder = null;
+        }
+
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             foreach (var (key, (box, _)) in _fields)
@@ -274,6 +383,12 @@ namespace Win11DesktopApp.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            CleanupPdfTemp();
+            base.OnClosed(e);
         }
     }
 }

@@ -460,6 +460,9 @@
     <sys:String x:Key="TitleSuccess">Успех</sys:String>
     <sys:String x:Key="TitleError">Ошибка</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Произошла непредвиденная ошибка:</sys:String>
+    <sys:String x:Key="MsgNetworkUnavailable">Не удалось связаться с сервером. Проверьте подключение и попробуйте снова.</sys:String>
+    <sys:String x:Key="MsgRequestTimedOut">Сервер не ответил вовремя. Попробуйте снова.</sys:String>
+    <sys:String x:Key="MsgInvalidServerResponse">Получен некорректный ответ от сервера.</sys:String>
     <sys:String x:Key="MsgSettingsRecoveredFromBackup">Файл настроек был поврежден или отсутствовал. Настройки восстановлены из резервной копии.</sys:String>
     <sys:String x:Key="MsgSettingsResetToDefaults">Файл настроек поврежден, а резервную копию восстановить не удалось. Используются настройки по умолчанию.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">Файл финансовых данных был поврежден или отсутствовал. Данные финансов восстановлены из резервной копии.</sys:String>
@@ -1409,19 +1412,22 @@
     <sys:String x:Key="SettingsCopyrightDesc">Данное программное обеспечение является собственностью автора. Несанкционированное копирование, распространение или модификация строго запрещены.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Лицензия</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Статус доступа</sys:String>
-    <sys:String x:Key="AccessStatusTrialTitle">Пробный период активен</sys:String>
-    <sys:String x:Key="AccessStatusTrialDetail">Осталось {0} дн., до {1}</sys:String>
-    <sys:String x:Key="AccessStatusActivatedTitle">Приложение активировано</sys:String>
-    <sys:String x:Key="AccessStatusUnlimitedDetail">Бессрочный доступ активен.</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceTitle">Временный офлайн-доступ</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceDetail">Работаем по последнему подтверждённому состоянию доступа. Связь с сервером недоступна, осталось {0} дн. офлайн-льготы. Кэшированный доступ до {1}.</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyTitle">Режим просмотра</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyDetail">Пробный период завершился. Для полного доступа нужна активация.</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Пробный доступ активен</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">Полный доступ действует ещё {0} дн., до {1}.</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Полный доступ активен</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Полный доступ предоставлен без ограничения срока.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Работаем офлайн</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">Сервер временно недоступен. Программа использует последнее подтверждённое состояние доступа. Офлайн-льгота: ещё {0} дн. Кэшированный доступ до {1}.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Доступ только для просмотра</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Полный доступ недоступен. Чтобы снова редактировать данные и выполнять экспорт, обратитесь к администратору.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Доступ заблокирован</sys:String>
-    <sys:String x:Key="AccessStatusBlockedDetail">Этот клиент заблокирован администратором.</sys:String>
-    <sys:String x:Key="AccessStatusUnknownTitle">Статус доступа неизвестен</sys:String>
-    <sys:String x:Key="AccessStatusUnknownDetail">Не удалось определить текущее состояние доступа.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">Этот клиент заблокирован администратором. Обратитесь к администратору для восстановления доступа.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Статус доступа уточняется</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Не удалось подтвердить текущее состояние доступа. Проверьте подключение или обратитесь к администратору.</sys:String>
+    <sys:String x:Key="AccessStatusStaleDetailSuffix">Подтверждение от сервера не удалось, поэтому этот кэшированный статус может быть уже неактуальным.</sys:String>
     <sys:String x:Key="AccessStatusAdminMessageLabel">Сообщение администратора</sys:String>
+    <sys:String x:Key="AccessStatusAdminRenewRequired">Серверный доступ нужно продлить через AdminPanel. Локальная лицензия больше не восстанавливает полный доступ сама по себе.</sys:String>
+    <sys:String x:Key="AccessStatusTrialEndedAdminPanel">Пробный период завершился. Активируйте этого клиента в AdminPanel, чтобы вернуть полный доступ.</sys:String>
     <sys:String x:Key="LicenseNotActivated">Не активировано</sys:String>
     <sys:String x:Key="LicenseOtherPC">Лицензия для другого ПК</sys:String>
     <sys:String x:Key="LicenseDamaged">Лицензия повреждена</sys:String>
@@ -1715,11 +1721,16 @@
 
     <!-- Replace Document Window -->
     <sys:String x:Key="ReplDocTitle">Замена документа</sys:String>
-    <sys:String x:Key="ReplDocUploadHint">Загрузите фото или скан документа</sys:String>
+    <sys:String x:Key="ReplDocUploadHint">Загрузите изображение или PDF документа</sys:String>
     <sys:String x:Key="ReplDocUpload">Загрузить</sys:String>
     <sys:String x:Key="ReplDocEdit">Редактор</sys:String>
     <sys:String x:Key="ReplDocOldValue">Было</sys:String>
-    <sys:String x:Key="ReplDocLoadError">Не удалось загрузить изображение</sys:String>
+    <sys:String x:Key="ReplDocLoadError">Не удалось загрузить превью документа</sys:String>
+    <sys:String x:Key="ReplDocEditorNotForPdf">Редактор доступен только для изображений</sys:String>
+    <sys:String x:Key="PreviewLoading">Загрузка...</sys:String>
+    <sys:String x:Key="PreviewFailed">Не удалось показать</sys:String>
+    <sys:String x:Key="PreviewRetry">Повторить</sys:String>
+    <sys:String x:Key="PreviewOpenFile">Открыть файл</sys:String>
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">Шаблонов пока нет. Нажмите + чтобы создать первый.</sys:String>
@@ -1761,7 +1772,7 @@
     <sys:String x:Key="ConfirmPasswordFailed">Неверный пароль.</sys:String>
     <sys:String x:Key="ConfirmPasswordNoProfile">Профиль не найден. Удаление заблокировано.</sys:String>
     <sys:String x:Key="ProfileNameLatinHint">Только латиница в формате Abc, например: Ivan, Petrenko.</sys:String>
-    <sys:String x:Key="ProfileErrClientIdMissing">Client ID is not available.</sys:String>
+    <sys:String x:Key="ProfileErrClientIdMissing">Идентификатор клиента недоступен.</sys:String>
     <sys:String x:Key="ProfileErrFirstNameRequired">Укажите имя.</sys:String>
     <sys:String x:Key="ProfileErrLastNameRequired">Укажите фамилию.</sys:String>
     <sys:String x:Key="ProfileErrPasswordRequired">Укажите пароль.</sys:String>
@@ -1780,6 +1791,10 @@
     <sys:String x:Key="ProfileErrLoadFailed">Не удалось загрузить профиль.</sys:String>
     <sys:String x:Key="ProfileErrUpdateFailed">Не удалось обновить профиль.</sys:String>
     <sys:String x:Key="ProfileErrEmptyServerResponse">Пустой ответ от сервера.</sys:String>
+    <sys:String x:Key="ProfileErrServiceUnavailable">Не удалось связаться с сервисом профилей. Попробуйте снова.</sys:String>
+    <sys:String x:Key="ProfileErrRequestTimedOut">Сервис профилей не ответил вовремя. Попробуйте снова.</sys:String>
+    <sys:String x:Key="ProfileErrInvalidResponse">Получен некорректный ответ от сервиса профилей.</sys:String>
+    <sys:String x:Key="ProfileErrCooldownActive">Слишком много попыток. Повторите через {0} с.</sys:String>
     <sys:String x:Key="SettingsProfileTitle">Профиль</sys:String>
     <sys:String x:Key="SettingsProfileSubtitle">Здесь можно изменить имя, фамилию, пароль и параметр запоминания входа.</sys:String>
     <sys:String x:Key="SettingsProfileNotLoaded">Профиль пользователя ещё не загружен.</sys:String>

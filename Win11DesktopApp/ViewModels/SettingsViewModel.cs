@@ -460,7 +460,7 @@ namespace Win11DesktopApp.ViewModels
                 UpdateStatus = Res("UpdateChecking");
                 try
                 {
-                    var update = await Services.UpdateService.CheckForUpdatesAsync();
+                    var update = await Services.UpdateService.CheckForUpdatesAsync(PolicyService.CurrentPolicy.UpdateChannel);
                     if (update != null)
                     {
                         _pendingUpdate = update;
@@ -490,7 +490,8 @@ namespace Win11DesktopApp.ViewModels
                     {
                         Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
                             UpdateStatus = $"{Res("UpdateDownloading")} {progress}%"));
-                    });
+                    },
+                    PolicyService.CurrentPolicy.UpdateChannel);
                 if (!string.IsNullOrWhiteSpace(errorMessage))
                 {
                     UpdateStatus = $"{Res("UpdateError")}: {errorMessage}";

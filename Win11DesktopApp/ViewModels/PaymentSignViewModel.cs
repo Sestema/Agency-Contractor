@@ -113,6 +113,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void GeneratePdf()
         {
+            if (!PolicyService.EnsureExportsAllowed("згенерувати PDF для підписів"))
+                return;
+
             var selectedFirms = Firms.Where(f => f.IsSelected).ToList();
             if (!selectedFirms.Any())
             {

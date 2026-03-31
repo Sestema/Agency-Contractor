@@ -16,6 +16,7 @@
             
             <BooleanToVisibilityConverter x:Key="BoolToVis"/>
             <conv:ImagePathConverter x:Key="ImagePathConverter"/>
+            <conv:PreviewStateToVisibilityConverter x:Key="PreviewStateToVis"/>
             <conv:StatusDisplayConverter x:Key="StatusDisplayConverter"/>
             <conv:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
             <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>

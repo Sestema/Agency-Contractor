@@ -476,7 +476,16 @@
     <sys:String x:Key="MsgTemplateDeleted">Шаблон успішно видалено.</sys:String>
     <sys:String x:Key="TitleSuccess">Успіх</sys:String>
     <sys:String x:Key="TitleError">Помилка</sys:String>
+    <sys:String x:Key="MsgLicenseBlocked">Ліцензію заблоковано. Зверніться до адміністратора.</sys:String>
+    <sys:String x:Key="MsgEditorOpenError">Не вдалося відкрити редактор:
+{0}</sys:String>
+    <sys:String x:Key="MsgFileOpenError">Не вдалося відкрити файл:
+{0}</sys:String>
+    <sys:String x:Key="MsgErrorGeneric">Помилка: {0}</sys:String>
     <sys:String x:Key="MsgUnexpectedError">Виникла непередбачена помилка:</sys:String>
+    <sys:String x:Key="MsgNetworkUnavailable">Не вдалося зв'язатися із сервером. Перевірте з'єднання та спробуйте ще раз.</sys:String>
+    <sys:String x:Key="MsgRequestTimedOut">Сервер не відповів вчасно. Спробуйте ще раз.</sys:String>
+    <sys:String x:Key="MsgInvalidServerResponse">Отримано некоректну відповідь від сервера.</sys:String>
     <sys:String x:Key="MsgSettingsRecoveredFromBackup">Файл налаштувань було пошкоджено або втрачено. Налаштування відновлено з резервної копії.</sys:String>
     <sys:String x:Key="MsgSettingsResetToDefaults">Файл налаштувань пошкоджено, резервну копію не вдалося відновити. Використано стандартні налаштування.</sys:String>
     <sys:String x:Key="MsgFinanceRecoveredFromBackup">Файл фінансів було пошкоджено або втрачено. Дані фінансів відновлено з резервної копії.</sys:String>
@@ -1424,19 +1433,22 @@
     <sys:String x:Key="SettingsCopyrightDesc">Це програмне забезпечення є власністю автора. Несанкціоноване копіювання, розповсюдження або модифікація суворо заборонені.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Ліцензія</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Статус доступу</sys:String>
-    <sys:String x:Key="AccessStatusTrialTitle">Пробний період активний</sys:String>
-    <sys:String x:Key="AccessStatusTrialDetail">Залишилось {0} дн., до {1}</sys:String>
-    <sys:String x:Key="AccessStatusActivatedTitle">Програму активовано</sys:String>
-    <sys:String x:Key="AccessStatusUnlimitedDetail">Безстроковий доступ активний.</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceTitle">Тимчасовий офлайн-доступ</sys:String>
-    <sys:String x:Key="AccessStatusOfflineGraceDetail">Працюємо за останнім підтвердженим станом доступу. Зв'язок із сервером відсутній, залишилось {0} дн. офлайн-пільги. Кешований доступ до {1}.</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyTitle">Режим перегляду</sys:String>
-    <sys:String x:Key="AccessStatusReadOnlyDetail">Пробний період завершився. Для повного доступу потрібна активація.</sys:String>
+    <sys:String x:Key="AccessStatusTrialTitle">Пробний доступ активний</sys:String>
+    <sys:String x:Key="AccessStatusTrialDetail">Повний доступ діє ще {0} дн., до {1}.</sys:String>
+    <sys:String x:Key="AccessStatusActivatedTitle">Повний доступ активний</sys:String>
+    <sys:String x:Key="AccessStatusUnlimitedDetail">Повний доступ надано без обмеження строку.</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceTitle">Працюємо офлайн</sys:String>
+    <sys:String x:Key="AccessStatusOfflineGraceDetail">Сервер тимчасово недоступний. Програма використовує останній підтверджений стан доступу. Офлайн-пільга: ще {0} дн. Кешований доступ до {1}.</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyTitle">Доступ лише для перегляду</sys:String>
+    <sys:String x:Key="AccessStatusReadOnlyDetail">Повний доступ недоступний. Щоб знову редагувати дані та виконувати експорт, зверніться до адміністратора.</sys:String>
     <sys:String x:Key="AccessStatusBlockedTitle">Доступ заблоковано</sys:String>
-    <sys:String x:Key="AccessStatusBlockedDetail">Цього клієнта заблоковано адміністратором.</sys:String>
-    <sys:String x:Key="AccessStatusUnknownTitle">Статус доступу невідомий</sys:String>
-    <sys:String x:Key="AccessStatusUnknownDetail">Не вдалося визначити поточний стан доступу.</sys:String>
+    <sys:String x:Key="AccessStatusBlockedDetail">Цей клієнт заблоковано адміністратором. Зверніться до адміністратора для відновлення доступу.</sys:String>
+    <sys:String x:Key="AccessStatusUnknownTitle">Статус доступу уточнюється</sys:String>
+    <sys:String x:Key="AccessStatusUnknownDetail">Не вдалося підтвердити поточний стан доступу. Перевірте з'єднання або зверніться до адміністратора.</sys:String>
+    <sys:String x:Key="AccessStatusStaleDetailSuffix">Підтвердження від сервера не вдалося, тому цей кешований статус може бути вже неактуальним.</sys:String>
     <sys:String x:Key="AccessStatusAdminMessageLabel">Повідомлення адміністратора</sys:String>
+    <sys:String x:Key="AccessStatusAdminRenewRequired">Серверний доступ потрібно поновити через AdminPanel. Локальна ліцензія більше не відновлює повний доступ самостійно.</sys:String>
+    <sys:String x:Key="AccessStatusTrialEndedAdminPanel">Пробний період завершився. Активуйте цього клієнта в AdminPanel, щоб повернути повний доступ.</sys:String>
     <sys:String x:Key="LicenseNotActivated">Не активовано</sys:String>
     <sys:String x:Key="LicenseOtherPC">Ліцензія для іншого ПК</sys:String>
     <sys:String x:Key="LicenseDamaged">Ліцензія пошкоджена</sys:String>
@@ -1727,11 +1739,16 @@
 
     <!-- Replace Document Window -->
     <sys:String x:Key="ReplDocTitle">Заміна документа</sys:String>
-    <sys:String x:Key="ReplDocUploadHint">Завантажте фото або скан документа</sys:String>
+    <sys:String x:Key="ReplDocUploadHint">Завантажте зображення або PDF документа</sys:String>
     <sys:String x:Key="ReplDocUpload">Завантажити</sys:String>
     <sys:String x:Key="ReplDocEdit">Редактор</sys:String>
     <sys:String x:Key="ReplDocOldValue">Було</sys:String>
-    <sys:String x:Key="ReplDocLoadError">Не вдалося завантажити зображення</sys:String>
+    <sys:String x:Key="ReplDocLoadError">Не вдалося завантажити прев'ю документа</sys:String>
+    <sys:String x:Key="ReplDocEditorNotForPdf">Редактор доступний лише для зображень</sys:String>
+    <sys:String x:Key="PreviewLoading">Завантаження...</sys:String>
+    <sys:String x:Key="PreviewFailed">Не вдалося показати</sys:String>
+    <sys:String x:Key="PreviewRetry">Повторити</sys:String>
+    <sys:String x:Key="PreviewOpenFile">Відкрити файл</sys:String>
 
     <!-- Empty States -->
     <sys:String x:Key="TplEmptyState">Шаблони ще не додані. Натисніть + щоб створити перший.</sys:String>
@@ -1773,7 +1790,7 @@
     <sys:String x:Key="ConfirmPasswordFailed">Невірний пароль.</sys:String>
     <sys:String x:Key="ConfirmPasswordNoProfile">Профіль не знайдено. Видалення заблоковано.</sys:String>
     <sys:String x:Key="ProfileNameLatinHint">Тільки латиниця у форматі Abc, наприклад: Ivan, Petrenko.</sys:String>
-    <sys:String x:Key="ProfileErrClientIdMissing">Client ID is not available.</sys:String>
+    <sys:String x:Key="ProfileErrClientIdMissing">Ідентифікатор клієнта недоступний.</sys:String>
     <sys:String x:Key="ProfileErrFirstNameRequired">Вкажіть ім'я.</sys:String>
     <sys:String x:Key="ProfileErrLastNameRequired">Вкажіть прізвище.</sys:String>
     <sys:String x:Key="ProfileErrPasswordRequired">Вкажіть пароль.</sys:String>
@@ -1792,6 +1809,10 @@
     <sys:String x:Key="ProfileErrLoadFailed">Не вдалося завантажити профіль.</sys:String>
     <sys:String x:Key="ProfileErrUpdateFailed">Не вдалося оновити профіль.</sys:String>
     <sys:String x:Key="ProfileErrEmptyServerResponse">Порожня відповідь від сервера.</sys:String>
+    <sys:String x:Key="ProfileErrServiceUnavailable">Не вдалося зв'язатися із сервісом профілів. Спробуйте ще раз.</sys:String>
+    <sys:String x:Key="ProfileErrRequestTimedOut">Сервіс профілів не відповів вчасно. Спробуйте ще раз.</sys:String>
+    <sys:String x:Key="ProfileErrInvalidResponse">Отримано некоректну відповідь від сервісу профілів.</sys:String>
+    <sys:String x:Key="ProfileErrCooldownActive">Забагато спроб. Повторіть через {0} с.</sys:String>
     <sys:String x:Key="SettingsProfileTitle">Профіль</sys:String>
     <sys:String x:Key="SettingsProfileSubtitle">Тут можна змінити ім'я, прізвище, пароль і параметр запам'ятовування входу.</sys:String>
     <sys:String x:Key="SettingsProfileNotLoaded">Профіль користувача ще не завантажено.</sys:String>

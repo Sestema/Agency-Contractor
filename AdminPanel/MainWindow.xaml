@@ -289,6 +289,11 @@
                         <DataGridTextColumn Header="Ім'я та прізвище" Binding="{Binding DisplayName}" Width="220"/>
                         <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="120"/>
                         <DataGridTextColumn Header="Версія" Binding="{Binding AppVersion}" Width="90"/>
+                        <DataGridTextColumn Header="Фірми" Binding="{Binding FirmsCount}" Width="65"/>
+                        <DataGridTextColumn Header="Працівники" Binding="{Binding EmployeesCount}" Width="90"/>
+                        <DataGridTextColumn Header="Помилки" Binding="{Binding ErrorLikeCount}" Width="75"/>
+                        <DataGridTextColumn Header="Heartbeat" Binding="{Binding LatestHeartbeatDisplay}" SortMemberPath="LatestHeartbeatAt" Width="95"/>
+                        <DataGridTextColumn Header="Ризик" Binding="{Binding RiskDisplay}" SortMemberPath="RiskScore" Width="95"/>
                         <DataGridTextColumn Header="Останній вхід" Binding="{Binding LastSeen, StringFormat=dd.MM.yyyy HH:mm}" Width="145"/>
                         <DataGridTextColumn Header="Активовано" Binding="{Binding ActivatedAt, StringFormat=dd.MM.yyyy}" Width="100"/>
                         <DataGridTextColumn Header="Діє до" Binding="{Binding ExpiresAt, StringFormat=dd.MM.yyyy}" Width="100"/>
@@ -461,8 +466,9 @@
                       Background="#45475A" Margin="0,6"/>
 
         <Border Grid.Row="5" Style="{StaticResource CardBorder}" Padding="12">
-            <TabControl Background="#313244" BorderThickness="0">
-                <TabItem Header="Сесії">
+            <TabControl x:Name="ClientDataTabs" Background="#313244" BorderThickness="0"
+                        SelectionChanged="ClientDataTabs_SelectionChanged">
+                <TabItem x:Name="TabSessions" Header="Сесії">
                     <Grid Margin="8">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -512,7 +518,7 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem Header="Події">
+                <TabItem x:Name="TabEvents" Header="Події">
                     <Grid Margin="8">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

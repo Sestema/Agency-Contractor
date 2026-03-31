@@ -53,6 +53,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Preview image -->
@@ -65,8 +66,24 @@
                         </Grid>
                     </Border>
 
+                    <!-- PDF page navigation -->
+                    <StackPanel x:Name="PagerPanel" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center"
+                                Margin="0,4,0,6" Visibility="Collapsed">
+                        <Button x:Name="BtnPrevPage" Click="BtnPrevPage_Click"
+                                Content="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                Width="28" Height="26" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
+                        <TextBlock x:Name="PageText" Text="1 / 1" VerticalAlignment="Center"
+                                   FontSize="{DynamicResource FS12}" Margin="8,0"
+                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                        <Button x:Name="BtnNextPage" Click="BtnNextPage_Click"
+                                Content="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                Width="28" Height="26" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
+                    </StackPanel>
+
                     <!-- Action buttons -->
-                    <WrapPanel Grid.Row="1" HorizontalAlignment="Center">
+                    <WrapPanel Grid.Row="2" HorizontalAlignment="Center">
                         <Button x:Name="BtnUpload" Click="BtnUpload_Click" Padding="10,6" Margin="3"
                                 Style="{StaticResource FilledActionButton}"
                                 Cursor="Hand" FontWeight="SemiBold" ToolTip="{DynamicResource ReplDocUpload}">

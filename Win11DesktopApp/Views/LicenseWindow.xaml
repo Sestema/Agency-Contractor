@@ -1,8 +1,8 @@
 <Window x:Class="Win11DesktopApp.Views.LicenseWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Agency Contractor — Ліцензія"
-        Width="580" Height="660"
+        Title="Agency Contractor — Доступ"
+        Width="620" Height="760"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
         MinWidth="460" MinHeight="500"
@@ -21,7 +21,7 @@
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Agency Contractor" FontSize="{DynamicResource FS24}" Style="{StaticResource PageHeaderTitleText}"/>
-                        <TextBlock Text="Ліцензія та активація"
+                        <TextBlock Text="Доступ і перевірка активації"
                                    FontSize="{DynamicResource FS12}"
                                    Foreground="{DynamicResource MutedForegroundBrush}"
                                    Margin="0,3,0,0"/>
@@ -44,11 +44,11 @@
                                                    Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Статус ліцензії"
+                                        <TextBlock Text="Статус доступу"
                                                    FontSize="{DynamicResource FS14}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource ForegroundBrush}"/>
-                                        <TextBlock Text="Поточний стан активації на цьому пристрої."
+                                        <TextBlock Text="Поточний server/local стан для цього пристрою."
                                                    FontSize="{DynamicResource FS11}"
                                                    Foreground="{DynamicResource MutedForegroundBrush}"
                                                    Margin="0,2,0,0"/>
@@ -60,6 +60,19 @@
                                            FontWeight="SemiBold"
                                            Foreground="#D32F2F"
                                            TextWrapping="Wrap"/>
+                                <TextBlock x:Name="TxtStatusDetail"
+                                           Text=""
+                                           Margin="0,8,0,0"
+                                           FontSize="{DynamicResource FS12}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="TxtAdminMessage"
+                                           Text=""
+                                           Margin="0,8,0,0"
+                                           FontSize="{DynamicResource FS11}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}"
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
 
@@ -75,7 +88,7 @@
                                                    FontSize="{DynamicResource FS14}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource ForegroundBrush}"/>
-                                        <TextBlock Text="Використовується для перевірки ключа активації."
+                                        <TextBlock Text="Потрібен для діагностики та legacy-активації."
                                                    FontSize="{DynamicResource FS11}"
                                                    Foreground="{DynamicResource MutedForegroundBrush}"
                                                    Margin="0,2,0,0"/>
@@ -95,50 +108,77 @@
                 <Border Style="{StaticResource DialogSectionCard}" Margin="0,0,0,12">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource SuccessLightBrush}">
-                                <TextBlock Text="&#xE8FB;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                           Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource InfoLightBrush}">
+                                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                           Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Активація"
+                                <TextBlock Text="Основний сценарій доступу"
                                            FontSize="{DynamicResource FS15}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="Виберіть термін дії та завантажте ключ для цього комп'ютера."
+                                <TextBlock Text="Доступ надається адміністратором через AdminPanel. Якщо доступ ще не з'явився, попросіть адміністратора активувати цей клієнт і натисніть перевірку ще раз."
                                            FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource MutedForegroundBrush}"
+                                           TextWrapping="Wrap"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
                         </StackPanel>
-
-                        <TextBlock Text="Термін"
-                                   FontSize="{DynamicResource FS12}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                   Margin="0,0,0,6"/>
-                        <ComboBox x:Name="CbPlan"
-                                  FontSize="{DynamicResource FS13}"
-                                  Style="{StaticResource ThemedComboBox}"
-                                  Margin="0,0,0,14">
-                            <ComboBoxItem Content="30 днів" Tag="30"/>
-                            <ComboBoxItem Content="90 днів" Tag="90"/>
-                            <ComboBoxItem Content="180 днів" Tag="180"/>
-                            <ComboBoxItem Content="362 дні" Tag="362"/>
-                            <ComboBoxItem Content="Безліміт" Tag="0" IsSelected="True"/>
-                        </ComboBox>
-
-                        <Button x:Name="BtnActivate" Click="BtnActivate_Click"
+                        <Button x:Name="BtnRefreshStatus" Click="BtnRefreshStatus_Click"
                                 Padding="16,11"
                                 Style="{StaticResource FilledActionButton}"
                                 HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}"
+                                <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}"
                                            Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="Виберіть ключ для активації" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                <TextBlock Text="Перевірити доступ ще раз" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
                                            Foreground="White" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Border>
+
+                <Expander Header="Legacy активація (.key)"
+                          Margin="0,0,0,12"
+                          Background="{DynamicResource CardBackgroundBrush}"
+                          Foreground="{DynamicResource ForegroundBrush}">
+                    <Border Style="{StaticResource DialogSectionCard}" Margin="0,8,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Це сумісний запасний сценарій для старих файлів активації. Використовуйте його лише якщо так сказав адміністратор."
+                                       FontSize="{DynamicResource FS11}"
+                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Термін"
+                                       FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                       Margin="0,0,0,6"/>
+                            <ComboBox x:Name="CbPlan"
+                                      FontSize="{DynamicResource FS13}"
+                                      Style="{StaticResource ThemedComboBox}"
+                                      Margin="0,0,0,14">
+                                <ComboBoxItem Content="30 днів" Tag="30"/>
+                                <ComboBoxItem Content="90 днів" Tag="90"/>
+                                <ComboBoxItem Content="180 днів" Tag="180"/>
+                                <ComboBoxItem Content="362 дні" Tag="362"/>
+                                <ComboBoxItem Content="Безліміт" Tag="0" IsSelected="True"/>
+                            </ComboBox>
+
+                            <Button x:Name="BtnActivate" Click="BtnActivate_Click"
+                                    Padding="16,11"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    HorizontalAlignment="Stretch">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}"
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Виберіть legacy-ключ для активації" FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Expander>
 
                 <Border Style="{StaticResource DialogPreviewSurface}" Padding="14,12">
                     <StackPanel>
@@ -166,7 +206,7 @@
                                Text="Agency Contractor"
                                FontSize="{DynamicResource FS11}"
                                Foreground="{DynamicResource TertiaryForegroundBrush}"/>
-                    <TextBlock Text="Продовження доступне після успішної перевірки ліцензії."
+                    <TextBlock Text="Продовження доступне після успішної server/local перевірки доступу."
                                FontSize="{DynamicResource FS10}"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                Margin="0,2,0,0"/>

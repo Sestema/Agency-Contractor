@@ -32,17 +32,8 @@
                            MouseRightButtonDown="DocImage_MouseRightButtonDown"
                            MouseRightButtonUp="DocImage_MouseRightButtonUp"
                            MouseMove="DocImage_MouseMove"
-                           MouseLeftButtonDown="DocImage_ResetZoom">
-                        <Image.Style>
-                            <Style TargetType="Image">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CarouselPreviewPath, Converter={StaticResource StringToVis}}" Value="{x:Static Visibility.Collapsed}">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Image.Style>
+                           MouseLeftButtonDown="DocImage_ResetZoom"
+                           Visibility="{Binding CarouselPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}">
                         <Image.RenderTransform>
                             <TransformGroup>
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
@@ -59,7 +50,7 @@
                             <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CarouselPreviewPath, Converter={StaticResource StringToVis}}" Value="{x:Static Visibility.Collapsed}">
+                                    <DataTrigger Binding="{Binding CarouselPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Empty}" Value="{x:Static Visibility.Visible}">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -71,6 +62,31 @@
                                        Style="{StaticResource CompactEmptyStateTitleText}"/>
                             <TextBlock Text="Завантаж документ або перейди до кроку з прикріпленим файлом."
                                        Style="{StaticResource CompactEmptyStateDescriptionText}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Margin="12"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Visibility="{Binding CarouselPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
+                        <TextBlock Text="&#xE895;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS24}"/>
+                        <TextBlock Text="{DynamicResource PreviewLoading}"
+                                   Style="{StaticResource CompactEmptyStateTitleText}"/>
+                    </StackPanel>
+
+                    <Border Margin="12"
+                            Padding="24,20"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Style="{StaticResource CompactEmptyStateCard}"
+                            Visibility="{Binding CarouselPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="&#xE783;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS24}"/>
+                            <TextBlock Text="{DynamicResource PreviewFailed}"
+                                       Style="{StaticResource CompactEmptyStateTitleText}"/>
+                            <Button Command="{Binding OpenCurrentPreviewFileCommand}" Style="{StaticResource HeaderGhostButton}" Margin="0,12,0,0">
+                                <TextBlock Text="{DynamicResource PreviewOpenFile}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </Grid>

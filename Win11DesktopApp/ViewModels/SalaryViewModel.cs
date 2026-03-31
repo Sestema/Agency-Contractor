@@ -702,6 +702,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void CreateNextMonth()
         {
+            if (!PolicyService.EnsureWriteAllowed("створити наступний місяць зарплат"))
+                return;
+
             SaveReport();
 
             var next = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1);
@@ -920,6 +923,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void SaveReport()
         {
+            if (!PolicyService.EnsureWriteAllowed("зберегти зарплатний звіт"))
+                return;
+
             if (!_financeService.SaveAllFirmPayments(_selectedYear, _selectedMonth, Entries.ToList(), FirmExpenses.ToList()))
             {
                 StatusMessage = string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
@@ -990,6 +996,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void OpenAdvanceDialog()
         {
+            if (!PolicyService.EnsureWriteAllowed("додати аванс"))
+                return;
+
             if (SelectedEntry != null)
                 AdvanceName = SelectedEntry.FullName;
             AdvanceAmount = "";
@@ -1000,6 +1009,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ConfirmAdvance()
         {
+            if (!PolicyService.EnsureWriteAllowed("підтвердити аванс"))
+                return;
+
             if (!decimal.TryParse(AdvanceAmount.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) || amount <= 0)
             {
                 StatusMessage = L("FinAdvanceInvalid") ?? "Invalid amount";
@@ -1062,10 +1074,14 @@ namespace Win11DesktopApp.ViewModels
 
         public void DeleteAdvance(string advanceId, string employeeName = "", string firmName = "", decimal amount = 0)
         {
+            if (!PolicyService.EnsureWriteAllowed("видалити аванс"))
+                return;
+
             if (amount >= 1000)
             {
                 var msg = $"{L("FinAdvanceDeleteConfirm") ?? "Delete advance"} {amount:N0} Kč?";
-                if (MessageBox.Show(msg, "", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                var title = L("TitleWarning") ?? "Warning";
+                if (MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                     return;
             }
 
@@ -1117,6 +1133,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void ExportToExcel()
         {
+            if (!PolicyService.EnsureExportsAllowed("експортувати зарплатний звіт"))
+                return;
+
             if (Entries.Count == 0)
             {
                 StatusMessage = L("FinSalaryNoData") is string n && n.Length > 0 ? n : "No data to export";
@@ -1670,6 +1689,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void AddExpense()
         {
+            if (!PolicyService.EnsureWriteAllowed("додати витрату"))
+                return;
+
             var allLabel = L("FinFilterAll") ?? "All";
             var isAll = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel;
 
@@ -1696,6 +1718,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void RemoveExpense(string? expenseId)
         {
+            if (!PolicyService.EnsureWriteAllowed("видалити витрату"))
+                return;
+
             if (string.IsNullOrEmpty(expenseId)) return;
             var item = FirmExpenses.FirstOrDefault(e => e.Id == expenseId);
             if (item != null)
@@ -1710,6 +1735,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void MarkAllPaid()
         {
+            if (!PolicyService.EnsureWriteAllowed("позначити зарплати як оплачені"))
+                return;
+
             foreach (var e in VisibleEntries())
             {
                 e.IsPaid = true;
@@ -1725,6 +1753,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void MarkAllUnpaid()
         {
+            if (!PolicyService.EnsureWriteAllowed("зняти позначку оплати зарплат"))
+                return;
+
             foreach (var e in VisibleEntries())
             {
                 e.IsPaid = false;
@@ -1775,6 +1806,9 @@ namespace Win11DesktopApp.ViewModels
 
         public void SaveExpensesNow()
         {
+            if (!PolicyService.EnsureWriteAllowed("зберегти витрати"))
+                return;
+
             _financeService.SaveFirmExpenses(FirmExpenses.ToList(), _selectedYear, _selectedMonth);
         }
 

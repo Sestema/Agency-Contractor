@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -14,7 +16,8 @@ namespace Win11DesktopApp.Services
     {
         private const string SettingsFileName = "settings.json";
         private const string BackupFileName = "settings.json.bak";
-        public const string CurrentAppVersion = "0.1.37";
+        private static readonly Lazy<string> _currentAppVersion = new(ResolveCurrentAppVersion);
+        public static string CurrentAppVersion => _currentAppVersion.Value;
         public static string? PendingUpdateFrom { get; set; }
         private readonly bool _suppressStartupNotifications;
         private string _settingsPath;
@@ -110,6 +113,30 @@ namespace Win11DesktopApp.Services
             LoadSettings();
         }
 
+        private static string ResolveCurrentAppVersion()
+        {
+            try
+            {
+                var assembly = typeof(AppSettingsService).Assembly;
+                var assemblyVersion = assembly.GetName().Version;
+                if (assemblyVersion != null)
+                {
+                    return assemblyVersion.Build >= 0
+                        ? $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}"
+                        : $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
+                }
+
+                var fileVersion = FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
+                if (!string.IsNullOrWhiteSpace(fileVersion))
+                    return fileVersion;
+            }
+            catch
+            {
+            }
+
+            return "0.0.0";
+        }
+
         private void LoadSettings()
         {
             var shouldPersistDefaults = false;
@@ -160,7 +187,7 @@ namespace Win11DesktopApp.Services
                 if (!File.Exists(_backupPath)) return false;
                 Settings = SafeFileService.ReadJsonOrDefault(_backupPath, new AppSettings(), _jsonOptions, Encoding.UTF8);
                 WasRecoveredFromBackupOnLoad = true;
-                LoggingService.LogWarning("AppSettingsService", "Restored settings from backup");
+                LoggingService.LogInfo("AppSettingsService", "Restored settings from backup");
                 NotifyStartupWarning(Res("MsgSettingsRecoveredFromBackup"));
                 _ = SaveSettingsImmediate();
                 return true;

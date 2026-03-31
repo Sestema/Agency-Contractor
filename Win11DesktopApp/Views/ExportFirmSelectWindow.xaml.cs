@@ -75,7 +75,8 @@ namespace Win11DesktopApp.Views
             if (SelectedFirms.Count == 0)
             {
                 var msg = TryL("FinExportNoFirms") ?? "Select at least one firm";
-                MessageBox.Show(msg, "", MessageBoxButton.OK, MessageBoxImage.Warning);
+                var title = TryL("TitleWarning") ?? "Warning";
+                MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

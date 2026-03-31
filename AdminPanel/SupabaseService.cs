@@ -42,6 +42,12 @@ namespace AdminPanel
         public string DisplayName =>
             string.IsNullOrWhiteSpace(ProfileFullName) ? MachineName : ProfileFullName;
 
+        public string RiskDisplay =>
+            $"{(string.IsNullOrWhiteSpace(RiskLevel) ? "Unknown" : RiskLevel)} ({RiskScore})";
+
+        public string LatestHeartbeatDisplay =>
+            LatestHeartbeatAt?.ToLocalTime().ToString("dd.MM HH:mm") ?? "—";
+
         public int AccessDaysRemaining =>
             !ExpiresAt.HasValue
                 ? int.MaxValue
@@ -429,11 +435,6 @@ namespace AdminPanel
         public async Task<ClientProfileRecord?> GetClientProfileAsync(string clientId)
         {
             return await CallAsync<ClientProfileRecord>("get_profile", new { client_id = clientId });
-        }
-
-        public async Task<List<ClientProfileRecord>> GetClientProfilesAsync()
-        {
-            return await CallAsync<List<ClientProfileRecord>>("get_profiles") ?? new List<ClientProfileRecord>();
         }
 
         public async Task<ClientMirrorStateRecord?> GetClientMirrorStateAsync(string clientId)

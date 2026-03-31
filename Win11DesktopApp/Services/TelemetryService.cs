@@ -29,6 +29,7 @@ namespace Win11DesktopApp.Services
         public List<RemoteCommand> PendingCommands { get; set; } = new();
         public bool IsLive { get; set; }
         public bool IsFromCache { get; set; }
+        public bool IsStale { get; set; }
         public DateTime? LastServerCheckUtc { get; set; }
         public string Source { get; set; } = string.Empty;
 
@@ -174,7 +175,7 @@ namespace Win11DesktopApp.Services
                 {
                     ["event_type"] = "app_started",
                     ["event_data"] = stats,
-                    ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
+                    ["ip_address"] = ""
                 }).ConfigureAwait(false);
                 if (gateway != null && gateway.Ok)
                     UpdateCachedGatewayState(gateway, BuildAccessState(gateway, isFromCache: false));
@@ -222,7 +223,12 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("TelemetryService.GetStartupAccessState", ex.Message);
-                return accessState.IsOfflineGraceActive ? accessState : new ClientAccessState();
+                if (!accessState.HasKnownState)
+                    return accessState;
+
+                accessState.IsStale = true;
+                accessState.Source = accessState.IsOfflineGraceActive ? "cache_offline_grace" : "cache_stale";
+                return accessState;
             }
         }
 
@@ -385,6 +391,7 @@ namespace Win11DesktopApp.Services
                 PendingCommands = gateway.PendingCommands ?? new List<RemoteCommand>(),
                 IsLive = !isFromCache,
                 IsFromCache = isFromCache,
+                IsStale = false,
                 LastServerCheckUtc = DateTime.UtcNow,
                 Source = isFromCache ? "cache" : "server"
             };
@@ -420,6 +427,7 @@ namespace Win11DesktopApp.Services
                 Policy = _cachedPolicy,
                 IsLive = false,
                 IsFromCache = true,
+                IsStale = false,
                 LastServerCheckUtc = lastCheckedUtc.Kind == DateTimeKind.Utc
                     ? lastCheckedUtc
                     : lastCheckedUtc.ToUniversalTime(),

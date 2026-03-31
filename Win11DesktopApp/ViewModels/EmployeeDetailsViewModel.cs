@@ -168,6 +168,20 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _passportFilePath, value);
         }
 
+        private string _passportPreviewPath = string.Empty;
+        public string PassportPreviewPath
+        {
+            get => _passportPreviewPath;
+            set => SetProperty(ref _passportPreviewPath, value);
+        }
+
+        private DocPreviewState _passportPreviewState = DocPreviewState.Empty;
+        public DocPreviewState PassportPreviewState
+        {
+            get => _passportPreviewState;
+            set => SetProperty(ref _passportPreviewState, value);
+        }
+
         private string _visaFilePath = string.Empty;
         public string VisaFilePath
         {
@@ -175,11 +189,39 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _visaFilePath, value);
         }
 
+        private string _visaPreviewPath = string.Empty;
+        public string VisaPreviewPath
+        {
+            get => _visaPreviewPath;
+            set => SetProperty(ref _visaPreviewPath, value);
+        }
+
+        private DocPreviewState _visaPreviewState = DocPreviewState.Empty;
+        public DocPreviewState VisaPreviewState
+        {
+            get => _visaPreviewState;
+            set => SetProperty(ref _visaPreviewState, value);
+        }
+
         private string _insuranceFilePath = string.Empty;
         public string InsuranceFilePath
         {
             get => _insuranceFilePath;
             set => SetProperty(ref _insuranceFilePath, value);
+        }
+
+        private string _insurancePreviewPath = string.Empty;
+        public string InsurancePreviewPath
+        {
+            get => _insurancePreviewPath;
+            set => SetProperty(ref _insurancePreviewPath, value);
+        }
+
+        private DocPreviewState _insurancePreviewState = DocPreviewState.Empty;
+        public DocPreviewState InsurancePreviewState
+        {
+            get => _insurancePreviewState;
+            set => SetProperty(ref _insurancePreviewState, value);
         }
 
         private string _photoFilePath = string.Empty;
@@ -245,6 +287,20 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _workPermitFilePath, value);
         }
 
+        private string _workPermitPreviewPath = string.Empty;
+        public string WorkPermitPreviewPath
+        {
+            get => _workPermitPreviewPath;
+            set => SetProperty(ref _workPermitPreviewPath, value);
+        }
+
+        private DocPreviewState _workPermitPreviewState = DocPreviewState.Empty;
+        public DocPreviewState WorkPermitPreviewState
+        {
+            get => _workPermitPreviewState;
+            set => SetProperty(ref _workPermitPreviewState, value);
+        }
+
         private bool _hasWorkPermit;
         public bool HasWorkPermit
         {
@@ -258,6 +314,9 @@ namespace Win11DesktopApp.ViewModels
             get => _workPermitIsPdf;
             set => SetProperty(ref _workPermitIsPdf, value);
         }
+
+        private string? _pdfPreviewTempFolder;
+        private CancellationTokenSource? _previewLoadCts;
 
         public bool IsWorkPermitType => Data.EmployeeType == "work_permit";
 
@@ -492,6 +551,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ConfirmExtendCommand { get; }
         public ICommand CancelExtendCommand { get; }
         public ICommand OpenWorkPermitCommand { get; }
+        public ICommand RetryPreviewCommand { get; }
         public ICommand RenewWorkPermitCommand { get; }
         public ICommand ConfirmRenewWpCommand { get; }
         public ICommand CancelRenewWpCommand { get; }
@@ -725,7 +785,7 @@ namespace Win11DesktopApp.ViewModels
             LoadCompanyPositions();
             LoadCompanyAddresses();
 
-            CloseCommand = new RelayCommand(o => RequestClose?.Invoke());
+            CloseCommand = new RelayCommand(o => RaiseRequestClose());
             ShowDocumentsCommand = new RelayCommand(o => TabIndex = 0);
             ShowProfileCommand = new RelayCommand(o => TabIndex = 1);
             ShowHistoryCommand = new RelayCommand(o =>
@@ -758,6 +818,11 @@ namespace Win11DesktopApp.ViewModels
             OpenVisaCommand = new RelayCommand(o => OpenFile(VisaFilePath), o => HasVisa);
             OpenInsuranceCommand = new RelayCommand(o => OpenFile(InsuranceFilePath), o => HasInsurance);
             OpenPhotoCommand = new RelayCommand(o => OpenFile(PhotoFilePath), o => HasPhoto);
+            RetryPreviewCommand = new RelayCommand(o =>
+            {
+                if (o is string docType)
+                    RebuildSinglePreview(docType);
+            });
 
             OpenGenerateDialogCommand = new RelayCommand(o => OpenGenerateDialog(), _ => !IsReadOnlyMode);
             CloseGenerateDialogCommand = new RelayCommand(o => IsGenerateDialogOpen = false);
@@ -986,6 +1051,10 @@ namespace Win11DesktopApp.ViewModels
                 VisaFilePath = string.Empty;
                 InsuranceFilePath = string.Empty;
                 WorkPermitFilePath = string.Empty;
+                PassportPreviewPath = string.Empty;
+                VisaPreviewPath = string.Empty;
+                InsurancePreviewPath = string.Empty;
+                WorkPermitPreviewPath = string.Empty;
                 OnPropertyChanged(nameof(PhotoFilePath));
                 OnPropertyChanged(nameof(PassportFilePath));
                 OnPropertyChanged(nameof(VisaFilePath));
@@ -1016,7 +1085,7 @@ namespace Win11DesktopApp.ViewModels
                     IsArchiveDialogOpen = false;
                     InvalidateDetailCaches();
                     DataChanged?.Invoke();
-                    RequestClose?.Invoke();
+                    RaiseRequestClose();
                 }
                 else
                 {
@@ -1328,6 +1397,8 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            CleanupPdfPreviews();
+
             PassportFilePath = ResolveDocumentPath(Data.Files.Passport, "passport");
             VisaFilePath = ResolveDocumentPath(Data.Files.Visa, "visa");
             InsuranceFilePath = ResolveDocumentPath(Data.Files.Insurance, "insurance");
@@ -1344,6 +1415,16 @@ namespace Win11DesktopApp.ViewModels
             VisaIsPdf = IsPdf(VisaFilePath);
             InsuranceIsPdf = IsPdf(InsuranceFilePath);
             WorkPermitIsPdf = IsPdf(WorkPermitFilePath);
+            PassportPreviewPath = PassportIsPdf ? string.Empty : PassportFilePath;
+            VisaPreviewPath = VisaIsPdf ? string.Empty : VisaFilePath;
+            InsurancePreviewPath = InsuranceIsPdf ? string.Empty : InsuranceFilePath;
+            WorkPermitPreviewPath = WorkPermitIsPdf ? string.Empty : WorkPermitFilePath;
+            PassportPreviewState = !HasPassport ? DocPreviewState.Empty : PassportIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
+            VisaPreviewState = !HasVisa ? DocPreviewState.Empty : VisaIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
+            InsurancePreviewState = !HasInsurance ? DocPreviewState.Empty : InsuranceIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
+            WorkPermitPreviewState = !HasWorkPermit ? DocPreviewState.Empty : WorkPermitIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
+
+            StartPdfPreviewLoading();
         }
 
         private async void LoadCompanyPositions()
@@ -1478,6 +1559,160 @@ namespace Win11DesktopApp.ViewModels
             return !string.IsNullOrEmpty(path) && Path.GetExtension(path).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
         }
 
+        private string BuildDocPreviewPath(string filePath, string baseName, CancellationToken token = default)
+        {
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                return string.Empty;
+
+            if (!IsPdf(filePath))
+                return filePath;
+
+            try
+            {
+                _pdfPreviewTempFolder ??= Path.Combine(Path.GetTempPath(), "AC_DetPreview_" + Guid.NewGuid().ToString("N")[..8]);
+                Directory.CreateDirectory(_pdfPreviewTempFolder);
+                token.ThrowIfCancellationRequested();
+
+                var pages = _employeeService.RenderPdfPages(filePath, _pdfPreviewTempFolder, baseName, maxPages: 1);
+                token.ThrowIfCancellationRequested();
+                if (pages.Count == 0)
+                {
+                    LoggingService.LogWarning("EmployeeDetailsViewModel.BuildDocPreviewPath",
+                        $"PDF preview generation returned no pages for '{filePath}'.");
+                    return string.Empty;
+                }
+
+                return pages[0];
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.BuildDocPreviewPath", ex.Message);
+                return string.Empty;
+            }
+        }
+
+        private void StartPdfPreviewLoading(string? docType = null)
+        {
+            _previewLoadCts?.Cancel();
+            _previewLoadCts?.Dispose();
+            _previewLoadCts = new CancellationTokenSource();
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null)
+                return;
+
+            var token = _previewLoadCts.Token;
+            var previewRequests = new List<(string DocType, string FilePath, string BaseName, Action<string> AssignPreview, Action<DocPreviewState> AssignState)>
+            {
+                ("passport", PassportFilePath, "det_pass", path => PassportPreviewPath = path, state => PassportPreviewState = state),
+                ("visa", VisaFilePath, "det_visa", path => VisaPreviewPath = path, state => VisaPreviewState = state),
+                ("insurance", InsuranceFilePath, "det_ins", path => InsurancePreviewPath = path, state => InsurancePreviewState = state),
+                ("work_permit", WorkPermitFilePath, "det_wp", path => WorkPermitPreviewPath = path, state => WorkPermitPreviewState = state)
+            };
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    foreach (var request in previewRequests)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        if (!string.IsNullOrWhiteSpace(docType)
+                            && !string.Equals(request.DocType, docType, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (!IsPdf(request.FilePath) || !File.Exists(request.FilePath))
+                            continue;
+
+                        var previewPath = BuildDocPreviewPath(request.FilePath, request.BaseName, token);
+                        token.ThrowIfCancellationRequested();
+
+                        await dispatcher.InvokeAsync(() =>
+                        {
+                            if (!token.IsCancellationRequested)
+                            {
+                                request.AssignPreview(previewPath);
+                                request.AssignState(string.IsNullOrWhiteSpace(previewPath) ? DocPreviewState.Error : DocPreviewState.Ready);
+                            }
+                        });
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }, token);
+        }
+
+        private void RebuildSinglePreview(string docType)
+        {
+            if (string.IsNullOrWhiteSpace(docType))
+                return;
+
+            switch (docType)
+            {
+                case "passport":
+                    if (!PassportIsPdf || string.IsNullOrWhiteSpace(PassportFilePath))
+                        return;
+                    PassportPreviewPath = string.Empty;
+                    PassportPreviewState = DocPreviewState.Loading;
+                    break;
+                case "visa":
+                    if (!VisaIsPdf || string.IsNullOrWhiteSpace(VisaFilePath))
+                        return;
+                    VisaPreviewPath = string.Empty;
+                    VisaPreviewState = DocPreviewState.Loading;
+                    break;
+                case "insurance":
+                    if (!InsuranceIsPdf || string.IsNullOrWhiteSpace(InsuranceFilePath))
+                        return;
+                    InsurancePreviewPath = string.Empty;
+                    InsurancePreviewState = DocPreviewState.Loading;
+                    break;
+                case "work_permit":
+                    if (!WorkPermitIsPdf || string.IsNullOrWhiteSpace(WorkPermitFilePath))
+                        return;
+                    WorkPermitPreviewPath = string.Empty;
+                    WorkPermitPreviewState = DocPreviewState.Loading;
+                    break;
+                default:
+                    return;
+            }
+
+            StartPdfPreviewLoading(docType);
+        }
+
+        private void CleanupPdfPreviews()
+        {
+            _previewLoadCts?.Cancel();
+            _previewLoadCts?.Dispose();
+            _previewLoadCts = null;
+
+            if (!string.IsNullOrWhiteSpace(_pdfPreviewTempFolder) && Directory.Exists(_pdfPreviewTempFolder))
+            {
+                try
+                {
+                    Directory.Delete(_pdfPreviewTempFolder, true);
+                }
+                catch
+                {
+                }
+            }
+
+            _pdfPreviewTempFolder = null;
+        }
+
+        private void RaiseRequestClose()
+        {
+            CleanupPdfPreviews();
+            RequestClose?.Invoke();
+        }
+
         private void OpenFile(string path)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -1554,7 +1789,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
 
             _profileCloseScheduled = true;
-            Application.Current?.Dispatcher?.BeginInvoke(new Action(() => RequestClose?.Invoke()));
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(RaiseRequestClose));
         }
 
         private string ResolveDocumentPath(string fileName, string documentLabel)
@@ -1573,11 +1808,16 @@ namespace Win11DesktopApp.ViewModels
 
         private void ClearDocumentState()
         {
+            CleanupPdfPreviews();
             PassportFilePath = string.Empty;
             VisaFilePath = string.Empty;
             InsuranceFilePath = string.Empty;
             PhotoFilePath = string.Empty;
             WorkPermitFilePath = string.Empty;
+            PassportPreviewPath = string.Empty;
+            VisaPreviewPath = string.Empty;
+            InsurancePreviewPath = string.Empty;
+            WorkPermitPreviewPath = string.Empty;
             HasPassport = false;
             HasVisa = false;
             HasInsurance = false;
@@ -1587,6 +1827,10 @@ namespace Win11DesktopApp.ViewModels
             VisaIsPdf = false;
             InsuranceIsPdf = false;
             WorkPermitIsPdf = false;
+            PassportPreviewState = DocPreviewState.Empty;
+            VisaPreviewState = DocPreviewState.Empty;
+            InsurancePreviewState = DocPreviewState.Empty;
+            WorkPermitPreviewState = DocPreviewState.Empty;
         }
 
         private void StartRenewWorkPermit()

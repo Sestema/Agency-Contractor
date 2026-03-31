@@ -17,6 +17,9 @@ namespace Win11DesktopApp
     public partial class App : Application
     {
         private static CancellationTokenSource? _heartbeatCts;
+        private static bool _heartbeatFailureActive;
+        private static string? _recommendedVersionPromptedFor;
+        private static int _versionPolicyEnforcementActive;
         public static NavigationService NavigationService { get; private set; } = null!;
         public static ThemeService ThemeService { get; private set; } = null!;
         public static LanguageService LanguageService { get; private set; } = null!;
@@ -190,6 +193,11 @@ namespace Win11DesktopApp
             else
             {
                 startupAccess = TelemetryService.GetCachedAccessStateSnapshot();
+                if (startupAccess.HasKnownState)
+                {
+                    startupAccess.IsStale = true;
+                    startupAccess.Source = startupAccess.IsOfflineGraceActive ? "cache_offline_grace" : "cache_stale";
+                }
                 startupClientId = startupAccess.ClientId;
                 LoggingService.LogWarning("App.ProfileGate",
                     startupAccess.IsOfflineGraceActive
@@ -201,7 +209,22 @@ namespace Win11DesktopApp
             if (!string.IsNullOrWhiteSpace(startupClientId))
             {
                 AdminMirrorSyncService.Start(startupClientId);
-                var profileCheck = await ProfileAuthService.CheckProfileAsync(startupClientId);
+                var profileCheckTask = ProfileAuthService.CheckProfileAsync(startupClientId);
+                ProfileCheckResult profileCheck;
+                if (await Task.WhenAny(profileCheckTask, Task.Delay(2000)) == profileCheckTask)
+                {
+                    profileCheck = await profileCheckTask;
+                }
+                else
+                {
+                    LoggingService.LogWarning("App.ProfileGate",
+                        "Profile check timed out after 2000ms. Continuing without profile gate.");
+                    profileCheck = new ProfileCheckResult
+                    {
+                        IsFeatureAvailable = false,
+                        ErrorMessage = "Profile check timed out"
+                    };
+                }
                 if (profileCheck.IsFeatureAvailable && profileCheck.RequiresSetup)
                 {
                     var profileWindow = new Views.ProfileSetupWindow(ProfileAuthService, startupClientId);
@@ -310,10 +333,12 @@ namespace Win11DesktopApp
             startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupPolicy);
 
             await PolicyService.ApplyPolicyAsync(startupPolicy);
+            if (!await EnforceVersionPolicyAsync(startupPolicy))
+                return;
 
             if (!skipLicenseGate && !localLicenseStatus.IsValid && !startupAccess.HasKnownState)
             {
-                var licenseWindow = new Views.LicenseWindow();
+                var licenseWindow = new Views.LicenseWindow(shutdownOnCloseWithoutAccess: true, initialAccessState: startupAccess);
                 MainWindow = licenseWindow;
                 var licenseAccepted = licenseWindow.ShowDialog() == true && licenseWindow.IsActivated;
                 MainWindow = null;
@@ -325,6 +350,11 @@ namespace Win11DesktopApp
                 }
 
                 localLicenseStatus = LicenseService.GetLocalLicenseStatus();
+                startupAccess = licenseWindow.LatestAccessState.HasKnownState ? licenseWindow.LatestAccessState : startupAccess;
+                startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupAccess.Policy ?? startupPolicy);
+                await PolicyService.ApplyPolicyAsync(startupPolicy);
+                if (!await EnforceVersionPolicyAsync(startupPolicy))
+                    return;
             }
         LogStartupPhase("license_gate_completed");
 
@@ -376,18 +406,33 @@ namespace Win11DesktopApp
                     try
                     {
                         var heartbeat = await TelemetryService.SendHeartbeatAsync().ConfigureAwait(false);
+                        if (_heartbeatFailureActive)
+                        {
+                            LoggingService.LogInfo("App.HeartbeatLoop", "Heartbeat connection restored.");
+                            _heartbeatFailureActive = false;
+                        }
                         if (heartbeat.AccessState.HasKnownState || heartbeat.Policy != null)
                         {
                             var effectivePolicy = BuildEffectivePolicy(LicenseService.GetLocalLicenseStatus(), heartbeat.AccessState, heartbeat.Policy);
                             await PolicyService.ApplyPolicyAsync(effectivePolicy).ConfigureAwait(false);
                             AccessStatusService.UpdateRemoteState(heartbeat.AccessState, effectivePolicy);
+                            if (!await EnforceVersionPolicyAsync(effectivePolicy).ConfigureAwait(false))
+                                return;
                         }
                         if (heartbeat.PendingCommands.Count > 0)
                             await CommandService.ExecutePendingCommandsAsync(heartbeat.PendingCommands, heartbeat.ClientId).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
-                        LoggingService.LogWarning("App.HeartbeatLoop", ex.Message);
+                        if (!_heartbeatFailureActive)
+                        {
+                            LoggingService.LogWarning("App.HeartbeatLoop", $"Heartbeat sync failed: {ex.Message}");
+                            _heartbeatFailureActive = true;
+                        }
+                        else
+                        {
+                            LoggingService.LogInfo("App.HeartbeatLoop", $"Heartbeat still unavailable: {ex.Message}");
+                        }
                     }
 
                     await Task.Delay(TimeSpan.FromMinutes(3), ct);
@@ -424,8 +469,8 @@ namespace Win11DesktopApp
                 if (string.IsNullOrWhiteSpace(effective.AdminMessage))
                 {
                     effective.AdminMessage = localLicenseStatus.IsValid
-                        ? "Локальна ліцензія більше не є головним джерелом доступу. Поновіть серверний доступ через AdminPanel."
-                        : "Пробний період завершився. Доступ переведено в режим перегляду до активації через AdminPanel.";
+                        ? Res("AccessStatusAdminRenewRequired", "Server access needs to be renewed in AdminPanel. The local license no longer restores full access on its own.")
+                        : Res("AccessStatusTrialEndedAdminPanel", "The trial period has ended. Activate this client in AdminPanel to restore full access.");
                 }
             }
 
@@ -514,6 +559,74 @@ namespace Win11DesktopApp
                 return true;
 
             return false;
+        }
+
+        private static async Task<bool> EnforceVersionPolicyAsync(RemotePolicy? policy)
+        {
+            if (policy == null)
+                return true;
+
+            var currentVersion = AppSettingsService.CurrentAppVersion;
+            var requiresMinimumVersion = PolicyService.IsCurrentVersionBelowMinimum(currentVersion);
+            var requiresForcedUpdate = policy.ForceUpdate
+                && !string.IsNullOrWhiteSpace(policy.RecommendedVersion)
+                && PolicyService.CompareVersions(currentVersion, policy.RecommendedVersion) < 0;
+
+            if (requiresMinimumVersion || requiresForcedUpdate)
+            {
+                if (Interlocked.Exchange(ref _versionPolicyEnforcementActive, 1) == 1)
+                    return false;
+
+                var dispatcher = Current?.Dispatcher;
+                if (dispatcher == null)
+                    return false;
+
+                await dispatcher.InvokeAsync(() =>
+                {
+                    var requiredVersion = requiresMinimumVersion
+                        ? policy.MinimumSupportedVersion
+                        : policy.RecommendedVersion;
+                    var reason = requiresMinimumVersion
+                        ? "Ця версія програми більше не підтримується сервером."
+                        : "Адміністратор вимагає оновити програму перед подальшою роботою.";
+                    var adminMessage = string.IsNullOrWhiteSpace(policy.AdminMessage)
+                        ? string.Empty
+                        : $"\n\n{policy.AdminMessage.Trim()}";
+
+                    MessageBox.Show(
+                        $"{reason}\n\nПоточна версія: {currentVersion}\nПотрібна версія: {requiredVersion}{adminMessage}\n\nПрограма буде закрита. Після оновлення її можна відкрити знову.",
+                        "Agency Contractor",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    Current?.Shutdown();
+                });
+
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(policy.RecommendedVersion)
+                && PolicyService.CompareVersions(currentVersion, policy.RecommendedVersion) < 0
+                && !string.Equals(_recommendedVersionPromptedFor, policy.RecommendedVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                _recommendedVersionPromptedFor = policy.RecommendedVersion;
+                var dispatcher = Current?.Dispatcher;
+                if (dispatcher != null)
+                {
+                    await dispatcher.InvokeAsync(() =>
+                    {
+                        ToastService.Instance.Warning(
+                            $"Адміністратор рекомендує оновити програму до версії {policy.RecommendedVersion}. Поточна версія: {currentVersion}.");
+                    });
+                }
+            }
+
+            return true;
+        }
+
+        private static string Res(string key, string fallback)
+        {
+            return Current?.TryFindResource(key) as string ?? fallback;
         }
     }
 }

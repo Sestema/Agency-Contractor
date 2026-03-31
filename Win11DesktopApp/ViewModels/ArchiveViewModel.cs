@@ -249,6 +249,9 @@ namespace Win11DesktopApp.ViewModels
 
             RestoreEmployeeCommand = new RelayCommand(o =>
             {
+                if (!PolicyService.EnsureWriteAllowed("відновити працівника з архіву"))
+                    return;
+
                 if (o is ArchivedEmployeeSummary emp)
                 {
                     EmployeeToRestore = emp;
@@ -433,6 +436,9 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task ConfirmRestoreAsync()
         {
+            if (!PolicyService.EnsureWriteAllowed("підтвердити відновлення працівника"))
+                return;
+
             if (EmployeeToRestore == null)
             {
                 RestoreStatus = Res("MsgNoEmployeeSelected");

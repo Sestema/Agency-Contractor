@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -64,6 +65,9 @@ namespace AdminPanel
         private string? _telemetryNextCursor;
         private bool _telemetryHasMore;
         private string? _telemetryClientId;
+        private string? _telemetryLoadingClientId;
+        private string? _profileClientId;
+        private string? _profileLoadingClientId;
         private bool _isUpdatingTelemetryEventFilter;
         private WindowState _lastNonMinimizedWindowState = WindowState.Normal;
 
@@ -134,44 +138,14 @@ namespace AdminPanel
                 RestoreClientSelection(selectedId);
 
                 if (_selected == null)
-                {
-                    _selectedProfile = null;
-                    _activeTelemetry = new List<TelemetryRecord>();
-                    _telemetryNextCursor = null;
-                    _telemetryHasMore = false;
-                    _telemetryClientId = null;
-                    RefreshSessionSummaries();
-                    PopulateTelemetryEventFilter();
-                    ApplyTelemetryFilters();
-                    UpdateStats(_activeTelemetry, null);
-                    PopulateClientDetails(null);
-                    UpdateActionButtons();
-                }
+                    OnClientSelected();
 
                 TxtStatus.Text = $"Оновлено: {DateTime.Now:HH:mm:ss}";
             }
             catch (Exception ex)
             {
                 TxtStatus.Text = $"Помилка: {ex.Message}";
-                MessageBox.Show($"Не вдалося завантажити дані:\n{ex.Message}", "Помилка",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void ApplyProfilesToClients(List<ClientProfileRecord> profiles)
-        {
-            var profilesByClientId = profiles
-                .Where(profile => !string.IsNullOrWhiteSpace(profile.ClientId))
-                .GroupBy(profile => profile.ClientId, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-
-            foreach (var client in _allClients)
-            {
-                if (!profilesByClientId.TryGetValue(client.Id, out var profile))
-                    continue;
-
-                client.ProfileFirstName = profile.FirstName ?? string.Empty;
-                client.ProfileLastName = profile.LastName ?? string.Empty;
+                ShowActionError("завантажити дані", ex);
             }
         }
 
@@ -330,16 +304,7 @@ namespace AdminPanel
             if (match == null)
             {
                 _selected = null;
-                _selectedProfile = null;
-                _activeTelemetry = new List<TelemetryRecord>();
-                _telemetryNextCursor = null;
-                _telemetryHasMore = false;
-                _telemetryClientId = null;
-                PopulateTelemetryEventFilter();
-                ApplyTelemetryFilters();
-                UpdateStats(_activeTelemetry, null);
-                PopulateClientDetails(null);
-                UpdateActionButtons();
+                OnClientSelected();
             }
         }
 
@@ -462,7 +427,9 @@ namespace AdminPanel
             TxtStatFirms.Text = $"Фірм: {totalFirms} (створено: +{firmsCreated}){label}";
             TxtStatEmployees.Text = $"Працівників: {totalEmployees} (додано: +{employeesAdded}){label}";
             TxtStatEvents.Text = clientId != null
-                ? $"Подій: {filtered.Count}"
+                ? string.Equals(_telemetryClientId, clientId, StringComparison.Ordinal)
+                    ? $"Подій: {filtered.Count}"
+                    : "Подій: ще не завантажено"
                 : "Подій: завантажуються лише для вибраного клієнта";
         }
 
@@ -490,10 +457,20 @@ namespace AdminPanel
         private void DgClients_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _selected = DgClients.SelectedItem as ClientRecord;
-            _selectedProfile = null;
-            UpdateActionButtons();
-            PopulateClientDetails(_selected);
-            _ = LoadSelectedClientDataAsync();
+            OnClientSelected();
+        }
+
+        private async void ClientDataTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(e.Source, ClientDataTabs))
+                return;
+
+            var selectedId = _selected?.Id;
+            if (string.IsNullOrWhiteSpace(selectedId))
+                return;
+
+            if (ReferenceEquals(ClientDataTabs.SelectedItem, TabSessions) || ReferenceEquals(ClientDataTabs.SelectedItem, TabEvents))
+                await EnsureSelectedClientTelemetryLoadedAsync(selectedId);
         }
 
         private void DgClients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -516,47 +493,57 @@ namespace AdminPanel
             BtnBlockIp.IsEnabled = hasSelection && !string.IsNullOrWhiteSpace(_selected?.IpAddress);
             BtnExtend.IsEnabled = hasSelection;
             BtnDelete.IsEnabled = hasSelection;
-            BtnResetProfile.IsEnabled = hasSelection && _selectedProfile != null;
+            BtnResetProfile.IsEnabled = hasSelection && !string.Equals(_profileLoadingClientId, _selected?.Id, StringComparison.Ordinal);
             BtnSaveNotes.IsEnabled = hasSelection && HasNotesChanged();
         }
 
-        private async Task LoadSelectedClientDataAsync()
+        private void OnClientSelected()
         {
+            _selectedProfile = null;
+            _profileClientId = null;
+
+            _activeTelemetry = new List<TelemetryRecord>();
+            _telemetryNextCursor = null;
+            _telemetryHasMore = false;
+            _telemetryClientId = null;
+
+            RefreshSessionSummaries();
+            PopulateTelemetryEventFilter();
+            ApplyTelemetryFilters();
+            UpdateStats(_activeTelemetry, _selected?.Id);
+            PopulateClientDetails(_selected);
+            UpdateActionButtons();
+        }
+
+        private async Task EnsureSelectedClientTelemetryLoadedAsync(string expectedClientId)
+        {
+            if (string.IsNullOrWhiteSpace(expectedClientId))
+                return;
+
+            if (string.Equals(_telemetryClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            if (string.Equals(_telemetryLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            _telemetryLoadingClientId = expectedClientId;
+            TxtTelemetrySummary.Text = "Завантаження подій...";
+            TxtSessionsSummary.Text = "Завантаження подій для побудови сесій...";
+            UpdateTelemetryPaginationButton();
+
             try
             {
-                if (_selected == null)
-                {
-                    _selectedProfile = null;
-                    _activeTelemetry = new List<TelemetryRecord>();
-                    _telemetryNextCursor = null;
-                    _telemetryHasMore = false;
-                    _telemetryClientId = null;
-                    RefreshSessionSummaries();
-                    PopulateTelemetryEventFilter();
-                    ApplyTelemetryFilters();
-                    UpdateStats(_activeTelemetry, null);
-                    PopulateClientDetails(null);
-                    UpdateActionButtons();
-                    return;
-                }
-
-                var selectedId = _selected.Id;
-                var telemetryTask = _svc.GetTelemetryPageAsync(selectedId, 200);
-                var profileTask = _svc.GetClientProfileAsync(selectedId);
-                await Task.WhenAll(telemetryTask, profileTask);
-
-                if (_selected?.Id != selectedId)
+                var telemetryPage = await _svc.GetTelemetryPageAsync(expectedClientId, 200);
+                if (!string.Equals(_selected?.Id, expectedClientId, StringComparison.Ordinal))
                     return;
 
-                var telemetryPage = telemetryTask.Result;
                 _activeTelemetry = telemetryPage.Items;
                 _telemetryNextCursor = string.IsNullOrWhiteSpace(telemetryPage.NextCursor) ? null : telemetryPage.NextCursor;
                 _telemetryHasMore = telemetryPage.HasMore;
-                _telemetryClientId = selectedId;
-                _selectedProfile = profileTask.Result;
+                _telemetryClientId = expectedClientId;
 
                 RefreshSessionSummaries();
-                UpdateStats(_activeTelemetry, selectedId);
+                UpdateStats(_activeTelemetry, expectedClientId);
                 PopulateClientDetails(_selected);
                 PopulateTelemetryEventFilter();
                 ApplyTelemetryFilters();
@@ -565,6 +552,49 @@ namespace AdminPanel
             catch (Exception ex)
             {
                 TxtStatus.Text = $"Telemetry error: {ex.Message}";
+            }
+            finally
+            {
+                if (string.Equals(_telemetryLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                    _telemetryLoadingClientId = null;
+                UpdateTelemetryPaginationButton();
+            }
+        }
+
+        private async Task EnsureSelectedClientProfileLoadedAsync(string expectedClientId)
+        {
+            if (string.IsNullOrWhiteSpace(expectedClientId))
+                return;
+
+            if (string.Equals(_profileClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            if (string.Equals(_profileLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            _profileLoadingClientId = expectedClientId;
+            UpdateActionButtons();
+
+            try
+            {
+                var profile = await _svc.GetClientProfileAsync(expectedClientId);
+                if (!string.Equals(_selected?.Id, expectedClientId, StringComparison.Ordinal))
+                    return;
+
+                _selectedProfile = profile;
+                _profileClientId = expectedClientId;
+                PopulateClientDetails(_selected);
+                UpdateActionButtons();
+            }
+            catch (Exception ex)
+            {
+                TxtStatus.Text = $"Profile error: {ex.Message}";
+            }
+            finally
+            {
+                if (string.Equals(_profileLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                    _profileLoadingClientId = null;
+                UpdateActionButtons();
             }
         }
 
@@ -652,10 +682,22 @@ namespace AdminPanel
 
         private void UpdateTelemetrySummary(List<TelemetryRecord> telemetry)
         {
+            if (_selected != null && !string.Equals(_telemetryClientId, _selected.Id, StringComparison.Ordinal))
+            {
+                TxtTelemetrySummary.Text = string.Equals(_telemetryLoadingClientId, _selected.Id, StringComparison.Ordinal)
+                    ? "Завантаження подій..."
+                    : "Події ще не завантажено для цього клієнта.";
+                UpdateTelemetryPaginationButton();
+                return;
+            }
+
             var errorLike = telemetry.Count(IsErrorLikeEvent);
             var latest = telemetry.OrderByDescending(t => t.CreatedAt ?? DateTime.MinValue).FirstOrDefault()?.CreatedAt;
             var latestText = latest.HasValue ? latest.Value.ToLocalTime().ToString("dd.MM HH:mm") : "—";
-            TxtTelemetrySummary.Text = $"Показано: {telemetry.Count} | Типів: {telemetry.Select(t => t.EventType).Distinct(StringComparer.OrdinalIgnoreCase).Count()} | Error-like: {errorLike} | Остання: {latestText}";
+            var shownText = _telemetryHasMore
+                ? $"Показано: {telemetry.Count}, є ще ->"
+                : $"Показано: {telemetry.Count}";
+            TxtTelemetrySummary.Text = $"{shownText} | Типів: {telemetry.Select(t => t.EventType).Distinct(StringComparer.OrdinalIgnoreCase).Count()} | Error-like: {errorLike} | Остання: {latestText}";
             UpdateTelemetryPaginationButton();
         }
 
@@ -664,8 +706,11 @@ namespace AdminPanel
             if (BtnLoadMoreTelemetry == null)
                 return;
 
-            BtnLoadMoreTelemetry.IsEnabled = _selected != null && _telemetryHasMore && !string.IsNullOrWhiteSpace(_telemetryClientId);
-            BtnLoadMoreTelemetry.Visibility = BtnLoadMoreTelemetry.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+            var isLoadedForSelected = _selected != null && string.Equals(_telemetryClientId, _selected.Id, StringComparison.Ordinal);
+            var isLoadingSelected = _selected != null && string.Equals(_telemetryLoadingClientId, _selected.Id, StringComparison.Ordinal);
+
+            BtnLoadMoreTelemetry.IsEnabled = isLoadedForSelected && _telemetryHasMore && !isLoadingSelected;
+            BtnLoadMoreTelemetry.Visibility = isLoadedForSelected && _telemetryHasMore ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async void BtnLoadMoreTelemetry_Click(object sender, RoutedEventArgs e)
@@ -673,10 +718,15 @@ namespace AdminPanel
             if (_selected == null || !_telemetryHasMore || string.IsNullOrWhiteSpace(_telemetryNextCursor))
                 return;
 
+            if (string.Equals(_telemetryLoadingClientId, _selected.Id, StringComparison.Ordinal))
+                return;
+
+            var selectedId = _selected.Id;
+
             try
             {
-                BtnLoadMoreTelemetry.IsEnabled = false;
-                var selectedId = _selected.Id;
+                _telemetryLoadingClientId = selectedId;
+                UpdateTelemetryPaginationButton();
                 var page = await _svc.GetTelemetryPageAsync(selectedId, 200, _telemetryNextCursor);
                 if (_selected?.Id != selectedId)
                     return;
@@ -696,6 +746,8 @@ namespace AdminPanel
             }
             finally
             {
+                if (string.Equals(_telemetryLoadingClientId, selectedId, StringComparison.Ordinal))
+                    _telemetryLoadingClientId = null;
                 UpdateTelemetryPaginationButton();
             }
         }
@@ -709,12 +761,24 @@ namespace AdminPanel
                 return;
             }
 
+            if (!string.Equals(_telemetryClientId, _selected.Id, StringComparison.Ordinal))
+            {
+                DgSessions.ItemsSource = new List<SessionSummaryRow>();
+                TxtSessionsSummary.Text = string.Equals(_telemetryLoadingClientId, _selected.Id, StringComparison.Ordinal)
+                    ? "Завантаження подій для побудови сесій..."
+                    : "Сесії будуть побудовані після завантаження подій для цього клієнта.";
+                return;
+            }
+
             var sessions = BuildSessionSummaries(_activeTelemetry);
             DgSessions.ItemsSource = sessions;
 
             var firmsTotal = sessions.Sum(session => session.FirmsAdded);
             var employeesTotal = sessions.Sum(session => session.EmployeesAdded);
-            TxtSessionsSummary.Text = $"Сесій: {sessions.Count} | +Фірм: {firmsTotal} | +Працівників: {employeesTotal}";
+            var caveat = _telemetryHasMore
+                ? $"на основі {_activeTelemetry.Count} завантажених подій, є ще"
+                : $"на основі {_activeTelemetry.Count} завантажених подій";
+            TxtSessionsSummary.Text = $"Сесій: {sessions.Count} | +Фірм: {firmsTotal} | +Працівників: {employeesTotal} | {caveat}";
         }
 
         private List<SessionSummaryRow> BuildSessionSummaries(IEnumerable<TelemetryRecord> telemetry)
@@ -861,12 +925,13 @@ namespace AdminPanel
                 ? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "Профіль не створено" : client.ProfileFullName)
                 : $"{_selectedProfile.FirstName} {_selectedProfile.LastName}".Trim();
             TxtDetailProfileStatus.Text = _selectedProfile == null
-                ? "Відсутній"
+                ? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "Профіль не створено" : "Деталі завантажуються на вимогу")
                 : _selectedProfile.MustResetPassword ? "Очікує примусового reset" : "Активний";
             TxtDetailRememberMe.Text = _selectedProfile == null
-                ? "—"
+                ? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "—" : "На вимогу")
                 : _selectedProfile.RememberMeEnabled ? "Увімкнено" : "Вимкнено";
-            TxtDetailProfileUpdatedAt.Text = _selectedProfile?.UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—";
+            TxtDetailProfileUpdatedAt.Text = _selectedProfile?.UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                ?? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "—" : "На вимогу");
             TxtNotes.Text = client.Notes ?? string.Empty;
             BtnSaveNotes.IsEnabled = HasNotesChanged();
         }
@@ -892,11 +957,6 @@ namespace AdminPanel
             return telemetry.EventType.Contains("error", StringComparison.OrdinalIgnoreCase) ||
                    telemetry.EventDataDisplay.Contains("error", StringComparison.OrdinalIgnoreCase) ||
                    telemetry.EventDataDisplay.Contains("exception", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private void EnrichClientsWithRiskSignals()
-        {
-            // Risk enrichment now comes from admin-gateway summary responses.
         }
 
         private static int GetDaysSinceLastSeen(DateTime? lastSeen)
@@ -1019,17 +1079,18 @@ namespace AdminPanel
 
             try
             {
+                var selectedId = _selected.Id;
                 var previousNotes = _selected.Notes ?? string.Empty;
                 var nextNotes = TxtNotes.Text.Trim();
-                await _svc.UpdateNotesAsync(_selected.Id, nextNotes);
-                await _svc.TryWriteAuditAsync(_selected.Id, "notes_updated",
+                await _svc.UpdateNotesAsync(selectedId, nextNotes);
+                await _svc.TryWriteAuditAsync(selectedId, "notes_updated",
                     new { notes = previousNotes }, new { notes = nextNotes }, "Оператор оновив нотатки");
-                await RefreshAsync(_selected.Id);
+                await RefreshAsync(selectedId);
                 TxtStatus.Text = $"Нотатки збережено: {DateTime.Now:HH:mm:ss}";
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("зберегти нотатки", ex);
             }
         }
 
@@ -1047,6 +1108,24 @@ namespace AdminPanel
                 (_selected.Notes ?? string.Empty).Trim(),
                 (TxtNotes.Text ?? string.Empty).Trim(),
                 StringComparison.Ordinal);
+        }
+
+        private static void ShowActionError(string action, Exception ex)
+        {
+            MessageBox.Show($"Не вдалося {action}.\n\n{DescribeOperatorError(ex)}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private static string DescribeOperatorError(Exception ex)
+        {
+            return ex switch
+            {
+                TaskCanceledException => "Сервер не відповів вчасно. Спробуйте ще раз.",
+                HttpRequestException => "Не вдалося зв'язатися із сервером. Перевірте підключення та повторіть спробу.",
+                JsonException => "Отримано некоректну відповідь від сервера. Оновіть дані ще раз.",
+                _ => string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Сталася внутрішня помилка. Перевірте журнал і повторіть спробу."
+                    : ex.Message
+            };
         }
 
         private async void BtnBlock_Click(object sender, RoutedEventArgs e)
@@ -1067,7 +1146,7 @@ namespace AdminPanel
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("заблокувати клієнта", ex);
             }
         }
 
@@ -1089,7 +1168,7 @@ namespace AdminPanel
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("розблокувати клієнта", ex);
             }
         }
 
@@ -1112,7 +1191,7 @@ namespace AdminPanel
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("заблокувати клієнтів за IP", ex);
             }
         }
 
@@ -1140,7 +1219,7 @@ namespace AdminPanel
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("продовжити доступ", ex);
             }
         }
 
@@ -1183,17 +1262,31 @@ namespace AdminPanel
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("видалити клієнта", ex);
             }
         }
 
         private async void BtnResetProfile_Click(object sender, RoutedEventArgs e)
         {
-            if (_selected == null || _selectedProfile == null)
+            if (_selected == null)
                 return;
 
+            var selectedId = _selected.Id;
+            await EnsureSelectedClientProfileLoadedAsync(selectedId);
+            if (!string.Equals(_selected?.Id, selectedId, StringComparison.Ordinal))
+                return;
+
+            if (_selectedProfile == null)
+            {
+                MessageBox.Show("У цього клієнта ще немає створеного профілю.", "Профіль відсутній",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var selectedMachineName = _selected?.MachineName ?? "цього клієнта";
+
             if (MessageBox.Show(
-                    $"Скинути пароль профілю для {_selected.MachineName}?\nКористувач при наступному запуску повинен буде задати новий пароль.",
+                    $"Скинути пароль профілю для {selectedMachineName}?\nКористувач при наступному запуску повинен буде задати новий пароль.",
                     "Скидання пароля профілю",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -1208,7 +1301,7 @@ namespace AdminPanel
                     session_version = _selectedProfile.SessionVersion
                 };
 
-                var updatedProfile = await _svc.ResetClientProfilePasswordAsync(_selected.Id);
+                var updatedProfile = await _svc.ResetClientProfilePasswordAsync(selectedId);
                 if (updatedProfile == null)
                 {
                     MessageBox.Show("У цього клієнта ще немає створеного профілю.", "Профіль відсутній",
@@ -1216,7 +1309,7 @@ namespace AdminPanel
                     return;
                 }
 
-                await _svc.TryWriteAuditAsync(_selected.Id, "profile_password_reset",
+                await _svc.TryWriteAuditAsync(selectedId, "profile_password_reset",
                     before,
                     new
                     {
@@ -1229,11 +1322,11 @@ namespace AdminPanel
                 MessageBox.Show("Пароль профілю скинуто. При наступному запуску клієнт повинен буде ввести новий пароль.",
                     "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                await RefreshAsync(_selected.Id);
+                await RefreshAsync(selectedId);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowActionError("скинути пароль профілю", ex);
             }
         }
 

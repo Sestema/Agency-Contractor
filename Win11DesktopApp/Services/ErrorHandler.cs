@@ -1,4 +1,7 @@
 using System;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace Win11DesktopApp.Services
@@ -14,7 +17,7 @@ namespace Win11DesktopApp.Services
 
         public static void Handle(string source, Exception ex, bool showUser = false)
         {
-            Report(source, ex.Message, ErrorSeverity.Error, showUser);
+            Report(source, ex, ErrorSeverity.Error, showUser);
         }
 
         public static void Handle(string source, string message, bool showUser = false)
@@ -56,16 +59,17 @@ namespace Win11DesktopApp.Services
         public static void Report(string source, Exception ex, ErrorSeverity severity, bool showUser = true)
         {
             LoggingService.LogError(source, ex);
+            var userMessage = NormalizeUserMessage(ex);
             switch (severity)
             {
                 case ErrorSeverity.Info:
-                    if (showUser) ToastService.Instance.Info(ex.Message);
+                    if (showUser) ToastService.Instance.Info(userMessage);
                     break;
                 case ErrorSeverity.Warning:
-                    if (showUser) ToastService.Instance.Warning(ex.Message);
+                    if (showUser) ToastService.Instance.Warning(userMessage);
                     break;
                 case ErrorSeverity.Error:
-                    if (showUser) ToastService.Instance.Error(ex.Message);
+                    if (showUser) ToastService.Instance.Error(userMessage);
                     break;
                 case ErrorSeverity.Critical:
                     if (_criticalDialogShown)
@@ -73,10 +77,29 @@ namespace Win11DesktopApp.Services
 
                     _criticalDialogShown = true;
                     Application.Current?.Dispatcher?.Invoke(() =>
-                        MessageBox.Show($"{Res("MsgUnexpectedError")}\n\n{ex.Message}",
+                        MessageBox.Show($"{Res("MsgUnexpectedError")}\n\n{userMessage}",
                             Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error));
                     break;
             }
+        }
+
+        public static string NormalizeUserMessage(Exception ex, string? fallback = null)
+        {
+            if (ex is TaskCanceledException)
+                return Res("MsgRequestTimedOut");
+
+            if (ex is HttpRequestException)
+                return Res("MsgNetworkUnavailable");
+
+            if (ex is JsonException)
+                return Res("MsgInvalidServerResponse");
+
+            if (!string.IsNullOrWhiteSpace(fallback))
+                return fallback!;
+
+            return string.IsNullOrWhiteSpace(ex.Message)
+                ? Res("MsgUnexpectedError")
+                : ex.Message;
         }
 
         public static void SafeExecute(string source, Action action, bool showUser = false)
