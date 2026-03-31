@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -48,7 +49,7 @@ namespace Win11DesktopApp.ViewModels
         }
     }
 
-    public class SettingsViewModel : ViewModelBase
+    public class SettingsViewModel : ViewModelBase, ICleanable
     {
         private readonly AppSettingsService _appSettingsService;
         private readonly ThemeService _themeService;
@@ -143,6 +144,9 @@ namespace Win11DesktopApp.ViewModels
         public string AccessStatusDetail => App.AccessStatusService?.Detail ?? string.Empty;
         public string AccessStatusAdminMessage => App.AccessStatusService?.AdminMessage ?? string.Empty;
         public bool HasAccessStatusAdminMessage => App.AccessStatusService?.HasAdminMessage == true;
+        public string AccessPlanCode => NormalizeAccessPlan(App.AccessStatusService?.Plan);
+        public string AccessPlanDisplay => FormatPlanDisplay(AccessPlanCode);
+        public bool HasAccessPlan => !string.IsNullOrWhiteSpace(AccessPlanCode);
         public string AccessStatusSeverity => App.AccessStatusService?.Severity ?? "Info";
         public string MachineId => Services.LicenseService.GetMachineId();
         public bool HasProfile => App.CurrentProfile != null;
@@ -220,13 +224,16 @@ namespace Win11DesktopApp.ViewModels
                 {
                     _appSettingsService.Settings.GeminiApiKey = value;
                     _appSettingsService.SaveSettings();
-                    App.GeminiApiService?.SetApiKey(value);
+                    App.RefreshGeminiApiKeyConfiguration();
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(HasGeminiApiKey));
                     OnPropertyChanged(nameof(GeminiApiKeyMaskedDisplay));
                     OnPropertyChanged(nameof(ShowMaskedGeminiApiKey));
                     OnPropertyChanged(nameof(ShowGeminiApiKeyEditor));
                     OnPropertyChanged(nameof(IsGeminiConfigured));
+                    OnPropertyChanged(nameof(IsManagedGeminiKeyActive));
+                    OnPropertyChanged(nameof(ShowGeminiAccessHint));
+                    OnPropertyChanged(nameof(GeminiAccessHint));
                     CommandManager.InvalidateRequerySuggested();
                 }
             }
@@ -260,6 +267,19 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public bool IsGeminiConfigured => App.GeminiApiService?.IsConfigured ?? false;
+
+        public bool IsManagedGeminiKeyActive =>
+            !HasGeminiApiKey
+            && !PolicyService.IsAIDisabled
+            && (App.GeminiApiService?.IsConfigured ?? false);
+
+        public bool ShowGeminiAccessHint => !HasGeminiApiKey;
+
+        public string GeminiAccessHint => PolicyService.IsAIDisabled
+            ? Res("AIGeminiDisabledByPolicy")
+            : IsManagedGeminiKeyActive
+                ? Res("AIGeminiManagedKeyActive")
+                : Res("AIGeminiKeyMissingOrAdmin");
 
         public string[] GeminiModels => Services.GeminiApiService.AvailableModels;
 
@@ -340,6 +360,8 @@ namespace Win11DesktopApp.ViewModels
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
             _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
             InitializeProfileFields();
+            if (App.AccessStatusService != null)
+                App.AccessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
 
             GoBackCommand = new RelayCommand(o =>
             {
@@ -353,11 +375,7 @@ namespace Win11DesktopApp.ViewModels
                     LanguageService.SetLanguage(code);
                     App.AccessStatusService?.RefreshPresentation();
                     CurrentLanguage = code;
-                    OnPropertyChanged(nameof(AccessStatusTitle));
-                    OnPropertyChanged(nameof(AccessStatusDetail));
-                    OnPropertyChanged(nameof(AccessStatusAdminMessage));
-                    OnPropertyChanged(nameof(HasAccessStatusAdminMessage));
-                    OnPropertyChanged(nameof(AccessStatusSeverity));
+                    RaiseAccessStatusPropertiesChanged();
                 }
             });
 
@@ -515,6 +533,58 @@ namespace Win11DesktopApp.ViewModels
                 SetProfileStatus(string.Empty, false);
                 IsProfileEditMode = false;
             }, _ => HasProfile);
+        }
+
+        private void AccessStatusService_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(AccessStatusService.Current)
+                or nameof(AccessStatusService.Title)
+                or nameof(AccessStatusService.Detail)
+                or nameof(AccessStatusService.AdminMessage)
+                or nameof(AccessStatusService.HasAdminMessage)
+                or nameof(AccessStatusService.Severity)
+                or nameof(AccessStatusService.Plan))
+            {
+                RaiseAccessStatusPropertiesChanged();
+            }
+        }
+
+        private void RaiseAccessStatusPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(AccessStatusTitle));
+            OnPropertyChanged(nameof(AccessStatusDetail));
+            OnPropertyChanged(nameof(AccessStatusAdminMessage));
+            OnPropertyChanged(nameof(HasAccessStatusAdminMessage));
+            OnPropertyChanged(nameof(AccessStatusSeverity));
+            OnPropertyChanged(nameof(AccessPlanCode));
+            OnPropertyChanged(nameof(AccessPlanDisplay));
+            OnPropertyChanged(nameof(HasAccessPlan));
+        }
+
+        private static string NormalizeAccessPlan(string? plan)
+        {
+            return (plan ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "standard" => "standard",
+                "pro" => "pro",
+                _ => "trial"
+            };
+        }
+
+        private static string FormatPlanDisplay(string? plan)
+        {
+            return NormalizeAccessPlan(plan) switch
+            {
+                "standard" => "Standard",
+                "pro" => "Pro",
+                _ => "Trial"
+            };
+        }
+
+        public void Cleanup()
+        {
+            if (App.AccessStatusService != null)
+                App.AccessStatusService.PropertyChanged -= AccessStatusService_PropertyChanged;
         }
 
         public static double GetInterfaceSizeMultiplier(string size) => size switch

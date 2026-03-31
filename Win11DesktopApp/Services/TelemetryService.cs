@@ -25,6 +25,8 @@ namespace Win11DesktopApp.Services
         public bool ClientExists { get; set; }
         public bool IsBlocked { get; set; }
         public DateTime? ExpiresAtUtc { get; set; }
+        public string Plan { get; set; } = string.Empty;
+        public string ManagedGeminiApiKey { get; set; } = string.Empty;
         public RemotePolicy? Policy { get; set; }
         public List<RemoteCommand> PendingCommands { get; set; } = new();
         public bool IsLive { get; set; }
@@ -387,6 +389,8 @@ namespace Win11DesktopApp.Services
                 ClientExists = !string.IsNullOrWhiteSpace(gateway.ClientId),
                 IsBlocked = gateway.IsBlocked,
                 ExpiresAtUtc = gateway.ExpiresAt,
+                Plan = gateway.Plan ?? string.Empty,
+                ManagedGeminiApiKey = gateway.GeminiApiKey ?? string.Empty,
                 Policy = gateway.Policy,
                 PendingCommands = gateway.PendingCommands ?? new List<RemoteCommand>(),
                 IsLive = !isFromCache,
@@ -424,6 +428,8 @@ namespace Win11DesktopApp.Services
                 ClientExists = !string.IsNullOrWhiteSpace(settings.CachedAccessClientId),
                 IsBlocked = settings.CachedAccessIsBlocked,
                 ExpiresAtUtc = expiresAtUtc,
+                Plan = settings.CachedAccessPlan ?? string.Empty,
+                ManagedGeminiApiKey = string.Empty,
                 Policy = _cachedPolicy,
                 IsLive = false,
                 IsFromCache = true,
@@ -450,6 +456,7 @@ namespace Win11DesktopApp.Services
             settings.CachedAccessExpiresAtUtc = accessState.ExpiresAtUtc?.ToString("o") ?? string.Empty;
             settings.CachedAccessLastCheckedAtUtc = accessState.LastServerCheckUtc?.ToString("o") ?? DateTime.UtcNow.ToString("o");
             settings.CachedAccessSource = "server";
+            settings.CachedAccessPlan = accessState.Plan;
             App.AppSettingsService?.SaveSettings();
         }
     }

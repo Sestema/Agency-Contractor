@@ -1357,6 +1357,8 @@
     <sys:String x:Key="FinDebtFromMonth">Debt from {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Loaded</sys:String>
     <sys:String x:Key="FinSalarySaved">Saved!</sys:String>
+    <sys:String x:Key="FinSalarySaveGenericError">Failed to save salary file. The file may be in use by another program.</sys:String>
+    <sys:String x:Key="FinSalarySaveRecoveryCreated">Could not update the main file, but new data was saved to a recovery file.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Unsaved changes</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Delete advance</sys:String>
     <sys:String x:Key="FinSalaryExported">Exported!</sys:String>
@@ -1415,6 +1417,7 @@
     <sys:String x:Key="SettingsCopyrightDesc">This software is proprietary and confidential. Unauthorized copying, distribution, or modification is strictly prohibited.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">License</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Access status</sys:String>
+    <sys:String x:Key="SettingsPlanLabel">Plan:</sys:String>
     <sys:String x:Key="AccessStatusTrialTitle">Trial access is active</sys:String>
     <sys:String x:Key="AccessStatusTrialDetail">{0} day(s) of full access remain, until {1}.</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Full access is active</sys:String>
@@ -1700,6 +1703,9 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="AIGeminiGetKey">Get free API key</sys:String>
     <sys:String x:Key="AIGeminiModel">Gemini Model:</sys:String>
     <sys:String x:Key="AIGeminiTest">Test connection</sys:String>
+    <sys:String x:Key="AIGeminiManagedKeyActive">AI is working through an administrator key.</sys:String>
+    <sys:String x:Key="AIGeminiKeyMissingOrAdmin">Enter an API key or contact your administrator.</sys:String>
+    <sys:String x:Key="AIGeminiDisabledByPolicy">AI is disabled by the current plan or administrator policy.</sys:String>
     <sys:String x:Key="AIProviderForChat">AI Assistant (chat):</sys:String>
     <sys:String x:Key="AIProviderForScan">AI Scan (documents):</sys:String>
     <sys:String x:Key="AIProviderHint">Gemini = smarter, needs internet. Local = offline, but weaker.</sys:String>

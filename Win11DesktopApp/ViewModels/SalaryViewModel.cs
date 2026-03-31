@@ -928,9 +928,11 @@ namespace Win11DesktopApp.ViewModels
 
             if (!_financeService.SaveAllFirmPayments(_selectedYear, _selectedMonth, Entries.ToList(), FirmExpenses.ToList()))
             {
-                StatusMessage = string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
-                    ? "Salary save blocked until duplicate OneDrive files are resolved."
-                    : _financeService.LastSalaryConflictMessage;
+                StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
+                    ? _financeService.LastSalaryConflictMessage
+                    : !string.IsNullOrWhiteSpace(_financeService.LastSaveRecoveryPath)
+                        ? (L("FinSalarySaveRecoveryCreated") ?? "Could not update the main file, but new data was saved to a recovery file.")
+                        : (L("FinSalarySaveGenericError") ?? "Failed to save salary file.");
                 return;
             }
 

@@ -21,6 +21,7 @@ namespace Win11DesktopApp.Services
         public string Title { get; init; } = string.Empty;
         public string Detail { get; init; } = string.Empty;
         public string AdminMessage { get; init; } = string.Empty;
+        public string Plan { get; init; } = string.Empty;
         public string Severity { get; init; } = "Info";
         public DateTime? ExpiresAtUtc { get; init; }
         public int? DaysLeft { get; init; }
@@ -48,6 +49,7 @@ namespace Win11DesktopApp.Services
                 OnPropertyChanged(nameof(Title));
                 OnPropertyChanged(nameof(Detail));
                 OnPropertyChanged(nameof(AdminMessage));
+                OnPropertyChanged(nameof(Plan));
                 OnPropertyChanged(nameof(Severity));
                 OnPropertyChanged(nameof(ExpiresAtUtc));
                 OnPropertyChanged(nameof(DaysLeft));
@@ -60,6 +62,7 @@ namespace Win11DesktopApp.Services
         public string Title => Current.Title;
         public string Detail => Current.Detail;
         public string AdminMessage => Current.AdminMessage;
+        public string Plan => Current.Plan;
         public string Severity => Current.Severity;
         public DateTime? ExpiresAtUtc => Current.ExpiresAtUtc;
         public int? DaysLeft => Current.DaysLeft;
@@ -107,6 +110,7 @@ namespace Win11DesktopApp.Services
                     Title = Res("AccessStatusBlockedTitle", "Access blocked"),
                     Detail = Res("AccessStatusBlockedDetail", "This client was blocked by the administrator."),
                     AdminMessage = adminMessage,
+                    Plan = _clientAccessState.Plan,
                     Severity = "Error"
                 };
             }
@@ -122,6 +126,7 @@ namespace Win11DesktopApp.Services
                     Title = Res("AccessStatusReadOnlyTitle", "Read-only mode"),
                     Detail = WithStaleMarker(Res("AccessStatusReadOnlyDetail", "The trial period ended. Full access requires activation.")),
                     AdminMessage = adminMessage,
+                    Plan = _clientAccessState.Plan,
                     Severity = "Error",
                     ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
                     DaysLeft = 0
@@ -141,6 +146,7 @@ namespace Win11DesktopApp.Services
                         _clientAccessState.OfflineGraceDaysRemaining,
                         cachedExpiry),
                     AdminMessage = adminMessage,
+                    Plan = _clientAccessState.Plan,
                     Severity = "Warning",
                     ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
                     DaysLeft = _clientAccessState.DaysRemaining
@@ -165,6 +171,7 @@ namespace Win11DesktopApp.Services
                             localExpiry))
                         : WithStaleMarker($"{Res("LicenseActiveUntil", "Active until")} {localExpiry} ({_clientAccessState.DaysRemaining} {Res("LicenseDaysLeft", "days")})"),
                     AdminMessage = adminMessage,
+                    Plan = _clientAccessState.Plan,
                     Severity = isTrialWindow ? "Warning" : "Success",
                     ExpiresAtUtc = _clientAccessState.ExpiresAtUtc,
                     DaysLeft = _clientAccessState.DaysRemaining
@@ -181,6 +188,7 @@ namespace Win11DesktopApp.Services
                         Title = Res("AccessStatusActivatedTitle", "Activated"),
                         Detail = Res("AccessStatusUnlimitedDetail", "Unlimited access is active."),
                         AdminMessage = adminMessage,
+                        Plan = _clientAccessState.Plan,
                         Severity = "Success"
                     };
                 }
@@ -196,6 +204,7 @@ namespace Win11DesktopApp.Services
                     Title = Res("AccessStatusActivatedTitle", "Activated"),
                     Detail = detail,
                     AdminMessage = adminMessage,
+                    Plan = _clientAccessState.Plan,
                     Severity = "Success",
                     ExpiresAtUtc = _localLicenseStatus.ExpiresAtUtc,
                     DaysLeft = _localLicenseStatus.DaysLeft >= 0 ? _localLicenseStatus.DaysLeft : null
@@ -208,6 +217,7 @@ namespace Win11DesktopApp.Services
                 Title = Res("AccessStatusUnknownTitle", "Access status unknown"),
                 Detail = Res("AccessStatusUnknownDetail", "Could not determine the current access state."),
                 AdminMessage = adminMessage,
+                Plan = _clientAccessState.Plan,
                 Severity = "Info"
             };
         }

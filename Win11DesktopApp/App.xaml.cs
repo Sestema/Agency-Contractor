@@ -18,8 +18,12 @@ namespace Win11DesktopApp
     {
         private static CancellationTokenSource? _heartbeatCts;
         private static bool _heartbeatFailureActive;
+        private static ClientAccessState _currentGeminiAccessState = new();
         private static string? _recommendedVersionPromptedFor;
         private static int _versionPolicyEnforcementActive;
+        private const string AccessPlanTrial = "trial";
+        private const string AccessPlanStandard = "standard";
+        private const string AccessPlanPro = "pro";
         public static NavigationService NavigationService { get; private set; } = null!;
         public static ThemeService ThemeService { get; private set; } = null!;
         public static LanguageService LanguageService { get; private set; } = null!;
@@ -130,8 +134,6 @@ namespace Win11DesktopApp
             NewsService = new NewsService();
             ProfileAuthService = new ProfileAuthService();
             ProfileSessionService = new ProfileSessionService(AppSettingsService);
-            if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiApiKey))
-                GeminiApiService.SetApiKey(AppSettingsService.Settings.GeminiApiKey);
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiModel))
                 GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
             DocumentGenerationService = new DocumentGenerationService();
@@ -333,6 +335,8 @@ namespace Win11DesktopApp
             startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupPolicy);
 
             await PolicyService.ApplyPolicyAsync(startupPolicy);
+            _currentGeminiAccessState = startupAccess;
+            ApplyEffectiveGeminiApiKey(startupAccess, startupPolicy);
             if (!await EnforceVersionPolicyAsync(startupPolicy))
                 return;
 
@@ -353,6 +357,8 @@ namespace Win11DesktopApp
                 startupAccess = licenseWindow.LatestAccessState.HasKnownState ? licenseWindow.LatestAccessState : startupAccess;
                 startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupAccess.Policy ?? startupPolicy);
                 await PolicyService.ApplyPolicyAsync(startupPolicy);
+                _currentGeminiAccessState = startupAccess;
+                ApplyEffectiveGeminiApiKey(startupAccess, startupPolicy);
                 if (!await EnforceVersionPolicyAsync(startupPolicy))
                     return;
             }
@@ -415,15 +421,22 @@ namespace Win11DesktopApp
                         {
                             var effectivePolicy = BuildEffectivePolicy(LicenseService.GetLocalLicenseStatus(), heartbeat.AccessState, heartbeat.Policy);
                             await PolicyService.ApplyPolicyAsync(effectivePolicy).ConfigureAwait(false);
+                            _currentGeminiAccessState = heartbeat.AccessState;
+                            ApplyEffectiveGeminiApiKey(heartbeat.AccessState, effectivePolicy);
                             AccessStatusService.UpdateRemoteState(heartbeat.AccessState, effectivePolicy);
                             if (!await EnforceVersionPolicyAsync(effectivePolicy).ConfigureAwait(false))
                                 return;
+                        }
+                        else
+                        {
+                            ApplyEffectiveGeminiApiKey(new ClientAccessState(), PolicyService.CurrentPolicy);
                         }
                         if (heartbeat.PendingCommands.Count > 0)
                             await CommandService.ExecutePendingCommandsAsync(heartbeat.PendingCommands, heartbeat.ClientId).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
+                        ApplyEffectiveGeminiApiKey(new ClientAccessState(), PolicyService.CurrentPolicy);
                         if (!_heartbeatFailureActive)
                         {
                             LoggingService.LogWarning("App.HeartbeatLoop", $"Heartbeat sync failed: {ex.Message}");
@@ -474,7 +487,48 @@ namespace Win11DesktopApp
                 }
             }
 
+            if (accessState.HasKnownState && !accessState.IsBlocked && !accessState.IsExpired)
+            {
+                effective ??= new RemotePolicy
+                {
+                    ClientId = accessState.ClientId ?? string.Empty
+                };
+
+                switch (NormalizeAccessPlan(accessState.Plan))
+                {
+                    case AccessPlanStandard:
+                        effective.DisableAI = true;
+                        break;
+                    case AccessPlanPro:
+                    case AccessPlanTrial:
+                        effective.DisableAI = false;
+                        break;
+                }
+            }
+
             return effective;
+        }
+
+        internal static void RefreshGeminiApiKeyConfiguration()
+        {
+            ApplyEffectiveGeminiApiKey(_currentGeminiAccessState, PolicyService.CurrentPolicy);
+        }
+
+        private static void ApplyEffectiveGeminiApiKey(ClientAccessState accessState, RemotePolicy? policy)
+        {
+            if (GeminiApiService == null || AppSettingsService == null)
+                return;
+
+            if (policy?.DisableAI == true || PolicyService.IsAIDisabled)
+            {
+                GeminiApiService.SetApiKey(null);
+                return;
+            }
+
+            var userKey = AppSettingsService.Settings.GeminiApiKey;
+            var serverKey = accessState.IsLive ? accessState.ManagedGeminiApiKey : string.Empty;
+            var effectiveKey = !string.IsNullOrWhiteSpace(userKey) ? userKey : serverKey;
+            GeminiApiService.SetApiKey(!string.IsNullOrWhiteSpace(effectiveKey) ? effectiveKey : null);
         }
 
         private static RemotePolicy? BuildPolicyFromSettings()
@@ -538,6 +592,16 @@ namespace Win11DesktopApp
                 AdminMessage = policy.AdminMessage,
                 PolicyVersion = policy.PolicyVersion,
                 UpdatedAt = policy.UpdatedAt
+            };
+        }
+
+        private static string NormalizeAccessPlan(string? plan)
+        {
+            return (plan ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                AccessPlanStandard => AccessPlanStandard,
+                AccessPlanPro => AccessPlanPro,
+                _ => AccessPlanTrial
             };
         }
 

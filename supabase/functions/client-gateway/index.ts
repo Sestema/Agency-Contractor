@@ -75,6 +75,8 @@ serve(async (req) => {
         client_id: refreshed.id,
         is_blocked: refreshed.is_blocked,
         expires_at: refreshed.expires_at,
+        plan: refreshed.plan ?? "trial",
+        gemini_api_key: refreshed.gemini_api_key ?? "",
         policy,
         pending_commands: commands,
       });
@@ -239,6 +241,8 @@ async function migrateLegacyLicense(
     client_id: refreshed.id,
     is_blocked: refreshed.is_blocked,
     expires_at: refreshed.expires_at,
+    plan: refreshed.plan ?? "trial",
+    gemini_api_key: refreshed.gemini_api_key ?? "",
     migration_result: migrationResult,
     policy,
     pending_commands: commands,

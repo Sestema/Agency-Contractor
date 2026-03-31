@@ -22,6 +22,7 @@ namespace Win11DesktopApp.Services
         public bool WasRecoveredFromBackupOnLoad { get; private set; }
         public bool WasResetToDefaultsOnLoad { get; private set; }
         public string LastSalaryConflictMessage { get; private set; } = string.Empty;
+        public string? LastSaveRecoveryPath { get; private set; }
 
         public FinanceService(FolderService folderService, bool suppressStartupNotifications = false)
         {
@@ -46,7 +47,9 @@ namespace Win11DesktopApp.Services
 
         private static T? ReadJson<T>(string path)
         {
-            return SafeFileService.ReadJson<T>(path, _jsonOptions);
+            // Salary files can be read while a save is in flight; allow shared read access
+            // so the app is less likely to block its own replace/copy path.
+            return SafeFileService.ReadJsonShared<T>(path, _jsonOptions);
         }
 
         private static T ReadJsonOrDefault<T>(string path, T fallback)
@@ -801,6 +804,7 @@ namespace Win11DesktopApp.Services
         public bool SaveFirmPaymentToFolder(string firmName, int year, int month,
             List<SalaryEntry> entries, List<FirmExpense> expenses)
         {
+            LastSaveRecoveryPath = null;
             var folderService = App.FolderService;
             if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return false;
 
@@ -829,12 +833,23 @@ namespace Win11DesktopApp.Services
             {
                 WriteJsonAtomic(filePath, data);
                 LastSalaryConflictMessage = string.Empty;
+                LastSaveRecoveryPath = null;
                 return true;
+            }
+            catch (SafeFileRecoveryException ex)
+            {
+                LastSaveRecoveryPath = ex.RecoveryPath;
+                System.Diagnostics.Debug.WriteLine($"SaveFirmPayment recovery ({firmName}): {ex.Message}");
+                LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder",
+                    new IOException($"firm={firmName}, year={year}, month={month}, path={filePath}, recovery={ex.RecoveryPath}: {ex.Message}", ex));
+                return false;
             }
             catch (Exception ex)
             {
+                LastSaveRecoveryPath = null;
                 System.Diagnostics.Debug.WriteLine($"SaveFirmPayment error ({firmName}): {ex.Message}");
-                LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder", ex);
+                LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder",
+                    new IOException($"firm={firmName}, year={year}, month={month}, path={filePath}: {ex.Message}", ex));
                 return false;
             }
         }
@@ -905,6 +920,7 @@ namespace Win11DesktopApp.Services
 
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
         {
+            LastSaveRecoveryPath = null;
             var folderService = App.FolderService;
             if (folderService == null || string.IsNullOrEmpty(folderService.RootPath))
                 return false;

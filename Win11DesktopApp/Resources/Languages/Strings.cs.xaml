@@ -1371,6 +1371,8 @@
     <sys:String x:Key="FinDebtFromMonth">Dluh za {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Načteno</sys:String>
     <sys:String x:Key="FinSalarySaved">Uloženo!</sys:String>
+    <sys:String x:Key="FinSalarySaveGenericError">Nepodařilo se uložit soubor mezd. Soubor může být používán jiným programem.</sys:String>
+    <sys:String x:Key="FinSalarySaveRecoveryCreated">Hlavní soubor se nepodařilo aktualizovat, ale nová data byla uložena do recovery souboru.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Neuložené změny</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Smazat zálohu</sys:String>
     <sys:String x:Key="FinSalaryExported">Exportováno!</sys:String>
@@ -1429,6 +1431,7 @@
     <sys:String x:Key="SettingsCopyrightDesc">Tento software je vlastnictvím autora. Neoprávněné kopírování, šíření nebo úpravy jsou přísně zakázány.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Licence</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Stav přístupu</sys:String>
+    <sys:String x:Key="SettingsPlanLabel">Plán:</sys:String>
     <sys:String x:Key="AccessStatusTrialTitle">Zkušební přístup je aktivní</sys:String>
     <sys:String x:Key="AccessStatusTrialDetail">Plný přístup trvá ještě {0} dnů, do {1}.</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Plný přístup je aktivní</sys:String>
@@ -1714,6 +1717,9 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="AIGeminiGetKey">Získat klíč zdarma</sys:String>
     <sys:String x:Key="AIGeminiModel">Model Gemini:</sys:String>
     <sys:String x:Key="AIGeminiTest">Test připojení</sys:String>
+    <sys:String x:Key="AIGeminiManagedKeyActive">AI funguje přes klíč administrátora.</sys:String>
+    <sys:String x:Key="AIGeminiKeyMissingOrAdmin">Zadejte API klíč nebo kontaktujte administrátora.</sys:String>
+    <sys:String x:Key="AIGeminiDisabledByPolicy">AI je vypnuta aktuálním plánem nebo politikou administrátora.</sys:String>
     <sys:String x:Key="AIProviderForChat">AI Asistent (chat):</sys:String>
     <sys:String x:Key="AIProviderForScan">AI Scan (dokumenty):</sys:String>
     <sys:String x:Key="AIProviderHint">Gemini = chytřejší, potřebuje internet. Lokální = offline, ale slabší.</sys:String>

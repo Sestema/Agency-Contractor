@@ -94,6 +94,7 @@ namespace Win11DesktopApp.Services
             public string CachedAccessLastCheckedAtUtc { get; set; } = string.Empty;
             public bool CachedAccessIsBlocked { get; set; } = false;
             public string CachedAccessSource { get; set; } = string.Empty;
+            public string CachedAccessPlan { get; set; } = string.Empty;
             public string LegacyLicenseMigratedAtUtc { get; set; } = string.Empty;
         }
 

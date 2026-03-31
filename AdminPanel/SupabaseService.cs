@@ -18,6 +18,8 @@ namespace AdminPanel
         public string AppVersion { get; set; } = "";
         public DateTime? ActivatedAt { get; set; }
         public DateTime? ExpiresAt { get; set; }
+        public string Plan { get; set; } = "trial";
+        public string GeminiApiKey { get; set; } = "";
         public bool IsBlocked { get; set; }
         public string? BlockReason { get; set; }
         public DateTime? LastSeen { get; set; }
@@ -47,6 +49,13 @@ namespace AdminPanel
 
         public string LatestHeartbeatDisplay =>
             LatestHeartbeatAt?.ToLocalTime().ToString("dd.MM HH:mm") ?? "—";
+
+        public string PlanDisplay => NormalizePlan(Plan) switch
+        {
+            "standard" => "Standard",
+            "pro" => "Pro",
+            _ => "Trial"
+        };
 
         public int AccessDaysRemaining =>
             !ExpiresAt.HasValue
@@ -105,6 +114,12 @@ namespace AdminPanel
             }
 
             return AccessDaysRemaining <= 14;
+        }
+
+        private static string NormalizePlan(string? plan)
+        {
+            var normalized = (plan ?? string.Empty).Trim().ToLowerInvariant();
+            return normalized == "standard" || normalized == "pro" ? normalized : "trial";
         }
     }
 
@@ -419,6 +434,16 @@ namespace AdminPanel
             {
                 client_id = clientId,
                 expires_at = newExpiry.ToUniversalTime().ToString("o")
+            });
+        }
+
+        public async Task UpdateClientAccessAsync(string clientId, string plan, string geminiApiKey)
+        {
+            await CallAsync<object>("update_client_access", new
+            {
+                client_id = clientId,
+                plan,
+                gemini_api_key = geminiApiKey
             });
         }
 

@@ -495,6 +495,7 @@ namespace AdminPanel
             BtnDelete.IsEnabled = hasSelection;
             BtnResetProfile.IsEnabled = hasSelection && !string.Equals(_profileLoadingClientId, _selected?.Id, StringComparison.Ordinal);
             BtnSaveNotes.IsEnabled = hasSelection && HasNotesChanged();
+            BtnSaveAccessConfig.IsEnabled = hasSelection && HasAccessConfigChanged();
         }
 
         private void OnClientSelected()
@@ -893,8 +894,11 @@ namespace AdminPanel
                 TxtDetailProfileStatus.Text = "—";
                 TxtDetailRememberMe.Text = "—";
                 TxtDetailProfileUpdatedAt.Text = "—";
+                SelectComboTag(CmbAccessPlan, "trial");
+                TxtManagedGeminiKey.Text = string.Empty;
                 TxtNotes.Text = string.Empty;
                 BtnSaveNotes.IsEnabled = false;
+                BtnSaveAccessConfig.IsEnabled = false;
                 return;
             }
 
@@ -932,8 +936,11 @@ namespace AdminPanel
                 : _selectedProfile.RememberMeEnabled ? "Увімкнено" : "Вимкнено";
             TxtDetailProfileUpdatedAt.Text = _selectedProfile?.UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                 ?? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "—" : "На вимогу");
+            SelectComboTag(CmbAccessPlan, NormalizeClientPlan(client.Plan));
+            TxtManagedGeminiKey.Text = client.GeminiApiKey ?? string.Empty;
             TxtNotes.Text = client.Notes ?? string.Empty;
             BtnSaveNotes.IsEnabled = HasNotesChanged();
+            BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
         }
 
         private string BuildLatestStateSummary()
@@ -1099,6 +1106,43 @@ namespace AdminPanel
             BtnSaveNotes.IsEnabled = HasNotesChanged();
         }
 
+        private void CmbAccessPlan_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+        }
+
+        private void TxtManagedGeminiKey_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+        }
+
+        private async void BtnSaveAccessConfig_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selected == null)
+                return;
+
+            try
+            {
+                var selectedId = _selected.Id;
+                var previousPlan = NormalizeClientPlan(_selected.Plan);
+                var previousHasManagedKey = !string.IsNullOrWhiteSpace(_selected.GeminiApiKey);
+                var nextPlan = GetSelectedAccessPlan();
+                var nextManagedKey = (TxtManagedGeminiKey.Text ?? string.Empty).Trim();
+
+                await _svc.UpdateClientAccessAsync(selectedId, nextPlan, nextManagedKey);
+                await _svc.TryWriteAuditAsync(selectedId, "client_access_updated",
+                    new { plan = previousPlan, has_managed_ai_key = previousHasManagedKey },
+                    new { plan = nextPlan, has_managed_ai_key = !string.IsNullOrWhiteSpace(nextManagedKey) },
+                    "Оператор оновив план клієнта та managed Gemini key");
+                await RefreshAsync(selectedId);
+                TxtStatus.Text = $"План та AI оновлено: {DateTime.Now:HH:mm:ss}";
+            }
+            catch (Exception ex)
+            {
+                ShowActionError("оновити план та AI", ex);
+            }
+        }
+
         private bool HasNotesChanged()
         {
             if (_selected == null)
@@ -1108,6 +1152,30 @@ namespace AdminPanel
                 (_selected.Notes ?? string.Empty).Trim(),
                 (TxtNotes.Text ?? string.Empty).Trim(),
                 StringComparison.Ordinal);
+        }
+
+        private bool HasAccessConfigChanged()
+        {
+            if (_selected == null)
+                return false;
+
+            return !string.Equals(NormalizeClientPlan(_selected.Plan), GetSelectedAccessPlan(), StringComparison.Ordinal)
+                || !string.Equals((_selected.GeminiApiKey ?? string.Empty).Trim(), (TxtManagedGeminiKey.Text ?? string.Empty).Trim(), StringComparison.Ordinal);
+        }
+
+        private string GetSelectedAccessPlan()
+        {
+            return NormalizeClientPlan(GetSelectedComboTag(CmbAccessPlan));
+        }
+
+        private static string NormalizeClientPlan(string? plan)
+        {
+            return (plan ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "standard" => "standard",
+                "pro" => "pro",
+                _ => "trial"
+            };
         }
 
         private static void ShowActionError(string action, Exception ex)

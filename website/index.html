@@ -61,7 +61,7 @@
     </div>
     <div class="container hero-content">
         <div class="hero-text animate-fade-up">
-            <div class="hero-badge">v0.1.40 · Windows · .NET 8</div>
+            <div class="hero-badge">v0.1.41 · Windows · .NET 8</div>
             <h1 data-i18n="hero_title" class="typewriter-text">Повне управління<br><span class="gradient-text">кадровим агентством</span></h1>
             <p class="hero-subtitle" data-i18n="hero_subtitle">Працівники, документи, шаблони, зарплати, рахунки, звіти — все в одній програмі з AI-інтеграцією та 4-мовною підтримкою</p>
             <div class="hero-buttons">
@@ -155,6 +155,35 @@
     </div>
 </div>
 
+<!-- Integrations Section -->
+<section class="integrations-section">
+    <div class="container">
+        <p class="integrations-title" data-i18n="integrations_title">Працює з вашими улюбленими технологіями</p>
+        <div class="integrations-logos">
+            <div class="integration-logo" title="Windows 11">
+                <svg viewBox="0 0 88 88" width="40" height="40"><path fill="#00a4ef" d="M0 12.402l35.687-4.86.016 34.423L0 41.965v-29.563zm35.67 33.529l.028 34.453L0 75.475V45.931l35.67.001zM40 6.61l48-6.61v41.96h-48V6.61zm48 39.352V88l-48-6.63V45.962h48z"/></svg>
+                <span>Windows 11</span>
+            </div>
+            <div class="integration-logo" title="Google Gemini">
+                <svg viewBox="0 0 24 24" width="40" height="40"><path fill="#8e24aa" d="M12 0c0 6.627-5.373 12-12 12 6.627 0 12 5.373 12 12 0-6.627 5.373-12 12-12-6.627 0-12-5.373-12-12z"/></svg>
+                <span>Gemini AI</span>
+            </div>
+            <div class="integration-logo" title=".NET 8">
+                <svg viewBox="0 0 24 24" width="40" height="40"><path fill="#512bd4" d="M2.1 16.5l3.2-9h3l1.8 5.2h.1L12 7.5h2.9l-3.3 9H8.7l-1.9-5.4h-.1l-1.8 5.4H2.1zm11.7 0v-9h5.6v2.4h-3v1.1h2.7v2.3h-2.7v1.1h3v2.1h-5.6z"/></svg>
+                <span>.NET 8</span>
+            </div>
+            <div class="integration-logo" title="OneDrive">
+                <svg viewBox="0 0 24 24" width="40" height="40"><path fill="#0078d4" d="M17.5 7.5c-1.3 0-2.4.9-2.8 2.1-.5-.4-1.1-.6-1.7-.6-1.7 0-3 1.3-3 3 0 .2 0 .4.1.5C9.5 12.2 9 12 8.5 12c-2.5 0-4.5 2-4.5 4.5S6 21 8.5 21h9c2.5 0 4.5-2 4.5-4.5s-2-4.5-4.5-4.5V12c0-2.5-2-4.5-4.5-4.5z"/></svg>
+                <span>OneDrive</span>
+            </div>
+            <div class="integration-logo" title="ARES (Чеський реєстр)">
+                <div style="font-weight: 900; font-size: 24px; color: #d32f2f; font-family: sans-serif; letter-spacing: -1px;">ARES</div>
+                <span>Реєстр ЧР</span>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Animated Stats -->
 <section class="stats-section">
     <div class="container">
@@ -188,62 +217,62 @@
             <p data-i18n="feat_subtitle">18 модулів, що покривають кожен аспект роботи кадрового агентства</p>
         </div>
         <div class="features-grid">
-            <div class="feature-card animate-fade-up" data-delay="0">
+            <a href="#dashboard" class="feature-card animate-fade-up" data-delay="0">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 </div>
                 <h3 data-i18n="feat_dash_title">Дашборд</h3>
                 <p data-i18n="feat_dash_desc">Інтерактивна панель з віджетами, статистикою, AI-звітами та гнучким компонуванням</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="50">
+            </a>
+            <a href="#employees" class="feature-card animate-fade-up" data-delay="50">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
                 <h3 data-i18n="feat_emp_title">Працівники</h3>
                 <p data-i18n="feat_emp_desc">Повний цикл: від wizard-створення до архівації, з AI-скануванням документів</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="100">
+            </a>
+            <a href="#templates" class="feature-card animate-fade-up" data-delay="100">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 </div>
                 <h3 data-i18n="feat_tpl_title">Шаблони</h3>
                 <p data-i18n="feat_tpl_desc">DOCX, XLSX, PDF редактори з каталогом тегів та AI-вставкою змінних</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="150">
+            </a>
+            <a href="#finance" class="feature-card animate-fade-up" data-delay="150">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
                 <h3 data-i18n="feat_fin_title">Фінанси</h3>
                 <p data-i18n="feat_fin_desc">Зарплатні таблиці, аванси, витрати, експорт — помісячний облік</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="200">
+            </a>
+            <a href="#reports" class="feature-card animate-fade-up" data-delay="200">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
                 </div>
                 <h3 data-i18n="feat_rep_title">Звіти</h3>
                 <p data-i18n="feat_rep_desc">Аналітика по фірмах, агенціях, працівниках з графіками та PDF/Excel експортом</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="250">
+            </a>
+            <a href="#invoices" class="feature-card animate-fade-up" data-delay="250">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #a18cd1, #fbc2eb);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                 </div>
                 <h3 data-i18n="feat_inv_title">Рахунки</h3>
                 <p data-i18n="feat_inv_desc">Фактури, цінові пропозиції, касові ордери з QR-платежами та ARES</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="300">
+            </a>
+            <a href="#ai" class="feature-card animate-fade-up" data-delay="300">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                 </div>
                 <h3 data-i18n="feat_ai_title">AI-асистент</h3>
                 <p data-i18n="feat_ai_desc">Вбудований чат Gemini зі спеціалізацією на кадровому праві та документах</p>
-            </div>
-            <div class="feature-card animate-fade-up" data-delay="350">
+            </a>
+            <a href="#security" class="feature-card animate-fade-up" data-delay="350">
                 <div class="feature-icon" style="background: linear-gradient(135deg, #89f7fe, #66a6ff);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </div>
                 <h3 data-i18n="feat_sec_title">Безпека</h3>
                 <p data-i18n="feat_sec_desc">Шифрування AES/DPAPI, паролі PBKDF2, підтвердження для небезпечних дій</p>
-            </div>
+            </a>
         </div>
     </div>
 </section>
@@ -279,7 +308,7 @@
             <div class="detail-image animate-slide-left tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Дашборд</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_dash_title">Дашборд</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -297,7 +326,7 @@
                             <div class="mock-dash-card alert mock-pulse-alert">
                                 <div class="mock-line w-80" style="background:rgba(229,57,53,0.3)"></div>
                                 <div class="mock-num danger">24</div>
-                                <div style="font-size:10px; color:#ff5f57; margin-top:5px;">Критичні документи</div>
+                                <div style="font-size:10px; color:#ff5f57; margin-top:5px;" data-i18n="mock_dash_crit">Критичні документи</div>
                             </div>
                             <div class="mock-dash-card">
                                 <div class="mock-line w-50"></div>
@@ -314,33 +343,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-right">
-                <span class="section-tag">Огляд</span>
-                <h2>Інтерактивний дашборд</h2>
-                <p class="detail-description">Центр управління з повною картиною стану вашого агентства в реальному часі</p>
+                <span class="section-tag" data-i18n="dash_tag">Огляд</span>
+                <h2 data-i18n="dash_title">Інтерактивний дашборд</h2>
+                <p class="detail-description" data-i18n="dash_desc">Центр управління з повною картиною стану вашого агентства в реальному часі</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Статистичні віджети</strong> — кількість працівників, проблем, шаблонів, компаній з трендами</div>
+                        <div data-i18n="dash_f1"><strong>Статистичні віджети</strong> — кількість працівників, проблем, шаблонів, компаній з трендами</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Прострочені документи</strong> — список з пріоритизацією: прострочені → критичні → попередження</div>
+                        <div data-i18n="dash_f2"><strong>Прострочені документи</strong> — список з пріоритизацією: прострочені → критичні → попередження</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Зарплатна панель</strong> — підсумки по місяцях: gross, net, виплачено, аванси</div>
+                        <div data-i18n="dash_f3"><strong>Зарплатна панель</strong> — підсумки по місяцях: gross, net, виплачено, аванси</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Статистика компаній</strong> — порівняння фірм за кількістю працівників та проблем</div>
+                        <div data-i18n="dash_f4"><strong>Статистика компаній</strong> — порівняння фірм за кількістю працівників та проблем</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-звіт</strong> — автоматична аналітична записка через Google Gemini</div>
+                        <div data-i18n="dash_f5"><strong>AI-звіт</strong> — автоматична аналітична записка через Google Gemini</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Гнучке компонування</strong> — drag & drop віджетів, зміна пропорцій, збереження layout</div>
+                        <div data-i18n="dash_f6"><strong>Гнучке компонування</strong> — drag & drop віджетів, зміна пропорцій, збереження layout</div>
                     </li>
                 </ul>
             </div>
@@ -355,7 +384,7 @@
             <div class="detail-image animate-slide-right tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Працівники</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_emp_title">Працівники</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -370,7 +399,7 @@
                         </div>
                         <div style="display:flex; gap:15px;">
                             <div style="flex:1;">
-                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:5px;">AI Сканування документу</div>
+                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:5px;" data-i18n="mock_emp_scan">AI Сканування документу</div>
                                 <div class="mock-id-card">
                                     <div class="mock-laser"></div>
                                     <div class="mock-id-photo"></div>
@@ -395,33 +424,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-left">
-                <span class="section-tag">Ядро системи</span>
-                <h2>Управління працівниками</h2>
-                <p class="detail-description">Повний цикл роботи з персоналом — від створення до архівації</p>
+                <span class="section-tag" data-i18n="emp_tag">Ядро системи</span>
+                <h2 data-i18n="emp_title">Управління працівниками</h2>
+                <p class="detail-description" data-i18n="emp_desc">Повний цикл роботи з персоналом — від створення до архівації</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Покроковий wizard</strong> — 9 кроків: документи, фото, паспорт, страхівка, віза, дозвіл, адреси. Адаптується під тип працівника</div>
+                        <div data-i18n="emp_f1"><strong>Покроковий wizard</strong> — 9 кроків: документи, фото, паспорт, страхівка, віза, дозвіл, адреси. Адаптується під тип працівника</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-сканування</strong> — автоматичне розпізнавання даних з документів через Gemini на кожному кроці</div>
+                        <div data-i18n="emp_f2"><strong>AI-сканування</strong> — автоматичне розпізнавання даних з документів через Gemini на кожному кроці</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>4 режими перегляду</strong> — таблиця, список, плитки, іконки з масштабуванням</div>
+                        <div data-i18n="emp_f3"><strong>4 режими перегляду</strong> — таблиця, список, плитки, іконки з масштабуванням</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Пошук та фільтри</strong> — по імені, номерах документів, статусу, проблемах, нових цього місяця</div>
+                        <div data-i18n="emp_f4"><strong>Пошук та фільтри</strong> — по імені, номерах документів, статусу, проблемах, нових цього місяця</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Масові операції</strong> — мультивибір, пакетна генерація документів, експорт в Excel</div>
+                        <div data-i18n="emp_f5"><strong>Масові операції</strong> — мультивибір, пакетна генерація документів, експорт в Excel</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Профіль</strong> — 4 вкладки (документи, профіль, історія, зарплата), індикатор заповненості, попередження про терміни</div>
+                        <div data-i18n="emp_f6"><strong>Профіль</strong> — 4 вкладки (документи, профіль, історія, зарплата), індикатор заповненості, попередження про терміни</div>
                     </li>
                 </ul>
             </div>
@@ -436,29 +465,29 @@
             <div class="detail-image animate-slide-left tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Документи</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_doc_title">Документи</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
                     </div>
                     <div class="mockup-body-area" style="position:relative;">
                         <div class="mock-table">
-                            <div class="mock-th"><div>Документ</div><div>Працівник</div><div>Статус</div><div>Дія</div></div>
-                            <div class="mock-tr"><div>Паспорт</div><div>Іван Петренко</div><div class="mock-status-change">Прострочено</div><div><div class="mock-line w-50"></div></div></div>
-                            <div class="mock-tr"><div>Віза</div><div>Марія Коваль</div><div style="color:#ffbd2e">Увага</div><div><div class="mock-line w-50"></div></div></div>
-                            <div class="mock-tr"><div>Страхівка</div><div>Олег Сидор</div><div style="color:#28ca41">Ок</div><div><div class="mock-line w-50"></div></div></div>
+                            <div class="mock-th"><div data-i18n="mock_doc_th1">Документ</div><div data-i18n="mock_doc_th2">Працівник</div><div data-i18n="mock_doc_th3">Статус</div><div data-i18n="mock_doc_th4">Дія</div></div>
+                            <div class="mock-tr"><div data-i18n="mock_doc_pass">Паспорт</div><div data-i18n="name_ivan">Іван Петренко</div><div class="mock-status-change" data-i18n="mock_doc_st_exp">Прострочено</div><div><div class="mock-line w-50"></div></div></div>
+                            <div class="mock-tr"><div data-i18n="mock_doc_visa">Віза</div><div data-i18n="name_maria">Марія Коваль</div><div style="color:#ffbd2e" data-i18n="mock_doc_st_warn">Увага</div><div><div class="mock-line w-50"></div></div></div>
+                            <div class="mock-tr"><div data-i18n="mock_doc_ins">Страхівка</div><div data-i18n="name_oleg">Олег Сидор</div><div style="color:#28ca41" data-i18n="mock_doc_st_ok">Ок</div><div><div class="mock-line w-50"></div></div></div>
                         </div>
                         
                         <!-- Анімація Popup -->
                         <div class="mock-popup">
                             <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                                <strong style="color:#ff5f57; font-size:12px;">Увага: Документ прострочено!</strong>
+                                <strong style="color:#ff5f57; font-size:12px;" data-i18n="mock_doc_pop_title">Увага: Документ прострочено!</strong>
                                 <span style="color:var(--text-muted);">✕</span>
                             </div>
-                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:15px;">Паспорт Івана Петренка закінчився 2 дні тому.</div>
+                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:15px;" data-i18n="mock_doc_pop_desc">Паспорт Івана Петренка закінчився 2 дні тому.</div>
                             <div style="display:flex; justify-content:flex-end; gap:10px;">
-                                <div style="background:var(--surface-light); padding:4px 10px; border-radius:4px; font-size:10px;">Ігнорувати</div>
-                                <div style="background:var(--primary); color:white; padding:4px 10px; border-radius:4px; font-size:10px;">Подовжити</div>
+                                <div style="background:var(--surface-light); padding:4px 10px; border-radius:4px; font-size:10px;" data-i18n="mock_doc_pop_btn1">Ігнорувати</div>
+                                <div style="background:var(--primary); color:white; padding:4px 10px; border-radius:4px; font-size:10px;" data-i18n="mock_doc_pop_btn2">Подовжити</div>
                             </div>
                         </div>
                         <div class="mock-cursor"></div>
@@ -466,33 +495,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-right">
-                <span class="section-tag">Контроль</span>
-                <h2>Документи та моніторинг</h2>
-                <p class="detail-description">Жоден прострочений документ не залишиться непоміченим</p>
+                <span class="section-tag" data-i18n="doc_tag">Контроль</span>
+                <h2 data-i18n="doc_title">Документи та моніторинг</h2>
+                <p class="detail-description" data-i18n="doc_desc">Жоден прострочений документ не залишиться непоміченим</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Паспорт, віза, страхівка, дозвіл</strong> — заміна, перегляд, подовження з діалогами</div>
+                        <div data-i18n="doc_f1"><strong>Паспорт, віза, страхівка, дозвіл</strong> — заміна, перегляд, подовження з діалогами</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Кастомні документи</strong> — власні підписані документи з датою підпису та терміном дії</div>
+                        <div data-i18n="doc_f2"><strong>Кастомні документи</strong> — власні підписані документи з датою підпису та терміном дії</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>3 рівні серйозності</strong> — Warning, Critical, Expired з кольоровими індикаторами</div>
+                        <div data-i18n="doc_f3"><strong>3 рівні серйозності</strong> — Warning, Critical, Expired з кольоровими індикаторами</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Агрегація по всіх фірмах</strong> — єдиний екран для всіх проблем усіх компаній</div>
+                        <div data-i18n="doc_f4"><strong>Агрегація по всіх фірмах</strong> — єдиний екран для всіх проблем усіх компаній</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Snooze</strong> — ігнорування проблеми на 7/14/30/60/90 днів з відновленням</div>
+                        <div data-i18n="doc_f5"><strong>Snooze</strong> — ігнорування проблеми на 7/14/30/60/90 днів з відновленням</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>PDF-звіт</strong> — експорт проблем з кольоровим маркуванням і статистикою</div>
+                        <div data-i18n="doc_f6"><strong>PDF-звіт</strong> — експорт проблем з кольоровим маркуванням і статистикою</div>
                     </li>
                 </ul>
             </div>
@@ -507,7 +536,7 @@
             <div class="detail-image animate-slide-right tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Шаблони</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_tpl_title">Шаблони</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -534,33 +563,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-left">
-                <span class="section-tag">Автоматизація</span>
-                <h2>Шаблони документів</h2>
-                <p class="detail-description">Створюйте документи за секунди — редактори для кожного формату</p>
+                <span class="section-tag" data-i18n="tpl_tag">Автоматизація</span>
+                <h2 data-i18n="tpl_title">Шаблони документів</h2>
+                <p class="detail-description" data-i18n="tpl_desc">Створюйте документи за секунди — редактори для кожного формату</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>DOCX-редактор</strong> — вбудований RTF-редактор з форматуванням, каталогом тегів, налаштуванням сторінки</div>
+                        <div data-i18n="tpl_f1"><strong>DOCX-редактор</strong> — вбудований RTF-редактор з форматуванням, каталогом тегів, налаштуванням сторінки</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>XLSX-редактор</strong> — табличний перегляд з об'єднаними комірками та вставкою тегів</div>
+                        <div data-i18n="tpl_f2"><strong>XLSX-редактор</strong> — табличний перегляд з об'єднаними комірками та вставкою тегів</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>PDF-редактор</strong> — візуальне розміщення тегів drag & drop з налаштуванням шрифту та позиції</div>
+                        <div data-i18n="tpl_f3"><strong>PDF-редактор</strong> — візуальне розміщення тегів drag & drop з налаштуванням шрифту та позиції</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-вставка тегів</strong> — Gemini автоматично розміщує змінні в правильні місця</div>
+                        <div data-i18n="tpl_f4"><strong>AI-вставка тегів</strong> — Gemini автоматично розміщує змінні в правильні місця</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Стартові шаблони</strong> — каталог готових шаблонів для швидкого старту</div>
+                        <div data-i18n="tpl_f5"><strong>Стартові шаблони</strong> — каталог готових шаблонів для швидкого старту</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Копіювання між фірмами</strong> — перенесення шаблону в іншу компанію одним кліком</div>
+                        <div data-i18n="tpl_f6"><strong>Копіювання між фірмами</strong> — перенесення шаблону в іншу компанію одним кліком</div>
                     </li>
                 </ul>
             </div>
@@ -575,57 +604,57 @@
             <div class="detail-image animate-slide-left tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Фінанси</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_fin_title">Фінанси</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
                     </div>
                     <div class="mockup-body-area">
                         <div class="mock-table" style="margin-bottom:15px;">
-                            <div class="mock-th"><div>Працівник</div><div>Години</div><div>Аванси</div><div>До виплати</div></div>
-                            <div class="mock-tr"><div>Іван Петренко</div><div class="mock-td">160</div><div class="mock-td">2000</div><div class="mock-td net mock-td-animate v1" style="color:transparent;">0</div></div>
-                            <div class="mock-tr"><div>Марія Коваль</div><div class="mock-td">145</div><div class="mock-td">0</div><div class="mock-td net mock-td-animate v2" style="color:transparent;">0</div></div>
-                            <div class="mock-tr"><div>Олег Сидор</div><div class="mock-td">180</div><div class="mock-td">5000</div><div class="mock-td net">28000</div></div>
+                            <div class="mock-th"><div data-i18n="mock_fin_th1">Працівник</div><div data-i18n="mock_fin_th2">Години</div><div data-i18n="mock_fin_th3">Аванси</div><div data-i18n="mock_fin_th4">До виплати</div></div>
+                            <div class="mock-tr"><div data-i18n="name_ivan">Іван Петренко</div><div class="mock-td">160</div><div class="mock-td">2000</div><div class="mock-td net mock-td-animate v1" style="color:transparent;">0</div></div>
+                            <div class="mock-tr"><div data-i18n="name_maria">Марія Коваль</div><div class="mock-td">145</div><div class="mock-td">0</div><div class="mock-td net mock-td-animate v2" style="color:transparent;">0</div></div>
+                            <div class="mock-tr"><div data-i18n="name_oleg">Олег Сидор</div><div class="mock-td">180</div><div class="mock-td">5000</div><div class="mock-td net">28000</div></div>
                         </div>
                         
                         <!-- Анімація Калькулятора -->
                         <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:15px; width:200px; margin-left:auto;">
-                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:10px;">Розрахунок: Іван Петренко</div>
-                            <div class="mock-calc-row mock-calc-step1"><span>Години:</span><span>160</span></div>
-                            <div class="mock-calc-row mock-calc-step2"><span>Ставка:</span><span>200 CZK</span></div>
-                            <div class="mock-calc-row mock-calc-step3"><span>Разом:</span><span>32 000 CZK</span></div>
+                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:10px;" data-i18n="mock_fin_calc_title">Розрахунок: Іван Петренко</div>
+                            <div class="mock-calc-row mock-calc-step1"><span data-i18n="mock_fin_calc_h">Години:</span><span>160</span></div>
+                            <div class="mock-calc-row mock-calc-step2"><span data-i18n="mock_fin_calc_r">Ставка:</span><span>200 CZK</span></div>
+                            <div class="mock-calc-row mock-calc-step3"><span data-i18n="mock_fin_calc_t">Разом:</span><span>32 000 CZK</span></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="detail-text animate-slide-right">
-                <span class="section-tag">Облік</span>
-                <h2>Фінанси та зарплати</h2>
-                <p class="detail-description">Помісячний облік зарплат, авансів та витрат з повним контролем</p>
+                <span class="section-tag" data-i18n="fin_tag">Облік</span>
+                <h2 data-i18n="fin_title">Фінанси та зарплати</h2>
+                <p class="detail-description" data-i18n="fin_desc">Помісячний облік зарплат, авансів та витрат з повним контролем</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Зарплатна таблиця</strong> — gross, net, години, аванси, стан оплати по кожному працівнику</div>
+                        <div data-i18n="fin_f1"><strong>Зарплатна таблиця</strong> — gross, net, години, аванси, стан оплати по кожному працівнику</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Фільтр по фірмах</strong> — перегляд зарплат окремо для кожної компанії</div>
+                        <div data-i18n="fin_f2"><strong>Фільтр по фірмах</strong> — перегляд зарплат окремо для кожної компанії</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Аванси</strong> — додавання з назвою, сумою, нотаткою; авансові PDF-таблиці по фірмах</div>
+                        <div data-i18n="fin_f3"><strong>Аванси</strong> — додавання з назвою, сумою, нотаткою; авансові PDF-таблиці по фірмах</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Витрати фірми</strong> — окремий облік витрат компанії</div>
+                        <div data-i18n="fin_f4"><strong>Витрати фірми</strong> — окремий облік витрат компанії</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Кастомні поля</strong> — додавання власних колонок до зарплатної таблиці</div>
+                        <div data-i18n="fin_f5"><strong>Кастомні поля</strong> — додавання власних колонок до зарплатної таблиці</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Підписні листи</strong> — PDF з підписами по місяцях, landscape A4</div>
+                        <div data-i18n="fin_f6"><strong>Підписні листи</strong> — PDF з підписами по місяцях, landscape A4</div>
                     </li>
                 </ul>
             </div>
@@ -640,7 +669,7 @@
             <div class="detail-image animate-slide-right tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Звіти</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_rep_title">Звіти</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -677,33 +706,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-left">
-                <span class="section-tag">Аналітика</span>
-                <h2>Звіти та аналітика</h2>
-                <p class="detail-description">Глибока аналітика з графіками, фільтрами та експортом</p>
+                <span class="section-tag" data-i18n="rep_tag">Аналітика</span>
+                <h2 data-i18n="rep_title">Звіти та аналітика</h2>
+                <p class="detail-description" data-i18n="rep_desc">Глибока аналітика з графіками, фільтрами та експортом</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Діапазон дат</strong> — гнучкий вибір періоду з автоматичним збереженням</div>
+                        <div data-i18n="rep_f1"><strong>Діапазон дат</strong> — гнучкий вибір періоду з автоматичним збереженням</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Фільтри по фірмах та агенціях</strong> — включення/виключення з toggle all</div>
+                        <div data-i18n="rep_f2"><strong>Фільтри по фірмах та агенціях</strong> — включення/виключення з toggle all</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Метрики</strong> — активні, нові, завершили, архівовані, відновлені за період</div>
+                        <div data-i18n="rep_f3"><strong>Метрики</strong> — активні, нові, завершили, архівовані, відновлені за період</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Графік архіву</strong> — помісячна динаміка архівацій та відновлень (OxyPlot)</div>
+                        <div data-i18n="rep_f4"><strong>Графік архіву</strong> — помісячна динаміка архівацій та відновлень (OxyPlot)</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Два режими</strong> — зведений звіт або детальний список працівників</div>
+                        <div data-i18n="rep_f5"><strong>Два режими</strong> — зведений звіт або детальний список працівників</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Експорт</strong> — вибір аркушів (фірми, агенції, працівники, архів) у XLSX або PDF</div>
+                        <div data-i18n="rep_f6"><strong>Експорт</strong> — вибір аркушів (фірми, агенції, працівники, архів) у XLSX або PDF</div>
                     </li>
                 </ul>
             </div>
@@ -718,7 +747,7 @@
             <div class="detail-image animate-slide-left tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Рахунки</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_inv_title">Рахунки</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -726,12 +755,12 @@
                     <div class="mockup-body-area">
                         <div style="display:flex; gap:15px; height:100%;">
                             <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
-                                <div class="mock-input" style="background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; cursor:pointer; animation: pulse-card 2s infinite;">Згенерувати PDF</div>
+                                <div class="mock-input" style="background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; cursor:pointer; animation: pulse-card 2s infinite;" data-i18n="mock_inv_btn">Згенерувати PDF</div>
                                 <div class="mock-input"></div>
                                 <div class="mock-input"></div>
                             </div>
                             <div style="flex:2; position:relative;">
-                                <div class="mock-stamp">PAID</div>
+                                <div class="mock-stamp" data-i18n="mock_inv_stamp">PAID</div>
                                 <div class="mock-inv-doc mock-inv-generate">
                                     <div class="mock-inv-top">
                                         <div><div class="mock-pdf-text" style="width:60px; height:20px; background:var(--primary);"></div></div>
@@ -747,7 +776,7 @@
                                     </div>
                                     <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end;">
                                         <div class="mock-qr"><div></div><div></div><div></div><div></div></div>
-                                        <div style="font-size:16px; font-weight:bold; color:#333;">Разом: 25 000 CZK</div>
+                                        <div style="font-size:16px; font-weight:bold; color:#333;" data-i18n="mock_inv_total">Разом: 25 000 CZK</div>
                                     </div>
                                 </div>
                             </div>
@@ -756,33 +785,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-right">
-                <span class="section-tag">Бухгалтерія</span>
-                <h2>Рахунки-фактури</h2>
-                <p class="detail-description">Повний модуль виставлення рахунків з QR-платежами та PDF-шаблонами</p>
+                <span class="section-tag" data-i18n="inv_tag">Бухгалтерія</span>
+                <h2 data-i18n="inv_title">Рахунки-фактури</h2>
+                <p class="detail-description" data-i18n="inv_desc">Повний модуль виставлення рахунків з QR-платежами та PDF-шаблонами</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>5 типів документів</strong> — рахунок, цінова пропозиція, замовлення, прибутковий та видатковий касові ордери</div>
+                        <div data-i18n="inv_f1"><strong>5 типів документів</strong> — рахунок, цінова пропозиція, замовлення, прибутковий та видатковий касові ордери</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>ARES-інтеграція</strong> — автозаповнення реквізитів по IČO з чеського реєстру</div>
+                        <div data-i18n="inv_f2"><strong>ARES-інтеграція</strong> — автозаповнення реквізитів по IČO з чеського реєстру</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>QR-платежі</strong> — формати SPAYD / EPC з живим превю коду</div>
+                        <div data-i18n="inv_f3"><strong>QR-платежі</strong> — формати SPAYD / EPC з живим превю коду</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>6 PDF-шаблонів + 4 теми</strong> — стилізовані рахунки з логотипом і печаткою</div>
+                        <div data-i18n="inv_f4"><strong>6 PDF-шаблонів + 4 теми</strong> — стилізовані рахунки з логотипом і печаткою</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>4 валюти</strong> — CZK, EUR, USD, PLN з знижками та частковою оплатою</div>
+                        <div data-i18n="inv_f5"><strong>4 валюти</strong> — CZK, EUR, USD, PLN з знижками та частковою оплатою</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Каталоги</strong> — збережені постачальники, замовники, товари для швидкого заповнення</div>
+                        <div data-i18n="inv_f6"><strong>Каталоги</strong> — збережені постачальники, замовники, товари для швидкого заповнення</div>
                     </li>
                 </ul>
             </div>
@@ -797,16 +826,16 @@
             <div class="detail-image animate-slide-right tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> AI Асистент</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_ai_title">AI Асистент</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
                     </div>
                     <div class="mockup-body-area">
                         <div class="mock-chat">
-                            <div class="mock-msg-user" style="animation-delay: 0.1s;">Проаналізуй договір працівника</div>
-                            <div class="mock-msg-ai" style="animation-delay: 0.3s;">Договір відповідає стандартам. Зверніть увагу на пункт 4.2 щодо випробувального терміну.</div>
-                            <div class="mock-msg-user" style="animation-delay: 0.5s;">Які документи потрібні для візи?</div>
+                            <div class="mock-msg-user" style="animation-delay: 0.1s;" data-i18n="mock_ai_msg1">Проаналізуй договір працівника</div>
+                            <div class="mock-msg-ai" style="animation-delay: 0.3s;" data-i18n="mock_ai_msg2">Договір відповідає стандартам. Зверніть увагу на пункт 4.2 щодо випробувального терміну.</div>
+                            <div class="mock-msg-user" style="animation-delay: 0.5s;" data-i18n="mock_ai_msg3">Які документи потрібні для візи?</div>
                             <div class="mock-typing" style="animation-delay: 0.7s; opacity: 0; animation: slideUpFade 0.5s ease-out 0.7s forwards;">
                                 <span></span><span></span><span></span>
                             </div>
@@ -819,33 +848,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-left">
-                <span class="section-tag">Штучний інтелект</span>
-                <h2>AI-інтеграція Gemini</h2>
-                <p class="detail-description">Google Gemini вбудований у кожен аспект програми</p>
+                <span class="section-tag" data-i18n="ai_tag">Штучний інтелект</span>
+                <h2 data-i18n="ai_title">AI-інтеграція Gemini</h2>
+                <p class="detail-description" data-i18n="ai_desc">Google Gemini вбудований у кожен аспект програми</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-чат</strong> — спеціалізований асистент для кадрових агенцій: трудове право, документи, дозволи</div>
+                        <div data-i18n="ai_f1"><strong>AI-чат</strong> — спеціалізований асистент для кадрових агенцій: трудове право, документи, дозволи</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Сканування документів</strong> — автоматичне розпізнавання даних з паспортів, віз, страхівок</div>
+                        <div data-i18n="ai_f2"><strong>Сканування документів</strong> — автоматичне розпізнавання даних з паспортів, віз, страхівок</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-пошук</strong> — знаходження працівників природною мовою</div>
+                        <div data-i18n="ai_f3"><strong>AI-пошук</strong> — знаходження працівників природною мовою</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-вставка тегів</strong> — автоматичне розміщення змінних у шаблонах</div>
+                        <div data-i18n="ai_f4"><strong>AI-вставка тегів</strong> — автоматичне розміщення змінних у шаблонах</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>AI-звіт дашборда</strong> — аналітична записка по всіх метриках</div>
+                        <div data-i18n="ai_f5"><strong>AI-звіт дашборда</strong> — аналітична записка по всіх метриках</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Новини з AI</strong> — переклад, аналіз, запитання до статей стрічки новин</div>
+                        <div data-i18n="ai_f6"><strong>Новини з AI</strong> — переклад, аналіз, запитання до статей стрічки новин</div>
                     </li>
                 </ul>
             </div>
@@ -862,42 +891,42 @@
                     <div class="mockup-header-bar"><div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div></div>
                     <div class="mockup-body-area">
                         <div class="mock-table">
-                            <div class="mock-th"><div>Працівник</div><div>Дата архівації</div><div>Причина</div><div>Дія</div></div>
-                            <div class="mock-tr"><div>Іван Петренко</div><div>12.05.2025</div><div>Закінчення контракту</div><div><div class="mock-line w-50"></div></div></div>
-                            <div class="mock-tr"><div>Марія Коваль</div><div>01.04.2025</div><div>За власним бажанням</div><div><div class="mock-line w-50"></div></div></div>
-                            <div class="mock-tr"><div>Олег Сидор</div><div>15.03.2025</div><div>Перехід на іншу фірму</div><div><div class="mock-line w-50"></div></div></div>
+                            <div class="mock-th"><div data-i18n="mock_fin_th1">Працівник</div><div data-i18n="mock_arch_th2">Дата архівації</div><div data-i18n="mock_arch_th3">Причина</div><div data-i18n="mock_doc_th4">Дія</div></div>
+                            <div class="mock-tr"><div data-i18n="name_ivan">Іван Петренко</div><div>12.05.2025</div><div data-i18n="mock_arch_r1">Закінчення контракту</div><div><div class="mock-line w-50"></div></div></div>
+                            <div class="mock-tr"><div data-i18n="name_maria">Марія Коваль</div><div>01.04.2025</div><div data-i18n="mock_arch_r2">За власним бажанням</div><div><div class="mock-line w-50"></div></div></div>
+                            <div class="mock-tr"><div data-i18n="name_oleg">Олег Сидор</div><div>15.03.2025</div><div data-i18n="mock_arch_r3">Перехід на іншу фірму</div><div><div class="mock-line w-50"></div></div></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="detail-text animate-slide-right">
-                <span class="section-tag">Захист даних</span>
-                <h2>Архів та м'яке видалення</h2>
-                <p class="detail-description">Жодні дані не втрачаються — повний контроль над життєвим циклом працівника</p>
+                <span class="section-tag" data-i18n="arch_tag">Захист даних</span>
+                <h2 data-i18n="arch_title">Архів та м'яке видалення</h2>
+                <p class="detail-description" data-i18n="arch_desc">Жодні дані не втрачаються — повний контроль над життєвим циклом працівника</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Архів</strong> — окремий процес завершення співпраці з датою; пошук, фільтри, відновлення</div>
+                        <div data-i18n="arch_f1"><strong>Архів</strong> — окремий процес завершення співпраці з датою; пошук, фільтри, відновлення</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Нещодавно видалені</strong> — м'яке видалення з можливістю відновлення, архівації або остаточного видалення</div>
+                        <div data-i18n="arch_f2"><strong>Нещодавно видалені</strong> — м'яке видалення з можливістю відновлення, архівації або остаточного видалення</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Відміна дій</strong> — кнопка Undo для нещодавніх архівацій з підтвердженням паролю</div>
+                        <div data-i18n="arch_f3"><strong>Відміна дій</strong> — кнопка Undo для нещодавніх архівацій з підтвердженням паролю</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Перегляд профілю</strong> — read-only доступ до профілю видалених та архівних працівників</div>
+                        <div data-i18n="arch_f4"><strong>Перегляд профілю</strong> — read-only доступ до профілю видалених та архівних працівників</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Історія дій</strong> — повний журнал всіх операцій з фільтрами, категоріями, експортом в Excel</div>
+                        <div data-i18n="arch_f5"><strong>Історія дій</strong> — повний журнал всіх операцій з фільтрами, категоріями, експортом в Excel</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Захист від помилок</strong> — пароль для видалення, неможливість випадкової втрати</div>
+                        <div data-i18n="arch_f6"><strong>Захист від помилок</strong> — пароль для видалення, неможливість випадкової втрати</div>
                     </li>
                 </ul>
             </div>
@@ -912,7 +941,7 @@
             <div class="detail-image animate-slide-right tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Компанії</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_comp_title">Компанії</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -946,33 +975,33 @@
                 </div>
             </div>
             <div class="detail-text animate-slide-left">
-                <span class="section-tag">Організація</span>
-                <h2>Компанії та кандидати</h2>
-                <p class="detail-description">Управління фірмами-роботодавцями та базою кандидатів</p>
+                <span class="section-tag" data-i18n="comp_tag">Організація</span>
+                <h2 data-i18n="comp_title">Компанії та кандидати</h2>
+                <p class="detail-description" data-i18n="comp_desc">Управління фірмами-роботодавцями та базою кандидатів</p>
                 <ul class="feature-list">
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Фірми-роботодавці</strong> — назва, IČO, юридична адреса, до 4 робочих адрес, позиції із зарплатами</div>
+                        <div data-i18n="comp_f1"><strong>Фірми-роботодавці</strong> — назва, IČO, юридична адреса, до 4 робочих адрес, позиції із зарплатами</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Агенція</strong> — прив'язка агенції (назва, IČO, адреса) до кожної фірми</div>
+                        <div data-i18n="comp_f2"><strong>Агенція</strong> — прив'язка агенції (назва, IČO, адреса) до кожної фірми</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Графік роботи</strong> — тижневі/денні години, кількість змін</div>
+                        <div data-i18n="comp_f3"><strong>Графік роботи</strong> — тижневі/денні години, кількість змін</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Видимість</strong> — приховування фірм без видалення; перевірка на активних працівників</div>
+                        <div data-i18n="comp_f4"><strong>Видимість</strong> — приховування фірм без видалення; перевірка на активних працівників</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Кандидати</strong> — окрема база з профілями, фото, документами; пошук по позиції</div>
+                        <div data-i18n="comp_f5"><strong>Кандидати</strong> — окрема база з профілями, фото, документами; пошук по позиції</div>
                     </li>
                     <li>
                         <span class="feature-check">✓</span>
-                        <div><strong>Глобальний пошук</strong> — знаходження працівників, шаблонів, кандидатів, архіву з однієї стрічки</div>
+                        <div data-i18n="comp_f6"><strong>Глобальний пошук</strong> — знаходження працівників, шаблонів, кандидатів, архіву з однієї стрічки</div>
                     </li>
                 </ul>
             </div>
@@ -987,7 +1016,7 @@
             <div class="detail-image animate-slide-left tilt-effect">
                 <div class="app-mockup-container">
                     <div class="mockup-header-bar">
-                        <div class="win-title"><span class="win-icon">AC</span> Безпека</div>
+                        <div class="win-title"><span class="win-icon">AC</span> <span data-i18n="mock_sec_title">Безпека</span></div>
                         <div class="win-controls">
                             <div class="win-btn">─</div><div class="win-btn">□</div><div class="win-btn close">✕</div>
                         </div>
@@ -999,9 +1028,9 @@
                                 <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--primary)" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                             </div>
                             <div class="mock-data-stream">
-                                <div class="mock-data-item">Іван Петренко</div>
+                                <div class="mock-data-item" data-i18n="name_ivan">Іван Петренко</div>
                                 <div class="mock-data-item encrypted">****************</div>
-                                <div class="mock-data-item">Паспорт: EX12345</div>
+                                <div class="mock-data-item" data-i18n="mock_sec_pass">Паспорт: EX12345</div>
                                 <div class="mock-data-item encrypted">****************</div>
                             </div>
                         </div>
@@ -1084,6 +1113,65 @@
     </div>
 </section>
 
+<!-- More Features Grid Section -->
+<section class="detail-section" id="more-features">
+    <div class="container">
+        <div class="section-header animate-fade-up">
+            <span class="section-tag" data-i18n="more_tag">Додатково</span>
+            <h2 data-i18n="more_title">Більше ніж просто база даних</h2>
+            <p data-i18n="more_subtitle">Ще 9 функцій, які роблять вашу щоденну роботу швидшою та приємнішою</p>
+        </div>
+        
+        <div class="more-features-grid">
+            <div class="more-feature-card animate-fade-up" data-delay="0">
+                <div class="mf-icon">📸</div>
+                <h4 data-i18n="mf_1_title">Редактор зображень</h4>
+                <p data-i18n="mf_1_desc">Обрізка, поворот та стиснення фотографій і сканів прямо в програмі.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="50">
+                <div class="mf-icon">🔄</div>
+                <h4 data-i18n="mf_2_title">Авто-бекапи</h4>
+                <p data-i18n="mf_2_desc">Створення резервних копій перед важливими змінами. Відкат в 1 клік.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="100">
+                <div class="mf-icon">🌍</div>
+                <h4 data-i18n="mf_3_title">Багатомовність</h4>
+                <p data-i18n="mf_3_desc">Інтерфейс програми доступний українською, чеською та англійською.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="150">
+                <div class="mf-icon">⚡</div>
+                <h4 data-i18n="mf_4_title">Масові операції</h4>
+                <p data-i18n="mf_4_desc">Генеруйте договори для 50 працівників одночасно одним натисканням.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="200">
+                <div class="mf-icon">🔍</div>
+                <h4 data-i18n="mf_5_title">Глобальний пошук</h4>
+                <p data-i18n="mf_5_desc">Шукайте працівників, фірми чи документи з будь-якого екрана (Ctrl+F).</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="250">
+                <div class="mf-icon">🛡️</div>
+                <h4 data-i18n="mf_6_title">Журнал активності</h4>
+                <p data-i18n="mf_6_desc">Програма записує кожну дію: хто, коли і що змінив або видалив.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="300">
+                <div class="mf-icon">🎨</div>
+                <h4 data-i18n="mf_7_title">Теми та кольори</h4>
+                <p data-i18n="mf_7_desc">Світла та темна теми, вибір акцентного кольору під ваш настрій.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="350">
+                <div class="mf-icon">📰</div>
+                <h4 data-i18n="mf_8_title">HR Новини</h4>
+                <p data-i18n="mf_8_desc">Вбудована стрічка новин трудового законодавства з AI-перекладом.</p>
+            </div>
+            <div class="more-feature-card animate-fade-up" data-delay="400">
+                <div class="mf-icon">🚀</div>
+                <h4 data-i18n="mf_9_title">Авто-оновлення</h4>
+                <p data-i18n="mf_9_desc">Програма сама завантажує нові версії у фоновому режимі (Velopack).</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Pricing Section -->
 <section class="detail-section" id="pricing">
     <div class="container">
@@ -1110,9 +1198,9 @@
             </div>
 
             <!-- Ultimate (AI) Plan -->
-            <div style="background:linear-gradient(180deg, var(--surface-light) 0%, var(--surface) 100%); border:2px solid var(--primary); border-radius:16px; padding:40px; width:360px; transform:translateY(-15px); position:relative; box-shadow:0 10px 40px rgba(102,126,234,0.2);" class="animate-fade-up" data-delay="100">
-                <div style="position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:var(--gradient); color:white; padding:6px 16px; border-radius:14px; font-size:13px; font-weight:bold; letter-spacing:1px; text-transform:uppercase;" data-i18n="price_recommended">Рекомендовано</div>
-                <h3 style="font-size:24px; margin-bottom:10px;" data-i18n="price_ult_title">Ultimate AI</h3>
+            <div style="border:2px solid var(--primary); border-radius:16px; padding:40px; width:360px; transform:translateY(-15px); position:relative; box-shadow:0 10px 40px rgba(102,126,234,0.2); transition: var(--transition);" class="animate-fade-up pricing-card-pro" data-delay="100">
+                <div style="position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:var(--gradient); color:white; padding:6px 16px; border-radius:14px; font-size:13px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; z-index: 2;" data-i18n="price_recommended">Рекомендовано</div>
+                <h3 style="font-size:24px; margin-bottom:10px; position: relative; z-index: 2;" data-i18n="price_ult_title">Ultimate AI</h3>
                 <div style="font-size:42px; font-weight:800; margin-bottom:20px; color:var(--primary);">9 000<span style="font-size:16px; color:var(--text-muted); font-weight:normal;" data-i18n="price_year"> CZK / рік</span></div>
                 <p style="color:var(--text-muted); margin-bottom:30px; font-size:15px;" data-i18n="price_ult_desc">Максимальна автоматизація завдяки інтеграції з Google Gemini.</p>
                 <ul class="feature-list" style="margin-bottom:40px;">
@@ -1125,6 +1213,37 @@
                 <a href="https://github.com/Sestema/Agency-Contractor" target="_blank" class="btn btn-primary" style="width:100%; justify-content:center;" data-i18n="price_btn_start">Почати 14 днів безкоштовно</a>
             </div>
 
+        </div>
+
+        <!-- What's included in all plans -->
+        <div class="included-features animate-fade-up" data-delay="200">
+            <h4 data-i18n="included_title">Усі тарифи включають:</h4>
+            <div class="included-grid">
+                <div class="included-item">
+                    <span class="included-icon">🔒</span>
+                    <span data-i18n="inc_local">Локальне зберігання даних (AES-256)</span>
+                </div>
+                <div class="included-item">
+                    <span class="included-icon">🔄</span>
+                    <span data-i18n="inc_updates">Безкоштовні оновлення</span>
+                </div>
+                <div class="included-item">
+                    <span class="included-icon">☁️</span>
+                    <span data-i18n="inc_cloud">Підтримка OneDrive / Google Drive</span>
+                </div>
+                <div class="included-item">
+                    <span class="included-icon">🌍</span>
+                    <span data-i18n="inc_lang">Багатомовність (UK, CS, EN)</span>
+                </div>
+                <div class="included-item">
+                    <span class="included-icon">🛡️</span>
+                    <span data-i18n="inc_log">Журнал активності</span>
+                </div>
+                <div class="included-item">
+                    <span class="included-icon">💾</span>
+                    <span data-i18n="inc_backup">Автоматичні бекапи</span>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -1180,46 +1299,56 @@
             <span class="section-tag">FAQ</span>
             <h2 data-i18n="faq_title">Поширені запитання</h2>
         </div>
-        <div style="max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
+        <div style="max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:15px;" class="faq-container">
             
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;" class="animate-fade-up">
-                <h4 style="font-size:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;" data-i18n="faq_q1">
-                    Чи безпечні мої дані?
-                    <span style="color:var(--primary);">+</span>
-                </h4>
-                <p style="color:var(--text-muted); font-size:14px; line-height:1.6;" data-i18n="faq_a1">Абсолютно. Всі дані зберігаються локально на вашому комп'ютері та зашифровані за допомогою алгоритму AES-256 та Windows DPAPI. Ми не маємо доступу до вашої бази даних.</p>
+            <div class="faq-item animate-fade-up">
+                <div class="faq-question">
+                    <h4 data-i18n="faq_q1">Чи безпечні мої дані?</h4>
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    <p data-i18n="faq_a1">Абсолютно. Всі дані зберігаються локально на вашому комп'ютері та зашифровані за допомогою алгоритму AES-256 та Windows DPAPI. Ми не маємо доступу до вашої бази даних.</p>
+                </div>
             </div>
 
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;" class="animate-fade-up" data-delay="50">
-                <h4 style="font-size:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;" data-i18n="faq_q2">
-                    Чи потрібен інтернет для роботи?
-                    <span style="color:var(--primary);">+</span>
-                </h4>
-                <p style="color:var(--text-muted); font-size:14px; line-height:1.6;" data-i18n="faq_a2">Основний функціонал програми працює повністю офлайн. Інтернет потрібен лише для функцій AI (Google Gemini), інтеграції з ARES (реєстр Чехії) та перевірки ліцензії.</p>
+            <div class="faq-item animate-fade-up" data-delay="50">
+                <div class="faq-question">
+                    <h4 data-i18n="faq_q2">Чи потрібен інтернет для роботи?</h4>
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    <p data-i18n="faq_a2">Основний функціонал програми працює повністю офлайн. Інтернет потрібен лише для функцій AI (Google Gemini), інтеграції з ARES (реєстр Чехії) та перевірки ліцензії.</p>
+                </div>
             </div>
 
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;" class="animate-fade-up" data-delay="100">
-                <h4 style="font-size:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;" data-i18n="faq_q3">
-                    Як працює 14-денний тестовий період?
-                    <span style="color:var(--primary);">+</span>
-                </h4>
-                <p style="color:var(--text-muted); font-size:14px; line-height:1.6;" data-i18n="faq_a3">Ви завантажуєте програму і отримуєте повний доступ до всіх функцій (рівень "Безліміт") на 14 днів. Жодної прив'язки картки. Після завершення періоду ви зможете обрати зручний тариф.</p>
+            <div class="faq-item animate-fade-up" data-delay="100">
+                <div class="faq-question">
+                    <h4 data-i18n="faq_q3">Як працює 14-денний тестовий період?</h4>
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    <p data-i18n="faq_a3">Ви завантажуєте програму і отримуєте повний доступ до всіх функцій (рівень "Безліміт") на 14 днів. Жодної прив'язки картки. Після завершення періоду ви зможете обрати зручний тариф.</p>
+                </div>
             </div>
 
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;" class="animate-fade-up" data-delay="150">
-                <h4 style="font-size:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;" data-i18n="faq_q4">
-                    Чому Windows або антивірус блокує файл?
-                    <span style="color:var(--primary);">+</span>
-                </h4>
-                <p style="color:var(--text-muted); font-size:14px; line-height:1.6;" data-i18n="faq_a4">Оскільки програма нова і розробник ще не має накопиченого "рейтингу довіри" від Microsoft (SmartScreen), система може попередити про невідомий файл. Це абсолютно безпечно. При завантаженні дозвольте збереження файлу, а при запуску натисніть "Докладніше" (More info) та "Виконати в будь-якому випадку" (Run anyway).</p>
+            <div class="faq-item animate-fade-up" data-delay="150">
+                <div class="faq-question">
+                    <h4 data-i18n="faq_q4">Чому Windows або антивірус блокує файл?</h4>
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    <p data-i18n="faq_a4">Оскільки програма нова і розробник ще не має накопиченого "рейтингу довіри" від Microsoft (SmartScreen), система може попередити про невідомий файл. Це абсолютно безпечно. При завантаженні дозвольте збереження файлу, а при запуску натисніть "Докладніше" (More info) та "Виконати в будь-якому випадку" (Run anyway).</p>
+                </div>
             </div>
 
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;" class="animate-fade-up" data-delay="200">
-                <h4 style="font-size:16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;" data-i18n="faq_q5">
-                    Який саме файл потрібно скачувати?
-                    <span style="color:var(--primary);">+</span>
-                </h4>
-                <p style="color:var(--text-muted); font-size:14px; line-height:1.6;" data-i18n="faq_a5">На сторінці GitHub Releases завжди обирайте найновішу версію (позначка Latest). Для встановлення програми вам потрібен файл із назвою <strong>AgencyContractor-win-Setup.exe</strong>.</p>
+            <div class="faq-item animate-fade-up" data-delay="200">
+                <div class="faq-question">
+                    <h4 data-i18n="faq_q5">Який саме файл потрібно скачувати?</h4>
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    <p data-i18n="faq_a5">На сторінці GitHub Releases завжди обирайте найновішу версію (позначка Latest). Для встановлення програми вам потрібен файл із назвою <strong>AgencyContractor-win-Setup.exe</strong>.</p>
+                </div>
             </div>
 
         </div>
@@ -1230,9 +1359,9 @@
 <section class="cta-section">
     <div class="container">
         <div class="cta-content animate-fade-up">
-            <h2>Готові оптимізувати<br>роботу вашого агентства?</h2>
-            <p>Agency Contractor — все необхідне для кадрового агентства в одній програмі</p>
-            <a href="https://github.com/Sestema/Agency-Contractor" target="_blank" class="btn btn-primary" style="margin-bottom: 40px; font-size: 18px; padding: 16px 32px;">
+            <h2 data-i18n="cta_title">Готові оптимізувати<br>роботу вашого агентства?</h2>
+            <p data-i18n="cta_desc">Agency Contractor — все необхідне для кадрового агентства в одній програмі</p>
+            <a href="https://github.com/Sestema/Agency-Contractor" target="_blank" class="btn btn-primary" style="margin-bottom: 40px; font-size: 18px; padding: 16px 32px;" data-i18n="cta_btn">
                 Почати безкоштовний період
             </a>
             <div class="cta-features">
@@ -1242,7 +1371,7 @@
                 </div>
                 <div class="cta-feature">
                     <span>🌐</span>
-                    <span>4 мови</span>
+                    <span data-i18n="cta_f1">4 мови</span>
                 </div>
                 <div class="cta-feature">
                     <span>🤖</span>
@@ -1250,7 +1379,7 @@
                 </div>
                 <div class="cta-feature">
                     <span>🔒</span>
-                    <span>Шифрування</span>
+                    <span data-i18n="cta_f2">Шифрування</span>
                 </div>
             </div>
         </div>

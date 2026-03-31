@@ -1,5 +1,11 @@
 create extension if not exists pgcrypto;
 
+alter table if exists public.clients
+    add column if not exists gemini_api_key text not null default '';
+
+alter table if exists public.clients
+    add column if not exists plan text not null default 'trial';
+
 create table if not exists public.admin_commands (
     id uuid primary key default gen_random_uuid(),
     client_id uuid not null references public.clients(id) on delete cascade,

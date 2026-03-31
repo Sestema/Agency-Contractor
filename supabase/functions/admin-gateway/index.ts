@@ -19,6 +19,7 @@ type AdminRequest = {
     | "block_client"
     | "unblock_client"
     | "extend_license"
+    | "update_client_access"
     | "update_notes"
     | "delete_client"
     | "get_profile"
@@ -75,6 +76,9 @@ serve(async (req) => {
         return json({ ok: true, data: true });
       case "extend_license":
         await extendLicense(admin, payload);
+        return json({ ok: true, data: true });
+      case "update_client_access":
+        await updateClientAccess(admin, payload);
         return json({ ok: true, data: true });
       case "update_notes":
         await updateNotes(admin, payload);
@@ -217,6 +221,19 @@ async function extendLicense(admin: ReturnType<typeof createAdminClient>, payloa
   if (error) throw error;
 }
 
+async function updateClientAccess(admin: ReturnType<typeof createAdminClient>, payload: Record<string, unknown>) {
+  const clientId = String(payload.client_id ?? "");
+  if (!clientId) {
+    throw new Error("client_id_required");
+  }
+
+  const { error } = await admin.from("clients").update({
+    plan: normalizeClientPlan(payload.plan),
+    gemini_api_key: sanitizeText(payload.gemini_api_key, 2048),
+  }).eq("id", clientId);
+  if (error) throw error;
+}
+
 async function updateNotes(admin: ReturnType<typeof createAdminClient>, payload: Record<string, unknown>) {
   const { error } = await admin.from("clients").update({
     notes: sanitizeText(payload.notes, 4000),
@@ -340,6 +357,11 @@ function stripProfileSecrets(profile: Record<string, unknown> | null) {
     password_hash: "",
     password_salt: "",
   };
+}
+
+function normalizeClientPlan(value: unknown): string {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "standard" || normalized === "pro" ? normalized : "trial";
 }
 
 function hasStats(eventData: unknown): boolean {

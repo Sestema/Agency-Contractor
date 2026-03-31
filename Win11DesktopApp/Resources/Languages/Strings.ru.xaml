@@ -1354,6 +1354,8 @@
     <sys:String x:Key="FinDebtFromMonth">Долг за {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Загружено</sys:String>
     <sys:String x:Key="FinSalarySaved">Сохранено!</sys:String>
+    <sys:String x:Key="FinSalarySaveGenericError">Не удалось сохранить файл зарплаты. Файл может быть занят другой программой.</sys:String>
+    <sys:String x:Key="FinSalarySaveRecoveryCreated">Основной файл не удалось обновить, но новые данные сохранены в recovery-файл.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Несохранённые изменения</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Удалить аванс</sys:String>
     <sys:String x:Key="FinSalaryExported">Экспортировано!</sys:String>
@@ -1412,6 +1414,7 @@
     <sys:String x:Key="SettingsCopyrightDesc">Данное программное обеспечение является собственностью автора. Несанкционированное копирование, распространение или модификация строго запрещены.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Лицензия</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Статус доступа</sys:String>
+    <sys:String x:Key="SettingsPlanLabel">План:</sys:String>
     <sys:String x:Key="AccessStatusTrialTitle">Пробный доступ активен</sys:String>
     <sys:String x:Key="AccessStatusTrialDetail">Полный доступ действует ещё {0} дн., до {1}.</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Полный доступ активен</sys:String>
@@ -1697,6 +1700,9 @@
     <sys:String x:Key="AIGeminiGetKey">Получить ключ бесплатно</sys:String>
     <sys:String x:Key="AIGeminiModel">Модель Gemini:</sys:String>
     <sys:String x:Key="AIGeminiTest">Тест соединения</sys:String>
+    <sys:String x:Key="AIGeminiManagedKeyActive">AI работает через ключ администратора.</sys:String>
+    <sys:String x:Key="AIGeminiKeyMissingOrAdmin">Укажите API ключ или обратитесь к администратору.</sys:String>
+    <sys:String x:Key="AIGeminiDisabledByPolicy">AI отключен текущим планом или политикой администратора.</sys:String>
     <sys:String x:Key="AIProviderForChat">AI Помощник (чат):</sys:String>
     <sys:String x:Key="AIProviderForScan">AI Scan (документы):</sys:String>
     <sys:String x:Key="AIProviderHint">Gemini = умнее, нужен интернет. Локальная = офлайн, но слабее.</sys:String>

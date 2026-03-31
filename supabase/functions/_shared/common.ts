@@ -8,6 +8,8 @@ export interface ClientRow {
   app_version: string;
   is_blocked: boolean;
   expires_at: string | null;
+  plan: string | null;
+  gemini_api_key: string | null;
 }
 
 const encoder = new TextEncoder();
@@ -81,7 +83,7 @@ export async function resolveClientByMachineId(
 ): Promise<ClientRow | null> {
   const { data: existing, error } = await admin
     .from("clients")
-    .select("id,machine_id,machine_name,ip_address,app_version,is_blocked,expires_at")
+    .select("id,machine_id,machine_name,ip_address,app_version,is_blocked,expires_at,plan,gemini_api_key")
     .eq("machine_id", machineId)
     .limit(1)
     .maybeSingle();
@@ -111,10 +113,11 @@ export async function resolveClientByMachineId(
       app_version: appVersion,
       activated_at: now,
       expires_at: expiresAt,
+      plan: "trial",
       last_seen: now,
       is_blocked: false,
     })
-    .select("id,machine_id,machine_name,ip_address,app_version,is_blocked,expires_at")
+    .select("id,machine_id,machine_name,ip_address,app_version,is_blocked,expires_at,plan,gemini_api_key")
     .single();
 
   if (createError) {

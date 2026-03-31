@@ -289,6 +289,7 @@
                         <DataGridTextColumn Header="Ім'я та прізвище" Binding="{Binding DisplayName}" Width="220"/>
                         <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="120"/>
                         <DataGridTextColumn Header="Версія" Binding="{Binding AppVersion}" Width="90"/>
+                        <DataGridTextColumn Header="План" Binding="{Binding PlanDisplay}" Width="85"/>
                         <DataGridTextColumn Header="Фірми" Binding="{Binding FirmsCount}" Width="65"/>
                         <DataGridTextColumn Header="Працівники" Binding="{Binding EmployeesCount}" Width="90"/>
                         <DataGridTextColumn Header="Помилки" Binding="{Binding ErrorLikeCount}" Width="75"/>
@@ -402,6 +403,44 @@
                                 <TextBox x:Name="TxtDetailLicense" Text="—" Style="{StaticResource DetailValueBox}"/>
                             </StackPanel>
                         </UniformGrid>
+
+                        <Border Background="#2F364D" CornerRadius="6" Padding="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="План і AI" Foreground="#A6ADC8" FontSize="12.5" Margin="0,0,0,8"/>
+                                <TextBlock Text="План клієнта" Style="{StaticResource DetailLabel}"/>
+                                <ComboBox x:Name="CmbAccessPlan"
+                                          Style="{StaticResource FilterComboBox}"
+                                          Margin="0,0,0,10"
+                                          SelectionChanged="CmbAccessPlan_SelectionChanged">
+                                    <ComboBoxItem Tag="trial">Trial</ComboBoxItem>
+                                    <ComboBoxItem Tag="standard">Standard</ComboBoxItem>
+                                    <ComboBoxItem Tag="pro">Pro</ComboBoxItem>
+                                </ComboBox>
+
+                                <TextBlock Text="Admin Gemini API key" Style="{StaticResource DetailLabel}"/>
+                                <TextBox x:Name="TxtManagedGeminiKey"
+                                         TextChanged="TxtManagedGeminiKey_TextChanged"
+                                         Background="#1E1E2E"
+                                         Foreground="#CDD6F4"
+                                         BorderBrush="#585B70"
+                                         BorderThickness="1"
+                                         Padding="10"
+                                         Margin="0,0,0,6"/>
+                                <TextBlock Text="Для Standard можна залишити порожнім. Для Pro або Trial ключ можна задати тут."
+                                           Foreground="#A6ADC8"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,10"/>
+                                <Button x:Name="BtnSaveAccessConfig"
+                                        Content="Зберегти план і AI"
+                                        Style="{StaticResource ActionBtn}"
+                                        Background="#A6E3A1"
+                                        Foreground="#11111B"
+                                        HorizontalAlignment="Right"
+                                        IsEnabled="False"
+                                        Click="BtnSaveAccessConfig_Click"/>
+                            </StackPanel>
+                        </Border>
 
                     <StackPanel Margin="0,0,0,12">
                         <TextBlock Text="Останній стан" Style="{StaticResource DetailLabel}"/>

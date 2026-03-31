@@ -17,9 +17,11 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public void WriteJsonAtomic_ShouldRoundTripJson()
+        public void WriteJsonAtomic_NormalOverwrite_Works()
         {
             var path = Path.Combine(_testRootPath, "data.json");
+            File.WriteAllText(path, "{\"Name\":\"Old\",\"Values\":[0]}");
+
             var data = new SampleData
             {
                 Name = "Test",
@@ -32,10 +34,68 @@ namespace Win11DesktopApp.Tests
             Assert.NotNull(restored);
             Assert.Equal("Test", restored!.Name);
             Assert.Equal(new[] { 1, 2, 3 }, restored.Values);
+            Assert.False(File.Exists(GetBackupPath(path)));
         }
 
         [Fact]
-        public void WriteJsonAtomic_ShouldOverwriteReadOnlyFile()
+        public void WriteJsonAtomic_LockedTarget_CreatesRecovery()
+        {
+            var path = Path.Combine(_testRootPath, "locked.json");
+            File.WriteAllText(path, "{\"Name\":\"Old\",\"Values\":[0]}");
+
+            using var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            var data = new SampleData
+            {
+                Name = "Recovered",
+                Values = new List<int> { 4, 5, 6 }
+            };
+
+            var ex = Assert.Throws<SafeFileRecoveryException>(() => SafeFileService.WriteJsonAtomic(path, data));
+
+            Assert.Equal(GetRecoveryPath(path), ex.RecoveryPath);
+            Assert.True(File.Exists(ex.RecoveryPath));
+
+            var recovered = SafeFileService.ReadJson<SampleData>(ex.RecoveryPath);
+            Assert.NotNull(recovered);
+            Assert.Equal("Recovered", recovered!.Name);
+            Assert.Equal(new[] { 4, 5, 6 }, recovered.Values);
+        }
+
+        [Fact]
+        public void WriteJsonAtomic_RecoveryCreated_TempCleaned()
+        {
+            var path = Path.Combine(_testRootPath, "tempclean.json");
+            File.WriteAllText(path, "{\"Name\":\"Old\"}");
+
+            using var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            Assert.Throws<SafeFileRecoveryException>(() =>
+                SafeFileService.WriteJsonAtomic(path, new SampleData { Name = "Recovered", Values = new List<int> { 7 } }));
+
+            Assert.Empty(GetTempFiles(path));
+        }
+
+        [Fact]
+        public void WriteJsonAtomic_RecoveryFailed_TempRemains()
+        {
+            var path = Path.Combine(_testRootPath, "tempremains.json");
+            File.WriteAllText(path, "{\"Name\":\"Old\"}");
+
+            var recoveryPath = GetRecoveryPath(path);
+            File.WriteAllText(recoveryPath, "{\"Name\":\"ExistingRecovery\"}");
+
+            using var targetLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            using var recoveryLock = new FileStream(recoveryPath, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            Assert.ThrowsAny<IOException>(() =>
+                SafeFileService.WriteJsonAtomic(path, new SampleData { Name = "NewData", Values = new List<int> { 8 } }));
+
+            Assert.NotEmpty(GetTempFiles(path));
+        }
+
+        [Fact]
+        public void WriteJsonAtomic_ReadonlyTarget_StillWorks()
         {
             var path = Path.Combine(_testRootPath, "readonly.json");
             File.WriteAllText(path, "{\"Name\":\"Old\"}");
@@ -76,6 +136,23 @@ namespace Win11DesktopApp.Tests
         {
             public string Name { get; set; } = string.Empty;
             public List<int> Values { get; set; } = new();
+        }
+
+        private static string GetBackupPath(string path) => $"{path}.bak";
+
+        private static string GetRecoveryPath(string path)
+        {
+            var directory = Path.GetDirectoryName(path) ?? Directory.GetCurrentDirectory();
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            var extension = Path.GetExtension(path);
+            return Path.Combine(directory, $"{fileName}.recovery{extension}");
+        }
+
+        private static string[] GetTempFiles(string path)
+        {
+            var directory = Path.GetDirectoryName(path) ?? Directory.GetCurrentDirectory();
+            var fileName = Path.GetFileName(path);
+            return Directory.GetFiles(directory, $"{fileName}.*.tmp", SearchOption.TopDirectoryOnly);
         }
     }
 }

@@ -1375,6 +1375,8 @@
     <sys:String x:Key="FinDebtFromMonth">Борг за {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Завантажено</sys:String>
     <sys:String x:Key="FinSalarySaved">Збережено!</sys:String>
+    <sys:String x:Key="FinSalarySaveGenericError">Не вдалося зберегти файл зарплати. Файл може бути зайнятий іншою програмою.</sys:String>
+    <sys:String x:Key="FinSalarySaveRecoveryCreated">Основний файл не вдалося оновити, але нові дані збережено в recovery-файл.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Незбережені зміни</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Видалити аванс</sys:String>
     <sys:String x:Key="FinSalaryExported">Експортовано!</sys:String>
@@ -1433,6 +1435,7 @@
     <sys:String x:Key="SettingsCopyrightDesc">Це програмне забезпечення є власністю автора. Несанкціоноване копіювання, розповсюдження або модифікація суворо заборонені.</sys:String>
     <sys:String x:Key="SettingsLicenseTitle">Ліцензія</sys:String>
     <sys:String x:Key="SettingsAccessTitle">Статус доступу</sys:String>
+    <sys:String x:Key="SettingsPlanLabel">План:</sys:String>
     <sys:String x:Key="AccessStatusTrialTitle">Пробний доступ активний</sys:String>
     <sys:String x:Key="AccessStatusTrialDetail">Повний доступ діє ще {0} дн., до {1}.</sys:String>
     <sys:String x:Key="AccessStatusActivatedTitle">Повний доступ активний</sys:String>
@@ -1715,6 +1718,9 @@
     <sys:String x:Key="AIGeminiGetKey">Отримати ключ безкоштовно</sys:String>
     <sys:String x:Key="AIGeminiModel">Модель Gemini:</sys:String>
     <sys:String x:Key="AIGeminiTest">Тест з'єднання</sys:String>
+    <sys:String x:Key="AIGeminiManagedKeyActive">AI працює через ключ адміністратора.</sys:String>
+    <sys:String x:Key="AIGeminiKeyMissingOrAdmin">Вкажіть API key або зверніться до адміністратора.</sys:String>
+    <sys:String x:Key="AIGeminiDisabledByPolicy">AI вимкнений поточним планом або політикою адміністратора.</sys:String>
     <sys:String x:Key="AIProviderForChat">AI Помічник (чат):</sys:String>
     <sys:String x:Key="AIProviderForScan">AI Scan (документи):</sys:String>
     <sys:String x:Key="AIProviderHint">Gemini = розумніший, потрібен інтернет. Локальна = офлайн, але слабша.</sys:String>
