@@ -50,10 +50,12 @@ namespace Win11DesktopApp.EmployeeModels
         public string BirthDate { get; set; } = string.Empty;
         public string Gender { get; set; } = "male";
         public string PassportNumber { get; set; } = string.Empty;
+        public string PassportAuthority { get; set; } = string.Empty;
         public string PassportCity { get; set; } = string.Empty;
         public string PassportCountry { get; set; } = string.Empty;
         public string PassportExpiry { get; set; } = string.Empty;
         public string VisaNumber { get; set; } = string.Empty;
+        public string VisaAuthority { get; set; } = string.Empty;
         public string VisaType { get; set; } = string.Empty;
         public string VisaExpiry { get; set; } = string.Empty;
         public string InsuranceCompanyShort { get; set; } = string.Empty;
@@ -75,6 +77,9 @@ namespace Win11DesktopApp.EmployeeModels
         public string ContractType { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public bool HasBankAccountData { get; set; }
+        public string BankAccountNumber { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
         public string Status { get; set; } = "Active";
         public string StartDate { get; set; } = string.Empty;

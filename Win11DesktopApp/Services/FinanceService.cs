@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Windows;
 using Win11DesktopApp.Models;
 
@@ -878,7 +879,7 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        public void UpdateHourlyRateForward(string employeeFolder, string firmName, decimal newRate, int fromYear, int fromMonth)
+        public void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, int fromYear, int fromMonth, CancellationToken cancellationToken = default)
         {
             var folderService = App.FolderService;
             if (folderService == null) return;
@@ -886,9 +887,14 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(paymentFolder) || !Directory.Exists(paymentFolder)) return;
 
             var fromKey = $"{fromYear:D4}-{fromMonth:D2}";
+            var resolvedEmployeeFolder = ResolveEmployeeFolder(employeeFolder, employeeId);
+            var normalizedEmployeeFolder = NormalizeEmployeePath(resolvedEmployeeFolder);
 
             foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
                 var fn = Path.GetFileNameWithoutExtension(file);
                 var parts = fn.Split('_');
                 if (parts.Length != 3) continue;
@@ -898,24 +904,41 @@ namespace Win11DesktopApp.Services
 
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var data = ReadJson<FirmPaymentData>(file);
                     if (data == null) continue;
 
                     bool changed = false;
                     foreach (var entry in data.Entries)
                     {
-                        if (entry.EmployeeFolder != employeeFolder) continue;
+                        if (!MatchesEmployee(entry, employeeId, normalizedEmployeeFolder)) continue;
                         entry.HourlyRate = newRate;
                         changed = true;
                     }
 
                     if (changed)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         WriteJsonAtomic(file, data);
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
                 catch (Exception ex) { LoggingService.LogError("FinanceService.UpdateHourlyRateForward", ex); }
             }
+        }
+
+        private static string NormalizeEmployeePath(string? path)
+            => (path ?? string.Empty).Replace('/', '\\').Trim().TrimEnd('\\');
+
+        private static bool MatchesEmployee(SalaryEntry entry, string? employeeId, string normalizedEmployeeFolder)
+        {
+            if (!string.IsNullOrWhiteSpace(employeeId) && !string.IsNullOrWhiteSpace(entry.EmployeeId))
+                return string.Equals(entry.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
+
+            return string.Equals(NormalizeEmployeePath(entry.EmployeeFolder), normalizedEmployeeFolder, StringComparison.OrdinalIgnoreCase);
         }
 
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)

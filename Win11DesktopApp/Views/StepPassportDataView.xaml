@@ -83,6 +83,8 @@
                     </Border>
                     <TextBlock Text="{DynamicResource WizPassportNum}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.PassportNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizPassportAuthority}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.PassportAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizBirthCity}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.PassportCity, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizBirthCountry}" Style="{StaticResource WizLabel}"/>

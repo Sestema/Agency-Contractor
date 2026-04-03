@@ -81,7 +81,7 @@ namespace Win11DesktopApp.Services
                     SelectedCompany = null;
             }
 
-            _persistenceService.SaveCompanies(_companies);
+            QueueCompanySave();
             _appSettingsService.SaveSettings();
             VisibilityChanged?.Invoke();
         }
@@ -262,7 +262,7 @@ namespace Win11DesktopApp.Services
             var idx = _companies.IndexOf(company);
             if (idx <= 0) return;
             _companies.Move(idx, idx - 1);
-            _persistenceService.SaveCompanies(_companies);
+            QueueCompanySave();
             VisibilityChanged?.Invoke();
         }
 
@@ -271,8 +271,13 @@ namespace Win11DesktopApp.Services
             var idx = _companies.IndexOf(company);
             if (idx < 0 || idx >= _companies.Count - 1) return;
             _companies.Move(idx, idx + 1);
-            _persistenceService.SaveCompanies(_companies);
+            QueueCompanySave();
             VisibilityChanged?.Invoke();
+        }
+
+        private void QueueCompanySave()
+        {
+            _ = _persistenceService.SaveCompaniesAsync(_companies);
         }
     }
 }

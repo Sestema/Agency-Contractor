@@ -163,10 +163,21 @@
                             <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
                         </ComboBox.Items>
                     </ComboBox>
+
+                    <Border Width="1" Background="{DynamicResource CardBorderBrush}" Margin="10,4"/>
+
+                    <TextBlock Text="{DynamicResource PdfModeLabel}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox Width="140" Height="24" VerticalContentAlignment="Center" FontSize="10"
+                              ItemsSource="{Binding AvailablePdfModes}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Label"
+                              SelectedValue="{Binding PdfMode}"/>
                 </WrapPanel>
 
                 <!-- Row 1: Tag properties (font size, font family, max width) + editing indicator -->
-                <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0"
+                           Visibility="{Binding IsOverlayMode, Converter={StaticResource BoolToVis}}">
                     <!-- Editing indicator -->
                     <Border CornerRadius="3" Padding="6,2" Margin="0,0,8,0"
                             Visibility="{Binding IsEditingPlacement, Converter={StaticResource BoolToVis}}">
@@ -187,6 +198,44 @@
                                     ToolTip="{DynamicResource PdfDeselect}"/>
                         </StackPanel>
                     </Border>
+
+                    <Button Command="{Binding AddInlineTextRowCommand}"
+                            Padding="10,3" Margin="0,0,8,0"
+                            Background="{DynamicResource AccentBrush}" Foreground="White"
+                            BorderThickness="0" Cursor="Hand"
+                            ToolTip="{DynamicResource PdfAddInlineTextRow}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource PdfInlineTextRowShort}" FontSize="{DynamicResource FS10}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding AddFieldCommand}"
+                            Padding="10,3" Margin="0,0,8,0"
+                            Background="{DynamicResource AccentDarkBrush}" Foreground="White"
+                            BorderThickness="0" Cursor="Hand"
+                            ToolTip="{DynamicResource PdfAddField}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource PdfFieldShort}" FontSize="{DynamicResource FS10}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsEditingTemplatePlacement, Converter={StaticResource BoolToVis}}"
+                                Margin="0,0,8,0">
+                        <TextBlock Text="{Binding TemplateEditorLabel}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBox x:Name="InlineTemplateTextBox"
+                                 Width="280"
+                                 Text="{Binding InlineTemplateText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="6,3"
+                                 FontSize="{DynamicResource FS10}"
+                                 SelectionChanged="InlineTemplateTextBox_SelectionChanged"
+                                 GotKeyboardFocus="InlineTemplateTextBox_GotKeyboardFocus"
+                                 LostKeyboardFocus="InlineTemplateTextBox_LostKeyboardFocus"
+                                 ToolTip="{DynamicResource PdfInlineTemplateHint}"/>
+                    </StackPanel>
 
                     <!-- Font size -->
                     <TextBlock Text="{DynamicResource EditorFontSize}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
@@ -216,7 +265,7 @@
                               SelectedItem="{Binding NewTagFontFamily}"/>
 
                     <!-- Max width -->
-                    <TextBlock Text="{DynamicResource EditorMaxWidth}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                    <TextBlock Text="{Binding WidthEditorLabel}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                VerticalAlignment="Center" Margin="8,0,3,0"/>
                     <ComboBox Width="55" Height="22" VerticalContentAlignment="Center" FontSize="10"
                               SelectedItem="{Binding NewTagMaxWidth}" IsEditable="True">
@@ -230,6 +279,34 @@
                             <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">300</system:Double>
                         </ComboBox.Items>
                     </ComboBox>
+
+                    <TextBlock Text="{DynamicResource PdfFieldHeight}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="8,0,3,0"
+                               Visibility="{Binding IsEditingFieldPlacement, Converter={StaticResource BoolToVis}}"/>
+                    <ComboBox Width="55" Height="22" VerticalContentAlignment="Center" FontSize="10"
+                              SelectedItem="{Binding NewFieldHeight}" IsEditable="True"
+                              Visibility="{Binding IsEditingFieldPlacement, Converter={StaticResource BoolToVis}}">
+                        <ComboBox.Items>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">20</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">28</system:Double>
+                            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib">32</system:Double>
+                        </ComboBox.Items>
+                    </ComboBox>
+
+                    <TextBlock Text="{DynamicResource EditorAlignment}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                               VerticalAlignment="Center" Margin="8,0,3,0"
+                               Visibility="{Binding IsEditingFieldPlacement, Converter={StaticResource BoolToVis}}"/>
+                    <ComboBox Width="110" Height="22" VerticalContentAlignment="Center" FontSize="10"
+                              ItemsSource="{Binding AvailableTextAlignments}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Label"
+                              SelectedValue="{Binding SelectedTextAlign}"
+                              Visibility="{Binding IsEditingFieldPlacement, Converter={StaticResource BoolToVis}}"/>
                 </WrapPanel>
             </Grid>
         </Border>
@@ -403,12 +480,23 @@
                     <!-- Placed tags header -->
                     <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" 
                             Padding="12,6" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
-                        <TextBlock Text="{DynamicResource PdfPlacedTags}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
-                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{DynamicResource PdfPlacedTags}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Visibility="{Binding IsOverlayMode, Converter={StaticResource BoolToVis}}"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource PdfFormFieldsHeader}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Visibility="{Binding IsFormMode, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
                     </Border>
 
                     <!-- Placed tags list (click to select & edit via toolbar) -->
-                    <ScrollViewer Grid.Row="4" MaxHeight="160" Style="{StaticResource ThinScroll}" Padding="6,4">
+                    <ScrollViewer Grid.Row="4" MaxHeight="160" Style="{StaticResource ThinScroll}" Padding="6,4"
+                                  Visibility="{Binding IsOverlayMode, Converter={StaticResource BoolToVis}}">
                         <ItemsControl ItemsSource="{Binding AllPlacements}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -444,9 +532,8 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="{DynamicResource AccentDarkBrush}"
-                                                           TextTrimming="CharacterEllipsis">
-                                                    <Run Text="${"/><Run Text="{Binding Tag, Mode=OneWay}"/><Run Text="}"/>
-                                                </TextBlock>
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding DisplayLabel, Mode=OneWay}"/>
                                                 <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}">
                                                     <Run Text="P"/><Run Text="{Binding Page, Mode=OneWay}"/>
                                                     <Run Text=" | "/>
@@ -454,6 +541,10 @@
                                                     <Run Text=" | "/>
                                                     <Run Text="{Binding FontFamily, Mode=OneWay}"/>
                                                 </TextBlock>
+                                                <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                           Text="{Binding OverlayText, Mode=OneWay}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Visibility="{Binding IsTemplatePlacement, Converter={StaticResource BoolToVis}}"/>
                                             </StackPanel>
                                             <Button Grid.Column="1" Content="&#xE74D;" 
                                                     FontFamily="Segoe MDL2 Assets" FontSize="10"
@@ -470,6 +561,74 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+
+                    <ListBox x:Name="FormFieldListBox"
+                             Grid.Row="4" MaxHeight="220" Margin="6,4"
+                             Background="Transparent" BorderThickness="0"
+                             Visibility="{Binding IsFormMode, Converter={StaticResource BoolToVis}}"
+                             ItemsSource="{Binding FormFieldBindings}"
+                             SelectedItem="{Binding SelectedFormFieldBinding, Mode=TwoWay}"
+                             SelectionChanged="FormFieldListBox_SelectionChanged"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,4"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="4" Padding="8,6"
+                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                        Cursor="Hand" MouseLeftButtonDown="FormField_Click">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Background">
+                                                        <Setter.Value>
+                                                            <SolidColorBrush Color="#FFF3E0"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Setter Property="BorderBrush">
+                                                        <Setter.Value>
+                                                            <SolidColorBrush Color="#FFB74D"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Border.Tag>
+                                        <Binding/>
+                                    </Border.Tag>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding FieldName}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentDarkBrush}"/>
+                                        <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,4">
+                                            <Run Text="{DynamicResource PdfFormFieldType}"/>
+                                            <Run Text=": "/>
+                                            <Run Text="{Binding FieldType}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"
+                                                   Text="{Binding LocationText}"/>
+                                        <TextBox Text="{Binding TemplateText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="6,3" FontSize="{DynamicResource FS10}"
+                                                 SelectionChanged="FormFieldTemplateTextBox_SelectionChanged"
+                                                 GotKeyboardFocus="FormFieldTemplateTextBox_GotKeyboardFocus"
+                                                 LostKeyboardFocus="FormFieldTemplateTextBox_LostKeyboardFocus"
+                                                 ToolTip="{DynamicResource PdfFieldTemplateHint}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </Border>
         </Grid>

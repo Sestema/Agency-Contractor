@@ -63,6 +63,8 @@
                     </StackPanel>
                     <TextBlock Text="{DynamicResource WizVisaNum}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.VisaNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizVisaAuthority}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.VisaAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizVisaType}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizVisaExpiry}" Style="{StaticResource WizLabel}"/>

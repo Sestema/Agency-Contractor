@@ -58,7 +58,7 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public void EmployeesViewModel_ShouldLoadEmployees()
+        public async Task EmployeesViewModel_ShouldLoadEmployees()
         {
             var firmName = "TestFirm";
             var employeesFolder = Path.Combine(_testRootPath, firmName, "Employees");
@@ -81,11 +81,12 @@ namespace Win11DesktopApp.Tests
             var company = new EmployerCompany { Name = firmName };
             var vm = new EmployeesViewModel(company, _employeeService);
 
+            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count >= 1);
             Assert.True(vm.Employees.Count >= 1);
         }
 
         [Fact]
-        public void EmployeesViewModel_ShouldFilterBySearchQuery()
+        public async Task EmployeesViewModel_ShouldFilterBySearchQuery()
         {
             var firmName = "TestFirm";
             var employeesFolder = Path.Combine(_testRootPath, firmName, "Employees");
@@ -103,6 +104,7 @@ namespace Win11DesktopApp.Tests
 
             var company = new EmployerCompany { Name = firmName };
             var vm = new EmployeesViewModel(company, _employeeService);
+            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count == 2);
 
             vm.SearchQuery = "AA111";
 
@@ -235,6 +237,18 @@ namespace Win11DesktopApp.Tests
 
             File.WriteAllText(Path.Combine(employeeFolder, "employee.json"), JsonSerializer.Serialize(data));
             return employeeFolder;
+        }
+
+        private static async Task WaitForAsync(Func<bool> condition, int timeoutMs = 3000)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            while (!condition())
+            {
+                if (DateTime.UtcNow >= deadline)
+                    throw new TimeoutException("Timed out waiting for background employee load.");
+
+                await Task.Delay(25);
+            }
         }
 
         public void Dispose()

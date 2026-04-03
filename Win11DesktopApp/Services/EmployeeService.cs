@@ -764,7 +764,11 @@ namespace Win11DesktopApp.Services
         {
             var photoPath = ResolvePhotoPath(employeeFolder, data);
             if (string.IsNullOrEmpty(data.UniqueId))
+            {
                 data.UniqueId = Guid.NewGuid().ToString();
+                if (!SaveEmployeeData(employeeFolder, data, notifyUser: false))
+                    LoggingService.LogWarning("EmployeeService.BuildSummary.PersistId", $"Failed to persist generated UniqueId for {employeeFolder}");
+            }
 
             return new EmployeeSummary
             {
@@ -954,6 +958,7 @@ namespace Win11DesktopApp.Services
                         var last = deduplicated.Last();
                         result.Add(new ArchivedEmployeeSummary
                         {
+                            UniqueId = data.UniqueId,
                             FullName = fullName,
                             PositionTitle = data.PositionTag,
                             FirmName = last.FirmName,
@@ -968,6 +973,7 @@ namespace Win11DesktopApp.Services
                     {
                         result.Add(new ArchivedEmployeeSummary
                         {
+                            UniqueId = data.UniqueId,
                             FullName = fullName,
                             PositionTitle = data.PositionTag,
                             FirmName = data.ArchivedFromFirm,
@@ -1011,6 +1017,7 @@ namespace Win11DesktopApp.Services
                             if (fh.FirmName == company.Name) continue;
                             result.Add(new ArchivedEmployeeSummary
                             {
+                                UniqueId = data.UniqueId,
                                 FullName = fullName,
                                 PositionTitle = data.PositionTag,
                                 FirmName = fh.FirmName,
@@ -1676,10 +1683,12 @@ namespace Win11DesktopApp.Services
                     oldData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"),
                     newData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
                 Check(Res("HistFieldPassportNum"), oldData.PassportNumber, newData.PassportNumber);
+                Check(Res("HistFieldPassportAuthority"), oldData.PassportAuthority, newData.PassportAuthority);
                 Check(Res("HistFieldPassportExp"), oldData.PassportExpiry, newData.PassportExpiry);
                 Check(Res("HistFieldPassportCity"), oldData.PassportCity, newData.PassportCity);
                 Check(Res("HistFieldPassportCountry"), oldData.PassportCountry, newData.PassportCountry);
                 Check(Res("HistFieldVisaNum"), oldData.VisaNumber, newData.VisaNumber);
+                Check(Res("HistFieldVisaAuthority"), oldData.VisaAuthority, newData.VisaAuthority);
                 Check(Res("HistFieldVisaType"), oldData.VisaType, newData.VisaType);
                 Check(Res("HistFieldVisaExp"), oldData.VisaExpiry, newData.VisaExpiry);
                 Check(Res("HistFieldInsNum"), oldData.InsuranceNumber, newData.InsuranceNumber);

@@ -39,6 +39,17 @@
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="{DynamicResource WizPhone}" Style="{StaticResource WizLabel}"/>
                         <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,6,0,12"/>
+                        <TextBlock Text="{DynamicResource EmployeeBankSection}" Style="{StaticResource WizLabel}"/>
+                        <CheckBox Content="{DynamicResource EmployeeBankToggle}"
+                                  IsChecked="{Binding HasBankAccountData}"
+                                  Margin="0,0,0,10"/>
+                        <StackPanel Visibility="{Binding ShowBankAccountSection, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{DynamicResource EmployeeBankAccountNumber}" Style="{StaticResource WizLabel}"/>
+                            <TextBox Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                            <TextBlock Text="{DynamicResource EmployeeBankName}" Style="{StaticResource WizLabel}"/>
+                            <TextBox Text="{Binding BankName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                        </StackPanel>
                         <TextBlock Text="{DynamicResource WizStartDate}" Style="{StaticResource WizLabel}"/>
                         <Grid>
                             <Grid.ColumnDefinitions>

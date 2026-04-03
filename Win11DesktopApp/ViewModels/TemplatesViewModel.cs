@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Threading.Tasks;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 
@@ -13,6 +14,7 @@ namespace Win11DesktopApp.ViewModels
     public class TemplatesViewModel : ViewModelBase
     {
         private readonly TemplateService _templateService;
+        private int _loadGeneration;
         private ObservableCollection<TemplateEntry> _templates = new ObservableCollection<TemplateEntry>();
         public ObservableCollection<TemplateEntry> Templates
         {
@@ -129,7 +131,7 @@ namespace Win11DesktopApp.ViewModels
             else
             {
                 _firmName = company.Name;
-                LoadTemplates();
+                _ = LoadTemplatesAsync();
             }
 
             GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
@@ -263,8 +265,8 @@ namespace Win11DesktopApp.ViewModels
                     App.ActivityLogService?.Log("TemplateRenamed", "Template", _firmName, "",
                         $"Перейменовано шаблон «{oldName}» → «{newName}» ({_firmName})",
                         oldName, newName);
-                    LoadTemplates();
                     IsRenameDialogOpen = false;
+                    _ = LoadTemplatesAsync();
                 }
                 catch (System.Exception ex)
                 {
@@ -389,7 +391,7 @@ namespace Win11DesktopApp.ViewModels
         {
             IsAddDialogOpen = false;
             CleanupAddTemplateVm();
-            LoadTemplates();
+            _ = LoadTemplatesAsync();
         }
 
         private void CleanupAddTemplateVm()
@@ -407,10 +409,25 @@ namespace Win11DesktopApp.ViewModels
             CopyTemplateName = string.Empty;
         }
 
-        private void LoadTemplates()
+        private async Task LoadTemplatesAsync()
         {
-            var list = _templateService.GetTemplates(_firmName);
-            Templates = new ObservableCollection<TemplateEntry>(list);
+            if (string.IsNullOrWhiteSpace(_firmName) || string.Equals(_firmName, "Unknown", System.StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                var generation = ++_loadGeneration;
+                var firmName = _firmName;
+                var list = await Task.Run(() => _templateService.GetTemplates(firmName));
+                if (generation != _loadGeneration || !string.Equals(_firmName, firmName, System.StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                Templates = new ObservableCollection<TemplateEntry>(list);
+            }
+            catch (System.Exception ex)
+            {
+                LoggingService.LogError("TemplatesViewModel.LoadTemplatesAsync", ex);
+            }
         }
 
         private void LoadAvailableTags()

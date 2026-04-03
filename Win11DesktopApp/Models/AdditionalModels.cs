@@ -10,6 +10,7 @@ namespace Win11DesktopApp.EmployeeModels
     /// </summary>
     public class ArchivedEmployeeSummary
     {
+        public string UniqueId { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string PositionTitle { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;

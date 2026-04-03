@@ -26,8 +26,10 @@ STEP 2: Parse the MRZ of THIS document:
 
 STEP 3: Find place of birth (printed text, NOT from MRZ). Look for the field labeled ""Place of birth"" or ""Місце народження"". Read the REGION/OBLAST name (e.g. ОДЕСЬКА ОБЛ. = Odesa, КИЇВ = Kyiv, ЛЬВІВСЬКА ОБЛ. = Lviv). Output ONLY the city name in Latin, never the oblast/region word.
 
+STEP 4: Find issuing authority / document issuer. Look for labels like ""Authority"", ""Orgán vydávající doklad"", ""Орган, що видав"", ""Орган выдачи"". If the document shows only a numeric code (for example 5142), return that code exactly. Do NOT invent a full institution name.
+
 Return ONLY this JSON (FirstName=given name, LastName=surname):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""PassportCity"":"""",""PassportCountry"":"""",""PassportExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""PassportExpiry"":""""}",
 
                 "insurance" => @"Read this insurance card/document photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
@@ -49,6 +51,7 @@ INSTEAD, look for one of these:
 TYPE A — VISA STICKER (for Ukrainian refugees):
 A colorful sticker with ""Číslo víza"", ""Druh víza"", hologram, MRZ code at bottom.
 - VisaNumber: 9-digit visa number near ""Číslo víza""
+- VisaAuthority: if a clear issuing authority is visible, extract it. If you can clearly read ""MV ČR OAMP"" anywhere on the visa or related authority text, return exactly ""MV ČR OAMP"". Otherwise leave empty.
 - VisaType: FULL code with slashes like D/DO/667, D/DO/668, D/DO/669, D/DO/767-769, D/DO/867-869, D/VS/91, D/SD/91. NOT just ""D"".
 - VisaExpiry: ""Do/To"" date in DD.MM.YYYY
 - WorkPermitName: If D/DO/ → ""Dočasná ochrana"", if D/VS/ or D/SD/ → ""Strpění""
@@ -57,6 +60,7 @@ TYPE B — RESIDENCE PERMIT STAMP from MV ČR OAMP (for EU citizens):
 A rectangular official stamp with ""MV ČR OAMP"" and header text ""POVOLENÍ K ... POBYTU NA ÚZEMÍ"".
 This stamp is the MOST IMPORTANT document on the page. Read its header line carefully:
 - VisaNumber: the permit/registration number (alphanumeric code, e.g. ""VB 027159"", may appear on the stamp or on the registration certificate above)
+- VisaAuthority: if the stamp/authority text shows ""MV ČR OAMP"", return exactly ""MV ČR OAMP"". Otherwise return the clearly visible issuing authority text if present.
 - VisaType: leave empty """"
 - VisaExpiry: the validity date in DD.MM.YYYY from the stamp (look for ""do"" or a date written by hand)
 - WorkPermitName: ONLY based on the MV ČR OAMP stamp header text:
@@ -65,7 +69,7 @@ This stamp is the MOST IMPORTANT document on the page. Read its header line care
   NEVER output ""Osvědčení o registraci"" — that is wrong.
 
 Return ONLY valid JSON, no other text:
-{""VisaNumber"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":""""}",
+{""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":""""}",
 
                 "permit" => @"Read this Czech work permit document (Povolení k zaměstnání / ROZHODNUTÍ). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic. Read ALL pages of the document.
 
@@ -120,8 +124,10 @@ STEP 5: Find nationality/country:
 - Look for 'Cetățenie/Nationality' (e.g. 'Română' → 'Romania')
 - Or derive from the country code (ROU → Romania, CZE → Czech Republic, DEU → Germany, etc.)
 
+STEP 6: Find issuing authority / document issuer. Look for labels like 'Authority', 'Orgán vydávající doklad', 'Vydal', 'Eliberată de', or a dedicated issuer code. If the card shows only a code, return the code exactly.
+
 Return ONLY this JSON (PassportExpiry = card expiry date):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""PassportCity"":"""",""PassportCountry"":"""",""PassportExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""PassportExpiry"":""""}",
 
                 "passport2" => @"Read this passport second page or EU residence permit photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 

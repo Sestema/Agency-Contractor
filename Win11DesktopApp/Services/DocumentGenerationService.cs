@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -14,6 +15,7 @@ using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using System.Windows;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using AlternativeFormatImportPartType = DocumentFormat.OpenXml.Packaging.AlternativeFormatImportPartType;
 
@@ -418,6 +420,14 @@ namespace Win11DesktopApp.Services
                 return outputPath;
             }
 
+            if (tagMap != null
+                && string.Equals(tagMap.Mode, "form", StringComparison.OrdinalIgnoreCase)
+                && tagMap.FormFields != null
+                && tagMap.FormFields.Count > 0)
+            {
+                return GeneratePdfWithFormFields(templatePath, outputPath, tagMap, tagValues);
+            }
+
             if (tagMap?.Placements == null || tagMap.Placements.Count == 0)
             {
                 SafeFileService.CopyFile(templatePath, outputPath);
@@ -447,8 +457,8 @@ namespace Win11DesktopApp.Services
             {
                 if (placement.Page < 0 || placement.Page >= outputDoc.PageCount) continue;
 
-                var tagName = placement.Tag;
-                if (!tagValues.TryGetValue(tagName, out var value) || string.IsNullOrEmpty(value))
+                var value = ResolvePlacementValue(placement, tagValues);
+                if (string.IsNullOrEmpty(value))
                     continue;
 
                 var page = outputDoc.Pages[placement.Page];
@@ -461,7 +471,14 @@ namespace Win11DesktopApp.Services
                 var x = placement.X * page.Width.Point;
                 var y = placement.Y * page.Height.Point;
 
-                if (placement.MaxWidth > 0)
+                if (string.Equals(placement.Kind, "field", StringComparison.OrdinalIgnoreCase))
+                {
+                    var width = placement.MaxWidth > 0 ? placement.MaxWidth : 160;
+                    var height = placement.BoxHeight > 0 ? placement.BoxHeight : Math.Max(fontSize * 1.8, 18);
+                    var rect = new XRect(x, y, width, height);
+                    gfx.DrawString(value, font, XBrushes.Black, rect, BuildFieldStringFormat(placement.TextAlign));
+                }
+                else if (placement.MaxWidth > 0)
                 {
                     var maxW = placement.MaxWidth;
                     var rect = new XRect(x, y, maxW, page.Height.Point - y);
@@ -481,6 +498,119 @@ namespace Win11DesktopApp.Services
             outputDoc.Save(outputPath);
 
             return outputPath;
+        }
+
+        private string GeneratePdfWithFormFields(string templatePath, string outputPath, PdfTagMap tagMap, Dictionary<string, string> tagValues)
+        {
+            if (NetPdfFormHelper.TryFillFormFields(templatePath, outputPath, tagMap.FormFields, tagValues))
+                return outputPath;
+
+            using var outputDoc = PdfReader.Open(templatePath, PdfDocumentOpenMode.Modify);
+            var detectedFields = PdfFormFieldReflectionHelper.EnumerateFields(outputDoc);
+            if (detectedFields.Count == 0)
+            {
+                SafeFileService.CopyFile(templatePath, outputPath);
+                return outputPath;
+            }
+
+            foreach (var binding in tagMap.FormFields)
+            {
+                if (string.IsNullOrWhiteSpace(binding.FieldName))
+                    continue;
+
+                var field = PdfFormFieldReflectionHelper.FindFieldByName(outputDoc, binding.FieldName);
+                if (field == null)
+                    continue;
+
+                var resolvedValue = PdfInlineTextResolver.ResolveTemplate(binding.TemplateText, tagValues);
+                ApplyPdfFormFieldValue(field, resolvedValue);
+            }
+
+            outputDoc.Save(outputPath);
+            return outputPath;
+        }
+
+        private static string ResolvePlacementValue(PdfTagPlacement placement, Dictionary<string, string> tagValues)
+        {
+            if (string.Equals(placement.Kind, "inline_text", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(placement.Kind, "field", StringComparison.OrdinalIgnoreCase))
+                return PdfInlineTextResolver.ResolveTemplate(placement.TemplateText, tagValues);
+
+            var tagName = placement.Tag;
+            return tagValues.TryGetValue(tagName, out var value) ? value ?? string.Empty : string.Empty;
+        }
+
+        private static XStringFormat BuildFieldStringFormat(string? textAlign)
+        {
+            var alignment = string.Equals(textAlign, "center", StringComparison.OrdinalIgnoreCase)
+                ? XStringAlignment.Center
+                : string.Equals(textAlign, "right", StringComparison.OrdinalIgnoreCase)
+                    ? XStringAlignment.Far
+                    : XStringAlignment.Near;
+
+            return new XStringFormat
+            {
+                Alignment = alignment,
+                LineAlignment = XLineAlignment.Center
+            };
+        }
+
+        private static void ApplyPdfFormFieldValue(object field, string value)
+        {
+            var typeName = field.GetType().Name.ToLowerInvariant();
+            if (typeName.Contains("check"))
+            {
+                TrySetProperty(field, "Checked", IsTruthyValue(value));
+                return;
+            }
+
+            if (!TrySetProperty(field, "Text", value))
+                TrySetProperty(field, "Value", value);
+        }
+
+        private static bool TrySetProperty(object target, string propertyName, object value)
+        {
+            var property = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            if (property == null || !property.CanWrite)
+                return false;
+
+            try
+            {
+                var converted = ConvertValueForProperty(property.PropertyType, value);
+                property.SetValue(target, converted);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static object ConvertValueForProperty(Type propertyType, object value)
+        {
+            if (propertyType == typeof(string))
+                return value.ToString() ?? string.Empty;
+
+            if (propertyType == typeof(bool) || propertyType == typeof(bool?))
+                return IsTruthyValue(value.ToString());
+
+            if (propertyType.IsEnum)
+                return Enum.Parse(propertyType, value.ToString() ?? string.Empty, ignoreCase: true);
+
+            var ctor = propertyType.GetConstructor(new[] { typeof(string) });
+            if (ctor != null)
+                return ctor.Invoke(new object[] { value.ToString() ?? string.Empty });
+
+            return Convert.ChangeType(value, Nullable.GetUnderlyingType(propertyType) ?? propertyType);
+        }
+
+        private static bool IsTruthyValue(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            var normalized = value.Trim().ToLowerInvariant();
+            return normalized is "1" or "true" or "yes" or "ano" or "так" or "on" or "checked";
         }
 
         /// <summary>

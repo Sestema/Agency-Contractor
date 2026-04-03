@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -16,6 +17,8 @@ namespace Win11DesktopApp.Views
     {
         private TagEntry? _pendingTag;
         private bool _isPlacingMode;
+        private bool _isPlacingInlineTextRow;
+        private bool _isPlacingField;
         private AITemplateOverlayWindow? _aiOverlay;
 
         private bool _isDragging;
@@ -48,7 +51,12 @@ namespace Win11DesktopApp.Views
             {
                 oldVm.PropertyChanged -= Vm_PropertyChanged;
                 oldVm.RequestPlaceTagOnClick = null;
+                oldVm.RequestPlaceInlineTextRowOnClick = null;
+                oldVm.RequestPlaceFieldOnClick = null;
+                oldVm.RequestFocusInlineTemplateEditor = null;
+                oldVm.RequestFocusFormFieldEditor = null;
                 oldVm.RequestRenderOverlays -= RenderTagOverlays;
+                UnsubscribeFormFieldChanges(oldVm);
             }
 
             if (e.NewValue is PdfEditorViewModel vm)
@@ -58,24 +66,61 @@ namespace Win11DesktopApp.Views
                 {
                     _pendingTag = tag;
                     _isPlacingMode = true;
+                    _isPlacingInlineTextRow = false;
+                    _isPlacingField = false;
                     PdfCanvas.Cursor = Cursors.Cross;
+                };
+                vm.RequestPlaceInlineTextRowOnClick = () =>
+                {
+                    _pendingTag = null;
+                    _isPlacingMode = false;
+                    _isPlacingInlineTextRow = true;
+                    _isPlacingField = false;
+                    PdfCanvas.Cursor = Cursors.Cross;
+                };
+                vm.RequestPlaceFieldOnClick = () =>
+                {
+                    _pendingTag = null;
+                    _isPlacingMode = false;
+                    _isPlacingInlineTextRow = false;
+                    _isPlacingField = true;
+                    PdfCanvas.Cursor = Cursors.Cross;
+                };
+                vm.RequestFocusInlineTemplateEditor = caretIndex =>
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        InlineTemplateTextBox.Focus();
+                        InlineTemplateTextBox.CaretIndex = Math.Clamp(caretIndex, 0, InlineTemplateTextBox.Text?.Length ?? 0);
+                        InlineTemplateTextBox.SelectionLength = 0;
+                    });
+                };
+                vm.RequestFocusFormFieldEditor = (binding, caretIndex) =>
+                {
+                    Dispatcher.InvokeAsync(() => FocusFormFieldTextBox(binding, caretIndex));
                 };
                 vm.RequestRenderOverlays += RenderTagOverlays;
                 UpdateCanvasSize();
                 SubscribePlacementChanges();
+                SubscribeFormFieldChanges(vm);
             }
         }
 
         private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(PdfEditorViewModel.CurrentPageImage) ||
-                e.PropertyName == nameof(PdfEditorViewModel.CurrentPagePlacements))
+                e.PropertyName == nameof(PdfEditorViewModel.CurrentPagePlacements) ||
+                e.PropertyName == nameof(PdfEditorViewModel.PdfMode) ||
+                e.PropertyName == nameof(PdfEditorViewModel.SelectedFormFieldBinding) ||
+                e.PropertyName == nameof(PdfEditorViewModel.FormFieldBindings))
             {
                 Dispatcher.InvokeAsync(() =>
                 {
                     UpdateCanvasSize();
                     RenderTagOverlays();
                     SubscribePlacementChanges();
+                    if (DataContext is PdfEditorViewModel vm)
+                        SubscribeFormFieldChanges(vm);
                 });
             }
         }
@@ -94,7 +139,35 @@ namespace Win11DesktopApp.Views
         {
             if (e.PropertyName is nameof(PdfPlacementViewModel.FontSize)
                 or nameof(PdfPlacementViewModel.FontFamily)
-                or nameof(PdfPlacementViewModel.MaxWidth))
+                or nameof(PdfPlacementViewModel.MaxWidth)
+                or nameof(PdfPlacementViewModel.BoxHeight)
+                or nameof(PdfPlacementViewModel.TextAlign)
+                or nameof(PdfPlacementViewModel.TemplateText))
+            {
+                Dispatcher.InvokeAsync(RenderTagOverlays);
+            }
+        }
+
+        private void SubscribeFormFieldChanges(PdfEditorViewModel vm)
+        {
+            foreach (var field in vm.FormFieldBindings)
+            {
+                field.PropertyChanged -= FormField_PropertyChanged;
+                field.PropertyChanged += FormField_PropertyChanged;
+            }
+        }
+
+        private void UnsubscribeFormFieldChanges(PdfEditorViewModel vm)
+        {
+            foreach (var field in vm.FormFieldBindings)
+                field.PropertyChanged -= FormField_PropertyChanged;
+        }
+
+        private void FormField_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(PdfFormFieldBindingViewModel.TemplateText)
+                or nameof(PdfFormFieldBindingViewModel.DisplayText)
+                or nameof(PdfFormFieldBindingViewModel.IsSelected))
             {
                 Dispatcher.InvokeAsync(RenderTagOverlays);
             }
@@ -118,7 +191,7 @@ namespace Win11DesktopApp.Views
         {
             if (_isDragging) return;
 
-            if (!_isPlacingMode || _pendingTag == null)
+            if ((!_isPlacingMode || _pendingTag == null) && !_isPlacingInlineTextRow && !_isPlacingField)
             {
                 if (DataContext is PdfEditorViewModel vm2)
                     vm2.SelectedPlacement = null;
@@ -141,9 +214,16 @@ namespace Win11DesktopApp.Views
                 yPercent = vm.SnapYPercent(yPercent);
             }
 
-            vm.PlaceTagAtPosition(_pendingTag, xPercent, yPercent);
+            if (_isPlacingInlineTextRow)
+                vm.PlaceInlineTextRowAtPosition(xPercent, yPercent);
+            else if (_isPlacingField)
+                vm.PlaceFieldAtPosition(xPercent, yPercent);
+            else if (_pendingTag != null)
+                vm.PlaceTagAtPosition(_pendingTag, xPercent, yPercent);
 
             _isPlacingMode = false;
+            _isPlacingInlineTextRow = false;
+            _isPlacingField = false;
             _pendingTag = null;
             PdfCanvas.Cursor = Cursors.Arrow;
 
@@ -214,6 +294,12 @@ namespace Win11DesktopApp.Views
             foreach (var el in toRemove)
                 PdfCanvas.Children.Remove(el);
 
+            if (vm.IsFormMode)
+            {
+                RenderSelectedFormFieldOverlay(vm);
+                return;
+            }
+
             var canvasW = PdfCanvas.Width;
             var canvasH = PdfCanvas.Height;
             if (canvasW <= 0 || canvasH <= 0) return;
@@ -225,6 +311,13 @@ namespace Win11DesktopApp.Views
             var selectedBorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 152, 0));
             var selectedBg = new SolidColorBrush(Color.FromArgb(220, 255, 243, 224));
 
+            HorizontalAlignment ResolveFieldAlignment(string? align) =>
+                string.Equals(align, "center", StringComparison.OrdinalIgnoreCase)
+                    ? HorizontalAlignment.Center
+                    : string.Equals(align, "right", StringComparison.OrdinalIgnoreCase)
+                        ? HorizontalAlignment.Right
+                        : HorizontalAlignment.Left;
+
             foreach (var placement in vm.CurrentPagePlacements)
             {
                 double x = placement.X * canvasW;
@@ -232,6 +325,13 @@ namespace Win11DesktopApp.Views
 
                 double scaledFontSize = Math.Max(8, placement.FontSize * (canvasH / vm.PdfPageHeight) * 0.75);
                 bool isSelected = placement.IsSelected;
+                bool isField = placement.IsField;
+                double scaledMaxW = placement.MaxWidth > 0
+                    ? placement.MaxWidth * (canvasW / vm.PdfPageWidth)
+                    : 160 * (canvasW / vm.PdfPageWidth);
+                double scaledBoxHeight = placement.BoxHeight > 0
+                    ? placement.BoxHeight * (canvasH / vm.PdfPageHeight)
+                    : Math.Max(18, scaledFontSize * 1.8);
 
                 var border = new Border
                 {
@@ -239,14 +339,28 @@ namespace Win11DesktopApp.Views
                     BorderBrush = isSelected ? selectedBorderBrush : accentBrush,
                     BorderThickness = new Thickness(isSelected ? 2 : 1.5),
                     CornerRadius = new CornerRadius(3),
-                    Padding = new Thickness(4, 1, 4, 1),
+                    Padding = isField ? new Thickness(4, 2, 4, 2) : new Thickness(4, 1, 4, 1),
                     Cursor = Cursors.SizeAll,
                     Tag = placement
                 };
 
+                if (isField)
+                {
+                    border.Width = Math.Max(60, scaledMaxW);
+                    border.Height = Math.Max(18, scaledBoxHeight);
+                }
+
                 var grid = new Grid();
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                if (isField)
+                {
+                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                }
+                else
+                {
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                }
 
                 var deleteBtn = new Button
                 {
@@ -268,19 +382,32 @@ namespace Win11DesktopApp.Views
                 };
                 deleteBtn.Tag = placement;
                 deleteBtn.Click += DeleteBtn_Click;
-                Grid.SetColumn(deleteBtn, 0);
+                if (isField)
+                    Grid.SetRow(deleteBtn, 0);
+                else
+                    Grid.SetColumn(deleteBtn, 0);
                 grid.Children.Add(deleteBtn);
-
-                var textStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
 
                 var text = new TextBlock
                 {
-                    Text = $"${{{placement.Tag}}}",
+                    Text = placement.OverlayText,
                     FontSize = scaledFontSize,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = isSelected ? new SolidColorBrush(Color.FromArgb(255, 230, 81, 0)) : accentBrush,
                     FontFamily = new FontFamily(placement.FontFamily ?? "Consolas"),
-                    VerticalAlignment = VerticalAlignment.Center
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = isField
+                        ? Math.Max(40, scaledMaxW - 8)
+                        : placement.MaxWidth > 0
+                            ? Math.Max(40, scaledMaxW)
+                            : 320,
+                    HorizontalAlignment = isField ? ResolveFieldAlignment(placement.TextAlign) : HorizontalAlignment.Left,
+                    TextAlignment = string.Equals(placement.TextAlign, "center", StringComparison.OrdinalIgnoreCase)
+                        ? TextAlignment.Center
+                        : string.Equals(placement.TextAlign, "right", StringComparison.OrdinalIgnoreCase)
+                            ? TextAlignment.Right
+                            : TextAlignment.Left
                 };
 
                 var sizeInfo = new TextBlock
@@ -292,18 +419,29 @@ namespace Win11DesktopApp.Views
                     Margin = new Thickness(3, 0, 0, 0)
                 };
 
-                textStack.Children.Add(text);
-                textStack.Children.Add(sizeInfo);
-                Grid.SetColumn(textStack, 1);
-                grid.Children.Add(textStack);
+                if (isField)
+                {
+                    var fieldGrid = new Grid
+                    {
+                        VerticalAlignment = VerticalAlignment.Stretch,
+                        HorizontalAlignment = HorizontalAlignment.Stretch
+                    };
+                    fieldGrid.Children.Add(text);
+                    Grid.SetRow(fieldGrid, 1);
+                    grid.Children.Add(fieldGrid);
+                }
+                else
+                {
+                    var textStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                    textStack.Children.Add(text);
+                    textStack.Children.Add(sizeInfo);
+                    Grid.SetColumn(textStack, 1);
+                    grid.Children.Add(textStack);
+                }
 
                 border.Child = grid;
-
-                if (placement.MaxWidth > 0)
-                {
-                    double scaledMaxW = placement.MaxWidth * (canvasW / vm.PdfPageWidth);
+                if (!isField && placement.MaxWidth > 0)
                     border.MaxWidth = scaledMaxW + 20;
-                }
 
                 border.MouseLeftButtonDown += TagBorder_MouseLeftButtonDown;
                 border.MouseMove += TagBorder_MouseMove;
@@ -324,6 +462,96 @@ namespace Win11DesktopApp.Views
                 Canvas.SetLeft(dot, x - 3);
                 Canvas.SetTop(dot, y - 3);
                 PdfCanvas.Children.Add(dot);
+            }
+        }
+
+        private void RenderSelectedFormFieldOverlay(PdfEditorViewModel vm)
+        {
+            var canvasW = PdfCanvas.Width;
+            var canvasH = PdfCanvas.Height;
+            if (canvasW <= 0 || canvasH <= 0 || vm.PdfPageWidth <= 0 || vm.PdfPageHeight <= 0)
+                return;
+
+            var scaleX = canvasW / vm.PdfPageWidth;
+            var scaleY = canvasH / vm.PdfPageHeight;
+            var currentPageFields = vm.FormFieldBindings
+                .Where(f => f.HasBounds && f.Page == vm.CurrentPageIndex)
+                .ToList();
+
+            foreach (var field in currentPageFields)
+            {
+                var isSelected = ReferenceEquals(field, vm.SelectedFormFieldBinding);
+                var left = field.X * scaleX;
+                var width = Math.Max(8, field.Width * scaleX);
+                var height = Math.Max(8, field.Height * scaleY);
+                var top = canvasH - ((field.Y + field.Height) * scaleY);
+
+                var highlight = new Rectangle
+                {
+                    Width = width,
+                    Height = height,
+                    RadiusX = 3,
+                    RadiusY = 3,
+                    Fill = isSelected
+                        ? new SolidColorBrush(Color.FromArgb(70, 255, 193, 7))
+                        : new SolidColorBrush(Color.FromArgb(28, 33, 150, 243)),
+                    Stroke = isSelected
+                        ? new SolidColorBrush(Color.FromArgb(255, 255, 152, 0))
+                        : new SolidColorBrush(Color.FromArgb(220, 33, 150, 243)),
+                    StrokeThickness = isSelected ? 2.5 : 1.5,
+                    Cursor = Cursors.Hand,
+                    Tag = field
+                };
+                highlight.MouseLeftButtonDown += FormFieldOverlay_MouseLeftButtonDown;
+                Canvas.SetLeft(highlight, left);
+                Canvas.SetTop(highlight, top);
+                PdfCanvas.Children.Add(highlight);
+
+                var displayText = field.DisplayText;
+                if (!string.IsNullOrWhiteSpace(displayText))
+                {
+                    var text = new TextBlock
+                    {
+                        Text = displayText,
+                        FontSize = Math.Max(8, Math.Min(height * 0.55, 12)),
+                        FontWeight = isSelected ? FontWeights.SemiBold : FontWeights.Medium,
+                        Foreground = isSelected
+                            ? new SolidColorBrush(Color.FromArgb(255, 140, 74, 0))
+                            : new SolidColorBrush(Color.FromArgb(255, 21, 101, 192)),
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        Width = Math.Max(10, width - 8),
+                        Height = Math.Max(10, height - 4),
+                        Padding = new Thickness(2, 0, 2, 0),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        IsHitTestVisible = false
+                    };
+                    Canvas.SetLeft(text, left + 4);
+                    Canvas.SetTop(text, top + Math.Max(1, (height - text.FontSize - 2) / 2));
+                    PdfCanvas.Children.Add(text);
+                }
+
+                if (!isSelected)
+                    continue;
+
+                var label = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(230, 255, 243, 224)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 152, 0)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(6, 2, 6, 2),
+                    IsHitTestVisible = false,
+                    Child = new TextBlock
+                    {
+                        Text = field.FieldName,
+                        FontSize = 10,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = new SolidColorBrush(Color.FromArgb(255, 140, 74, 0))
+                    }
+                };
+                Canvas.SetLeft(label, Math.Max(0, left));
+                Canvas.SetTop(label, Math.Max(0, top - 26));
+                PdfCanvas.Children.Add(label);
             }
         }
 
@@ -486,7 +714,119 @@ namespace Win11DesktopApp.Views
             Focus();
         }
 
+        private void FormField_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Border border) return;
+            if (border.Tag is not PdfFormFieldBindingViewModel binding) return;
+            if (DataContext is not PdfEditorViewModel vm) return;
+
+            vm.SelectFormField(binding);
+            e.Handled = true;
+            Focus();
+        }
+
+        private void FormFieldOverlay_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Shape shape) return;
+            if (shape.Tag is not PdfFormFieldBindingViewModel binding) return;
+            if (DataContext is not PdfEditorViewModel vm) return;
+
+            vm.SelectFormField(binding);
+            FormFieldListBox?.ScrollIntoView(binding);
+            e.Handled = true;
+            Focus();
+        }
+
+        private void FormFieldListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is not ListBox listBox) return;
+            if (listBox.SelectedItem is not PdfFormFieldBindingViewModel binding) return;
+
+            listBox.ScrollIntoView(binding);
+        }
+
         #endregion
+
+        private void InlineTemplateTextBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not PdfEditorViewModel vm) return;
+            vm.InlineTemplateCaretIndex = InlineTemplateTextBox.CaretIndex;
+        }
+
+        private void InlineTemplateTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (DataContext is not PdfEditorViewModel vm) return;
+            vm.IsInlineTemplateEditorFocused = true;
+            vm.InlineTemplateCaretIndex = InlineTemplateTextBox.CaretIndex;
+        }
+
+        private void InlineTemplateTextBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (DataContext is not PdfEditorViewModel vm) return;
+            vm.IsInlineTemplateEditorFocused = false;
+            vm.InlineTemplateCaretIndex = InlineTemplateTextBox.CaretIndex;
+        }
+
+        private void FormFieldTemplateTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            if (textBox.DataContext is not PdfFormFieldBindingViewModel binding) return;
+            if (DataContext is not PdfEditorViewModel vm) return;
+
+            vm.SelectFormField(binding);
+            vm.UpdateFormFieldEditorState(binding, textBox.CaretIndex, true);
+        }
+
+        private void FormFieldTemplateTextBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            if (textBox.DataContext is not PdfFormFieldBindingViewModel binding) return;
+            if (DataContext is not PdfEditorViewModel vm) return;
+
+            vm.UpdateFormFieldEditorState(binding, textBox.CaretIndex, textBox.IsKeyboardFocused);
+        }
+
+        private void FormFieldTemplateTextBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            if (textBox.DataContext is not PdfFormFieldBindingViewModel binding) return;
+            if (DataContext is not PdfEditorViewModel vm) return;
+
+            vm.UpdateFormFieldEditorState(binding, textBox.CaretIndex, false);
+        }
+
+        private void FocusFormFieldTextBox(PdfFormFieldBindingViewModel binding, int caretIndex)
+        {
+            FormFieldListBox?.ScrollIntoView(binding);
+            FormFieldListBox?.UpdateLayout();
+
+            if (FormFieldListBox?.ItemContainerGenerator.ContainerFromItem(binding) is not ListBoxItem item)
+                return;
+
+            var textBox = FindDescendant<TextBox>(item);
+            if (textBox == null)
+                return;
+
+            textBox.Focus();
+            textBox.CaretIndex = Math.Clamp(caretIndex, 0, textBox.Text?.Length ?? 0);
+            textBox.SelectionLength = 0;
+        }
+
+        private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                if (child is T match)
+                    return match;
+
+                var nested = FindDescendant<T>(child);
+                if (nested != null)
+                    return nested;
+            }
+
+            return null;
+        }
 
         #region AI Overlay
 
@@ -516,7 +856,11 @@ namespace Win11DesktopApp.Views
             sb.AppendLine("Placed tags:");
             foreach (var p in vm.AllPlacements)
             {
-                sb.AppendLine($"  ${{{p.Tag}}} — page {p.Page + 1}, X={Math.Round(p.X * vm.PdfPageWidth, 1)}pt Y={Math.Round(p.Y * vm.PdfPageHeight, 1)}pt, font={p.FontFamily} {p.FontSize}pt");
+                sb.AppendLine($"  {p.DisplayLabel} — page {p.Page + 1}, X={Math.Round(p.X * vm.PdfPageWidth, 1)}pt Y={Math.Round(p.Y * vm.PdfPageHeight, 1)}pt, font={p.FontFamily} {p.FontSize}pt");
+                if (p.IsField)
+                    sb.AppendLine($"    field: width={p.MaxWidth}pt height={p.BoxHeight}pt align={p.TextAlign}");
+                if (p.IsTemplatePlacement && !string.IsNullOrWhiteSpace(p.TemplateText))
+                    sb.AppendLine($"    template: {p.TemplateText}");
             }
             return sb.ToString();
         }
@@ -541,7 +885,9 @@ namespace Win11DesktopApp.Views
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is not PdfEditorViewModel vm) return;
+            if (!vm.IsOverlayMode) return;
             if (vm.SelectedPlacement == null) return;
+            if (InlineTemplateTextBox.IsKeyboardFocusWithin || vm.IsInlineTemplateEditorFocused) return;
 
             double stepPx = 1.0;
             if (Keyboard.Modifiers == ModifierKeys.Shift)

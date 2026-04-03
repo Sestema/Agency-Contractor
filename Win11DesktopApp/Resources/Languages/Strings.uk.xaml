@@ -633,11 +633,13 @@
     <sys:String x:Key="DetFieldBirthDate">Дата народження</sys:String>
     <sys:String x:Key="DetSecPassport">Паспортні дані</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Номер паспорту</sys:String>
+    <sys:String x:Key="DetFieldPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Місто народження</sys:String>
     <sys:String x:Key="DetFieldBirthCountry">Країна народження</sys:String>
     <sys:String x:Key="DetFieldExpiry">Дата закінчення</sys:String>
     <sys:String x:Key="DetSecVisa">Віза</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Номер візи</sys:String>
+    <sys:String x:Key="DetFieldVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="DetFieldVisaType">Тип візи</sys:String>
     <sys:String x:Key="DetFieldWorkPermitName">Назва дозволу на роботу</sys:String>
     <sys:String x:Key="DetSecInsurance">Страховка</sys:String>
@@ -656,6 +658,10 @@
     <sys:String x:Key="DetFieldHourly">Годинна зарплата</sys:String>
     <sys:String x:Key="DetFieldWorkAddr">Адреса виконання роботи</sys:String>
     <sys:String x:Key="DetSecContacts">Контакти та дати</sys:String>
+    <sys:String x:Key="EmployeeBankSection">Дані Банківського рахунку</sys:String>
+    <sys:String x:Key="EmployeeBankToggle">Відкрити дані банківського рахунку</sys:String>
+    <sys:String x:Key="EmployeeBankAccountNumber">Номер рахунку</sys:String>
+    <sys:String x:Key="EmployeeBankName">Назва банку</sys:String>
     <sys:String x:Key="DetFieldPhone">Телефон</sys:String>
     <sys:String x:Key="DetFieldEmail">Електронна пошта</sys:String>
     <sys:String x:Key="DetFieldContractType">Тип договору</sys:String>
@@ -787,6 +793,7 @@
     <sys:String x:Key="GenderMale">Чоловік</sys:String>
     <sys:String x:Key="GenderFemale">Жінка</sys:String>
     <sys:String x:Key="WizPassportNum">Номер паспорту або ID</sys:String>
+    <sys:String x:Key="WizPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="WizBirthCity">Місто народження</sys:String>
     <sys:String x:Key="WizBirthCountry">Країна народження</sys:String>
     <sys:String x:Key="WizPassportExpiry">Дата закінчення дії документа</sys:String>
@@ -794,6 +801,7 @@
     <sys:String x:Key="WizInsNumber">Номер страховки</sys:String>
     <sys:String x:Key="WizInsExpiry">Дата закінчення страховки</sys:String>
     <sys:String x:Key="WizVisaNum">Номер візи</sys:String>
+    <sys:String x:Key="WizVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="WizVisaType">Тип візи</sys:String>
     <sys:String x:Key="WizVisaExpiry">Дата закінчення візи</sys:String>
     <sys:String x:Key="WizWorkPermitName">Назва дозволу на роботу</sys:String>
@@ -1010,6 +1018,21 @@
     <!-- PDF Editor -->
     <sys:String x:Key="PdfClickToPlace">Натисніть «Вст.» біля тегу, потім клікніть на PDF щоб розмістити</sys:String>
     <sys:String x:Key="PdfPlaceTag">Розмістити на PDF</sys:String>
+    <sys:String x:Key="PdfAddInlineTextRow">Додати один текстовий рядок з тегами</sys:String>
+    <sys:String x:Key="PdfInlineTextRowShort">Рядок</sys:String>
+    <sys:String x:Key="PdfInlineTemplate">Шаблон</sys:String>
+    <sys:String x:Key="PdfInlineTemplateHint">Впишіть текст і вставляйте теги, напр. народився в ${EMPLOYEE_BirthCountry}, громадянин ${EMPLOYEE_Citizenship}.</sys:String>
+    <sys:String x:Key="PdfAddField">Додати одне текстове поле з тегами</sys:String>
+    <sys:String x:Key="PdfFieldShort">Поле</sys:String>
+    <sys:String x:Key="PdfFieldTemplate">Поле</sys:String>
+    <sys:String x:Key="PdfFieldTemplateHint">Впишіть текст або вставляйте теги для цього поля, напр. ${EMPLOYEE_FirstName} ${EMPLOYEE_LastName}.</sys:String>
+    <sys:String x:Key="PdfModeLabel">Режим</sys:String>
+    <sys:String x:Key="PdfModeOverlay">Накладання</sys:String>
+    <sys:String x:Key="PdfModeForm">PDF форма</sys:String>
+    <sys:String x:Key="PdfFormFieldsHeader">PDF-поля</sys:String>
+    <sys:String x:Key="PdfFormFieldType">Тип</sys:String>
+    <sys:String x:Key="PdfFormSelectFieldFirst">Спочатку виберіть і прив'яжіть PDF-поле.</sys:String>
+    <sys:String x:Key="PdfFormFieldMapped">Прив'язано PDF-поле: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Розміщені теги</sys:String>
     <sys:String x:Key="PdfTagMarker">Позначка тегу</sys:String>
 
@@ -1189,16 +1212,20 @@
     <sys:String x:Key="TagDescEmpGender">Стать (Чоловік / Жінка)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
+    <sys:String x:Key="TagDescEmpBankAccountNumber">Номер рахунку працівника</sys:String>
+    <sys:String x:Key="TagDescEmpBankName">Назва банку працівника</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Статус</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Passport -->
     <sys:String x:Key="TagDescEmpPassportNumber">Номер паспорту</sys:String>
+    <sys:String x:Key="TagDescEmpPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="TagDescEmpPassportCity">Місто народження</sys:String>
     <sys:String x:Key="TagDescEmpPassportCountry">Країна народження</sys:String>
     <sys:String x:Key="TagDescEmpPassportExpiry">Дата закінчення паспорту</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Visa -->
     <sys:String x:Key="TagDescEmpVisaNumber">Номер візи</sys:String>
+    <sys:String x:Key="TagDescEmpVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="TagDescEmpVisaType">Тип візи</sys:String>
     <sys:String x:Key="TagDescEmpVisaExpiry">Дата закінчення візи</sys:String>
 
@@ -1317,6 +1344,17 @@
     <!-- PDF Editor ViewModel -->
     <sys:String x:Key="PdfEditorTitle">PDF: {0}</sys:String>
     <sys:String x:Key="PdfFileNotFound">PDF файл не знайдено.</sys:String>
+    <sys:String x:Key="PdfPlaceInlineTextRow">Клікніть на PDF, щоб розмістити текстовий рядок</sys:String>
+    <sys:String x:Key="PdfInlineTextRowLabel">Текстовий рядок</sys:String>
+    <sys:String x:Key="PdfInlineTextRowDescription">Текстовий рядок у лінію</sys:String>
+    <sys:String x:Key="PdfInlineTextRowPlaced">Текстовий рядок розміщено на сторінці {0}</sys:String>
+    <sys:String x:Key="PdfPlaceField">Клікніть на PDF, щоб розмістити поле</sys:String>
+    <sys:String x:Key="PdfFieldLabel">Поле</sys:String>
+    <sys:String x:Key="PdfFieldDescription">Текстове поле</sys:String>
+    <sys:String x:Key="PdfFieldPlaced">Поле розміщено на сторінці {0}</sys:String>
+    <sys:String x:Key="PdfFieldWidth">Ширина поля</sys:String>
+    <sys:String x:Key="PdfFieldHeight">Висота поля</sys:String>
+    <sys:String x:Key="PdfInlineTagInserted">{0} вставлено в текстовий рядок</sys:String>
     <sys:String x:Key="PdfTagPlaced">{0} розміщено на сторінці {1}</sys:String>
     <sys:String x:Key="PdfTagRemoved">{0} видалено</sys:String>
     <sys:String x:Key="PdfTagCopied">{0} скопійовано</sys:String>
@@ -1584,6 +1622,10 @@
     <sys:String x:Key="HistoryDescRenewWp">Номер: {0} → {1}, Термін: {2} → {3}</sys:String>
 
     <!-- PDF Profile labels -->
+    <sys:String x:Key="PdfJavaRequiredMessage">Для режиму PDF Form потрібна Java 21 або новіша. Встановити Eclipse Temurin JDK 21 зараз?</sys:String>
+    <sys:String x:Key="PdfJavaDownloading">Завантаження інсталятора Java...</sys:String>
+    <sys:String x:Key="PdfJavaInstallerStarted">Інсталятор Java запущено. Завершіть установку і знову відкрийте PDF Form.</sys:String>
+    <sys:String x:Key="PdfJavaInstallerFailed">Не вдалося завантажити або запустити інсталятор Java. Буде відкрито сторінку завантаження.</sys:String>
     <sys:String x:Key="PdfSecContacts">КОНТАКТИ</sys:String>
     <sys:String x:Key="PdfSecInsurance">СТРАХОВКА</sys:String>
     <sys:String x:Key="PdfFieldNumber">Номер</sys:String>
@@ -1633,8 +1675,10 @@
     <sys:String x:Key="HistFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
+    <sys:String x:Key="HistFieldPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Термін паспорту</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Номер візи</sys:String>
+    <sys:String x:Key="HistFieldVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="HistFieldVisaExp">Термін візи</sys:String>
     <sys:String x:Key="HistFieldInsNum">Номер страховки</sys:String>
     <sys:String x:Key="HistFieldInsExp">Термін страховки</sys:String>

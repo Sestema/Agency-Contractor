@@ -50,7 +50,9 @@ namespace Win11DesktopApp.Models
     /// </summary>
     public class PdfTagPlacement
     {
+        public string Kind { get; set; } = "tag";
         public string Tag { get; set; } = string.Empty;
+        public string TemplateText { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public int Page { get; set; }
         public double X { get; set; }
@@ -58,8 +60,22 @@ namespace Win11DesktopApp.Models
         public double FontSize { get; set; } = 10;
         public string FontFamily { get; set; } = "Arial";
         public double MaxWidth { get; set; }
+        public double BoxHeight { get; set; } = 18;
+        public string TextAlign { get; set; } = "left";
         public double PdfPageWidth { get; set; }
         public double PdfPageHeight { get; set; }
+    }
+
+    public class PdfFormFieldBinding
+    {
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = string.Empty;
+        public string TemplateText { get; set; } = string.Empty;
+        public int Page { get; set; } = -1;
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
     }
 
     /// <summary>
@@ -67,6 +83,8 @@ namespace Win11DesktopApp.Models
     /// </summary>
     public class PdfTagMap
     {
+        public string Mode { get; set; } = "overlay";
         public List<PdfTagPlacement> Placements { get; set; } = new();
+        public List<PdfFormFieldBinding> FormFields { get; set; } = new();
     }
 }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
-using System.Threading;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 
@@ -45,7 +44,6 @@ namespace Win11DesktopApp.Converters
                     }
                     catch when (attempt < 2)
                     {
-                        Thread.Sleep(50);
                     }
                 }
 

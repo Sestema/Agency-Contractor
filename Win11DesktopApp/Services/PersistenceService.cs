@@ -69,34 +69,12 @@ namespace Win11DesktopApp.Services
         {
             var dbPath = _folderService.DatabaseFilePath;
             if (string.IsNullOrEmpty(dbPath)) return;
+            var companySnapshot = companies.ToList();
 
             await _saveLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var db = new DatabaseRoot
-                {
-                    Version = "2.0",
-                    Companies = companies.ToList(),
-                    Settings = new DatabaseSettings
-                    {
-                        LanguageCode = _appSettingsService.Settings.LanguageCode ?? "uk",
-                        SelectedCompanyId = _appSettingsService.Settings.SelectedCompanyId ?? string.Empty,
-                        AppVersion = _appSettingsService.Settings.AppVersion
-                    }
-                };
-
-                var json = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
-
-                if (File.Exists(dbPath))
-                {
-                    CreateBackup(dbPath);
-                }
-
-                var encryptedData = Encrypt(json);
-                SafeFileService.WriteBytesAtomic(dbPath, encryptedData);
-
-                var checksum = ComputeHash(encryptedData);
-                SafeFileService.WriteTextAtomic(_folderService.DatabaseChecksumPath, checksum, Encoding.UTF8);
+                SaveDatabaseCore(companySnapshot, dbPath);
             }
             catch (Exception ex)
             {
@@ -518,7 +496,25 @@ namespace Win11DesktopApp.Services
 
         public void SaveDatabase(IEnumerable<EmployerCompany> companies)
         {
-            SaveDatabaseAsync(companies).GetAwaiter().GetResult();
+            var dbPath = _folderService.DatabaseFilePath;
+            if (string.IsNullOrEmpty(dbPath)) return;
+
+            var companySnapshot = companies.ToList();
+            _saveLock.Wait();
+            try
+            {
+                SaveDatabaseCore(companySnapshot, dbPath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("PersistenceService.SaveDatabase", ex);
+                Debug.WriteLine($"PersistenceService.SaveDatabase failed: {ex.Message}");
+                ErrorHandler.Report("PersistenceService.SaveDatabase", ex, ErrorSeverity.Error);
+            }
+            finally
+            {
+                _saveLock.Release();
+            }
         }
 
         /// <summary>
@@ -527,6 +523,32 @@ namespace Win11DesktopApp.Services
         public void SaveCompanies(IEnumerable<EmployerCompany> companies)
         {
             SaveDatabase(companies);
+        }
+
+        private void SaveDatabaseCore(List<EmployerCompany> companySnapshot, string dbPath)
+        {
+            var db = new DatabaseRoot
+            {
+                Version = "2.0",
+                Companies = companySnapshot,
+                Settings = new DatabaseSettings
+                {
+                    LanguageCode = _appSettingsService.Settings.LanguageCode ?? "uk",
+                    SelectedCompanyId = _appSettingsService.Settings.SelectedCompanyId ?? string.Empty,
+                    AppVersion = _appSettingsService.Settings.AppVersion
+                }
+            };
+
+            var json = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
+
+            if (File.Exists(dbPath))
+                CreateBackup(dbPath);
+
+            var encryptedData = Encrypt(json);
+            SafeFileService.WriteBytesAtomic(dbPath, encryptedData);
+
+            var checksum = ComputeHash(encryptedData);
+            SafeFileService.WriteTextAtomic(_folderService.DatabaseChecksumPath, checksum, Encoding.UTF8);
         }
 
         // ============ ENCRYPTION ============

@@ -103,6 +103,7 @@ namespace Win11DesktopApp.Views
             var passportFields = new List<(string key, string label, string oldValue)>
             {
                 ("PassportNumber", Res("DetFieldPassportNum"), _data.PassportNumber),
+                ("PassportAuthority", Res("DetFieldPassportAuthority"), _data.PassportAuthority),
                 ("PassportCountry", Res("CandPassportCountry"), _data.PassportCountry),
                 ("PassportCity", Res("CandPassportCity"), _data.PassportCity),
                 ("PassportExpiry", Res("DetFieldExpiry"), _data.PassportExpiry),
@@ -116,6 +117,7 @@ namespace Win11DesktopApp.Views
                 "visa" => new()
                 {
                     ("VisaNumber", Res("DetFieldVisaNum"), _data.VisaNumber),
+                    ("VisaAuthority", Res("DetFieldVisaAuthority"), _data.VisaAuthority),
                     ("VisaType", Res("DetFieldVisaType"), _data.VisaType),
                     ("VisaExpiry", Res("DetFieldExpiry"), _data.VisaExpiry),
                     ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),

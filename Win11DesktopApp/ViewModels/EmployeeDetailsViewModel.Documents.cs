@@ -344,6 +344,7 @@ namespace Win11DesktopApp.ViewModels
 
                 ContentSection(DocRes("DetSecPassport"), lx, subW, ref yL);
                 ContentField(DocRes("PdfFieldNumber"), Data.PassportNumber, lx, ref yL);
+                ContentField(DocRes("PdfFieldAuthority"), Data.PassportAuthority, lx, ref yL);
                 ContentField(DocRes("PdfFieldValidTo"), Data.PassportExpiry, lx, ref yL);
                 ContentField(DocRes("DetFieldBirthCity"), Data.PassportCity, lx, ref yL);
                 ContentField(DocRes("DetFieldBirthCountry"), Data.PassportCountry, lx, ref yL);
@@ -353,6 +354,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     ContentSection(DocRes("DetSecVisa"), lx, subW, ref yL);
                     ContentField(DocRes("PdfFieldNumber"), Data.VisaNumber, lx, ref yL);
+                    ContentField(DocRes("PdfFieldAuthority"), Data.VisaAuthority, lx, ref yL);
                     ContentField(DocRes("PdfFieldType"), Data.VisaType, lx, ref yL);
                     ContentField(DocRes("PdfFieldValidToF"), Data.VisaExpiry, lx, ref yL);
                     if (!string.IsNullOrEmpty(Data.WorkPermitName))

@@ -70,6 +70,51 @@ namespace Win11DesktopApp.ViewModels
 
         public EmployeeModels.EmployeeData Data { get; } = new EmployeeModels.EmployeeData();
 
+        public bool HasBankAccountData
+        {
+            get => Data.HasBankAccountData;
+            set
+            {
+                if (Data.HasBankAccountData == value)
+                    return;
+
+                Data.HasBankAccountData = value;
+                OnPropertyChanged(nameof(HasBankAccountData));
+                OnPropertyChanged(nameof(ShowBankAccountSection));
+            }
+        }
+
+        public bool ShowBankAccountSection => HasBankAccountData;
+
+        public string BankAccountNumber
+        {
+            get => Data.BankAccountNumber;
+            set
+            {
+                var normalized = value ?? string.Empty;
+                if (Data.BankAccountNumber == normalized)
+                    return;
+
+                Data.BankAccountNumber = normalized;
+                OnPropertyChanged(nameof(BankAccountNumber));
+                TryAutofillBankName(normalized);
+            }
+        }
+
+        public string BankName
+        {
+            get => Data.BankName;
+            set
+            {
+                var normalized = value ?? string.Empty;
+                if (Data.BankName == normalized)
+                    return;
+
+                Data.BankName = normalized;
+                OnPropertyChanged(nameof(BankName));
+            }
+        }
+
         public ObservableCollection<WorkAddress> CompanyAddresses { get; }
         public ObservableCollection<Position> CompanyPositions { get; }
 
@@ -236,6 +281,37 @@ namespace Win11DesktopApp.ViewModels
         {
             get => Data.Gender == "female";
             set { if (value) { Data.Gender = "female"; OnPropertyChanged(nameof(IsGenderMale)); OnPropertyChanged(nameof(IsGenderFemale)); } }
+        }
+
+        private void TryAutofillBankName(string accountNumber)
+        {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+            {
+                if (!string.IsNullOrEmpty(Data.BankName))
+                {
+                    Data.BankName = string.Empty;
+                    OnPropertyChanged(nameof(BankName));
+                }
+
+                return;
+            }
+
+            if (CzechBankAccountResolver.TryResolveBankName(accountNumber, out var resolvedBankName))
+            {
+                if (!string.Equals(Data.BankName, resolvedBankName, StringComparison.Ordinal))
+                {
+                    Data.BankName = resolvedBankName;
+                    OnPropertyChanged(nameof(BankName));
+                }
+
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(CzechBankAccountResolver.ExtractBankCode(accountNumber)) && !string.IsNullOrEmpty(Data.BankName))
+            {
+                Data.BankName = string.Empty;
+                OnPropertyChanged(nameof(BankName));
+            }
         }
 
         public bool ShowPassportUpload => true;
@@ -1424,6 +1500,7 @@ namespace Win11DesktopApp.ViewModels
                     Set("LastName", v => Data.LastName = ToTitleCase(v));
                     Set("BirthDate", v => Data.BirthDate = v);
                     Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
+                    Set("PassportAuthority", v => Data.PassportAuthority = v);
                     Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
                     Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
                     Set("PassportExpiry", v => Data.PassportExpiry = v);
@@ -1434,6 +1511,7 @@ namespace Win11DesktopApp.ViewModels
                     Set("LastName", v => Data.LastName = ToTitleCase(v));
                     Set("BirthDate", v => Data.BirthDate = v);
                     Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
+                    Set("PassportAuthority", v => Data.PassportAuthority = v);
                     Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
                     Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
                     Set("PassportExpiry", v => Data.PassportExpiry = v);
@@ -1448,6 +1526,7 @@ namespace Win11DesktopApp.ViewModels
 
                 case "visa":
                     Set("VisaNumber", v => Data.VisaNumber = v);
+                    Set("VisaAuthority", v => Data.VisaAuthority = v);
                     Set("VisaType", v => Data.VisaType = v);
                     Set("VisaExpiry", v => Data.VisaExpiry = v);
                     Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));

@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Data;
 using System.Threading.Tasks;
@@ -21,7 +22,9 @@ namespace Win11DesktopApp.ViewModels
     {
         private readonly FinanceService _financeService;
         private readonly EmployeeService _employeeService;
-
+        private readonly object _ratePropagationGate = new();
+        private readonly Dictionary<string, CancellationTokenSource> _ratePropagationCtsByKey = new(StringComparer.OrdinalIgnoreCase);
+        private CancellationTokenSource? _notePropagationCts;
         // key: folderKey|firmName → note value at load time (for forward propagation)
         private Dictionary<string, string> _originalNotes = new(StringComparer.OrdinalIgnoreCase);
 
@@ -244,6 +247,16 @@ namespace Win11DesktopApp.ViewModels
 
         public FinanceService Finance => _financeService;
 
+        private sealed record RatePropagationRequest(
+            string Key,
+            string EmployeeId,
+            string EmployeeFolder,
+            string FirmName,
+            string FullName,
+            decimal NewRate,
+            int FromYear,
+            int FromMonth);
+
         public SalaryViewModel()
         {
             _financeService = App.FinanceService;
@@ -327,6 +340,59 @@ namespace Win11DesktopApp.ViewModels
         private static string FolderKey(string path) =>
             System.IO.Path.GetFileName(path?.TrimEnd('\\', '/') ?? "");
 
+        private static string NormalizeEmployeePath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            return path.Replace('/', '\\').Trim().TrimEnd('\\');
+        }
+
+        private static string BuildEmployeeFirmKey(string? employeeId, string? employeeFolder, string? firmName)
+        {
+            var identity = !string.IsNullOrWhiteSpace(employeeId)
+                ? employeeId.Trim()
+                : NormalizeEmployeePath(employeeFolder);
+
+            if (string.IsNullOrWhiteSpace(identity))
+                identity = FolderKey(employeeFolder ?? string.Empty);
+
+            return identity + "|" + (firmName ?? string.Empty);
+        }
+
+        private bool MatchesSalaryEntry(SalaryEntry existingEntry, string? employeeId, string employeeFolder, string firmName)
+        {
+            if (!string.Equals(existingEntry.FirmName, firmName, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(employeeId)
+                && !string.IsNullOrWhiteSpace(existingEntry.EmployeeId)
+                && string.Equals(existingEntry.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var existingFolder = NormalizeEmployeePath(_financeService.ResolveEmployeeFolder(existingEntry.EmployeeFolder, existingEntry.EmployeeId));
+            var currentFolder = NormalizeEmployeePath(_financeService.ResolveEmployeeFolder(employeeFolder, employeeId));
+            return string.Equals(existingFolder, currentFolder, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool TryGetHourlyRateFromEntries(IReadOnlyList<SalaryEntry> sourceEntries, string? employeeId, string employeeFolder, string firmName, out decimal hourlyRate)
+        {
+            for (int i = sourceEntries.Count - 1; i >= 0; i--)
+            {
+                var entry = sourceEntries[i];
+                if (!MatchesSalaryEntry(entry, employeeId, employeeFolder, firmName))
+                    continue;
+
+                hourlyRate = entry.HourlyRate;
+                return true;
+            }
+
+            hourlyRate = 0;
+            return false;
+        }
+
         private static bool WorkedInMonth(string? startDate, string? endDate, int year, int month)
         {
             var monthStart = new DateTime(year, month, 1);
@@ -383,7 +449,7 @@ namespace Win11DesktopApp.ViewModels
             // Set IsFinished (fast loop, no I/O)
             foreach (var entry in newEntries)
             {
-                var fn = FolderKey(entry.EmployeeFolder);
+                var fn = NormalizeEmployeePath(entry.EmployeeFolder);
                 entry.IsFinished = !activeFoldersByFirm.TryGetValue(entry.FirmName, out var active)
                                    || !active.Contains(fn);
             }
@@ -398,7 +464,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 entry.PropertyChanged += OnEntryChanged;
                 Entries.Add(entry);
-                _originalNotes[FolderKey(entry.EmployeeFolder) + "|" + entry.FirmName] = entry.Note;
+                _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
             }
 
             if (needResave)
@@ -411,13 +477,14 @@ namespace Win11DesktopApp.ViewModels
             RefreshActiveFields();
             RefreshAdvanceSums();
             LoadExpenses();
-            CheckNextMonthExists();
+            await CheckNextMonthExistsAsync();
             IsLoading = false;
             DataLoaded?.Invoke();
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("SalaryViewModel.LoadReport", ex);
+                IsLoading = false;
             }
         }
 
@@ -426,9 +493,9 @@ namespace Win11DesktopApp.ViewModels
                                    List<EmployerCompany> companies)
         {
             var entries = new List<SalaryEntry>();
-            var existingKeys = new HashSet<string>();
+            var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             bool needResave = false;
-            var activeFoldersByFirm = new Dictionary<string, HashSet<string>>();
+            var activeFoldersByFirm = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
             var allHistory = new List<ArchivedEmployeeSummary>();
             allHistory.AddRange(_employeeService.GetArchivedEmployees());
@@ -439,7 +506,7 @@ namespace Win11DesktopApp.ViewModels
             foreach (var company in companies)
                 foreach (var emp in _employeeService.GetEmployeesForFirm(company.Name))
                 {
-                    var key = FolderKey(emp.EmployeeFolder) + "|" + company.Name;
+                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
                     employmentByKey.TryAdd(key, (emp.StartDate, emp.EndDate));
                 }
 
@@ -448,7 +515,7 @@ namespace Win11DesktopApp.ViewModels
                 if (string.IsNullOrEmpty(arc.FirmName))
                     continue;
 
-                var key = FolderKey(arc.EmployeeFolder) + "|" + arc.FirmName;
+                var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, arc.FirmName);
                 employmentByKey.TryAdd(key, (arc.StartDate, arc.EndDate));
             }
 
@@ -459,23 +526,24 @@ namespace Win11DesktopApp.ViewModels
             var prevNotes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var pe in prevEntries)
                 if (!string.IsNullOrEmpty(pe.Note))
-                    prevNotes[FolderKey(pe.EmployeeFolder) + "|" + pe.FirmName] = pe.Note;
+                    prevNotes[BuildEmployeeFirmKey(pe.EmployeeId, pe.EmployeeFolder, pe.FirmName)] = pe.Note;
 
             // Load saved payments
             var (sharedEntries, _) = _financeService.LoadAllFirmPayments(year, month);
             foreach (var entry in sharedEntries)
             {
-                if (string.IsNullOrEmpty(entry.EmployeeId))
+                var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, companies);
+                if (!string.IsNullOrEmpty(canonicalId)
+                    && !string.Equals(entry.EmployeeId, canonicalId, StringComparison.OrdinalIgnoreCase))
                 {
-                    var id = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, companies);
-                    if (!string.IsNullOrEmpty(id)) { entry.EmployeeId = id; needResave = true; }
+                    entry.EmployeeId = canonicalId;
+                    needResave = true;
                 }
 
                 var resolved = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
                 if (resolved != entry.EmployeeFolder) { entry.EmployeeFolder = resolved; needResave = true; }
 
-                var fKey = FolderKey(entry.EmployeeFolder);
-                var key = fKey + "|" + entry.FirmName;
+                var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
                 if (!employmentByKey.TryGetValue(key, out var employment)
                     || !WorkedInMonth(employment.StartDate, employment.EndDate, year, month))
                 {
@@ -499,15 +567,15 @@ namespace Win11DesktopApp.ViewModels
             foreach (var company in companies)
             {
                 var employees = _employeeService.GetEmployeesForFirm(company.Name);
-                var activeNames = new HashSet<string>();
+                var activeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var emp in employees)
                 {
-                    var folderName = FolderKey(emp.EmployeeFolder);
-                    if (emp.Status == "Active") activeNames.Add(folderName);
+                    var normalizedFolder = NormalizeEmployeePath(emp.EmployeeFolder);
+                    if (emp.Status == "Active") activeNames.Add(normalizedFolder);
                     if (emp.Status != "Active") continue;
                     if (!EmployeeWorkedInMonth(emp, year, month)) continue;
 
-                    var key = folderName + "|" + company.Name;
+                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
                     if (existingKeys.Contains(key)) continue;
 
                     prevNotes.TryGetValue(key, out var inheritedNote);
@@ -517,7 +585,9 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeFolder = emp.EmployeeFolder,
                         FullName      = emp.FullName,
                         FirmName      = company.Name,
-                        HourlyRate    = GetDefaultRate(emp.EmployeeFolder),
+                        HourlyRate    = TryGetHourlyRateFromEntries(prevEntries, emp.UniqueId, emp.EmployeeFolder, company.Name, out var previousRate)
+                            ? previousRate
+                            : GetDefaultRate(emp.EmployeeFolder),
                         HoursWorked   = 0,
                         Note          = inheritedNote ?? string.Empty,
                         FieldDefinitions = fieldList
@@ -534,17 +604,19 @@ namespace Win11DesktopApp.ViewModels
                 if (!ArchivedWorkedInMonth(arc, year, month)) continue;
                 var firmName = arc.FirmName;
                 if (string.IsNullOrEmpty(firmName)) continue;
-                var folderName = FolderKey(arc.EmployeeFolder);
-                var key = folderName + "|" + firmName;
+                var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
 
                 prevNotes.TryGetValue(key, out var inheritedNote);
                 var entry = new SalaryEntry
                 {
+                    EmployeeId     = arc.UniqueId,
                     EmployeeFolder = arc.EmployeeFolder,
                     FullName       = arc.FullName,
                     FirmName       = firmName,
-                    HourlyRate     = GetDefaultRate(arc.EmployeeFolder),
+                    HourlyRate     = TryGetHourlyRateFromEntries(prevEntries, arc.UniqueId, arc.EmployeeFolder, firmName, out var previousRate)
+                        ? previousRate
+                        : GetDefaultRate(arc.EmployeeFolder),
                     HoursWorked    = 0,
                     Note           = inheritedNote ?? string.Empty,
                     FieldDefinitions = fieldList
@@ -600,11 +672,28 @@ namespace Win11DesktopApp.ViewModels
             return null;
         }
 
-        private void CheckNextMonthExists()
+        private async Task CheckNextMonthExistsAsync()
         {
-            var next = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1);
-            var (entries, _) = _financeService.LoadAllFirmPayments(next.Year, next.Month);
-            NextMonthExists = entries.Count > 0;
+            try
+            {
+                var year = _selectedYear;
+                var month = _selectedMonth;
+                var next = new DateTime(year, month, 1).AddMonths(1);
+                var hasEntries = await Task.Run(() =>
+                {
+                    var (entries, _) = _financeService.LoadAllFirmPayments(next.Year, next.Month);
+                    return entries.Count > 0;
+                });
+
+                if (_selectedYear != year || _selectedMonth != month)
+                    return;
+
+                NextMonthExists = hasEntries;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.CheckNextMonthExistsAsync", ex);
+            }
         }
 
         private static readonly HashSet<string> _recalcProperties = new()
@@ -622,44 +711,68 @@ namespace Win11DesktopApp.ViewModels
             IsDirty = true;
 
             if (e.PropertyName == nameof(SalaryEntry.HourlyRate) && sender is SalaryEntry entry)
-                PropagateRateForward(entry);
+                ScheduleRatePropagation(entry);
         }
 
-        private void PropagateRateForward(SalaryEntry entry)
+        private void ScheduleRatePropagation(SalaryEntry entry)
         {
-            var newRate = entry.HourlyRate;
-            decimal oldRate = 0;
+            var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+            var request = new RatePropagationRequest(
+                key,
+                entry.EmployeeId,
+                entry.EmployeeFolder,
+                entry.FirmName,
+                entry.FullName,
+                entry.HourlyRate,
+                _selectedYear,
+                _selectedMonth);
+            var cts = new CancellationTokenSource();
+            CancellationTokenSource? previous = null;
 
+            lock (_ratePropagationGate)
+            {
+                if (_ratePropagationCtsByKey.TryGetValue(key, out var existing))
+                    previous = existing;
+
+                _ratePropagationCtsByKey[key] = cts;
+            }
+
+            previous?.Cancel();
+            previous?.Dispose();
+            _ = RunRatePropagationAsync(request, cts);
+        }
+
+        private async Task RunRatePropagationAsync(RatePropagationRequest request, CancellationTokenSource cts)
+        {
             try
             {
-                var jsonPath = System.IO.Path.Combine(entry.EmployeeFolder, "employee.json");
-                if (System.IO.File.Exists(jsonPath))
-                {
-                    var json = SafeFileService.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                    var data = System.Text.Json.JsonSerializer.Deserialize<EmployeeModels.EmployeeData>(json);
-                    if (data != null)
-                    {
-                        oldRate = data.HourlySalary;
-                        data.HourlySalary = newRate;
-                        SafeFileService.WriteJsonAtomic(
-                            jsonPath,
-                            data,
-                            new System.Text.Json.JsonSerializerOptions { WriteIndented = true },
-                            System.Text.Encoding.UTF8);
-                    }
-                }
+                await Task.Delay(500, cts.Token);
+                await Task.Run(() => PropagateRateForwardCore(request, cts.Token), cts.Token);
             }
-            catch (Exception ex) { LoggingService.LogError("SalaryViewModel.PropagateRateForward", ex); }
-
-            if (oldRate != newRate)
+            catch (OperationCanceledException)
             {
-                App.ActivityLogService?.Log("RateChanged", "Salary", entry.FirmName, entry.FullName,
-                    $"{entry.FullName}: ставка {oldRate} → {newRate} ({entry.FirmName})",
-                    oldRate.ToString(), newRate.ToString(),
-                    employeeFolder: entry.EmployeeFolder);
+                // A newer rate edit superseded this propagation.
             }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.PropagateRateForwardAsync", ex);
+            }
+            finally
+            {
+                lock (_ratePropagationGate)
+                {
+                    if (_ratePropagationCtsByKey.TryGetValue(request.Key, out var current) && ReferenceEquals(current, cts))
+                        _ratePropagationCtsByKey.Remove(request.Key);
+                }
 
-            _financeService.UpdateHourlyRateForward(entry.EmployeeFolder, entry.FirmName, newRate, _selectedYear, _selectedMonth);
+                cts.Dispose();
+            }
+        }
+
+        private void PropagateRateForwardCore(RatePropagationRequest request, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            _financeService.UpdateHourlyRateForward(request.EmployeeId, request.EmployeeFolder, request.FirmName, request.NewRate, request.FromYear, request.FromMonth, token);
         }
 
         private void InitFirstMonth()
@@ -714,16 +827,26 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(SelectedMonth));
             UpdateMonthDisplay();
 
-            var previousRates = new Dictionary<string, decimal>();
-            foreach (var e in Entries)
-                previousRates[FolderKey(e.EmployeeFolder) + "|" + e.FirmName] = e.HourlyRate;
+            var previousEntries = Entries.ToList();
 
-            foreach (var old in Entries)
+            foreach (var old in previousEntries)
                 old.PropertyChanged -= OnEntryChanged;
+
+            foreach (var e in previousEntries)
+            {
+                var canonicalId = TryResolveEmployeeId(e.EmployeeFolder, e.FullName);
+                if (!string.IsNullOrEmpty(canonicalId))
+                    e.EmployeeId = canonicalId;
+
+                var resolvedFolder = _financeService.ResolveEmployeeFolder(e.EmployeeFolder, e.EmployeeId);
+                if (!string.IsNullOrEmpty(resolvedFolder))
+                    e.EmployeeFolder = resolvedFolder;
+            }
+
             Entries.Clear();
 
             var fieldList = ActiveCustomFields.ToList();
-            var existingKeys = new HashSet<string>();
+            var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var nextMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
             var companyService = App.CompanyService;
@@ -740,7 +863,7 @@ namespace Win11DesktopApp.ViewModels
                     if (!EmployeeWorkedInMonth(emp, _selectedYear, _selectedMonth))
                         continue;
 
-                    var key = FolderKey(emp.EmployeeFolder) + "|" + company.Name;
+                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
                     if (existingKeys.Contains(key)) continue;
 
                     var entry = new SalaryEntry
@@ -749,7 +872,9 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeFolder = emp.EmployeeFolder,
                         FullName = emp.FullName,
                         FirmName = company.Name,
-                        HourlyRate = previousRates.TryGetValue(key, out var prevRate) ? prevRate : GetDefaultRate(emp.EmployeeFolder),
+                        HourlyRate = TryGetHourlyRateFromEntries(previousEntries, emp.UniqueId, emp.EmployeeFolder, company.Name, out var prevRate)
+                            ? prevRate
+                            : GetDefaultRate(emp.EmployeeFolder),
                         HoursWorked = 0,
                         FieldDefinitions = fieldList
                     };
@@ -774,16 +899,18 @@ namespace Win11DesktopApp.ViewModels
                 var firmName = arc.FirmName;
                 if (string.IsNullOrEmpty(firmName)) continue;
 
-                var folderName = FolderKey(arc.EmployeeFolder);
-                var key = folderName + "|" + firmName;
+                    var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
 
                 var entry = new SalaryEntry
                 {
+                        EmployeeId = arc.UniqueId,
                     EmployeeFolder = arc.EmployeeFolder,
                     FullName = arc.FullName,
                     FirmName = firmName,
-                    HourlyRate = previousRates.TryGetValue(key, out var prevArcRate) ? prevArcRate : GetDefaultRate(arc.EmployeeFolder),
+                    HourlyRate = TryGetHourlyRateFromEntries(previousEntries, arc.UniqueId, arc.EmployeeFolder, firmName, out var prevArcRate)
+                        ? prevArcRate
+                        : GetDefaultRate(arc.EmployeeFolder),
                     HoursWorked = 0,
                     FieldDefinitions = fieldList
                 };
@@ -799,7 +926,7 @@ namespace Win11DesktopApp.ViewModels
             RefreshAdvanceSums();
             LoadExpenses();
             SaveReport();
-            CheckNextMonthExists();
+            _ = CheckNextMonthExistsAsync();
         }
 
         private decimal GetDefaultRate(string employeeFolder)
@@ -939,42 +1066,92 @@ namespace Win11DesktopApp.ViewModels
             foreach (var entry in Entries)
                 entry.SavedNetSalary = entry.NetSalary;
 
-            // Propagate note changes forward
-            PropagateNoteChangesForward();
+            var changedNotes = CaptureNotePropagationChanges();
 
             // Update snapshot after save
             _originalNotes.Clear();
             foreach (var entry in Entries)
-                _originalNotes[FolderKey(entry.EmployeeFolder) + "|" + entry.FirmName] = entry.Note;
+                _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
 
             IsDirty = false;
             StatusMessage = L("FinSalarySaved") is string s && s.Length > 0 ? s : "Saved!";
+            ScheduleNotePropagation(changedNotes, _selectedYear, _selectedMonth);
         }
 
-        private void PropagateNoteChangesForward()
+        private Dictionary<string, (string oldNote, string newNote)> CaptureNotePropagationChanges()
         {
-            // Find entries whose note changed since load
             var changed = new Dictionary<string, (string oldNote, string newNote)>(StringComparer.OrdinalIgnoreCase);
             foreach (var entry in Entries)
             {
-                var key = FolderKey(entry.EmployeeFolder) + "|" + entry.FirmName;
+                var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
                 var oldNote = _originalNotes.TryGetValue(key, out var o) ? o : string.Empty;
                 if (oldNote != entry.Note)
                     changed[key] = (oldNote, entry.Note);
             }
-            if (changed.Count == 0) return;
+
+            return changed;
+        }
+
+        private void ScheduleNotePropagation(Dictionary<string, (string oldNote, string newNote)> changed, int fromYear, int fromMonth)
+        {
+            if (changed.Count == 0)
+                return;
+
+            var cts = new CancellationTokenSource();
+            var previous = Interlocked.Exchange(ref _notePropagationCts, cts);
+            previous?.Cancel();
+            previous?.Dispose();
+            _ = RunNotePropagationAsync(changed, fromYear, fromMonth, cts);
+        }
+
+        private async Task RunNotePropagationAsync(
+            Dictionary<string, (string oldNote, string newNote)> changed,
+            int fromYear,
+            int fromMonth,
+            CancellationTokenSource cts)
+        {
+            try
+            {
+                await Task.Run(() => PropagateNoteChangesForwardCore(changed, fromYear, fromMonth, cts.Token), cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // A newer save superseded this propagation.
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.PropagateNoteChangesForwardAsync", ex);
+            }
+            finally
+            {
+                if (ReferenceEquals(_notePropagationCts, cts))
+                    _notePropagationCts = null;
+
+                cts.Dispose();
+            }
+        }
+
+        private void PropagateNoteChangesForwardCore(
+            Dictionary<string, (string oldNote, string newNote)> changed,
+            int fromYear,
+            int fromMonth,
+            CancellationToken token)
+        {
+            if (changed.Count == 0)
+                return;
 
             // Walk forward month by month and propagate
-            var date = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1);
+            var date = new DateTime(fromYear, fromMonth, 1).AddMonths(1);
             for (int i = 0; i < 24; i++) // max 24 months forward
             {
+                token.ThrowIfCancellationRequested();
                 var (futureEntries, futureExpenses) = _financeService.LoadAllFirmPayments(date.Year, date.Month);
                 if (futureEntries.Count == 0) break;
 
                 bool anyUpdated = false;
                 foreach (var fe in futureEntries)
                 {
-                    var key = FolderKey(fe.EmployeeFolder) + "|" + fe.FirmName;
+                    var key = BuildEmployeeFirmKey(fe.EmployeeId, fe.EmployeeFolder, fe.FirmName);
                     if (!changed.TryGetValue(key, out var change)) continue;
                     // Only overwrite if future note == old note OR future note == new note (already propagated)
                     if (fe.Note == change.oldNote || fe.Note == change.newNote)
@@ -984,6 +1161,7 @@ namespace Win11DesktopApp.ViewModels
                     }
                 }
 
+                token.ThrowIfCancellationRequested();
                 if (anyUpdated && !_financeService.SaveAllFirmPayments(date.Year, date.Month, futureEntries, futureExpenses))
                     break;
 

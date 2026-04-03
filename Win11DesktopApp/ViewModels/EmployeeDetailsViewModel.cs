@@ -35,6 +35,60 @@ namespace Win11DesktopApp.ViewModels
         public EmployeeData Data { get; private set; }
         public string EmployeeFolderPath => _employeeFolder;
 
+        public bool HasBankAccountData
+        {
+            get => Data?.HasBankAccountData ?? false;
+            set
+            {
+                if (Data == null || Data.HasBankAccountData == value)
+                    return;
+
+                Data.HasBankAccountData = value;
+                NotifyBankAccountStateChanged();
+                OnPropertyChanged(nameof(Data));
+            }
+        }
+
+        public bool ShowBankAccountSection => HasBankAccountData;
+        public bool ShowBankAccountCard => IsEditMode || HasBankAccountData;
+
+        public string BankAccountNumber
+        {
+            get => Data?.BankAccountNumber ?? string.Empty;
+            set
+            {
+                if (Data == null)
+                    return;
+
+                var normalized = value ?? string.Empty;
+                if (Data.BankAccountNumber == normalized)
+                    return;
+
+                Data.BankAccountNumber = normalized;
+                OnPropertyChanged(nameof(BankAccountNumber));
+                TryAutofillBankName(normalized);
+                OnPropertyChanged(nameof(Data));
+            }
+        }
+
+        public string BankName
+        {
+            get => Data?.BankName ?? string.Empty;
+            set
+            {
+                if (Data == null)
+                    return;
+
+                var normalized = value ?? string.Empty;
+                if (Data.BankName == normalized)
+                    return;
+
+                Data.BankName = normalized;
+                OnPropertyChanged(nameof(BankName));
+                OnPropertyChanged(nameof(Data));
+            }
+        }
+
         private int _tabIndex;
         public int TabIndex
         {
@@ -46,7 +100,11 @@ namespace Win11DesktopApp.ViewModels
         public bool IsEditMode
         {
             get => _isEditMode;
-            set => SetProperty(ref _isEditMode, value);
+            set
+            {
+                if (SetProperty(ref _isEditMode, value))
+                    OnPropertyChanged(nameof(ShowBankAccountCard));
+            }
         }
 
         private bool _isArchiveMode;
@@ -94,6 +152,49 @@ namespace Win11DesktopApp.ViewModels
         {
             get => Data?.Gender == "female";
             set { if (value && Data != null) { Data.Gender = "female"; OnPropertyChanged(nameof(IsGenderMale)); OnPropertyChanged(nameof(IsGenderFemale)); OnPropertyChanged(nameof(Data)); } }
+        }
+
+        private void NotifyBankAccountStateChanged()
+        {
+            OnPropertyChanged(nameof(HasBankAccountData));
+            OnPropertyChanged(nameof(ShowBankAccountSection));
+            OnPropertyChanged(nameof(ShowBankAccountCard));
+            OnPropertyChanged(nameof(BankAccountNumber));
+            OnPropertyChanged(nameof(BankName));
+        }
+
+        private void TryAutofillBankName(string accountNumber)
+        {
+            if (Data == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(accountNumber))
+            {
+                if (!string.IsNullOrEmpty(Data.BankName))
+                {
+                    Data.BankName = string.Empty;
+                    OnPropertyChanged(nameof(BankName));
+                }
+
+                return;
+            }
+
+            if (CzechBankAccountResolver.TryResolveBankName(accountNumber, out var resolvedBankName))
+            {
+                if (!string.Equals(Data.BankName, resolvedBankName, StringComparison.Ordinal))
+                {
+                    Data.BankName = resolvedBankName;
+                    OnPropertyChanged(nameof(BankName));
+                }
+
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(CzechBankAccountResolver.ExtractBankCode(accountNumber)) && !string.IsNullOrEmpty(Data.BankName))
+            {
+                Data.BankName = string.Empty;
+                OnPropertyChanged(nameof(BankName));
+            }
         }
 
         private string _statusMessage = string.Empty;
@@ -697,6 +798,7 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<Position> CompanyPositions { get; } = new();
         public ObservableCollection<WorkAddress> CompanyAddresses { get; } = new();
 
+        private bool _isInitializingSelectedPosition;
         private Position? _selectedPosition;
         public Position? SelectedPosition
         {
@@ -705,6 +807,9 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _selectedPosition, value) && value != null)
                 {
+                    if (_isInitializingSelectedPosition)
+                        return;
+
                     Data.PositionTag = value.Title;
                     Data.PositionNumber = value.PositionNumber;
                     Data.MonthlySalaryBrutto = value.MonthlySalaryBrutto;
@@ -781,6 +886,8 @@ namespace Win11DesktopApp.ViewModels
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
+            NotifyBankAccountStateChanged();
+            TryAutofillBankName(Data.BankAccountNumber);
             RefreshDocuments();
             LoadCompanyPositions();
             LoadCompanyAddresses();
@@ -1152,6 +1259,8 @@ namespace Win11DesktopApp.ViewModels
                 Data = data;
                 OnPropertyChanged(nameof(Data));
                 OnPropertyChanged(nameof(FullName));
+                NotifyBankAccountStateChanged();
+                TryAutofillBankName(Data.BankAccountNumber);
             }
             IsEditMode = false;
             OnPropertyChanged(nameof(IsGenderMale));
@@ -1427,7 +1536,7 @@ namespace Win11DesktopApp.ViewModels
             StartPdfPreviewLoading();
         }
 
-        private async void LoadCompanyPositions()
+        private void LoadCompanyPositions()
         {
             try
             {
@@ -1449,30 +1558,14 @@ namespace Win11DesktopApp.ViewModels
 
                     if (matchedPosition != null)
                     {
-                        var shouldResave =
-                            !string.Equals(Data.PositionTag, matchedPosition.Title, StringComparison.OrdinalIgnoreCase) ||
-                            !string.Equals(Data.PositionNumber, matchedPosition.PositionNumber, StringComparison.OrdinalIgnoreCase) ||
-                            Data.MonthlySalaryBrutto != matchedPosition.MonthlySalaryBrutto ||
-                            Data.HourlySalary != matchedPosition.HourlySalary;
-
-                        var oldData = shouldResave
-                            ? _employeeService.LoadEmployeeData(_employeeFolder)
-                            : null;
-
-                        SelectedPosition = matchedPosition;
-
-                        if (shouldResave)
+                        _isInitializingSelectedPosition = true;
+                        try
                         {
-                            if (_employeeService.SaveEmployeeData(_employeeFolder, Data) && oldData != null)
-                            {
-                                await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
-                                LogProfileChanges(oldData, Data);
-                                InvalidateDetailCaches();
-                                DataChanged?.Invoke();
-
-                                if (TabIndex == 2)
-                                    EnsureHistoryLoaded();
-                            }
+                            SelectedPosition = matchedPosition;
+                        }
+                        finally
+                        {
+                            _isInitializingSelectedPosition = false;
                         }
                     }
                 }

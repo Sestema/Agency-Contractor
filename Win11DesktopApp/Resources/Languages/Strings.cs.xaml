@@ -631,11 +631,13 @@
     <sys:String x:Key="DetFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="DetSecPassport">Pasové údaje</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Číslo pasu</sys:String>
+    <sys:String x:Key="DetFieldPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Město narození</sys:String>
     <sys:String x:Key="DetFieldBirthCountry">Země narození</sys:String>
     <sys:String x:Key="DetFieldExpiry">Datum expirace</sys:String>
     <sys:String x:Key="DetSecVisa">Vízum</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Číslo víza</sys:String>
+    <sys:String x:Key="DetFieldVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="DetFieldVisaType">Typ víza</sys:String>
     <sys:String x:Key="DetFieldWorkPermitName">Název pracovního povolení</sys:String>
     <sys:String x:Key="DetSecInsurance">Pojištění</sys:String>
@@ -654,6 +656,10 @@
     <sys:String x:Key="DetFieldHourly">Hodinová mzda</sys:String>
     <sys:String x:Key="DetFieldWorkAddr">Adresa výkonu práce</sys:String>
     <sys:String x:Key="DetSecContacts">Kontakty a data</sys:String>
+    <sys:String x:Key="EmployeeBankSection">Údaje bankovního účtu</sys:String>
+    <sys:String x:Key="EmployeeBankToggle">Zobrazit údaje bankovního účtu</sys:String>
+    <sys:String x:Key="EmployeeBankAccountNumber">Číslo účtu</sys:String>
+    <sys:String x:Key="EmployeeBankName">Název banky</sys:String>
     <sys:String x:Key="DetFieldPhone">Telefon</sys:String>
     <sys:String x:Key="DetFieldEmail">E-mail</sys:String>
     <sys:String x:Key="DetFieldContractType">Typ smlouvy</sys:String>
@@ -783,6 +789,7 @@
     <sys:String x:Key="GenderMale">Muž</sys:String>
     <sys:String x:Key="GenderFemale">Žena</sys:String>
     <sys:String x:Key="WizPassportNum">Číslo pasu nebo ID</sys:String>
+    <sys:String x:Key="WizPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="WizBirthCity">Město narození</sys:String>
     <sys:String x:Key="WizBirthCountry">Země narození</sys:String>
     <sys:String x:Key="WizPassportExpiry">Datum expirace dokumentu</sys:String>
@@ -790,6 +797,7 @@
     <sys:String x:Key="WizInsNumber">Číslo pojištění</sys:String>
     <sys:String x:Key="WizInsExpiry">Datum expirace pojištění</sys:String>
     <sys:String x:Key="WizVisaNum">Číslo víza</sys:String>
+    <sys:String x:Key="WizVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="WizVisaType">Typ víza</sys:String>
     <sys:String x:Key="WizVisaExpiry">Datum expirace víza</sys:String>
     <sys:String x:Key="WizWorkPermitName">Název pracovního povolení</sys:String>
@@ -1006,6 +1014,21 @@
     <!-- PDF Editor -->
     <sys:String x:Key="PdfClickToPlace">Stiskněte Vl. u tagu a klikněte na PDF pro umístění</sys:String>
     <sys:String x:Key="PdfPlaceTag">Umístit na PDF</sys:String>
+    <sys:String x:Key="PdfAddInlineTextRow">Přidat jeden textový řádek s tagy</sys:String>
+    <sys:String x:Key="PdfInlineTextRowShort">Řádek</sys:String>
+    <sys:String x:Key="PdfInlineTemplate">Šablona</sys:String>
+    <sys:String x:Key="PdfInlineTemplateHint">Pište text a vkládejte tagy, např. narozen v ${EMPLOYEE_BirthCountry}, občan ${EMPLOYEE_Citizenship}.</sys:String>
+    <sys:String x:Key="PdfAddField">Přidat jedno textové pole s tagy</sys:String>
+    <sys:String x:Key="PdfFieldShort">Pole</sys:String>
+    <sys:String x:Key="PdfFieldTemplate">Pole</sys:String>
+    <sys:String x:Key="PdfFieldTemplateHint">Pište text nebo vkládejte tagy do pole, např. ${EMPLOYEE_FirstName} ${EMPLOYEE_LastName}.</sys:String>
+    <sys:String x:Key="PdfModeLabel">Režim</sys:String>
+    <sys:String x:Key="PdfModeOverlay">Překrytí</sys:String>
+    <sys:String x:Key="PdfModeForm">PDF formulář</sys:String>
+    <sys:String x:Key="PdfFormFieldsHeader">PDF pole</sys:String>
+    <sys:String x:Key="PdfFormFieldType">Typ</sys:String>
+    <sys:String x:Key="PdfFormSelectFieldFirst">Nejdříve vyberte a namapujte PDF pole.</sys:String>
+    <sys:String x:Key="PdfFormFieldMapped">Namapováno PDF pole: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Umístěné tagy</sys:String>
     <sys:String x:Key="PdfTagMarker">Značka tagu</sys:String>
 
@@ -1185,16 +1208,20 @@
     <sys:String x:Key="TagDescEmpGender">Pohlaví (Muž / Žena)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Telefon</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
+    <sys:String x:Key="TagDescEmpBankAccountNumber">Číslo účtu zaměstnance</sys:String>
+    <sys:String x:Key="TagDescEmpBankName">Název banky zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Stav</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Passport -->
     <sys:String x:Key="TagDescEmpPassportNumber">Číslo pasu</sys:String>
+    <sys:String x:Key="TagDescEmpPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="TagDescEmpPassportCity">Město narození</sys:String>
     <sys:String x:Key="TagDescEmpPassportCountry">Země narození</sys:String>
     <sys:String x:Key="TagDescEmpPassportExpiry">Datum expirace pasu</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Visa -->
     <sys:String x:Key="TagDescEmpVisaNumber">Číslo víza</sys:String>
+    <sys:String x:Key="TagDescEmpVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="TagDescEmpVisaType">Typ víza</sys:String>
     <sys:String x:Key="TagDescEmpVisaExpiry">Datum expirace víza</sys:String>
 
@@ -1313,6 +1340,17 @@
     <!-- PDF Editor ViewModel -->
     <sys:String x:Key="PdfEditorTitle">PDF: {0}</sys:String>
     <sys:String x:Key="PdfFileNotFound">PDF soubor nebyl nalezen.</sys:String>
+    <sys:String x:Key="PdfPlaceInlineTextRow">Klikněte na PDF pro umístění textového řádku</sys:String>
+    <sys:String x:Key="PdfInlineTextRowLabel">Textový řádek</sys:String>
+    <sys:String x:Key="PdfInlineTextRowDescription">Textový řádek v jednom toku</sys:String>
+    <sys:String x:Key="PdfInlineTextRowPlaced">Textový řádek umístěn na stránce {0}</sys:String>
+    <sys:String x:Key="PdfPlaceField">Klikněte na PDF pro umístění pole</sys:String>
+    <sys:String x:Key="PdfFieldLabel">Pole</sys:String>
+    <sys:String x:Key="PdfFieldDescription">Textové pole</sys:String>
+    <sys:String x:Key="PdfFieldPlaced">Pole umístěno na stránce {0}</sys:String>
+    <sys:String x:Key="PdfFieldWidth">Šířka pole</sys:String>
+    <sys:String x:Key="PdfFieldHeight">Výška pole</sys:String>
+    <sys:String x:Key="PdfInlineTagInserted">{0} vložen do textového řádku</sys:String>
     <sys:String x:Key="PdfTagPlaced">{0} umístěn na stránce {1}</sys:String>
     <sys:String x:Key="PdfTagRemoved">{0} odstraněn</sys:String>
     <sys:String x:Key="PdfTagCopied">{0} zkopírováno</sys:String>
@@ -1582,6 +1620,10 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistoryDescRenewWp">Číslo: {0} → {1}, Platnost: {2} → {3}</sys:String>
 
     <!-- PDF Profile labels -->
+    <sys:String x:Key="PdfJavaRequiredMessage">Režim PDF Form vyžaduje Java 21 nebo novější. Nainstalovat Eclipse Temurin JDK 21 nyní?</sys:String>
+    <sys:String x:Key="PdfJavaDownloading">Stahování instalátoru Java...</sys:String>
+    <sys:String x:Key="PdfJavaInstallerStarted">Instalátor Java byl spuštěn. Dokončete instalaci a znovu otevřete PDF Form.</sys:String>
+    <sys:String x:Key="PdfJavaInstallerFailed">Nepodařilo se stáhnout nebo spustit instalátor Java. Otevře se stránka ke stažení.</sys:String>
     <sys:String x:Key="PdfSecContacts">KONTAKTY</sys:String>
     <sys:String x:Key="PdfSecInsurance">POJIŠTĚNÍ</sys:String>
     <sys:String x:Key="PdfFieldNumber">Číslo</sys:String>
@@ -1632,8 +1674,10 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistFieldBirthDate">Datum narození</sys:String>
     <sys:String x:Key="HistFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Číslo pasu</sys:String>
+    <sys:String x:Key="HistFieldPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Platnost pasu</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Číslo víza</sys:String>
+    <sys:String x:Key="HistFieldVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="HistFieldVisaExp">Platnost víza</sys:String>
     <sys:String x:Key="HistFieldInsNum">Číslo pojištění</sys:String>
     <sys:String x:Key="HistFieldInsExp">Platnost pojištění</sys:String>

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 using ClosedXML.Excel;
 using Win11DesktopApp.Models;
@@ -21,6 +22,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployerCompany? _company;
         private List<EmployeeModels.EmployeeSummary> _allEmployees = new List<EmployeeModels.EmployeeSummary>();
         private string _lastStatus = string.Empty;
+        private int _loadGeneration;
 
         private ObservableCollection<EmployeeModels.EmployeeSummary> _employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
         public ObservableCollection<EmployeeModels.EmployeeSummary> Employees
@@ -360,28 +362,57 @@ namespace Win11DesktopApp.ViewModels
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             FilterByStatCommand = new RelayCommand(o => StatFilter = o as string ?? "all");
 
-            LoadEmployees();
+            _ = LoadEmployeesAsync();
         }
 
-        private void LoadEmployees()
+        private async Task LoadEmployeesAsync()
         {
-            if (_company == null)
+            var generation = ++_loadGeneration;
+            IsLoading = true;
+
+            try
             {
+                if (_company == null)
+                {
+                    _allEmployees = new List<EmployeeModels.EmployeeSummary>();
+                    Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
+                    HasEmployees = false;
+                    IsError = false;
+                    StatusMessage = GetString("MsgEmployeesSelectCompany") ?? "Please select a company.";
+                    return;
+                }
+
+                var companyName = _company.Name;
+                var result = await Task.Run(() => _employeeService.GetEmployeesForFirmWithStatus(companyName));
+                if (generation != _loadGeneration || !string.Equals(_company?.Name, companyName, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                _allEmployees = result.Employees;
+                _lastStatus = result.Status;
+                ApplyFilter();
+                HasEmployees = Employees.Count > 0;
+                StatusMessage = GetStatusMessage(result.Status);
+                IsError = result.Status == "LoadError";
+                RefreshStats();
+                Debug.WriteLine($"EmployeesViewModel.LoadEmployees: {Employees.Count} items");
+            }
+            catch (Exception ex)
+            {
+                if (generation != _loadGeneration)
+                    return;
+
+                LoggingService.LogError("EmployeesViewModel.LoadEmployeesAsync", ex);
                 _allEmployees = new List<EmployeeModels.EmployeeSummary>();
                 Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
                 HasEmployees = false;
-                StatusMessage = GetString("MsgEmployeesSelectCompany") ?? "Please select a company.";
-                return;
+                IsError = true;
+                StatusMessage = GetString("MsgEmployeesLoadError") ?? "Failed to load employees.";
             }
-            var result = _employeeService.GetEmployeesForFirmWithStatus(_company.Name);
-            _allEmployees = result.Employees;
-            _lastStatus = result.Status;
-            ApplyFilter();
-            HasEmployees = Employees.Count > 0;
-            StatusMessage = GetStatusMessage(result.Status);
-            IsError = result.Status == "LoadError";
-            RefreshStats();
-            Debug.WriteLine($"EmployeesViewModel.LoadEmployees: {Employees.Count} items");
+            finally
+            {
+                if (generation == _loadGeneration)
+                    IsLoading = false;
+            }
         }
 
         private static string DocRes(string key) =>
@@ -481,7 +512,7 @@ namespace Win11DesktopApp.ViewModels
         {
             IsAddEmployeeDialogOpen = false;
             CleanupAddEmployeeVm();
-            LoadEmployees();
+            _ = LoadEmployeesAsync();
         }
 
         private void CleanupAddEmployeeVm()
@@ -491,7 +522,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged() => LoadEmployees();
+        private void OnDetailsDataChanged() => _ = LoadEmployeesAsync();
 
         private void OpenEmployee(EmployeeModels.EmployeeSummary? employee)
         {
@@ -587,7 +618,7 @@ namespace Win11DesktopApp.ViewModels
 
             IsDeleteConfirmOpen = false;
             EmployeeToDelete = null;
-            LoadEmployees();
+            await LoadEmployeesAsync();
             ToastService.Instance.Success(string.Format(
                 GetString("RecentlyDeletedMoveSuccess") ?? "Employee {0} was moved to Recently Deleted.",
                 employee.FullName));

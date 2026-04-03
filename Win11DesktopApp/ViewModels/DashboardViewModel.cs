@@ -53,6 +53,7 @@ namespace Win11DesktopApp.ViewModels
 
     public class DashboardViewModel : ViewModelBase
     {
+        private CancellationTokenSource? _loadCts;
         public ICommand GoBackCommand { get; }
         public ICommand OpenEmployeesCommand { get; }
         public ICommand OpenProblemsCommand { get; }
@@ -349,12 +350,23 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
         private async void LoadDataAsync()
         {
+            var cts = new CancellationTokenSource();
+            var previous = Interlocked.Exchange(ref _loadCts, cts);
+            previous?.Cancel();
+            previous?.Dispose();
+
             IsLoading = true;
             try
             {
-                var data = await Task.Run(GatherDashboardData);
-                Application.Current.Dispatcher.Invoke(() =>
+                var data = await Task.Run(GatherDashboardData, cts.Token);
+                if (cts.Token.IsCancellationRequested)
+                    return;
+
+                Application.Current?.Dispatcher?.Invoke(() =>
                 {
+                    if (cts.Token.IsCancellationRequested)
+                        return;
+
                     TotalEmployees = data.TotalEmployees;
                     TotalProblems = data.TotalProblems;
                     TotalTemplates = data.TotalTemplates;
@@ -368,13 +380,23 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     CompanyStats = new ObservableCollection<CompanyStatItem>(data.CompanyStats);
                 });
             }
+            catch (OperationCanceledException)
+            {
+                // A newer refresh superseded this one.
+            }
             catch (Exception ex)
             {
                 LoggingService.LogError("DashboardViewModel.LoadData", ex);
             }
             finally
             {
-                Application.Current?.Dispatcher?.Invoke(() => IsLoading = false);
+                if (ReferenceEquals(_loadCts, cts))
+                {
+                    _loadCts = null;
+                    Application.Current?.Dispatcher?.Invoke(() => IsLoading = false);
+                }
+
+                cts.Dispose();
             }
         }
 

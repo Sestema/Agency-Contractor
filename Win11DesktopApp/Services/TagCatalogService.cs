@@ -18,6 +18,12 @@ namespace Win11DesktopApp.Services
             catch { return key; }
         }
 
+        private static string DocRes(string key)
+        {
+            try { return App.DocumentLocalizationService?.Get(key) ?? Res(key); }
+            catch { return Res(key); }
+        }
+
         private static string ResF(string key, params object[] args)
         {
             var fmt = Res(key);
@@ -72,14 +78,16 @@ namespace Win11DesktopApp.Services
             AddTag("EMPLOYEE_LastName", "Employee", companyName, Res("TagDescEmpLastName"), data.LastName);
             AddTag("EMPLOYEE_FullName", "Employee", companyName, Res("TagDescEmpFullName"), $"{data.FirstName} {data.LastName}");
             AddTag("EMPLOYEE_BirthDate", "Employee", companyName, Res("TagDescEmpBirthDate"), data.BirthDate);
-            AddTag("EMPLOYEE_Gender", "Employee", companyName, Res("TagDescEmpGender"), data.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
+            AddTag("EMPLOYEE_Gender", "Employee", companyName, Res("TagDescEmpGender"), data.Gender == "female" ? DocRes("GenderFemale") : DocRes("GenderMale"));
 
             AddTag("EMPLOYEE_PassportNumber", "Employee", companyName, Res("TagDescEmpPassportNumber"), data.PassportNumber);
+            AddTag("EMPLOYEE_PassportAuthority", "Employee", companyName, Res("TagDescEmpPassportAuthority"), data.PassportAuthority);
             AddTag("EMPLOYEE_PassportCity", "Employee", companyName, Res("TagDescEmpPassportCity"), data.PassportCity);
             AddTag("EMPLOYEE_PassportCountry", "Employee", companyName, Res("TagDescEmpPassportCountry"), data.PassportCountry);
             AddTag("EMPLOYEE_PassportExpiry", "Employee", companyName, Res("TagDescEmpPassportExpiry"), data.PassportExpiry);
 
             AddTag("EMPLOYEE_VisaNumber", "Employee", companyName, Res("TagDescEmpVisaNumber"), data.VisaNumber);
+            AddTag("EMPLOYEE_VisaAuthority", "Employee", companyName, Res("TagDescEmpVisaAuthority"), data.VisaAuthority);
             AddTag("EMPLOYEE_VisaType", "Employee", companyName, Res("TagDescEmpVisaType"), data.VisaType);
             AddTag("EMPLOYEE_VisaExpiry", "Employee", companyName, Res("TagDescEmpVisaExpiry"), data.VisaExpiry);
 
@@ -121,6 +129,10 @@ namespace Win11DesktopApp.Services
 
             AddTag("EMPLOYEE_Phone", "Employee", companyName, Res("TagDescEmpPhone"), data.Phone);
             AddTag("EMPLOYEE_Email", "Employee", companyName, Res("TagDescEmpEmail"), data.Email);
+            AddTag("EMPLOYEE_BankAccountNumber", "Employee", companyName, Res("TagDescEmpBankAccountNumber"),
+                data.HasBankAccountData ? data.BankAccountNumber : string.Empty);
+            AddTag("EMPLOYEE_BankName", "Employee", companyName, Res("TagDescEmpBankName"),
+                data.HasBankAccountData ? data.BankName : string.Empty);
             AddTag("EMPLOYEE_Status", "Employee", companyName, Res("TagDescEmpStatus"), StatusHelper.GetDisplayText(data.Status));
 
             AddTag("EMPLOYEE_StartDate", "Employee", companyName, Res("TagDescEmpStartDate"), data.StartDate);
@@ -146,12 +158,14 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_LastName"] = employeeData.LastName;
             map["EMPLOYEE_FullName"] = $"{employeeData.FirstName} {employeeData.LastName}";
             map["EMPLOYEE_BirthDate"] = employeeData.BirthDate;
-            map["EMPLOYEE_Gender"] = employeeData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale");
+            map["EMPLOYEE_Gender"] = employeeData.Gender == "female" ? DocRes("GenderFemale") : DocRes("GenderMale");
             map["EMPLOYEE_PassportNumber"] = employeeData.PassportNumber;
+            map["EMPLOYEE_PassportAuthority"] = employeeData.PassportAuthority;
             map["EMPLOYEE_PassportCity"] = employeeData.PassportCity;
             map["EMPLOYEE_PassportCountry"] = employeeData.PassportCountry;
             map["EMPLOYEE_PassportExpiry"] = employeeData.PassportExpiry;
             map["EMPLOYEE_VisaNumber"] = employeeData.VisaNumber;
+            map["EMPLOYEE_VisaAuthority"] = employeeData.VisaAuthority;
             map["EMPLOYEE_VisaType"] = employeeData.VisaType;
             map["EMPLOYEE_VisaExpiry"] = employeeData.VisaExpiry;
             map["EMPLOYEE_InsuranceCompany"] = employeeData.InsuranceCompanyShort;
@@ -185,6 +199,8 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_Department"] = employeeData.Department;
             map["EMPLOYEE_Phone"] = employeeData.Phone;
             map["EMPLOYEE_Email"] = employeeData.Email;
+            map["EMPLOYEE_BankAccountNumber"] = employeeData.HasBankAccountData ? employeeData.BankAccountNumber : string.Empty;
+            map["EMPLOYEE_BankName"] = employeeData.HasBankAccountData ? employeeData.BankName : string.Empty;
             map["EMPLOYEE_Status"] = StatusHelper.GetDisplayText(employeeData.Status);
             map["EMPLOYEE_StartDate"] = employeeData.StartDate;
             map["EMPLOYEE_ContractSignDate"] = employeeData.ContractSignDate;
@@ -310,14 +326,18 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_Gender", Category = "Employee.Personal", Description = Res("TagDescEmpGender") },
                 new() { Tag = "EMPLOYEE_Phone", Category = "Employee.Personal", Description = Res("TagDescEmpPhone") },
                 new() { Tag = "EMPLOYEE_Email", Category = "Employee.Personal", Description = Res("TagDescEmpEmail") },
+                new() { Tag = "EMPLOYEE_BankAccountNumber", Category = "Employee.Personal", Description = Res("TagDescEmpBankAccountNumber") },
+                new() { Tag = "EMPLOYEE_BankName", Category = "Employee.Personal", Description = Res("TagDescEmpBankName") },
                 new() { Tag = "EMPLOYEE_Status", Category = "Employee.Personal", Description = Res("TagDescEmpStatus") },
 
                 new() { Tag = "EMPLOYEE_PassportNumber", Category = "Employee.Passport", Description = Res("TagDescEmpPassportNumber") },
+                new() { Tag = "EMPLOYEE_PassportAuthority", Category = "Employee.Passport", Description = Res("TagDescEmpPassportAuthority") },
                 new() { Tag = "EMPLOYEE_PassportCity", Category = "Employee.Passport", Description = Res("TagDescEmpPassportCity") },
                 new() { Tag = "EMPLOYEE_PassportCountry", Category = "Employee.Passport", Description = Res("TagDescEmpPassportCountry") },
                 new() { Tag = "EMPLOYEE_PassportExpiry", Category = "Employee.Passport", Description = Res("TagDescEmpPassportExpiry") },
 
                 new() { Tag = "EMPLOYEE_VisaNumber", Category = "Employee.Visa", Description = Res("TagDescEmpVisaNumber") },
+                new() { Tag = "EMPLOYEE_VisaAuthority", Category = "Employee.Visa", Description = Res("TagDescEmpVisaAuthority") },
                 new() { Tag = "EMPLOYEE_VisaType", Category = "Employee.Visa", Description = Res("TagDescEmpVisaType") },
                 new() { Tag = "EMPLOYEE_VisaExpiry", Category = "Employee.Visa", Description = Res("TagDescEmpVisaExpiry") },
 

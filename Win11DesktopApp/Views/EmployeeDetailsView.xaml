@@ -1272,6 +1272,8 @@
                                                 <StackPanel>
                                                     <TextBlock Text="{DynamicResource DetFieldPassportNum}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.PassportNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <TextBlock Text="{DynamicResource DetFieldPassportAuthority}" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBox Text="{Binding Data.PassportAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldBirthCity}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.PassportCity, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldBirthCountry}" Style="{StaticResource FieldLabel}"/>
@@ -1323,6 +1325,8 @@
                                                         </StackPanel>
                                                         <TextBlock Text="{DynamicResource DetFieldExpiry}" Style="{StaticResource FieldLabel}"/>
                                                         <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                        <TextBlock Text="{DynamicResource DetFieldVisaAuthority}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBox Text="{Binding Data.VisaAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                         <Border CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Left"
                                                                 Background="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
                                                                 Visibility="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
@@ -1520,6 +1524,31 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Bank account -->
+                                            <StackPanel Orientation="Horizontal"
+                                                        Margin="0,0,0,8"
+                                                        Visibility="{Binding ShowBankAccountCard, Converter={StaticResource BoolToVis}}">
+                                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource SuccessLightBrush}">
+                                                    <TextBlock Text="&#xE825;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="{DynamicResource EmployeeBankSection}" Style="{StaticResource DetailsSectionTitle}" Foreground="{DynamicResource SuccessBrush}"/>
+                                            </StackPanel>
+                                            <Border Style="{StaticResource DetailsSectionCard}"
+                                                    Visibility="{Binding ShowBankAccountCard, Converter={StaticResource BoolToVis}}">
+                                                <StackPanel>
+                                                    <CheckBox Content="{DynamicResource EmployeeBankToggle}"
+                                                              IsChecked="{Binding HasBankAccountData}"
+                                                              Margin="0,0,0,10"
+                                                              Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                                                    <StackPanel Visibility="{Binding ShowBankAccountSection, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{DynamicResource EmployeeBankAccountNumber}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBox Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                        <TextBlock Text="{DynamicResource EmployeeBankName}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBox Text="{Binding BankName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </Border>
 

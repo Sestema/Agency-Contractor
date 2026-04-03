@@ -617,11 +617,13 @@
     <sys:String x:Key="DetFieldGender">Gender</sys:String>
     <sys:String x:Key="DetSecPassport">Passport data</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Passport number</sys:String>
+    <sys:String x:Key="DetFieldPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="DetFieldBirthCity">City of birth</sys:String>
     <sys:String x:Key="DetFieldBirthCountry">Country of birth</sys:String>
     <sys:String x:Key="DetFieldExpiry">Expiry date</sys:String>
     <sys:String x:Key="DetSecVisa">Visa</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Visa number</sys:String>
+    <sys:String x:Key="DetFieldVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="DetFieldVisaType">Visa type</sys:String>
     <sys:String x:Key="DetFieldWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="DetSecInsurance">Insurance</sys:String>
@@ -640,6 +642,10 @@
     <sys:String x:Key="DetFieldHourly">Hourly salary</sys:String>
     <sys:String x:Key="DetFieldWorkAddr">Work address</sys:String>
     <sys:String x:Key="DetSecContacts">Contacts and dates</sys:String>
+    <sys:String x:Key="EmployeeBankSection">Bank account details</sys:String>
+    <sys:String x:Key="EmployeeBankToggle">Show bank account details</sys:String>
+    <sys:String x:Key="EmployeeBankAccountNumber">Account number</sys:String>
+    <sys:String x:Key="EmployeeBankName">Bank name</sys:String>
     <sys:String x:Key="DetFieldPhone">Phone</sys:String>
     <sys:String x:Key="DetFieldEmail">Email</sys:String>
     <sys:String x:Key="DetFieldContractType">Contract type</sys:String>
@@ -769,6 +775,7 @@
     <sys:String x:Key="GenderMale">Male</sys:String>
     <sys:String x:Key="GenderFemale">Female</sys:String>
     <sys:String x:Key="WizPassportNum">Passport or ID number</sys:String>
+    <sys:String x:Key="WizPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="WizBirthCity">City of birth</sys:String>
     <sys:String x:Key="WizBirthCountry">Country of birth</sys:String>
     <sys:String x:Key="WizPassportExpiry">Document expiry date</sys:String>
@@ -776,6 +783,7 @@
     <sys:String x:Key="WizInsNumber">Insurance number</sys:String>
     <sys:String x:Key="WizInsExpiry">Insurance expiry date</sys:String>
     <sys:String x:Key="WizVisaNum">Visa number</sys:String>
+    <sys:String x:Key="WizVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="WizVisaType">Visa type</sys:String>
     <sys:String x:Key="WizVisaExpiry">Visa expiry date</sys:String>
     <sys:String x:Key="WizWorkPermitName">Work permit name</sys:String>
@@ -992,6 +1000,21 @@
     <!-- PDF Editor -->
     <sys:String x:Key="PdfClickToPlace">Press Ins. next to a tag, then click on PDF to place it</sys:String>
     <sys:String x:Key="PdfPlaceTag">Place on PDF</sys:String>
+    <sys:String x:Key="PdfAddInlineTextRow">Add one inline text row with tags</sys:String>
+    <sys:String x:Key="PdfInlineTextRowShort">Text row</sys:String>
+    <sys:String x:Key="PdfInlineTemplate">Template</sys:String>
+    <sys:String x:Key="PdfInlineTemplateHint">Type text and insert tags, e.g. born in ${EMPLOYEE_BirthCountry}, citizen of ${EMPLOYEE_Citizenship}.</sys:String>
+    <sys:String x:Key="PdfAddField">Add one text field with tags</sys:String>
+    <sys:String x:Key="PdfFieldShort">Field</sys:String>
+    <sys:String x:Key="PdfFieldTemplate">Field</sys:String>
+    <sys:String x:Key="PdfFieldTemplateHint">Type text or insert tags for this field, e.g. ${EMPLOYEE_FirstName} ${EMPLOYEE_LastName}.</sys:String>
+    <sys:String x:Key="PdfModeLabel">Mode</sys:String>
+    <sys:String x:Key="PdfModeOverlay">Overlay</sys:String>
+    <sys:String x:Key="PdfModeForm">PDF Form</sys:String>
+    <sys:String x:Key="PdfFormFieldsHeader">PDF fields</sys:String>
+    <sys:String x:Key="PdfFormFieldType">Type</sys:String>
+    <sys:String x:Key="PdfFormSelectFieldFirst">Select a PDF field and map it first.</sys:String>
+    <sys:String x:Key="PdfFormFieldMapped">Mapped PDF field: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Placed tags</sys:String>
     <sys:String x:Key="PdfTagMarker">Tag marker</sys:String>
 
@@ -1171,16 +1194,20 @@
     <sys:String x:Key="TagDescEmpGender">Gender (Male / Female)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Phone</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
+    <sys:String x:Key="TagDescEmpBankAccountNumber">Employee bank account number</sys:String>
+    <sys:String x:Key="TagDescEmpBankName">Employee bank name</sys:String>
     <sys:String x:Key="TagDescEmpStatus">Status</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Passport -->
     <sys:String x:Key="TagDescEmpPassportNumber">Passport number</sys:String>
+    <sys:String x:Key="TagDescEmpPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="TagDescEmpPassportCity">City of birth</sys:String>
     <sys:String x:Key="TagDescEmpPassportCountry">Country of birth</sys:String>
     <sys:String x:Key="TagDescEmpPassportExpiry">Passport expiry date</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Visa -->
     <sys:String x:Key="TagDescEmpVisaNumber">Visa number</sys:String>
+    <sys:String x:Key="TagDescEmpVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="TagDescEmpVisaType">Visa type</sys:String>
     <sys:String x:Key="TagDescEmpVisaExpiry">Visa expiry date</sys:String>
 
@@ -1299,6 +1326,17 @@
     <!-- PDF Editor ViewModel -->
     <sys:String x:Key="PdfEditorTitle">PDF: {0}</sys:String>
     <sys:String x:Key="PdfFileNotFound">PDF file not found.</sys:String>
+    <sys:String x:Key="PdfPlaceInlineTextRow">Click on PDF to place the text row</sys:String>
+    <sys:String x:Key="PdfInlineTextRowLabel">Text row</sys:String>
+    <sys:String x:Key="PdfInlineTextRowDescription">Inline text row</sys:String>
+    <sys:String x:Key="PdfInlineTextRowPlaced">Text row placed on page {0}</sys:String>
+    <sys:String x:Key="PdfPlaceField">Click on PDF to place the field</sys:String>
+    <sys:String x:Key="PdfFieldLabel">Field</sys:String>
+    <sys:String x:Key="PdfFieldDescription">Text field</sys:String>
+    <sys:String x:Key="PdfFieldPlaced">Field placed on page {0}</sys:String>
+    <sys:String x:Key="PdfFieldWidth">Field width</sys:String>
+    <sys:String x:Key="PdfFieldHeight">Field height</sys:String>
+    <sys:String x:Key="PdfInlineTagInserted">{0} inserted into the text row</sys:String>
     <sys:String x:Key="PdfTagPlaced">{0} placed on page {1}</sys:String>
     <sys:String x:Key="PdfTagRemoved">{0} removed</sys:String>
     <sys:String x:Key="PdfTagCopied">{0} copied</sys:String>
@@ -1568,6 +1606,10 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistoryDescRenewWp">Number: {0} → {1}, Expiry: {2} → {3}</sys:String>
 
     <!-- PDF Profile labels -->
+    <sys:String x:Key="PdfJavaRequiredMessage">PDF Form mode requires Java 21 or newer. Install Eclipse Temurin JDK 21 now?</sys:String>
+    <sys:String x:Key="PdfJavaDownloading">Downloading the Java installer...</sys:String>
+    <sys:String x:Key="PdfJavaInstallerStarted">Java installer started. Complete the installation and open PDF Form again.</sys:String>
+    <sys:String x:Key="PdfJavaInstallerFailed">Could not download or start the Java installer. The download page will be opened.</sys:String>
     <sys:String x:Key="PdfSecContacts">CONTACTS</sys:String>
     <sys:String x:Key="PdfSecInsurance">INSURANCE</sys:String>
     <sys:String x:Key="PdfFieldNumber">Number</sys:String>
@@ -1618,8 +1660,10 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistFieldBirthDate">Date of birth</sys:String>
     <sys:String x:Key="HistFieldGender">Gender</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Passport number</sys:String>
+    <sys:String x:Key="HistFieldPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Passport expiry</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Visa number</sys:String>
+    <sys:String x:Key="HistFieldVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="HistFieldVisaExp">Visa expiry</sys:String>
     <sys:String x:Key="HistFieldInsNum">Insurance number</sys:String>
     <sys:String x:Key="HistFieldInsExp">Insurance expiry</sys:String>
