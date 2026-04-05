@@ -920,6 +920,12 @@
     <sys:String x:Key="ReportViewSummary">Сводка</sys:String>
     <sys:String x:Key="ReportViewEmployees">Сотрудники</sys:String>
     <sys:String x:Key="ReportConfigExport">Настроить экспорт</sys:String>
+    <sys:String x:Key="ReportColumnsButton">Колонки</sys:String>
+    <sys:String x:Key="ReportColumnsResetButton">Сбросить колонки</sys:String>
+    <sys:String x:Key="ReportColumnsDialogTitle">Настройка колонок</sys:String>
+    <sys:String x:Key="ReportColumnsDialogDesc">Выберите, какие колонки показывать, и измените их порядок.</sys:String>
+    <sys:String x:Key="ReportColumnsMoveUp">Переместить выше</sys:String>
+    <sys:String x:Key="ReportColumnsMoveDown">Переместить ниже</sys:String>
     <sys:String x:Key="ReportExportTitle">Настройки экспорта</sys:String>
     <sys:String x:Key="ReportExportDesc">Выберите листы для включения в Excel файл:</sys:String>
     <sys:String x:Key="ReportExportFormat">Формат:</sys:String>
@@ -1014,6 +1020,19 @@
     <sys:String x:Key="PdfFormFieldMapped">Привязано PDF-поле: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Размещённые теги</sys:String>
     <sys:String x:Key="PdfTagMarker">Метка тега</sys:String>
+    <sys:String x:Key="PdfAiHeader">AI для PDF-полей</sys:String>
+    <sys:String x:Key="PdfAiHint">AI подбирает логичные теги из вашего каталога для пустых PDF-полей.</sys:String>
+    <sys:String x:Key="PdfAiAnalyze">Анализировать</sys:String>
+    <sys:String x:Key="PdfAiSuggestedText">Предложенный текст</sys:String>
+    <sys:String x:Key="PdfAiTagsUsed">Использованные теги</sys:String>
+    <sys:String x:Key="PdfAiReason">Пояснение</sys:String>
+    <sys:String x:Key="PdfAiIgnore">Игнорировать</sys:String>
+    <sys:String x:Key="PdfAiSwitchToFormMode">Переключитесь в режим PDF-формы, чтобы анализировать поля через AI.</sys:String>
+    <sys:String x:Key="PdfAiNoEmptyFields">Пустые PDF-поля для анализа не найдены.</sys:String>
+    <sys:String x:Key="PdfAiNoSuggestions">AI не нашёл надёжных рекомендаций для пустых PDF-полей.</sys:String>
+    <sys:String x:Key="PdfAiSuggestionsReady">AI подготовил рекомендаций: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionApplied">Рекомендация AI применена к полю: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionIgnored">Рекомендация AI скрыта для поля: {0}</sys:String>
 
 
     <sys:String x:Key="ImgEditorTitle">Редактор документа</sys:String>
@@ -1761,6 +1780,38 @@
     <!-- AI Validation -->
     <sys:String x:Key="AIValidateBtn">AI Проверка</sys:String>
     <sys:String x:Key="AIValidateTitle">AI Проверка данных</sys:String>
+    <sys:String x:Key="AIValidationApplyButton">Заполнить</sys:String>
+    <sys:String x:Key="AIValidationApplyAllButton">Заполнить всё</sys:String>
+    <sys:String x:Key="AIValidationOpenSourceButton">Открыть документ</sys:String>
+    <sys:String x:Key="AIValidationAttentionTitle">Требует внимания</sys:String>
+    <sys:String x:Key="AIValidationErrorsTitle">Критические ошибки</sys:String>
+    <sys:String x:Key="AIValidationWarningsTitle">Нужно проверить</sys:String>
+    <sys:String x:Key="AIValidationAutofillTitle">Можно заполнить</sys:String>
+    <sys:String x:Key="AIValidationOkTitle">Всё в порядке</sys:String>
+    <sys:String x:Key="AIValidationSummaryTitle">Общий аудит</sys:String>
+    <sys:String x:Key="AIValidationCurrentLabel">В профиле</sys:String>
+    <sys:String x:Key="AIValidationSuggestedLabel">В документе</sys:String>
+    <sys:String x:Key="AIValidationMissingMessage">Поле пустое в профиле, в документе найдено: {0}</sys:String>
+    <sys:String x:Key="AIValidationMismatchMessage">В профиле: {0} -> В документе: {1}</sys:String>
+    <sys:String x:Key="AIValidationMatchMessage">Совпадает с документом</sys:String>
+    <sys:String x:Key="AIValidationAppliedMessage">Значение применено</sys:String>
+    <sys:String x:Key="AIValidationSuspiciousReadMessage">AI мог ненадёжно считать это значение: {0}</sys:String>
+    <sys:String x:Key="AIValidationSourcePassport">Паспорт</sys:String>
+    <sys:String x:Key="AIValidationSourceVisa">Виза</sys:String>
+    <sys:String x:Key="AIValidationSourceInsurance">Страховка</sys:String>
+    <sys:String x:Key="AIValidationSourcePermit">Разрешение</sys:String>
+    <sys:String x:Key="AIValidationSourceCrossCheck">Сверка</sys:String>
+    <sys:String x:Key="AIValidationVisaOwnershipTitle">Принадлежность визы</sys:String>
+    <sys:String x:Key="AIValidationInsuranceOwnershipTitle">Принадлежность страховки</sys:String>
+    <sys:String x:Key="AIValidationPermitOwnershipTitle">Принадлежность разрешения</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportTitle">Виза и паспорт</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportTitle">Страховка и паспорт</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportIdentityTitle">Личность в визе и паспорте</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportIdentityTitle">Личность в страховке и паспорте</sys:String>
+    <sys:String x:Key="AIValidationCrossPermitPassportIdentityTitle">Личность в разрешении и паспорте</sys:String>
+    <sys:String x:Key="AIValidationCrossIdentityMessage">{0}: не совпадают данные личности ({1})</sys:String>
+    <sys:String x:Key="AIValidationCrossPassportNumberMessage">Номер паспорта в визе не совпадает с паспортом</sys:String>
+    <sys:String x:Key="AIValidationCrossBirthDateMessage">Дата рождения в страховке не совпадает с паспортом</sys:String>
 
     <!-- AI Dashboard Report -->
     <sys:String x:Key="AIReportBtn">AI Отчёт</sys:String>

@@ -2357,7 +2357,7 @@
                 </Border.InputBindings>
             </Border>
             <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
-                    MaxWidth="620" MaxHeight="580" Padding="24"
+                    MaxWidth="760" MaxHeight="680" Padding="24"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                 <Border.Effect>
@@ -2371,27 +2371,270 @@
                     </Grid.RowDefinitions>
 
                     <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="18"
                                        Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <TextBlock Text="{DynamicResource AIValidateTitle}" FontSize="{DynamicResource FS18}"
                                        FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
                         </StackPanel>
+
+                        <Button Grid.Column="1"
+                                Command="{Binding ApplyAllAISuggestionsCommand}"
+                                Padding="14,8" Margin="12,0,0,0"
+                                Background="{DynamicResource AccentBrush}" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Visibility="{Binding HasAIValidationAttentionItems, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{DynamicResource AIValidationApplyAllButton}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                        </Button>
                     </Grid>
 
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="420"
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="520"
                                   Style="{StaticResource ThinScroll}">
-                        <TextBox Text="{Binding AIValidationResult, Mode=OneWay}" 
-                                 IsReadOnly="True" TextWrapping="Wrap"
-                                 BorderThickness="0" Background="Transparent" Padding="0"
-                                 FontSize="{DynamicResource FS13}"
-                                 Foreground="{DynamicResource ForegroundBrush}"
-                                 VerticalScrollBarVisibility="Disabled"/>
+                        <StackPanel>
+                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12"
+                                    Visibility="{Binding HasAIValidationErrorItems, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource AIValidationErrorsTitle}"
+                                               FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
+                                    <ItemsControl ItemsSource="{Binding AIValidationErrorItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                                        CornerRadius="10" Padding="12" Margin="0,0,0,8"
+                                                        Background="{DynamicResource ContentBackgroundBrush}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Border Background="#FDECEC" BorderBrush="#F5C2C7" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
+                                                                    <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#B42318"/>
+                                                                </Border>
+                                                                <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                                           Text="{Binding FieldDisplayName}" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                       FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       Margin="0,4,0,0"/>
+                                                            <TextBlock FontSize="{DynamicResource FS12}" Margin="0,6,0,0"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       Visibility="{Binding CurrentValue, Converter={StaticResource StringToVis}}">
+                                                                <Run Text="{DynamicResource AIValidationCurrentLabel}"/>
+                                                                <Run Text=": "/>
+                                                                <Run Text="{Binding CurrentValue}"/>
+                                                            </TextBlock>
+                                                            <TextBlock FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       Visibility="{Binding SuggestedValue, Converter={StaticResource StringToVis}}">
+                                                                <Run Text="{DynamicResource AIValidationSuggestedLabel}"/>
+                                                                <Run Text=": "/>
+                                                                <Run Text="{Binding SuggestedValue}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                                Command="{Binding DataContext.OpenAIValidationSourceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Padding="12,7" Margin="12,0,0,0"
+                                                                Background="{DynamicResource ContentBackgroundBrush}"
+                                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                BorderThickness="1" Cursor="Hand"
+                                                                VerticalAlignment="Top">
+                                                            <TextBlock Text="{DynamicResource AIValidationOpenSourceButton}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12"
+                                    Visibility="{Binding HasAIValidationWarningItems, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource AIValidationWarningsTitle}"
+                                               FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
+                                    <ItemsControl ItemsSource="{Binding AIValidationWarningItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                                        CornerRadius="10" Padding="12" Margin="0,0,0,8"
+                                                        Background="{DynamicResource ContentBackgroundBrush}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Border Background="#FFF4E5" BorderBrush="#F5C97A" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
+                                                                    <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#B54708"/>
+                                                                </Border>
+                                                                <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                                           Text="{Binding FieldDisplayName}" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                       FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       Margin="0,4,0,0"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1"
+                                                                Command="{Binding DataContext.OpenAIValidationSourceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Padding="12,7" Margin="12,0,0,0"
+                                                                Background="{DynamicResource ContentBackgroundBrush}"
+                                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                BorderThickness="1" Cursor="Hand"
+                                                                VerticalAlignment="Top">
+                                                            <TextBlock Text="{DynamicResource AIValidationOpenSourceButton}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12"
+                                    Visibility="{Binding HasAIValidationAutofillItems, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource AIValidationAutofillTitle}"
+                                               FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
+                                    <ItemsControl ItemsSource="{Binding AIValidationAutofillItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                                        CornerRadius="10" Padding="12" Margin="0,0,0,8"
+                                                        Background="{DynamicResource ContentBackgroundBrush}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Border Background="#EEF4FF" BorderBrush="#B2CCFF" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
+                                                                    <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#175CD3"/>
+                                                                </Border>
+                                                                <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                                           Text="{Binding FieldDisplayName}" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                       FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       Margin="0,4,0,0"/>
+                                                            <TextBlock FontSize="{DynamicResource FS12}" Margin="0,6,0,0"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                                <Run Text="{DynamicResource AIValidationCurrentLabel}"/>
+                                                                <Run Text=": "/>
+                                                                <Run Text="{Binding CurrentValue}"/>
+                                                            </TextBlock>
+                                                            <TextBlock FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                                <Run Text="{DynamicResource AIValidationSuggestedLabel}"/>
+                                                                <Run Text=": "/>
+                                                                <Run Text="{Binding SuggestedValue}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                            <Button Command="{Binding DataContext.OpenAIValidationSourceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Padding="12,7" Margin="0,0,0,8"
+                                                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                    BorderThickness="1" Cursor="Hand"
+                                                                    VerticalAlignment="Top">
+                                                                <TextBlock Text="{DynamicResource AIValidationOpenSourceButton}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                                            </Button>
+                                                            <Button Command="{Binding DataContext.ApplyAISuggestionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Padding="12,7"
+                                                                    Background="{DynamicResource AccentBrush}" Foreground="White"
+                                                                    BorderThickness="0" Cursor="Hand"
+                                                                    VerticalAlignment="Top"
+                                                                    IsEnabled="{Binding CanAutofill}">
+                                                                <TextBlock Text="{DynamicResource AIValidationApplyButton}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12"
+                                    Visibility="{Binding HasAIValidationOkItems, Converter={StaticResource BoolToVis}}">
+                                <Expander IsExpanded="False">
+                                    <Expander.Header>
+                                        <TextBlock Text="{DynamicResource AIValidationOkTitle}"
+                                                   FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                    </Expander.Header>
+                                    <ItemsControl ItemsSource="{Binding AIValidationOkItems}" Margin="0,10,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                                        CornerRadius="10" Padding="12" Margin="0,0,0,8"
+                                                        Background="{DynamicResource ContentBackgroundBrush}">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Border Background="#F0F9F4" BorderBrush="#ABEFC6" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
+                                                                <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#067647"/>
+                                                            </Border>
+                                                            <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       Text="{Binding FieldDisplayName}" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                                                   FontSize="{DynamicResource FS12}"
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                   Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Expander>
+                            </Border>
+
+                            <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="12" Padding="14"
+                                    Visibility="{Binding AIValidationResult, Converter={StaticResource StringToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource AIValidationSummaryTitle}"
+                                               FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
+                                    <TextBox Text="{Binding AIValidationResult, Mode=OneWay}"
+                                             IsReadOnly="True" TextWrapping="Wrap"
+                                             BorderThickness="0" Background="Transparent" Padding="0"
+                                             FontSize="{DynamicResource FS13}"
+                                             Foreground="{DynamicResource ForegroundBrush}"
+                                             VerticalScrollBarVisibility="Disabled"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </ScrollViewer>
 
-                    <!-- OK button with animated loading ring -->
                     <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,14,0,0">
-                        <!-- Spinning ring (visible while loading) -->
                         <Border x:Name="AIValRing" Width="52" Height="52" CornerRadius="26"
                                 BorderThickness="3"
                                 RenderTransformOrigin="0.5,0.5"
@@ -2422,7 +2665,6 @@
                                 </EventTrigger>
                             </Border.Triggers>
                         </Border>
-                        <!-- OK button on top -->
                         <Button Command="{Binding CloseAIValidationCommand}"
                                 Width="44" Height="44" Cursor="Hand" FontWeight="SemiBold"
                                 Background="{DynamicResource AccentBrush}" Foreground="White"

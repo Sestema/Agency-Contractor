@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
 using Win11DesktopApp.EmployeeModels;
@@ -26,7 +27,7 @@ namespace Win11DesktopApp.ViewModels
             IsGenerateDialogOpen = true;
         }
 
-        private void GenerateDocument(TemplateEntry? template)
+        private async Task GenerateDocumentAsync(TemplateEntry? template)
         {
             if (!PolicyService.EnsureWriteAllowed("Генерація документа"))
                 return;
@@ -72,7 +73,7 @@ namespace Win11DesktopApp.ViewModels
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                    App.DocumentGenerationService?.GeneratePdf(templateFullPath, outputPath, tagValues);
+                    await Task.Run(() => App.DocumentGenerationService?.GeneratePdf(templateFullPath, outputPath, tagValues));
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                     App.ActivityLogService?.Log("DocGenerated", "Document", _firmName, FullName,
                         $"Згенеровано документ «{template.Name}» для {FullName}",
@@ -92,7 +93,7 @@ namespace Win11DesktopApp.ViewModels
                         var sanitized = SanitizeFileName(outputFileName);
                         var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                        App.DocumentGenerationService?.GenerateDocxFromRtf(rtfPath, outputPath, tagValues);
+                        await Task.Run(() => App.DocumentGenerationService?.GenerateDocxFromRtf(rtfPath, outputPath, tagValues));
                         GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                         DocumentGenerationService.OpenFile(outputPath);
                     }
@@ -102,7 +103,7 @@ namespace Win11DesktopApp.ViewModels
                         var sanitized = SanitizeFileName(outputFileName);
                         var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                        App.DocumentGenerationService?.GenerateDocx(templateFullPath, outputPath, tagValues);
+                        await Task.Run(() => App.DocumentGenerationService?.GenerateDocx(templateFullPath, outputPath, tagValues));
                         GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                         DocumentGenerationService.OpenFile(outputPath);
                     }
@@ -114,7 +115,7 @@ namespace Win11DesktopApp.ViewModels
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                    App.DocumentGenerationService?.GenerateXlsx(templateFullPath, outputPath, tagValues);
+                    await Task.Run(() => App.DocumentGenerationService?.GenerateXlsx(templateFullPath, outputPath, tagValues));
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                     DocumentGenerationService.OpenFile(outputPath);
                 }

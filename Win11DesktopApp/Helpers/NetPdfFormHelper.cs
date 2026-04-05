@@ -2,16 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using JavaFile = Java.Io.File;
+using JavaFileInputStream = Java.Io.FileInputStream;
+using JavaArrayList = Java.Util.ArrayList<Org.Apache.Pdfbox.Pdmodel.Interactive.Form.PDField>;
 using MASES.NetPDF;
 using Org.Apache.Pdfbox;
+using Org.Apache.Pdfbox.Cos;
+using Org.Apache.Pdfbox.Pdmodel.Font;
 using Org.Apache.Pdfbox.Pdmodel;
+using Org.Apache.Pdfbox.Pdmodel.Interactive.Annotation;
 using Org.Apache.Pdfbox.Pdmodel.Common;
 using Org.Apache.Pdfbox.Pdmodel.Interactive.Form;
+using Org.Apache.Pdfbox.Text;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 
@@ -21,9 +31,31 @@ namespace Win11DesktopApp.Helpers
     {
     }
 
+    public sealed class PdfFormFillIssue
+    {
+        public string FieldName { get; init; } = string.Empty;
+        public string Value { get; init; } = string.Empty;
+        public string Message { get; init; } = string.Empty;
+    }
+
+    public sealed class PdfFormFillResult
+    {
+        public bool Success { get; init; }
+        public List<PdfFormFillIssue> FailedFields { get; init; } = new();
+    }
+
     public static class NetPdfFormHelper
     {
         private static readonly object SyncRoot = new();
+        private static readonly Regex DefaultAppearanceFontRegex = new(@"/[^\s/]+\s+([0-9]+(?:\.[0-9]+)?)\s+Tf", RegexOptions.Compiled);
+        private static readonly string[] UnicodeFontCandidates =
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "segoeui.ttf"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "tahoma.ttf"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "calibri.ttf"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arialuni.ttf")
+        };
         private const string TemurinInstallerEndpoint = "https://api.adoptium.net/v3/installer/latest/21/ga/windows/{0}/jdk/hotspot/normal/eclipse";
         private const string TemurinDownloadPageUrl = "https://adoptium.net/temurin/releases/?version=21&os=windows&package=jdk";
         private static bool _isInitialized;
@@ -32,6 +64,14 @@ namespace Win11DesktopApp.Helpers
 
         public static bool IsJavaRuntimeAvailable()
             => !string.IsNullOrWhiteSpace(ResolveJvmPath());
+
+        public static void WarmUp()
+        {
+            if (!IsJavaRuntimeAvailable())
+                return;
+
+            _ = EnsureInitialized();
+        }
 
         public static string GetJavaDownloadPageUrl()
             => TemurinDownloadPageUrl;
@@ -126,23 +166,27 @@ namespace Win11DesktopApp.Helpers
             }
         }
 
-        public static bool TryFillFormFields(
+        public static PdfFormFillResult TryFillFormFields(
             string templatePath,
             string outputPath,
             IEnumerable<PdfFormFieldBinding> bindings,
             Dictionary<string, string> tagValues)
         {
             if (!EnsureInitialized())
-                return false;
+                return new PdfFormFillResult { Success = false };
 
             try
             {
                 using var document = Loader.LoadPDF(File.ReadAllBytes(templatePath));
                 var acroForm = document.DocumentCatalog?.AcroForm;
                 if (acroForm == null)
-                    return false;
+                    return new PdfFormFillResult { Success = false };
 
-                acroForm.NeedAppearances = true;
+                acroForm.NeedAppearances = false;
+                string? unicodeFontResourceName = null;
+                PDFont? unicodeFont = null;
+                var touchedFields = new JavaArrayList();
+                var failedFields = new List<PdfFormFillIssue>();
 
                 var availableFields = EnumerateFields(document, acroForm)
                     .Select(f => f.FieldName)
@@ -157,7 +201,7 @@ namespace Win11DesktopApp.Helpers
                             $"PDF exposes XFA form data but no AcroForm fields were enumerated: {templatePath}");
                     }
 
-                    return false;
+                    return new PdfFormFillResult { Success = false };
                 }
 
                 foreach (var binding in bindings)
@@ -176,20 +220,41 @@ namespace Win11DesktopApp.Helpers
                         continue;
 
                     var resolvedValue = PdfInlineTextResolver.ResolveTemplate(binding.TemplateText, tagValues);
-                    TryApplyFieldValue(field, resolvedValue ?? string.Empty, binding.FieldName);
+                    ResetFieldAppearanceState(field);
+                    EnsureWidgetAppearances(document, field);
+                    TryPrepareUnicodeTextField(document, acroForm, field, resolvedValue, ref unicodeFontResourceName, ref unicodeFont);
+                    TryApplyFieldValue(field, resolvedValue ?? string.Empty, binding.FieldName, failedFields);
+                    if (field is PDVariableText)
+                        touchedFields.Add(field);
+                }
+
+                if (touchedFields.Size() > 0)
+                {
+                    try
+                    {
+                        acroForm.RefreshAppearances(touchedFields);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("NetPdfFormHelper.RefreshAppearances", ex.Message);
+                    }
                 }
 
                 document.Save(outputPath);
-                return true;
+                return new PdfFormFillResult
+                {
+                    Success = true,
+                    FailedFields = failedFields
+                };
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("NetPdfFormHelper.TryFillFormFields", ex);
-                return false;
+                return new PdfFormFillResult { Success = false };
             }
         }
 
-        private static void TryApplyFieldValue(PDField field, string value, string fieldName)
+        private static void TryApplyFieldValue(PDField field, string value, string fieldName, List<PdfFormFillIssue> failedFields)
         {
             try
             {
@@ -242,10 +307,262 @@ namespace Win11DesktopApp.Helpers
             }
             catch (Exception ex)
             {
+                if (TryApplySanitizedFallbackValue(field, value, fieldName, ex))
+                    return;
+
                 LoggingService.LogWarning(
                     "NetPdfFormHelper.TryApplyFieldValue",
                     $"Skipping field '{fieldName}': {ex.Message}");
+                failedFields.Add(new PdfFormFillIssue
+                {
+                    FieldName = fieldName,
+                    Value = value,
+                    Message = ex.Message
+                });
             }
+        }
+
+        private static bool TryApplySanitizedFallbackValue(PDField field, string value, string fieldName, Exception originalException)
+        {
+            var normalizedFieldType = NormalizeFieldType(field.FieldType?.ToString());
+            if (!string.Equals(normalizedFieldType, "text", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(normalizedFieldType, "choice", StringComparison.OrdinalIgnoreCase)
+                && field is not PDVariableText)
+            {
+                return false;
+            }
+
+            var message = originalException.Message ?? string.Empty;
+            if (!message.Contains("not available in the font", StringComparison.OrdinalIgnoreCase)
+                && !message.Contains("WinAnsiEncoding", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var sanitizedValue = SimplifyPdfUnsafeCharacters(value);
+            if (string.Equals(sanitizedValue, value, StringComparison.Ordinal))
+                return false;
+
+            try
+            {
+                field.SetValue(sanitizedValue);
+                LoggingService.LogWarning(
+                    "NetPdfFormHelper.TryApplyFieldValue",
+                    $"Field '{fieldName}' used sanitized fallback value '{sanitizedValue}' after font encoding failure.");
+                return true;
+            }
+            catch (Exception fallbackEx)
+            {
+                LoggingService.LogWarning(
+                    "NetPdfFormHelper.TryApplyFieldValue",
+                    $"Sanitized fallback also failed for field '{fieldName}': {fallbackEx.Message}");
+                return false;
+            }
+        }
+
+        private static void EnsureWidgetAppearances(PDDocument document, PDField field)
+        {
+            foreach (var widget in field.Widgets ?? Enumerable.Empty<PDAnnotationWidget>())
+            {
+                try
+                {
+                    var appearance = widget.Appearance;
+                    if (appearance == null)
+                    {
+                        appearance = new PDAppearanceDictionary();
+                        widget.Appearance = appearance;
+                    }
+
+                    if (appearance.NormalAppearance == null)
+                    {
+                        var stream = widget.NormalAppearanceStream ?? new PDAppearanceStream(document);
+                        appearance.SetNormalAppearance(stream);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("NetPdfFormHelper.EnsureWidgetAppearances", ex.Message);
+                }
+            }
+        }
+
+        private static void ResetFieldAppearanceState(PDField field)
+        {
+            if (field is PDTextField textField)
+            {
+                try
+                {
+                    textField.SetActions(null);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("NetPdfFormHelper.ResetFieldAppearanceState", ex.Message);
+                }
+            }
+
+            foreach (var widget in field.Widgets ?? Enumerable.Empty<PDAnnotationWidget>())
+            {
+                try
+                {
+                    widget.Action = null;
+                    widget.Actions = null;
+                    if (widget.COSObject is COSDictionary widgetDictionary)
+                    {
+                        widgetDictionary.RemoveItem(COSName.AP);
+                        widgetDictionary.RemoveItem(COSName.AS);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("NetPdfFormHelper.ResetFieldAppearanceState", ex.Message);
+                }
+            }
+        }
+
+        private static void TryPrepareUnicodeTextField(
+            PDDocument document,
+            PDAcroForm acroForm,
+            PDField field,
+            string? value,
+            ref string? unicodeFontResourceName,
+            ref PDFont? unicodeFont)
+        {
+            if (field is not PDVariableText variableText || string.IsNullOrEmpty(value))
+                return;
+
+            try
+            {
+                unicodeFontResourceName ??= EnsureUnicodeFontResource(document, acroForm, ref unicodeFont);
+                if (string.IsNullOrWhiteSpace(unicodeFontResourceName))
+                    return;
+
+                var acroDefaultAppearance = BuildUnicodeDefaultAppearance(acroForm.DefaultAppearance, unicodeFontResourceName);
+                acroForm.DefaultAppearance = acroDefaultAppearance;
+                ApplyUnicodeFontAliases(acroForm.DefaultResources, unicodeFontResourceName, unicodeFont);
+                variableText.DefaultAppearance = BuildUnicodeDefaultAppearance(variableText.DefaultAppearance, unicodeFontResourceName, acroDefaultAppearance);
+                ApplyWidgetDefaultAppearances(field, variableText.DefaultAppearance);
+                if (field is PDTextField textField)
+                    textField.SetActions(null);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning(
+                    "NetPdfFormHelper.TryPrepareUnicodeTextField",
+                    $"Could not prepare Unicode font for field '{field.FullyQualifiedName}': {ex.Message}");
+            }
+        }
+
+        private static void ApplyWidgetDefaultAppearances(PDField field, string defaultAppearance)
+        {
+            foreach (var widget in field.Widgets ?? Enumerable.Empty<PDAnnotationWidget>())
+            {
+                try
+                {
+                    if (widget.COSObject is COSDictionary widgetDictionary)
+                    {
+                        widgetDictionary.SetItem(COSName.DA, new COSString(defaultAppearance));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("NetPdfFormHelper.ApplyWidgetDefaultAppearances", ex.Message);
+                }
+            }
+        }
+
+        private static string? EnsureUnicodeFontResource(PDDocument document, PDAcroForm acroForm, ref PDFont? unicodeFont)
+        {
+            var fontPath = ResolveUnicodeFontPath();
+            if (string.IsNullOrWhiteSpace(fontPath))
+                return null;
+
+            var resources = acroForm.DefaultResources ?? new PDResources();
+            acroForm.DefaultResources = resources;
+
+            if (unicodeFont == null)
+            {
+                using var stream = new JavaFileInputStream(new JavaFile(fontPath));
+                unicodeFont = PDType0Font.Load(document, stream, false);
+            }
+
+            var font = unicodeFont;
+            if (font == null)
+                return null;
+
+            var resourceName = resources.Add(font);
+            return resourceName?.Name;
+        }
+
+        private static void ApplyUnicodeFontAliases(PDResources? resources, string unicodeFontResourceName, PDFont? unicodeFont)
+        {
+            if (resources == null || unicodeFont == null)
+                return;
+
+            try
+            {
+                resources.Put(COSName.GetPDFName(unicodeFontResourceName), unicodeFont);
+                resources.Put(COSName.GetPDFName("Helv"), unicodeFont);
+                resources.Put(COSName.GetPDFName("Helvetica"), unicodeFont);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("NetPdfFormHelper.ApplyUnicodeFontAliases", ex.Message);
+            }
+        }
+
+        private static string? ResolveUnicodeFontPath()
+        {
+            foreach (var candidate in UnicodeFontCandidates)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        private static string BuildUnicodeDefaultAppearance(string? existingAppearance, string fontResourceName, string? fallbackAppearance = null)
+        {
+            if (!string.IsNullOrWhiteSpace(existingAppearance))
+            {
+                var updated = DefaultAppearanceFontRegex.Replace(existingAppearance, $"/{fontResourceName} $1 Tf", 1);
+                if (!string.Equals(updated, existingAppearance, StringComparison.Ordinal))
+                    return updated;
+            }
+
+            if (!string.IsNullOrWhiteSpace(fallbackAppearance))
+            {
+                var updated = DefaultAppearanceFontRegex.Replace(fallbackAppearance, $"/{fontResourceName} $1 Tf", 1);
+                if (!string.Equals(updated, fallbackAppearance, StringComparison.Ordinal))
+                    return updated;
+            }
+
+            return $"/{fontResourceName} 0 Tf 0 g";
+        }
+
+        private static string SimplifyPdfUnsafeCharacters(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
+
+            var normalized = value.Normalize(NormalizationForm.FormD);
+            var builder = new System.Text.StringBuilder(normalized.Length);
+
+            foreach (var ch in normalized)
+            {
+                var category = CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (category != UnicodeCategory.NonSpacingMark)
+                    builder.Append(ch);
+            }
+
+            return builder
+                .ToString()
+                .Normalize(NormalizationForm.FormC)
+                .Replace('\u0142', 'l')
+                .Replace('\u0141', 'L')
+                .Replace('\u0111', 'd')
+                .Replace('\u0110', 'D')
+                .Replace('\u00DF', 's');
         }
 
         private static IEnumerable<PdfFormFieldBinding> EnumerateFields(PDDocument document, PDAcroForm acroForm)
@@ -255,13 +572,16 @@ namespace Win11DesktopApp.Helpers
                 if (field == null)
                     continue;
 
-                var name = FirstNonEmpty(field.FullyQualifiedName?.ToString(), field.PartialName?.ToString());
+                var rawName = FirstNonEmpty(field.FullyQualifiedName?.ToString(), field.PartialName?.ToString());
+                var decodedName = DecodePdfFieldName(rawName);
+                var name = FirstNonEmpty(decodedName, rawName);
                 if (string.IsNullOrWhiteSpace(name))
                     continue;
 
                 var binding = new PdfFormFieldBinding
                 {
-                    FieldName = name,
+                    FieldName = rawName,
+                    DecodedFieldName = decodedName,
                     FieldType = NormalizeFieldType(field.FieldType?.ToString())
                 };
 
@@ -272,6 +592,7 @@ namespace Win11DesktopApp.Helpers
                     binding.Y = Math.Round(rectangle.LowerLeftY, 2);
                     binding.Width = Math.Round(rectangle.Width, 2);
                     binding.Height = Math.Round(rectangle.Height, 2);
+                    binding.NearbyText = ExtractNearbyText(document, page, rectangle);
                 }
 
                 yield return binding;
@@ -315,6 +636,96 @@ namespace Win11DesktopApp.Helpers
             }
 
             return -1;
+        }
+
+        private static string DecodePdfFieldName(string? rawName)
+        {
+            if (string.IsNullOrWhiteSpace(rawName))
+                return string.Empty;
+
+            var name = rawName.Trim();
+            if (!name.Contains('#'))
+                return name;
+
+            try
+            {
+                var bytes = new List<byte>();
+                var buffer = new StringBuilder();
+
+                for (var i = 0; i < name.Length; i++)
+                {
+                    var ch = name[i];
+                    if (ch == '#' && i + 2 < name.Length
+                        && byte.TryParse(name.Substring(i + 1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value))
+                    {
+                        if (buffer.Length > 0)
+                        {
+                            bytes.AddRange(Encoding.UTF8.GetBytes(buffer.ToString()));
+                            buffer.Clear();
+                        }
+
+                        bytes.Add(value);
+                        i += 2;
+                    }
+                    else
+                    {
+                        buffer.Append(ch);
+                    }
+                }
+
+                if (buffer.Length > 0)
+                    bytes.AddRange(Encoding.UTF8.GetBytes(buffer.ToString()));
+
+                var decoded = Encoding.UTF8.GetString(bytes.ToArray()).Trim();
+                return string.IsNullOrWhiteSpace(decoded) ? name : decoded;
+            }
+            catch
+            {
+                return name;
+            }
+        }
+
+        private static string ExtractNearbyText(PDDocument document, int pageIndex, PDRectangle fieldRectangle)
+        {
+            if (pageIndex < 0 || pageIndex >= document.NumberOfPages)
+                return string.Empty;
+
+            try
+            {
+                var page = document.GetPage(pageIndex);
+                if (page == null)
+                    return string.Empty;
+
+                var mediaBox = page.MediaBox;
+                if (mediaBox == null)
+                    return string.Empty;
+
+                var regionX = Math.Max(0, fieldRectangle.LowerLeftX - 180);
+                var regionY = Math.Max(0, fieldRectangle.LowerLeftY - 18);
+                var regionRight = Math.Min(mediaBox.Width, fieldRectangle.LowerLeftX + fieldRectangle.Width + 40);
+                var regionTop = Math.Min(mediaBox.Height, fieldRectangle.LowerLeftY + fieldRectangle.Height + 18);
+                var regionWidth = Math.Max(1, regionRight - regionX);
+                var regionHeight = Math.Max(1, regionTop - regionY);
+
+                var pdfYFromTop = Math.Max(0, mediaBox.Height - regionTop);
+                var region = new Java.Awt.Rectangle(
+                    (int)Math.Round(regionX),
+                    (int)Math.Round(pdfYFromTop),
+                    (int)Math.Round(regionWidth),
+                    (int)Math.Round(regionHeight));
+
+                using var stripper = new PDFTextStripperByArea();
+                stripper.AddRegion("fieldContext", region);
+                stripper.ExtractRegions(page);
+                var text = stripper.GetTextForRegion("fieldContext")?.ToString()?.Trim() ?? string.Empty;
+                text = Regex.Replace(text, @"\s+", " ").Trim();
+                return text.Length > 220 ? text.Substring(0, 220) : text;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("NetPdfFormHelper.ExtractNearbyText", ex.Message);
+                return string.Empty;
+            }
         }
 
         private static bool EnsureInitialized()

@@ -6,7 +6,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -43,6 +46,9 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public string FieldName => Model.FieldName;
+        public string DecodedFieldName => Model.DecodedFieldName;
+        public string NearbyText => Model.NearbyText;
+        public string PreferredDisplayName => !string.IsNullOrWhiteSpace(DecodedFieldName) ? DecodedFieldName : FieldName;
         public string FieldType
         {
             get => Model.FieldType;
@@ -80,6 +86,18 @@ namespace Win11DesktopApp.ViewModels
             {
                 var text = TemplateText?.Trim() ?? string.Empty;
                 return string.IsNullOrWhiteSpace(text) ? string.Empty : (text.Length > 60 ? text[..57] + "..." : text);
+            }
+        }
+
+        public string ContextText
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(NearbyText))
+                    return NearbyText;
+                if (!string.IsNullOrWhiteSpace(DecodedFieldName) && !string.Equals(DecodedFieldName, FieldName, StringComparison.Ordinal))
+                    return DecodedFieldName;
+                return string.Empty;
             }
         }
 
@@ -211,6 +229,7 @@ namespace Win11DesktopApp.ViewModels
         private bool _navigateBackScheduled;
         private bool _formFieldsLoaded;
         private bool _formFieldsLoadStarted;
+        private readonly Dictionary<string, TagEntry> _tagLookup = new(StringComparer.OrdinalIgnoreCase);
 
         private List<BitmapSource> _pageImages = new();
 
@@ -247,6 +266,8 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(CurrentPageDisplay));
                     OnPropertyChanged(nameof(CurrentPageImage));
                     OnPropertyChanged(nameof(CurrentPagePlacements));
+                    OnPropertyChanged(nameof(VisibleAIPdfFieldSuggestions));
+                    OnPropertyChanged(nameof(HasAIPdfFieldSuggestions));
                 }
             }
         }
@@ -274,9 +295,14 @@ namespace Win11DesktopApp.ViewModels
 
                     OnPropertyChanged(nameof(IsOverlayMode));
                     OnPropertyChanged(nameof(IsFormMode));
+                    OnPropertyChanged(nameof(IsAIPdfSuggestionsVisible));
 
                     if (IsFormMode)
                         _ = EnsurePdfFormModeReadyAsync();
+                    else
+                        IsAIPdfSuggestionsOpen = false;
+
+                    CommandManager.InvalidateRequerySuggested();
                 }
             }
         }
@@ -301,6 +327,73 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _formFieldBindings;
             set => SetProperty(ref _formFieldBindings, value);
+        }
+
+        private ObservableCollection<AIPdfFieldSuggestion> _aiPdfFieldSuggestions = new();
+        public ObservableCollection<AIPdfFieldSuggestion> AIPdfFieldSuggestions
+        {
+            get => _aiPdfFieldSuggestions;
+            set
+            {
+                if (SetProperty(ref _aiPdfFieldSuggestions, value))
+                {
+                    OnPropertyChanged(nameof(VisibleAIPdfFieldSuggestions));
+                    OnPropertyChanged(nameof(HasAIPdfFieldSuggestions));
+                }
+            }
+        }
+
+        public IEnumerable<AIPdfFieldSuggestion> VisibleAIPdfFieldSuggestions =>
+            AIPdfFieldSuggestions.Where(s => !s.IsIgnored);
+
+        public bool HasAIPdfFieldSuggestions => VisibleAIPdfFieldSuggestions.Any();
+
+        private AIPdfFieldSuggestion? _selectedAIPdfFieldSuggestion;
+        public AIPdfFieldSuggestion? SelectedAIPdfFieldSuggestion
+        {
+            get => _selectedAIPdfFieldSuggestion;
+            set
+            {
+                if (SetProperty(ref _selectedAIPdfFieldSuggestion, value) && value != null)
+                    SelectAIPdfSuggestion(value);
+            }
+        }
+
+        private bool _isAnalyzingPdfFieldsWithAI;
+        public bool IsAnalyzingPdfFieldsWithAI
+        {
+            get => _isAnalyzingPdfFieldsWithAI;
+            set => SetProperty(ref _isAnalyzingPdfFieldsWithAI, value);
+        }
+
+        private bool _isAIPdfSuggestionsOpen;
+        public bool IsAIPdfSuggestionsOpen
+        {
+            get => _isAIPdfSuggestionsOpen;
+            set
+            {
+                if (SetProperty(ref _isAIPdfSuggestionsOpen, value))
+                {
+                    OnPropertyChanged(nameof(IsAIPdfSuggestionsVisible));
+
+                    var settingsService = App.AppSettingsService;
+                    var settings = settingsService?.Settings;
+                    if (settings != null && settingsService != null)
+                    {
+                        settings.PdfEditorAiPanelOpen = value;
+                        settingsService.SaveSettings();
+                    }
+                }
+            }
+        }
+
+        public bool IsAIPdfSuggestionsVisible => IsFormMode && IsAIPdfSuggestionsOpen;
+
+        private string _aiPdfSuggestionsStatus = string.Empty;
+        public string AIPdfSuggestionsStatus
+        {
+            get => _aiPdfSuggestionsStatus;
+            set => SetProperty(ref _aiPdfSuggestionsStatus, value);
         }
 
         private PdfFormFieldBindingViewModel? _selectedFormFieldBinding;
@@ -632,6 +725,12 @@ namespace Win11DesktopApp.ViewModels
         public ICommand AddFieldCommand { get; }
         public ICommand CopyTagCommand { get; }
         public ICommand RemovePlacementCommand { get; }
+        public ICommand AnalyzePdfFieldsWithAICommand { get; }
+        public ICommand ApplyAIPdfSuggestionCommand { get; }
+        public ICommand IgnoreAIPdfSuggestionCommand { get; }
+        public ICommand SelectAIPdfSuggestionCommand { get; }
+        public ICommand ToggleAIPdfSuggestionsCommand { get; }
+        public ICommand CloseAIPdfSuggestionsCommand { get; }
 
         public Action<TagEntry>? RequestPlaceTagOnClick { get; set; }
         public Action? RequestPlaceInlineTextRowOnClick { get; set; }
@@ -653,6 +752,8 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var allTags = App.TagCatalogService.GetAllTagDefinitions();
+                foreach (var tag in allTags)
+                    _tagLookup[tag.Tag] = tag;
                 var groups = TagGroupViewModel.BuildTagGroups(allTags);
                 TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService.Settings.HiddenTags);
             }
@@ -676,6 +777,12 @@ namespace Win11DesktopApp.ViewModels
             AddFieldCommand = new RelayCommand(_ => BeginPlaceField());
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             RemovePlacementCommand = new RelayCommand(o => RemovePlacement(o));
+            AnalyzePdfFieldsWithAICommand = new AsyncRelayCommand(_ => AnalyzePdfFieldsWithAIAsync(), _ => IsFormMode && !IsAnalyzingPdfFieldsWithAI);
+            ApplyAIPdfSuggestionCommand = new RelayCommand(o => ApplyAIPdfSuggestion(o as AIPdfFieldSuggestion), o => o is AIPdfFieldSuggestion suggestion && !suggestion.IsIgnored && !suggestion.IsApplied);
+            IgnoreAIPdfSuggestionCommand = new RelayCommand(o => IgnoreAIPdfSuggestion(o as AIPdfFieldSuggestion), o => o is AIPdfFieldSuggestion suggestion && !suggestion.IsApplied && !suggestion.IsIgnored);
+            SelectAIPdfSuggestionCommand = new RelayCommand(o => SelectAIPdfSuggestion(o as AIPdfFieldSuggestion), o => o is AIPdfFieldSuggestion);
+            ToggleAIPdfSuggestionsCommand = new AsyncRelayCommand(_ => ToggleAIPdfSuggestionsAsync(), _ => IsFormMode && !IsAnalyzingPdfFieldsWithAI);
+            CloseAIPdfSuggestionsCommand = new RelayCommand(_ => IsAIPdfSuggestionsOpen = false, _ => IsAIPdfSuggestionsOpen);
             ZoomInCommand = new RelayCommand(_ => ZoomLevel += 0.25);
             ZoomOutCommand = new RelayCommand(_ => ZoomLevel -= 0.25);
             ZoomResetCommand = new RelayCommand(_ => ZoomLevel = 1.0);
@@ -684,6 +791,8 @@ namespace Win11DesktopApp.ViewModels
             LoadPdf();
             LoadTagMap();
             AttachPlacementCollection(AllPlacements);
+
+            IsAIPdfSuggestionsOpen = App.AppSettingsService?.Settings?.PdfEditorAiPanelOpen ?? false;
         }
 
         private void LoadPdf()
@@ -881,6 +990,8 @@ namespace Win11DesktopApp.ViewModels
             var allBindings = FormFieldBindings.Select(f => new PdfFormFieldBinding
                 {
                     FieldName = f.FieldName,
+                    DecodedFieldName = f.DecodedFieldName,
+                    NearbyText = f.NearbyText,
                     FieldType = f.FieldType,
                     TemplateText = f.TemplateText,
                     Page = f.Page,
@@ -901,6 +1012,8 @@ namespace Win11DesktopApp.ViewModels
                     return new PdfFormFieldBinding
                     {
                         FieldName = first.FieldName,
+                        DecodedFieldName = FirstNonEmptyText(g.Select(x => x.DecodedFieldName)),
+                        NearbyText = FirstNonEmptyText(g.Select(x => x.NearbyText)),
                         FieldType = withType?.FieldType ?? first.FieldType,
                         TemplateText = withTemplate?.TemplateText ?? first.TemplateText,
                         Page = withBounds?.Page ?? first.Page,
@@ -919,6 +1032,8 @@ namespace Win11DesktopApp.ViewModels
                 merged.Add(new PdfFormFieldBindingViewModel(new PdfFormFieldBinding
                 {
                     FieldName = binding.FieldName,
+                    DecodedFieldName = binding.DecodedFieldName,
+                    NearbyText = binding.NearbyText,
                     FieldType = binding.FieldType,
                     TemplateText = binding.TemplateText,
                     Page = binding.Page,
@@ -1184,8 +1299,8 @@ namespace Win11DesktopApp.ViewModels
             if (binding != null)
             {
                 StatusMessage = binding.HasBounds
-                    ? $"Selected field: {binding.FieldName} ({binding.LocationText})"
-                    : $"Selected field: {binding.FieldName}";
+                    ? $"Selected field: {binding.PreferredDisplayName} ({binding.LocationText})"
+                    : $"Selected field: {binding.PreferredDisplayName}";
             }
         }
 
@@ -1218,7 +1333,258 @@ namespace Win11DesktopApp.ViewModels
             StatusMessage = ResF("PdfFormFieldMapped", target.FieldName);
         }
 
+        private async Task AnalyzePdfFieldsWithAIAsync()
+        {
+            if (!PolicyService.EnsureWriteAllowed("проаналізувати PDF-поля через AI"))
+                return;
+
+            var geminiService = App.GeminiApiService;
+            if (geminiService == null || !geminiService.IsConfigured)
+            {
+                AIPdfSuggestionsStatus = Res("AIChatNoModel");
+                IsAIPdfSuggestionsOpen = true;
+                return;
+            }
+
+            if (!IsFormMode)
+            {
+                AIPdfSuggestionsStatus = Res("PdfAiSwitchToFormMode");
+                IsAIPdfSuggestionsOpen = true;
+                return;
+            }
+
+            await EnsurePdfFormModeReadyAsync();
+
+            var candidateFields = FormFieldBindings
+                .Where(f => string.IsNullOrWhiteSpace(f.TemplateText) && !string.IsNullOrWhiteSpace(f.FieldName))
+                .Select(f => f.Model)
+                .ToList();
+
+            if (candidateFields.Count == 0)
+            {
+                AIPdfFieldSuggestions = new ObservableCollection<AIPdfFieldSuggestion>();
+                AIPdfSuggestionsStatus = Res("PdfAiNoEmptyFields");
+                IsAIPdfSuggestionsOpen = true;
+                return;
+            }
+
+            IsAnalyzingPdfFieldsWithAI = true;
+            IsAIPdfSuggestionsOpen = true;
+            AIPdfSuggestionsStatus = Res("AIChatThinking");
+            CommandManager.InvalidateRequerySuggested();
+
+            try
+            {
+                var prompt = AIScanPrompts.GetPdfFieldMappingPrompt(candidateFields, _tagLookup.Values);
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+                var response = await geminiService.ChatAsync(prompt, null, cts.Token);
+
+                if (GeminiApiService.IsFailureResponse(response))
+                {
+                    AIPdfSuggestionsStatus = response;
+                    return;
+                }
+
+                var suggestions = ParsePdfFieldSuggestions(response);
+                AIPdfFieldSuggestions = new ObservableCollection<AIPdfFieldSuggestion>(suggestions);
+                SelectedAIPdfFieldSuggestion = AIPdfFieldSuggestions.FirstOrDefault();
+
+                if (AIPdfFieldSuggestions.Count == 0)
+                {
+                    AIPdfSuggestionsStatus = Res("PdfAiNoSuggestions");
+                }
+                else
+                {
+                    AIPdfSuggestionsStatus = ResF("PdfAiSuggestionsReady", AIPdfFieldSuggestions.Count);
+                    if (SelectedAIPdfFieldSuggestion != null)
+                        SelectAIPdfSuggestion(SelectedAIPdfFieldSuggestion);
+                }
+            }
+            catch (Exception ex)
+            {
+                AIPdfSuggestionsStatus = ResF("EditorErrFmt", ex.Message);
+                LoggingService.LogError("PdfEditorViewModel.AnalyzePdfFieldsWithAIAsync", ex);
+            }
+            finally
+            {
+                IsAnalyzingPdfFieldsWithAI = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private async Task ToggleAIPdfSuggestionsAsync()
+        {
+            if (!IsFormMode)
+                return;
+
+            IsAIPdfSuggestionsOpen = !IsAIPdfSuggestionsOpen;
+            CommandManager.InvalidateRequerySuggested();
+
+            if (IsAIPdfSuggestionsOpen && !HasAIPdfFieldSuggestions && !IsAnalyzingPdfFieldsWithAI)
+                await AnalyzePdfFieldsWithAIAsync();
+        }
+
+        private List<AIPdfFieldSuggestion> ParsePdfFieldSuggestions(string response)
+        {
+            var result = new List<AIPdfFieldSuggestion>();
+            var jsonMatch = Regex.Match(response, @"\[[\s\S]*\]", RegexOptions.Singleline);
+            if (!jsonMatch.Success)
+                return result;
+
+            try
+            {
+                using var document = JsonDocument.Parse(jsonMatch.Value);
+                foreach (var element in document.RootElement.EnumerateArray())
+                {
+                    var fieldName = GetJsonString(element, "field_name");
+                    var suggestedText = GetJsonString(element, "suggested_text");
+                    if (string.IsNullOrWhiteSpace(fieldName) || string.IsNullOrWhiteSpace(suggestedText))
+                        continue;
+
+                    var binding = ResolveFormFieldBinding(fieldName);
+                    if (binding == null)
+                        continue;
+
+                    var tagsUsed = new List<string>();
+                    if (element.TryGetProperty("tags_used", out var tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in tagsElement.EnumerateArray())
+                        {
+                            var tag = item.GetString()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(tag)
+                                && _tagLookup.ContainsKey(tag)
+                                && !tagsUsed.Any(x => string.Equals(x, tag, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                tagsUsed.Add(tag);
+                            }
+                        }
+                    }
+
+                    if (tagsUsed.Count == 0)
+                    {
+                        foreach (Match tokenMatch in Regex.Matches(suggestedText, @"\$\{(?<tag>[A-Za-z0-9_]+)\}"))
+                        {
+                            var tag = tokenMatch.Groups["tag"].Value;
+                            if (_tagLookup.ContainsKey(tag)
+                                && !tagsUsed.Any(x => string.Equals(x, tag, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                tagsUsed.Add(tag);
+                            }
+                        }
+                    }
+
+                    result.Add(new AIPdfFieldSuggestion
+                    {
+                        FieldName = !string.IsNullOrWhiteSpace(binding.DecodedFieldName) ? binding.DecodedFieldName : binding.FieldName,
+                        FieldType = binding.FieldType,
+                        FieldPage = binding.Page,
+                        FieldLocationText = string.IsNullOrWhiteSpace(binding.NearbyText)
+                            ? binding.LocationText
+                            : $"{binding.LocationText} | {binding.NearbyText}",
+                        CurrentTemplateText = binding.TemplateText ?? string.Empty,
+                        SuggestedText = suggestedText,
+                        TagsUsed = tagsUsed,
+                        TagDisplayLines = tagsUsed.Select(BuildTagDisplayLine).ToList(),
+                        Reason = GetJsonString(element, "reason"),
+                        Confidence = NormalizeConfidence(GetJsonString(element, "confidence"))
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PdfEditorViewModel.ParsePdfFieldSuggestions", ex.Message);
+            }
+
+            return result;
+        }
+
+        private static string GetJsonString(JsonElement element, string propertyName)
+        {
+            return element.TryGetProperty(propertyName, out var property)
+                ? property.GetString()?.Trim() ?? string.Empty
+                : string.Empty;
+        }
+
+        private string BuildTagDisplayLine(string tagName)
+        {
+            if (_tagLookup.TryGetValue(tagName, out var tag))
+                return $"${{{tag.Tag}}} - {tag.Description}";
+
+            return $"${{{tagName}}}";
+        }
+
+        private static string NormalizeConfidence(string value)
+        {
+            return value?.Trim().ToLowerInvariant() switch
+            {
+                "high" => "high",
+                "low" => "low",
+                _ => "medium"
+            };
+        }
+
+        private void SelectAIPdfSuggestion(AIPdfFieldSuggestion? suggestion)
+        {
+            if (suggestion == null)
+                return;
+
+            SelectedAIPdfFieldSuggestion = suggestion;
+            var binding = ResolveFormFieldBinding(suggestion.FieldName);
+            if (binding != null)
+                SelectFormField(binding);
+        }
+
+        private void ApplyAIPdfSuggestion(AIPdfFieldSuggestion? suggestion)
+        {
+            if (suggestion == null)
+                return;
+
+            var binding = ResolveFormFieldBinding(suggestion.FieldName);
+            if (binding == null)
+                return;
+
+            binding.TemplateText = suggestion.SuggestedText;
+            suggestion.CurrentTemplateText = suggestion.SuggestedText;
+            suggestion.IsApplied = true;
+            SelectFormField(binding);
+            RequestFocusFormFieldEditor?.Invoke(binding, binding.TemplateText?.Length ?? 0);
+            AIPdfSuggestionsStatus = ResF("PdfAiSuggestionApplied", binding.FieldName);
+            StatusMessage = ResF("PdfFormFieldMapped", binding.FieldName);
+            OnPropertyChanged(nameof(VisibleAIPdfFieldSuggestions));
+            OnPropertyChanged(nameof(HasAIPdfFieldSuggestions));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void IgnoreAIPdfSuggestion(AIPdfFieldSuggestion? suggestion)
+        {
+            if (suggestion == null)
+                return;
+
+            suggestion.IsIgnored = true;
+            if (ReferenceEquals(SelectedAIPdfFieldSuggestion, suggestion))
+                SelectedAIPdfFieldSuggestion = VisibleAIPdfFieldSuggestions.FirstOrDefault();
+
+            AIPdfSuggestionsStatus = ResF("PdfAiSuggestionIgnored", suggestion.FieldName);
+            OnPropertyChanged(nameof(VisibleAIPdfFieldSuggestions));
+            OnPropertyChanged(nameof(HasAIPdfFieldSuggestions));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
         private static bool HasFieldLocation(PdfFormFieldBinding binding)
             => binding.Page >= 0 && binding.Width > 0 && binding.Height > 0;
+
+        private PdfFormFieldBindingViewModel? ResolveFormFieldBinding(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            return FormFieldBindings.FirstOrDefault(f =>
+                string.Equals(f.FieldName, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(f.DecodedFieldName, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(f.PreferredDisplayName, name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string FirstNonEmptyText(IEnumerable<string?> values)
+            => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
     }
 }

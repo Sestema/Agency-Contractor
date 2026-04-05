@@ -31,10 +31,33 @@ namespace Win11DesktopApp.ViewModels
         public event Action? DataLoaded;
 
         public ObservableCollection<SalaryEntry> Entries { get; } = new();
-        public ObservableCollection<FirmSalarySummary> FirmSummaries { get; } = new();
-        public ObservableCollection<string> AvailableFirms { get; } = new();
-        public ObservableCollection<CustomSalaryField> ActiveCustomFields { get; } = new();
-        public ObservableCollection<FirmExpense> FirmExpenses { get; } = new();
+        private ObservableCollection<FirmSalarySummary> _firmSummaries = new();
+        public ObservableCollection<FirmSalarySummary> FirmSummaries
+        {
+            get => _firmSummaries;
+            set => SetProperty(ref _firmSummaries, value);
+        }
+
+        private ObservableCollection<string> _availableFirms = new();
+        public ObservableCollection<string> AvailableFirms
+        {
+            get => _availableFirms;
+            set => SetProperty(ref _availableFirms, value);
+        }
+
+        private ObservableCollection<CustomSalaryField> _activeCustomFields = new();
+        public ObservableCollection<CustomSalaryField> ActiveCustomFields
+        {
+            get => _activeCustomFields;
+            set => SetProperty(ref _activeCustomFields, value);
+        }
+
+        private ObservableCollection<FirmExpense> _firmExpenses = new();
+        public ObservableCollection<FirmExpense> FirmExpenses
+        {
+            get => _firmExpenses;
+            set => SetProperty(ref _firmExpenses, value);
+        }
 
         public ICollectionView GroupedEntries { get; }
 
@@ -274,8 +297,8 @@ namespace Win11DesktopApp.ViewModels
             GoBackCommand = new RelayCommand(o => { SaveReport(); App.NavigationService?.NavigateTo(new FinanceTablesViewModel()); });
             SaveCommand = new RelayCommand(o => SaveReport());
             ExportExcelCommand = new RelayCommand(o => ExportToExcel());
-            PrevMonthCommand = new RelayCommand(o => ChangeMonth(-1));
-            NextMonthCommand = new RelayCommand(o => ChangeMonth(1));
+            PrevMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(-1), _ => !IsLoading);
+            NextMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(1), _ => !IsLoading);
             LoadEmployeesCommand = new RelayCommand(o => { });
             OpenAdvanceDialogCommand = new RelayCommand(o => OpenAdvanceDialog());
             CloseAdvanceDialogCommand = new RelayCommand(o => IsAdvanceDialogOpen = false);
@@ -303,9 +326,7 @@ namespace Win11DesktopApp.ViewModels
                 ? _financeService.GetActiveFields(visibleFirms)
                 : _financeService.GetCustomFields();
 
-            ActiveCustomFields.Clear();
-            foreach (var f in fields)
-                ActiveCustomFields.Add(f);
+            ActiveCustomFields = new ObservableCollection<CustomSalaryField>(fields);
 
             var fieldList = ActiveCustomFields.ToList();
             foreach (var entry in Entries)
@@ -318,23 +339,32 @@ namespace Win11DesktopApp.ViewModels
             RecalcTotals();
         }
 
-        private void ChangeMonth(int delta)
+        private async Task ChangeMonthAsync(int delta)
         {
             NavigationDirection = delta;
             IsLoading = true;
             var date = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(delta);
-            var (testEntries, _) = _financeService.LoadAllFirmPayments(date.Year, date.Month);
-            if (delta > 0 && testEntries.Count == 0)
-                return;
+            try
+            {
+                var (testEntries, _) = await Task.Run(() =>
+                    _financeService.LoadAllFirmPayments(date.Year, date.Month)).ConfigureAwait(true);
 
-            if (Entries.Count > 0)
-                SaveReport();
+                if (delta > 0 && testEntries.Count == 0)
+                    return;
 
-            _selectedYear = date.Year;
-            _selectedMonth = date.Month;
-            OnPropertyChanged(nameof(SelectedYear));
-            OnPropertyChanged(nameof(SelectedMonth));
-            _ = LoadReportAsync();
+                if (Entries.Count > 0)
+                    SaveReport();
+
+                _selectedYear = date.Year;
+                _selectedMonth = date.Month;
+                OnPropertyChanged(nameof(SelectedYear));
+                OnPropertyChanged(nameof(SelectedMonth));
+                await LoadReportAsync();
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         private static string FolderKey(string path) =>
@@ -951,9 +981,7 @@ namespace Win11DesktopApp.ViewModels
             var allLabel = L("FinFilterAll") ?? "All";
             var firms = Entries.Select(e => e.FirmName).Distinct().OrderBy(f => f).ToList();
 
-            AvailableFirms.Clear();
-            AvailableFirms.Add(allLabel);
-            foreach (var f in firms) AvailableFirms.Add(f);
+            AvailableFirms = new ObservableCollection<string>(new[] { allLabel }.Concat(firms));
 
             if (_selectedFirmFilter != allLabel && !firms.Contains(_selectedFirmFilter))
                 SelectedFirmFilter = allLabel;
@@ -1030,12 +1058,12 @@ namespace Win11DesktopApp.ViewModels
             StatCustomAdd = addSum;
             StatCustomSub = subSum;
 
-            FirmSummaries.Clear();
             var summarySource = string.IsNullOrWhiteSpace(_searchText) ? Entries : (IEnumerable<SalaryEntry>)visible;
             var allGroups = summarySource.GroupBy(e => e.FirmName);
-            foreach (var g in allGroups.OrderByDescending(g => g.Sum(e => e.GrossSalary)))
-            {
-                FirmSummaries.Add(new FirmSalarySummary
+            FirmSummaries = new ObservableCollection<FirmSalarySummary>(
+                allGroups
+                    .OrderByDescending(g => g.Sum(e => e.GrossSalary))
+                    .Select(g => new FirmSalarySummary
                 {
                     FirmName = g.Key,
                     TotalGross = g.Sum(e => e.GrossSalary),
@@ -1044,8 +1072,7 @@ namespace Win11DesktopApp.ViewModels
                     EmployeeCount = g.Count(),
                     PaidCount = g.Count(e => e.IsPaid),
                     IsSelected = g.Key == _selectedFirmFilter
-                });
-            }
+                }));
         }
 
         private void SaveReport()
@@ -1841,7 +1868,6 @@ namespace Win11DesktopApp.ViewModels
         {
             foreach (var old in FirmExpenses)
                 old.PropertyChanged -= OnExpenseChanged;
-            FirmExpenses.Clear();
 
             var allLabel = L("FinFilterAll") ?? "All";
             var isAll = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel;
@@ -1851,10 +1877,9 @@ namespace Win11DesktopApp.ViewModels
                 : _financeService.GetFirmExpenses(_selectedYear, _selectedMonth, _selectedFirmFilter);
 
             foreach (var exp in expenses)
-            {
                 exp.PropertyChanged += OnExpenseChanged;
-                FirmExpenses.Add(exp);
-            }
+
+            FirmExpenses = new ObservableCollection<FirmExpense>(expenses);
             OnPropertyChanged(nameof(ExpenseHeaderText));
             RecalcTotals();
         }

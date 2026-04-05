@@ -37,8 +37,9 @@
                            Foreground="{DynamicResource ForegroundBrush}"
                            VerticalAlignment="Center"/>
 
-                <!-- AI Assistant Overlay Button -->
-                <Button x:Name="BtnAIOverlay" Grid.Column="2" Click="AIOverlay_Click"
+                <!-- AI Assistant Button -->
+                <Button x:Name="BtnAIOverlay" Grid.Column="2"
+                        Command="{Binding ToggleAIPdfSuggestionsCommand}"
                         Padding="10,5" Margin="0,0,6,0" Cursor="Hand"
                         Background="{DynamicResource CardBackgroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
@@ -316,7 +317,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="7*" MinWidth="400"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="3*" MinWidth="240"/>
+                <ColumnDefinition x:Name="RightSidebarColumn" Width="360" MinWidth="240"/>
             </Grid.ColumnDefinitions>
 
             <!-- ===== PDF CANVAS ===== -->
@@ -346,7 +347,8 @@
             <!-- GridSplitter -->
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" 
                           VerticalAlignment="Stretch" Background="{DynamicResource CardBorderBrush}" 
-                          Cursor="SizeWE" ShowsPreview="True"/>
+                          Cursor="SizeWE" ShowsPreview="True"
+                          DragCompleted="SidebarGridSplitter_DragCompleted"/>
 
             <!-- ===== TAG CATALOG + PLACED TAGS ===== -->
             <Border Grid.Column="2" 
@@ -354,281 +356,514 @@
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition x:Name="TagsPanelRow" Height="*"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition x:Name="FieldsPanelRow" Height="260"/>
+                        <RowDefinition x:Name="AiPanelSplitterRow" Height="Auto"/>
+                        <RowDefinition x:Name="AiPanelRow" Height="280"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Tags header -->
-                    <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" Padding="12,8">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
-                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                            <TextBlock Text="{DynamicResource PdfClickToPlace}"
-                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Search -->
-                    <Border Grid.Row="1" Padding="10,6" Background="{DynamicResource CardBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+                    <Border Grid.Row="0"
+                            Margin="6,6,6,0"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6">
                         <Grid>
-                            <TextBox Text="{Binding TagSearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="6,4" FontSize="{DynamicResource FS11}"
-                                     Background="{DynamicResource ContentBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                     VerticalContentAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
-                                       IsHitTestVisible="False" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding TagSearchQuery}" Value="">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding TagSearchQuery}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-                    </Border>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                    <!-- Tags list -->
-                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4">
-                        <ItemsControl ItemsSource="{Binding FilteredTagGroups}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Expander IsExpanded="True" Margin="0,0,0,6">
-                                        <Expander.Header>
-                                            <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
-                                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                                        </Expander.Header>
-                                        <ItemsControl ItemsSource="{Binding Tags}" Margin="0,4,0,0">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Background="{DynamicResource CardBackgroundBrush}" 
-                                                            CornerRadius="4" Padding="8,5" Margin="0,0,0,3"
-                                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                                        <Grid>
-                                                            <Grid.RowDefinitions>
-                                                                <RowDefinition Height="Auto"/>
-                                                                <RowDefinition Height="Auto"/>
-                                                            </Grid.RowDefinitions>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                            </Grid.ColumnDefinitions>
+                            <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" Padding="12,8"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource EditorTagCatalog}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource PdfClickToPlace}"
+                                               FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
 
-                                                            <!-- Description (top) -->
-                                                            <TextBlock Grid.Row="0" Grid.Column="0"
-                                                                       Text="{Binding Description}" 
-                                                                       FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                                                       Foreground="{DynamicResource ForegroundBrush}"
-                                                                       TextTrimming="CharacterEllipsis"/>
-
-                                                            <!-- Place button -->
-                                                            <Button Grid.Row="0" Grid.Column="1"
-                                                                    Command="{Binding DataContext.PlaceTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Padding="8,2" Margin="4,0,2,0"
-                                                                    Background="{DynamicResource AccentBrush}" 
-                                                                    Foreground="White" BorderThickness="0"
-                                                                    VerticalAlignment="Center" Cursor="Hand"
-                                                                    ToolTip="{DynamicResource PdfPlaceTag}">
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="&#xE819;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{DynamicResource EditorInsert}" FontSize="{DynamicResource FS10}"/>
-                                                                </StackPanel>
-                                                            </Button>
-
-                                                            <!-- Copy button -->
-                                                            <Button Grid.Row="0" Grid.Column="2" Content="&#xE8C8;"
-                                                                    FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                                    Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Width="26" Height="24"
-                                                                    Background="Transparent" BorderThickness="0"
-                                                                    Foreground="{DynamicResource ForegroundBrush}"
-                                                                    VerticalAlignment="Center" Cursor="Hand"
-                                                                    ToolTip="{DynamicResource EditorCopyTag}"/>
-
-                                                            <!-- Tag name (bottom) -->
-                                                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                                                       FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                       FontFamily="Consolas"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       Margin="0,2,0,0">
-                                                                <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
-                                                            </TextBlock>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Expander>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
-                    <!-- Placed tags header -->
-                    <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}" 
-                            Padding="12,6" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{DynamicResource PdfPlacedTags}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
-                                       Foreground="{DynamicResource ForegroundBrush}"
-                                       Visibility="{Binding IsOverlayMode, Converter={StaticResource BoolToVis}}"/>
-                            <TextBlock Grid.Column="1" Text="{DynamicResource PdfFormFieldsHeader}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
-                                       Foreground="{DynamicResource ForegroundBrush}"
-                                       Visibility="{Binding IsFormMode, Converter={StaticResource BoolToVis}}"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Placed tags list (click to select & edit via toolbar) -->
-                    <ScrollViewer Grid.Row="4" MaxHeight="160" Style="{StaticResource ThinScroll}" Padding="6,4"
-                                  Visibility="{Binding IsOverlayMode, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl ItemsSource="{Binding AllPlacements}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border CornerRadius="4" Padding="6,3" Margin="0,0,0,2"
-                                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                            Cursor="Hand" MouseLeftButtonDown="PlacedTag_Click">
-                                        <Border.Tag>
-                                            <Binding/>
-                                        </Border.Tag>
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                            <Border Grid.Row="1" Padding="10,6" Background="{DynamicResource CardBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+                                <Grid>
+                                    <TextBox Text="{Binding TagSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="6,4" FontSize="{DynamicResource FS11}"
+                                             Background="{DynamicResource ContentBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                             VerticalContentAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource EditorSearchTags}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                               IsHitTestVisible="False" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Background">
-                                                            <Setter.Value>
-                                                                <SolidColorBrush Color="#FFF3E0"/>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                        <Setter Property="BorderBrush">
-                                                            <Setter.Value>
-                                                                <SolidColorBrush Color="#FFB74D"/>
-                                                            </Setter.Value>
-                                                        </Setter>
+                                                    <DataTrigger Binding="{Binding TagSearchQuery}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding TagSearchQuery}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Border.Style>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="{DynamicResource AccentDarkBrush}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Text="{Binding DisplayLabel, Mode=OneWay}"/>
-                                                <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}">
-                                                    <Run Text="P"/><Run Text="{Binding Page, Mode=OneWay}"/>
-                                                    <Run Text=" | "/>
-                                                    <Run Text="{Binding FontSize, StringFormat={}{0}pt, Mode=OneWay}"/>
-                                                    <Run Text=" | "/>
-                                                    <Run Text="{Binding FontFamily, Mode=OneWay}"/>
-                                                </TextBlock>
-                                                <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                           Text="{Binding OverlayText, Mode=OneWay}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Visibility="{Binding IsTemplatePlacement, Converter={StaticResource BoolToVis}}"/>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Border>
+
+                            <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4">
+                                <ItemsControl ItemsSource="{Binding FilteredTagGroups}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Expander IsExpanded="True" Margin="0,0,0,6">
+                                                <Expander.Header>
+                                                    <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                                </Expander.Header>
+                                                <ItemsControl ItemsSource="{Binding Tags}" Margin="0,4,0,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource CardBackgroundBrush}" 
+                                                                    CornerRadius="4" Padding="8,5" Margin="0,0,0,3"
+                                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                                                <Grid>
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                    </Grid.RowDefinitions>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+
+                                                                    <TextBlock Grid.Row="0" Grid.Column="0"
+                                                                               Text="{Binding Description}" 
+                                                                               FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                                               TextTrimming="CharacterEllipsis"/>
+
+                                                                    <Button Grid.Row="0" Grid.Column="1"
+                                                                            Command="{Binding DataContext.PlaceTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Padding="8,2" Margin="4,0,2,0"
+                                                                            Background="{DynamicResource AccentBrush}" 
+                                                                            Foreground="White" BorderThickness="0"
+                                                                            VerticalAlignment="Center" Cursor="Hand"
+                                                                            ToolTip="{DynamicResource PdfPlaceTag}">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <TextBlock Text="&#xE819;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{DynamicResource EditorInsert}" FontSize="{DynamicResource FS10}"/>
+                                                                        </StackPanel>
+                                                                    </Button>
+
+                                                                    <Button Grid.Row="0" Grid.Column="2" Content="&#xE8C8;"
+                                                                            FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                                            Command="{Binding DataContext.CopyTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Width="26" Height="24"
+                                                                            Background="Transparent" BorderThickness="0"
+                                                                            Foreground="{DynamicResource ForegroundBrush}"
+                                                                            VerticalAlignment="Center" Cursor="Hand"
+                                                                            ToolTip="{DynamicResource EditorCopyTag}"/>
+
+                                                                    <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                                                                               FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                               FontFamily="Consolas"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               Margin="0,2,0,0">
+                                                                        <Run Text="${"/><Run Text="{Binding Tag}"/><Run Text="}"/>
+                                                                    </TextBlock>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Expander>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <GridSplitter Grid.Row="1"
+                                  Height="5"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  Background="{DynamicResource CardBorderBrush}"
+                                  ShowsPreview="True"
+                                  ResizeDirection="Rows"
+                                  ResizeBehavior="PreviousAndNext"
+                                  DragCompleted="FieldsPanelGridSplitter_DragCompleted"/>
+
+                    <Border Grid.Row="2"
+                            Margin="6,4,6,0"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <Grid>
+                            <Grid Visibility="{Binding IsOverlayMode, Converter={StaticResource BoolToVis}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0"
+                                        Padding="12,6"
+                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Background="{DynamicResource CardBackgroundBrush}">
+                                    <TextBlock Text="{DynamicResource PdfPlacedTags}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Border>
+
+                                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="6,4">
+                                    <ItemsControl ItemsSource="{Binding AllPlacements}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="4" Padding="6,3" Margin="0,0,0,2"
+                                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                                        Cursor="Hand" MouseLeftButtonDown="PlacedTag_Click">
+                                                    <Border.Tag>
+                                                        <Binding/>
+                                                    </Border.Tag>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Background">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="#FFF3E0"/>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                    <Setter Property="BorderBrush">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="#FFB74D"/>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="{DynamicResource AccentDarkBrush}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Text="{Binding DisplayLabel, Mode=OneWay}"/>
+                                                            <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                                                <Run Text="P"/><Run Text="{Binding Page, Mode=OneWay}"/>
+                                                                <Run Text=" | "/>
+                                                                <Run Text="{Binding FontSize, StringFormat={}{0}pt, Mode=OneWay}"/>
+                                                                <Run Text=" | "/>
+                                                                <Run Text="{Binding FontFamily, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                            <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       Text="{Binding OverlayText, Mode=OneWay}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Visibility="{Binding IsTemplatePlacement, Converter={StaticResource BoolToVis}}"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Content="&#xE74D;" 
+                                                                FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                Command="{Binding DataContext.RemovePlacementCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Width="20" Height="20"
+                                                                Background="Transparent" BorderThickness="0"
+                                                                Foreground="{DynamicResource ErrorBrush}" Cursor="Hand"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip="{DynamicResource BtnDelete}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+
+                            <Grid Visibility="{Binding IsFormMode, Converter={StaticResource BoolToVis}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0"
+                                        Padding="12,6"
+                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Background="{DynamicResource CardBackgroundBrush}">
+                                    <TextBlock Text="{DynamicResource PdfFormFieldsHeader}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Border>
+
+                                <ListBox x:Name="FormFieldListBox"
+                                         Grid.Row="1"
+                                         Margin="6,6,6,6"
+                                         Background="Transparent" BorderThickness="0"
+                                         ItemsSource="{Binding FormFieldBindings}"
+                                         SelectedItem="{Binding SelectedFormFieldBinding, Mode=TwoWay}"
+                                         SelectionChanged="FormFieldListBox_SelectionChanged"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="Margin" Value="0,0,0,4"/>
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="4" Padding="8,6"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                                    Cursor="Hand" MouseLeftButtonDown="FormField_Click">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Background">
+                                                                    <Setter.Value>
+                                                                        <SolidColorBrush Color="#FFF3E0"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                                <Setter Property="BorderBrush">
+                                                                    <Setter.Value>
+                                                                        <SolidColorBrush Color="#FFB74D"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Border.Tag>
+                                                    <Binding/>
+                                                </Border.Tag>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding PreferredDisplayName}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AccentDarkBrush}"/>
+                                                    <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,4"
+                                                               Text="{Binding ContextText}" TextWrapping="Wrap"/>
+                                                    <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,4">
+                                                        <Run Text="{DynamicResource PdfFormFieldType}"/>
+                                                        <Run Text=": "/>
+                                                        <Run Text="{Binding FieldType}"/>
+                                                    </TextBlock>
+                                                    <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"
+                                                               Text="{Binding LocationText}"/>
+                                                    <TextBox Text="{Binding TemplateText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Padding="6,3" FontSize="{DynamicResource FS10}"
+                                                             SelectionChanged="FormFieldTemplateTextBox_SelectionChanged"
+                                                             GotKeyboardFocus="FormFieldTemplateTextBox_GotKeyboardFocus"
+                                                             LostKeyboardFocus="FormFieldTemplateTextBox_LostKeyboardFocus"
+                                                             ToolTip="{DynamicResource PdfFieldTemplateHint}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <GridSplitter Grid.Row="3"
+                                  Height="5"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  Background="{DynamicResource CardBorderBrush}"
+                                  ShowsPreview="True"
+                                  ResizeDirection="Rows"
+                                  ResizeBehavior="PreviousAndNext"
+                                  Visibility="{Binding IsAIPdfSuggestionsVisible, Converter={StaticResource BoolToVis}}"
+                                  DragCompleted="AiPanelGridSplitter_DragCompleted"/>
+
+                    <Border Grid.Row="4"
+                            Margin="6,0,6,8"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Visibility="{Binding IsAIPdfSuggestionsVisible, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    Padding="12,8"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="0,0,0,1"
+                                    Background="{DynamicResource CardBackgroundBrush}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{DynamicResource PdfAiHeader}" FontWeight="SemiBold" FontSize="{DynamicResource FS13}"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                        <TextBlock Text="{DynamicResource PdfAiHint}" FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding AnalyzePdfFieldsWithAICommand}"
+                                            Padding="10,4"
+                                            Margin="8,0,0,0"
+                                            Background="{DynamicResource AccentBrush}"
+                                            Foreground="White"
+                                            BorderThickness="0"
+                                            Cursor="Hand">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE9CE;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,4,0"/>
+                                            <TextBlock Text="{DynamicResource PdfAiAnalyze}" FontSize="{DynamicResource FS10}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding CloseAIPdfSuggestionsCommand}"
+                                            Width="26" Height="24"
+                                            Margin="8,0,0,0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Foreground="{DynamicResource ForegroundBrush}"
+                                            Cursor="Hand"
+                                            ToolTip="{DynamicResource PdfDeselect}">
+                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Grid.Row="1"
+                                       Margin="12,8,12,6"
+                                       Text="{Binding AIPdfSuggestionsStatus}"
+                                       FontSize="{DynamicResource FS10}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                       TextWrapping="Wrap"/>
+
+                            <ListBox Grid.Row="2"
+                                     Margin="6,0,6,6"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ItemsSource="{Binding VisibleAIPdfFieldSuggestions}"
+                                     SelectedItem="{Binding SelectedAIPdfFieldSuggestion, Mode=TwoWay}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,0,0,6"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6"
+                                            Padding="8"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            Background="{DynamicResource CardBackgroundBrush}">
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="False">
+                                                <TextBlock DockPanel.Dock="Left"
+                                                           Text="{Binding FieldName}"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource AccentDarkBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Border DockPanel.Dock="Right"
+                                                        CornerRadius="10"
+                                                        Padding="6,2"
+                                                        Margin="8,0,0,0"
+                                                        Background="#FFE8F0FE">
+                                                    <TextBlock Text="{Binding Confidence}"
+                                                               FontSize="9"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               FontWeight="SemiBold"/>
+                                                </Border>
+                                            </DockPanel>
+
+                                            <TextBlock FontSize="9"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       Margin="0,2,0,4"
+                                                       Text="{Binding FieldLocationText}"/>
+
+                                            <TextBlock Text="{DynamicResource PdfAiSuggestedText}"
+                                                       FontSize="9"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                            <TextBlock Text="{Binding SuggestedText}"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       FontFamily="Consolas"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,1,0,4"/>
+
+                                            <TextBlock Text="{DynamicResource PdfAiTagsUsed}"
+                                                       FontSize="9"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                            <ItemsControl ItemsSource="{Binding TagDisplayLines}"
+                                                          Margin="0,1,0,4">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}"
+                                                                   FontSize="9"
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                   TextWrapping="Wrap"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <TextBlock Text="{DynamicResource PdfAiReason}"
+                                                       FontSize="9"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                            <TextBlock Text="{Binding Reason}"
+                                                       FontSize="9"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,1,0,6"/>
+
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button Command="{Binding DataContext.IgnoreAIPdfSuggestionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="8,3"
+                                                        Margin="0,0,6,0"
+                                                        Background="{DynamicResource CardBackgroundBrush}"
+                                                        Foreground="{DynamicResource ForegroundBrush}"
+                                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                                        BorderThickness="1"
+                                                        Cursor="Hand">
+                                                    <TextBlock Text="{DynamicResource PdfAiIgnore}" FontSize="{DynamicResource FS10}"/>
+                                                </Button>
+                                                <Button Command="{Binding DataContext.ApplyAIPdfSuggestionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="8,3"
+                                                        Background="{DynamicResource AccentBrush}"
+                                                        Foreground="White"
+                                                        BorderThickness="0"
+                                                        Cursor="Hand">
+                                                    <TextBlock Text="{DynamicResource EditorInsert}" FontSize="{DynamicResource FS10}"/>
+                                                </Button>
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="&#xE74D;" 
-                                                    FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                                    Command="{Binding DataContext.RemovePlacementCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Width="20" Height="20"
-                                                    Background="Transparent" BorderThickness="0"
-                                                    Foreground="{DynamicResource ErrorBrush}" Cursor="Hand"
-                                                    VerticalAlignment="Center"
-                                                    ToolTip="{DynamicResource BtnDelete}"/>
-                                        </Grid>
+                                        </StackPanel>
                                     </Border>
                                 </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
-                    <ListBox x:Name="FormFieldListBox"
-                             Grid.Row="4" MaxHeight="220" Margin="6,4"
-                             Background="Transparent" BorderThickness="0"
-                             Visibility="{Binding IsFormMode, Converter={StaticResource BoolToVis}}"
-                             ItemsSource="{Binding FormFieldBindings}"
-                             SelectedItem="{Binding SelectedFormFieldBinding, Mode=TwoWay}"
-                             SelectionChanged="FormFieldListBox_SelectionChanged"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,0,0,4"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border CornerRadius="4" Padding="8,6"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                        Cursor="Hand" MouseLeftButtonDown="FormField_Click">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                    <Setter Property="Background">
-                                                        <Setter.Value>
-                                                            <SolidColorBrush Color="#FFF3E0"/>
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                    <Setter Property="BorderBrush">
-                                                        <Setter.Value>
-                                                            <SolidColorBrush Color="#FFB74D"/>
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Border.Tag>
-                                        <Binding/>
-                                    </Border.Tag>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding FieldName}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource AccentDarkBrush}"/>
-                                        <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,4">
-                                            <Run Text="{DynamicResource PdfFormFieldType}"/>
-                                            <Run Text=": "/>
-                                            <Run Text="{Binding FieldType}"/>
-                                        </TextBlock>
-                                        <TextBlock FontSize="9" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"
-                                                   Text="{Binding LocationText}"/>
-                                        <TextBox Text="{Binding TemplateText, UpdateSourceTrigger=PropertyChanged}"
-                                                 Padding="6,3" FontSize="{DynamicResource FS10}"
-                                                 SelectionChanged="FormFieldTemplateTextBox_SelectionChanged"
-                                                 GotKeyboardFocus="FormFieldTemplateTextBox_GotKeyboardFocus"
-                                                 LostKeyboardFocus="FormFieldTemplateTextBox_LostKeyboardFocus"
-                                                 ToolTip="{DynamicResource PdfFieldTemplateHint}"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                            </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>

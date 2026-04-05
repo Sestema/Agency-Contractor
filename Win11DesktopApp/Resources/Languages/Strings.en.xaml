@@ -923,6 +923,12 @@
     <sys:String x:Key="ReportViewSummary">Summary</sys:String>
     <sys:String x:Key="ReportViewEmployees">Employees</sys:String>
     <sys:String x:Key="ReportConfigExport">Configure Export</sys:String>
+    <sys:String x:Key="ReportColumnsButton">Columns</sys:String>
+    <sys:String x:Key="ReportColumnsResetButton">Reset columns</sys:String>
+    <sys:String x:Key="ReportColumnsDialogTitle">Column settings</sys:String>
+    <sys:String x:Key="ReportColumnsDialogDesc">Choose which columns to show and change their order.</sys:String>
+    <sys:String x:Key="ReportColumnsMoveUp">Move up</sys:String>
+    <sys:String x:Key="ReportColumnsMoveDown">Move down</sys:String>
     <sys:String x:Key="ReportExportTitle">Export Settings</sys:String>
     <sys:String x:Key="ReportExportDesc">Select which sheets to include in the Excel file:</sys:String>
     <sys:String x:Key="ReportExportFormat">Format:</sys:String>
@@ -1017,6 +1023,19 @@
     <sys:String x:Key="PdfFormFieldMapped">Mapped PDF field: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Placed tags</sys:String>
     <sys:String x:Key="PdfTagMarker">Tag marker</sys:String>
+    <sys:String x:Key="PdfAiHeader">AI for PDF fields</sys:String>
+    <sys:String x:Key="PdfAiHint">AI suggests logical tags from your catalog for empty PDF fields.</sys:String>
+    <sys:String x:Key="PdfAiAnalyze">Analyze</sys:String>
+    <sys:String x:Key="PdfAiSuggestedText">Suggested text</sys:String>
+    <sys:String x:Key="PdfAiTagsUsed">Tags used</sys:String>
+    <sys:String x:Key="PdfAiReason">Reason</sys:String>
+    <sys:String x:Key="PdfAiIgnore">Ignore</sys:String>
+    <sys:String x:Key="PdfAiSwitchToFormMode">Switch to PDF form mode to analyze fields with AI.</sys:String>
+    <sys:String x:Key="PdfAiNoEmptyFields">No empty PDF fields were found for analysis.</sys:String>
+    <sys:String x:Key="PdfAiNoSuggestions">AI did not find reliable suggestions for empty PDF fields.</sys:String>
+    <sys:String x:Key="PdfAiSuggestionsReady">AI prepared suggestions: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionApplied">AI suggestion applied to field: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionIgnored">AI suggestion hidden for field: {0}</sys:String>
 
 
     <sys:String x:Key="ImgEditorTitle">Document Editor</sys:String>
@@ -1764,6 +1783,38 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <!-- AI Validation -->
     <sys:String x:Key="AIValidateBtn">AI Validate</sys:String>
     <sys:String x:Key="AIValidateTitle">AI Data Validation</sys:String>
+    <sys:String x:Key="AIValidationApplyButton">Apply</sys:String>
+    <sys:String x:Key="AIValidationApplyAllButton">Apply all</sys:String>
+    <sys:String x:Key="AIValidationOpenSourceButton">Open document</sys:String>
+    <sys:String x:Key="AIValidationAttentionTitle">Needs attention</sys:String>
+    <sys:String x:Key="AIValidationErrorsTitle">Critical errors</sys:String>
+    <sys:String x:Key="AIValidationWarningsTitle">Needs review</sys:String>
+    <sys:String x:Key="AIValidationAutofillTitle">Can be filled</sys:String>
+    <sys:String x:Key="AIValidationOkTitle">Everything looks good</sys:String>
+    <sys:String x:Key="AIValidationSummaryTitle">General audit</sys:String>
+    <sys:String x:Key="AIValidationCurrentLabel">Profile</sys:String>
+    <sys:String x:Key="AIValidationSuggestedLabel">Document</sys:String>
+    <sys:String x:Key="AIValidationMissingMessage">The field is empty in the profile, found in the document: {0}</sys:String>
+    <sys:String x:Key="AIValidationMismatchMessage">Profile: {0} -> Document: {1}</sys:String>
+    <sys:String x:Key="AIValidationMatchMessage">Matches the document</sys:String>
+    <sys:String x:Key="AIValidationAppliedMessage">Value applied</sys:String>
+    <sys:String x:Key="AIValidationSuspiciousReadMessage">AI may have read this value unreliably: {0}</sys:String>
+    <sys:String x:Key="AIValidationSourcePassport">Passport</sys:String>
+    <sys:String x:Key="AIValidationSourceVisa">Visa</sys:String>
+    <sys:String x:Key="AIValidationSourceInsurance">Insurance</sys:String>
+    <sys:String x:Key="AIValidationSourcePermit">Work permit</sys:String>
+    <sys:String x:Key="AIValidationSourceCrossCheck">Cross-check</sys:String>
+    <sys:String x:Key="AIValidationVisaOwnershipTitle">Visa ownership</sys:String>
+    <sys:String x:Key="AIValidationInsuranceOwnershipTitle">Insurance ownership</sys:String>
+    <sys:String x:Key="AIValidationPermitOwnershipTitle">Work permit ownership</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportTitle">Visa and passport</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportTitle">Insurance and passport</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportIdentityTitle">Visa identity and passport</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportIdentityTitle">Insurance identity and passport</sys:String>
+    <sys:String x:Key="AIValidationCrossPermitPassportIdentityTitle">Work permit identity and passport</sys:String>
+    <sys:String x:Key="AIValidationCrossIdentityMessage">{0}: identity fields do not match ({1})</sys:String>
+    <sys:String x:Key="AIValidationCrossPassportNumberMessage">Passport number on visa does not match passport</sys:String>
+    <sys:String x:Key="AIValidationCrossBirthDateMessage">Birth date on insurance does not match passport</sys:String>
 
     <!-- AI Dashboard Report -->
     <sys:String x:Key="AIReportBtn">AI Report</sys:String>

@@ -26,6 +26,14 @@ namespace Win11DesktopApp.Services
         private readonly SemaphoreSlim _saveLock = new(1, 1);
         private Timer? _debounceTimer;
 
+        public class ReportColumnSetting
+        {
+            public string Key { get; set; } = string.Empty;
+            public bool IsVisible { get; set; } = true;
+            public int DisplayIndex { get; set; }
+            public double Width { get; set; } = 120;
+        }
+
         public class AppSettings
         {
             public string RootFolderPath { get; set; } = string.Empty;
@@ -47,6 +55,10 @@ namespace Win11DesktopApp.Services
             public string CandidateViewMode { get; set; } = "List";
             public double SalarySidebarTopRatio { get; set; } = 2.0;
             public double SalarySidebarWidth { get; set; } = 230.0;
+            public double PdfEditorSidebarWidth { get; set; } = 360.0;
+            public double PdfEditorFieldsPanelHeight { get; set; } = 260.0;
+            public double PdfEditorAiPanelHeight { get; set; } = 280.0;
+            public bool PdfEditorAiPanelOpen { get; set; } = false;
             public bool ShowStatPaid { get; set; } = false;
             public bool ShowStatRemaining { get; set; } = false;
             public bool ShowStatAdvances { get; set; } = false;
@@ -56,6 +68,7 @@ namespace Win11DesktopApp.Services
             public string TextSize { get; set; } = "Medium";
             public string DocumentLanguage { get; set; } = "";
             public List<double> SalaryColumnWidths { get; set; } = new List<double>();
+            public List<ReportColumnSetting> EmployeeReportColumns { get; set; } = new List<ReportColumnSetting>();
             public string ReportDateFrom { get; set; } = "";
             public string ReportDateTo { get; set; } = "";
             public string GeminiApiKey { get; set; } = "";
@@ -272,10 +285,27 @@ namespace Win11DesktopApp.Services
             Settings.CandidateZoomLevel = SafeDouble(Settings.CandidateZoomLevel, 1.0);
             Settings.SalarySidebarTopRatio = SafeDouble(Settings.SalarySidebarTopRatio, 2.0);
             Settings.SalarySidebarWidth = SafeDouble(Settings.SalarySidebarWidth, 230.0);
+            Settings.PdfEditorSidebarWidth = Math.Max(240, SafeDouble(Settings.PdfEditorSidebarWidth, 360.0));
+            Settings.PdfEditorFieldsPanelHeight = Math.Max(180, SafeDouble(Settings.PdfEditorFieldsPanelHeight, 260.0));
+            Settings.PdfEditorAiPanelHeight = Math.Max(160, SafeDouble(Settings.PdfEditorAiPanelHeight, 280.0));
 
             if (Settings.SalaryColumnWidths?.Count > 0)
                 Settings.SalaryColumnWidths = Settings.SalaryColumnWidths
                     .Select(w => SafeDouble(w, 100)).ToList();
+
+            if (Settings.EmployeeReportColumns?.Count > 0)
+            {
+                Settings.EmployeeReportColumns = Settings.EmployeeReportColumns
+                    .Where(c => !string.IsNullOrWhiteSpace(c.Key))
+                    .Select(c => new ReportColumnSetting
+                    {
+                        Key = c.Key.Trim(),
+                        IsVisible = c.IsVisible,
+                        DisplayIndex = Math.Max(0, c.DisplayIndex),
+                        Width = Math.Max(40, SafeDouble(c.Width, 120))
+                    })
+                    .ToList();
+            }
         }
 
         public void SaveSettings()

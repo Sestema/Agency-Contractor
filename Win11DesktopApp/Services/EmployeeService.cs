@@ -796,6 +796,8 @@ namespace Win11DesktopApp.Services
                 Status = StatusHelper.Normalize(data.Status),
                 Phone = data.Phone,
                 Email = data.Email,
+                BankAccountNumber = data.HasBankAccountData ? data.BankAccountNumber : string.Empty,
+                BankName = data.HasBankAccountData ? data.BankName : string.Empty,
                 EmployeeFolder = employeeFolder,
                 FirmName = firmName,
                 EmployeeType = data.EmployeeType ?? "visa",
@@ -1011,10 +1013,14 @@ namespace Win11DesktopApp.Services
                         var fullName = $"{data.FirstName} {data.LastName}";
                         var photo = ResolvePhotoPath(folder, data);
                         var hasPhoto = !string.IsNullOrEmpty(photo);
+                        var deduplicated = data.FirmHistory
+                            .Where(fh => fh.FirmName != company.Name)
+                            .GroupBy(fh => $"{fh.FirmName}|{fh.StartDate}")
+                            .Select(g => g.Last())
+                            .ToList();
 
-                        foreach (var fh in data.FirmHistory)
+                        foreach (var fh in deduplicated)
                         {
-                            if (fh.FirmName == company.Name) continue;
                             result.Add(new ArchivedEmployeeSummary
                             {
                                 UniqueId = data.UniqueId,

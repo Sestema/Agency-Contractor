@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.EmployeeModels
 {
@@ -188,6 +189,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string StartDate { get; set; } = string.Empty;
         public string EndDate { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
+        public string BankAccountNumber { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
         public string Position { get; set; } = string.Empty;
         public bool IsArchived { get; set; }
 
@@ -248,5 +251,25 @@ namespace Win11DesktopApp.EmployeeModels
         }
 
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    }
+
+    public class AIFieldCheckItem : ViewModelBase
+    {
+        public string FieldKey { get; set; } = string.Empty;
+        public string FieldDisplayName { get; set; } = string.Empty;
+        public string SourceDocument { get; set; } = string.Empty;
+        public string SourceDocumentDisplay { get; set; } = string.Empty;
+        public string CurrentValue { get; set; } = string.Empty;
+        public string SuggestedValue { get; set; } = string.Empty;
+        public string Severity { get; set; } = "ok";
+        public string Message { get; set; } = string.Empty;
+        public bool CanAutofill { get; set; }
+
+        private bool _isApplied;
+        public bool IsApplied
+        {
+            get => _isApplied;
+            set => SetProperty(ref _isApplied, value);
+        }
     }
 }

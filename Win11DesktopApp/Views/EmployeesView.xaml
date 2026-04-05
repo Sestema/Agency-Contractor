@@ -623,6 +623,20 @@
                                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                                           ScrollViewer.CanContentScroll="True"
                                           Visibility="{Binding IsListView, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.Template>
+                                    <ControlTemplate TargetType="ItemsControl">
+                                        <ScrollViewer CanContentScroll="True"
+                                                      Focusable="False"
+                                                      Padding="{TemplateBinding Padding}">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </ControlTemplate>
+                                </ItemsControl.Template>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border CornerRadius="8" Padding="10" Margin="16,3,16,6" BorderThickness="1" RenderTransformOrigin="0.5,0.5" Cursor="Hand"

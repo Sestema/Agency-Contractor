@@ -28,6 +28,20 @@ namespace Win11DesktopApp.ViewModels
     {
         private readonly EmployeeService _employeeService;
         private CancellationTokenSource? _refreshCts;
+        private static readonly List<AppSettingsService.ReportColumnSetting> DefaultEmployeeColumns = new()
+        {
+            new() { Key = "name", IsVisible = true, DisplayIndex = 0, Width = 200 },
+            new() { Key = "type", IsVisible = true, DisplayIndex = 1, Width = 180 },
+            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 2, Width = 100 },
+            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 3, Width = 100 },
+            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 4, Width = 100 },
+            new() { Key = "startDate", IsVisible = true, DisplayIndex = 5, Width = 90 },
+            new() { Key = "endDate", IsVisible = true, DisplayIndex = 6, Width = 90 },
+            new() { Key = "phone", IsVisible = true, DisplayIndex = 7, Width = 110 },
+            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 8, Width = 150 },
+            new() { Key = "bankName", IsVisible = false, DisplayIndex = 9, Width = 150 },
+            new() { Key = "position", IsVisible = true, DisplayIndex = 10, Width = 110 },
+        };
 
         public ICommand GoBackCommand { get; }
         public ICommand GenerateReportCommand { get; }
@@ -193,12 +207,34 @@ namespace Win11DesktopApp.ViewModels
         public int SummaryArchived { get => _summaryArchived; set => SetProperty(ref _summaryArchived, value); }
 
         // ===== Report tables =====
-        public ObservableCollection<FirmReportRow> FirmDetails { get; } = new();
-        public ObservableCollection<AgencyReportRow> AgencyDetails { get; } = new();
-        public ObservableCollection<ArchiveLogEntry> ArchiveHistory { get; } = new();
+        private ObservableCollection<FirmReportRow> _firmDetails = new();
+        public ObservableCollection<FirmReportRow> FirmDetails
+        {
+            get => _firmDetails;
+            set => SetProperty(ref _firmDetails, value);
+        }
+
+        private ObservableCollection<AgencyReportRow> _agencyDetails = new();
+        public ObservableCollection<AgencyReportRow> AgencyDetails
+        {
+            get => _agencyDetails;
+            set => SetProperty(ref _agencyDetails, value);
+        }
+
+        private ObservableCollection<ArchiveLogEntry> _archiveHistory = new();
+        public ObservableCollection<ArchiveLogEntry> ArchiveHistory
+        {
+            get => _archiveHistory;
+            set => SetProperty(ref _archiveHistory, value);
+        }
 
         // ===== Employee list =====
-        public ObservableCollection<FirmEmployeeGroup> EmployeeGroups { get; } = new();
+        private ObservableCollection<FirmEmployeeGroup> _employeeGroups = new();
+        public ObservableCollection<FirmEmployeeGroup> EmployeeGroups
+        {
+            get => _employeeGroups;
+            set => SetProperty(ref _employeeGroups, value);
+        }
         private List<EmployeeReportRow> _allEmployees = new();
 
         private string _employeeSearchText = string.Empty;
@@ -270,6 +306,165 @@ namespace Win11DesktopApp.ViewModels
 
         private static string DocString(string key) =>
             App.DocumentLocalizationService?.Get(key) ?? GetString(key);
+
+        private static AppSettingsService.ReportColumnSetting CopyColumnSetting(AppSettingsService.ReportColumnSetting source)
+        {
+            return new AppSettingsService.ReportColumnSetting
+            {
+                Key = source.Key,
+                IsVisible = source.IsVisible,
+                DisplayIndex = source.DisplayIndex,
+                Width = source.Width
+            };
+        }
+
+        public static List<AppSettingsService.ReportColumnSetting> NormalizeEmployeeColumnLayout(
+            IEnumerable<AppSettingsService.ReportColumnSetting> layout)
+        {
+            var normalized = layout
+                .Where(c => !string.IsNullOrWhiteSpace(c.Key))
+                .Select(CopyColumnSetting)
+                .ToList();
+
+            foreach (var col in normalized)
+            {
+                col.Width = Math.Max(40, col.Width);
+                col.DisplayIndex = Math.Max(0, col.DisplayIndex);
+                if (string.Equals(col.Key, "name", StringComparison.OrdinalIgnoreCase))
+                    col.IsVisible = true;
+            }
+
+            var ordered = normalized
+                .OrderBy(c => c.DisplayIndex)
+                .ThenBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            for (int i = 0; i < ordered.Count; i++)
+                ordered[i].DisplayIndex = i;
+
+            return ordered;
+        }
+
+        public static List<AppSettingsService.ReportColumnSetting> MergeEmployeeColumnsWithDefaults(
+            List<AppSettingsService.ReportColumnSetting>? saved)
+        {
+            var result = new List<AppSettingsService.ReportColumnSetting>();
+            var savedByKey = (saved ?? new List<AppSettingsService.ReportColumnSetting>())
+                .Where(c => !string.IsNullOrWhiteSpace(c.Key))
+                .GroupBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var def in DefaultEmployeeColumns)
+            {
+                if (savedByKey.TryGetValue(def.Key, out var existing))
+                {
+                    result.Add(new AppSettingsService.ReportColumnSetting
+                    {
+                        Key = def.Key,
+                        IsVisible = string.Equals(def.Key, "name", StringComparison.OrdinalIgnoreCase) || existing.IsVisible,
+                        DisplayIndex = existing.DisplayIndex,
+                        Width = existing.Width
+                    });
+                }
+                else
+                {
+                    var copy = CopyColumnSetting(def);
+                    copy.DisplayIndex = result.Count + 100;
+                    result.Add(copy);
+                }
+            }
+
+            return NormalizeEmployeeColumnLayout(result);
+        }
+
+        public static List<AppSettingsService.ReportColumnSetting> GetEffectiveEmployeeColumns()
+        {
+            var saved = App.AppSettingsService?.Settings?.EmployeeReportColumns;
+            return MergeEmployeeColumnsWithDefaults(saved);
+        }
+
+        public static void SaveEmployeeColumnLayout(IEnumerable<AppSettingsService.ReportColumnSetting> layout)
+        {
+            var settingsService = App.AppSettingsService;
+            if (settingsService == null)
+                return;
+
+            settingsService.Settings.EmployeeReportColumns = NormalizeEmployeeColumnLayout(layout);
+            settingsService.SaveSettings();
+        }
+
+        public static List<AppSettingsService.ReportColumnSetting> ResetEmployeeColumnsToDefaults()
+        {
+            var reset = NormalizeEmployeeColumnLayout(DefaultEmployeeColumns.Select(CopyColumnSetting));
+            SaveEmployeeColumnLayout(reset);
+            return reset;
+        }
+
+        public static string GetEmployeeColumnHeaderResourceKey(string key) => key switch
+        {
+            "name" => "ReportColName",
+            "type" => "ReportColType",
+            "passportExpiry" => "ReportColPassportExpFull",
+            "visaExpiry" => "ReportColVisaExpFull",
+            "insuranceExpiry" => "ReportColInsExpFull",
+            "startDate" => "ReportColStartDateFull",
+            "endDate" => "ReportColEndDateFull",
+            "phone" => "ReportColPhone",
+            "bankAccount" => "EmployeeBankAccountNumber",
+            "bankName" => "EmployeeBankName",
+            "position" => "ReportColPosition",
+            _ => key
+        };
+
+        private static List<AppSettingsService.ReportColumnSetting> GetVisibleEmployeeColumnsForExport()
+        {
+            return GetEffectiveEmployeeColumns()
+                .Where(c => c.IsVisible)
+                .OrderBy(c => c.DisplayIndex)
+                .ToList();
+        }
+
+        private static string GetEmployeeColumnValue(EmployeeReportRow employee, string key) => key switch
+        {
+            "name" => employee.FullName,
+            "type" => employee.EmployeeType,
+            "passportExpiry" => employee.PassportExpiry,
+            "visaExpiry" => employee.VisaExpiry,
+            "insuranceExpiry" => employee.InsuranceExpiry,
+            "startDate" => employee.StartDate,
+            "endDate" => employee.EndDate,
+            "phone" => employee.Phone,
+            "bankAccount" => employee.BankAccountNumber,
+            "bankName" => employee.BankName,
+            "position" => employee.Position,
+            _ => string.Empty
+        };
+
+        private static string? GetEmployeeColumnStatus(EmployeeReportRow employee, string key) => key switch
+        {
+            "passportExpiry" => employee.PassportExpiryStatus,
+            "visaExpiry" => employee.VisaExpiryStatus,
+            "insuranceExpiry" => employee.InsuranceExpiryStatus,
+            _ => null
+        };
+
+        private static XLAlignmentHorizontalValues GetEmployeeExcelAlignment(string key) => key switch
+        {
+            "name" => XLAlignmentHorizontalValues.Left,
+            "bankAccount" => XLAlignmentHorizontalValues.Left,
+            "bankName" => XLAlignmentHorizontalValues.Left,
+            "position" => XLAlignmentHorizontalValues.Left,
+            _ => XLAlignmentHorizontalValues.Center
+        };
+
+        private static XStringFormat GetEmployeePdfFormat(string key) => key switch
+        {
+            "name" => XStringFormats.CenterLeft,
+            "bankAccount" => XStringFormats.CenterLeft,
+            "bankName" => XStringFormats.CenterLeft,
+            "position" => XStringFormats.CenterLeft,
+            _ => XStringFormats.Center
+        };
 
         private static string GetTypeDisplay(string type)
         {
@@ -593,6 +788,8 @@ namespace Win11DesktopApp.ViewModels
                             StartDate = employee.StartDate,
                             EndDate = endDate,
                             Phone = employee.Phone,
+                            BankAccountNumber = employee.BankAccountNumber,
+                            BankName = employee.BankName,
                             Position = employee.PositionTitle,
                             IsArchived = false
                         });
@@ -699,20 +896,12 @@ namespace Win11DesktopApp.ViewModels
 
         private void ApplyReportResult(ReportComputationResult result, DateTime dateFrom, DateTime dateTo)
         {
-            FirmDetails.Clear();
-            foreach (var firm in result.FirmDetails)
-                FirmDetails.Add(firm);
-
-            AgencyDetails.Clear();
-            foreach (var agency in result.AgencyDetails)
-                AgencyDetails.Add(agency);
-
-            ArchiveHistory.Clear();
-            foreach (var entry in result.ArchiveHistory)
-                ArchiveHistory.Add(entry);
+            FirmDetails = new ObservableCollection<FirmReportRow>(result.FirmDetails);
+            AgencyDetails = new ObservableCollection<AgencyReportRow>(result.AgencyDetails);
+            ArchiveHistory = new ObservableCollection<ArchiveLogEntry>(result.ArchiveHistory);
 
             _allEmployees = result.AllEmployees;
-            EmployeeGroups.Clear();
+            EmployeeGroups = new ObservableCollection<FirmEmployeeGroup>();
 
             TotalEmployees = result.TotalEmployees;
             ActiveEmployees = result.ActiveEmployees;
@@ -820,13 +1009,106 @@ namespace Win11DesktopApp.ViewModels
             var result = new Dictionary<string, List<EmployeeReportRow>>(StringComparer.OrdinalIgnoreCase);
             var financeService = App.FinanceService;
             if (financeService == null) return result;
-            var alreadyAdded = new HashSet<string>();
+            var alreadyAdded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var looseAdded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            static string NormalizeDedupPart(string? value) => (value ?? string.Empty).Trim();
+
+            static string NormalizeDedupPath(string? value)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return string.Empty;
+
+                return value.Trim()
+                    .Replace('/', '\\')
+                    .TrimEnd('\\');
+            }
 
             try
             {
                 var archivedEvents = archiveLog
                     .Where(l => l.Action == "Archived" && firmFilter.Contains(l.FirmName))
                     .ToList();
+
+                foreach (var arch in archivedList)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    if (string.IsNullOrWhiteSpace(arch.FirmName) || !firmFilter.Contains(arch.FirmName)) continue;
+                    var resolvedFolder = financeService.ResolveEmployeeFolder(arch.EmployeeFolder ?? string.Empty);
+                    var dedupKey = !string.IsNullOrWhiteSpace(arch.UniqueId)
+                        ? string.Join("|",
+                            NormalizeDedupPart(arch.UniqueId),
+                            NormalizeDedupPart(arch.FirmName),
+                            NormalizeDedupPart(arch.EndDate))
+                        : string.Join("|",
+                            NormalizeDedupPart(arch.FullName),
+                            NormalizeDedupPart(arch.FirmName),
+                            NormalizeDedupPart(arch.EndDate),
+                            NormalizeDedupPath(resolvedFolder));
+
+                    if (alreadyAdded.Contains(dedupKey)) continue;
+
+                    if (!IsHistoricalRecordInRange(arch.StartDate, arch.EndDate, dateFrom, dateTo)) continue;
+
+                    alreadyAdded.Add(dedupKey);
+                    looseAdded.Add(string.Join("|",
+                        NormalizeDedupPart(arch.FullName),
+                        NormalizeDedupPart(arch.FirmName),
+                        NormalizeDedupPart(arch.EndDate)));
+                    var row = BuildArchivedRowFromSummary(
+                        arch.FullName,
+                        arch.FirmName,
+                        resolvedFolder,
+                        arch.StartDate,
+                        arch.EndDate,
+                        arch.PositionTitle,
+                        typeDisplayMap);
+
+                    if (!result.ContainsKey(arch.FirmName))
+                        result[arch.FirmName] = new List<EmployeeReportRow>();
+                    result[arch.FirmName].Add(row);
+                }
+
+                foreach (var history in activeFirmHistory)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    if (string.IsNullOrWhiteSpace(history.FirmName) || !firmFilter.Contains(history.FirmName)) continue;
+                    var resolvedFolder = financeService.ResolveEmployeeFolder(history.EmployeeFolder ?? string.Empty);
+                    var dedupKey = !string.IsNullOrWhiteSpace(history.UniqueId)
+                        ? string.Join("|",
+                            NormalizeDedupPart(history.UniqueId),
+                            NormalizeDedupPart(history.FirmName),
+                            NormalizeDedupPart(history.EndDate))
+                        : string.Join("|",
+                            NormalizeDedupPart(history.FullName),
+                            NormalizeDedupPart(history.FirmName),
+                            NormalizeDedupPart(history.EndDate),
+                            NormalizeDedupPath(resolvedFolder));
+
+                    if (alreadyAdded.Contains(dedupKey)) continue;
+
+                    if (!IsHistoricalRecordInRange(history.StartDate, history.EndDate, dateFrom, dateTo)) continue;
+
+                    alreadyAdded.Add(dedupKey);
+                    looseAdded.Add(string.Join("|",
+                        NormalizeDedupPart(history.FullName),
+                        NormalizeDedupPart(history.FirmName),
+                        NormalizeDedupPart(history.EndDate)));
+                    var row = BuildArchivedRowFromSummary(
+                        history.FullName,
+                        history.FirmName,
+                        resolvedFolder,
+                        history.StartDate,
+                        history.EndDate,
+                        history.PositionTitle,
+                        typeDisplayMap);
+
+                    if (!result.ContainsKey(history.FirmName))
+                        result[history.FirmName] = new List<EmployeeReportRow>();
+                    result[history.FirmName].Add(row);
+                }
 
                 foreach (var evt in archivedEvents)
                 {
@@ -835,79 +1117,30 @@ namespace Win11DesktopApp.ViewModels
                     var endDate = DateParsingHelper.TryParseDate(evt.Date);
                     if (endDate != null && endDate.Value.Date < dateFrom.Date) continue;
 
-                    var dedupKey = evt.EmployeeName + "|" + evt.FirmName + "|" + evt.Date + "|" + (evt.EmployeeFolder ?? string.Empty);
+                    var resolvedFolder = !string.IsNullOrEmpty(evt.EmployeeFolder)
+                        ? financeService.ResolveEmployeeFolder(evt.EmployeeFolder)
+                        : ResolveEmployeeFolderByName(evt.FirmName, evt.EmployeeName, financeService, archivedList, getEmployeesCached);
+                    var looseKey = string.Join("|",
+                        NormalizeDedupPart(evt.EmployeeName),
+                        NormalizeDedupPart(evt.FirmName),
+                        NormalizeDedupPart(evt.Date));
+                    if (looseAdded.Contains(looseKey))
+                        continue;
+
+                    var dedupKey = string.Join("|",
+                        NormalizeDedupPart(evt.EmployeeName),
+                        NormalizeDedupPart(evt.FirmName),
+                        NormalizeDedupPart(evt.Date),
+                        NormalizeDedupPath(resolvedFolder));
                     if (alreadyAdded.Contains(dedupKey)) continue;
                     alreadyAdded.Add(dedupKey);
 
-                    var folder = !string.IsNullOrEmpty(evt.EmployeeFolder)
-                        ? evt.EmployeeFolder
-                        : ResolveEmployeeFolderByName(evt.FirmName, evt.EmployeeName, financeService, archivedList, getEmployeesCached);
-                    var row = BuildArchivedRowFromLog(evt, folder, typeDisplayMap);
+                    var row = BuildArchivedRowFromLog(evt, resolvedFolder, typeDisplayMap);
                     if (row == null) continue;
 
                     if (!result.ContainsKey(evt.FirmName))
                         result[evt.FirmName] = new List<EmployeeReportRow>();
                     result[evt.FirmName].Add(row);
-                }
-
-                foreach (var arch in archivedList)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    if (string.IsNullOrWhiteSpace(arch.FirmName) || !firmFilter.Contains(arch.FirmName)) continue;
-
-                    var dedupKey = arch.FullName + "|" + arch.FirmName + "|" + arch.EndDate + "|" + (arch.EmployeeFolder ?? string.Empty);
-                    if (alreadyAdded.Contains(dedupKey)) continue;
-
-                    if (!IsHistoricalRecordInRange(arch.StartDate, arch.EndDate, dateFrom, dateTo)) continue;
-
-                    alreadyAdded.Add(dedupKey);
-
-                    var resolvedFolder = financeService.ResolveEmployeeFolder(arch.EmployeeFolder ?? string.Empty);
-
-                    if (!result.ContainsKey(arch.FirmName))
-                        result[arch.FirmName] = new List<EmployeeReportRow>();
-                    result[arch.FirmName].Add(new EmployeeReportRow
-                    {
-                        FullName = arch.FullName,
-                        FirmName = arch.FirmName,
-                        EmployeeFolder = resolvedFolder,
-                        EmployeeType = "—",
-                        StartDate = arch.StartDate,
-                        EndDate = arch.EndDate,
-                        Position = arch.PositionTitle,
-                        IsArchived = true
-                    });
-                }
-
-                foreach (var history in activeFirmHistory)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    if (string.IsNullOrWhiteSpace(history.FirmName) || !firmFilter.Contains(history.FirmName)) continue;
-
-                    var dedupKey = history.FullName + "|" + history.FirmName + "|" + history.EndDate + "|" + (history.EmployeeFolder ?? string.Empty);
-                    if (alreadyAdded.Contains(dedupKey)) continue;
-
-                    if (!IsHistoricalRecordInRange(history.StartDate, history.EndDate, dateFrom, dateTo)) continue;
-
-                    alreadyAdded.Add(dedupKey);
-
-                    var resolvedFolder = financeService.ResolveEmployeeFolder(history.EmployeeFolder ?? string.Empty);
-
-                    if (!result.ContainsKey(history.FirmName))
-                        result[history.FirmName] = new List<EmployeeReportRow>();
-                    result[history.FirmName].Add(new EmployeeReportRow
-                    {
-                        FullName = history.FullName,
-                        FirmName = history.FirmName,
-                        EmployeeFolder = resolvedFolder,
-                        EmployeeType = "—",
-                        StartDate = history.StartDate,
-                        EndDate = history.EndDate,
-                        Position = history.PositionTitle,
-                        IsArchived = true
-                    });
                 }
             }
             catch (Exception ex)
@@ -981,25 +1214,13 @@ namespace Win11DesktopApp.ViewModels
                     var json = SafeFileService.ReadAllText(jsonPath);
                     var data = JsonSerializer.Deserialize<EmployeeData>(json);
                     if (data != null)
-                    {
-                        return new EmployeeReportRow
-                        {
-                            FullName = evt.EmployeeName,
-                            FirmName = evt.FirmName,
-                            EmployeeFolder = resolvedFolder,
-                            EmployeeType = !string.IsNullOrEmpty(data.WorkPermitName)
-                                ? data.WorkPermitName
-                                : GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
-                            PassportExpiry = data.PassportExpiry,
-                            VisaExpiry = data.VisaExpiry,
-                            InsuranceExpiry = data.InsuranceExpiry,
-                            StartDate = data.StartDate,
-                            EndDate = evt.Date,
-                            Phone = data.Phone,
-                            Position = data.PositionTag,
-                            IsArchived = true
-                        };
-                    }
+                        return BuildArchivedRowFromData(
+                            evt.EmployeeName,
+                            evt.FirmName,
+                            resolvedFolder,
+                            evt.Date,
+                            data,
+                            typeDisplayMap);
                 }
 
                 return new EmployeeReportRow
@@ -1019,9 +1240,81 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private EmployeeReportRow BuildArchivedRowFromSummary(
+            string fullName,
+            string firmName,
+            string employeeFolder,
+            string startDate,
+            string endDate,
+            string positionTitle,
+            IReadOnlyDictionary<string, string> typeDisplayMap)
+        {
+            try
+            {
+                var resolvedFolder = employeeFolder;
+                if (!string.IsNullOrWhiteSpace(resolvedFolder))
+                {
+                    var financeService = App.FinanceService;
+                    resolvedFolder = financeService?.ResolveEmployeeFolder(resolvedFolder) ?? resolvedFolder;
+                }
+
+                var jsonPath = !string.IsNullOrEmpty(resolvedFolder) ? Path.Combine(resolvedFolder, "employee.json") : string.Empty;
+                if (!string.IsNullOrEmpty(jsonPath) && File.Exists(jsonPath))
+                {
+                    var data = SafeFileService.ReadJson<EmployeeData>(jsonPath);
+                    if (data != null)
+                        return BuildArchivedRowFromData(fullName, firmName, resolvedFolder, endDate, data, typeDisplayMap);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ReportViewModel.BuildArchivedRowFromSummary", ex.Message);
+            }
+
+            return new EmployeeReportRow
+            {
+                FullName = fullName,
+                FirmName = firmName,
+                EmployeeFolder = employeeFolder,
+                EmployeeType = "—",
+                StartDate = startDate,
+                EndDate = endDate,
+                Position = positionTitle,
+                IsArchived = true
+            };
+        }
+
+        private static EmployeeReportRow BuildArchivedRowFromData(
+            string fullName,
+            string firmName,
+            string employeeFolder,
+            string endDate,
+            EmployeeData data,
+            IReadOnlyDictionary<string, string> typeDisplayMap)
+        {
+            return new EmployeeReportRow
+            {
+                FullName = fullName,
+                FirmName = firmName,
+                EmployeeFolder = employeeFolder,
+                EmployeeType = !string.IsNullOrEmpty(data.WorkPermitName)
+                    ? data.WorkPermitName
+                    : GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
+                PassportExpiry = data.PassportExpiry,
+                VisaExpiry = data.VisaExpiry,
+                InsuranceExpiry = data.InsuranceExpiry,
+                StartDate = data.StartDate,
+                EndDate = endDate,
+                Phone = data.Phone,
+                BankAccountNumber = data.HasBankAccountData ? data.BankAccountNumber : string.Empty,
+                BankName = data.HasBankAccountData ? data.BankName : string.Empty,
+                Position = data.PositionTag,
+                IsArchived = true
+            };
+        }
+
         private void FilterEmployees()
         {
-            EmployeeGroups.Clear();
             var search = EmployeeSearchText?.Trim() ?? "";
 
             var dateFiltered = _allEmployees.Where(e =>
@@ -1046,19 +1339,19 @@ namespace Win11DesktopApp.ViewModels
                 : dateFiltered.Where(e =>
                     (e.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (e.Phone?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.BankAccountNumber?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.BankName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (e.Position?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (e.FirmName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
 
             var groups = filtered.GroupBy(e => e.FirmName).OrderBy(g => g.Key);
-            foreach (var g in groups)
-            {
-                EmployeeGroups.Add(new FirmEmployeeGroup
+            EmployeeGroups = new ObservableCollection<FirmEmployeeGroup>(
+                groups.Select(g => new FirmEmployeeGroup
                 {
                     FirmName = g.Key,
                     EmployeeCount = g.Count(),
                     Employees = new ObservableCollection<EmployeeReportRow>(g)
-                });
-            }
+                }));
         }
 
         private void OpenEmployee(EmployeeReportRow? row)
@@ -1379,7 +1672,13 @@ namespace Win11DesktopApp.ViewModels
                 if (IsSheetSelected("employees") && _allEmployees.Count > 0)
                 {
                     var wsE = workbook.Worksheets.Add(DocString("ReportSheetEmployees"));
-                    const int colCount = 9;
+                    var visibleColumns = GetVisibleEmployeeColumnsForExport();
+                    int colCount = visibleColumns.Count;
+                    if (colCount == 0)
+                        visibleColumns = NormalizeEmployeeColumnLayout(DefaultEmployeeColumns.Select(CopyColumnSetting))
+                            .Where(c => c.IsVisible)
+                            .ToList();
+                    colCount = visibleColumns.Count;
 
                     int row = 1;
                     var groups = _allEmployees
@@ -1398,34 +1697,26 @@ namespace Win11DesktopApp.ViewModels
                         wsE.Range(row, 1, row, colCount).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         row++;
 
-                        wsE.Cell(row, 1).Value = DocString("ReportColName");
-                        wsE.Cell(row, 2).Value = DocString("ReportColType");
-                        wsE.Cell(row, 3).Value = DocString("ReportColPassportExpFull");
-                        wsE.Cell(row, 4).Value = DocString("ReportColVisaExpFull");
-                        wsE.Cell(row, 5).Value = DocString("ReportColInsExpFull");
-                        wsE.Cell(row, 6).Value = DocString("ReportColStartDateFull");
-                        wsE.Cell(row, 7).Value = DocString("ReportColEndDateFull");
-                        wsE.Cell(row, 8).Value = DocString("ReportColPhone");
-                        wsE.Cell(row, 9).Value = DocString("ReportColPosition");
+                        for (int colIndex = 0; colIndex < visibleColumns.Count; colIndex++)
+                        {
+                            var column = visibleColumns[colIndex];
+                            wsE.Cell(row, colIndex + 1).Value = DocString(GetEmployeeColumnHeaderResourceKey(column.Key));
+                            wsE.Cell(row, colIndex + 1).Style.Alignment.Horizontal = GetEmployeeExcelAlignment(column.Key);
+                        }
                         var hdr = wsE.Range(row, 1, row, colCount);
                         hdr.Style.Font.Bold = true;
                         hdr.Style.Fill.BackgroundColor = XLColor.LightSteelBlue;
-                        wsE.Range(row, 2, row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         row++;
 
                         foreach (var emp in group)
                         {
-                            wsE.Cell(row, 1).Value = emp.FullName;
-                            wsE.Cell(row, 2).Value = emp.EmployeeType;
-                            wsE.Cell(row, 3).Value = emp.PassportExpiry;
-                            wsE.Cell(row, 4).Value = emp.VisaExpiry;
-                            wsE.Cell(row, 5).Value = emp.InsuranceExpiry;
-                            wsE.Cell(row, 6).Value = emp.StartDate;
-                            wsE.Cell(row, 7).Value = emp.EndDate;
-                            wsE.Cell(row, 8).Value = emp.Phone;
-                            wsE.Cell(row, 9).Value = emp.Position;
-
-                            wsE.Range(row, 2, row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            for (int colIndex = 0; colIndex < visibleColumns.Count; colIndex++)
+                            {
+                                var column = visibleColumns[colIndex];
+                                var cell = wsE.Cell(row, colIndex + 1);
+                                cell.Value = GetEmployeeColumnValue(emp, column.Key);
+                                cell.Style.Alignment.Horizontal = GetEmployeeExcelAlignment(column.Key);
+                            }
 
                             if (emp.IsArchived)
                             {
@@ -1435,9 +1726,12 @@ namespace Win11DesktopApp.ViewModels
                             }
                             else
                             {
-                                ColorExpiryCell(wsE.Cell(row, 3), emp.PassportExpiryStatus);
-                                ColorExpiryCell(wsE.Cell(row, 4), emp.VisaExpiryStatus);
-                                ColorExpiryCell(wsE.Cell(row, 5), emp.InsuranceExpiryStatus);
+                                for (int colIndex = 0; colIndex < visibleColumns.Count; colIndex++)
+                                {
+                                    var status = GetEmployeeColumnStatus(emp, visibleColumns[colIndex].Key);
+                                    if (!string.IsNullOrEmpty(status))
+                                        ColorExpiryCell(wsE.Cell(row, colIndex + 1), status);
+                                }
                             }
 
                             row++;
@@ -1663,16 +1957,27 @@ namespace Win11DesktopApp.ViewModels
                         .GroupBy(e => e.FirmName);
 
                     double contentW = pageW - marginLeft * 2;
-                    double[] empCols = { contentW * 0.15, contentW * 0.10, contentW * 0.10, contentW * 0.10,
-                        contentW * 0.10, contentW * 0.07, contentW * 0.07, contentW * 0.31 };
-                    string[] empHeaders = { DocString("ReportColName"), DocString("ReportColType"), DocString("ReportColPassportExp"), DocString("ReportColVisaExp"), DocString("ReportColInsExp"), DocString("ReportColStartDate"), DocString("ReportColEndDate"), DocString("ReportColPosition") };
+                    var visibleColumns = GetVisibleEmployeeColumnsForExport();
+                    if (visibleColumns.Count == 0)
+                    {
+                        visibleColumns = NormalizeEmployeeColumnLayout(DefaultEmployeeColumns.Select(CopyColumnSetting))
+                            .Where(c => c.IsVisible)
+                            .ToList();
+                    }
 
-                    // i=0 Jméno → left, i=1 Typ → center, i=2-6 dates → center, i=7 Pozice → left
-                    XStringFormat[] empFmts = {
-                        XStringFormats.CenterLeft, XStringFormats.Center, XStringFormats.Center,
-                        XStringFormats.Center, XStringFormats.Center, XStringFormats.Center,
-                        XStringFormats.Center, XStringFormats.CenterLeft
-                    };
+                    double totalWidthWeight = visibleColumns.Sum(c => c.Width);
+                    if (totalWidthWeight <= 0)
+                        totalWidthWeight = visibleColumns.Count;
+
+                    double[] empCols = visibleColumns
+                        .Select(c => contentW * (c.Width / totalWidthWeight))
+                        .ToArray();
+                    string[] empHeaders = visibleColumns
+                        .Select(c => DocString(GetEmployeeColumnHeaderResourceKey(c.Key)))
+                        .ToArray();
+                    XStringFormat[] empFmts = visibleColumns
+                        .Select(c => GetEmployeePdfFormat(c.Key))
+                        .ToArray();
 
                     foreach (var group in groups)
                     {
@@ -1709,17 +2014,18 @@ namespace Win11DesktopApp.ViewModels
                             }
 
                             double cx = marginLeft;
-                            string[] vals = { emp.FullName, emp.EmployeeType, emp.PassportExpiry, emp.VisaExpiry,
-                                emp.InsuranceExpiry, emp.StartDate, emp.EndDate, emp.Position };
+                            string[] vals = visibleColumns
+                                .Select(c => GetEmployeeColumnValue(emp, c.Key))
+                                .ToArray();
 
                             for (int i = 0; i < vals.Length && i < empCols.Length; i++)
                             {
                                 XBrush cellFg = baseFg;
                                 if (!emp.IsArchived)
                                 {
-                                    if (i == 2) cellFg = GetExpiryBrush(emp.PassportExpiryStatus);
-                                    else if (i == 3) cellFg = GetExpiryBrush(emp.VisaExpiryStatus);
-                                    else if (i == 4) cellFg = GetExpiryBrush(emp.InsuranceExpiryStatus);
+                                    var status = GetEmployeeColumnStatus(emp, visibleColumns[i].Key);
+                                    if (!string.IsNullOrEmpty(status))
+                                        cellFg = GetExpiryBrush(status);
                                 }
                                 gfx!.DrawString(vals[i] ?? "", usedFont, cellFg,
                                     new XRect(cx + 4, y, empCols[i] - 8, rowHeight), empFmts[i]);

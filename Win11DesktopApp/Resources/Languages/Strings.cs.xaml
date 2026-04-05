@@ -937,6 +937,12 @@
     <sys:String x:Key="ReportViewSummary">Souhrn</sys:String>
     <sys:String x:Key="ReportViewEmployees">Zaměstnanci</sys:String>
     <sys:String x:Key="ReportConfigExport">Nastavit export</sys:String>
+    <sys:String x:Key="ReportColumnsButton">Sloupce</sys:String>
+    <sys:String x:Key="ReportColumnsResetButton">Obnovit sloupce</sys:String>
+    <sys:String x:Key="ReportColumnsDialogTitle">Nastavení sloupců</sys:String>
+    <sys:String x:Key="ReportColumnsDialogDesc">Vyberte, které sloupce zobrazit, a změňte jejich pořadí.</sys:String>
+    <sys:String x:Key="ReportColumnsMoveUp">Posunout výš</sys:String>
+    <sys:String x:Key="ReportColumnsMoveDown">Posunout níž</sys:String>
     <sys:String x:Key="ReportExportTitle">Nastavení exportu</sys:String>
     <sys:String x:Key="ReportExportDesc">Vyberte listy pro zahrnutí do souboru Excel:</sys:String>
     <sys:String x:Key="ReportExportFormat">Formát:</sys:String>
@@ -1031,6 +1037,19 @@
     <sys:String x:Key="PdfFormFieldMapped">Namapováno PDF pole: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Umístěné tagy</sys:String>
     <sys:String x:Key="PdfTagMarker">Značka tagu</sys:String>
+    <sys:String x:Key="PdfAiHeader">AI pro PDF pole</sys:String>
+    <sys:String x:Key="PdfAiHint">AI navrhne logické tagy z vašeho katalogu pro prázdná PDF pole.</sys:String>
+    <sys:String x:Key="PdfAiAnalyze">Analyzovat</sys:String>
+    <sys:String x:Key="PdfAiSuggestedText">Navržený text</sys:String>
+    <sys:String x:Key="PdfAiTagsUsed">Použité tagy</sys:String>
+    <sys:String x:Key="PdfAiReason">Důvod</sys:String>
+    <sys:String x:Key="PdfAiIgnore">Ignorovat</sys:String>
+    <sys:String x:Key="PdfAiSwitchToFormMode">Přepněte do režimu PDF formuláře pro AI analýzu polí.</sys:String>
+    <sys:String x:Key="PdfAiNoEmptyFields">Nebyly nalezeny žádné prázdné PDF pole pro analýzu.</sys:String>
+    <sys:String x:Key="PdfAiNoSuggestions">AI nenašla spolehlivé návrhy pro prázdná PDF pole.</sys:String>
+    <sys:String x:Key="PdfAiSuggestionsReady">AI připravila návrhů: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionApplied">AI návrh použit pro pole: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionIgnored">AI návrh skryt pro pole: {0}</sys:String>
 
 
     <sys:String x:Key="ImgEditorTitle">Editor dokumentu</sys:String>
@@ -1778,6 +1797,38 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <!-- AI Validation -->
     <sys:String x:Key="AIValidateBtn">AI Kontrola</sys:String>
     <sys:String x:Key="AIValidateTitle">AI Kontrola dat</sys:String>
+    <sys:String x:Key="AIValidationApplyButton">Doplnit</sys:String>
+    <sys:String x:Key="AIValidationApplyAllButton">Doplnit vše</sys:String>
+    <sys:String x:Key="AIValidationOpenSourceButton">Otevřít dokument</sys:String>
+    <sys:String x:Key="AIValidationAttentionTitle">Vyžaduje pozornost</sys:String>
+    <sys:String x:Key="AIValidationErrorsTitle">Kritické chyby</sys:String>
+    <sys:String x:Key="AIValidationWarningsTitle">Je potřeba zkontrolovat</sys:String>
+    <sys:String x:Key="AIValidationAutofillTitle">Lze doplnit</sys:String>
+    <sys:String x:Key="AIValidationOkTitle">Vše je v pořádku</sys:String>
+    <sys:String x:Key="AIValidationSummaryTitle">Celkový audit</sys:String>
+    <sys:String x:Key="AIValidationCurrentLabel">V profilu</sys:String>
+    <sys:String x:Key="AIValidationSuggestedLabel">V dokumentu</sys:String>
+    <sys:String x:Key="AIValidationMissingMessage">Pole je v profilu prázdné, v dokumentu nalezeno: {0}</sys:String>
+    <sys:String x:Key="AIValidationMismatchMessage">V profilu: {0} -> V dokumentu: {1}</sys:String>
+    <sys:String x:Key="AIValidationMatchMessage">Souhlasí s dokumentem</sys:String>
+    <sys:String x:Key="AIValidationAppliedMessage">Hodnota byla použita</sys:String>
+    <sys:String x:Key="AIValidationSuspiciousReadMessage">AI mohla tuto hodnotu přečíst nespolehlivě: {0}</sys:String>
+    <sys:String x:Key="AIValidationSourcePassport">Pas</sys:String>
+    <sys:String x:Key="AIValidationSourceVisa">Vízum</sys:String>
+    <sys:String x:Key="AIValidationSourceInsurance">Pojištění</sys:String>
+    <sys:String x:Key="AIValidationSourcePermit">Povolení</sys:String>
+    <sys:String x:Key="AIValidationSourceCrossCheck">Kontrola</sys:String>
+    <sys:String x:Key="AIValidationVisaOwnershipTitle">Příslušnost víza</sys:String>
+    <sys:String x:Key="AIValidationInsuranceOwnershipTitle">Příslušnost pojištění</sys:String>
+    <sys:String x:Key="AIValidationPermitOwnershipTitle">Příslušnost povolení</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportTitle">Vízum a pas</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportTitle">Pojištění a pas</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportIdentityTitle">Identita ve vízu a pase</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportIdentityTitle">Identita v pojištění a pase</sys:String>
+    <sys:String x:Key="AIValidationCrossPermitPassportIdentityTitle">Identita v povolení a pase</sys:String>
+    <sys:String x:Key="AIValidationCrossIdentityMessage">{0}: osobní údaje nesouhlasí ({1})</sys:String>
+    <sys:String x:Key="AIValidationCrossPassportNumberMessage">Číslo pasu na vízu nesouhlasí s pasem</sys:String>
+    <sys:String x:Key="AIValidationCrossBirthDateMessage">Datum narození na pojištění nesouhlasí s pasem</sys:String>
 
     <!-- AI Dashboard Report -->
     <sys:String x:Key="AIReportBtn">AI Zpráva</sys:String>

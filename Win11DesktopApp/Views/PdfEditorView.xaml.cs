@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -19,7 +18,6 @@ namespace Win11DesktopApp.Views
         private bool _isPlacingMode;
         private bool _isPlacingInlineTextRow;
         private bool _isPlacingField;
-        private AITemplateOverlayWindow? _aiOverlay;
 
         private bool _isDragging;
         private PdfPlacementViewModel? _dragPlacement;
@@ -27,6 +25,7 @@ namespace Win11DesktopApp.Views
         private Point _dragStartMouse;
         private double _dragStartLeft;
         private double _dragStartTop;
+        private bool _isApplyingSavedLayout;
 
         private const double AlignSnapThreshold = 4.0;
 
@@ -41,6 +40,7 @@ namespace Win11DesktopApp.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            ApplySavedLayout();
             UpdateCanvasSize();
             Focus();
         }
@@ -122,6 +122,12 @@ namespace Win11DesktopApp.Views
                     if (DataContext is PdfEditorViewModel vm)
                         SubscribeFormFieldChanges(vm);
                 });
+            }
+
+            if (e.PropertyName == nameof(PdfEditorViewModel.IsAIPdfSuggestionsOpen)
+                || e.PropertyName == nameof(PdfEditorViewModel.PdfMode))
+            {
+                Dispatcher.InvokeAsync(UpdateAiPanelLayoutState);
             }
         }
 
@@ -828,57 +834,83 @@ namespace Win11DesktopApp.Views
             return null;
         }
 
-        #region AI Overlay
-
-        private void AIOverlay_Click(object sender, RoutedEventArgs e)
+        private void ApplySavedLayout()
         {
-            if (_aiOverlay == null || !_aiOverlay.IsLoaded)
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
             {
-                _aiOverlay = new AITemplateOverlayWindow();
-                _aiOverlay.Owner = Window.GetWindow(this);
-                _aiOverlay.SetContentProviders(GetPdfContent, GetTagCatalogText);
+                UpdateAiPanelLayoutState();
+                return;
             }
 
-            if (_aiOverlay.IsVisible)
-                _aiOverlay.Hide();
+            _isApplyingSavedLayout = true;
+            try
+            {
+                RightSidebarColumn.Width = new GridLength(Math.Max(240, settings.PdfEditorSidebarWidth));
+                FieldsPanelRow.Height = new GridLength(Math.Max(180, settings.PdfEditorFieldsPanelHeight));
+                AiPanelRow.Height = new GridLength(Math.Max(160, settings.PdfEditorAiPanelHeight));
+            }
+            finally
+            {
+                _isApplyingSavedLayout = false;
+            }
+
+            UpdateAiPanelLayoutState();
+        }
+
+        private void UpdateAiPanelLayoutState()
+        {
+            if (DataContext is not PdfEditorViewModel vm)
+                return;
+
+            var isVisible = vm.IsAIPdfSuggestionsVisible;
+            AiPanelSplitterRow.Height = isVisible ? GridLength.Auto : new GridLength(0);
+            if (isVisible)
+            {
+                if (AiPanelRow.Height.Value <= 0)
+                    AiPanelRow.Height = new GridLength(Math.Max(160, App.AppSettingsService?.Settings?.PdfEditorAiPanelHeight ?? 280));
+            }
             else
-                _aiOverlay.Show();
-        }
-
-        private string? GetPdfContent()
-        {
-            if (DataContext is not PdfEditorViewModel vm) return null;
-            var sb = new StringBuilder();
-            sb.AppendLine($"PDF template: {vm.Title}");
-            sb.AppendLine($"Pages: {vm.PageCount}");
-            sb.AppendLine($"Page size: {vm.PdfPageWidth:F0}x{vm.PdfPageHeight:F0} pt");
-            sb.AppendLine();
-            sb.AppendLine("Placed tags:");
-            foreach (var p in vm.AllPlacements)
             {
-                sb.AppendLine($"  {p.DisplayLabel} — page {p.Page + 1}, X={Math.Round(p.X * vm.PdfPageWidth, 1)}pt Y={Math.Round(p.Y * vm.PdfPageHeight, 1)}pt, font={p.FontFamily} {p.FontSize}pt");
-                if (p.IsField)
-                    sb.AppendLine($"    field: width={p.MaxWidth}pt height={p.BoxHeight}pt align={p.TextAlign}");
-                if (p.IsTemplatePlacement && !string.IsNullOrWhiteSpace(p.TemplateText))
-                    sb.AppendLine($"    template: {p.TemplateText}");
+                AiPanelRow.Height = new GridLength(0);
             }
-            return sb.ToString();
         }
 
-        private string? GetTagCatalogText()
+        private void SavePdfEditorLayout()
         {
-            if (DataContext is not PdfEditorViewModel vm) return null;
-            var sb = new StringBuilder();
-            foreach (var group in vm.TagGroups)
-            {
-                sb.AppendLine($"[{group.GroupName}]");
-                foreach (var tag in group.Tags)
-                    sb.AppendLine($"  ${{{tag.Tag}}} — {tag.Description}");
-            }
-            return sb.ToString();
+            if (_isApplyingSavedLayout)
+                return;
+
+            var settings = App.AppSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            if (RightSidebarColumn.ActualWidth > 0)
+                settings.PdfEditorSidebarWidth = Math.Max(240, RightSidebarColumn.ActualWidth);
+
+            if (FieldsPanelRow.ActualHeight > 0)
+                settings.PdfEditorFieldsPanelHeight = Math.Max(180, FieldsPanelRow.ActualHeight);
+
+            if (AiPanelRow.ActualHeight > 0)
+                settings.PdfEditorAiPanelHeight = Math.Max(160, AiPanelRow.ActualHeight);
+
+            App.AppSettingsService?.SaveSettings();
         }
 
-        #endregion
+        private void AiPanelGridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            SavePdfEditorLayout();
+        }
+
+        private void FieldsPanelGridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            SavePdfEditorLayout();
+        }
+
+        private void SidebarGridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            SavePdfEditorLayout();
+        }
 
         #region Arrow Key Nudge
 

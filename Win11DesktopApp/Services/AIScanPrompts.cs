@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
@@ -23,6 +26,9 @@ STEP 2: Parse the MRZ of THIS document:
 - PASSPORT NUMBER is the first 9 characters of MRZ line 2 (may contain letters AND digits). Example: GB780524<9 — number is GB780524. This is NOT the 4-digit authority number printed elsewhere on the page!
 - BIRTHDATE is 6 digits YYMMDD starting at position 14 of line 2. Convert to DD.MM.YYYY.
 - EXPIRY is 6 digits YYMMDD starting at position 22 of line 2. Convert to DD.MM.YYYY.
+- CRITICAL: If the MRZ is blurry, cut off, partially hidden, or unreadable, return PassportNumber as an empty string. NEVER guess.
+- CRITICAL: Do NOT take PassportNumber from any visa, permit, insurance card, or any other document that may appear on the same image.
+- If both the printed passport number and the MRZ passport number are clearly visible, prefer the value that matches both. If they conflict, return empty instead of guessing.
 
 STEP 3: Find place of birth (printed text, NOT from MRZ). Look for the field labeled ""Place of birth"" or ""Місце народження"". Read the REGION/OBLAST name (e.g. ОДЕСЬКА ОБЛ. = Odesa, КИЇВ = Kyiv, ЛЬВІВСЬКА ОБЛ. = Lviv). Output ONLY the city name in Latin, never the oblast/region word.
 
@@ -34,12 +40,15 @@ Return ONLY this JSON (FirstName=given name, LastName=surname):
                 "insurance" => @"Read this insurance card/document photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
 This is a Czech health insurance card (průkaz pojištěnce). Extract these fields:
+- FirstName: holder's first/given name if it is clearly printed on the card. If not clearly visible, leave empty.
+- LastName: holder's last name/surname if it is clearly printed on the card. If not clearly visible, leave empty.
+- BirthDate: holder's birth date in DD.MM.YYYY ONLY if it is explicitly printed on the card as a date. If it is NOT explicitly printed, leave empty. Do NOT derive it from the insurance number.
 - InsuranceCompanyShort: short name of the insurance company (e.g. VZP CR, ZPMV, OZP, CPZP)
 - InsuranceNumber: the field labeled ""Číslo pojištěnce"" (personal insurance number, usually 10 digits like birth number). This is NOT ""Číslo průkazu"" (card number which is much longer). Look specifically for ""Číslo pojištěnce"" or ""Cislo pojistence"".
 - InsuranceExpiry: the ""Do:"" date (expiry) in DD.MM.YYYY format
 
 Return ONLY valid JSON, no other text:
-{""InsuranceCompanyShort"":"""",""InsuranceNumber"":"""",""InsuranceExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""InsuranceCompanyShort"":"""",""InsuranceNumber"":"""",""InsuranceExpiry"":""""}",
 
                 "visa" => @"Read this Czech visa/residence permit document photo. CRITICAL: ALL output in Latin alphabet ONLY, never Cyrillic.
 
@@ -50,6 +59,10 @@ INSTEAD, look for one of these:
 
 TYPE A — VISA STICKER (for Ukrainian refugees):
 A colorful sticker with ""Číslo víza"", ""Druh víza"", hologram, MRZ code at bottom.
+- FirstName: visa holder's given name in Latin alphabet if clearly visible
+- LastName: visa holder's surname in Latin alphabet if clearly visible
+- BirthDate: holder's birth date in DD.MM.YYYY if clearly visible
+- PassportNumber: passport number shown on the visa sticker or in the MRZ if clearly visible
 - VisaNumber: 9-digit visa number near ""Číslo víza""
 - VisaAuthority: if a clear issuing authority is visible, extract it. If you can clearly read ""MV ČR OAMP"" anywhere on the visa or related authority text, return exactly ""MV ČR OAMP"". Otherwise leave empty.
 - VisaType: FULL code with slashes like D/DO/667, D/DO/668, D/DO/669, D/DO/767-769, D/DO/867-869, D/VS/91, D/SD/91. NOT just ""D"".
@@ -59,6 +72,10 @@ A colorful sticker with ""Číslo víza"", ""Druh víza"", hologram, MRZ code at
 TYPE B — RESIDENCE PERMIT STAMP from MV ČR OAMP (for EU citizens):
 A rectangular official stamp with ""MV ČR OAMP"" and header text ""POVOLENÍ K ... POBYTU NA ÚZEMÍ"".
 This stamp is the MOST IMPORTANT document on the page. Read its header line carefully:
+- FirstName: holder's given name in Latin alphabet if clearly visible
+- LastName: holder's surname in Latin alphabet if clearly visible
+- BirthDate: holder's birth date in DD.MM.YYYY if clearly visible
+- PassportNumber: passport/document number linked to this permit if clearly visible
 - VisaNumber: the permit/registration number (alphanumeric code, e.g. ""VB 027159"", may appear on the stamp or on the registration certificate above)
 - VisaAuthority: if the stamp/authority text shows ""MV ČR OAMP"", return exactly ""MV ČR OAMP"". Otherwise return the clearly visible issuing authority text if present.
 - VisaType: leave empty """"
@@ -69,11 +86,16 @@ This stamp is the MOST IMPORTANT document on the page. Read its header line care
   NEVER output ""Osvědčení o registraci"" — that is wrong.
 
 Return ONLY valid JSON, no other text:
-{""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":""""}",
 
                 "permit" => @"Read this Czech work permit document (Povolení k zaměstnání / ROZHODNUTÍ). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic. Read ALL pages of the document.
 
 This is typically a multi-page official document (ROZHODNUTÍ) issued by Úřad práce České republiky (Czech Labour Office).
+
+STEP 0 — Find the employee identity if clearly visible:
+- FirstName: employee's given name in Latin alphabet if clearly visible
+- LastName: employee's surname in Latin alphabet if clearly visible
+- BirthDate: employee's birth date in DD.MM.YYYY if clearly visible
 
 STEP 1 — Find the permit reference number (Číslo jednací / Č.j.):
 Look near the top for ""Č.j."" or a reference code like ""ROA-B3025-za"", ""UPA-xxx"" etc.
@@ -97,7 +119,7 @@ STEP 5 — Permit title:
 WorkPermitName = ""Povolení k zaměstnání""
 
 Return ONLY valid JSON, no other text:
-{""WorkPermitName"":"""",""WorkPermitNumber"":"""",""WorkPermitType"":"""",""WorkPermitIssueDate"":"""",""WorkPermitExpiry"":"""",""WorkPermitAuthority"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""WorkPermitName"":"""",""WorkPermitNumber"":"""",""WorkPermitType"":"""",""WorkPermitIssueDate"":"""",""WorkPermitExpiry"":"""",""WorkPermitAuthority"":""""}",
 
                 "id_card" => @"Read this EU national ID card (Carte de Identitate, Personalausweis, Občanský průkaz, etc.). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
@@ -164,6 +186,85 @@ Return ONLY valid JSON, no other text:
                 LoggingService.LogError("AIScanPrompts.ParseResponse", ex);
             }
             return result;
+        }
+
+        public static string GetPdfFieldMappingPrompt(
+            IEnumerable<PdfFormFieldBinding> fields,
+            IEnumerable<TagEntry> tags)
+        {
+            var fieldList = fields
+                .Where(f => !string.IsNullOrWhiteSpace(f.FieldName) || !string.IsNullOrWhiteSpace(f.DecodedFieldName) || !string.IsNullOrWhiteSpace(f.NearbyText))
+                .OrderBy(f => f.Page)
+                .ThenBy(f => f.Y)
+                .ThenBy(f => f.X)
+                .ToList();
+
+            var tagList = tags
+                .Where(t => !string.IsNullOrWhiteSpace(t.Tag))
+                .OrderBy(t => t.Category)
+                .ThenBy(t => t.Tag, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var prompt = new StringBuilder();
+            prompt.AppendLine("You are a PDF form field mapping assistant for a Czech employment agency.");
+            prompt.AppendLine("You analyze PDF form fields and suggest ONLY template text built from the provided tag catalog.");
+            prompt.AppendLine();
+            prompt.AppendLine("STRICT RULES:");
+            prompt.AppendLine("- Use ONLY tags from the provided catalog.");
+            prompt.AppendLine("- NEVER invent new tag names.");
+            prompt.AppendLine("- Suggest mappings ONLY for empty fields (fields with no current template text).");
+            prompt.AppendLine("- Field names are often Czech or Slovak. Translate mentally before matching.");
+            prompt.AppendLine("- Prefer decoded_field_name and nearby_text over raw technical field_name if raw name looks broken or encoded.");
+            prompt.AppendLine("- You MAY compose multiple tags into one field if the field logically requires multiple data parts.");
+            prompt.AppendLine("- Prefer the SMALLEST correct data unit. Do NOT default to full address if the field asks only for street, city, ZIP, country, passport number, etc.");
+            prompt.AppendLine("- If a field asks for passport number and issuing country, suggest those two parts only.");
+            prompt.AppendLine("- If a match is weak but still useful, return it with confidence = low instead of omitting it.");
+            prompt.AppendLine("- Omit the field only if there is truly no sensible suggestion.");
+            prompt.AppendLine("- confidence must be one of: high, medium, low.");
+            prompt.AppendLine();
+            prompt.AppendLine("FORM FIELDS (from PDF):");
+            for (var i = 0; i < fieldList.Count; i++)
+            {
+                var field = fieldList[i];
+                var currentText = string.IsNullOrWhiteSpace(field.TemplateText) ? "currently empty" : $"currently: {field.TemplateText}";
+                prompt.AppendLine($"{i + 1}. raw_field_name: \"{field.FieldName}\"");
+                prompt.AppendLine($"   decoded_field_name: \"{field.DecodedFieldName}\"");
+                prompt.AppendLine($"   nearby_text: \"{field.NearbyText}\"");
+                prompt.AppendLine($"   meta: ({field.FieldType}, P{Math.Max(1, field.Page + 1)} X:{Math.Round(field.X)} Y:{Math.Round(field.Y)}) - {currentText}");
+            }
+
+            prompt.AppendLine();
+            prompt.AppendLine("AVAILABLE TAGS:");
+            foreach (var tag in tagList)
+                prompt.AppendLine($"- ${{{tag.Tag}}} — {tag.Description}");
+
+            prompt.AppendLine();
+            prompt.AppendLine("Return ONLY a valid JSON array. Each element must have:");
+            prompt.AppendLine("  field_name       - exact PDF field name");
+            prompt.AppendLine("  suggested_text   - exact template text to insert, may contain one OR multiple tags");
+            prompt.AppendLine("  tags_used        - array of tag names used inside suggested_text");
+            prompt.AppendLine("  reason           - short human explanation");
+            prompt.AppendLine("  confidence       - high / medium / low");
+            prompt.AppendLine();
+            prompt.AppendLine("Example:");
+            prompt.AppendLine("[");
+            prompt.AppendLine("  {");
+            prompt.AppendLine("    \"field_name\": \"Jméno\",");
+            prompt.AppendLine("    \"suggested_text\": \"${EMPLOYEE_FirstName}\",");
+            prompt.AppendLine("    \"tags_used\": [\"EMPLOYEE_FirstName\"],");
+            prompt.AppendLine("    \"reason\": \"Field label Jméno means first name.\",");
+            prompt.AppendLine("    \"confidence\": \"high\"");
+            prompt.AppendLine("  },");
+            prompt.AppendLine("  {");
+            prompt.AppendLine("    \"field_name\": \"Ulice a číslo\",");
+            prompt.AppendLine("    \"suggested_text\": \"${EMPLOYEE_LocalAddress_Street} ${EMPLOYEE_LocalAddress_Number}\",");
+            prompt.AppendLine("    \"tags_used\": [\"EMPLOYEE_LocalAddress_Street\", \"EMPLOYEE_LocalAddress_Number\"],");
+            prompt.AppendLine("    \"reason\": \"Field asks for street and number, not full address.\",");
+            prompt.AppendLine("    \"confidence\": \"high\"");
+            prompt.AppendLine("  }");
+            prompt.AppendLine("]");
+
+            return prompt.ToString();
         }
     }
 }

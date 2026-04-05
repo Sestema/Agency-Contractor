@@ -159,19 +159,45 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Export Settings button -->
-                    <Button Grid.Column="2"
-                            Command="{Binding ShowExportDialogCommand}"
-                            Cursor="Hand"
-                            VerticalAlignment="Center"
-                            Style="{StaticResource FilledActionButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource ReportConfigExport}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
-                                       Foreground="White" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Click="ColumnsButton_Click"
+                                Cursor="Hand"
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0"
+                                Style="{StaticResource DialogAccentSoftButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{DynamicResource ReportColumnsButton}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Click="ResetColumnsButton_Click"
+                                Cursor="Hand"
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0"
+                                Style="{StaticResource DialogAccentSoftButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{DynamicResource ReportColumnsResetButton}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding ShowExportDialogCommand}"
+                                Cursor="Hand"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource FilledActionButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xEDE1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{DynamicResource ReportConfigExport}" FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- ===== FILTERS CARD ===== -->
@@ -253,7 +279,8 @@
                                 <StackPanel>
                                     <TextBlock Text="{DynamicResource ReportDateFrom}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,6"/>
-                                    <DatePicker SelectedDate="{Binding DateFrom}" Width="150"
+                                    <DatePicker x:Name="DateFromPicker"
+                                                SelectedDate="{Binding DateFrom}" Width="150"
                                                 Style="{StaticResource ThemedDatePicker}"/>
                                 </StackPanel>
                             </Border>
@@ -262,7 +289,8 @@
                                 <StackPanel>
                                     <TextBlock Text="{DynamicResource ReportDateTo}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,6"/>
-                                    <DatePicker SelectedDate="{Binding DateTo}" Width="150"
+                                    <DatePicker x:Name="DateToPicker"
+                                                SelectedDate="{Binding DateTo}" Width="150"
                                                 Style="{StaticResource ThemedDatePicker}"/>
                                 </StackPanel>
                             </Border>
@@ -668,12 +696,17 @@
 
                                         <DataGrid ItemsSource="{Binding Employees}" AutoGenerateColumns="False"
                                                   IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                                  CanUserReorderColumns="True" CanUserResizeColumns="True"
                                                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                                   BorderThickness="0" Background="Transparent"
                                                   RowBackground="{DynamicResource CardBackgroundBrush}"
                                                   AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
                                                   HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
-                                                  Foreground="{DynamicResource ForegroundBrush}" Margin="0,12,0,0">
+                                                  Foreground="{DynamicResource ForegroundBrush}" Margin="0,12,0,0"
+                                                  Loaded="EmployeeGrid_Loaded"
+                                                  Unloaded="EmployeeGrid_Unloaded"
+                                                  ColumnReordered="EmployeeGrid_ColumnReordered"
+                                                  Tag="EmployeeReportGrid">
                                             <DataGrid.ColumnHeaderStyle>
                                                 <StaticResource ResourceKey="ReportDataGridColumnHeaderStyle"/>
                                             </DataGrid.ColumnHeaderStyle>
@@ -697,9 +730,9 @@
                                                 <StaticResource ResourceKey="ReportDataGridCellStyle"/>
                                             </DataGrid.CellStyle>
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="{DynamicResource ReportColName}" Binding="{Binding FullName}" Width="*"/>
-                                                <DataGridTextColumn Header="{DynamicResource ReportColType}" Binding="{Binding EmployeeType}" Width="180"/>
-                                                <DataGridTemplateColumn Header="{DynamicResource ReportColPassportExp}" Width="100">
+                                                <DataGridTextColumn Header="{DynamicResource ReportColName}" Binding="{Binding FullName}" Width="200" SortMemberPath="FullName"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColType}" Binding="{Binding EmployeeType}" Width="180" SortMemberPath="EmployeeType"/>
+                                                <DataGridTemplateColumn Header="{DynamicResource ReportColPassportExp}" Width="100" SortMemberPath="PassportExpiry">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <TextBlock Text="{Binding PassportExpiry}" Padding="2,0" VerticalAlignment="Center" FontSize="{DynamicResource FS12}">
@@ -724,7 +757,7 @@
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
-                                                <DataGridTemplateColumn Header="{DynamicResource ReportColVisaExp}" Width="100">
+                                                <DataGridTemplateColumn Header="{DynamicResource ReportColVisaExp}" Width="100" SortMemberPath="VisaExpiry">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <TextBlock Text="{Binding VisaExpiry}" Padding="2,0" VerticalAlignment="Center" FontSize="{DynamicResource FS12}">
@@ -749,7 +782,7 @@
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
-                                                <DataGridTemplateColumn Header="{DynamicResource ReportColInsExp}" Width="100">
+                                                <DataGridTemplateColumn Header="{DynamicResource ReportColInsExp}" Width="100" SortMemberPath="InsuranceExpiry">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <TextBlock Text="{Binding InsuranceExpiry}" Padding="2,0" VerticalAlignment="Center" FontSize="{DynamicResource FS12}">
@@ -774,10 +807,12 @@
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
-                                                <DataGridTextColumn Header="{DynamicResource ReportColStartDate}" Binding="{Binding StartDate}" Width="90"/>
-                                                <DataGridTextColumn Header="{DynamicResource ReportColEndDate}" Binding="{Binding EndDate}" Width="90"/>
-                                                <DataGridTextColumn Header="{DynamicResource ReportColPhone}" Binding="{Binding Phone}" Width="110"/>
-                                                <DataGridTextColumn Header="{DynamicResource ReportColPosition}" Binding="{Binding Position}" Width="110"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColStartDate}" Binding="{Binding StartDate}" Width="90" SortMemberPath="StartDate"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColEndDate}" Binding="{Binding EndDate}" Width="90" SortMemberPath="EndDate"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColPhone}" Binding="{Binding Phone}" Width="110" SortMemberPath="Phone"/>
+                                                <DataGridTextColumn Header="{DynamicResource EmployeeBankAccountNumber}" Binding="{Binding BankAccountNumber}" Width="150" SortMemberPath="BankAccountNumber"/>
+                                                <DataGridTextColumn Header="{DynamicResource EmployeeBankName}" Binding="{Binding BankName}" Width="150" SortMemberPath="BankName"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColPosition}" Binding="{Binding Position}" Width="110" SortMemberPath="Position"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </Expander>

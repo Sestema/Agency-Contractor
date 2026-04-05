@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Models
 {
@@ -69,6 +70,8 @@ namespace Win11DesktopApp.Models
     public class PdfFormFieldBinding
     {
         public string FieldName { get; set; } = string.Empty;
+        public string DecodedFieldName { get; set; } = string.Empty;
+        public string NearbyText { get; set; } = string.Empty;
         public string FieldType { get; set; } = string.Empty;
         public string TemplateText { get; set; } = string.Empty;
         public int Page { get; set; } = -1;
@@ -86,5 +89,33 @@ namespace Win11DesktopApp.Models
         public string Mode { get; set; } = "overlay";
         public List<PdfTagPlacement> Placements { get; set; } = new();
         public List<PdfFormFieldBinding> FormFields { get; set; } = new();
+    }
+
+    public class AIPdfFieldSuggestion : ViewModelBase
+    {
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = string.Empty;
+        public int FieldPage { get; set; }
+        public string FieldLocationText { get; set; } = string.Empty;
+        public string CurrentTemplateText { get; set; } = string.Empty;
+        public string SuggestedText { get; set; } = string.Empty;
+        public List<string> TagsUsed { get; set; } = new();
+        public List<string> TagDisplayLines { get; set; } = new();
+        public string Reason { get; set; } = string.Empty;
+        public string Confidence { get; set; } = "medium";
+
+        private bool _isApplied;
+        public bool IsApplied
+        {
+            get => _isApplied;
+            set => SetProperty(ref _isApplied, value);
+        }
+
+        private bool _isIgnored;
+        public bool IsIgnored
+        {
+            get => _isIgnored;
+            set => SetProperty(ref _isIgnored, value);
+        }
     }
 }

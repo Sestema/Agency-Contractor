@@ -941,6 +941,12 @@
     <sys:String x:Key="ReportViewSummary">Зведення</sys:String>
     <sys:String x:Key="ReportViewEmployees">Працівники</sys:String>
     <sys:String x:Key="ReportConfigExport">Налаштувати експорт</sys:String>
+    <sys:String x:Key="ReportColumnsButton">Колонки</sys:String>
+    <sys:String x:Key="ReportColumnsResetButton">Скинути колонки</sys:String>
+    <sys:String x:Key="ReportColumnsDialogTitle">Налаштування колонок</sys:String>
+    <sys:String x:Key="ReportColumnsDialogDesc">Оберіть, які колонки показувати, та змініть їх порядок.</sys:String>
+    <sys:String x:Key="ReportColumnsMoveUp">Перемістити вище</sys:String>
+    <sys:String x:Key="ReportColumnsMoveDown">Перемістити нижче</sys:String>
     <sys:String x:Key="ReportExportTitle">Налаштування експорту</sys:String>
     <sys:String x:Key="ReportExportDesc">Оберіть які листи включити в Excel файл:</sys:String>
     <sys:String x:Key="ReportExportFormat">Формат:</sys:String>
@@ -1035,6 +1041,19 @@
     <sys:String x:Key="PdfFormFieldMapped">Прив'язано PDF-поле: {0}</sys:String>
     <sys:String x:Key="PdfPlacedTags">Розміщені теги</sys:String>
     <sys:String x:Key="PdfTagMarker">Позначка тегу</sys:String>
+    <sys:String x:Key="PdfAiHeader">AI для PDF-полів</sys:String>
+    <sys:String x:Key="PdfAiHint">AI підбирає логічні теги з вашого каталогу для порожніх PDF-полів.</sys:String>
+    <sys:String x:Key="PdfAiAnalyze">Аналізувати</sys:String>
+    <sys:String x:Key="PdfAiSuggestedText">Запропонований текст</sys:String>
+    <sys:String x:Key="PdfAiTagsUsed">Використані теги</sys:String>
+    <sys:String x:Key="PdfAiReason">Пояснення</sys:String>
+    <sys:String x:Key="PdfAiIgnore">Ігнорувати</sys:String>
+    <sys:String x:Key="PdfAiSwitchToFormMode">Перейдіть у режим PDF форми, щоб аналізувати поля через AI.</sys:String>
+    <sys:String x:Key="PdfAiNoEmptyFields">Порожніх PDF-полів для аналізу не знайдено.</sys:String>
+    <sys:String x:Key="PdfAiNoSuggestions">AI не знайшов надійних рекомендацій для порожніх PDF-полів.</sys:String>
+    <sys:String x:Key="PdfAiSuggestionsReady">AI підготував рекомендації: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionApplied">Рекомендацію AI застосовано до поля: {0}</sys:String>
+    <sys:String x:Key="PdfAiSuggestionIgnored">Рекомендацію AI приховано для поля: {0}</sys:String>
 
 
     <sys:String x:Key="ImgEditorTitle">Редактор документа</sys:String>
@@ -1779,6 +1798,38 @@
     <!-- AI Validation -->
     <sys:String x:Key="AIValidateBtn">AI Перевірка</sys:String>
     <sys:String x:Key="AIValidateTitle">AI Перевірка даних</sys:String>
+    <sys:String x:Key="AIValidationApplyButton">Заповнити</sys:String>
+    <sys:String x:Key="AIValidationApplyAllButton">Заповнити все</sys:String>
+    <sys:String x:Key="AIValidationOpenSourceButton">Відкрити документ</sys:String>
+    <sys:String x:Key="AIValidationAttentionTitle">Потребує уваги</sys:String>
+    <sys:String x:Key="AIValidationErrorsTitle">Критичні помилки</sys:String>
+    <sys:String x:Key="AIValidationWarningsTitle">Потрібно перевірити</sys:String>
+    <sys:String x:Key="AIValidationAutofillTitle">Можна заповнити</sys:String>
+    <sys:String x:Key="AIValidationOkTitle">Все добре</sys:String>
+    <sys:String x:Key="AIValidationSummaryTitle">Загальний аудит</sys:String>
+    <sys:String x:Key="AIValidationCurrentLabel">У профілі</sys:String>
+    <sys:String x:Key="AIValidationSuggestedLabel">У документі</sys:String>
+    <sys:String x:Key="AIValidationMissingMessage">Поле порожнє у профілі, у документі знайдено: {0}</sys:String>
+    <sys:String x:Key="AIValidationMismatchMessage">У профілі: {0} -> У документі: {1}</sys:String>
+    <sys:String x:Key="AIValidationMatchMessage">Збігається з документом</sys:String>
+    <sys:String x:Key="AIValidationAppliedMessage">Значення застосовано</sys:String>
+    <sys:String x:Key="AIValidationSuspiciousReadMessage">AI може ненадійно зчитати це значення: {0}</sys:String>
+    <sys:String x:Key="AIValidationSourcePassport">Паспорт</sys:String>
+    <sys:String x:Key="AIValidationSourceVisa">Віза</sys:String>
+    <sys:String x:Key="AIValidationSourceInsurance">Страховка</sys:String>
+    <sys:String x:Key="AIValidationSourcePermit">Дозвіл</sys:String>
+    <sys:String x:Key="AIValidationSourceCrossCheck">Звірка</sys:String>
+    <sys:String x:Key="AIValidationVisaOwnershipTitle">Належність візи</sys:String>
+    <sys:String x:Key="AIValidationInsuranceOwnershipTitle">Належність страховки</sys:String>
+    <sys:String x:Key="AIValidationPermitOwnershipTitle">Належність дозволу</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportTitle">Віза та паспорт</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportTitle">Страховка та паспорт</sys:String>
+    <sys:String x:Key="AIValidationCrossVisaPassportIdentityTitle">Особа у візі та паспорті</sys:String>
+    <sys:String x:Key="AIValidationCrossInsurancePassportIdentityTitle">Особа у страховці та паспорті</sys:String>
+    <sys:String x:Key="AIValidationCrossPermitPassportIdentityTitle">Особа у дозволі та паспорті</sys:String>
+    <sys:String x:Key="AIValidationCrossIdentityMessage">{0}: не збігаються дані особи ({1})</sys:String>
+    <sys:String x:Key="AIValidationCrossPassportNumberMessage">Номер паспорта у візі не збігається з паспортом</sys:String>
+    <sys:String x:Key="AIValidationCrossBirthDateMessage">Дата народження у страховці не збігається з паспортом</sys:String>
 
     <!-- AI Dashboard Report -->
     <sys:String x:Key="AIReportBtn">AI Звіт</sys:String>

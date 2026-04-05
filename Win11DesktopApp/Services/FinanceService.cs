@@ -17,6 +17,8 @@ namespace Win11DesktopApp.Services
         private FinanceDatabase _db;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
         private readonly HashSet<string> _reportedSalaryConflictKeys = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object _paymentsCacheLock = new();
+        private readonly Dictionary<(int year, int month), (List<SalaryEntry> entries, List<FirmExpense> expenses)> _paymentsCache = new();
 
         public const string GlobalKey = "__GLOBAL__";
         public const string AllFirmsKey = "__ALL__";
@@ -689,6 +691,7 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(expense.Id))
                 expense.Id = Guid.NewGuid().ToString();
             _db.FirmExpenses.Add(expense);
+            InvalidatePaymentsCache(expense.Year, expense.Month);
             Save();
         }
 
@@ -697,12 +700,16 @@ namespace Win11DesktopApp.Services
             var idx = _db.FirmExpenses.FindIndex(e => e.Id == updated.Id);
             if (idx >= 0)
                 _db.FirmExpenses[idx] = updated;
+            InvalidatePaymentsCache(updated.Year, updated.Month);
             Save();
         }
 
         public void RemoveFirmExpense(string expenseId)
         {
+            var removed = _db.FirmExpenses.FirstOrDefault(e => e.Id == expenseId);
             _db.FirmExpenses.RemoveAll(e => e.Id == expenseId);
+            if (removed != null)
+                InvalidatePaymentsCache(removed.Year, removed.Month);
             Save();
         }
 
@@ -710,6 +717,7 @@ namespace Win11DesktopApp.Services
         {
             _db.FirmExpenses.RemoveAll(e => e.Year == year && e.Month == month);
             _db.FirmExpenses.AddRange(expenses);
+            InvalidatePaymentsCache(year, month);
             Save();
         }
 
@@ -833,6 +841,7 @@ namespace Win11DesktopApp.Services
             try
             {
                 WriteJsonAtomic(filePath, data);
+                InvalidatePaymentsCache(year, month);
                 LastSalaryConflictMessage = string.Empty;
                 LastSaveRecoveryPath = null;
                 return true;
@@ -967,12 +976,23 @@ namespace Win11DesktopApp.Services
                     return false;
             }
 
+            InvalidatePaymentsCache(year, month);
             LastSalaryConflictMessage = string.Empty;
             return true;
         }
 
-        public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month)
+        public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
         {
+            var cacheKey = (year, month);
+            if (!forceReload)
+            {
+                lock (_paymentsCacheLock)
+                {
+                    if (_paymentsCache.TryGetValue(cacheKey, out var cached))
+                        return (CloneSalaryEntries(cached.entries), CloneFirmExpenses(cached.expenses));
+                }
+            }
+
             var folderService = App.FolderService;
             var entries = new List<SalaryEntry>();
             var expenses = new List<FirmExpense>();
@@ -994,6 +1014,13 @@ namespace Win11DesktopApp.Services
             var archiveFolder = folderService.GetArchiveFolder();
             if (Directory.Exists(archiveFolder))
             {
+                var existingEntryKeys = new HashSet<string>(
+                    entries.Select(BuildPaymentEntryCacheKey),
+                    StringComparer.OrdinalIgnoreCase);
+                var existingExpenseIds = new HashSet<string>(
+                    expenses.Select(e => e.Id ?? string.Empty),
+                    StringComparer.OrdinalIgnoreCase);
+
                 foreach (var dir in Directory.GetDirectories(archiveFolder))
                 {
                     var firmName = Path.GetFileName(dir);
@@ -1008,17 +1035,90 @@ namespace Win11DesktopApp.Services
                         var data = ReadJson<FirmPaymentData>(filePath);
                         if (data != null)
                         {
-                            foreach (var e in data.Entries.Where(e => !entries.Any(x => x.EmployeeFolder == e.EmployeeFolder && x.FirmName == e.FirmName)))
-                                entries.Add(e);
-                            foreach (var e in data.Expenses.Where(e => !expenses.Any(x => x.Id == e.Id)))
-                                expenses.Add(e);
+                            foreach (var e in data.Entries)
+                            {
+                                if (existingEntryKeys.Add(BuildPaymentEntryCacheKey(e)))
+                                    entries.Add(e);
+                            }
+
+                            foreach (var e in data.Expenses)
+                            {
+                                var expenseKey = e.Id ?? string.Empty;
+                                if (existingExpenseIds.Add(expenseKey))
+                                    expenses.Add(e);
+                            }
                         }
                     }
                     catch (Exception ex) { LoggingService.LogError("FinanceService.LoadAllFirmPayments", ex); }
                 }
             }
 
-            return (entries, expenses);
+            var clonedEntries = CloneSalaryEntries(entries);
+            var clonedExpenses = CloneFirmExpenses(expenses);
+            lock (_paymentsCacheLock)
+            {
+                _paymentsCache[cacheKey] = (clonedEntries, clonedExpenses);
+            }
+
+            return (CloneSalaryEntries(clonedEntries), CloneFirmExpenses(clonedExpenses));
+        }
+
+        public void InvalidatePaymentsCache(int? year = null, int? month = null)
+        {
+            lock (_paymentsCacheLock)
+            {
+                if (year.HasValue && month.HasValue)
+                {
+                    _paymentsCache.Remove((year.Value, month.Value));
+                    return;
+                }
+
+                _paymentsCache.Clear();
+            }
+        }
+
+        private static string BuildPaymentEntryCacheKey(SalaryEntry entry)
+        {
+            return $"{NormalizeEmployeePath(entry.EmployeeFolder)}|{entry.FirmName}";
+        }
+
+        private static List<SalaryEntry> CloneSalaryEntries(IEnumerable<SalaryEntry> source)
+        {
+#pragma warning disable CS0618
+            return source.Select(entry => new SalaryEntry
+            {
+                EmployeeId = entry.EmployeeId,
+                EmployeeFolder = entry.EmployeeFolder,
+                FullName = entry.FullName,
+                FirmName = entry.FirmName,
+                HoursWorked = entry.HoursWorked,
+                HourlyRate = entry.HourlyRate,
+                Advance = entry.Advance,
+                Advances = entry.Advances,
+                Surcharge = entry.Surcharge,
+                Accommodation = entry.Accommodation,
+                OtherDeductions = entry.OtherDeductions,
+                CustomValues = new Dictionary<string, decimal>(entry.CustomValues, StringComparer.OrdinalIgnoreCase),
+                SavedNetSalary = entry.SavedNetSalary,
+                Status = entry.Status,
+                Note = entry.Note,
+                ColorTag = entry.ColorTag,
+                IsFinished = entry.IsFinished
+            }).ToList();
+#pragma warning restore CS0618
+        }
+
+        private static List<FirmExpense> CloneFirmExpenses(IEnumerable<FirmExpense> source)
+        {
+            return source.Select(expense => new FirmExpense
+            {
+                Id = expense.Id,
+                FirmName = expense.FirmName,
+                Year = expense.Year,
+                Month = expense.Month,
+                Name = expense.Name,
+                Amount = expense.Amount
+            }).ToList();
         }
 
         private void CleanupPaymentFiles(Func<string?, string?, bool> matches)

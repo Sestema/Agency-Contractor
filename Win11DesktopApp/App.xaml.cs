@@ -150,6 +150,18 @@ namespace Win11DesktopApp
                 }
             });
 
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    NetPdfFormHelper.WarmUp();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("App.NetPdfWarmUp", ex.Message);
+                }
+            });
+
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
                 LanguageService.SetLanguage(AppSettingsService.Settings.LanguageCode);

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -625,8 +627,40 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isAIValidationOpen, value);
         }
 
+        private ObservableCollection<AIFieldCheckItem> _aiValidationItems = new();
+        public ObservableCollection<AIFieldCheckItem> AIValidationItems
+        {
+            get => _aiValidationItems;
+            set => SetProperty(ref _aiValidationItems, value);
+        }
+
+        public IEnumerable<AIFieldCheckItem> AIValidationAutofillItems =>
+            AIValidationItems.Where(i => i.CanAutofill && !string.Equals(i.Severity, "ok", StringComparison.OrdinalIgnoreCase));
+
+        public IEnumerable<AIFieldCheckItem> AIValidationErrorItems =>
+            AIValidationItems.Where(i => string.Equals(i.Severity, "error", StringComparison.OrdinalIgnoreCase));
+
+        public IEnumerable<AIFieldCheckItem> AIValidationWarningItems =>
+            AIValidationItems.Where(i => string.Equals(i.Severity, "warning", StringComparison.OrdinalIgnoreCase) && !i.CanAutofill);
+
+        public IEnumerable<AIFieldCheckItem> AIValidationAttentionItems =>
+            AIValidationItems.Where(i => !string.Equals(i.Severity, "ok", StringComparison.OrdinalIgnoreCase));
+
+        public IEnumerable<AIFieldCheckItem> AIValidationOkItems =>
+            AIValidationItems.Where(i => string.Equals(i.Severity, "ok", StringComparison.OrdinalIgnoreCase));
+
+        public bool HasAIValidationItems => AIValidationItems.Count > 0;
+        public bool HasAIValidationAttentionItems => AIValidationItems.Any(i => !string.Equals(i.Severity, "ok", StringComparison.OrdinalIgnoreCase));
+        public bool HasAIValidationAutofillItems => AIValidationItems.Any(i => i.CanAutofill && !string.Equals(i.Severity, "ok", StringComparison.OrdinalIgnoreCase));
+        public bool HasAIValidationErrorItems => AIValidationItems.Any(i => string.Equals(i.Severity, "error", StringComparison.OrdinalIgnoreCase));
+        public bool HasAIValidationWarningItems => AIValidationItems.Any(i => string.Equals(i.Severity, "warning", StringComparison.OrdinalIgnoreCase) && !i.CanAutofill);
+        public bool HasAIValidationOkItems => AIValidationItems.Any(i => string.Equals(i.Severity, "ok", StringComparison.OrdinalIgnoreCase));
+
         public ICommand AIValidateCommand { get; }
         public ICommand CloseAIValidationCommand { get; }
+        public ICommand ApplyAISuggestionCommand { get; }
+        public ICommand ApplyAllAISuggestionsCommand { get; }
+        public ICommand OpenAIValidationSourceCommand { get; }
 
         // ---- Commands ----
         public ICommand CloseCommand { get; }
@@ -933,7 +967,7 @@ namespace Win11DesktopApp.ViewModels
 
             OpenGenerateDialogCommand = new RelayCommand(o => OpenGenerateDialog(), _ => !IsReadOnlyMode);
             CloseGenerateDialogCommand = new RelayCommand(o => IsGenerateDialogOpen = false);
-            GenerateFromTemplateCommand = new RelayCommand(o => GenerateDocument(o as TemplateEntry), _ => !IsReadOnlyMode);
+            GenerateFromTemplateCommand = new AsyncRelayCommand(o => GenerateDocumentAsync(o as TemplateEntry), _ => !IsReadOnlyMode);
 
             OpenFolderCommand = new RelayCommand(o =>
             {
@@ -972,6 +1006,23 @@ namespace Win11DesktopApp.ViewModels
             ExportProfilePdfCommand = new RelayCommand(o => ExportProfilePdf());
             AIValidateCommand = new AsyncRelayCommand(_ => RunAIValidationAsync(), _ => !IsAIValidating);
             CloseAIValidationCommand = new RelayCommand(o => IsAIValidationOpen = false);
+            ApplyAISuggestionCommand = new AsyncRelayCommand(
+                async o =>
+                {
+                    if (o is AIFieldCheckItem item)
+                        await ApplyAISuggestionAsync(item);
+                },
+                o => o is AIFieldCheckItem item && item.CanAutofill && !item.IsApplied && !IsAIValidating && !IsReadOnlyMode);
+            ApplyAllAISuggestionsCommand = new AsyncRelayCommand(
+                async _ => await ApplyAllAISuggestionsAsync(),
+                _ => !IsAIValidating && !IsReadOnlyMode && AIValidationAutofillItems.Any(i => !i.IsApplied));
+            OpenAIValidationSourceCommand = new RelayCommand(
+                o =>
+                {
+                    if (o is AIFieldCheckItem item)
+                        OpenAIValidationSource(item);
+                },
+                o => o is AIFieldCheckItem item && CanOpenAIValidationSource(item));
 
 
             AddCustomDocCommand = new RelayCommand(o =>
@@ -1829,6 +1880,52 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private void OpenAIValidationSource(AIFieldCheckItem item)
+        {
+            var path = ResolveAIValidationSourcePath(item);
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            OpenFile(path);
+        }
+
+        private bool CanOpenAIValidationSource(AIFieldCheckItem item)
+        {
+            var path = ResolveAIValidationSourcePath(item);
+            return !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+        }
+
+        private string ResolveAIValidationSourcePath(AIFieldCheckItem item)
+        {
+            if (item == null)
+                return string.Empty;
+
+            return item.SourceDocument switch
+            {
+                "passport" => PassportFilePath,
+                "visa" => VisaFilePath,
+                "insurance" => InsuranceFilePath,
+                "permit" => WorkPermitFilePath,
+                "cross-check" => ResolveCrossCheckSourcePath(item),
+                _ => string.Empty
+            };
+        }
+
+        private string ResolveCrossCheckSourcePath(AIFieldCheckItem item)
+        {
+            var key = item.FieldKey ?? string.Empty;
+            if (key.Contains("insurance", StringComparison.OrdinalIgnoreCase))
+                return InsuranceFilePath;
+
+            if (key.Contains("permit", StringComparison.OrdinalIgnoreCase))
+                return WorkPermitFilePath;
+
+            if (key.Contains("visa", StringComparison.OrdinalIgnoreCase))
+                return VisaFilePath;
+
+            return PassportFilePath;
+        }
+
         private EmployeeData LoadInitialEmployeeData()
         {
             if (!EnsureEmployeeFolderAvailable("EmployeeDetailsViewModel.LoadInitialEmployeeData", notifyUser: true))
@@ -2023,17 +2120,27 @@ namespace Win11DesktopApp.ViewModels
 
                 IsAIValidating = true;
                 AIValidationResult = Res("AIChatThinking");
+                AIValidationItems.Clear();
+                RaiseAIValidationCollectionsChanged();
                 IsAIValidationOpen = true;
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+                var passportData = await ScanDocumentAsync(geminiService, HasPassport, PassportFilePath, PassportIsPdf,
+                    Data.EmployeeType == "eu_citizen" && Data.EuDocumentType == "id_card" ? "id_card" : "passport", cts.Token);
+                var visaData = await ScanDocumentAsync(geminiService, HasVisa, VisaFilePath, VisaIsPdf, "visa", cts.Token);
+                var insuranceData = await ScanDocumentAsync(geminiService, HasInsurance, InsuranceFilePath, InsuranceIsPdf, "insurance", cts.Token);
+                var permitData = await ScanDocumentAsync(geminiService, HasWorkPermit, WorkPermitFilePath, WorkPermitIsPdf, "permit", cts.Token);
+                BuildAIValidationItems(passportData, visaData, insuranceData, permitData);
 
                 var d = Data;
                 var context = $@"Employee data to validate:
 - Full Name: {d.FirstName} {d.LastName}
 - Birth Date: {d.BirthDate}
 - Employee Type: {d.EmployeeType} (visa = needs visa, eu_citizen = EU citizen, work_permit = needs work permit)
-- Passport Number: {d.PassportNumber}, Country: {d.PassportCountry}, Expiry: {d.PassportExpiry}
-- Visa Number: {d.VisaNumber}, Type: {d.VisaType}, Expiry: {d.VisaExpiry}
+- Passport Number: {d.PassportNumber}, Authority: {d.PassportAuthority}, City: {d.PassportCity}, Country: {d.PassportCountry}, Expiry: {d.PassportExpiry}
+- Visa Number: {d.VisaNumber}, Authority: {d.VisaAuthority}, Type: {d.VisaType}, Expiry: {d.VisaExpiry}
 - Insurance: {d.InsuranceCompanyShort}, Number: {d.InsuranceNumber}, Expiry: {d.InsuranceExpiry}
-- Work Permit: Name={d.WorkPermitName}, Number={d.WorkPermitNumber}, Type={d.WorkPermitType}, Expiry={d.WorkPermitExpiry}
+- Work Permit: Name={d.WorkPermitName}, Number={d.WorkPermitNumber}, Type={d.WorkPermitType}, Authority={d.WorkPermitAuthority}, Expiry={d.WorkPermitExpiry}
 - Position (CZ-ISCO tag): {d.PositionTag}, Position Number: {d.PositionNumber}
 - Work Address Tag: {d.WorkAddressTag}
 - Local Address: {d.AddressLocal.Street} {d.AddressLocal.Number}, {d.AddressLocal.City}, {d.AddressLocal.Zip}
@@ -2079,7 +2186,6 @@ Respond in " + GetUILanguageName() + @". Use text markers for severity (NEVER us
 
 Format: one line per check. Be concise. At the end, give a summary score like 'Score: 8/10'.";
 
-                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
                 var result = await geminiService.ChatAsync(context, systemPrompt, cts.Token);
                 if (GeminiApiService.IsTimeoutResponse(result))
                 {
@@ -2116,6 +2222,583 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 "ru" => "Russian",
                 _ => "Ukrainian"
             };
+        }
+
+        private async Task<Dictionary<string, string>> ScanDocumentAsync(
+            GeminiApiService geminiService,
+            bool hasFile,
+            string filePath,
+            bool isPdf,
+            string docKey,
+            CancellationToken cancellationToken)
+        {
+            var extracted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (!hasFile || string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return extracted;
+
+            var prompt = AIScanPrompts.GetPrompt(docKey);
+            var result = isPdf
+                ? await geminiService.ChatWithFileAsync(filePath, prompt, ct: cancellationToken)
+                : await geminiService.ChatWithImageAsync(filePath, prompt, ct: cancellationToken);
+
+            if (GeminiApiService.IsFailureResponse(result))
+                return extracted;
+
+            foreach (var kv in AIScanPrompts.ParseResponse(result))
+                extracted[kv.Key] = kv.Value;
+
+            return extracted;
+        }
+
+        private void BuildAIValidationItems(
+            Dictionary<string, string> passportData,
+            Dictionary<string, string> visaData,
+            Dictionary<string, string> insuranceData,
+            Dictionary<string, string> permitData)
+        {
+            var items = new List<AIFieldCheckItem>();
+            var merged = MergeDictionaries(passportData, visaData, insuranceData, permitData);
+
+                BuildFieldComparisonItems(items, merged);
+                BuildOwnershipItems(items, visaData, insuranceData, permitData);
+                BuildCrossDocumentItems(items, passportData, visaData, insuranceData, permitData);
+
+            AIValidationItems = new ObservableCollection<AIFieldCheckItem>(items);
+            RaiseAIValidationCollectionsChanged();
+        }
+
+        private Dictionary<string, string> MergeDictionaries(params Dictionary<string, string>[] sources)
+        {
+            var merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var source in sources)
+            {
+                foreach (var kv in source)
+                    merged[kv.Key] = kv.Value;
+            }
+
+            return merged;
+        }
+
+        private void BuildFieldComparisonItems(List<AIFieldCheckItem> items, Dictionary<string, string> extracted)
+        {
+            CompareAIField(items, extracted, "PassportNumber", Data.PassportNumber, Res("HistFieldPassportNum") ?? "Passport Number", "passport");
+            CompareAIField(items, extracted, "PassportExpiry", Data.PassportExpiry, Res("HistFieldPassportExp") ?? "Passport Expiry", "passport");
+            CompareAIField(items, extracted, "PassportAuthority", Data.PassportAuthority, Res("HistFieldPassportAuthority") ?? "Passport Authority", "passport");
+            CompareAIField(items, extracted, "PassportCity", Data.PassportCity, Res("HistFieldPassportCity") ?? "Passport City", "passport");
+            CompareAIField(items, extracted, "PassportCountry", Data.PassportCountry, Res("HistFieldPassportCountry") ?? "Passport Country", "passport");
+            CompareAIField(items, extracted, "VisaNumber", Data.VisaNumber, Res("HistFieldVisaNum") ?? "Visa Number", "visa");
+            CompareAIField(items, extracted, "VisaExpiry", Data.VisaExpiry, Res("HistFieldVisaExp") ?? "Visa Expiry", "visa");
+            CompareAIField(items, extracted, "VisaAuthority", Data.VisaAuthority, Res("HistFieldVisaAuthority") ?? "Visa Authority", "visa");
+            CompareAIField(items, extracted, "VisaType", Data.VisaType, Res("HistFieldVisaType") ?? "Visa Type", "visa");
+            CompareAIField(items, extracted, "InsuranceNumber", Data.InsuranceNumber, Res("HistFieldInsNum") ?? "Insurance Number", "insurance");
+            CompareAIField(items, extracted, "InsuranceExpiry", Data.InsuranceExpiry, Res("HistFieldInsExp") ?? "Insurance Expiry", "insurance");
+            CompareAIField(items, extracted, "WorkPermitNumber", Data.WorkPermitNumber, Res("DetWpNumber") ?? "Work Permit Number", "permit");
+            CompareAIField(items, extracted, "WorkPermitExpiry", Data.WorkPermitExpiry, Res("DetWpExpiry") ?? "Work Permit Expiry", "permit");
+            CompareAIField(items, extracted, "WorkPermitIssueDate", Data.WorkPermitIssueDate, Res("DetWpIssueDate") ?? "Work Permit Issue Date", "permit");
+            CompareAIField(items, extracted, "WorkPermitAuthority", Data.WorkPermitAuthority, Res("DetWpAuthority") ?? "Work Permit Authority", "permit");
+        }
+
+        private void BuildOwnershipItems(
+            List<AIFieldCheckItem> items,
+            Dictionary<string, string> visaData,
+            Dictionary<string, string> insuranceData,
+            Dictionary<string, string> permitData)
+        {
+            CheckDocumentOwnership(items, "visa", Res("AIValidationVisaOwnershipTitle") ?? "Visa ownership", visaData, allowBirthDateOnlyError: true);
+            CheckDocumentOwnership(items, "insurance", Res("AIValidationInsuranceOwnershipTitle") ?? "Insurance ownership", insuranceData, allowBirthDateOnlyError: false);
+            CheckDocumentOwnership(items, "permit", Res("AIValidationPermitOwnershipTitle") ?? "Work permit ownership", permitData, allowBirthDateOnlyError: true);
+        }
+
+        private void CheckDocumentOwnership(
+            List<AIFieldCheckItem> items,
+            string sourceDocument,
+            string displayName,
+            Dictionary<string, string> docData,
+            bool allowBirthDateOnlyError)
+        {
+            if (docData.Count == 0)
+                return;
+
+            var details = new List<string>();
+            var strongMismatches = 0;
+            var hasBirthDateMismatch = false;
+            var hasFirstName = TryGetNonEmpty(docData, "FirstName", out var firstName);
+            var hasLastName = TryGetNonEmpty(docData, "LastName", out var lastName);
+            var isSwappedNameMatch = hasFirstName
+                && hasLastName
+                && NamesMatch(firstName, Data.LastName)
+                && NamesMatch(lastName, Data.FirstName);
+
+            if (hasFirstName && !NamesMatch(firstName, Data.FirstName) && !isSwappedNameMatch)
+            {
+                strongMismatches++;
+                details.Add($"FirstName: {firstName} vs {Data.FirstName}");
+            }
+
+            if (hasLastName && !NamesMatch(lastName, Data.LastName) && !isSwappedNameMatch)
+            {
+                strongMismatches++;
+                details.Add($"LastName: {lastName} vs {Data.LastName}");
+            }
+
+            if (TryGetNonEmpty(docData, "BirthDate", out var birthDate) && !ValuesMatch("BirthDate", Data.BirthDate, birthDate))
+            {
+                hasBirthDateMismatch = true;
+                details.Add($"BirthDate: {birthDate} vs {Data.BirthDate}");
+            }
+
+            var mismatchCount = strongMismatches + (hasBirthDateMismatch ? 1 : 0);
+            if (mismatchCount == 0)
+                return;
+
+            var severity = mismatchCount >= 2 || (allowBirthDateOnlyError && strongMismatches >= 1 && hasBirthDateMismatch)
+                ? "error"
+                : "warning";
+
+            if (!allowBirthDateOnlyError && strongMismatches == 0 && hasBirthDateMismatch)
+                severity = "warning";
+
+            items.Add(new AIFieldCheckItem
+            {
+                FieldKey = $"_ownership_{sourceDocument}",
+                FieldDisplayName = displayName,
+                SourceDocument = sourceDocument,
+                SourceDocumentDisplay = GetSourceDocumentDisplayName(sourceDocument),
+                Severity = severity,
+                Message = string.Join("; ", details),
+                CanAutofill = false
+            });
+        }
+
+        private void BuildCrossDocumentItems(
+            List<AIFieldCheckItem> items,
+            Dictionary<string, string> passportData,
+            Dictionary<string, string> visaData,
+            Dictionary<string, string> insuranceData,
+            Dictionary<string, string> permitData)
+        {
+            AddCrossDocumentMismatch(
+                items,
+                "PassportNumber",
+                passportData,
+                visaData,
+                "_cross_visa_passport_number",
+                Res("AIValidationCrossVisaPassportTitle") ?? "Visa vs passport",
+                Res("AIValidationCrossPassportNumberMessage") ?? "Passport number on visa does not match passport");
+
+            AddCrossDocumentMismatch(
+                items,
+                "BirthDate",
+                passportData,
+                insuranceData,
+                "_cross_insurance_passport_birth",
+                Res("AIValidationCrossInsurancePassportTitle") ?? "Insurance vs passport",
+                Res("AIValidationCrossBirthDateMessage") ?? "Birth date on insurance does not match passport",
+                severityOverride: "warning");
+
+            AddCrossDocumentIdentityCheck(
+                items,
+                passportData,
+                visaData,
+                "passport",
+                "visa",
+                Res("AIValidationCrossVisaPassportIdentityTitle") ?? "Visa identity vs passport");
+
+            AddCrossDocumentIdentityCheck(
+                items,
+                passportData,
+                insuranceData,
+                "passport",
+                "insurance",
+                Res("AIValidationCrossInsurancePassportIdentityTitle") ?? "Insurance identity vs passport",
+                birthDateSeverity: "warning");
+
+            AddCrossDocumentIdentityCheck(
+                items,
+                passportData,
+                permitData,
+                "passport",
+                "permit",
+                Res("AIValidationCrossPermitPassportIdentityTitle") ?? "Work permit identity vs passport");
+        }
+
+        private void AddCrossDocumentMismatch(
+            List<AIFieldCheckItem> items,
+            string fieldKey,
+            Dictionary<string, string> leftDoc,
+            Dictionary<string, string> rightDoc,
+            string itemKey,
+            string displayName,
+            string messagePrefix,
+            string severityOverride = "error")
+        {
+            if (!TryGetNonEmpty(leftDoc, fieldKey, out var leftValue) || !TryGetNonEmpty(rightDoc, fieldKey, out var rightValue))
+                return;
+
+            if (ValuesMatch(fieldKey, leftValue, rightValue))
+                return;
+
+            items.Add(new AIFieldCheckItem
+            {
+                FieldKey = itemKey,
+                FieldDisplayName = displayName,
+                SourceDocument = "cross-check",
+                SourceDocumentDisplay = GetSourceDocumentDisplayName("cross-check"),
+                CurrentValue = leftValue,
+                SuggestedValue = rightValue,
+                Severity = severityOverride,
+                Message = $"{messagePrefix}: {leftValue} vs {rightValue}",
+                CanAutofill = false
+            });
+        }
+
+        private void AddCrossDocumentIdentityCheck(
+            List<AIFieldCheckItem> items,
+            Dictionary<string, string> leftDoc,
+            Dictionary<string, string> rightDoc,
+            string leftDocKey,
+            string rightDocKey,
+            string displayName,
+            string birthDateSeverity = "error")
+        {
+            if (leftDoc.Count == 0 || rightDoc.Count == 0)
+                return;
+
+            var details = new List<string>();
+            var mismatchCount = 0;
+
+            if (TryGetNonEmpty(leftDoc, "FirstName", out var leftFirstName)
+                && TryGetNonEmpty(rightDoc, "FirstName", out var rightFirstName)
+                && !NamesMatch(leftFirstName, rightFirstName))
+            {
+                mismatchCount++;
+                details.Add($"FirstName: {leftFirstName} vs {rightFirstName}");
+            }
+
+            if (TryGetNonEmpty(leftDoc, "LastName", out var leftLastName)
+                && TryGetNonEmpty(rightDoc, "LastName", out var rightLastName)
+                && !NamesMatch(leftLastName, rightLastName))
+            {
+                mismatchCount++;
+                details.Add($"LastName: {leftLastName} vs {rightLastName}");
+            }
+
+            var leftBirthDate = string.Empty;
+            var rightBirthDate = string.Empty;
+            var hasBirthDateMismatch = TryGetNonEmpty(leftDoc, "BirthDate", out leftBirthDate)
+                && TryGetNonEmpty(rightDoc, "BirthDate", out rightBirthDate)
+                && !ValuesMatch("BirthDate", leftBirthDate, rightBirthDate);
+
+            if (hasBirthDateMismatch)
+            {
+                mismatchCount++;
+                details.Add($"BirthDate: {leftBirthDate} vs {rightBirthDate}");
+            }
+
+            if (mismatchCount == 0)
+                return;
+
+            var severity = mismatchCount >= 2 ? "error" : hasBirthDateMismatch ? birthDateSeverity : "warning";
+            items.Add(new AIFieldCheckItem
+            {
+                FieldKey = $"_cross_identity_{leftDocKey}_{rightDocKey}",
+                FieldDisplayName = displayName,
+                SourceDocument = "cross-check",
+                SourceDocumentDisplay = GetSourceDocumentDisplayName("cross-check"),
+                Severity = severity,
+                Message = string.Format(Res("AIValidationCrossIdentityMessage") ?? "{0} has mismatched identity fields: {1}", displayName, string.Join("; ", details)),
+                CanAutofill = false
+            });
+        }
+
+        private void CompareAIField(
+            List<AIFieldCheckItem> items,
+            Dictionary<string, string> extracted,
+            string fieldKey,
+            string? currentValue,
+            string displayName,
+            string sourceDocument)
+        {
+            if (!extracted.TryGetValue(fieldKey, out var suggestedValue))
+                return;
+
+            var current = currentValue?.Trim() ?? string.Empty;
+            var suggested = suggestedValue?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(suggested))
+                return;
+
+            if (IsSuspiciousDocumentValue(fieldKey, suggested))
+            {
+                items.Add(new AIFieldCheckItem
+                {
+                    FieldKey = $"_suspicious_{fieldKey}",
+                    FieldDisplayName = displayName,
+                    SourceDocument = sourceDocument,
+                    SourceDocumentDisplay = GetSourceDocumentDisplayName(sourceDocument),
+                    CurrentValue = current,
+                    SuggestedValue = suggested,
+                    Severity = "warning",
+                    Message = string.Format(Res("AIValidationSuspiciousReadMessage") ?? "AI may have read this value unreliably: {0}", suggested),
+                    CanAutofill = false
+                });
+                return;
+            }
+
+            var item = new AIFieldCheckItem
+            {
+                FieldKey = fieldKey,
+                FieldDisplayName = displayName,
+                SourceDocument = sourceDocument,
+                SourceDocumentDisplay = GetSourceDocumentDisplayName(sourceDocument),
+                CurrentValue = current,
+                SuggestedValue = suggested,
+                CanAutofill = true
+            };
+
+            if (string.IsNullOrWhiteSpace(current))
+            {
+                item.Severity = "missing";
+                item.Message = string.Format(Res("AIValidationMissingMessage") ?? "Empty in profile, found in document: {0}", suggested);
+            }
+            else if (!ValuesMatch(fieldKey, current, suggested))
+            {
+                item.Severity = "warning";
+                item.Message = string.Format(Res("AIValidationMismatchMessage") ?? "Profile: {0} -> Document: {1}", current, suggested);
+            }
+            else
+            {
+                item.Severity = "ok";
+                item.Message = Res("AIValidationMatchMessage") ?? "Matches document";
+                item.CanAutofill = false;
+            }
+
+            items.Add(item);
+        }
+
+        private static bool ValuesMatch(string fieldKey, string current, string suggested)
+        {
+            if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(suggested))
+                return false;
+
+            if (string.Equals(fieldKey, "FirstName", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "LastName", StringComparison.OrdinalIgnoreCase))
+            {
+                return NamesMatch(current, suggested);
+            }
+
+            current = current.Trim();
+            suggested = suggested.Trim();
+
+            if (string.Equals(fieldKey, "PassportCountry", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Equals(NormalizeCountry(current), NormalizeCountry(suggested), StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (IsDocumentNumberField(fieldKey))
+            {
+                return string.Equals(NormalizeDocumentNumber(current), NormalizeDocumentNumber(suggested), StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (fieldKey.EndsWith("Expiry", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("IssueDate", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "BirthDate", StringComparison.OrdinalIgnoreCase))
+            {
+                var currentDate = DateParsingHelper.TryParseDate(current);
+                var suggestedDate = DateParsingHelper.TryParseDate(suggested);
+                if (currentDate != null && suggestedDate != null)
+                    return currentDate.Value.Date == suggestedDate.Value.Date;
+            }
+
+            if (fieldKey.EndsWith("Authority", StringComparison.OrdinalIgnoreCase))
+            {
+                if (current.Length < 4 || suggested.Length < 4)
+                    return string.Equals(current, suggested, StringComparison.OrdinalIgnoreCase);
+
+                return current.Contains(suggested, StringComparison.OrdinalIgnoreCase)
+                    || suggested.Contains(current, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(current, suggested, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool TryGetNonEmpty(Dictionary<string, string> source, string key, out string value)
+        {
+            if (source.TryGetValue(key, out var raw) && !string.IsNullOrWhiteSpace(raw))
+            {
+                value = raw.Trim();
+                return true;
+            }
+
+            value = string.Empty;
+            return false;
+        }
+
+        private static bool NamesMatch(string left, string right)
+        {
+            if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+                return true;
+
+            return string.Equals(NormalizeName(left), NormalizeName(right), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeName(string value)
+        {
+            var normalized = value.Trim().ToUpperInvariant()
+                .Replace('-', ' ')
+                .Replace('’', '\'')
+                .Replace('`', '\'')
+                .Replace('´', '\'')
+                .Replace('\u00A0', ' ');
+
+            normalized = normalized
+                .Replace('А', 'A')
+                .Replace('В', 'B')
+                .Replace('Е', 'E')
+                .Replace('К', 'K')
+                .Replace('М', 'M')
+                .Replace('Н', 'H')
+                .Replace('О', 'O')
+                .Replace('Р', 'P')
+                .Replace('С', 'C')
+                .Replace('Т', 'T')
+                .Replace('У', 'Y')
+                .Replace('Х', 'X')
+                .Replace('І', 'I')
+                .Replace('Ї', 'I')
+                .Replace('Ё', 'E');
+
+            normalized = Regex.Replace(normalized, @"[^\p{L}\s']", string.Empty);
+            return Regex.Replace(normalized, @"\s+", " ");
+        }
+
+        private static string NormalizeCountry(string value)
+        {
+            var normalized = Regex.Replace(value.Trim().ToUpperInvariant(), @"\s+", " ");
+            return normalized switch
+            {
+                "UA" => "UKRAINE",
+                "UKR" => "UKRAINE",
+                "UKRAINA" => "UKRAINE",
+                "UKRAJINA" => "UKRAINE",
+                "UKRAINE" => "UKRAINE",
+                "УКРАЇНА" => "UKRAINE",
+                "УКРАИНА" => "UKRAINE",
+                _ => normalized
+            };
+        }
+
+        private static bool IsDocumentNumberField(string fieldKey)
+        {
+            return string.Equals(fieldKey, "PassportNumber", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "VisaNumber", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "InsuranceNumber", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "WorkPermitNumber", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeDocumentNumber(string value)
+        {
+            var normalized = Regex.Replace(value.Trim().ToUpperInvariant(), @"[\s\-\/]+", string.Empty);
+            return normalized;
+        }
+
+        private static bool IsSuspiciousDocumentValue(string fieldKey, string value)
+        {
+            if (!IsDocumentNumberField(fieldKey))
+                return false;
+
+            var normalized = NormalizeDocumentNumber(value);
+            if (normalized.Length < 5)
+                return true;
+
+            if (!Regex.IsMatch(normalized, @"^[A-Z0-9]+$"))
+                return true;
+
+            if (string.Equals(fieldKey, "PassportNumber", StringComparison.OrdinalIgnoreCase) && normalized.Length is < 6 or > 12)
+                return true;
+
+            return false;
+        }
+
+        private string GetSourceDocumentDisplayName(string sourceDocument)
+        {
+            return sourceDocument switch
+            {
+                "passport" => Res("AIValidationSourcePassport") ?? "Passport",
+                "visa" => Res("AIValidationSourceVisa") ?? "Visa",
+                "insurance" => Res("AIValidationSourceInsurance") ?? "Insurance",
+                "permit" => Res("AIValidationSourcePermit") ?? "Work permit",
+                "cross-check" => Res("AIValidationSourceCrossCheck") ?? "Cross-check",
+                _ => sourceDocument
+            };
+        }
+
+        private async Task ApplyAISuggestionAsync(AIFieldCheckItem item)
+        {
+            if (item == null || !item.CanAutofill || item.IsApplied || IsReadOnlyMode)
+                return;
+
+            var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
+            if (oldData == null)
+                return;
+
+            switch (item.FieldKey)
+            {
+                case "PassportNumber": Data.PassportNumber = item.SuggestedValue; break;
+                case "PassportExpiry": Data.PassportExpiry = item.SuggestedValue; break;
+                case "PassportAuthority": Data.PassportAuthority = item.SuggestedValue; break;
+                case "PassportCity": Data.PassportCity = item.SuggestedValue; break;
+                case "PassportCountry": Data.PassportCountry = item.SuggestedValue; break;
+                case "VisaNumber": Data.VisaNumber = item.SuggestedValue; break;
+                case "VisaExpiry": Data.VisaExpiry = item.SuggestedValue; break;
+                case "VisaAuthority": Data.VisaAuthority = item.SuggestedValue; break;
+                case "VisaType": Data.VisaType = item.SuggestedValue; break;
+                case "InsuranceNumber": Data.InsuranceNumber = item.SuggestedValue; break;
+                case "InsuranceExpiry": Data.InsuranceExpiry = item.SuggestedValue; break;
+                case "WorkPermitNumber": Data.WorkPermitNumber = item.SuggestedValue; break;
+                case "WorkPermitExpiry": Data.WorkPermitExpiry = item.SuggestedValue; break;
+                case "WorkPermitIssueDate": Data.WorkPermitIssueDate = item.SuggestedValue; break;
+                case "WorkPermitAuthority": Data.WorkPermitAuthority = item.SuggestedValue; break;
+                default: return;
+            }
+
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
+            {
+                StatusMessage = Res("MsgProfileSaveFail");
+                return;
+            }
+
+            await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+            item.IsApplied = true;
+            item.CurrentValue = item.SuggestedValue;
+            item.CanAutofill = false;
+            item.Severity = "ok";
+            item.Message = Res("AIValidationAppliedMessage") ?? "Applied";
+            OnPropertyChanged(nameof(Data));
+            InvalidateDetailCaches();
+            DataChanged?.Invoke();
+            RaiseAIValidationCollectionsChanged();
+        }
+
+        private async Task ApplyAllAISuggestionsAsync()
+        {
+            foreach (var item in AIValidationItems.Where(i => i.CanAutofill && !i.IsApplied).ToList())
+                await ApplyAISuggestionAsync(item);
+        }
+
+        private void RaiseAIValidationCollectionsChanged()
+        {
+            OnPropertyChanged(nameof(AIValidationItems));
+            OnPropertyChanged(nameof(AIValidationAutofillItems));
+            OnPropertyChanged(nameof(AIValidationErrorItems));
+            OnPropertyChanged(nameof(AIValidationWarningItems));
+            OnPropertyChanged(nameof(AIValidationAttentionItems));
+            OnPropertyChanged(nameof(AIValidationOkItems));
+            OnPropertyChanged(nameof(HasAIValidationItems));
+            OnPropertyChanged(nameof(HasAIValidationAutofillItems));
+            OnPropertyChanged(nameof(HasAIValidationErrorItems));
+            OnPropertyChanged(nameof(HasAIValidationWarningItems));
+            OnPropertyChanged(nameof(HasAIValidationAttentionItems));
+            OnPropertyChanged(nameof(HasAIValidationOkItems));
         }
 
         // ExportProfilePdf moved to EmployeeDetailsViewModel.Documents.cs

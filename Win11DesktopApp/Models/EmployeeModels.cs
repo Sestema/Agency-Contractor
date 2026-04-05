@@ -121,6 +121,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string Status { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string BankAccountNumber { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = "visa";
         public string WorkPermitName { get; set; } = string.Empty;
         public string WorkPermitExpiry { get; set; } = string.Empty;
