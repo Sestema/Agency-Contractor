@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using Win11DesktopApp.Models;
+using System.Globalization;
 
 namespace Win11DesktopApp.Services
 {
@@ -16,7 +17,8 @@ namespace Win11DesktopApp.Services
         private readonly string _filePath;
         private FinanceDatabase _db;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-        private readonly HashSet<string> _reportedSalaryConflictKeys = new(StringComparer.OrdinalIgnoreCase);
+        private readonly SalaryDbService? _salaryDbService;
+        private readonly LocalDbService? _localDbService;
         private readonly object _paymentsCacheLock = new();
         private readonly Dictionary<(int year, int month), (List<SalaryEntry> entries, List<FirmExpense> expenses)> _paymentsCache = new();
 
@@ -27,9 +29,11 @@ namespace Win11DesktopApp.Services
         public string LastSalaryConflictMessage { get; private set; } = string.Empty;
         public string? LastSaveRecoveryPath { get; private set; }
 
-        public FinanceService(FolderService folderService, bool suppressStartupNotifications = false)
+        public FinanceService(FolderService folderService, SalaryDbService? salaryDbService = null, LocalDbService? localDbService = null, bool suppressStartupNotifications = false)
         {
             _suppressStartupNotifications = suppressStartupNotifications;
+            _salaryDbService = salaryDbService;
+            _localDbService = localDbService;
             var rootPath = folderService.RootPath;
             if (!string.IsNullOrEmpty(rootPath))
             {
@@ -46,6 +50,37 @@ namespace Win11DesktopApp.Services
             }
             _db = Load();
             MigrateIfNeeded();
+        }
+
+        public SalaryDbMigrationResult EnsureSalaryMigratedToLocalDb()
+        {
+            try
+            {
+                if (_salaryDbService == null || _localDbService == null)
+                    return new SalaryDbMigrationResult { Message = "SalaryDbService or LocalDbService is not configured." };
+
+                if (IsSalaryMigrationCompleted())
+                {
+                    return new SalaryDbMigrationResult
+                    {
+                        WasMigrationAttempted = false,
+                        IsSuccessful = true,
+                        Message = "Salary migration already completed."
+                    };
+                }
+
+                return MigrateSalaryJsonToMonthlyDatabases();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.EnsureSalaryMigratedToLocalDb", ex);
+                return new SalaryDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
         }
 
         private static T? ReadJson<T>(string path)
@@ -291,6 +326,228 @@ namespace Win11DesktopApp.Services
 
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
+
+        private bool IsSalaryMigrationCompleted()
+        {
+            try
+            {
+                using var connection = _localDbService!.OpenConnection();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT COUNT(1)
+FROM migration_journal
+WHERE stage = 'salary_entries'
+  AND status = 'completed';";
+                var result = command.ExecuteScalar();
+                return Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private SalaryDbMigrationResult MigrateSalaryJsonToMonthlyDatabases()
+        {
+            if (_salaryDbService == null || _localDbService == null)
+                return new SalaryDbMigrationResult { Message = "Salary migration services are not configured." };
+
+            var monthBuckets = new Dictionary<string, (int year, int month, List<SalaryEntry> entries, List<FirmExpense> expenses)>(StringComparer.OrdinalIgnoreCase);
+            var filesScanned = 0;
+            var filesSkipped = 0;
+            var recordsFound = 0;
+            var expensesFound = 0;
+            var databasesCreated = 0;
+
+            _localDbService.RecordMigrationJournal("salary_entries", "started", 0, 0, null, 0, 0);
+
+            try
+            {
+                foreach (var paymentFolder in EnumeratePaymentFolders())
+                {
+                    if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
+                        continue;
+
+                    foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
+                    {
+                        filesScanned++;
+
+                        var fileName = Path.GetFileNameWithoutExtension(file);
+                        var parts = fileName.Split('_');
+                        if (parts.Length != 3
+                            || !int.TryParse(parts[1], out var year)
+                            || !int.TryParse(parts[2], out var month))
+                        {
+                            filesSkipped++;
+                            LoggingService.LogWarning("FinanceService.SalaryMigration",
+                                $"Skipped unreadable salary filename: {file}");
+                            continue;
+                        }
+
+                        try
+                        {
+                            var data = ReadJson<FirmPaymentData>(file);
+                            if (data == null)
+                            {
+                                filesSkipped++;
+                                LoggingService.LogWarning("FinanceService.SalaryMigration",
+                                    $"Skipped unreadable salary JSON: {file}");
+                                continue;
+                            }
+
+                            var monthKey = $"{year:D4}-{month:D2}";
+                            if (!monthBuckets.TryGetValue(monthKey, out var bucket))
+                            {
+                                bucket = (year, month, new List<SalaryEntry>(), new List<FirmExpense>());
+                            }
+
+                            bucket.entries.AddRange(data.Entries.Select(CloneSalaryEntryForMigration));
+                            bucket.expenses.AddRange(data.Expenses.Select(CloneFirmExpenseForMigration));
+                            monthBuckets[monthKey] = bucket;
+
+                            recordsFound += data.Entries.Count;
+                            expensesFound += data.Expenses.Count;
+                        }
+                        catch (Exception ex)
+                        {
+                            filesSkipped++;
+                            LoggingService.LogError("FinanceService.SalaryMigration.ReadFile",
+                                new IOException($"file={file}: {ex.Message}", ex));
+                        }
+                    }
+                }
+
+                var recordsImported = 0;
+                var expensesImported = 0;
+
+                foreach (var bucket in monthBuckets.Values.OrderBy(v => v.year).ThenBy(v => v.month))
+                {
+                    var monthDbExisted = _salaryDbService.MonthDbExists(bucket.year, bucket.month);
+                    _salaryDbService.ReplaceMonthData(bucket.year, bucket.month, bucket.entries, bucket.expenses);
+                    if (!monthDbExisted)
+                        databasesCreated++;
+
+                    var snapshot = _salaryDbService.GetMonthValidationSnapshot(bucket.year, bucket.month);
+                    ValidateMonthSnapshot(bucket.year, bucket.month, bucket.entries, bucket.expenses, snapshot);
+
+                    recordsImported += snapshot.EntryCount;
+                    expensesImported += snapshot.ExpenseCount;
+                }
+
+                _localDbService.RecordMigrationJournal(
+                    "salary_entries",
+                    "completed",
+                    recordsFound + expensesFound,
+                    recordsImported + expensesImported,
+                    null,
+                    filesScanned,
+                    filesSkipped);
+
+                return new SalaryDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = true,
+                    FilesScanned = filesScanned,
+                    FilesSkipped = filesSkipped,
+                    RecordsFound = recordsFound,
+                    RecordsImported = recordsImported,
+                    ExpensesFound = expensesFound,
+                    ExpensesImported = expensesImported,
+                    DatabasesCreated = databasesCreated,
+                    Message = $"Migrated salary JSON to {monthBuckets.Count} monthly SQLite databases."
+                };
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.MigrateSalaryJsonToMonthlyDatabases", ex);
+                _localDbService.RecordMigrationJournal(
+                    "salary_entries",
+                    "failed",
+                    recordsFound + expensesFound,
+                    0,
+                    ex.Message,
+                    filesScanned,
+                    filesSkipped);
+
+                return new SalaryDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    FilesScanned = filesScanned,
+                    FilesSkipped = filesSkipped,
+                    RecordsFound = recordsFound,
+                    ExpensesFound = expensesFound,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        private static SalaryEntry CloneSalaryEntryForMigration(SalaryEntry entry)
+        {
+#pragma warning disable CS0618
+            return new SalaryEntry
+            {
+                EmployeeId = entry.EmployeeId,
+                EmployeeFolder = entry.EmployeeFolder,
+                FullName = entry.FullName,
+                FirmName = entry.FirmName,
+                HoursWorked = entry.HoursWorked,
+                HourlyRate = entry.HourlyRate,
+                Advance = entry.Advance,
+                Advances = entry.Advances,
+                Surcharge = entry.Surcharge,
+                Accommodation = entry.Accommodation,
+                OtherDeductions = entry.OtherDeductions,
+                CustomValues = new Dictionary<string, decimal>(entry.CustomValues, StringComparer.OrdinalIgnoreCase),
+                SavedNetSalary = entry.SavedNetSalary,
+                Status = entry.Status,
+                Note = entry.Note,
+                ColorTag = entry.ColorTag,
+                IsFinished = entry.IsFinished
+            };
+#pragma warning restore CS0618
+        }
+
+        private static FirmExpense CloneFirmExpenseForMigration(FirmExpense expense)
+        {
+            return new FirmExpense
+            {
+                Id = expense.Id,
+                FirmName = expense.FirmName,
+                Year = expense.Year,
+                Month = expense.Month,
+                Name = expense.Name,
+                Amount = expense.Amount
+            };
+        }
+
+        private static void ValidateMonthSnapshot(
+            int year,
+            int month,
+            IReadOnlyCollection<SalaryEntry> expectedEntries,
+            IReadOnlyCollection<FirmExpense> expectedExpenses,
+            (int EntryCount, int ExpenseCount, decimal SavedNetSalaryTotal, Dictionary<string, int> StatusCounts) snapshot)
+        {
+            if (snapshot.EntryCount != expectedEntries.Count)
+                throw new InvalidOperationException($"Salary entry count mismatch for {year:D4}-{month:D2}: expected {expectedEntries.Count}, got {snapshot.EntryCount}.");
+
+            if (snapshot.ExpenseCount != expectedExpenses.Count)
+                throw new InvalidOperationException($"Salary expense count mismatch for {year:D4}-{month:D2}: expected {expectedExpenses.Count}, got {snapshot.ExpenseCount}.");
+
+            var expectedNetTotal = expectedEntries.Sum(e => e.SavedNetSalary);
+            if (expectedNetTotal != snapshot.SavedNetSalaryTotal)
+                throw new InvalidOperationException($"SavedNetSalary mismatch for {year:D4}-{month:D2}: expected {expectedNetTotal}, got {snapshot.SavedNetSalaryTotal}.");
+
+            var expectedStatusCounts = expectedEntries
+                .GroupBy(e => e.Status ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var pair in expectedStatusCounts)
+            {
+                if (!snapshot.StatusCounts.TryGetValue(pair.Key, out var actual) || actual != pair.Value)
+                    throw new InvalidOperationException($"Status distribution mismatch for {year:D4}-{month:D2}: status={pair.Key}, expected {pair.Value}, got {actual}.");
+            }
+        }
 
         private void NotifyStartupWarning(string message)
         {
@@ -609,31 +866,23 @@ namespace Win11DesktopApp.Services
 
             if (firmName != null)
             {
+                var resolvedEmployeeFolder = ResolveEmployeeFolder(employeeFolder);
+                var employeeId = ResolveEmployeeId(resolvedEmployeeFolder);
+
                 try
                 {
-                    var folderService = App.FolderService;
-                    if (folderService == null) return result;
-                    var paymentFolder = folderService.GetPaymentFolder(firmName);
-                    if (!string.IsNullOrEmpty(paymentFolder) && Directory.Exists(paymentFolder))
+                    if (_salaryDbService != null)
                     {
-                        foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
-                        {
-                            var fn = Path.GetFileNameWithoutExtension(file);
-                            var parts = fn.Split('_');
-                            if (parts.Length != 3) continue;
-                            if (!int.TryParse(parts[1], out var y) || !int.TryParse(parts[2], out var m)) continue;
-                            var mk = $"{y:D4}-{m:D2}";
-                            if (string.Compare(mk, beforeMonthKey, StringComparison.Ordinal) >= 0) continue;
-                            if (result.ContainsKey(mk)) continue;
+                        var sqliteSavedPayments = _salaryDbService.GetSavedPaymentsForEmployee(
+                            resolvedEmployeeFolder,
+                            employeeId,
+                            firmName,
+                            beforeMonthKey);
 
-                            var pd = LoadFirmPaymentFromFolder(firmName, y, m);
-                            if (pd == null) continue;
-                            var entry = pd.Entries.FirstOrDefault(e => e.EmployeeFolder == employeeFolder);
-                            if (entry == null) continue;
+                        foreach (var pair in sqliteSavedPayments)
+                            result.TryAdd(pair.Key, pair.Value);
 
-                            var paid = entry.Status == "paid";
-                            result.TryAdd(mk, (entry.SavedNetSalary, paid));
-                        }
+                        return result;
                     }
                 }
                 catch (Exception ex) { LoggingService.LogError("FinanceService.LoadSavedPaymentsForEmployee", ex); }
@@ -723,220 +972,25 @@ namespace Win11DesktopApp.Services
 
         #endregion
 
-        #region Per-Firm Shared Folder
-
-        private static string BuildSalaryFileName(int year, int month)
-            => $"salary_{year}_{month:D2}.json";
-
-        private static List<string> FindSalaryMonthFileVariants(string paymentFolder, int year, int month)
-        {
-            if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
-                return new List<string>();
-
-            var canonicalName = BuildSalaryFileName(year, month);
-            var baseName = Path.GetFileNameWithoutExtension(canonicalName);
-
-            return Directory.GetFiles(paymentFolder, $"{baseName}*.json")
-                .Where(path =>
-                {
-                    var name = Path.GetFileName(path);
-                    if (string.Equals(name, canonicalName, StringComparison.OrdinalIgnoreCase))
-                        return true;
-
-                    var fileBase = Path.GetFileNameWithoutExtension(name);
-                    return fileBase.StartsWith(baseName + "-", StringComparison.OrdinalIgnoreCase)
-                           || fileBase.StartsWith(baseName + " ", StringComparison.OrdinalIgnoreCase)
-                           || fileBase.StartsWith(baseName + "(", StringComparison.OrdinalIgnoreCase);
-                })
-                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-
-        private static List<string> FindSalaryConflictFiles(string paymentFolder, int year, int month)
-        {
-            var canonicalName = BuildSalaryFileName(year, month);
-            return FindSalaryMonthFileVariants(paymentFolder, year, month)
-                .Where(path => !string.Equals(Path.GetFileName(path), canonicalName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        private void ReportSalaryConflict(string firmName, int year, int month, IReadOnlyList<string> conflictFiles)
-        {
-            if (conflictFiles.Count == 0)
-                return;
-
-            var key = $"{firmName}|{year:D4}-{month:D2}|{string.Join("|", conflictFiles.Select(Path.GetFileName))}";
-            var monthLabel = $"{month:D2}.{year:D4}";
-            var filesLabel = string.Join(", ", conflictFiles.Select(Path.GetFileName));
-            LastSalaryConflictMessage =
-                $"OneDrive conflict detected for salary files {monthLabel} ({firmName}). Resolve duplicate files first: {filesLabel}";
-
-            if (_reportedSalaryConflictKeys.Add(key))
-                NotifyWarning(LastSalaryConflictMessage);
-
-            LoggingService.LogWarning("FinanceService.SalaryConflict", LastSalaryConflictMessage);
-        }
-
-        private string? ResolveSalaryMonthFilePath(string paymentFolder, string firmName, int year, int month)
-        {
-            if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
-                return null;
-
-            var canonicalName = BuildSalaryFileName(year, month);
-            var canonicalPath = Path.Combine(paymentFolder, canonicalName);
-            var variants = FindSalaryMonthFileVariants(paymentFolder, year, month);
-            var conflicts = variants
-                .Where(path => !string.Equals(Path.GetFileName(path), canonicalName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (conflicts.Count > 0)
-                ReportSalaryConflict(firmName, year, month, conflicts);
-
-            if (File.Exists(canonicalPath))
-                return canonicalPath;
-
-            return variants
-                .OrderByDescending(File.GetLastWriteTimeUtc)
-                .FirstOrDefault();
-        }
-
-        private bool HasBlockingSalaryConflicts(string paymentFolder, string firmName, int year, int month)
-        {
-            var conflicts = FindSalaryConflictFiles(paymentFolder, year, month);
-            if (conflicts.Count == 0)
-                return false;
-
-            ReportSalaryConflict(firmName, year, month, conflicts);
-            return true;
-        }
-
-        public bool SaveFirmPaymentToFolder(string firmName, int year, int month,
-            List<SalaryEntry> entries, List<FirmExpense> expenses)
-        {
-            LastSaveRecoveryPath = null;
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return false;
-
-            var paymentFolder = folderService.GetPaymentFolder(firmName);
-            if (string.IsNullOrEmpty(paymentFolder)) return false;
-
-            Directory.CreateDirectory(paymentFolder);
-
-            if (HasBlockingSalaryConflicts(paymentFolder, firmName, year, month))
-                return false;
-
-            var data = new FirmPaymentData
-            {
-                Year = year,
-                Month = month,
-                FirmName = firmName,
-                Entries = entries,
-                Expenses = expenses,
-                UpdatedAt = DateTime.Now
-            };
-
-            var fileName = $"salary_{year}_{month:D2}.json";
-            var filePath = Path.Combine(paymentFolder, fileName);
-
-            try
-            {
-                WriteJsonAtomic(filePath, data);
-                InvalidatePaymentsCache(year, month);
-                LastSalaryConflictMessage = string.Empty;
-                LastSaveRecoveryPath = null;
-                return true;
-            }
-            catch (SafeFileRecoveryException ex)
-            {
-                LastSaveRecoveryPath = ex.RecoveryPath;
-                System.Diagnostics.Debug.WriteLine($"SaveFirmPayment recovery ({firmName}): {ex.Message}");
-                LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder",
-                    new IOException($"firm={firmName}, year={year}, month={month}, path={filePath}, recovery={ex.RecoveryPath}: {ex.Message}", ex));
-                return false;
-            }
-            catch (Exception ex)
-            {
-                LastSaveRecoveryPath = null;
-                System.Diagnostics.Debug.WriteLine($"SaveFirmPayment error ({firmName}): {ex.Message}");
-                LoggingService.LogError("FinanceService.SaveFirmPaymentToFolder",
-                    new IOException($"firm={firmName}, year={year}, month={month}, path={filePath}: {ex.Message}", ex));
-                return false;
-            }
-        }
-
-        public FirmPaymentData? LoadFirmPaymentFromFolder(string firmName, int year, int month)
-        {
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return null;
-
-            var paymentFolder = folderService.GetPaymentFolder(firmName);
-            if (string.IsNullOrEmpty(paymentFolder)) return null;
-
-            var filePath = ResolveSalaryMonthFilePath(paymentFolder, firmName, year, month);
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-                return null;
-
-            try
-            {
-                return ReadJson<FirmPaymentData>(filePath);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"LoadFirmPayment error ({firmName}): {ex.Message}");
-                LoggingService.LogError("FinanceService.LoadFirmPaymentFromFolder", ex);
-                return null;
-            }
-        }
-
         public void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, int fromYear, int fromMonth, CancellationToken cancellationToken = default)
         {
-            var folderService = App.FolderService;
-            if (folderService == null) return;
-            var paymentFolder = folderService.GetPaymentFolder(firmName);
-            if (string.IsNullOrEmpty(paymentFolder) || !Directory.Exists(paymentFolder)) return;
-
             var fromKey = $"{fromYear:D4}-{fromMonth:D2}";
             var resolvedEmployeeFolder = ResolveEmployeeFolder(employeeFolder, employeeId);
-            var normalizedEmployeeFolder = NormalizeEmployeePath(resolvedEmployeeFolder);
 
-            foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
+            try
             {
-                if (cancellationToken.IsCancellationRequested)
-                    return;
-
-                var fn = Path.GetFileNameWithoutExtension(file);
-                var parts = fn.Split('_');
-                if (parts.Length != 3) continue;
-                if (!int.TryParse(parts[1], out var y) || !int.TryParse(parts[2], out var m)) continue;
-                var mk = $"{y:D4}-{m:D2}";
-                if (string.Compare(mk, fromKey, StringComparison.Ordinal) <= 0) continue;
-
-                try
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var data = ReadJson<FirmPaymentData>(file);
-                    if (data == null) continue;
-
-                    bool changed = false;
-                    foreach (var entry in data.Entries)
-                    {
-                        if (!MatchesEmployee(entry, employeeId, normalizedEmployeeFolder)) continue;
-                        entry.HourlyRate = newRate;
-                        changed = true;
-                    }
-
-                    if (changed)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        WriteJsonAtomic(file, data);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception ex) { LoggingService.LogError("FinanceService.UpdateHourlyRateForward", ex); }
+                _salaryDbService?.UpdateHourlyRateForward(employeeId, resolvedEmployeeFolder, firmName, newRate, fromKey, cancellationToken);
             }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward.SQLite", ex.Message);
+            }
+
+            InvalidatePaymentsCache();
         }
 
         private static string NormalizeEmployeePath(string? path)
@@ -957,27 +1011,19 @@ namespace Win11DesktopApp.Services
             if (folderService == null || string.IsNullOrEmpty(folderService.RootPath))
                 return false;
 
-            var firmGroups = allEntries.GroupBy(e => e.FirmName);
-            foreach (var group in firmGroups)
+            try
             {
-                var paymentFolder = folderService.GetPaymentFolder(group.Key);
-                if (string.IsNullOrEmpty(paymentFolder))
-                    return false;
-
-                Directory.CreateDirectory(paymentFolder);
-                if (HasBlockingSalaryConflicts(paymentFolder, group.Key, year, month))
-                    return false;
+                _salaryDbService?.SaveMonthPayments(year, month, CloneSalaryEntries(allEntries), CloneFirmExpenses(allExpenses));
             }
-
-            foreach (var group in firmGroups)
+            catch (Exception ex)
             {
-                var firmExpenses = allExpenses.Where(e => e.FirmName == group.Key).ToList();
-                if (!SaveFirmPaymentToFolder(group.Key, year, month, group.ToList(), firmExpenses))
-                    return false;
+                LoggingService.LogError("FinanceService.SaveAllFirmPayments.SQLite", ex);
+                return false;
             }
 
             InvalidatePaymentsCache(year, month);
             LastSalaryConflictMessage = string.Empty;
+            LastSaveRecoveryPath = null;
             return true;
         }
 
@@ -993,74 +1039,44 @@ namespace Win11DesktopApp.Services
                 }
             }
 
-            var folderService = App.FolderService;
-            var entries = new List<SalaryEntry>();
-            var expenses = new List<FirmExpense>();
-
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return (entries, expenses);
-
-            var companies = App.CompanyService?.Companies;
-            if (companies == null) return (entries, expenses);
-            foreach (var company in companies)
+            if (_salaryDbService != null)
             {
-                var data = LoadFirmPaymentFromFolder(company.Name, year, month);
-                if (data != null)
+                try
                 {
-                    entries.AddRange(data.Entries);
-                    expenses.AddRange(data.Expenses);
-                }
-            }
-
-            var archiveFolder = folderService.GetArchiveFolder();
-            if (Directory.Exists(archiveFolder))
-            {
-                var existingEntryKeys = new HashSet<string>(
-                    entries.Select(BuildPaymentEntryCacheKey),
-                    StringComparer.OrdinalIgnoreCase);
-                var existingExpenseIds = new HashSet<string>(
-                    expenses.Select(e => e.Id ?? string.Empty),
-                    StringComparer.OrdinalIgnoreCase);
-
-                foreach (var dir in Directory.GetDirectories(archiveFolder))
-                {
-                    var firmName = Path.GetFileName(dir);
-                    var paymentFolder = FindPaymentFolder(dir);
-                    if (string.IsNullOrEmpty(paymentFolder)) continue;
-
-                    var filePath = ResolveSalaryMonthFilePath(paymentFolder, firmName, year, month);
-                    if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) continue;
-
-                    try
+                    if (_salaryDbService.MonthDbExists(year, month))
                     {
-                        var data = ReadJson<FirmPaymentData>(filePath);
-                        if (data != null)
+                        var sqliteResult = _salaryDbService.LoadMonthPayments(year, month);
+                        var sqliteEntries = CloneSalaryEntries(sqliteResult.entries);
+                        var sqliteExpenses = CloneFirmExpenses(sqliteResult.expenses);
+                        lock (_paymentsCacheLock)
                         {
-                            foreach (var e in data.Entries)
-                            {
-                                if (existingEntryKeys.Add(BuildPaymentEntryCacheKey(e)))
-                                    entries.Add(e);
-                            }
-
-                            foreach (var e in data.Expenses)
-                            {
-                                var expenseKey = e.Id ?? string.Empty;
-                                if (existingExpenseIds.Add(expenseKey))
-                                    expenses.Add(e);
-                            }
+                            _paymentsCache[cacheKey] = (sqliteEntries, sqliteExpenses);
                         }
+
+                        return (CloneSalaryEntries(sqliteEntries), CloneFirmExpenses(sqliteExpenses));
                     }
-                    catch (Exception ex) { LoggingService.LogError("FinanceService.LoadAllFirmPayments", ex); }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("FinanceService.LoadAllFirmPayments.SQLite", ex.Message);
                 }
             }
+            return (new List<SalaryEntry>(), new List<FirmExpense>());
+        }
 
-            var clonedEntries = CloneSalaryEntries(entries);
-            var clonedExpenses = CloneFirmExpenses(expenses);
-            lock (_paymentsCacheLock)
+        private string? ResolveEmployeeId(string employeeFolder)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
+            try
             {
-                _paymentsCache[cacheKey] = (clonedEntries, clonedExpenses);
+                return App.EmployeeService?.LoadEmployeeData(employeeFolder)?.UniqueId;
             }
-
-            return (CloneSalaryEntries(clonedEntries), CloneFirmExpenses(clonedExpenses));
+            catch
+            {
+                return null;
+            }
         }
 
         public void InvalidatePaymentsCache(int? year = null, int? month = null)
@@ -1075,11 +1091,6 @@ namespace Win11DesktopApp.Services
 
                 _paymentsCache.Clear();
             }
-        }
-
-        private static string BuildPaymentEntryCacheKey(SalaryEntry entry)
-        {
-            return $"{NormalizeEmployeePath(entry.EmployeeFolder)}|{entry.FirmName}";
         }
 
         private static List<SalaryEntry> CloneSalaryEntries(IEnumerable<SalaryEntry> source)
@@ -1195,8 +1206,6 @@ namespace Win11DesktopApp.Services
             }
             return null;
         }
-
-        #endregion
 
         #region Salary History per Employee
 

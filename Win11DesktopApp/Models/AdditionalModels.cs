@@ -27,6 +27,7 @@ namespace Win11DesktopApp.EmployeeModels
     /// </summary>
     public class DocumentExpiryInfo
     {
+        public string UniqueId { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
         public string EmployeeFolder { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;
@@ -44,6 +45,7 @@ namespace Win11DesktopApp.EmployeeModels
     /// </summary>
     public class EmployeeProblemGroup : System.ComponentModel.INotifyPropertyChanged
     {
+        public string UniqueId { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
         public string EmployeeFolder { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;
@@ -75,6 +77,7 @@ namespace Win11DesktopApp.EmployeeModels
     /// </summary>
     public class EmployeeHistoryEntry
     {
+        public long Id { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public string EventType { get; set; } = "ProfileChanged";
         public string Action { get; set; } = string.Empty;
@@ -175,6 +178,43 @@ namespace Win11DesktopApp.EmployeeModels
         public bool IsReverted { get; set; }
         public string? RevertedAt { get; set; }
         public string? RevertedByOperationId { get; set; }
+    }
+
+    public sealed class EmployeeIndexRow
+    {
+        public string UniqueId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string FirmName { get; set; } = string.Empty;
+        public string EmployeeFolder { get; set; } = string.Empty;
+        public string EmployeeType { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string StartDate { get; set; } = string.Empty;
+        public string EndDate { get; set; } = string.Empty;
+        public string ContractType { get; set; } = string.Empty;
+        public string PositionTitle { get; set; } = string.Empty;
+        public string PositionNumber { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PassportNumber { get; set; } = string.Empty;
+        public string VisaNumber { get; set; } = string.Empty;
+        public string InsuranceNumber { get; set; } = string.Empty;
+        public string PassportExpiry { get; set; } = string.Empty;
+        public string VisaExpiry { get; set; } = string.Empty;
+        public string InsuranceExpiry { get; set; } = string.Empty;
+        public string WorkPermitName { get; set; } = string.Empty;
+        public string WorkPermitExpiry { get; set; } = string.Empty;
+        public string BankAccountNumber { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public bool IsArchived { get; set; }
+        public string ArchivedFromFirm { get; set; } = string.Empty;
+        public string PhotoPath { get; set; } = string.Empty;
+        public bool HasPhoto { get; set; }
+        public bool HasPassport { get; set; }
+        public bool HasVisa { get; set; }
+        public bool HasInsurance { get; set; }
+        public string UpdatedAt { get; set; } = string.Empty;
     }
 
     public class EmployeeReportRow

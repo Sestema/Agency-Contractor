@@ -306,6 +306,27 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _visaPreviewState, value);
         }
 
+        private string _passportPage2FilePath = string.Empty;
+        public string PassportPage2FilePath
+        {
+            get => _passportPage2FilePath;
+            set => SetProperty(ref _passportPage2FilePath, value);
+        }
+
+        private string _passportPage2PreviewPath = string.Empty;
+        public string PassportPage2PreviewPath
+        {
+            get => _passportPage2PreviewPath;
+            set => SetProperty(ref _passportPage2PreviewPath, value);
+        }
+
+        private DocPreviewState _passportPage2PreviewState = DocPreviewState.Empty;
+        public DocPreviewState PassportPage2PreviewState
+        {
+            get => _passportPage2PreviewState;
+            set => SetProperty(ref _passportPage2PreviewState, value);
+        }
+
         private string _insuranceFilePath = string.Empty;
         public string InsuranceFilePath
         {
@@ -376,6 +397,20 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _visaIsPdf, value);
         }
 
+        private bool _hasPassportPage2;
+        public bool HasPassportPage2
+        {
+            get => _hasPassportPage2;
+            set => SetProperty(ref _hasPassportPage2, value);
+        }
+
+        private bool _passportPage2IsPdf;
+        public bool PassportPage2IsPdf
+        {
+            get => _passportPage2IsPdf;
+            set => SetProperty(ref _passportPage2IsPdf, value);
+        }
+
         private bool _insuranceIsPdf;
         public bool InsuranceIsPdf
         {
@@ -422,6 +457,43 @@ namespace Win11DesktopApp.ViewModels
         private CancellationTokenSource? _previewLoadCts;
 
         public bool IsWorkPermitType => Data.EmployeeType == "work_permit";
+        public bool IsEuIdCardEmployee =>
+            string.Equals(Data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(Data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase);
+        public bool HasPassportPage2SecondaryDocument => !string.IsNullOrWhiteSpace(PassportPage2FilePath);
+        public bool ShowVisaDocumentCard => !HasPassportPage2SecondaryDocument;
+        public bool ShowIdCardSecondSideCard => IsEuIdCardEmployee && HasPassportPage2SecondaryDocument;
+        public string SecondaryDocumentDisplayName =>
+            HasPassportPage2SecondaryDocument
+                ? (IsEuIdCardEmployee
+                    ? (Res("StepIdCardPage2Data") ?? "Дані ID-карти (2 сторони)")
+                    : (Res("StepPassportPage2Data") ?? "Дані з паспорту (стор. 2)"))
+                : (Res("DetDocVisa") ?? "Віза");
+        public bool HasSecondaryDocument => HasPassportPage2 || HasVisa;
+        public string SecondaryDocumentFilePath =>
+            !string.IsNullOrWhiteSpace(PassportPage2FilePath) ? PassportPage2FilePath : VisaFilePath;
+        public string SecondaryDocumentPreviewPath =>
+            !string.IsNullOrWhiteSpace(PassportPage2PreviewPath) ? PassportPage2PreviewPath : VisaPreviewPath;
+        public DocPreviewState SecondaryDocumentPreviewState =>
+            !string.IsNullOrWhiteSpace(PassportPage2FilePath) ? PassportPage2PreviewState : VisaPreviewState;
+        public string SecondaryDocumentNumberLabel => IsEuIdCardEmployee
+            ? $"{Res("DetFieldVisaNum")} ({Res("WizIdCardNumberHint")})"
+            : (Res("DetFieldVisaNum") ?? "Номер візи");
+        public string SecondaryDocumentAuthorityLabel => IsEuIdCardEmployee
+            ? $"{Res("DetFieldVisaAuthority")} ({Res("WizIdCardAuthorityHint")})"
+            : (Res("DetFieldVisaAuthority") ?? "Орган, що видав візу");
+        public string SecondaryDocumentExpiryLabel => IsEuIdCardEmployee
+            ? $"{Res("DetFieldExpiry")} ({Res("WizIdCardExpiryHint")})"
+            : (Res("DetFieldExpiry") ?? "Термін дії");
+        public string SecondaryDocumentRetryPreviewKey => !string.IsNullOrWhiteSpace(PassportPage2FilePath)
+            ? "passport_page2"
+            : "visa";
+        public string SecondaryDocumentAIValidationKey => HasPassportPage2SecondaryDocument
+            ? (IsEuIdCardEmployee ? "id_card_back" : "passport2")
+            : "visa";
+        public string SecondaryDocumentSourceDocumentKey => HasPassportPage2SecondaryDocument
+            ? (IsEuIdCardEmployee ? "id_card_back" : "passport2")
+            : "visa";
 
         // ---- Custom Signed Documents ----
         private ObservableCollection<CustomSignedDocument> _customDocuments = new();
@@ -694,6 +766,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ConfirmArchiveCommand { get; }
         public ICommand CancelArchiveCommand { get; }
         public ICommand ShowHistoryCommand { get; }
+        public ICommand DeleteHistoryEntryCommand { get; }
 
         public ICommand ShowSalaryCommand { get; }
 
@@ -874,7 +947,7 @@ namespace Win11DesktopApp.ViewModels
         {
             var fields = new List<string> {
                 Data.FirstName, Data.LastName, Data.BirthDate,
-                Data.PassportNumber, Data.PassportExpiry, Data.PassportCity, Data.PassportCountry,
+                Data.PassportNumber, Data.PassportExpiry, Data.PassportCity, Data.PassportCountry, Data.Citizenship, Data.IssuingCountry,
                 Data.Phone, Data.Email, Data.StartDate, Data.ContractSignDate,
                 Data.AddressLocal.Street, Data.AddressLocal.City,
                 Data.PositionTag, Data.ContractType
@@ -911,12 +984,17 @@ namespace Win11DesktopApp.ViewModels
         // Export PDF
         public ICommand ExportProfilePdfCommand { get; }
 
-        public EmployeeDetailsViewModel(string firmName, string employeeFolder, EmployeeService? employeeService = null, bool isReadOnlyMode = false)
+        public EmployeeDetailsViewModel(string firmName, string employeeFolder, EmployeeService? employeeService = null, bool isReadOnlyMode = false, string? employeeId = null)
         {
             _firmName = firmName;
-            _employeeFolder = employeeFolder;
             _employeeService = employeeService ?? App.EmployeeService;
             _isReadOnlyMode = isReadOnlyMode;
+            _employeeFolder = Directory.Exists(employeeFolder)
+                ? employeeFolder
+                : (App.FinanceService?.ResolveEmployeeFolder(employeeFolder, employeeId) ?? employeeFolder);
+
+            var settings = App.AppSettingsService?.Settings;
+            _tabIndex = settings != null ? Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 3) : 0;
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
@@ -925,6 +1003,11 @@ namespace Win11DesktopApp.ViewModels
             RefreshDocuments();
             LoadCompanyPositions();
             LoadCompanyAddresses();
+
+            if (_tabIndex == 2)
+                EnsureHistoryLoaded();
+            else if (_tabIndex == 3)
+                EnsureSalaryHistoryLoaded();
 
             CloseCommand = new RelayCommand(o => RaiseRequestClose());
             ShowDocumentsCommand = new RelayCommand(o => TabIndex = 0);
@@ -951,12 +1034,12 @@ namespace Win11DesktopApp.ViewModels
             CancelEditCommand = new RelayCommand(o => CancelEdit(), _ => !IsReadOnlyMode);
 
             ReplacePassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport"), _ => !IsReadOnlyMode);
-            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("visa"), _ => !IsReadOnlyMode);
+            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync(HasPassportPage2SecondaryDocument ? "passport_page2" : "visa"), _ => !IsReadOnlyMode);
             ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"), _ => !IsReadOnlyMode);
             ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"), _ => !IsReadOnlyMode);
 
             OpenPassportCommand = new RelayCommand(o => OpenFile(PassportFilePath), o => HasPassport);
-            OpenVisaCommand = new RelayCommand(o => OpenFile(VisaFilePath), o => HasVisa);
+            OpenVisaCommand = new RelayCommand(o => OpenFile(SecondaryDocumentFilePath), o => HasSecondaryDocument);
             OpenInsuranceCommand = new RelayCommand(o => OpenFile(InsuranceFilePath), o => HasInsurance);
             OpenPhotoCommand = new RelayCommand(o => OpenFile(PhotoFilePath), o => HasPhoto);
             RetryPreviewCommand = new RelayCommand(o =>
@@ -1003,6 +1086,13 @@ namespace Win11DesktopApp.ViewModels
             }, _ => !IsReadOnlyMode);
             ConfirmArchiveCommand = new AsyncRelayCommand(_ => ConfirmArchiveAsync(), _ => !IsReadOnlyMode);
             CancelArchiveCommand = new RelayCommand(o => IsArchiveDialogOpen = false, _ => !IsReadOnlyMode);
+            DeleteHistoryEntryCommand = new AsyncRelayCommand(
+                async o =>
+                {
+                    if (o is EmployeeHistoryEntry item)
+                        await DeleteHistoryEntryAsync(item);
+                },
+                o => o is EmployeeHistoryEntry && !IsReadOnlyMode);
             ExportProfilePdfCommand = new RelayCommand(o => ExportProfilePdf());
             AIValidateCommand = new AsyncRelayCommand(_ => RunAIValidationAsync(), _ => !IsAIValidating);
             CloseAIValidationCommand = new RelayCommand(o => IsAIValidationOpen = false);
@@ -1143,7 +1233,7 @@ namespace Win11DesktopApp.ViewModels
 
                 if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
                 {
-                    await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+                    await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
                     {
                         EventType = "DocumentExtended",
                         Action = actionName,
@@ -1193,7 +1283,7 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 SetBusyState(true, Res("DetArchiveTitle") ?? "Перемістити в архів");
-                await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
                 {
                     EventType = "Archived",
                     Action = Res("HistoryActionArchive"),
@@ -1371,6 +1461,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 "passport" => "Pass",
                 "visa" => "Viza",
+                "passport_page2" => "PassPage2",
                 "insurance" => Data.InsuranceCompanyShort,
                 "work_permit" => "WorkPermit",
                 _ => type
@@ -1387,6 +1478,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 case "passport": Data.Files.Passport = saved; break;
                 case "visa": Data.Files.Visa = saved; break;
+                case "passport_page2": Data.Files.PassportPage2 = saved; break;
                 case "insurance": Data.Files.Insurance = saved; break;
                 case "work_permit": Data.Files.WorkPermit = saved; break;
             }
@@ -1414,6 +1506,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     "passport"    => Data.Files.Passport,
                     "visa"        => Data.Files.Visa,
+                    "passport_page2" => !string.IsNullOrWhiteSpace(Data.Files.PassportPage2) ? Data.Files.PassportPage2 : Data.Files.Visa,
                     "insurance"   => Data.Files.Insurance,
                     "work_permit" => Data.Files.WorkPermit,
                     _             => null
@@ -1423,6 +1516,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     "passport"    => Data.PassportExpiry,
                     "visa"        => Data.VisaExpiry,
+                    "passport_page2" => Data.VisaExpiry,
                     "insurance"   => Data.InsuranceExpiry,
                     "work_permit" => Data.WorkPermitExpiry,
                     _             => null
@@ -1500,6 +1594,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 "passport" => (Res("DetDocPassport"), Res("DetDocPassport")),
                 "visa" => (Res("DetDocVisa"), Res("DetDocVisa")),
+                "passport_page2" => (SecondaryDocumentDisplayName, SecondaryDocumentDisplayName),
                 "insurance" => (Res("DetDocInsurance"), Res("DetDocInsurance")),
                 "work_permit" => (Res("DetDocWorkPermit"), Res("DetDocWorkPermit")),
                 _ => (type, type)
@@ -1509,7 +1604,7 @@ namespace Win11DesktopApp.ViewModels
             if (changes.Count > 0)
                 desc += " | " + string.Join(", ", changes);
 
-            await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+            await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {
                 EventType = "DocumentUpdated",
                 Action = Res("HistoryActionDocReplace"),
@@ -1532,7 +1627,7 @@ namespace Win11DesktopApp.ViewModels
                     dialog.FileName, _employeeFolder,
                     $"{Data.FirstName} {Data.LastName} - Photo");
                 _employeeService.SaveEmployeeData(_employeeFolder, Data);
-                await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
                 {
                     EventType = "DocumentUpdated",
                     Action = Res("HistoryActionDocReplace"),
@@ -1561,28 +1656,53 @@ namespace Win11DesktopApp.ViewModels
 
             PassportFilePath = ResolveDocumentPath(Data.Files.Passport, "passport");
             VisaFilePath = ResolveDocumentPath(Data.Files.Visa, "visa");
+            PassportPage2FilePath = ResolveDocumentPath(Data.Files.PassportPage2, "passport page 2");
             InsuranceFilePath = ResolveDocumentPath(Data.Files.Insurance, "insurance");
             PhotoFilePath = ResolveDocumentPath(Data.Files.Photo, "photo");
+            if (string.IsNullOrEmpty(PhotoFilePath))
+            {
+                var fallbackPhotoPath = Path.Combine(_employeeFolder, $"{Data.FirstName} {Data.LastName} - Photo.jpg");
+                if (File.Exists(fallbackPhotoPath))
+                    PhotoFilePath = fallbackPhotoPath;
+            }
             WorkPermitFilePath = ResolveDocumentPath(Data.Files.WorkPermit, "work permit");
 
             HasPassport = !string.IsNullOrEmpty(PassportFilePath);
             HasVisa = !string.IsNullOrEmpty(VisaFilePath);
+            HasPassportPage2 = !string.IsNullOrEmpty(PassportPage2FilePath);
             HasInsurance = !string.IsNullOrEmpty(InsuranceFilePath);
             HasPhoto = !string.IsNullOrEmpty(PhotoFilePath);
             HasWorkPermit = !string.IsNullOrEmpty(WorkPermitFilePath);
 
             PassportIsPdf = IsPdf(PassportFilePath);
             VisaIsPdf = IsPdf(VisaFilePath);
+            PassportPage2IsPdf = IsPdf(PassportPage2FilePath);
             InsuranceIsPdf = IsPdf(InsuranceFilePath);
             WorkPermitIsPdf = IsPdf(WorkPermitFilePath);
             PassportPreviewPath = PassportIsPdf ? string.Empty : PassportFilePath;
             VisaPreviewPath = VisaIsPdf ? string.Empty : VisaFilePath;
+            PassportPage2PreviewPath = PassportPage2IsPdf ? string.Empty : PassportPage2FilePath;
             InsurancePreviewPath = InsuranceIsPdf ? string.Empty : InsuranceFilePath;
             WorkPermitPreviewPath = WorkPermitIsPdf ? string.Empty : WorkPermitFilePath;
             PassportPreviewState = !HasPassport ? DocPreviewState.Empty : PassportIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
             VisaPreviewState = !HasVisa ? DocPreviewState.Empty : VisaIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
+            PassportPage2PreviewState = !HasPassportPage2 ? DocPreviewState.Empty : PassportPage2IsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
             InsurancePreviewState = !HasInsurance ? DocPreviewState.Empty : InsuranceIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
             WorkPermitPreviewState = !HasWorkPermit ? DocPreviewState.Empty : WorkPermitIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
+
+            OnPropertyChanged(nameof(IsEuIdCardEmployee));
+            OnPropertyChanged(nameof(HasPassportPage2SecondaryDocument));
+            OnPropertyChanged(nameof(ShowVisaDocumentCard));
+            OnPropertyChanged(nameof(ShowIdCardSecondSideCard));
+            OnPropertyChanged(nameof(SecondaryDocumentDisplayName));
+            OnPropertyChanged(nameof(HasSecondaryDocument));
+            OnPropertyChanged(nameof(SecondaryDocumentFilePath));
+            OnPropertyChanged(nameof(SecondaryDocumentPreviewPath));
+            OnPropertyChanged(nameof(SecondaryDocumentPreviewState));
+            OnPropertyChanged(nameof(SecondaryDocumentNumberLabel));
+            OnPropertyChanged(nameof(SecondaryDocumentAuthorityLabel));
+            OnPropertyChanged(nameof(SecondaryDocumentExpiryLabel));
+            OnPropertyChanged(nameof(SecondaryDocumentRetryPreviewKey));
 
             StartPdfPreviewLoading();
         }
@@ -1753,6 +1873,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 ("passport", PassportFilePath, "det_pass", path => PassportPreviewPath = path, state => PassportPreviewState = state),
                 ("visa", VisaFilePath, "det_visa", path => VisaPreviewPath = path, state => VisaPreviewState = state),
+                ("passport_page2", PassportPage2FilePath, "det_pass2", path => PassportPage2PreviewPath = path, state => PassportPage2PreviewState = state),
                 ("insurance", InsuranceFilePath, "det_ins", path => InsurancePreviewPath = path, state => InsurancePreviewState = state),
                 ("work_permit", WorkPermitFilePath, "det_wp", path => WorkPermitPreviewPath = path, state => WorkPermitPreviewState = state)
             };
@@ -1812,6 +1933,12 @@ namespace Win11DesktopApp.ViewModels
                     VisaPreviewPath = string.Empty;
                     VisaPreviewState = DocPreviewState.Loading;
                     break;
+                case "passport_page2":
+                    if (!PassportPage2IsPdf || string.IsNullOrWhiteSpace(PassportPage2FilePath))
+                        return;
+                    PassportPage2PreviewPath = string.Empty;
+                    PassportPage2PreviewState = DocPreviewState.Loading;
+                    break;
                 case "insurance":
                     if (!InsuranceIsPdf || string.IsNullOrWhiteSpace(InsuranceFilePath))
                         return;
@@ -1853,8 +1980,17 @@ namespace Win11DesktopApp.ViewModels
 
         private void RaiseRequestClose()
         {
+            SaveLayoutSettings();
             CleanupPdfPreviews();
             RequestClose?.Invoke();
+        }
+
+        public void SaveLayoutSettings()
+        {
+            var settingsService = App.AppSettingsService;
+            if (settingsService == null) return;
+            settingsService.Settings.EmployeeDetailsLastTabIndex = Math.Clamp(TabIndex, 0, 3);
+            settingsService.SaveSettings();
         }
 
         private void OpenFile(string path)
@@ -1904,6 +2040,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 "passport" => PassportFilePath,
                 "visa" => VisaFilePath,
+                "passport2" => SecondaryDocumentFilePath,
+                "id_card_back" => SecondaryDocumentFilePath,
                 "insurance" => InsuranceFilePath,
                 "permit" => WorkPermitFilePath,
                 "cross-check" => ResolveCrossCheckSourcePath(item),
@@ -1921,7 +2059,7 @@ namespace Win11DesktopApp.ViewModels
                 return WorkPermitFilePath;
 
             if (key.Contains("visa", StringComparison.OrdinalIgnoreCase))
-                return VisaFilePath;
+                return SecondaryDocumentFilePath;
 
             return PassportFilePath;
         }
@@ -2001,24 +2139,29 @@ namespace Win11DesktopApp.ViewModels
             CleanupPdfPreviews();
             PassportFilePath = string.Empty;
             VisaFilePath = string.Empty;
+            PassportPage2FilePath = string.Empty;
             InsuranceFilePath = string.Empty;
             PhotoFilePath = string.Empty;
             WorkPermitFilePath = string.Empty;
             PassportPreviewPath = string.Empty;
             VisaPreviewPath = string.Empty;
+            PassportPage2PreviewPath = string.Empty;
             InsurancePreviewPath = string.Empty;
             WorkPermitPreviewPath = string.Empty;
             HasPassport = false;
             HasVisa = false;
+            HasPassportPage2 = false;
             HasInsurance = false;
             HasPhoto = false;
             HasWorkPermit = false;
             PassportIsPdf = false;
             VisaIsPdf = false;
+            PassportPage2IsPdf = false;
             InsuranceIsPdf = false;
             WorkPermitIsPdf = false;
             PassportPreviewState = DocPreviewState.Empty;
             VisaPreviewState = DocPreviewState.Empty;
+            PassportPage2PreviewState = DocPreviewState.Empty;
             InsurancePreviewState = DocPreviewState.Empty;
             WorkPermitPreviewState = DocPreviewState.Empty;
         }
@@ -2073,7 +2216,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
                 {
                     EventType = "DocumentUpdated",
                     Timestamp = DateTime.Now,
@@ -2127,7 +2270,13 @@ namespace Win11DesktopApp.ViewModels
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
                 var passportData = await ScanDocumentAsync(geminiService, HasPassport, PassportFilePath, PassportIsPdf,
                     Data.EmployeeType == "eu_citizen" && Data.EuDocumentType == "id_card" ? "id_card" : "passport", cts.Token);
-                var visaData = await ScanDocumentAsync(geminiService, HasVisa, VisaFilePath, VisaIsPdf, "visa", cts.Token);
+                var visaData = await ScanDocumentAsync(
+                    geminiService,
+                    HasSecondaryDocument,
+                    SecondaryDocumentFilePath,
+                    IsPdf(SecondaryDocumentFilePath),
+                    SecondaryDocumentAIValidationKey,
+                    cts.Token);
                 var insuranceData = await ScanDocumentAsync(geminiService, HasInsurance, InsuranceFilePath, InsuranceIsPdf, "insurance", cts.Token);
                 var permitData = await ScanDocumentAsync(geminiService, HasWorkPermit, WorkPermitFilePath, WorkPermitIsPdf, "permit", cts.Token);
                 BuildAIValidationItems(passportData, visaData, insuranceData, permitData);
@@ -2137,7 +2286,7 @@ namespace Win11DesktopApp.ViewModels
 - Full Name: {d.FirstName} {d.LastName}
 - Birth Date: {d.BirthDate}
 - Employee Type: {d.EmployeeType} (visa = needs visa, eu_citizen = EU citizen, work_permit = needs work permit)
-- Passport Number: {d.PassportNumber}, Authority: {d.PassportAuthority}, City: {d.PassportCity}, Country: {d.PassportCountry}, Expiry: {d.PassportExpiry}
+- Passport Number: {d.PassportNumber}, Authority: {d.PassportAuthority}, City: {d.PassportCity}, Country: {d.PassportCountry}, Citizenship: {d.Citizenship}, Issuing Country: {d.IssuingCountry}, Expiry: {d.PassportExpiry}
 - Visa Number: {d.VisaNumber}, Authority: {d.VisaAuthority}, Type: {d.VisaType}, Expiry: {d.VisaExpiry}
 - Insurance: {d.InsuranceCompanyShort}, Number: {d.InsuranceNumber}, Expiry: {d.InsuranceExpiry}
 - Work Permit: Name={d.WorkPermitName}, Number={d.WorkPermitNumber}, Type={d.WorkPermitType}, Authority={d.WorkPermitAuthority}, Expiry={d.WorkPermitExpiry}
@@ -2257,45 +2406,64 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             Dictionary<string, string> permitData)
         {
             var items = new List<AIFieldCheckItem>();
-            var merged = MergeDictionaries(passportData, visaData, insuranceData, permitData);
-
-                BuildFieldComparisonItems(items, merged);
-                BuildOwnershipItems(items, visaData, insuranceData, permitData);
-                BuildCrossDocumentItems(items, passportData, visaData, insuranceData, permitData);
+            BuildFieldComparisonItems(items, passportData, visaData, insuranceData, permitData);
+            BuildOwnershipItems(items, visaData, insuranceData, permitData);
+            BuildCrossDocumentItems(items, passportData, visaData, insuranceData, permitData);
 
             AIValidationItems = new ObservableCollection<AIFieldCheckItem>(items);
             RaiseAIValidationCollectionsChanged();
         }
 
-        private Dictionary<string, string> MergeDictionaries(params Dictionary<string, string>[] sources)
+        private void BuildFieldComparisonItems(
+            List<AIFieldCheckItem> items,
+            Dictionary<string, string> passportData,
+            Dictionary<string, string> visaData,
+            Dictionary<string, string> insuranceData,
+            Dictionary<string, string> permitData)
         {
-            var merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var source in sources)
+            Dictionary<string, string> GetPassportFieldSource(string fieldKey)
             {
-                foreach (var kv in source)
-                    merged[kv.Key] = kv.Value;
+                if (!IsEuIdCardEmployee)
+                    return passportData;
+
+                return (fieldKey == "PassportAuthority" || fieldKey == "PassportCity" || fieldKey == "PassportCountry")
+                       && TryGetNonEmpty(visaData, fieldKey, out _)
+                    ? visaData
+                    : passportData;
             }
 
-            return merged;
-        }
+            string GetPassportFieldSourceKey(string fieldKey)
+            {
+                if (!IsEuIdCardEmployee)
+                    return "passport";
 
-        private void BuildFieldComparisonItems(List<AIFieldCheckItem> items, Dictionary<string, string> extracted)
-        {
-            CompareAIField(items, extracted, "PassportNumber", Data.PassportNumber, Res("HistFieldPassportNum") ?? "Passport Number", "passport");
-            CompareAIField(items, extracted, "PassportExpiry", Data.PassportExpiry, Res("HistFieldPassportExp") ?? "Passport Expiry", "passport");
-            CompareAIField(items, extracted, "PassportAuthority", Data.PassportAuthority, Res("HistFieldPassportAuthority") ?? "Passport Authority", "passport");
-            CompareAIField(items, extracted, "PassportCity", Data.PassportCity, Res("HistFieldPassportCity") ?? "Passport City", "passport");
-            CompareAIField(items, extracted, "PassportCountry", Data.PassportCountry, Res("HistFieldPassportCountry") ?? "Passport Country", "passport");
-            CompareAIField(items, extracted, "VisaNumber", Data.VisaNumber, Res("HistFieldVisaNum") ?? "Visa Number", "visa");
-            CompareAIField(items, extracted, "VisaExpiry", Data.VisaExpiry, Res("HistFieldVisaExp") ?? "Visa Expiry", "visa");
-            CompareAIField(items, extracted, "VisaAuthority", Data.VisaAuthority, Res("HistFieldVisaAuthority") ?? "Visa Authority", "visa");
-            CompareAIField(items, extracted, "VisaType", Data.VisaType, Res("HistFieldVisaType") ?? "Visa Type", "visa");
-            CompareAIField(items, extracted, "InsuranceNumber", Data.InsuranceNumber, Res("HistFieldInsNum") ?? "Insurance Number", "insurance");
-            CompareAIField(items, extracted, "InsuranceExpiry", Data.InsuranceExpiry, Res("HistFieldInsExp") ?? "Insurance Expiry", "insurance");
-            CompareAIField(items, extracted, "WorkPermitNumber", Data.WorkPermitNumber, Res("DetWpNumber") ?? "Work Permit Number", "permit");
-            CompareAIField(items, extracted, "WorkPermitExpiry", Data.WorkPermitExpiry, Res("DetWpExpiry") ?? "Work Permit Expiry", "permit");
-            CompareAIField(items, extracted, "WorkPermitIssueDate", Data.WorkPermitIssueDate, Res("DetWpIssueDate") ?? "Work Permit Issue Date", "permit");
-            CompareAIField(items, extracted, "WorkPermitAuthority", Data.WorkPermitAuthority, Res("DetWpAuthority") ?? "Work Permit Authority", "permit");
+                return (fieldKey == "PassportAuthority" || fieldKey == "PassportCity" || fieldKey == "PassportCountry")
+                       && TryGetNonEmpty(visaData, fieldKey, out _)
+                    ? SecondaryDocumentSourceDocumentKey
+                    : "passport";
+            }
+
+            CompareAIField(items, GetPassportFieldSource("PassportNumber"), "PassportNumber", Data.PassportNumber, Res("HistFieldPassportNum") ?? "Passport Number", GetPassportFieldSourceKey("PassportNumber"));
+            CompareAIField(items, GetPassportFieldSource("PassportExpiry"), "PassportExpiry", Data.PassportExpiry, Res("HistFieldPassportExp") ?? "Passport Expiry", GetPassportFieldSourceKey("PassportExpiry"));
+            CompareAIField(items, GetPassportFieldSource("PassportAuthority"), "PassportAuthority", Data.PassportAuthority, Res("HistFieldPassportAuthority") ?? "Passport Authority", GetPassportFieldSourceKey("PassportAuthority"));
+            CompareAIField(items, GetPassportFieldSource("PassportCity"), "PassportCity", Data.PassportCity, Res("HistFieldPassportCity") ?? "Passport City", GetPassportFieldSourceKey("PassportCity"));
+            CompareAIField(items, GetPassportFieldSource("PassportCountry"), "PassportCountry", Data.PassportCountry, Res("HistFieldPassportCountry") ?? "Passport Country", GetPassportFieldSourceKey("PassportCountry"));
+            CompareAIField(items, passportData, "Citizenship", Data.Citizenship, Res("HistFieldCitizenship") ?? "Citizenship", "passport");
+            CompareAIField(items, passportData, "IssuingCountry", Data.IssuingCountry, Res("HistFieldIssuingCountry") ?? "Issuing Country", "passport");
+
+            CompareAIField(items, visaData, "VisaNumber", Data.VisaNumber, Res("HistFieldVisaNum") ?? "Visa Number", SecondaryDocumentSourceDocumentKey);
+            CompareAIField(items, visaData, "VisaExpiry", Data.VisaExpiry, Res("HistFieldVisaExp") ?? "Visa Expiry", SecondaryDocumentSourceDocumentKey);
+            CompareAIField(items, visaData, "VisaAuthority", Data.VisaAuthority, Res("HistFieldVisaAuthority") ?? "Visa Authority", SecondaryDocumentSourceDocumentKey);
+            if (!IsEuIdCardEmployee)
+                CompareAIField(items, visaData, "VisaType", Data.VisaType, Res("HistFieldVisaType") ?? "Visa Type", SecondaryDocumentSourceDocumentKey);
+
+            CompareAIField(items, insuranceData, "InsuranceNumber", Data.InsuranceNumber, Res("HistFieldInsNum") ?? "Insurance Number", "insurance");
+            CompareAIField(items, insuranceData, "InsuranceExpiry", Data.InsuranceExpiry, Res("HistFieldInsExp") ?? "Insurance Expiry", "insurance");
+
+            CompareAIField(items, permitData, "WorkPermitNumber", Data.WorkPermitNumber, Res("DetWpNumber") ?? "Work Permit Number", "permit");
+            CompareAIField(items, permitData, "WorkPermitExpiry", Data.WorkPermitExpiry, Res("DetWpExpiry") ?? "Work Permit Expiry", "permit");
+            CompareAIField(items, permitData, "WorkPermitIssueDate", Data.WorkPermitIssueDate, Res("DetWpIssueDate") ?? "Work Permit Issue Date", "permit");
+            CompareAIField(items, permitData, "WorkPermitAuthority", Data.WorkPermitAuthority, Res("DetWpAuthority") ?? "Work Permit Authority", "permit");
         }
 
         private void BuildOwnershipItems(
@@ -2304,7 +2472,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             Dictionary<string, string> insuranceData,
             Dictionary<string, string> permitData)
         {
-            CheckDocumentOwnership(items, "visa", Res("AIValidationVisaOwnershipTitle") ?? "Visa ownership", visaData, allowBirthDateOnlyError: true);
+            CheckDocumentOwnership(items, SecondaryDocumentSourceDocumentKey, Res("AIValidationVisaOwnershipTitle") ?? "Visa ownership", visaData, allowBirthDateOnlyError: true);
             CheckDocumentOwnership(items, "insurance", Res("AIValidationInsuranceOwnershipTitle") ?? "Insurance ownership", insuranceData, allowBirthDateOnlyError: false);
             CheckDocumentOwnership(items, "permit", Res("AIValidationPermitOwnershipTitle") ?? "Work permit ownership", permitData, allowBirthDateOnlyError: true);
         }
@@ -2401,7 +2569,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 passportData,
                 visaData,
                 "passport",
-                "visa",
+                SecondaryDocumentSourceDocumentKey,
                 Res("AIValidationCrossVisaPassportIdentityTitle") ?? "Visa identity vs passport");
 
             AddCrossDocumentIdentityCheck(
@@ -2589,7 +2757,9 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             current = current.Trim();
             suggested = suggested.Trim();
 
-            if (string.Equals(fieldKey, "PassportCountry", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(fieldKey, "PassportCountry", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "Citizenship", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "IssuingCountry", StringComparison.OrdinalIgnoreCase))
             {
                 return string.Equals(NormalizeCountry(current), NormalizeCountry(suggested), StringComparison.OrdinalIgnoreCase);
             }
@@ -2697,7 +2867,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         private static string NormalizeDocumentNumber(string value)
         {
-            var normalized = Regex.Replace(value.Trim().ToUpperInvariant(), @"[\s\-\/]+", string.Empty);
+            var normalized = Regex.Replace(value.Trim().ToUpperInvariant(), @"[^A-Z0-9]+", string.Empty);
             return normalized;
         }
 
@@ -2725,6 +2895,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             {
                 "passport" => Res("AIValidationSourcePassport") ?? "Passport",
                 "visa" => Res("AIValidationSourceVisa") ?? "Visa",
+                "passport2" => SecondaryDocumentDisplayName,
+                "id_card_back" => SecondaryDocumentDisplayName,
                 "insurance" => Res("AIValidationSourceInsurance") ?? "Insurance",
                 "permit" => Res("AIValidationSourcePermit") ?? "Work permit",
                 "cross-check" => Res("AIValidationSourceCrossCheck") ?? "Cross-check",
@@ -2748,6 +2920,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 case "PassportAuthority": Data.PassportAuthority = item.SuggestedValue; break;
                 case "PassportCity": Data.PassportCity = item.SuggestedValue; break;
                 case "PassportCountry": Data.PassportCountry = item.SuggestedValue; break;
+                case "Citizenship": Data.Citizenship = item.SuggestedValue; break;
+                case "IssuingCountry": Data.IssuingCountry = item.SuggestedValue; break;
                 case "VisaNumber": Data.VisaNumber = item.SuggestedValue; break;
                 case "VisaExpiry": Data.VisaExpiry = item.SuggestedValue; break;
                 case "VisaAuthority": Data.VisaAuthority = item.SuggestedValue; break;
@@ -2768,6 +2942,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             }
 
             await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+            LogProfileChanges(oldData, Data);
             item.IsApplied = true;
             item.CurrentValue = item.SuggestedValue;
             item.CanAutofill = false;
@@ -2930,7 +3105,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             var expiryPart = string.IsNullOrEmpty(doc.ExpiryDate) ? "" : $", до: {doc.ExpiryDate}";
             var histDesc = $"{doc.Name} (підписано: {doc.SignDate}{expiryPart})";
 
-            await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+            await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {
                 EventType = "CustomDocumentAdded",
                 Action = Res("HistoryActionDocAdd") ?? "Додано документ",
@@ -2974,7 +3149,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
             var histDesc = $"{doc.Name} (підписано: {doc.SignDate})";
 
-            await _employeeService.AddHistoryEntry(_employeeFolder, new EmployeeHistoryEntry
+            await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {
                 EventType = "CustomDocumentDeleted",
                 Action = Res("HistoryActionDocDelete") ?? "Видалено документ",

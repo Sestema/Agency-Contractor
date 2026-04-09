@@ -636,6 +636,8 @@
     <sys:String x:Key="DetFieldPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Місто народження</sys:String>
     <sys:String x:Key="DetFieldBirthCountry">Країна народження</sys:String>
+    <sys:String x:Key="DetFieldCitizenship">Громадянство</sys:String>
+    <sys:String x:Key="DetFieldIssuingCountry">Країна видачі</sys:String>
     <sys:String x:Key="DetFieldExpiry">Дата закінчення</sys:String>
     <sys:String x:Key="DetSecVisa">Віза</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Номер візи</sys:String>
@@ -670,6 +672,8 @@
     <sys:String x:Key="DetHistoryTitle">Історія змін</sys:String>
     <sys:String x:Key="DetHistoryEmpty">Історія порожня</sys:String>
     <sys:String x:Key="DetHistoryEmptyMsg">Зміни в анкеті працівника будуть відображатись тут.</sys:String>
+    <sys:String x:Key="DetHistoryDeleteConfirm">Видалити цей запис з історії працівника?</sys:String>
+    <sys:String x:Key="DetHistoryDeleteSuccess">Запис історії видалено.</sys:String>
     <sys:String x:Key="DetTabSalary">Зарплата</sys:String>
     <sys:String x:Key="DetSalaryTitle">Історія виплат</sys:String>
     <sys:String x:Key="DetSalaryTotalNet">Загальна виплата</sys:String>
@@ -686,6 +690,7 @@
     <sys:String x:Key="DetTooltipClose">Закрити</sys:String>
     <sys:String x:Key="DetTooltipExtendVisa">Подовжити дату візи</sys:String>
     <sys:String x:Key="DetTooltipExtendIns">Подовжити дату страховки</sys:String>
+    <sys:String x:Key="DetTooltipDeleteHistory">Видалити запис історії</sys:String>
 
     <!-- MainPage -->
     <sys:String x:Key="MainSelectCompany">Оберіть фірму для роботи</sys:String>
@@ -796,6 +801,8 @@
     <sys:String x:Key="WizPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="WizBirthCity">Місто народження</sys:String>
     <sys:String x:Key="WizBirthCountry">Країна народження</sys:String>
+    <sys:String x:Key="WizCitizenship">Громадянство</sys:String>
+    <sys:String x:Key="WizIssuingCountry">Країна видачі</sys:String>
     <sys:String x:Key="WizPassportExpiry">Дата закінчення дії документа</sys:String>
     <sys:String x:Key="WizInsCompany">Страхова компанія (скорочено)</sys:String>
     <sys:String x:Key="WizInsNumber">Номер страховки</sys:String>
@@ -804,6 +811,9 @@
     <sys:String x:Key="WizVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="WizVisaType">Тип візи</sys:String>
     <sys:String x:Key="WizVisaExpiry">Дата закінчення візи</sys:String>
+    <sys:String x:Key="WizIdCardNumberHint">номер карти / документа</sys:String>
+    <sys:String x:Key="WizIdCardAuthorityHint">орган видачі документа</sys:String>
+    <sys:String x:Key="WizIdCardExpiryHint">дата закінчення карти</sys:String>
     <sys:String x:Key="WizWorkPermitName">Назва дозволу на роботу</sys:String>
     <sys:String x:Key="WizStreet">Вулиця</sys:String>
     <sys:String x:Key="WizNumber">Номер</sys:String>
@@ -1240,7 +1250,11 @@
     <sys:String x:Key="TagDescEmpPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="TagDescEmpPassportCity">Місто народження</sys:String>
     <sys:String x:Key="TagDescEmpPassportCountry">Країна народження</sys:String>
+    <sys:String x:Key="TagDescEmpCitizenship">Громадянство</sys:String>
+    <sys:String x:Key="TagDescEmpIssuingCountry">Країна видачі документа</sys:String>
     <sys:String x:Key="TagDescEmpPassportExpiry">Дата закінчення паспорту</sys:String>
+    <sys:String x:Key="TagDescEmpPrimaryDocumentType">Тип основного документа</sys:String>
+    <sys:String x:Key="TagDescEmpResidenceDocumentType">Тип документа перебування</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Visa -->
     <sys:String x:Key="TagDescEmpVisaNumber">Номер візи</sys:String>
@@ -1573,6 +1587,18 @@
     <sys:String x:Key="MsgDeleteError">Помилка видалення: {0}</sys:String>
     <sys:String x:Key="MsgRenameError">Помилка перейменування: {0}</sys:String>
     <sys:String x:Key="MsgOpenFileError">Не вдалося відкрити файл: {0}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationSuccess">Історію дій перенесено в SQLite. Імпортовано записів: {0}. Резервна копія: {1}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationFailed">Не вдалося перенести історію дій у SQLite. Програма продовжить працювати зі старим джерелом. Деталі: {0}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationNoBackup">не створено</sys:String>
+    <sys:String x:Key="MsgEmployeeHistoryMigrationSuccess">Історію працівників перенесено в SQLite. Імпортовано записів: {0}. Оброблено папок: {1}. Пропущено: {2}</sys:String>
+    <sys:String x:Key="MsgEmployeeHistoryMigrationFailed">Не вдалося перенести історію працівників у SQLite. Програма продовжить працювати зі старим джерелом. Деталі: {0}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationSuccess">Журнал архіву перенесено в SQLite. Імпортовано записів: {0}. Резервна копія: {1}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationFailed">Не вдалося перенести журнал архіву у SQLite. Програма продовжить працювати зі старим джерелом. Деталі: {0}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationNoBackup">не створено</sys:String>
+    <sys:String x:Key="MsgEmployeeIndexBuildSuccess">Індекс працівників побудовано в SQLite. Імпортовано записів: {0}. Оброблено папок: {1}. Пропущено: {2}</sys:String>
+    <sys:String x:Key="MsgEmployeeIndexBuildFailed">Не вдалося побудувати індекс працівників у SQLite. Програма продовжить працювати з поточним джерелом. Деталі: {0}</sys:String>
+    <sys:String x:Key="MsgSalaryMigrationSuccess">Бази виплат по місяцях побудовано в SQLite. Файлів оброблено: {0}. Записів виплат: {1}. Витрат: {2}</sys:String>
+    <sys:String x:Key="MsgSalaryMigrationFailed">Не вдалося перенести виплати в SQLite. Програма продовжить працювати з JSON. Деталі: {0}</sys:String>
 
     <!-- Crop targets -->
     <sys:String x:Key="CropPassport">Паспорт</sys:String>
@@ -1721,6 +1747,8 @@
     <sys:String x:Key="HistFieldInsCompany">Страхова компанія</sys:String>
     <sys:String x:Key="HistFieldPassportCity">Місто народження</sys:String>
     <sys:String x:Key="HistFieldPassportCountry">Країна народження</sys:String>
+    <sys:String x:Key="HistFieldCitizenship">Громадянство</sys:String>
+    <sys:String x:Key="HistFieldIssuingCountry">Країна видачі</sys:String>
     <sys:String x:Key="HistFieldWorkPermitName">Назва дозволу</sys:String>
     <sys:String x:Key="HistFieldPosNumber">Номер позиції</sys:String>
     <sys:String x:Key="MsgPdfSaved">PDF збережено.</sys:String>

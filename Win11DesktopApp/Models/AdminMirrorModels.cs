@@ -80,6 +80,8 @@ public sealed class AdminMirrorEmployeeDto
     public string PassportNumber { get; set; } = string.Empty;
     public string PassportCity { get; set; } = string.Empty;
     public string PassportCountry { get; set; } = string.Empty;
+    public string Citizenship { get; set; } = string.Empty;
+    public string IssuingCountry { get; set; } = string.Empty;
     public string PassportExpiry { get; set; } = string.Empty;
     public string VisaNumber { get; set; } = string.Empty;
     public string VisaType { get; set; } = string.Empty;

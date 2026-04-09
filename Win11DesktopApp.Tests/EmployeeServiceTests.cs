@@ -16,6 +16,7 @@ namespace Win11DesktopApp.Tests
         private readonly AppSettingsService _appSettingsService;
         private readonly TagCatalogService _tagCatalogService;
         private readonly FolderService _folderService;
+        private readonly EmployeeIndexDbService _employeeIndexDbService;
         private readonly EmployeeService _employeeService;
 
         public EmployeeServiceTests()
@@ -27,7 +28,8 @@ namespace Win11DesktopApp.Tests
             _appSettingsService.Settings.RootFolderPath = _testRootPath;
             _tagCatalogService = new TagCatalogService();
             _folderService = new FolderService(_appSettingsService);
-            _employeeService = new EmployeeService(_appSettingsService, _tagCatalogService, _folderService);
+            _employeeIndexDbService = new EmployeeIndexDbService(_folderService);
+            _employeeService = new EmployeeService(_appSettingsService, _tagCatalogService, _folderService, employeeIndexDbService: _employeeIndexDbService);
         }
 
         [Fact]
@@ -121,6 +123,114 @@ namespace Win11DesktopApp.Tests
 
             Assert.Equal("NoEmployees", result.Status);
             Assert.Empty(result.Employees);
+        }
+
+        [Fact]
+        public void GetEmployeesForFirm_ShouldReadFromEmployeeIndex_WhenJsonIsMissingAfterRebuild()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Index", "User", "2026-03-01", uniqueId: "emp-index-1");
+
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+
+            File.Delete(Path.Combine(employeeFolder, "employee.json"));
+
+            var list = _employeeService.GetEmployeesForFirm(firmName);
+
+            Assert.Single(list);
+            Assert.Equal("emp-index-1", list[0].UniqueId);
+            Assert.Equal("Index User", list[0].FullName);
+        }
+
+        [Fact]
+        public void GetEmployeesForFirm_ShouldReadPhotoFromEmployeeIndex()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployeeWithPhoto(firmName, "John", "Doe", "2026-03-01", uniqueId: "emp-photo-1");
+
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+            File.Delete(Path.Combine(employeeFolder, "employee.json"));
+
+            var list = _employeeService.GetEmployeesForFirm(firmName);
+
+            var employee = Assert.Single(list);
+            Assert.Equal("emp-photo-1", employee.UniqueId);
+            Assert.True(employee.HasPhoto);
+            Assert.True(File.Exists(employee.PhotoPath));
+            Assert.EndsWith("John Doe - Photo.jpg", employee.PhotoPath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void GetEmployeesForFirm_ShouldResolvePhotoAfterRootFolderMove()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployeeWithPhoto(firmName, "Jane", "Roe", "2026-03-01", uniqueId: "emp-photo-move-1");
+
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+
+            var movedRootPath = Path.Combine(Path.GetTempPath(), "AgencyContractorEmployeesTests_Moved_" + Guid.NewGuid());
+            CopyDirectory(_testRootPath, movedRootPath);
+
+            try
+            {
+                var movedSettings = new AppSettingsService();
+                movedSettings.Settings.RootFolderPath = movedRootPath;
+                var movedTagCatalog = new TagCatalogService();
+                var movedFolderService = new FolderService(movedSettings);
+                var movedIndexDbService = new EmployeeIndexDbService(movedFolderService);
+                var movedEmployeeService = new EmployeeService(movedSettings, movedTagCatalog, movedFolderService, employeeIndexDbService: movedIndexDbService);
+
+                var list = movedEmployeeService.GetEmployeesForFirm(firmName);
+
+                var employee = Assert.Single(list);
+                Assert.True(employee.HasPhoto);
+                Assert.True(File.Exists(employee.PhotoPath));
+                Assert.StartsWith(Path.GetFullPath(movedRootPath), Path.GetFullPath(employee.PhotoPath), StringComparison.OrdinalIgnoreCase);
+                Assert.False(
+                    Path.GetFullPath(employee.PhotoPath).StartsWith(
+                        Path.GetFullPath(_testRootPath),
+                        StringComparison.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                try { Directory.Delete(movedRootPath, true); } catch { }
+            }
+        }
+
+        [Fact]
+        public void EmployeeListAndProfile_ShouldResolveSamePhotoPath()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployeeWithPhoto(firmName, "Olena", "Zmereha", "2026-03-01", uniqueId: "emp-photo-profile-1");
+
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+
+            var employee = Assert.Single(_employeeService.GetEmployeesForFirm(firmName));
+            var detailsViewModel = new EmployeeDetailsViewModel(firmName, employeeFolder, _employeeService, employeeId: "emp-photo-profile-1");
+
+            Assert.True(employee.HasPhoto);
+            Assert.False(string.IsNullOrWhiteSpace(detailsViewModel.PhotoFilePath));
+            Assert.Equal(
+                Path.GetFullPath(employee.PhotoPath),
+                Path.GetFullPath(detailsViewModel.PhotoFilePath));
+        }
+
+        [Fact]
+        public async Task GetArchivedEmployees_ShouldReadFromEmployeeIndex_WhenArchivedJsonIsMissing()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Archived", "User", "2026-03-01", uniqueId: "emp-arch-1");
+
+            var archiveResult = await _employeeService.ArchiveEmployee(employeeFolder, firmName, "2026-03-20");
+            Assert.True(archiveResult.Success);
+
+            File.Delete(Path.Combine(archiveResult.ArchiveFolder, "employee.json"));
+
+            var archived = _employeeService.GetArchivedEmployees();
+
+            var item = Assert.Single(archived);
+            Assert.Equal("emp-arch-1", item.UniqueId);
+            Assert.Equal("Archived User", item.FullName);
         }
 
         [Fact]
@@ -237,6 +347,28 @@ namespace Win11DesktopApp.Tests
 
             File.WriteAllText(Path.Combine(employeeFolder, "employee.json"), JsonSerializer.Serialize(data));
             return employeeFolder;
+        }
+
+        private string CreateEmployeeWithPhoto(string firmName, string firstName, string lastName, string startDate, string uniqueId)
+        {
+            var employeeFolder = CreateEmployee(firmName, firstName, lastName, startDate, uniqueId);
+            var photoPath = Path.Combine(employeeFolder, $"{firstName} {lastName} - Photo.jpg");
+            File.WriteAllBytes(photoPath, new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 });
+            return employeeFolder;
+        }
+
+        private static void CopyDirectory(string sourceDir, string destinationDir)
+        {
+            Directory.CreateDirectory(destinationDir);
+
+            foreach (var file in Directory.GetFiles(sourceDir))
+                File.Copy(file, Path.Combine(destinationDir, Path.GetFileName(file)), overwrite: true);
+
+            foreach (var directory in Directory.GetDirectories(sourceDir))
+            {
+                var targetDirectory = Path.Combine(destinationDir, Path.GetFileName(directory));
+                CopyDirectory(directory, targetDirectory);
+            }
         }
 
         private static async Task WaitForAsync(Func<bool> condition, int timeoutMs = 3000)

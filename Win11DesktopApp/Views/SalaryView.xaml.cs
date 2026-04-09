@@ -39,12 +39,31 @@ namespace Win11DesktopApp.Views
 
         private void SalaryView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                CommitPendingGridEdits();
+            }
+
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 SearchBox.Focus();
                 SearchBox.SelectAll();
                 e.Handled = true;
             }
+        }
+
+        private void CommitGridEdits_BeforeAction(object sender, MouseButtonEventArgs e)
+        {
+            CommitPendingGridEdits();
+        }
+
+        private void CommitPendingGridEdits()
+        {
+            if (SalaryGrid == null)
+                return;
+
+            SalaryGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+            SalaryGrid.CommitEdit(DataGridEditingUnit.Row, true);
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)

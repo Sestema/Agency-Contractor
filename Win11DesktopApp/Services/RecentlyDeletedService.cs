@@ -95,6 +95,7 @@ namespace Win11DesktopApp.Services
 
                 var deletedFolder = BuildDeletedFolderPath(data, employee.EmployeeFolder);
                 MoveDirectory(employee.EmployeeFolder, deletedFolder);
+                _employeeService.SyncEmployeeIndexForFolder(deletedFolder, employee.FirmName);
 
                 var item = new RecentlyDeletedItem
                 {
@@ -154,6 +155,7 @@ namespace Win11DesktopApp.Services
                     Directory.CreateDirectory(parent);
 
                 MoveDirectory(item.DeletedEmployeeFolder, restorePath);
+                _employeeService.SyncEmployeeIndexForFolder(restorePath, item.FirmName);
 
                 manifest.Remove(item);
                 SaveManifest(manifest);
@@ -221,6 +223,8 @@ namespace Win11DesktopApp.Services
 
                 App.FinanceService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
                 App.ActivityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
+                App.LocalDbService?.DeleteEmployeeHistory(item.UniqueId);
+                App.EmployeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
                 DeleteDirectory(item.DeletedEmployeeFolder);
                 manifest.Remove(item);
                 SaveManifest(manifest);
@@ -257,7 +261,13 @@ namespace Win11DesktopApp.Services
                         continue;
 
                     if (!isMissing)
+                    {
+                        App.FinanceService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
+                        App.ActivityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
+                        App.LocalDbService?.DeleteEmployeeHistory(item.UniqueId);
+                        App.EmployeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
                         DeleteDirectory(item.DeletedEmployeeFolder);
+                    }
 
                     manifest.Remove(item);
                     removed++;

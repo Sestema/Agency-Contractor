@@ -25,6 +25,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly object _ratePropagationGate = new();
         private readonly Dictionary<string, CancellationTokenSource> _ratePropagationCtsByKey = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? _notePropagationCts;
+        private readonly SemaphoreSlim _saveReportGate = new(1, 1);
         // key: folderKey|firmName → note value at load time (for forward propagation)
         private Dictionary<string, string> _originalNotes = new(StringComparer.OrdinalIgnoreCase);
 
@@ -294,8 +295,12 @@ namespace Win11DesktopApp.ViewModels
             _selectedFirmFilter = L("FinFilterAll") ?? "All";
             AvailableFirms.Add(_selectedFirmFilter);
 
-            GoBackCommand = new RelayCommand(o => { SaveReport(); App.NavigationService?.NavigateTo(new FinanceTablesViewModel()); });
-            SaveCommand = new RelayCommand(o => SaveReport());
+            GoBackCommand = new AsyncRelayCommand(async o =>
+            {
+                if (await SaveReportAsync())
+                    App.NavigationService?.NavigateTo(new FinanceTablesViewModel());
+            });
+            SaveCommand = new AsyncRelayCommand(async o => await SaveReportAsync());
             ExportExcelCommand = new RelayCommand(o => ExportToExcel());
             PrevMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(-1), _ => !IsLoading);
             NextMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(1), _ => !IsLoading);
@@ -308,9 +313,9 @@ namespace Win11DesktopApp.ViewModels
             AddExpenseCommand = new RelayCommand(o => AddExpense());
             RemoveExpenseCommand = new RelayCommand(o => RemoveExpense(o as string));
             SelectFirmCommand = new RelayCommand(o => SelectFirm(o as string));
-            MarkAllPaidCommand = new RelayCommand(o => MarkAllPaid());
-            MarkAllUnpaidCommand = new RelayCommand(o => MarkAllUnpaid());
-            CreateNextMonthCommand = new RelayCommand(o => CreateNextMonth());
+            MarkAllPaidCommand = new AsyncRelayCommand(async o => await MarkAllPaidAsync());
+            MarkAllUnpaidCommand = new AsyncRelayCommand(async o => await MarkAllUnpaidAsync());
+            CreateNextMonthCommand = new AsyncRelayCommand(async o => await CreateNextMonthAsync());
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as SalaryEntry));
             ToggleStatsSettingsCommand = new RelayCommand(o => IsStatsSettingsOpen = !IsStatsSettingsOpen);
             ClearSearchCommand = new RelayCommand(o => SearchText = string.Empty);
@@ -352,8 +357,8 @@ namespace Win11DesktopApp.ViewModels
                 if (delta > 0 && testEntries.Count == 0)
                     return;
 
-                if (Entries.Count > 0)
-                    SaveReport();
+                if (Entries.Count > 0 && !await SaveReportAsync())
+                    return;
 
                 _selectedYear = date.Year;
                 _selectedMonth = date.Month;
@@ -498,7 +503,7 @@ namespace Win11DesktopApp.ViewModels
             }
 
             if (needResave)
-                SaveReport();
+                await SaveReportAsync();
 
             try { await Task.Run(() => _financeService.CleanupGhostFolders()); }
             catch (Exception ex) { LoggingService.LogError("SalaryViewModel.CleanupGhosts", ex); }
@@ -582,10 +587,6 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 if (existingKeys.Contains(key)) continue;
-
-                // Carry note from previous month if current entry has none
-                if (string.IsNullOrEmpty(entry.Note) && prevNotes.TryGetValue(key, out var inherited))
-                    entry.Note = inherited;
 
                 entry.FieldDefinitions = fieldList;
                 entry.RecalcNet();
@@ -843,12 +844,13 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void CreateNextMonth()
+        private async Task CreateNextMonthAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("створити наступний місяць зарплат"))
                 return;
 
-            SaveReport();
+            if (!await SaveReportAsync())
+                return;
 
             var next = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1);
             _selectedYear = next.Year;
@@ -871,6 +873,13 @@ namespace Win11DesktopApp.ViewModels
                 var resolvedFolder = _financeService.ResolveEmployeeFolder(e.EmployeeFolder, e.EmployeeId);
                 if (!string.IsNullOrEmpty(resolvedFolder))
                     e.EmployeeFolder = resolvedFolder;
+            }
+
+            var prevNotes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pe in previousEntries)
+            {
+                if (!string.IsNullOrEmpty(pe.Note))
+                    prevNotes[BuildEmployeeFirmKey(pe.EmployeeId, pe.EmployeeFolder, pe.FirmName)] = pe.Note;
             }
 
             Entries.Clear();
@@ -896,6 +905,8 @@ namespace Win11DesktopApp.ViewModels
                     var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
                     if (existingKeys.Contains(key)) continue;
 
+                    prevNotes.TryGetValue(key, out var inheritedNote);
+
                     var entry = new SalaryEntry
                     {
                         EmployeeId = emp.UniqueId,
@@ -906,6 +917,7 @@ namespace Win11DesktopApp.ViewModels
                             ? prevRate
                             : GetDefaultRate(emp.EmployeeFolder),
                         HoursWorked = 0,
+                        Note = inheritedNote ?? string.Empty,
                         FieldDefinitions = fieldList
                     };
 
@@ -932,6 +944,8 @@ namespace Win11DesktopApp.ViewModels
                     var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
 
+                prevNotes.TryGetValue(key, out var inheritedNote);
+
                 var entry = new SalaryEntry
                 {
                         EmployeeId = arc.UniqueId,
@@ -942,6 +956,7 @@ namespace Win11DesktopApp.ViewModels
                         ? prevArcRate
                         : GetDefaultRate(arc.EmployeeFolder),
                     HoursWorked = 0,
+                    Note = inheritedNote ?? string.Empty,
                     FieldDefinitions = fieldList
                 };
 
@@ -955,8 +970,8 @@ namespace Win11DesktopApp.ViewModels
             RefreshActiveFields();
             RefreshAdvanceSums();
             LoadExpenses();
-            SaveReport();
-            _ = CheckNextMonthExistsAsync();
+            await SaveReportAsync();
+            await CheckNextMonthExistsAsync();
         }
 
         private decimal GetDefaultRate(string employeeFolder)
@@ -1076,50 +1091,77 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private void SaveReport()
+            => _ = SaveReportAsync();
+
+        private async Task<bool> SaveReportAsync()
         {
-            if (!PolicyService.EnsureWriteAllowed("зберегти зарплатний звіт"))
-                return;
-
-            if (!_financeService.SaveAllFirmPayments(_selectedYear, _selectedMonth, Entries.ToList(), FirmExpenses.ToList()))
+            await _saveReportGate.WaitAsync();
+            try
             {
-                StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
-                    ? _financeService.LastSalaryConflictMessage
-                    : !string.IsNullOrWhiteSpace(_financeService.LastSaveRecoveryPath)
-                        ? (L("FinSalarySaveRecoveryCreated") ?? "Could not update the main file, but new data was saved to a recovery file.")
-                        : (L("FinSalarySaveGenericError") ?? "Failed to save salary file.");
-                return;
+                if (!PolicyService.EnsureWriteAllowed("зберегти зарплатний звіт"))
+                    return false;
+
+                var saveYear = _selectedYear;
+                var saveMonth = _selectedMonth;
+
+                if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, Entries.ToList(), FirmExpenses.ToList()))
+                {
+                    StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
+                        ? _financeService.LastSalaryConflictMessage
+                        : !string.IsNullOrWhiteSpace(_financeService.LastSaveRecoveryPath)
+                            ? (L("FinSalarySaveRecoveryCreated") ?? "Could not update the main file, but new data was saved to a recovery file.")
+                            : (L("FinSalarySaveGenericError") ?? "Failed to save salary file.");
+                    return false;
+                }
+
+                foreach (var entry in Entries)
+                    entry.SavedNetSalary = entry.NetSalary;
+
+                var changedNotes = CaptureNotePropagationChanges();
+
+                // Update snapshot after save
+                _originalNotes.Clear();
+                foreach (var entry in Entries)
+                    _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
+
+                IsDirty = false;
+                StatusMessage = L("FinSalarySaved") is string s && s.Length > 0 ? s : "Saved!";
+
+                if (changedNotes.Count > 0)
+                    await PropagateNoteChangesForwardAsync(changedNotes, saveYear, saveMonth);
+
+                return true;
             }
-
-            foreach (var entry in Entries)
-                entry.SavedNetSalary = entry.NetSalary;
-
-            var changedNotes = CaptureNotePropagationChanges();
-
-            // Update snapshot after save
-            _originalNotes.Clear();
-            foreach (var entry in Entries)
-                _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
-
-            IsDirty = false;
-            StatusMessage = L("FinSalarySaved") is string s && s.Length > 0 ? s : "Saved!";
-            ScheduleNotePropagation(changedNotes, _selectedYear, _selectedMonth);
+            finally
+            {
+                _saveReportGate.Release();
+            }
         }
 
-        private Dictionary<string, (string oldNote, string newNote)> CaptureNotePropagationChanges()
+        private List<NotePropagationChange> CaptureNotePropagationChanges()
         {
-            var changed = new Dictionary<string, (string oldNote, string newNote)>(StringComparer.OrdinalIgnoreCase);
+            var changed = new List<NotePropagationChange>();
             foreach (var entry in Entries)
             {
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
                 var oldNote = _originalNotes.TryGetValue(key, out var o) ? o : string.Empty;
                 if (oldNote != entry.Note)
-                    changed[key] = (oldNote, entry.Note);
+                {
+                    changed.Add(new NotePropagationChange
+                    {
+                        EmployeeId = entry.EmployeeId ?? string.Empty,
+                        EmployeeFolder = entry.EmployeeFolder ?? string.Empty,
+                        FirmName = entry.FirmName ?? string.Empty,
+                        OldNote = oldNote,
+                        NewNote = entry.Note ?? string.Empty
+                    });
+                }
             }
 
             return changed;
         }
 
-        private void ScheduleNotePropagation(Dictionary<string, (string oldNote, string newNote)> changed, int fromYear, int fromMonth)
+        private void ScheduleNotePropagation(List<NotePropagationChange> changed, int fromYear, int fromMonth)
         {
             if (changed.Count == 0)
                 return;
@@ -1131,8 +1173,16 @@ namespace Win11DesktopApp.ViewModels
             _ = RunNotePropagationAsync(changed, fromYear, fromMonth, cts);
         }
 
+        private Task PropagateNoteChangesForwardAsync(
+            List<NotePropagationChange> changed,
+            int fromYear,
+            int fromMonth)
+        {
+            return Task.Run(() => PropagateNoteChangesForwardCore(changed, fromYear, fromMonth, CancellationToken.None));
+        }
+
         private async Task RunNotePropagationAsync(
-            Dictionary<string, (string oldNote, string newNote)> changed,
+            List<NotePropagationChange> changed,
             int fromYear,
             int fromMonth,
             CancellationTokenSource cts)
@@ -1159,7 +1209,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private void PropagateNoteChangesForwardCore(
-            Dictionary<string, (string oldNote, string newNote)> changed,
+            List<NotePropagationChange> changed,
             int fromYear,
             int fromMonth,
             CancellationToken token)
@@ -1175,24 +1225,79 @@ namespace Win11DesktopApp.ViewModels
                 var (futureEntries, futureExpenses) = _financeService.LoadAllFirmPayments(date.Year, date.Month);
                 if (futureEntries.Count == 0) break;
 
+                CanonicalizeSalaryEntriesForPropagation(futureEntries);
+
                 bool anyUpdated = false;
                 foreach (var fe in futureEntries)
                 {
-                    var key = BuildEmployeeFirmKey(fe.EmployeeId, fe.EmployeeFolder, fe.FirmName);
-                    if (!changed.TryGetValue(key, out var change)) continue;
+                    var matched = FindChangedNoteForEntry(changed, fe);
+                    if (matched == null)
+                        continue;
+
+                    var change = matched;
+
                     // Only overwrite if future note == old note OR future note == new note (already propagated)
-                    if (fe.Note == change.oldNote || fe.Note == change.newNote)
+                    if (fe.Note == change.OldNote || fe.Note == change.NewNote || string.IsNullOrEmpty(fe.Note))
                     {
-                        fe.Note = change.newNote;
+                        fe.Note = change.NewNote;
                         anyUpdated = true;
                     }
                 }
 
                 token.ThrowIfCancellationRequested();
                 if (anyUpdated && !_financeService.SaveAllFirmPayments(date.Year, date.Month, futureEntries, futureExpenses))
+                {
+                    LoggingService.LogWarning(
+                        "SalaryViewModel.PropagateNoteChangesForward",
+                        $"Failed to save propagated notes for {date.Year:D4}-{date.Month:D2}.");
                     break;
+                }
 
                 date = date.AddMonths(1);
+            }
+        }
+
+        private NotePropagationChange? FindChangedNoteForEntry(
+            List<NotePropagationChange> changed,
+            SalaryEntry futureEntry)
+        {
+            foreach (var changedEntry in changed)
+            {
+                if (!MatchesSalaryEntry(futureEntry, changedEntry.EmployeeId, changedEntry.EmployeeFolder, changedEntry.FirmName))
+                    continue;
+
+                return changedEntry;
+            }
+
+            return null;
+        }
+
+        private sealed class NotePropagationChange
+        {
+            public string EmployeeId { get; init; } = string.Empty;
+            public string EmployeeFolder { get; init; } = string.Empty;
+            public string FirmName { get; init; } = string.Empty;
+            public string OldNote { get; init; } = string.Empty;
+            public string NewNote { get; init; } = string.Empty;
+        }
+
+        private void CanonicalizeSalaryEntriesForPropagation(List<SalaryEntry> entries)
+        {
+            var companyService = App.CompanyService;
+            var companies = companyService?.Companies?.ToList() ?? new List<EmployerCompany>();
+
+            foreach (var entry in entries)
+            {
+                var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, companies);
+                if (!string.IsNullOrEmpty(canonicalId)
+                    && !string.Equals(entry.EmployeeId, canonicalId, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.EmployeeId = canonicalId;
+                }
+
+                var resolvedFolder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
+                if (!string.Equals(resolvedFolder, entry.EmployeeFolder, StringComparison.OrdinalIgnoreCase))
+                    entry.EmployeeFolder = resolvedFolder;
             }
         }
 
@@ -1938,7 +2043,7 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void MarkAllPaid()
+        private async Task MarkAllPaidAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("позначити зарплати як оплачені"))
                 return;
@@ -1949,14 +2054,14 @@ namespace Win11DesktopApp.ViewModels
                 WriteSalaryHistory(e);
             }
             RecalcTotals();
-            SaveReport();
+            await SaveReportAsync();
 
             var firmNames = VisibleEntries().Select(e => e.FirmName).Distinct().ToList();
             App.ActivityLogService?.Log("MonthPaid", "Salary", string.Join(", ", firmNames), "",
                 $"Позначено оплачено: {MonthDisplay} ({VisibleEntries().Count()} працівників)");
         }
 
-        private void MarkAllUnpaid()
+        private async Task MarkAllUnpaidAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("зняти позначку оплати зарплат"))
                 return;
@@ -1967,7 +2072,7 @@ namespace Win11DesktopApp.ViewModels
                 RemoveSalaryHistory(e);
             }
             RecalcTotals();
-            SaveReport();
+            await SaveReportAsync();
         }
 
         internal void OnEntryPaidChanged(SalaryEntry? entry)

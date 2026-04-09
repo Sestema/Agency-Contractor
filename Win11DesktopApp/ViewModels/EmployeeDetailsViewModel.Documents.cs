@@ -349,6 +349,8 @@ namespace Win11DesktopApp.ViewModels
                 ContentField(DocRes("PdfFieldValidTo"), Data.PassportExpiry, lx, ref yL);
                 ContentField(DocRes("DetFieldBirthCity"), Data.PassportCity, lx, ref yL);
                 ContentField(DocRes("DetFieldBirthCountry"), Data.PassportCountry, lx, ref yL);
+                ContentField(DocRes("DetFieldCitizenship"), Data.Citizenship, lx, ref yL);
+                ContentField(DocRes("DetFieldIssuingCountry"), Data.IssuingCountry, lx, ref yL);
                 yL += 10;
 
                 if (!string.IsNullOrEmpty(Data.VisaNumber) || !string.IsNullOrEmpty(Data.VisaExpiry))

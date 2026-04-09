@@ -21,6 +21,7 @@ namespace Win11DesktopApp.ViewModels
         public string Severity { get; set; } = "";
         public string SeverityColor { get; set; } = "#FF9800";
         public string SeverityLabel { get; set; } = "";
+        public string UniqueId { get; set; } = "";
         public string EmployeeFolder { get; set; } = "";
         public string CompanyName { get; set; } = "";
         public int DaysLeft { get; set; }
@@ -211,7 +212,7 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                         EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
                     }
-                    EmployeeDetailsVm = new EmployeeDetailsViewModel(item.CompanyName, item.EmployeeFolder);
+                    EmployeeDetailsVm = new EmployeeDetailsViewModel(item.CompanyName, item.EmployeeFolder, employeeId: item.UniqueId);
                     EmployeeDetailsVm.RequestClose += OnDetailsClose;
                     EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
                     IsEmployeeDetailsOpen = true;
@@ -432,15 +433,15 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                             thisMonthAdded++;
 
                         CheckExpiry(emp.PassportExpiry, emp.FullName,
-                            Res("DetDocPassport"), company.Name, emp.EmployeeFolder, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
+                            Res("DetDocPassport"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
                         if (emp.EmployeeType != "eu_citizen")
                             CheckExpiry(emp.VisaExpiry, emp.FullName,
-                                Res("DetDocVisa"), company.Name, emp.EmployeeFolder, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
+                                Res("DetDocVisa"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
                         CheckExpiry(emp.InsuranceExpiry, emp.FullName,
-                            Res("DetDocInsurance"), company.Name, emp.EmployeeFolder, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
+                            Res("DetDocInsurance"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
                         if (emp.EmployeeType == "work_permit")
                             CheckExpiry(emp.WorkPermitExpiry, emp.FullName,
-                                Res("DetDocWorkPermit"), company.Name, emp.EmployeeFolder, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
+                                Res("DetDocWorkPermit"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
                     }
 
                     result.TotalProblems += companyProblems;
@@ -568,7 +569,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
         }
 
         private static void CheckExpiry(string dateStr, string empName, string docType,
-            string companyName, string folder, List<DashboardItem> list, ref int problemCount,
+            string companyName, string folder, string uniqueId, List<DashboardItem> list, ref int problemCount,
             ref int expiredCount, ref int criticalCount)
         {
             var severity = DateParsingHelper.GetSeverity(dateStr);
@@ -609,6 +610,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 SeverityColor = severityColor,
                 SeverityLabel = severityLabel,
                 DaysLeft = days,
+                UniqueId = uniqueId,
                 EmployeeFolder = folder,
                 CompanyName = companyName
             });

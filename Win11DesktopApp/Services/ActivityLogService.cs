@@ -10,12 +10,15 @@ namespace Win11DesktopApp.Services
     public class ActivityLogService
     {
         private readonly FolderService _folderService;
+        private readonly LocalDbService? _localDbService;
+        private bool _useLocalDb;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
         private const int MaxEntries = 5000;
 
-        public ActivityLogService(FolderService folderService)
+        public ActivityLogService(FolderService folderService, LocalDbService? localDbService = null)
         {
             _folderService = folderService;
+            _localDbService = localDbService;
         }
 
         private string LogFilePath
@@ -24,6 +27,35 @@ namespace Win11DesktopApp.Services
             {
                 var root = _folderService.RootPath;
                 return string.IsNullOrEmpty(root) ? "" : Path.Combine(root, "activity_log.json");
+            }
+        }
+
+        public LocalDbMigrationResult EnsureMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var path = LogFilePath;
+                if (string.IsNullOrWhiteSpace(path))
+                    return new LocalDbMigrationResult { Message = "Activity log path is not available." };
+
+                var entries = LoadEntries(path);
+                var result = _localDbService.MigrateActivityLogIfNeeded(path, entries);
+                _useLocalDb = result.IsSuccessful;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _useLocalDb = false;
+                LoggingService.LogWarning("ActivityLogService.EnsureMigratedToLocalDb", ex.Message);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
             }
         }
 
@@ -36,9 +68,8 @@ namespace Win11DesktopApp.Services
                 var path = LogFilePath;
                 if (string.IsNullOrEmpty(path)) return;
 
-                var entries = LoadEntries(path);
                 var actorName = GetCurrentActorName();
-                entries.Insert(0, new ActivityLogEntry
+                var entry = new ActivityLogEntry
                 {
                     ActionType = actionType,
                     Category = category,
@@ -51,11 +82,18 @@ namespace Win11DesktopApp.Services
                     Details = details,
                     RelatedOperationId = relatedOperationId,
                     ActorName = actorName
-                });
+                };
 
+                if (_useLocalDb && _localDbService != null)
+                {
+                    _localDbService.InsertActivityLog(entry);
+                    return;
+                }
+
+                var entries = LoadEntries(path);
+                entries.Insert(0, entry);
                 if (entries.Count > MaxEntries)
                     entries.RemoveRange(MaxEntries, entries.Count - MaxEntries);
-
                 SaveEntries(path, entries);
             }
             catch (Exception ex)
@@ -79,6 +117,13 @@ namespace Win11DesktopApp.Services
             {
                 var path = LogFilePath;
                 if (string.IsNullOrEmpty(path)) return new();
+
+                if (_useLocalDb && _localDbService != null)
+                {
+                    var dbEntries = _localDbService.GetAllActivityLogs();
+                    return dbEntries;
+                }
+
                 return LoadEntries(path);
             }
             catch (Exception ex)
@@ -93,7 +138,16 @@ namespace Win11DesktopApp.Services
             try
             {
                 var path = LogFilePath;
-                if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                if (string.IsNullOrEmpty(path))
+                    return;
+
+                if (_useLocalDb && _localDbService != null)
+                {
+                    _localDbService.RemoveActivityLogEntries(originalFolder, deletedFolder, employeeName, firmName);
+                    return;
+                }
+
+                if (!File.Exists(path))
                     return;
 
                 var entries = LoadEntries(path);
@@ -118,6 +172,12 @@ namespace Win11DesktopApp.Services
         {
             try
             {
+                if (_useLocalDb && _localDbService != null)
+                {
+                    _localDbService.ClearActivityLogs();
+                    return;
+                }
+
                 var path = LogFilePath;
                 if (!string.IsNullOrEmpty(path) && File.Exists(path))
                     SafeFileService.DeleteFile(path);

@@ -82,7 +82,7 @@
 
         <!-- Tab button base -->
         <Style x:Key="TabBtn" TargetType="Button">
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Padding" Value="14,7"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -96,7 +96,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10"
+                                CornerRadius="12"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -149,7 +149,7 @@
         <Style x:Key="DetailsSectionCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="15,14"/>
+            <Setter Property="Padding" Value="16,15"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -205,13 +205,14 @@
 
     </UserControl.Resources>
 
-    <Grid>
+    <Grid ClipToBounds="False">
         <!-- Main Card -->
-        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="16"
-                Width="1060" Height="700"
+        <Border x:Name="MainCard"
+                Background="{DynamicResource CardBackgroundBrush}" CornerRadius="16"
+                Width="1120" Height="760"
                 Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.18"/>
+                <DropShadowEffect BlurRadius="22" ShadowDepth="3" Opacity="0.1"/>
             </Border.Effect>
             <Grid>
                 <Grid.RowDefinitions>
@@ -220,8 +221,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- ===== HEADER ===== -->
-                <Border Grid.Row="0" Padding="20,14,20,12" 
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+                <Border Grid.Row="0" Padding="20,14,20,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -286,13 +286,15 @@
                 <!-- ===== BODY ===== -->
                 <Grid Grid.Row="1" Margin="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="292"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- ===== LEFT SIDEBAR ===== -->
-                    <Border Grid.Column="0" Padding="18,16" Background="{DynamicResource WindowBackgroundBrush}"
-                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0">
+                    <Border x:Name="LeftSidebar"
+                            Grid.Column="0"
+                            Padding="18,16"
+                            Background="{DynamicResource WindowBackgroundBrush}">
                         <ScrollViewer Style="{StaticResource ThinScroll}">
                             <StackPanel>
                                 <!-- Photo -->
@@ -525,8 +527,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- Tab Buttons -->
-                        <Border Grid.Row="0" Padding="18,12,18,10"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+                        <Border Grid.Row="0" Padding="18,2,18,10" Margin="0,-2,0,0">
                             <StackPanel Orientation="Horizontal">
                                 <Button Command="{Binding ShowDocumentsCommand}" Margin="0,0,4,0">
                                     <Button.Content>
@@ -616,7 +617,7 @@
                         </Border>
 
                         <!-- Tab Content -->
-                        <Grid Grid.Row="1">
+                        <Grid Grid.Row="1" Margin="0,-1,0,0">
                                 <!-- ========== TAB 0: DOCUMENTS ========== -->
                                 <ScrollViewer Style="{StaticResource ThinScroll}" Padding="20,16"
                                               Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=0}">
@@ -687,23 +688,15 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <!-- Visa (hidden for passport_only) -->
-                                        <Border>
-                                            <Border.Style>
-                                                <Style TargetType="Border" BasedOn="{StaticResource DetailsDocumentCard}">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Data.EmployeeType}" Value="passport_only">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
+                                        <!-- Secondary document / ID-card second side -->
+                                        <Border Style="{StaticResource DetailsDocumentCard}"
+                                                Visibility="{Binding HasSecondaryDocument, Converter={StaticResource BoolToVis}}">
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE81E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" 
                                                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{DynamicResource DetDocVisa}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
+                                                        <TextBlock Text="{Binding SecondaryDocumentDisplayName}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
                                                     <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
@@ -716,22 +709,22 @@
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
-                                                        <Image Source="{Binding VisaPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                                                               Visibility="{Binding VisaPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}"/>
+                                                        <Image Source="{Binding SecondaryDocumentPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
+                                                               Visibility="{Binding SecondaryDocumentPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Ready}"/>
                                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                    Visibility="{Binding VisaPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
+                                                                    Visibility="{Binding SecondaryDocumentPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Loading}">
                                                             <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center"
                                                                        FontSize="{DynamicResource FS20}" Foreground="{DynamicResource MutedForegroundBrush}"/>
                                                             <TextBlock Text="{DynamicResource PreviewLoading}" HorizontalAlignment="Center"
                                                                        FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
                                                         </StackPanel>
                                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                    Visibility="{Binding VisaPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
+                                                                    Visibility="{Binding SecondaryDocumentPreviewState, Converter={StaticResource PreviewStateToVis}, ConverterParameter=Error}">
                                                             <TextBlock Text="PDF" HorizontalAlignment="Center" FontSize="{DynamicResource FS16}"
                                                                        FontWeight="Bold" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                             <TextBlock Text="{DynamicResource PreviewFailed}" HorizontalAlignment="Center"
                                                                        FontSize="{DynamicResource FS10}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,6"/>
-                                                            <Button Style="{StaticResource DocCardBtn}" Command="{Binding RetryPreviewCommand}" CommandParameter="visa">
+                                                            <Button Style="{StaticResource DocCardBtn}" Command="{Binding RetryPreviewCommand}" CommandParameter="{Binding SecondaryDocumentRetryPreviewKey}">
                                                                 <TextBlock Text="{DynamicResource PreviewRetry}" FontSize="{DynamicResource FS10}"/>
                                                             </Button>
                                                         </StackPanel>
@@ -757,7 +750,7 @@
                                                         </StackPanel>
                                                     </Button>
                                                     <Button Grid.Column="2" Style="{StaticResource DocCardBtn}" Command="{Binding ExtendVisaCommand}"
-                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}"
+                                                            Visibility="{Binding ShowVisaDocumentCard, Converter={StaticResource BoolToVis}}"
                                                             ToolTip="{DynamicResource DetTooltipExtendVisa}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
@@ -1278,6 +1271,10 @@
                                                     <TextBox Text="{Binding Data.PassportCity, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldBirthCountry}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.PassportCountry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <TextBlock Text="{DynamicResource DetFieldCitizenship}" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBox Text="{Binding Data.Citizenship, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <TextBlock Text="{DynamicResource DetFieldIssuingCountry}" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBox Text="{Binding Data.IssuingCountry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldExpiry}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.PassportExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <Border CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Left"
@@ -1289,22 +1286,13 @@
                                                 </StackPanel>
                                             </Border>
 
-                                            <!-- Visa (hidden for passport_only) -->
-                                            <StackPanel>
-                                                <StackPanel.Style>
-                                                    <Style TargetType="StackPanel">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Data.EmployeeType}" Value="passport_only">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </StackPanel.Style>
+                                            <!-- Secondary document / ID-card second side -->
+                                            <StackPanel Visibility="{Binding HasSecondaryDocument, Converter={StaticResource BoolToVis}}">
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                                     <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
                                                         <TextBlock Text="&#xE81E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
-                                                    <TextBlock Text="{DynamicResource DetDocVisa}" Style="{StaticResource DetailsSectionTitle}" Foreground="{DynamicResource AccentDarkBrush}"/>
+                                                    <TextBlock Text="{Binding SecondaryDocumentDisplayName}" Style="{StaticResource DetailsSectionTitle}" Foreground="{DynamicResource AccentDarkBrush}"/>
                                                 </StackPanel>
                                                 <Border Style="{StaticResource DetailsSectionCard}">
                                                     <StackPanel>
@@ -1312,20 +1300,26 @@
                                                             <StackPanel.Style>
                                                                 <Style TargetType="StackPanel">
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding Data.EmployeeType}" Value="eu_citizen">
+                                                                        <MultiDataTrigger>
+                                                                            <MultiDataTrigger.Conditions>
+                                                                                <Condition Binding="{Binding Data.EmployeeType}" Value="eu_citizen"/>
+                                                                                <Condition Binding="{Binding IsEuIdCardEmployee}" Value="False"/>
+                                                                            </MultiDataTrigger.Conditions>
                                                                             <Setter Property="Visibility" Value="Collapsed"/>
-                                                                        </DataTrigger>
+                                                                        </MultiDataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </StackPanel.Style>
-                                                            <TextBlock Text="{DynamicResource DetFieldVisaNum}" Style="{StaticResource FieldLabel}"/>
+                                                            <TextBlock Text="{Binding SecondaryDocumentNumberLabel}" Style="{StaticResource FieldLabel}"/>
                                                             <TextBox Text="{Binding Data.VisaNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
-                                                            <TextBlock Text="{DynamicResource DetFieldVisaType}" Style="{StaticResource FieldLabel}"/>
-                                                            <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                            <StackPanel Visibility="{Binding IsEuIdCardEmployee, Converter={StaticResource InverseBoolToVis}}">
+                                                                <TextBlock Text="{DynamicResource DetFieldVisaType}" Style="{StaticResource FieldLabel}"/>
+                                                                <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                            </StackPanel>
                                                         </StackPanel>
-                                                        <TextBlock Text="{DynamicResource DetFieldExpiry}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBlock Text="{Binding SecondaryDocumentExpiryLabel}" Style="{StaticResource FieldLabel}"/>
                                                         <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
-                                                        <TextBlock Text="{DynamicResource DetFieldVisaAuthority}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBlock Text="{Binding SecondaryDocumentAuthorityLabel}" Style="{StaticResource FieldLabel}"/>
                                                         <TextBox Text="{Binding Data.VisaAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                         <Border CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Left"
                                                                 Background="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
@@ -1706,6 +1700,15 @@
                                                                         <TextBlock Text="{Binding Action}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
                                                                                    Foreground="{Binding EventColor, Converter={StaticResource HexToBrush}}"/>
                                                                     </Border>
+                                                                    <Button Command="{Binding DataContext.DeleteHistoryEntryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Style="{StaticResource HeaderGhostButton}"
+                                                                            Width="28"
+                                                                            Height="28"
+                                                                            Margin="8,0,0,0"
+                                                                            ToolTip="{DynamicResource DetTooltipDeleteHistory}">
+                                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                                    </Button>
                                                                 </StackPanel>
                                                             </Grid>
                                                             <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS13}"
@@ -2084,6 +2087,7 @@
                             </Grid>
                     </Grid>
                 </Grid>
+
             </Grid>
         </Border>
 

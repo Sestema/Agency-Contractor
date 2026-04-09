@@ -55,6 +55,10 @@ namespace Win11DesktopApp.Services
             public string CandidateViewMode { get; set; } = "List";
             public double SalarySidebarTopRatio { get; set; } = 2.0;
             public double SalarySidebarWidth { get; set; } = 230.0;
+            public double EmployeeDetailsPanelWidth { get; set; } = 1120.0;
+            public double EmployeeDetailsPanelHeight { get; set; } = 760.0;
+            public double EmployeeDetailsSidebarWidth { get; set; } = 292.0;
+            public int EmployeeDetailsLastTabIndex { get; set; } = 0;
             public double PdfEditorSidebarWidth { get; set; } = 360.0;
             public double PdfEditorFieldsPanelHeight { get; set; } = 260.0;
             public double PdfEditorAiPanelHeight { get; set; } = 280.0;

@@ -53,6 +53,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string PassportAuthority { get; set; } = string.Empty;
         public string PassportCity { get; set; } = string.Empty;
         public string PassportCountry { get; set; } = string.Empty;
+        public string Citizenship { get; set; } = string.Empty;
+        public string IssuingCountry { get; set; } = string.Empty;
         public string PassportExpiry { get; set; } = string.Empty;
         public string VisaNumber { get; set; } = string.Empty;
         public string VisaAuthority { get; set; } = string.Empty;

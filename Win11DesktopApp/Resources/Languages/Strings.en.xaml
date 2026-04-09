@@ -620,6 +620,8 @@
     <sys:String x:Key="DetFieldPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="DetFieldBirthCity">City of birth</sys:String>
     <sys:String x:Key="DetFieldBirthCountry">Country of birth</sys:String>
+    <sys:String x:Key="DetFieldCitizenship">Citizenship</sys:String>
+    <sys:String x:Key="DetFieldIssuingCountry">Issuing country</sys:String>
     <sys:String x:Key="DetFieldExpiry">Expiry date</sys:String>
     <sys:String x:Key="DetSecVisa">Visa</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Visa number</sys:String>
@@ -654,6 +656,8 @@
     <sys:String x:Key="DetHistoryTitle">Change history</sys:String>
     <sys:String x:Key="DetHistoryEmpty">History is empty</sys:String>
     <sys:String x:Key="DetHistoryEmptyMsg">Changes to employee profile will be displayed here.</sys:String>
+    <sys:String x:Key="DetHistoryDeleteConfirm">Delete this employee history entry?</sys:String>
+    <sys:String x:Key="DetHistoryDeleteSuccess">History entry deleted.</sys:String>
     <sys:String x:Key="DetTabSalary">Salary</sys:String>
     <sys:String x:Key="DetSalaryTitle">Payment History</sys:String>
     <sys:String x:Key="DetSalaryTotalNet">Total paid</sys:String>
@@ -670,6 +674,7 @@
     <sys:String x:Key="DetTooltipClose">Close</sys:String>
     <sys:String x:Key="DetTooltipExtendVisa">Extend visa date</sys:String>
     <sys:String x:Key="DetTooltipExtendIns">Extend insurance date</sys:String>
+    <sys:String x:Key="DetTooltipDeleteHistory">Delete history entry</sys:String>
 
     <!-- MainPage -->
     <sys:String x:Key="MainSelectCompany">Select a company to work with</sys:String>
@@ -778,6 +783,8 @@
     <sys:String x:Key="WizPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="WizBirthCity">City of birth</sys:String>
     <sys:String x:Key="WizBirthCountry">Country of birth</sys:String>
+    <sys:String x:Key="WizCitizenship">Citizenship</sys:String>
+    <sys:String x:Key="WizIssuingCountry">Issuing country</sys:String>
     <sys:String x:Key="WizPassportExpiry">Document expiry date</sys:String>
     <sys:String x:Key="WizInsCompany">Insurance company (short)</sys:String>
     <sys:String x:Key="WizInsNumber">Insurance number</sys:String>
@@ -786,6 +793,9 @@
     <sys:String x:Key="WizVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="WizVisaType">Visa type</sys:String>
     <sys:String x:Key="WizVisaExpiry">Visa expiry date</sys:String>
+    <sys:String x:Key="WizIdCardNumberHint">card / document number</sys:String>
+    <sys:String x:Key="WizIdCardAuthorityHint">document issuing authority</sys:String>
+    <sys:String x:Key="WizIdCardExpiryHint">card expiry date</sys:String>
     <sys:String x:Key="WizWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="WizStreet">Street</sys:String>
     <sys:String x:Key="WizNumber">Number</sys:String>
@@ -1222,7 +1232,11 @@
     <sys:String x:Key="TagDescEmpPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="TagDescEmpPassportCity">City of birth</sys:String>
     <sys:String x:Key="TagDescEmpPassportCountry">Country of birth</sys:String>
+    <sys:String x:Key="TagDescEmpCitizenship">Citizenship</sys:String>
+    <sys:String x:Key="TagDescEmpIssuingCountry">Document issuing country</sys:String>
     <sys:String x:Key="TagDescEmpPassportExpiry">Passport expiry date</sys:String>
+    <sys:String x:Key="TagDescEmpPrimaryDocumentType">Primary document type</sys:String>
+    <sys:String x:Key="TagDescEmpResidenceDocumentType">Residence document type</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Visa -->
     <sys:String x:Key="TagDescEmpVisaNumber">Visa number</sys:String>
@@ -1555,6 +1569,18 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="MsgDeleteError">Delete error: {0}</sys:String>
     <sys:String x:Key="MsgRenameError">Rename error: {0}</sys:String>
     <sys:String x:Key="MsgOpenFileError">Could not open file: {0}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationSuccess">Activity log was migrated to SQLite. Imported records: {0}. Backup: {1}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationFailed">Activity log migration to SQLite failed. The program will keep using the previous source. Details: {0}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationNoBackup">not created</sys:String>
+    <sys:String x:Key="MsgEmployeeHistoryMigrationSuccess">Employee history was migrated to SQLite. Imported records: {0}. Folders scanned: {1}. Skipped: {2}</sys:String>
+    <sys:String x:Key="MsgEmployeeHistoryMigrationFailed">Employee history migration to SQLite failed. The program will keep using the previous source. Details: {0}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationSuccess">Archive log was migrated to SQLite. Imported records: {0}. Backup: {1}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationFailed">Archive log migration to SQLite failed. The program will keep using the previous source. Details: {0}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationNoBackup">not created</sys:String>
+    <sys:String x:Key="MsgEmployeeIndexBuildSuccess">Employee index was built in SQLite. Imported records: {0}. Folders scanned: {1}. Skipped: {2}</sys:String>
+    <sys:String x:Key="MsgEmployeeIndexBuildFailed">Employee index build in SQLite failed. The program will keep using the current source. Details: {0}</sys:String>
+    <sys:String x:Key="MsgSalaryMigrationSuccess">Monthly salary databases were built in SQLite. Files scanned: {0}. Salary entries: {1}. Expenses: {2}</sys:String>
+    <sys:String x:Key="MsgSalaryMigrationFailed">Salary migration to SQLite failed. The program will keep using JSON. Details: {0}</sys:String>
 
     <!-- Crop targets -->
     <sys:String x:Key="CropPassport">Passport</sys:String>
@@ -1706,6 +1732,8 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistFieldInsCompany">Insurance company</sys:String>
     <sys:String x:Key="HistFieldPassportCity">Birth city</sys:String>
     <sys:String x:Key="HistFieldPassportCountry">Birth country</sys:String>
+    <sys:String x:Key="HistFieldCitizenship">Citizenship</sys:String>
+    <sys:String x:Key="HistFieldIssuingCountry">Issuing country</sys:String>
     <sys:String x:Key="HistFieldWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="HistFieldPosNumber">Position number</sys:String>
     <sys:String x:Key="MsgPdfSaved">PDF saved.</sys:String>

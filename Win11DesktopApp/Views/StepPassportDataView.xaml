@@ -89,6 +89,10 @@
                     <TextBox Text="{Binding Data.PassportCity, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizBirthCountry}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.PassportCountry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizCitizenship}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.Citizenship, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource WizIssuingCountry}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.IssuingCountry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizPassportExpiry}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.PassportExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
 
@@ -97,8 +101,6 @@
                         <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,14,0,12"/>
                         <TextBlock Text="{DynamicResource WizWorkPermitName}" Style="{StaticResource WizLabel}"/>
                         <TextBox Text="{Binding Data.WorkPermitName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                        <TextBlock Text="{DynamicResource WizVisaExpiry}" Style="{StaticResource WizLabel}"/>
-                        <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

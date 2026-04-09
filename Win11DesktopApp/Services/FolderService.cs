@@ -97,6 +97,48 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
+        /// Get the SQLite system folder path: {Root}/SQLite
+        /// </summary>
+        public string GetSqliteFolder()
+        {
+            if (string.IsNullOrEmpty(RootPath)) return string.Empty;
+            return Path.Combine(RootPath, "SQLite");
+        }
+
+        /// <summary>
+        /// Full path to the local SQLite database file: {Root}/SQLite/app.db
+        /// </summary>
+        public string LocalDbPath
+        {
+            get
+            {
+                var sqliteFolder = GetSqliteFolder();
+                return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "app.db");
+            }
+        }
+
+        /// <summary>
+        /// Full path to the employee index SQLite database file: {Root}/SQLite/employee_index.db
+        /// </summary>
+        public string EmployeeIndexDbPath
+        {
+            get
+            {
+                var sqliteFolder = GetSqliteFolder();
+                return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "employee_index.db");
+            }
+        }
+
+        /// <summary>
+        /// Get the salary SQLite folder path: {Root}/SQLite/Vyplaty
+        /// </summary>
+        public string GetSalaryDbFolder()
+        {
+            var sqliteFolder = GetSqliteFolder();
+            return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "Vyplaty");
+        }
+
+        /// <summary>
         /// Full path to the database file: {Root}/database.json
         /// </summary>
         public string DatabaseFilePath

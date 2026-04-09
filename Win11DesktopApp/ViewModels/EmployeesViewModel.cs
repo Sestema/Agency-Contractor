@@ -528,7 +528,7 @@ namespace Win11DesktopApp.ViewModels
         {
             if (employee == null || _company == null) return;
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService);
+            EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
@@ -540,7 +540,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
             if (employee == null || _company == null) return;
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService);
+            EmployeeDetailsVm = new EmployeeDetailsViewModel(_company.Name, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             EmployeeDetailsVm.IsEditMode = true;

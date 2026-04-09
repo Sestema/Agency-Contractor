@@ -37,13 +37,15 @@
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Command="{Binding GoBackCommand}"
+                        PreviewMouseLeftButtonDown="CommitGridEdits_BeforeAction"
                         Style="{StaticResource HeaderBackButton}">
                     <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                 </Button>
 
                 <!-- Month navigator -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Button Command="{Binding PrevMonthCommand}" Style="{StaticResource HeaderGhostButton}" Margin="0,0,8,0">
+                    <Button Command="{Binding PrevMonthCommand}" Style="{StaticResource HeaderGhostButton}" Margin="0,0,8,0"
+                            PreviewMouseLeftButtonDown="CommitGridEdits_BeforeAction">
                         <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </Button>
@@ -96,12 +98,14 @@
                              Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}"/>
 
                     <Button Command="{Binding NextMonthCommand}" Style="{StaticResource HeaderGhostButton}" Margin="8,0,0,0"
+                            PreviewMouseLeftButtonDown="CommitGridEdits_BeforeAction"
                             Visibility="{Binding NextMonthExists, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </Button>
 
                     <Button Command="{Binding CreateNextMonthCommand}" Style="{StaticResource FilledPillButton}"
+                            PreviewMouseLeftButtonDown="CommitGridEdits_BeforeAction"
                             Background="{DynamicResource SuccessBrush}" Margin="10,0,0,0"
                             Visibility="{Binding NextMonthExists, Converter={StaticResource InverseBoolToVis}}">
                         <StackPanel Orientation="Horizontal">
@@ -168,6 +172,7 @@
                     </Button>
 
                     <Button Command="{Binding SaveCommand}" Style="{StaticResource FilledActionButton}"
+                            PreviewMouseLeftButtonDown="CommitGridEdits_BeforeAction"
                             Background="{DynamicResource SuccessBrush}" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
@@ -709,7 +714,10 @@
                             </DataGridTemplateColumn>
 
                             <!-- Note (LAST — Width="*" absorbs all remaining space) -->
-                            <DataGridTextColumn x:Name="NoteColumn" Binding="{Binding Note}" Width="*">
+                            <DataGridTextColumn x:Name="NoteColumn" Width="*">
+                                <DataGridTextColumn.Binding>
+                                    <Binding Path="Note" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged"/>
+                                </DataGridTextColumn.Binding>
                                 <DataGridTextColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColNote}"/>

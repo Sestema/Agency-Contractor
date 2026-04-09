@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using Docnet.Core;
 using Docnet.Core.Models;
 using Win11DesktopApp.Converters;
 using Win11DesktopApp.EmployeeModels;
+using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
@@ -43,14 +45,20 @@ namespace Win11DesktopApp.Services
         private readonly AppSettingsService _appSettingsService;
         private readonly TagCatalogService _tagCatalogService;
         private readonly FolderService _folderService;
+        private readonly LocalDbService? _localDbService;
+        private readonly EmployeeIndexDbService? _employeeIndexDbService;
+        private bool _useLocalDbArchiveLog;
+        private bool _useLocalDbHistory;
         private static readonly SemaphoreSlim _historyLock = new(1, 1);
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-        public EmployeeService(AppSettingsService appSettingsService, TagCatalogService tagCatalogService, FolderService folderService)
+        public EmployeeService(AppSettingsService appSettingsService, TagCatalogService tagCatalogService, FolderService folderService, LocalDbService? localDbService = null, EmployeeIndexDbService? employeeIndexDbService = null)
         {
             _appSettingsService = appSettingsService;
             _tagCatalogService = tagCatalogService;
             _folderService = folderService;
+            _localDbService = localDbService;
+            _employeeIndexDbService = employeeIndexDbService;
             CleanupStaleTempFolders();
         }
 
@@ -293,26 +301,32 @@ namespace Win11DesktopApp.Services
                 return new List<EmployeeSummary>();
             }
 
-            var summaries = new List<EmployeeSummary>();
-            foreach (var folder in Directory.GetDirectories(employeesFolder))
+            if (_employeeIndexDbService != null)
             {
-                var jsonPath = Path.Combine(folder, "employee.json");
-                if (!File.Exists(jsonPath))
-                {
-                    Debug.WriteLine($"EmployeeService.GetEmployeesForFirm: missing {jsonPath}");
-                    continue;
-                }
                 try
                 {
-                    var data = ReadJson<EmployeeData>(jsonPath);
-                    if (data == null) continue;
-                    _tagCatalogService.AddTagsForEmployee(firmName, data);
-                    summaries.Add(BuildSummary(firmName, folder, data));
+                    var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+                    if (rows.Count > 0)
+                    {
+                        return rows
+                            .Select(BuildSummaryFromIndexRow)
+                            .ToList();
+                    }
+
+                    if (!HasAnyEmployeeFolders(employeesFolder))
+                        return new List<EmployeeSummary>();
+
+                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
+                        $"Employee index returned no rows for '{firmName}' while employee folders exist. Falling back to file scan.");
                 }
-                catch (Exception ex) { LoggingService.LogError("EmployeeService.GetEmployeesForFirm", ex); }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
+                        $"Employee index read failed for '{firmName}', falling back to file scan. {ex.Message}");
+                }
             }
-            Debug.WriteLine($"EmployeeService.GetEmployeesForFirm: {summaries.Count} items for {firmName}");
-            return summaries;
+
+            return GetEmployeesForFirmFromFiles(firmName, employeesFolder);
         }
 
         public (List<EmployeeSummary> Employees, string Status) GetEmployeesForFirmWithStatus(string firmName)
@@ -328,34 +342,30 @@ namespace Win11DesktopApp.Services
                 return (new List<EmployeeSummary>(), "EmployeesFolderMissing");
             }
 
-            var summaries = new List<EmployeeSummary>();
-            foreach (var folder in Directory.GetDirectories(employeesFolder))
+            if (_employeeIndexDbService != null)
             {
-                var jsonPath = Path.Combine(folder, "employee.json");
-                if (!File.Exists(jsonPath))
-                {
-                    continue;
-                }
                 try
                 {
-                    var data = ReadJson<EmployeeData>(jsonPath);
-                    if (data == null) continue;
-                    _tagCatalogService.AddTagsForEmployee(firmName, data);
-                    summaries.Add(BuildSummary(firmName, folder, data));
+                    var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+                    if (rows.Count > 0)
+                    {
+                        return (rows.Select(BuildSummaryFromIndexRow).ToList(), "Ok");
+                    }
+
+                    if (!HasAnyEmployeeFolders(employeesFolder))
+                        return (new List<EmployeeSummary>(), "NoEmployees");
+
+                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
+                        $"Employee index returned no rows for '{firmName}' while employee folders exist. Falling back to file scan.");
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogError("EmployeeService.GetEmployeesForFirmWithStatus", ex);
-                    continue;
+                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
+                        $"Employee index read failed for '{firmName}', falling back to file scan. {ex.Message}");
                 }
             }
 
-            if (summaries.Count == 0)
-            {
-                return (summaries, "NoEmployees");
-            }
-
-            return (summaries, "Ok");
+            return GetEmployeesForFirmWithStatusFromFiles(firmName, employeesFolder);
         }
 
         public EmployeeData? LoadEmployeeData(string employeeFolder)
@@ -514,10 +524,13 @@ namespace Win11DesktopApp.Services
             try
             {
                 Directory.CreateDirectory(employeeFolder);
+                if (string.IsNullOrWhiteSpace(data.UniqueId))
+                    data.UniqueId = Guid.NewGuid().ToString();
                 var jsonPath = Path.Combine(employeeFolder, "employee.json");
                 WriteJsonAtomic(jsonPath, data);
                 var firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, employeeFolder, data);
+                UpsertEmployeeIndex(employeeFolder, data, firmName);
                 return true;
             }
             catch (Exception ex)
@@ -570,12 +583,14 @@ namespace Win11DesktopApp.Services
             try
             {
                 var data = LoadEmployeeData(employeeFolder);
+                var employeeId = data?.UniqueId ?? string.Empty;
                 var firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
                 if (Directory.Exists(employeeFolder))
                 {
                     Directory.Delete(employeeFolder, true);
                 }
                 App.AdminMirrorSyncService?.EnqueueEmployeeDelete(firmName, data);
+                DeleteEmployeeIndex(employeeId);
                 LoggingService.LogInfo("EmployeeService", $"Employee deleted: {employeeFolder}");
                 return true;
             }
@@ -806,6 +821,316 @@ namespace Win11DesktopApp.Services
             };
         }
 
+        private static EmployeeSummary BuildSummaryFromIndexRow(EmployeeIndexRow row)
+        {
+            var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
+            var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
+            var hasPhoto = !string.IsNullOrWhiteSpace(photoPath);
+            return new EmployeeSummary
+            {
+                UniqueId = row.UniqueId,
+                FullName = row.FullName,
+                PositionTitle = row.PositionTitle,
+                StartDate = row.StartDate,
+                EndDate = row.EndDate,
+                ContractType = row.ContractType,
+                PhotoPath = hasPhoto ? photoPath : string.Empty,
+                HasPhoto = hasPhoto,
+                HasPassport = row.HasPassport,
+                HasVisa = row.HasVisa,
+                HasInsurance = row.HasInsurance,
+                PassportNumber = row.PassportNumber,
+                VisaNumber = row.VisaNumber,
+                InsuranceNumber = row.InsuranceNumber,
+                PassportExpiry = row.PassportExpiry,
+                VisaExpiry = row.VisaExpiry,
+                InsuranceExpiry = row.InsuranceExpiry,
+                PassportSeverity = DateParsingHelper.GetSeverity(row.PassportExpiry),
+                VisaSeverity = DateParsingHelper.GetSeverity(row.VisaExpiry),
+                InsuranceSeverity = DateParsingHelper.GetSeverity(row.InsuranceExpiry),
+                WorkPermitSeverity = DateParsingHelper.GetSeverity(row.WorkPermitExpiry),
+                Status = StatusHelper.Normalize(row.Status),
+                Phone = row.Phone,
+                Email = row.Email,
+                BankAccountNumber = row.BankAccountNumber,
+                BankName = row.BankName,
+                EmployeeFolder = employeeFolder,
+                FirmName = row.FirmName,
+                EmployeeType = row.EmployeeType ?? "visa",
+                WorkPermitName = row.WorkPermitName ?? string.Empty,
+                WorkPermitExpiry = row.WorkPermitExpiry ?? string.Empty
+            };
+        }
+
+        private static ArchivedEmployeeSummary BuildArchivedSummaryFromIndexRow(EmployeeIndexRow row)
+        {
+            var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
+            var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
+            var hasPhoto = !string.IsNullOrWhiteSpace(photoPath);
+            return new ArchivedEmployeeSummary
+            {
+                UniqueId = row.UniqueId,
+                FullName = row.FullName,
+                PositionTitle = row.PositionTitle,
+                FirmName = row.FirmName,
+                StartDate = row.StartDate,
+                EndDate = row.EndDate,
+                EmployeeFolder = employeeFolder,
+                PhotoPath = hasPhoto ? photoPath : string.Empty,
+                HasPhoto = hasPhoto
+            };
+        }
+
+        private static string ResolveEmployeeFolderFromIndexRow(EmployeeIndexRow row)
+        {
+            var employeeFolder = row.EmployeeFolder ?? string.Empty;
+            return App.FinanceService?.ResolveEmployeeFolder(employeeFolder, row.UniqueId) ?? employeeFolder;
+        }
+
+        private static string ResolvePhotoPathFromIndexRow(EmployeeIndexRow row, string employeeFolder)
+        {
+            var photoPath = row.PhotoPath ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(photoPath) && File.Exists(photoPath))
+                return photoPath;
+
+            if (string.IsNullOrWhiteSpace(employeeFolder) || !Directory.Exists(employeeFolder))
+                return string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(photoPath))
+            {
+                var fileName = Path.GetFileName(photoPath);
+                if (!string.IsNullOrWhiteSpace(fileName))
+                {
+                    var rebasedPath = Path.Combine(employeeFolder, fileName);
+                    if (File.Exists(rebasedPath))
+                        return rebasedPath;
+                }
+            }
+
+            var fallbackFileName = $"{row.FirstName} {row.LastName} - Photo.jpg".Trim();
+            if (!string.IsNullOrWhiteSpace(fallbackFileName))
+            {
+                var fallbackPath = Path.Combine(employeeFolder, fallbackFileName);
+                if (File.Exists(fallbackPath))
+                    return fallbackPath;
+            }
+
+            return string.Empty;
+        }
+
+        private static bool HasAnyEmployeeFolders(string employeesFolder)
+        {
+            return Directory.Exists(employeesFolder)
+                && Directory.GetDirectories(employeesFolder).Length > 0;
+        }
+
+        private List<EmployeeSummary> GetEmployeesForFirmFromFiles(string firmName, string employeesFolder)
+        {
+            var summaries = new List<EmployeeSummary>();
+            foreach (var folder in Directory.GetDirectories(employeesFolder))
+            {
+                var jsonPath = Path.Combine(folder, "employee.json");
+                if (!File.Exists(jsonPath))
+                {
+                    Debug.WriteLine($"EmployeeService.GetEmployeesForFirm: missing {jsonPath}");
+                    continue;
+                }
+
+                try
+                {
+                    var data = ReadJson<EmployeeData>(jsonPath);
+                    if (data == null)
+                        continue;
+
+                    _tagCatalogService.AddTagsForEmployee(firmName, data);
+                    summaries.Add(BuildSummary(firmName, folder, data));
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("EmployeeService.GetEmployeesForFirm", ex);
+                }
+            }
+
+            Debug.WriteLine($"EmployeeService.GetEmployeesForFirm: {summaries.Count} items for {firmName}");
+            return summaries;
+        }
+
+        private (List<EmployeeSummary> Employees, string Status) GetEmployeesForFirmWithStatusFromFiles(string firmName, string employeesFolder)
+        {
+            var summaries = GetEmployeesForFirmFromFiles(firmName, employeesFolder);
+            if (summaries.Count == 0)
+                return (summaries, "NoEmployees");
+
+            return (summaries, "Ok");
+        }
+
+        private List<ArchivedEmployeeSummary> GetArchivedEmployeesFromFiles(string archiveFolder)
+        {
+            var result = new List<ArchivedEmployeeSummary>();
+            foreach (var folder in Directory.GetDirectories(archiveFolder))
+            {
+                var jsonPath = Path.Combine(folder, "employee.json");
+                if (!File.Exists(jsonPath))
+                    continue;
+
+                try
+                {
+                    var data = ReadJson<EmployeeData>(jsonPath);
+                    if (data == null)
+                        continue;
+
+                    var fullName = $"{data.FirstName} {data.LastName}";
+                    var photo = ResolvePhotoPath(folder, data);
+                    var hasPhoto = !string.IsNullOrEmpty(photo);
+
+                    if (data.FirmHistory != null && data.FirmHistory.Count > 0)
+                    {
+                        var deduplicated = data.FirmHistory
+                            .GroupBy(fh => $"{fh.FirmName}|{fh.StartDate}")
+                            .Select(g => g.Last())
+                            .ToList();
+
+                        bool needResave = deduplicated.Count != data.FirmHistory.Count;
+                        if (needResave)
+                        {
+                            data.FirmHistory = deduplicated;
+                            try
+                            {
+                                var resavePath = Path.Combine(folder, "employee.json");
+                                WriteJsonAtomic(resavePath, data);
+                            }
+                            catch (Exception ex2)
+                            {
+                                LoggingService.LogWarning("GetArchivedEmployees.Dedup", ex2.Message);
+                            }
+                        }
+
+                        var last = deduplicated.Last();
+                        result.Add(new ArchivedEmployeeSummary
+                        {
+                            UniqueId = data.UniqueId,
+                            FullName = fullName,
+                            PositionTitle = data.PositionTag,
+                            FirmName = last.FirmName,
+                            StartDate = last.StartDate,
+                            EndDate = last.EndDate,
+                            EmployeeFolder = folder,
+                            PhotoPath = photo,
+                            HasPhoto = hasPhoto
+                        });
+                    }
+                    else
+                    {
+                        result.Add(new ArchivedEmployeeSummary
+                        {
+                            UniqueId = data.UniqueId,
+                            FullName = fullName,
+                            PositionTitle = data.PositionTag,
+                            FirmName = data.ArchivedFromFirm,
+                            StartDate = data.StartDate,
+                            EndDate = data.EndDate,
+                            EmployeeFolder = folder,
+                            PhotoPath = photo,
+                            HasPhoto = hasPhoto
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("EmployeeService.GetArchivedEmployees", ex);
+                }
+            }
+
+            return result;
+        }
+
+        private EmployeeIndexRow BuildEmployeeIndexRow(EmployeeData data, string firmName, string employeeFolder)
+        {
+            var photoPath = ResolvePhotoPath(employeeFolder, data);
+            var hasPhoto = !string.IsNullOrWhiteSpace(photoPath) && File.Exists(photoPath);
+            return new EmployeeIndexRow
+            {
+                UniqueId = data.UniqueId ?? string.Empty,
+                FullName = $"{data.FirstName} {data.LastName}".Trim(),
+                FirstName = data.FirstName ?? string.Empty,
+                LastName = data.LastName ?? string.Empty,
+                FirmName = firmName ?? string.Empty,
+                EmployeeFolder = employeeFolder ?? string.Empty,
+                EmployeeType = data.EmployeeType ?? "visa",
+                Status = StatusHelper.Normalize(data.Status),
+                StartDate = data.StartDate ?? string.Empty,
+                EndDate = data.EndDate ?? string.Empty,
+                ContractType = data.ContractType ?? string.Empty,
+                PositionTitle = data.PositionTag ?? string.Empty,
+                PositionNumber = data.PositionNumber ?? string.Empty,
+                Phone = data.Phone ?? string.Empty,
+                Email = data.Email ?? string.Empty,
+                PassportNumber = data.PassportNumber ?? string.Empty,
+                VisaNumber = data.VisaNumber ?? string.Empty,
+                InsuranceNumber = data.InsuranceNumber ?? string.Empty,
+                PassportExpiry = data.PassportExpiry ?? string.Empty,
+                VisaExpiry = data.VisaExpiry ?? string.Empty,
+                InsuranceExpiry = data.InsuranceExpiry ?? string.Empty,
+                WorkPermitName = data.WorkPermitName ?? string.Empty,
+                WorkPermitExpiry = data.WorkPermitExpiry ?? string.Empty,
+                BankAccountNumber = data.HasBankAccountData ? data.BankAccountNumber ?? string.Empty : string.Empty,
+                BankName = data.HasBankAccountData ? data.BankName ?? string.Empty : string.Empty,
+                IsArchived = data.IsArchived,
+                ArchivedFromFirm = data.ArchivedFromFirm ?? string.Empty,
+                PhotoPath = hasPhoto ? photoPath : string.Empty,
+                HasPhoto = hasPhoto,
+                HasPassport = !string.IsNullOrEmpty(data.Files.Passport),
+                HasVisa = !string.IsNullOrEmpty(data.Files.Visa),
+                HasInsurance = !string.IsNullOrEmpty(data.Files.Insurance),
+                UpdatedAt = DateTime.UtcNow.ToString("O")
+            };
+        }
+
+        private void UpsertEmployeeIndex(string employeeFolder, EmployeeData data, string? firmNameOverride = null)
+        {
+            if (_employeeIndexDbService == null || data == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(data.UniqueId))
+                data.UniqueId = Guid.NewGuid().ToString();
+
+            var firmName = firmNameOverride;
+            if (string.IsNullOrWhiteSpace(firmName))
+            {
+                if (data.IsArchived && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm))
+                    firmName = data.ArchivedFromFirm;
+                else
+                    firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder) ?? ResolveFirmNameForHistory(employeeFolder);
+            }
+
+            _employeeIndexDbService.UpsertEmployeeIndex(BuildEmployeeIndexRow(data, firmName ?? string.Empty, employeeFolder));
+        }
+
+        private void DeleteEmployeeIndex(string? uniqueId)
+        {
+            if (_employeeIndexDbService == null || string.IsNullOrWhiteSpace(uniqueId))
+                return;
+
+            _employeeIndexDbService.DeleteEmployeeIndex(uniqueId);
+        }
+
+        public void RemoveEmployeeIndexEntry(string? uniqueId)
+        {
+            DeleteEmployeeIndex(uniqueId);
+        }
+
+        public void SyncEmployeeIndexForFolder(string employeeFolder, string? firmName = null)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return;
+
+            var data = LoadEmployeeData(employeeFolder);
+            if (data == null)
+                return;
+
+            UpsertEmployeeIndex(employeeFolder, data, firmName);
+        }
+
         // ============ DUPLICATE RESOLUTION ============
 
         /// <summary>
@@ -875,18 +1200,164 @@ namespace Win11DesktopApp.Services
             return Path.Combine(archiveFolder, "archive_log.json");
         }
 
+        public LocalDbMigrationResult EnsureArchiveLogMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var path = GetArchiveLogPath();
+                if (string.IsNullOrWhiteSpace(path))
+                    return new LocalDbMigrationResult { Message = "Archive log path is not available." };
+
+                var result = _localDbService.MigrateArchiveLogIfNeeded(path, LoadArchiveLogEntries(path));
+                _useLocalDbArchiveLog = result.IsSuccessful;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _useLocalDbArchiveLog = false;
+                LoggingService.LogError("EmployeeService.EnsureArchiveLogMigratedToLocalDb", ex);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public EmployeeIndexRebuildResult EnsureEmployeeIndexBuilt()
+        {
+            try
+            {
+                if (_employeeIndexDbService == null)
+                    return new EmployeeIndexRebuildResult { Message = "EmployeeIndexDbService is not configured." };
+
+                if (_employeeIndexDbService.HasAnyRows())
+                {
+                    if (_employeeIndexDbService.HasLegacyAbsolutePaths())
+                    {
+                        LoggingService.LogWarning("EmployeeService.EnsureEmployeeIndexBuilt",
+                            "Employee index contains legacy absolute paths. Rebuilding index for current root.");
+                        return RebuildEmployeeIndex();
+                    }
+
+                    var existingCount = _employeeIndexDbService.GetEmployeeIndexCount();
+                    return new EmployeeIndexRebuildResult
+                    {
+                        WasRebuildAttempted = false,
+                        IsSuccessful = true,
+                        RecordsFound = existingCount,
+                        RecordsImported = existingCount,
+                        Message = "Employee index already exists."
+                    };
+                }
+
+                return RebuildEmployeeIndex();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.EnsureEmployeeIndexBuilt", ex);
+                return new EmployeeIndexRebuildResult
+                {
+                    WasRebuildAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public EmployeeIndexRebuildResult RebuildEmployeeIndex()
+        {
+            if (_employeeIndexDbService == null)
+                return new EmployeeIndexRebuildResult { Message = "EmployeeIndexDbService is not configured." };
+
+            var foldersScanned = 0;
+            var foldersSkipped = 0;
+            var rows = new List<EmployeeIndexRow>();
+
+            foreach (var source in EnumerateEmployeeFolders())
+            {
+                foldersScanned++;
+                var jsonPath = Path.Combine(source.EmployeeFolder, "employee.json");
+                if (!File.Exists(jsonPath))
+                {
+                    LoggingService.LogWarning("EmployeeService.RebuildEmployeeIndex",
+                        $"Skipped (no employee.json): {source.EmployeeFolder} [firm: {source.FirmName}]");
+                    foldersSkipped++;
+                    continue;
+                }
+
+                var data = LoadEmployeeData(source.EmployeeFolder);
+                if (data == null)
+                {
+                    LoggingService.LogWarning("EmployeeService.RebuildEmployeeIndex",
+                        $"Skipped (unreadable employee.json): {source.EmployeeFolder} [firm: {source.FirmName}]");
+                    foldersSkipped++;
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(data.UniqueId))
+                {
+                    data.UniqueId = Guid.NewGuid().ToString();
+                    if (!SaveEmployeeData(source.EmployeeFolder, data, notifyUser: false))
+                    {
+                        LoggingService.LogWarning("EmployeeService.RebuildEmployeeIndex",
+                            $"Skipped (could not save generated UniqueId): {source.EmployeeFolder} [firm: {source.FirmName}]");
+                        foldersSkipped++;
+                        continue;
+                    }
+                }
+
+                _tagCatalogService.AddTagsForEmployee(source.FirmName, data);
+                rows.Add(BuildEmployeeIndexRow(data, source.FirmName, source.EmployeeFolder));
+            }
+
+            return _employeeIndexDbService.RebuildEmployeeIndex(rows, _localDbService, foldersScanned, foldersSkipped);
+        }
+
         public List<ArchiveLogEntry> LoadArchiveLog()
         {
             try
             {
+                if (_useLocalDbArchiveLog && _localDbService != null)
+                    return _localDbService.GetAllArchiveLogs();
+
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
                     return new List<ArchiveLogEntry>();
-                return ReadJsonOrDefault(path, new List<ArchiveLogEntry>());
+                return LoadArchiveLogEntries(path);
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("EmployeeService.LoadArchiveLog", ex);
+                return new List<ArchiveLogEntry>();
+            }
+        }
+
+        private static List<ArchiveLogEntry> LoadArchiveLogEntries(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return new List<ArchiveLogEntry>();
+
+            try
+            {
+                var raw = SafeFileService.ReadAllText(path, Encoding.UTF8);
+                if (string.IsNullOrWhiteSpace(raw))
+                {
+                    LoggingService.LogWarning("EmployeeService.LoadArchiveLogEntries",
+                        $"archive_log.json is empty and will be treated as an empty log: {path}");
+                    return new List<ArchiveLogEntry>();
+                }
+
+                return ReadJsonOrDefault(path, new List<ArchiveLogEntry>());
+            }
+            catch (JsonException ex)
+            {
+                LoggingService.LogWarning("EmployeeService.LoadArchiveLogEntries",
+                    $"archive_log.json is invalid and will be treated as an empty log: {path}. {ex.Message}");
                 return new List<ArchiveLogEntry>();
             }
         }
@@ -899,9 +1370,16 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrWhiteSpace(entry.OperationId))
                     entry.OperationId = Guid.NewGuid().ToString();
 
+                if (_useLocalDbArchiveLog && _localDbService != null)
+                {
+                    _localDbService.InsertArchiveLog(entry);
+                    return;
+                }
+
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrEmpty(path)) return;
-                var entries = LoadArchiveLog();
+
+                var entries = LoadArchiveLogEntries(path);
                 entries.Add(entry);
                 WriteJsonAtomic(path, entries);
             }
@@ -924,72 +1402,32 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(archiveFolder) || !Directory.Exists(archiveFolder))
                 return new List<ArchivedEmployeeSummary>();
 
-            var result = new List<ArchivedEmployeeSummary>();
-            foreach (var folder in Directory.GetDirectories(archiveFolder))
+            if (_employeeIndexDbService != null)
             {
-                var jsonPath = Path.Combine(folder, "employee.json");
-                if (!File.Exists(jsonPath)) continue;
                 try
                 {
-                    var data = ReadJson<EmployeeData>(jsonPath);
-                    if (data == null) continue;
-
-                    var fullName = $"{data.FirstName} {data.LastName}";
-                    var photo = ResolvePhotoPath(folder, data);
-                    var hasPhoto = !string.IsNullOrEmpty(photo);
-
-                    if (data.FirmHistory != null && data.FirmHistory.Count > 0)
+                    var rows = _employeeIndexDbService.GetArchivedEmployeeRows();
+                    if (rows.Count > 0)
                     {
-                        var deduplicated = data.FirmHistory
-                            .GroupBy(fh => $"{fh.FirmName}|{fh.StartDate}")
-                            .Select(g => g.Last())
+                        return rows
+                            .Select(BuildArchivedSummaryFromIndexRow)
                             .ToList();
-
-                        bool needResave = deduplicated.Count != data.FirmHistory.Count;
-                        if (needResave)
-                        {
-                            data.FirmHistory = deduplicated;
-                            try
-                            {
-                                var resavePath = Path.Combine(folder, "employee.json");
-                                WriteJsonAtomic(resavePath, data);
-                            }
-                            catch (Exception ex2) { LoggingService.LogWarning("GetArchivedEmployees.Dedup", ex2.Message); }
-                        }
-
-                        var last = deduplicated.Last();
-                        result.Add(new ArchivedEmployeeSummary
-                        {
-                            UniqueId = data.UniqueId,
-                            FullName = fullName,
-                            PositionTitle = data.PositionTag,
-                            FirmName = last.FirmName,
-                            StartDate = last.StartDate,
-                            EndDate = last.EndDate,
-                            EmployeeFolder = folder,
-                            PhotoPath = photo,
-                            HasPhoto = hasPhoto
-                        });
                     }
-                    else
-                    {
-                        result.Add(new ArchivedEmployeeSummary
-                        {
-                            UniqueId = data.UniqueId,
-                            FullName = fullName,
-                            PositionTitle = data.PositionTag,
-                            FirmName = data.ArchivedFromFirm,
-                            StartDate = data.StartDate,
-                            EndDate = data.EndDate,
-                            EmployeeFolder = folder,
-                            PhotoPath = photo,
-                            HasPhoto = hasPhoto
-                        });
-                    }
+
+                    if (!HasAnyEmployeeFolders(archiveFolder))
+                        return new List<ArchivedEmployeeSummary>();
+
+                    LoggingService.LogWarning("EmployeeService.GetArchivedEmployees",
+                        "Employee index returned no archived rows while archive folders exist. Falling back to file scan.");
                 }
-                catch (Exception ex) { LoggingService.LogError("EmployeeService.GetArchivedEmployees", ex); }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("EmployeeService.GetArchivedEmployees",
+                        $"Employee index read failed for archive list, falling back to file scan. {ex.Message}");
+                }
             }
-            return result;
+
+            return GetArchivedEmployeesFromFiles(archiveFolder);
         }
 
         public List<ArchivedEmployeeSummary> GetActiveEmployeeFirmHistory()
@@ -1074,6 +1512,8 @@ namespace Win11DesktopApp.Services
 
                 LoggingService.LogInfo("EmployeeService", $"Employee restored to {newFirmName}: {destFolder}");
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(newFirmName, destFolder, restoredData);
+                if (restoredData != null)
+                    UpsertEmployeeIndex(destFolder, restoredData, newFirmName);
                 return new RestoreEmployeeResult
                 {
                     RestoredFolder = destFolder,
@@ -1095,11 +1535,20 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrWhiteSpace(operationId))
                     return new UndoArchiveResult();
 
-                var archiveEntries = LoadArchiveLog();
-                var target = archiveEntries.FirstOrDefault(entry =>
-                    string.Equals(entry.OperationId, operationId, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
-                    && !entry.IsReverted);
+                ArchiveLogEntry? target;
+                if (_useLocalDbArchiveLog && _localDbService != null)
+                {
+                    target = _localDbService.GetActiveArchiveLogEntry(operationId);
+                }
+                else
+                {
+                    var archiveEntries = LoadArchiveLog();
+                    target = archiveEntries.FirstOrDefault(entry =>
+                        string.Equals(entry.OperationId, operationId, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                        && !entry.IsReverted);
+                }
+
                 if (target == null)
                     return new UndoArchiveResult();
 
@@ -1138,6 +1587,8 @@ namespace Win11DesktopApp.Services
 
                 var restoredData = LoadEmployeeData(restoredFolder);
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(target.FirmName, restoredFolder, restoredData);
+                if (restoredData != null)
+                    UpsertEmployeeIndex(restoredFolder, restoredData, target.FirmName);
                 return new UndoArchiveResult
                 {
                     RestoredFolder = restoredFolder,
@@ -1276,11 +1727,17 @@ namespace Win11DesktopApp.Services
             await _historyLock.WaitAsync();
             try
             {
+                if (_useLocalDbArchiveLog && _localDbService != null)
+                {
+                    _localDbService.MarkArchiveLogReverted(operationId, undoOperationId);
+                    return;
+                }
+
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrWhiteSpace(path))
                     return;
 
-                var entries = LoadArchiveLog();
+                var entries = LoadArchiveLogEntries(path);
                 var target = entries.FirstOrDefault(entry =>
                     string.Equals(entry.OperationId, operationId, StringComparison.OrdinalIgnoreCase));
                 if (target == null)
@@ -1444,6 +1901,8 @@ namespace Win11DesktopApp.Services
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived: {employeeName} from {firmName}");
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
+                if (verifyData != null)
+                    UpsertEmployeeIndex(destFolder, verifyData, firmName);
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
@@ -1600,6 +2059,8 @@ namespace Win11DesktopApp.Services
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived from Recently Deleted: {employeeName} from {firmName}");
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
+                if (verifyData != null)
+                    UpsertEmployeeIndex(destFolder, verifyData, firmName);
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
@@ -1617,19 +2078,35 @@ namespace Win11DesktopApp.Services
 
         // ============ HISTORY ============
 
-        public async Task AddHistoryEntry(string employeeFolder, EmployeeHistoryEntry entry)
+        public LocalDbMigrationResult EnsureEmployeeHistoryMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var result = _localDbService.MigrateEmployeeHistoryIfNeeded(BuildEmployeeHistoryMigrationSources());
+                _useLocalDbHistory = result.IsSuccessful;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _useLocalDbHistory = false;
+                LoggingService.LogError("EmployeeService.EnsureEmployeeHistoryMigratedToLocalDb", ex);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public async Task AddHistoryEntry(string employeeFolder, string employeeId, EmployeeHistoryEntry entry)
         {
             await _historyLock.WaitAsync();
             try
             {
-                var historyFile = Path.Combine(employeeFolder, "history.json");
-                var entries = new List<EmployeeHistoryEntry>();
-
-                if (File.Exists(historyFile))
-                {
-                    entries = ReadJsonOrDefault(historyFile, new List<EmployeeHistoryEntry>());
-                }
-
                 if (string.IsNullOrWhiteSpace(entry.ActorName))
                 {
                     var profile = App.CurrentProfile;
@@ -1637,9 +2114,13 @@ namespace Win11DesktopApp.Services
                         entry.ActorName = $"{profile.FirstName} {profile.LastName}".Trim();
                 }
 
-                entries.Add(entry);
+                if (_useLocalDbHistory && _localDbService != null && !string.IsNullOrWhiteSpace(employeeId))
+                {
+                    _localDbService.InsertEmployeeHistory(employeeId, employeeFolder, ResolveFirmNameForHistory(employeeFolder), entry);
+                    return;
+                }
 
-                WriteJsonAtomic(historyFile, entries);
+                await AddHistoryEntryToJsonAsync(employeeFolder, entry);
             }
             catch (Exception ex)
             {
@@ -1652,19 +2133,73 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public async Task AddHistoryEntry(string employeeFolder, EmployeeHistoryEntry entry)
+        {
+            var employeeId = ReadEmployeeUniqueId(employeeFolder) ?? string.Empty;
+            await AddHistoryEntry(employeeFolder, employeeId, entry);
+        }
+
         public List<EmployeeHistoryEntry> LoadHistory(string employeeFolder)
         {
             try
             {
-                var historyFile = Path.Combine(employeeFolder, "history.json");
-                if (!File.Exists(historyFile)) return new List<EmployeeHistoryEntry>();
+                var employeeId = ReadEmployeeUniqueId(employeeFolder) ?? string.Empty;
+                if (_useLocalDbHistory && _localDbService != null && !string.IsNullOrWhiteSpace(employeeId))
+                {
+                    var dbEntries = _localDbService.GetEmployeeHistory(employeeId);
+                    if (dbEntries.Count > 0)
+                        return dbEntries;
+                }
 
-                return ReadJsonOrDefault(historyFile, new List<EmployeeHistoryEntry>());
+                var historyFile = Path.Combine(employeeFolder, "history.json");
+                if (!File.Exists(historyFile) || File.Exists(historyFile + ".migrated"))
+                    return new List<EmployeeHistoryEntry>();
+
+                return LoadHistoryEntries(historyFile);
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("EmployeeService.LoadHistory", ex);
                 return new List<EmployeeHistoryEntry>();
+            }
+        }
+
+        public async Task DeleteHistoryEntry(string employeeFolder, string employeeId, EmployeeHistoryEntry entry)
+        {
+            if (entry == null)
+                return;
+
+            await _historyLock.WaitAsync();
+            try
+            {
+                if (_useLocalDbHistory && _localDbService != null && !string.IsNullOrWhiteSpace(employeeId) && entry.Id > 0)
+                {
+                    _localDbService.DeleteEmployeeHistoryEntry(employeeId, entry.Id);
+                    return;
+                }
+
+                var historyFile = Path.Combine(employeeFolder, "history.json");
+                if (!File.Exists(historyFile))
+                    return;
+
+                var entries = LoadHistoryEntries(historyFile);
+                var removed = entries.RemoveAll(x =>
+                    x.Timestamp == entry.Timestamp
+                    && string.Equals(x.EventType, entry.EventType, StringComparison.Ordinal)
+                    && string.Equals(x.Action, entry.Action, StringComparison.Ordinal)
+                    && string.Equals(x.Description, entry.Description, StringComparison.Ordinal)
+                    && string.Equals(x.ActorName, entry.ActorName, StringComparison.Ordinal));
+
+                if (removed > 0)
+                    WriteJsonAtomic(historyFile, entries);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.DeleteHistoryEntry", ex);
+            }
+            finally
+            {
+                _historyLock.Release();
             }
         }
 
@@ -1693,6 +2228,8 @@ namespace Win11DesktopApp.Services
                 Check(Res("HistFieldPassportExp"), oldData.PassportExpiry, newData.PassportExpiry);
                 Check(Res("HistFieldPassportCity"), oldData.PassportCity, newData.PassportCity);
                 Check(Res("HistFieldPassportCountry"), oldData.PassportCountry, newData.PassportCountry);
+                Check(Res("HistFieldCitizenship"), oldData.Citizenship, newData.Citizenship);
+                Check(Res("HistFieldIssuingCountry"), oldData.IssuingCountry, newData.IssuingCountry);
                 Check(Res("HistFieldVisaNum"), oldData.VisaNumber, newData.VisaNumber);
                 Check(Res("HistFieldVisaAuthority"), oldData.VisaAuthority, newData.VisaAuthority);
                 Check(Res("HistFieldVisaType"), oldData.VisaType, newData.VisaType);
@@ -1717,7 +2254,8 @@ namespace Win11DesktopApp.Services
                 foreach (var (field, oldVal, newVal) in changes)
                 {
                     var evtType = field == Res("HistFieldStatus") ? "StatusChanged" : "ProfileChanged";
-                    await AddHistoryEntry(employeeFolder, new EmployeeHistoryEntry
+                    var employeeId = LoadEmployeeData(employeeFolder)?.UniqueId ?? string.Empty;
+                    await AddHistoryEntry(employeeFolder, employeeId, new EmployeeHistoryEntry
                     {
                         EventType = evtType,
                         Action = Res("HistoryActionProfileChange"),
@@ -1732,6 +2270,167 @@ namespace Win11DesktopApp.Services
             {
                 Debug.WriteLine($"RecordChanges error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.RecordChanges", ex);
+            }
+        }
+
+        private async Task AddHistoryEntryToJsonAsync(string employeeFolder, EmployeeHistoryEntry entry)
+        {
+            var historyFile = Path.Combine(employeeFolder, "history.json");
+            var entries = LoadHistoryEntries(historyFile);
+
+            entries.Add(entry);
+            WriteJsonAtomic(historyFile, entries);
+            await Task.CompletedTask;
+        }
+
+        private IEnumerable<EmployeeHistoryMigrationSource> BuildEmployeeHistoryMigrationSources()
+        {
+            foreach (var source in EnumerateEmployeeFolders())
+            {
+                var historyJsonPath = Path.Combine(source.EmployeeFolder, "history.json");
+                if (!File.Exists(historyJsonPath) || File.Exists(historyJsonPath + ".migrated"))
+                    continue;
+
+                var data = LoadEmployeeData(source.EmployeeFolder);
+                if (data == null || string.IsNullOrWhiteSpace(data.UniqueId))
+                {
+                    LoggingService.LogWarning("EmployeeService.BuildEmployeeHistoryMigrationSources",
+                        $"Skipped history migration because employee.json or UniqueId is missing: {source.EmployeeFolder}");
+                    yield return new EmployeeHistoryMigrationSource
+                    {
+                        EmployeeFolder = source.EmployeeFolder,
+                        FirmName = source.FirmName,
+                        HistoryJsonPath = historyJsonPath
+                    };
+                    continue;
+                }
+
+                yield return new EmployeeHistoryMigrationSource
+                {
+                    EmployeeId = data.UniqueId,
+                    EmployeeFolder = source.EmployeeFolder,
+                    FirmName = source.FirmName,
+                    HistoryJsonPath = historyJsonPath,
+                    Entries = LoadHistoryEntries(historyJsonPath)
+                };
+            }
+        }
+
+        private IEnumerable<EmployeeHistoryMigrationSource> BuildEmployeeHistoryCleanupSources()
+        {
+            foreach (var source in EnumerateEmployeeFolders())
+            {
+                var historyJsonPath = Path.Combine(source.EmployeeFolder, "history.json");
+                if (File.Exists(historyJsonPath) || !File.Exists(historyJsonPath + ".migrated"))
+                    continue;
+
+                var data = LoadEmployeeData(source.EmployeeFolder);
+                if (data == null || string.IsNullOrWhiteSpace(data.UniqueId))
+                {
+                    LoggingService.LogWarning("EmployeeService.BuildEmployeeHistoryCleanupSources",
+                        $"Skipped history cleanup because employee.json or UniqueId is missing: {source.EmployeeFolder}");
+                    continue;
+                }
+
+                yield return new EmployeeHistoryMigrationSource
+                {
+                    EmployeeId = data.UniqueId,
+                    EmployeeFolder = source.EmployeeFolder,
+                    FirmName = source.FirmName,
+                    HistoryJsonPath = historyJsonPath
+                };
+            }
+        }
+
+        public int CleanupMigratedEmployeeHistoryBackups()
+        {
+            if (_localDbService == null)
+                return 0;
+
+            try
+            {
+                return _localDbService.CleanupMigratedEmployeeHistoryBackups(BuildEmployeeHistoryCleanupSources());
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.CleanupMigratedEmployeeHistoryBackups", ex.Message);
+                return 0;
+            }
+        }
+
+        private IEnumerable<(string EmployeeFolder, string FirmName)> EnumerateEmployeeFolders()
+        {
+            var companies = App.CompanyService?.Companies;
+            if (companies != null)
+            {
+                foreach (var company in companies)
+                {
+                    var employeesFolder = _folderService.GetEmployeesFolder(company.Name);
+                    if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
+                        continue;
+
+                    foreach (var folder in Directory.GetDirectories(employeesFolder))
+                        yield return (folder, company.Name);
+                }
+            }
+
+            var archiveFolder = _folderService.GetArchiveFolder();
+            if (string.IsNullOrWhiteSpace(archiveFolder) || !Directory.Exists(archiveFolder))
+                yield break;
+
+            foreach (var folder in Directory.GetDirectories(archiveFolder))
+            {
+                var data = LoadEmployeeData(folder);
+                var firmName = data?.ArchivedFromFirm;
+                yield return (folder, string.IsNullOrWhiteSpace(firmName) ? "archive" : firmName);
+            }
+        }
+
+        private string ResolveFirmNameForHistory(string employeeFolder)
+        {
+            var data = LoadEmployeeData(employeeFolder);
+            if (data?.IsArchived == true && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm))
+                return data.ArchivedFromFirm;
+
+            var companies = App.CompanyService?.Companies;
+            if (companies == null)
+                return string.Empty;
+
+            foreach (var company in companies)
+            {
+                var employeesFolder = _folderService.GetEmployeesFolder(company.Name);
+                if (!string.IsNullOrWhiteSpace(employeesFolder)
+                    && employeeFolder.StartsWith(employeesFolder, StringComparison.OrdinalIgnoreCase))
+                {
+                    return company.Name;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static List<EmployeeHistoryEntry> LoadHistoryEntries(string path)
+        {
+            if (!File.Exists(path))
+                return new();
+
+            try
+            {
+                var raw = SafeFileService.ReadAllText(path, Encoding.UTF8);
+                if (string.IsNullOrWhiteSpace(raw))
+                {
+                    LoggingService.LogWarning("EmployeeService.LoadHistoryEntries",
+                        $"history.json is empty and will be treated as an empty history: {path}");
+                    return new();
+                }
+
+                return SafeFileService.ReadJsonOrDefault(path, new List<EmployeeHistoryEntry>(), _jsonOptions, Encoding.UTF8);
+            }
+            catch (JsonException ex)
+            {
+                LoggingService.LogWarning("EmployeeService.LoadHistoryEntries",
+                    $"history.json is invalid and will be treated as an empty history: {path}. {ex.Message}");
+                return new();
             }
         }
 

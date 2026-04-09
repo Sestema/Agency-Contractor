@@ -61,17 +61,20 @@
                             </Grid>
                         </Border>
                     </StackPanel>
-                    <TextBlock Text="{DynamicResource WizVisaNum}" Style="{StaticResource WizLabel}"/>
+                    <TextBlock Text="{Binding SecondaryStepVisaNumberLabel}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.VisaNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizVisaAuthority}" Style="{StaticResource WizLabel}"/>
+                    <TextBlock Text="{Binding SecondaryStepVisaAuthorityLabel}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.VisaAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizVisaType}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizVisaExpiry}" Style="{StaticResource WizLabel}"/>
+                    <StackPanel Visibility="{Binding ShowSecondaryVisaTypeField, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{DynamicResource WizVisaType}" Style="{StaticResource WizLabel}"/>
+                        <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding SecondaryStepVisaExpiryLabel}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-
-                    <TextBlock Text="{DynamicResource WizWorkPermitName}" Style="{StaticResource WizLabel}" Margin="0,14,0,0"/>
-                    <TextBox Text="{Binding Data.WorkPermitName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <StackPanel Visibility="{Binding IsEuIdCard, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="{DynamicResource WizWorkPermitName}" Style="{StaticResource WizLabel}" Margin="0,14,0,0"/>
+                        <TextBox Text="{Binding Data.WorkPermitName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch"

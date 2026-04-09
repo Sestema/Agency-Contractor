@@ -296,7 +296,7 @@ namespace Win11DesktopApp.ViewModels
         private void OpenEmployeeDetails(ArchivedEmployeeSummary emp)
         {
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(emp.FirmName, emp.EmployeeFolder, _employeeService);
+            EmployeeDetailsVm = new EmployeeDetailsViewModel(emp.FirmName, emp.EmployeeFolder, _employeeService, employeeId: emp.UniqueId);
             EmployeeDetailsVm.IsArchiveMode = true;
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             IsEmployeeDetailsOpen = true;
@@ -477,7 +477,7 @@ namespace Win11DesktopApp.ViewModels
 
                 if (result.Success)
                 {
-                    await _employeeService.AddHistoryEntry(result.RestoredFolder, new EmployeeModels.EmployeeHistoryEntry
+                    await _employeeService.AddHistoryEntry(result.RestoredFolder, EmployeeToRestore.UniqueId, new EmployeeModels.EmployeeHistoryEntry
                     {
                         EventType = "Restored",
                         Action = Res("HistoryActionRestored"),

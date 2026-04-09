@@ -218,6 +218,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(TotalSteps));
             OnPropertyChanged(nameof(IsLastStep));
             OnPropertyChanged(nameof(PersonalDocPreviewPath));
+            OnPropertyChanged(nameof(ShowSecondaryVisaTypeField));
         }
 
         public string EmployeeType
@@ -255,6 +256,10 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(PrimaryDocumentStepTitle));
                     OnPropertyChanged(nameof(SecondaryDocumentStepTitle));
                     OnPropertyChanged(nameof(SecondaryDocumentStepHint));
+                    OnPropertyChanged(nameof(SecondaryStepVisaNumberLabel));
+                    OnPropertyChanged(nameof(SecondaryStepVisaAuthorityLabel));
+                    OnPropertyChanged(nameof(SecondaryStepVisaExpiryLabel));
+                    OnPropertyChanged(nameof(ShowSecondaryVisaTypeField));
                     RefreshCarousel();
                     UpdateCropTargets();
                 }
@@ -263,13 +268,26 @@ namespace Win11DesktopApp.ViewModels
 
         public bool IsEuPassport => _euDocumentType == "passport";
         public bool IsEuIdCard => _euDocumentType == "id_card";
-        public bool ShowIdCardFallbackFields => IsEuIdCard && !ShowPassportPage2Upload;
+        public bool IsSingleSideIdCardWithInsuranceScenario =>
+            IsEuIdCard && !ShowPassportPage2Upload && HasInsurance && !HasVisa;
+        public bool ShowIdCardFallbackFields => IsSingleSideIdCardWithInsuranceScenario;
         public bool ShowEuDocTypeSelector => !_hasVisa;
         public string PrimaryDocument1Label => IsEuIdCard ? Res("WizardIdCard1") : Res("WizardPassport1");
         public string PrimaryDocument2Label => IsEuIdCard ? Res("WizardIdCard2") : Res("WizardPassport2");
         public string PrimaryDocumentStepTitle => IsEuIdCard ? Res("StepIdCardData") : Res("StepPassportData");
         public string SecondaryDocumentStepTitle => IsEuIdCard ? Res("StepIdCardPage2Data") : Res("StepPassportPage2Data");
         public string SecondaryDocumentStepHint => IsEuIdCard ? Res("StepIdCardPage2Hint") : Res("StepPassportPage2Hint");
+        public string SecondaryStepVisaNumberLabel => IsEuIdCard
+            ? $"{Res("WizVisaNum")} ({Res("WizIdCardNumberHint")})"
+            : Res("WizVisaNum");
+        public string SecondaryStepVisaAuthorityLabel => IsEuIdCard
+            ? $"{Res("WizVisaAuthority")} ({Res("WizIdCardAuthorityHint")})"
+            : Res("WizVisaAuthority");
+        public string SecondaryStepVisaExpiryLabel => IsEuIdCard
+            ? $"{Res("WizVisaExpiry")} ({Res("WizIdCardExpiryHint")})"
+            : Res("WizVisaExpiry");
+        public bool ShowSecondaryVisaTypeField =>
+            !IsEuIdCard && !string.Equals(EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase);
 
         public bool IsGenderMale
         {
@@ -491,7 +509,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 2 => "passport",
                 3 => "insurance",
-                4 => "visa",
+                4 => ShowVisaPage2Upload ? "visa2" : "visa",
                 7 => "permit",
                 8 => "passport2",
                 _ => ""
@@ -1190,7 +1208,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                await _employeeService.AddHistoryEntry(folder, new EmployeeModels.EmployeeHistoryEntry
+                await _employeeService.AddHistoryEntry(folder, Data.UniqueId, new EmployeeModels.EmployeeHistoryEntry
                 {
                     EventType = "Created",
                     Action = Res("HistoryActionCreation"),
@@ -1224,7 +1242,7 @@ namespace Win11DesktopApp.ViewModels
             if (StepIndex > 0) return true;
             if (!string.IsNullOrWhiteSpace(PassportPreviewPath) || !string.IsNullOrWhiteSpace(VisaPreviewPath) ||
                 !string.IsNullOrWhiteSpace(InsurancePreviewPath) || !string.IsNullOrWhiteSpace(WorkPermitPreviewPath) ||
-                !string.IsNullOrWhiteSpace(PassportPage2PreviewPath)) return true;
+                !string.IsNullOrWhiteSpace(PassportPage2PreviewPath) || !string.IsNullOrWhiteSpace(VisaPage2PreviewPath)) return true;
             var d = Data;
             if (!string.IsNullOrWhiteSpace(d.FirstName) || !string.IsNullOrWhiteSpace(d.LastName) ||
                 !string.IsNullOrWhiteSpace(d.BirthDate) || !string.IsNullOrWhiteSpace(d.PassportNumber) ||
@@ -1260,9 +1278,9 @@ namespace Win11DesktopApp.ViewModels
             if (!(App.GeminiApiService?.IsConfigured ?? false))
                 return;
 
-            if (StepIndex == 8 && IsEuIdCard)
+            if (IsEuIdCard && (StepIndex == 2 || StepIndex == 4 || StepIndex == 8))
             {
-                await AIScanEuIdCardStepAsync();
+                await AIScanEuIdCardStepAsync(StepIndex);
                 return;
             }
 
@@ -1278,6 +1296,8 @@ namespace Win11DesktopApp.ViewModels
 
             if (docKey == "passport" && EmployeeType == "eu_citizen" && _euDocumentType == "id_card")
                 docKey = "id_card";
+            else if (docKey == "passport2" && EmployeeType == "eu_citizen" && _euDocumentType == "id_card")
+                docKey = "id_card_back";
 
             if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
             {
@@ -1316,7 +1336,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey(docKey, parsed));
+                Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey(docKey, parsed, StepIndex));
                 AIScanStatus = string.Format(Res("AIScanDone"), parsed.Count);
             }
             catch (OperationCanceledException)
@@ -1334,7 +1354,7 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private async Task AIScanEuIdCardStepAsync()
+        private async Task AIScanEuIdCardStepAsync(int sourceStepIndex)
         {
             if (string.IsNullOrWhiteSpace(PassportPreviewPath) || !File.Exists(PassportPreviewPath))
             {
@@ -1358,17 +1378,17 @@ namespace Win11DesktopApp.ViewModels
                 if (primaryParsed.Count > 0)
                 {
                     totalFields += primaryParsed.Count;
-                    Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("id_card", primaryParsed));
+                    Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("id_card", primaryParsed, sourceStepIndex));
                 }
 
                 if (!string.IsNullOrWhiteSpace(PassportPage2PreviewPath) && File.Exists(PassportPage2PreviewPath))
                 {
-                    var secondaryParsed = await ScanImageDocumentAsync("passport2", PassportPage2PreviewPath, token);
+                    var secondaryParsed = await ScanImageDocumentAsync("id_card_back", PassportPage2PreviewPath, token);
                     token.ThrowIfCancellationRequested();
                     if (secondaryParsed.Count > 0)
                     {
                         totalFields += secondaryParsed.Count;
-                        Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("passport2", secondaryParsed));
+                        Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("id_card_back", secondaryParsed, sourceStepIndex));
                     }
                 }
 
@@ -1480,12 +1500,41 @@ namespace Win11DesktopApp.ViewModels
             return s;
         }
 
+        private static bool LooksRomanianDocumentValue(string? raw)
+        {
+            var value = (raw ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrEmpty(value))
+                return false;
+
+            return value.Contains("ROMANIA", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("ROUMANIE", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("ROU", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("ROMANIAN", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("ROMANA", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool ShouldAutofillRomanianIdCardName(Dictionary<string, string> data, int? sourceStepIndex)
+        {
+            if (sourceStepIndex == 4 || sourceStepIndex == 8)
+                return false;
+
+            if (!IsSingleSideIdCardWithInsuranceScenario)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(Data.WorkPermitName))
+                return false;
+
+            return (data.TryGetValue("IssuingCountry", out var issuingCountry) && LooksRomanianDocumentValue(issuingCountry))
+                || (data.TryGetValue("Citizenship", out var citizenship) && LooksRomanianDocumentValue(citizenship))
+                || (data.TryGetValue("PassportCountry", out var passportCountry) && LooksRomanianDocumentValue(passportCountry));
+        }
+
         private string GetPrimaryCropLabel() => IsEuIdCard ? Res("CropIdCard1") : Res("CropPassport");
         private string GetSecondaryCropLabel() => IsEuIdCard ? Res("CropIdCard2") : Res("CropPassport2");
         private string GetPrimaryCarouselLabel() => IsEuIdCard ? Res("CarouselIdCard1") : Res("CarouselPassport");
         private string GetSecondaryCarouselLabel() => IsEuIdCard ? Res("CarouselIdCard2") : Res("CarouselPassport2");
 
-        private void ApplyParsedDataByKey(string docKey, Dictionary<string, string> data)
+        private void ApplyParsedDataByKey(string docKey, Dictionary<string, string> data, int? sourceStepIndex = null)
         {
             void Set(string key, Action<string> setter)
             {
@@ -1499,23 +1548,44 @@ namespace Win11DesktopApp.ViewModels
                     Set("FirstName", v => Data.FirstName = ToTitleCase(v));
                     Set("LastName", v => Data.LastName = ToTitleCase(v));
                     Set("BirthDate", v => Data.BirthDate = v);
+                    Set("Sex", v => Data.Gender = NormalizeGender(v));
                     Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
                     Set("PassportAuthority", v => Data.PassportAuthority = v);
                     Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
                     Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
+                    Set("Citizenship", v => Data.Citizenship = ToTitleCase(v));
+                    Set("IssuingCountry", v => Data.IssuingCountry = ToTitleCase(v));
                     Set("PassportExpiry", v => Data.PassportExpiry = v);
                     break;
 
                 case "id_card":
-                    Set("FirstName", v => Data.FirstName = ToTitleCase(v));
-                    Set("LastName", v => Data.LastName = ToTitleCase(v));
-                    Set("BirthDate", v => Data.BirthDate = v);
-                    Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
-                    Set("PassportAuthority", v => Data.PassportAuthority = v);
-                    Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
-                    Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
-                    Set("PassportExpiry", v => Data.PassportExpiry = v);
-                    Set("PassportExpiry", v => Data.VisaExpiry = v);
+                    if (sourceStepIndex == 4 || sourceStepIndex == 8)
+                    {
+                        Set("PassportNumber", v => Data.VisaNumber = v.ToUpper());
+                        Set("PassportAuthority", v => Data.VisaAuthority = v);
+                        Set("PassportExpiry", v => Data.VisaExpiry = v);
+                    }
+                    else
+                    {
+                        Set("FirstName", v => Data.FirstName = ToTitleCase(v));
+                        Set("LastName", v => Data.LastName = ToTitleCase(v));
+                        Set("BirthDate", v => Data.BirthDate = v);
+                        Set("Sex", v => Data.Gender = NormalizeGender(v));
+                        Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
+                        Set("PassportAuthority", v => Data.PassportAuthority = v);
+                        Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
+                        Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
+                        Set("Citizenship", v => Data.Citizenship = ToTitleCase(v));
+                        Set("IssuingCountry", v => Data.IssuingCountry = ToTitleCase(v));
+                        Set("PassportExpiry", v => Data.PassportExpiry = v);
+                        Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
+
+                        if (ShouldAutofillRomanianIdCardName(data, sourceStepIndex))
+                            Data.WorkPermitName = "Rumunska obcanka";
+
+                        if (IsSingleSideIdCardWithInsuranceScenario)
+                            Data.VisaExpiry = string.Empty;
+                    }
                     break;
 
                 case "insurance":
@@ -1525,6 +1595,7 @@ namespace Win11DesktopApp.ViewModels
                     break;
 
                 case "visa":
+                    Set("Sex", v => Data.Gender = NormalizeGender(v));
                     Set("VisaNumber", v => Data.VisaNumber = v);
                     Set("VisaAuthority", v => Data.VisaAuthority = v);
                     Set("VisaType", v => Data.VisaType = v);
@@ -1533,6 +1604,7 @@ namespace Win11DesktopApp.ViewModels
                     break;
 
                 case "permit":
+                    Set("Sex", v => Data.Gender = NormalizeGender(v));
                     Set("WorkPermitNumber", v => Data.WorkPermitNumber = v);
                     Set("WorkPermitType", v => Data.WorkPermitType = v);
                     Set("WorkPermitIssueDate", v => Data.WorkPermitIssueDate = v);
@@ -1541,13 +1613,64 @@ namespace Win11DesktopApp.ViewModels
                     break;
 
                 case "passport2":
+                    if (sourceStepIndex == 4 || sourceStepIndex == 8)
+                    {
+                        Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("VisaExpiry", v => Data.VisaExpiry = v);
+                        Set("VisaAuthority", v => Data.VisaAuthority = v);
+                        Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
+                    }
+                    else
+                    {
+                        Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
+                        Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
+                        Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
+                        Set("VisaAuthority", v => Data.PassportAuthority = v);
+                    }
+                    break;
+
+                case "id_card_back":
                     Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
-                    Set("VisaNumber", v => Data.VisaNumber = v);
-                    Set("VisaExpiry", v => Data.VisaExpiry = v);
+                    Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
+                    Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
+                    Set("PassportAuthority", v => Data.PassportAuthority = v);
+
+                    if (sourceStepIndex == 4 || sourceStepIndex == 8)
+                    {
+                        Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("VisaExpiry", v => Data.VisaExpiry = v);
+                    }
+                    break;
+
+                case "visa2":
+                    if (sourceStepIndex == 4 || sourceStepIndex == 8)
+                    {
+                        Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("VisaExpiry", v => Data.VisaExpiry = v);
+                        Set("VisaAuthority", v => Data.VisaAuthority = v);
+                        Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
+                    }
+                    else
+                    {
+                        Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
+                    }
                     break;
             }
 
             OnPropertyChanged(nameof(Data));
+            OnPropertyChanged(nameof(IsGenderMale));
+            OnPropertyChanged(nameof(IsGenderFemale));
+        }
+
+        private static string NormalizeGender(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToUpperInvariant();
+            return normalized switch
+            {
+                "F" or "FEMALE" or "Ž" or "Z" => "female",
+                "M" or "MALE" => "male",
+                _ => string.Empty
+            };
         }
 
         private static void ShowDocumentProcessingError(string prefix, Exception ex)

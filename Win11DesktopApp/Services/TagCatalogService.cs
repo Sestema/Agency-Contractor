@@ -31,6 +31,27 @@ namespace Win11DesktopApp.Services
             catch { return fmt; }
         }
 
+        private static string GetPrimaryDocumentType(EmployeeModels.EmployeeData data)
+        {
+            return string.Equals(data.EuDocumentType, "id_card", System.StringComparison.OrdinalIgnoreCase)
+                ? DocRes("EuDocTypeIdCard")
+                : DocRes("DetDocPassport");
+        }
+
+        private static string GetResidenceDocumentType(EmployeeModels.EmployeeData data)
+        {
+            var hasResidenceDocument =
+                string.Equals(data.EmployeeType, "visa", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(data.EmployeeType, "work_permit", System.StringComparison.OrdinalIgnoreCase);
+
+            if (!hasResidenceDocument)
+                return string.Empty;
+
+            return string.Equals(data.VisaDocType, "id_card", System.StringComparison.OrdinalIgnoreCase)
+                ? DocRes("VisaDocTypeIdCard")
+                : DocRes("VisaDocTypeSticker");
+        }
+
         public void AddTagsForCompany(EmployerCompany employer, AgencyCompany agency)
         {
             AddTagsForEmployerOnly(employer);
@@ -84,7 +105,11 @@ namespace Win11DesktopApp.Services
             AddTag("EMPLOYEE_PassportAuthority", "Employee", companyName, Res("TagDescEmpPassportAuthority"), data.PassportAuthority);
             AddTag("EMPLOYEE_PassportCity", "Employee", companyName, Res("TagDescEmpPassportCity"), data.PassportCity);
             AddTag("EMPLOYEE_PassportCountry", "Employee", companyName, Res("TagDescEmpPassportCountry"), data.PassportCountry);
+            AddTag("EMPLOYEE_Citizenship", "Employee", companyName, Res("TagDescEmpCitizenship"), data.Citizenship);
+            AddTag("EMPLOYEE_IssuingCountry", "Employee", companyName, Res("TagDescEmpIssuingCountry"), data.IssuingCountry);
             AddTag("EMPLOYEE_PassportExpiry", "Employee", companyName, Res("TagDescEmpPassportExpiry"), data.PassportExpiry);
+            AddTag("EMPLOYEE_PrimaryDocumentType", "Employee", companyName, Res("TagDescEmpPrimaryDocumentType"), GetPrimaryDocumentType(data));
+            AddTag("EMPLOYEE_ResidenceDocumentType", "Employee", companyName, Res("TagDescEmpResidenceDocumentType"), GetResidenceDocumentType(data));
 
             AddTag("EMPLOYEE_VisaNumber", "Employee", companyName, Res("TagDescEmpVisaNumber"), data.VisaNumber);
             AddTag("EMPLOYEE_VisaAuthority", "Employee", companyName, Res("TagDescEmpVisaAuthority"), data.VisaAuthority);
@@ -163,7 +188,11 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_PassportAuthority"] = employeeData.PassportAuthority;
             map["EMPLOYEE_PassportCity"] = employeeData.PassportCity;
             map["EMPLOYEE_PassportCountry"] = employeeData.PassportCountry;
+            map["EMPLOYEE_Citizenship"] = employeeData.Citizenship;
+            map["EMPLOYEE_IssuingCountry"] = employeeData.IssuingCountry;
             map["EMPLOYEE_PassportExpiry"] = employeeData.PassportExpiry;
+            map["EMPLOYEE_PrimaryDocumentType"] = GetPrimaryDocumentType(employeeData);
+            map["EMPLOYEE_ResidenceDocumentType"] = GetResidenceDocumentType(employeeData);
             map["EMPLOYEE_VisaNumber"] = employeeData.VisaNumber;
             map["EMPLOYEE_VisaAuthority"] = employeeData.VisaAuthority;
             map["EMPLOYEE_VisaType"] = employeeData.VisaType;
@@ -334,7 +363,11 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_PassportAuthority", Category = "Employee.Passport", Description = Res("TagDescEmpPassportAuthority") },
                 new() { Tag = "EMPLOYEE_PassportCity", Category = "Employee.Passport", Description = Res("TagDescEmpPassportCity") },
                 new() { Tag = "EMPLOYEE_PassportCountry", Category = "Employee.Passport", Description = Res("TagDescEmpPassportCountry") },
+                new() { Tag = "EMPLOYEE_Citizenship", Category = "Employee.Passport", Description = Res("TagDescEmpCitizenship") },
+                new() { Tag = "EMPLOYEE_IssuingCountry", Category = "Employee.Passport", Description = Res("TagDescEmpIssuingCountry") },
                 new() { Tag = "EMPLOYEE_PassportExpiry", Category = "Employee.Passport", Description = Res("TagDescEmpPassportExpiry") },
+                new() { Tag = "EMPLOYEE_PrimaryDocumentType", Category = "Employee.Passport", Description = Res("TagDescEmpPrimaryDocumentType") },
+                new() { Tag = "EMPLOYEE_ResidenceDocumentType", Category = "Employee.Visa", Description = Res("TagDescEmpResidenceDocumentType") },
 
                 new() { Tag = "EMPLOYEE_VisaNumber", Category = "Employee.Visa", Description = Res("TagDescEmpVisaNumber") },
                 new() { Tag = "EMPLOYEE_VisaAuthority", Category = "Employee.Visa", Description = Res("TagDescEmpVisaAuthority") },

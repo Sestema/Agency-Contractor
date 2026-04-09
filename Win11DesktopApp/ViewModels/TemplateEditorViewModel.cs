@@ -773,9 +773,13 @@ namespace Win11DesktopApp.ViewModels
                 prompt.AppendLine("  'IČO:', 'IČ:'                           → AGENCY_ICO");
                 prompt.AppendLine("  'zaměstnanec:', 'Zaměstnanec:'          → EMPLOYEE_FullName");
                 prompt.AppendLine("  'č. dokladu:', 'číslo dokladu:'         → EMPLOYEE_PassportNumber");
+                prompt.AppendLine("  'typ cestovního dokladu:'               → EMPLOYEE_PrimaryDocumentType");
+                prompt.AppendLine("  'číslo a typ cestovního dokladu:'       → EMPLOYEE_PrimaryDocumentType + EMPLOYEE_PassportNumber");
                 prompt.AppendLine("  'narozen/á:', 'datum narození:'         → EMPLOYEE_BirthDate");
                 prompt.AppendLine("  'místo narození:'                       → EMPLOYEE_PassportCity");
-                prompt.AppendLine("  'státní občanství:'                     → EMPLOYEE_PassportCountry");
+                prompt.AppendLine("  'státní občanství:'                     → EMPLOYEE_Citizenship");
+                prompt.AppendLine("  'země vydání:', 'stát vydání:'          → EMPLOYEE_IssuingCountry");
+                prompt.AppendLine("  'typ pobytového dokladu:'               → EMPLOYEE_ResidenceDocumentType");
                 prompt.AppendLine("  'bydliště v ČR:', 'adresa v ČR:'        → EMPLOYEE_LocalAddress_Full  (employee's Czech Republic address)");
                 prompt.AppendLine("  'trvalé bydliště:', 'adresa v zemi původu:' → EMPLOYEE_AbroadAddress_Full  (employee's home country address)");
                 prompt.AppendLine("  'Druh práce', 'druh práce (funkce):'    → EMPLOYEE_Position");

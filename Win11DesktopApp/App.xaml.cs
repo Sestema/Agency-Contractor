@@ -45,6 +45,9 @@ namespace Win11DesktopApp
         public static InvoicePdfRenderService InvoicePdfRenderService { get; private set; } = null!;
 
         public static FinanceService FinanceService { get; private set; } = null!;
+        public static LocalDbService LocalDbService { get; private set; } = null!;
+        public static EmployeeIndexDbService EmployeeIndexDbService { get; private set; } = null!;
+        public static SalaryDbService SalaryDbService { get; private set; } = null!;
         public static ActivityLogService ActivityLogService { get; private set; } = null!;
         public static CandidateService CandidateService { get; private set; } = null!;
         public static GeminiApiService GeminiApiService { get; private set; } = null!;
@@ -119,16 +122,19 @@ namespace Win11DesktopApp
             CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
             TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
             StarterTemplateCatalogService = new StarterTemplateCatalogService();
-            EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService);
+            LocalDbService = new LocalDbService(FolderService);
+            EmployeeIndexDbService = new EmployeeIndexDbService(FolderService);
+            SalaryDbService = new SalaryDbService(FolderService);
+            EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService, LocalDbService, EmployeeIndexDbService);
             AdminMirrorSyncService = new AdminMirrorSyncService();
             RecentlyDeletedService = new RecentlyDeletedService(FolderService, EmployeeService);
-            FinanceService = new FinanceService(FolderService, suppressStartupNotifications: true);
+            FinanceService = new FinanceService(FolderService, SalaryDbService, LocalDbService, suppressStartupNotifications: true);
             InvoiceStorageService = new InvoiceStorageService(FolderService);
             AresLookupService = new AresLookupService(InvoiceStorageService);
             InvoiceQrPaymentService = new InvoiceQrPaymentService();
             InvoicePdfRenderService = new InvoicePdfRenderService(InvoiceStorageService, InvoiceQrPaymentService);
             startupIntegrityService.IncludeFinanceStartupState(FinanceService);
-            ActivityLogService = new ActivityLogService(FolderService);
+            ActivityLogService = new ActivityLogService(FolderService, LocalDbService);
             CandidateService = new CandidateService(FolderService);
             GeminiApiService = new GeminiApiService();
             NewsService = new NewsService();
@@ -179,6 +185,168 @@ namespace Win11DesktopApp
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.ThemeName))
             {
                 ThemeService.SetTheme(AppSettingsService.Settings.ThemeName);
+            }
+
+            var activityLogMigration = ActivityLogService.EnsureMigratedToLocalDb();
+            if (activityLogMigration.WasMigrationAttempted)
+            {
+                if (activityLogMigration.IsSuccessful)
+                {
+                    var successMessage = string.Format(
+                        Res("MsgActivityLogMigrationSuccess", "Activity log was migrated to SQLite. Imported records: {0}. Backup: {1}"),
+                        activityLogMigration.RecordsImported,
+                        string.IsNullOrWhiteSpace(activityLogMigration.BackupPath)
+                            ? Res("MsgActivityLogMigrationNoBackup", "not created")
+                            : activityLogMigration.BackupPath);
+                    ToastService.Instance.Warning(successMessage);
+                    LoggingService.LogInfo("App.ActivityLogMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = string.Format(
+                        Res("MsgActivityLogMigrationFailed", "Activity log migration to SQLite failed. The program will keep using the previous source. Details: {0}"),
+                        activityLogMigration.Message);
+                    MessageBox.Show(
+                        failedMessage,
+                        Res("TitleWarning", "Warning"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    LoggingService.LogWarning("App.ActivityLogMigration", failedMessage);
+                }
+            }
+
+            var employeeHistoryMigration = EmployeeService.EnsureEmployeeHistoryMigratedToLocalDb();
+            if (employeeHistoryMigration.WasMigrationAttempted)
+            {
+                if (employeeHistoryMigration.IsSuccessful)
+                {
+                    var successMessage = string.Format(
+                        Res("MsgEmployeeHistoryMigrationSuccess", "Employee history was migrated to SQLite. Imported records: {0}. Folders scanned: {1}. Skipped: {2}"),
+                        employeeHistoryMigration.RecordsImported,
+                        employeeHistoryMigration.FoldersScanned,
+                        employeeHistoryMigration.FoldersSkipped);
+                    ToastService.Instance.Warning(successMessage);
+                    LoggingService.LogInfo("App.EmployeeHistoryMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = string.Format(
+                        Res("MsgEmployeeHistoryMigrationFailed", "Employee history migration to SQLite failed. The program will keep using the previous source. Details: {0}"),
+                        employeeHistoryMigration.Message);
+                    MessageBox.Show(
+                        failedMessage,
+                        Res("TitleWarning", "Warning"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    LoggingService.LogWarning("App.EmployeeHistoryMigration", failedMessage);
+                }
+            }
+
+            var archiveLogMigration = EmployeeService.EnsureArchiveLogMigratedToLocalDb();
+            if (archiveLogMigration.WasMigrationAttempted)
+            {
+                if (archiveLogMigration.IsSuccessful)
+                {
+                    var successMessage = string.Format(
+                        Res("MsgArchiveLogMigrationSuccess", "Archive log was migrated to SQLite. Imported records: {0}. Backup: {1}"),
+                        archiveLogMigration.RecordsImported,
+                        string.IsNullOrWhiteSpace(archiveLogMigration.BackupPath)
+                            ? Res("MsgArchiveLogMigrationNoBackup", "not created")
+                            : archiveLogMigration.BackupPath);
+                    ToastService.Instance.Warning(successMessage);
+                    LoggingService.LogInfo("App.ArchiveLogMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = string.Format(
+                        Res("MsgArchiveLogMigrationFailed", "Archive log migration to SQLite failed. The program will keep using the previous source. Details: {0}"),
+                        archiveLogMigration.Message);
+                    MessageBox.Show(
+                        failedMessage,
+                        Res("TitleWarning", "Warning"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    LoggingService.LogWarning("App.ArchiveLogMigration", failedMessage);
+                }
+            }
+
+            var employeeIndexRebuild = EmployeeService.EnsureEmployeeIndexBuilt();
+            if (employeeIndexRebuild.WasRebuildAttempted)
+            {
+                if (employeeIndexRebuild.IsSuccessful)
+                {
+                    var successMessage = string.Format(
+                        Res("MsgEmployeeIndexBuildSuccess", "Employee index was built in SQLite. Imported records: {0}. Folders scanned: {1}. Skipped: {2}"),
+                        employeeIndexRebuild.RecordsImported,
+                        employeeIndexRebuild.FoldersScanned,
+                        employeeIndexRebuild.FoldersSkipped);
+                    ToastService.Instance.Warning(successMessage);
+                    LoggingService.LogInfo("App.EmployeeIndexBuild", successMessage);
+                }
+                else
+                {
+                    var failedMessage = string.Format(
+                        Res("MsgEmployeeIndexBuildFailed", "Employee index build in SQLite failed. The program will keep using the current source. Details: {0}"),
+                        employeeIndexRebuild.Message);
+                    MessageBox.Show(
+                        failedMessage,
+                        Res("TitleWarning", "Warning"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    LoggingService.LogWarning("App.EmployeeIndexBuild", failedMessage);
+                }
+            }
+
+            var salaryMigration = FinanceService.EnsureSalaryMigratedToLocalDb();
+            if (salaryMigration.WasMigrationAttempted)
+            {
+                if (salaryMigration.IsSuccessful)
+                {
+                    var successMessage = string.Format(
+                        Res("MsgSalaryMigrationSuccess", "Salary month databases were built in SQLite. Files: {0}. Entries: {1}. Expenses: {2}."),
+                        salaryMigration.FilesScanned,
+                        salaryMigration.RecordsImported,
+                        salaryMigration.ExpensesImported);
+                    ToastService.Instance.Warning(successMessage);
+                    LoggingService.LogInfo("App.SalaryMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = string.Format(
+                        Res("MsgSalaryMigrationFailed", "Salary migration to SQLite failed. The program will keep using JSON. Details: {0}"),
+                        salaryMigration.Message);
+                    MessageBox.Show(
+                        failedMessage,
+                        Res("TitleWarning", "Warning"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    LoggingService.LogWarning("App.SalaryMigration", failedMessage);
+                }
+            }
+
+            try
+            {
+                if (LocalDbService != null)
+                {
+                    var deletedActivityLogBackup = LocalDbService.CleanupMigratedActivityLogBackup();
+                    if (deletedActivityLogBackup)
+                        LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted activity_log.json.migrated after confirmed SQLite migration.");
+
+                    var deletedArchiveLogBackup = LocalDbService.CleanupMigratedArchiveLogBackup();
+                    if (deletedArchiveLogBackup)
+                        LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted archive_log.json.migrated after confirmed SQLite migration.");
+                }
+
+                var deletedEmployeeHistoryBackups = EmployeeService.CleanupMigratedEmployeeHistoryBackups();
+                if (deletedEmployeeHistoryBackups > 0)
+                {
+                    LoggingService.LogInfo("App.MigratedBackupCleanup",
+                        $"Deleted history.json.migrated backups after confirmed SQLite migration. Files: {deletedEmployeeHistoryBackups}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("App.MigratedBackupCleanup", ex.Message);
             }
 
             RecentlyDeletedService.EnsureStorage();

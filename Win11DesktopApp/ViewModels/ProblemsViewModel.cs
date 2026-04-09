@@ -233,7 +233,7 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeDetailsVm.RequestClose -= _onProbDetailsClose;
                         EmployeeDetailsVm.DataChanged -= _onProbDetailsChanged;
                     }
-                    EmployeeDetailsVm = new EmployeeDetailsViewModel(group.FirmName, group.EmployeeFolder);
+                    EmployeeDetailsVm = new EmployeeDetailsViewModel(group.FirmName, group.EmployeeFolder, employeeId: group.UniqueId);
                     EmployeeDetailsVm.RequestClose += _onProbDetailsClose;
                     EmployeeDetailsVm.DataChanged += _onProbDetailsChanged;
                     IsEmployeeDetailsOpen = true;
@@ -354,6 +354,7 @@ namespace Win11DesktopApp.ViewModels
                         var first = g.First();
                         return new EmployeeProblemGroup
                         {
+                            UniqueId = first.UniqueId,
                             EmployeeName = first.EmployeeName,
                             EmployeeFolder = first.EmployeeFolder,
                             FirmName = first.FirmName,
@@ -400,6 +401,7 @@ namespace Win11DesktopApp.ViewModels
                         if (expiredIssues.Count == 0) return null;
                         return new EmployeeProblemGroup
                         {
+                            UniqueId = g.UniqueId,
                             EmployeeName = g.EmployeeName,
                             EmployeeFolder = g.EmployeeFolder,
                             FirmName = g.FirmName,
@@ -419,6 +421,7 @@ namespace Win11DesktopApp.ViewModels
                         if (warningIssues.Count == 0) return null;
                         return new EmployeeProblemGroup
                         {
+                            UniqueId = g.UniqueId,
                             EmployeeName = g.EmployeeName,
                             EmployeeFolder = g.EmployeeFolder,
                             FirmName = g.FirmName,
@@ -451,6 +454,7 @@ namespace Win11DesktopApp.ViewModels
             var days = DateParsingHelper.GetDaysRemaining(expiryDate);
             var info = new DocumentExpiryInfo
             {
+                UniqueId = emp.UniqueId,
                 EmployeeName = emp.FullName,
                 EmployeeFolder = emp.EmployeeFolder,
                 FirmName = emp.FirmName,

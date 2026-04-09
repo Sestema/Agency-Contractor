@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -48,6 +49,26 @@ namespace Win11DesktopApp.ViewModels
             };
             HistoryEntries = new ObservableCollection<EmployeeHistoryEntry>(filtered);
             HasHistory = HistoryEntries.Count > 0;
+        }
+
+        private async Task DeleteHistoryEntryAsync(EmployeeHistoryEntry entry)
+        {
+            if (!PolicyService.EnsureWriteAllowed("Видалити запис з історії працівника"))
+                return;
+
+            var confirm = MessageBox.Show(
+                Res("DetHistoryDeleteConfirm") ?? "Видалити цей запис з історії працівника?",
+                Res("TitleConfirmDelete") ?? "Підтвердження видалення",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            await _employeeService.DeleteHistoryEntry(_employeeFolder, Data.UniqueId, entry);
+            _allHistoryEntries.Remove(entry);
+            ApplyHistoryFilter();
+            StatusMessage = Res("DetHistoryDeleteSuccess") ?? "Запис історії видалено.";
         }
 
         private void LoadSalaryHistory()
@@ -161,12 +182,15 @@ namespace Win11DesktopApp.ViewModels
         {
             void Check(string field, string oldVal, string newVal)
             {
-                if (string.Equals(oldVal ?? "", newVal ?? "", StringComparison.Ordinal)) return;
+                if (string.Equals(oldVal, newVal, StringComparison.Ordinal)) return;
                 App.ActivityLogService?.Log("ProfileChanged", "Employee", _firmName, FullName,
                     $"{FullName}: {field}: {oldVal} → {newVal}", oldVal ?? "", newVal ?? "",
                     employeeFolder: _employeeFolder);
             }
 
+            Check(Res("HistFieldFirstName"), oldData.FirstName, newData.FirstName);
+            Check(Res("HistFieldLastName"), oldData.LastName, newData.LastName);
+            Check(Res("HistFieldBirthDate"), oldData.BirthDate, newData.BirthDate);
             Check(Res("HistFieldGender"),
                 oldData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"),
                 newData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
@@ -175,6 +199,8 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldPassportExp"), oldData.PassportExpiry, newData.PassportExpiry);
             Check(Res("HistFieldPassportCity"), oldData.PassportCity, newData.PassportCity);
             Check(Res("HistFieldPassportCountry"), oldData.PassportCountry, newData.PassportCountry);
+            Check(Res("HistFieldCitizenship"), oldData.Citizenship, newData.Citizenship);
+            Check(Res("HistFieldIssuingCountry"), oldData.IssuingCountry, newData.IssuingCountry);
             Check(Res("HistFieldVisaNum"), oldData.VisaNumber, newData.VisaNumber);
             Check(Res("HistFieldVisaAuthority"), oldData.VisaAuthority, newData.VisaAuthority);
             Check(Res("HistFieldVisaType"), oldData.VisaType, newData.VisaType);
@@ -184,9 +210,11 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldInsExp"), oldData.InsuranceExpiry, newData.InsuranceExpiry);
             Check(Res("HistFieldPhone"), oldData.Phone, newData.Phone);
             Check(Res("HistFieldEmail"), oldData.Email, newData.Email);
+            Check(Res("HistFieldStatus"), oldData.Status, newData.Status);
             Check(Res("HistFieldPosition"), oldData.PositionTag, newData.PositionTag);
             Check(Res("HistFieldPosNumber"), oldData.PositionNumber, newData.PositionNumber);
             Check(Res("HistFieldWorkAddr"), oldData.WorkAddressTag, newData.WorkAddressTag);
+            Check(Res("HistFieldSignDate"), oldData.ContractSignDate, newData.ContractSignDate);
             Check(Res("HistFieldContractType"), oldData.ContractType, newData.ContractType);
             Check(Res("HistFieldWorkPermitName"), oldData.WorkPermitName, newData.WorkPermitName);
             Check(Res("HistFieldDepartment"), oldData.Department, newData.Department);

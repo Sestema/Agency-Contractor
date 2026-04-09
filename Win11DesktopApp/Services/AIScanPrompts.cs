@@ -34,8 +34,12 @@ STEP 3: Find place of birth (printed text, NOT from MRZ). Look for the field lab
 
 STEP 4: Find issuing authority / document issuer. Look for labels like ""Authority"", ""Orgán vydávající doklad"", ""Орган, що видав"", ""Орган выдачи"". If the document shows only a numeric code (for example 5142), return that code exactly. Do NOT invent a full institution name.
 
+STEP 5: Find nationality/citizenship and issuing country:
+- Citizenship: look for labels such as ""Nationality"", ""Citizenship"", ""Státní občanství"", ""Громадянство"". Normalize common variants like UKR / Ukraina / Ukraine to a sensible Latin country name.
+- IssuingCountry: country that issued the passport or ID card. Prefer explicit labels/country codes on the document (e.g. UKR -> Ukraine, CZE -> Czech Republic).
+
 Return ONLY this JSON (FirstName=given name, LastName=surname):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""PassportExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":""""}",
 
                 "insurance" => @"Read this insurance card/document photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
@@ -85,8 +89,13 @@ This stamp is the MOST IMPORTANT document on the page. Read its header line care
   If stamp says ""TRVALÉMU POBYTU"" → output exactly ""Trvalý pobyt""
   NEVER output ""Osvědčení o registraci"" — that is wrong.
 
+Also extract if clearly visible:
+- Sex: M or F
+- Citizenship: nationality/citizenship of the holder
+- IssuingCountry: country that issued this visa/residence document
+
 Return ONLY valid JSON, no other text:
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""PassportNumber"":"""",""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":"""",""Citizenship"":"""",""IssuingCountry"":""""}",
 
                 "permit" => @"Read this Czech work permit document (Povolení k zaměstnání / ROZHODNUTÍ). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic. Read ALL pages of the document.
 
@@ -118,8 +127,13 @@ WorkPermitAuthority = full authority name
 STEP 5 — Permit title:
 WorkPermitName = ""Povolení k zaměstnání""
 
+Also extract if clearly visible:
+- Sex: M or F
+- Citizenship: nationality/citizenship of the employee
+- IssuingCountry: country issuing this permit
+
 Return ONLY valid JSON, no other text:
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""WorkPermitName"":"""",""WorkPermitNumber"":"""",""WorkPermitType"":"""",""WorkPermitIssueDate"":"""",""WorkPermitExpiry"":"""",""WorkPermitAuthority"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""WorkPermitName"":"""",""WorkPermitNumber"":"""",""WorkPermitType"":"""",""WorkPermitIssueDate"":"""",""WorkPermitExpiry"":"""",""WorkPermitAuthority"":"""",""Citizenship"":"""",""IssuingCountry"":""""}",
 
                 "id_card" => @"Read this EU national ID card (Carte de Identitate, Personalausweis, Občanský průkaz, etc.). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
@@ -145,21 +159,66 @@ STEP 4: Find place of birth:
 STEP 5: Find nationality/country:
 - Look for 'Cetățenie/Nationality' (e.g. 'Română' → 'Romania')
 - Or derive from the country code (ROU → Romania, CZE → Czech Republic, DEU → Germany, etc.)
+- Citizenship = nationality of the holder
+- IssuingCountry = country that issued the ID card
 
-STEP 6: Find issuing authority / document issuer. Look for labels like 'Authority', 'Orgán vydávající doklad', 'Vydal', 'Eliberată de', or a dedicated issuer code. If the card shows only a code, return the code exactly.
+STEP 6: Find residence status / permit name if clearly visible:
+- Look for fields like 'DRUH POVOLENÍ', 'DRUH POBYTU', 'Karta trvalého pobytu'
+- Return the exact Czech status if clearly visible, for example 'Trvalý pobyt' or 'Přechodný pobyt'
+
+STEP 7: Find issuing authority / document issuer. Look for labels like 'Authority', 'Orgán vydávající doklad', 'Vydal', 'Eliberată de', or a dedicated issuer code. If the card shows only a code, return the code exactly.
 
 Return ONLY this JSON (PassportExpiry = card expiry date):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""PassportExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
 
                 "passport2" => @"Read this passport second page or EU residence permit photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
-Extract:
-- WorkPermitName: Look for the field 'DRUH POBYTU NA ÚZEMÍ' or 'DRUH POVOLENÍ' on the document. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. Return the EXACT Czech text from the document.
-- VisaNumber: document number (look for a number like 'VB 027159' etc.)
-- VisaExpiry: expiry date in DD.MM.YYYY format (look for 'PLATNOST DO')
+If this is the SECOND SIDE of a Czech residence ID card, extract these fields:
+- WorkPermitName: look for the field 'DRUH POBYTU NA ÚZEMÍ' or 'DRUH POVOLENÍ'. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. Return the EXACT Czech text from the document if clearly visible.
+- VisaNumber: document/card number shown on the card.
+- VisaExpiry: expiry date in DD.MM.YYYY format (look for 'PLATNOST DO').
+- VisaAuthority: issuing authority / place of issue from fields like 'DATUM VYDÁNÍ - MÍSTO VYDÁNÍ'. Example: 'MV ČR PLZEŇ'.
+- PassportCity: birth city from fields like 'MÍSTO NAROZENÍ'. If the value contains city + country like 'DIBROVA UKR', return ONLY the city part 'DIBROVA'.
+- PassportCountry: birth country from the same birth-place line. If the country is shown as a code like 'UKR', return the normalized Latin country name like 'Ukraine'.
+
+If this is NOT that document type, still extract the fields that are clearly visible and leave the others empty.
 
 Return ONLY valid JSON, no other text:
-{""WorkPermitName"":"""",""VisaNumber"":"""",""VisaExpiry"":""""}",
+{""WorkPermitName"":"""",""VisaNumber"":"""",""VisaExpiry"":"""",""VisaAuthority"":"""",""PassportCity"":"""",""PassportCountry"":""""}",
+
+                "id_card_back" => @"Read ONLY the BACK / SECOND SIDE of this EU national ID card. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+
+This prompt is ONLY for the second side of a 2-sided EU ID card. Give priority to data printed on THIS side, even if similar data may exist on the front side.
+
+Extract these fields:
+- WorkPermitName: look for fields like 'DRUH POBYTU NA ÚZEMÍ', 'DRUH POVOLENÍ', residence status or card status. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. Return the exact Czech text if clearly visible.
+- VisaNumber: document/card number if clearly visible on this side.
+- VisaExpiry: expiry / validity-until date in DD.MM.YYYY format if clearly visible on this side.
+- PassportAuthority: issuing authority / place of issue from fields like 'DATUM VYDÁNÍ - MÍSTO VYDÁNÍ', 'Orgán vydávající doklad', 'Vydal', 'Místo vydání'. If you can clearly read 'MV ČR OAMP', return exactly 'MV ČR OAMP'.
+- PassportCity: birth city from fields like 'MÍSTO NAROZENÍ'. If the value contains city + country, return ONLY the city/locality part.
+- PassportCountry: birth country from the same birth-place line. If the country is shown as a code like 'UKR', normalize it to a Latin country name like 'Ukraine'.
+
+If a field is not clearly visible on THIS side, leave it empty. NEVER invent values.
+
+Return ONLY valid JSON, no other text:
+{""WorkPermitName"":"""",""VisaNumber"":"""",""VisaExpiry"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":""""}",
+
+                "visa2" => @"Read this second-side visa / residence ID card / residence permit photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+
+If this is the BACK SIDE of a residence or ID-style document, extract these fields when visible:
+- WorkPermitName: residence status / permit label if clearly visible, such as 'Přechodný pobyt', 'Trvalý pobyt', 'Dočasná ochrana', 'Strpění'. Return the exact Czech status when visible.
+- VisaNumber: document/card/permit number shown on the card or back side.
+- VisaExpiry: expiry / validity-until date in DD.MM.YYYY format.
+- VisaAuthority: issuing authority / place of issue / institution if clearly visible. If you can clearly read 'MV ČR OAMP', return exactly 'MV ČR OAMP'.
+- VisaType: if the document clearly contains a visa/residence type code, return it; otherwise leave empty.
+- FirstName: holder first name if clearly visible
+- LastName: holder last name if clearly visible
+- BirthDate: holder birth date in DD.MM.YYYY if clearly visible
+
+If this is not that document type, still extract the clearly visible fields and leave the rest empty.
+
+Return ONLY valid JSON, no other text:
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaExpiry"":"""",""WorkPermitName"":""""}",
 
                 _ => "Describe what you see in this document image."
             };

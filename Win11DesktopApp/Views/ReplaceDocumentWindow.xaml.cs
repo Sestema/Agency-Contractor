@@ -52,6 +52,7 @@ namespace Win11DesktopApp.Views
         {
             "passport" => Res("DetDocPassport"),
             "visa" => Res("DetDocVisa"),
+            "passport_page2" => IsEuIdCard ? Res("StepIdCardPage2Data") : Res("StepPassportPage2Data"),
             "insurance" => Res("DetDocInsurance"),
             "work_permit" => Res("DetDocWorkPermit"),
             _ => _docType
@@ -122,6 +123,23 @@ namespace Win11DesktopApp.Views
                     ("VisaExpiry", Res("DetFieldExpiry"), _data.VisaExpiry),
                     ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),
                 },
+                "passport_page2" => IsEuIdCard
+                    ? new()
+                    {
+                        ("VisaNumber", $"{Res("DetFieldVisaNum")} ({Res("WizIdCardNumberHint")})", _data.VisaNumber),
+                        ("PassportAuthority", $"{Res("DetFieldVisaAuthority")} ({Res("WizIdCardAuthorityHint")})", _data.PassportAuthority),
+                        ("PassportCity", Res("CandPassportCity"), _data.PassportCity),
+                        ("PassportCountry", Res("CandPassportCountry"), _data.PassportCountry),
+                        ("VisaExpiry", $"{Res("DetFieldExpiry")} ({Res("WizIdCardExpiryHint")})", _data.VisaExpiry),
+                        ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),
+                    }
+                    : new()
+                    {
+                        ("VisaNumber", Res("DetFieldVisaNum"), _data.VisaNumber),
+                        ("VisaAuthority", Res("DetFieldVisaAuthority"), _data.VisaAuthority),
+                        ("VisaExpiry", Res("DetFieldExpiry"), _data.VisaExpiry),
+                        ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),
+                    },
                 "insurance" => new()
                 {
                     ("InsuranceCompanyShort", Res("DetFieldInsCompany"), _data.InsuranceCompanyShort),
@@ -297,6 +315,10 @@ namespace Win11DesktopApp.Views
                 var docKey = _docType == "work_permit" ? "permit" : _docType;
                 if (docKey == "passport" && _data.EmployeeType == "eu_citizen" && _data.EuDocumentType == "id_card")
                     docKey = "id_card";
+                else if (docKey == "passport_page2" && IsEuIdCard)
+                    docKey = "id_card_back";
+                else if (docKey == "passport_page2")
+                    docKey = "passport2";
                 var prompt = AIScanPrompts.GetPrompt(docKey);
                 var result = await App.GeminiApiService.ChatWithImageAsync(_selectedFilePath, prompt, null);
 

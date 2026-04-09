@@ -634,6 +634,8 @@
     <sys:String x:Key="DetFieldPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="DetFieldBirthCity">Město narození</sys:String>
     <sys:String x:Key="DetFieldBirthCountry">Země narození</sys:String>
+    <sys:String x:Key="DetFieldCitizenship">Státní občanství</sys:String>
+    <sys:String x:Key="DetFieldIssuingCountry">Země vydání</sys:String>
     <sys:String x:Key="DetFieldExpiry">Datum expirace</sys:String>
     <sys:String x:Key="DetSecVisa">Vízum</sys:String>
     <sys:String x:Key="DetFieldVisaNum">Číslo víza</sys:String>
@@ -668,6 +670,8 @@
     <sys:String x:Key="DetHistoryTitle">Historie změn</sys:String>
     <sys:String x:Key="DetHistoryEmpty">Historie je prázdná</sys:String>
     <sys:String x:Key="DetHistoryEmptyMsg">Změny v dotazníku zaměstnance budou zobrazeny zde.</sys:String>
+    <sys:String x:Key="DetHistoryDeleteConfirm">Smazat tento záznam z historie zaměstnance?</sys:String>
+    <sys:String x:Key="DetHistoryDeleteSuccess">Záznam historie byl smazán.</sys:String>
     <sys:String x:Key="DetTabSalary">Plat</sys:String>
     <sys:String x:Key="DetSalaryTitle">Historie plateb</sys:String>
     <sys:String x:Key="DetSalaryTotalNet">Celková výplata</sys:String>
@@ -684,6 +688,7 @@
     <sys:String x:Key="DetTooltipClose">Zavřít</sys:String>
     <sys:String x:Key="DetTooltipExtendVisa">Prodloužit datum víza</sys:String>
     <sys:String x:Key="DetTooltipExtendIns">Prodloužit datum pojištění</sys:String>
+    <sys:String x:Key="DetTooltipDeleteHistory">Smazat záznam historie</sys:String>
 
     <!-- MainPage -->
     <sys:String x:Key="MainSelectCompany">Vyberte firmu pro práci</sys:String>
@@ -792,6 +797,8 @@
     <sys:String x:Key="WizPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="WizBirthCity">Město narození</sys:String>
     <sys:String x:Key="WizBirthCountry">Země narození</sys:String>
+    <sys:String x:Key="WizCitizenship">Státní občanství</sys:String>
+    <sys:String x:Key="WizIssuingCountry">Země vydání</sys:String>
     <sys:String x:Key="WizPassportExpiry">Datum expirace dokumentu</sys:String>
     <sys:String x:Key="WizInsCompany">Pojišťovna (zkratka)</sys:String>
     <sys:String x:Key="WizInsNumber">Číslo pojištění</sys:String>
@@ -800,6 +807,9 @@
     <sys:String x:Key="WizVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="WizVisaType">Typ víza</sys:String>
     <sys:String x:Key="WizVisaExpiry">Datum expirace víza</sys:String>
+    <sys:String x:Key="WizIdCardNumberHint">číslo karty / dokladu</sys:String>
+    <sys:String x:Key="WizIdCardAuthorityHint">orgán vydání dokladu</sys:String>
+    <sys:String x:Key="WizIdCardExpiryHint">datum expirace karty</sys:String>
     <sys:String x:Key="WizWorkPermitName">Název pracovního povolení</sys:String>
     <sys:String x:Key="WizStreet">Ulice</sys:String>
     <sys:String x:Key="WizNumber">Číslo</sys:String>
@@ -1236,7 +1246,11 @@
     <sys:String x:Key="TagDescEmpPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="TagDescEmpPassportCity">Město narození</sys:String>
     <sys:String x:Key="TagDescEmpPassportCountry">Země narození</sys:String>
+    <sys:String x:Key="TagDescEmpCitizenship">Státní občanství</sys:String>
+    <sys:String x:Key="TagDescEmpIssuingCountry">Země vydání dokladu</sys:String>
     <sys:String x:Key="TagDescEmpPassportExpiry">Datum expirace pasu</sys:String>
+    <sys:String x:Key="TagDescEmpPrimaryDocumentType">Typ hlavního dokladu</sys:String>
+    <sys:String x:Key="TagDescEmpResidenceDocumentType">Typ pobytového dokladu</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Visa -->
     <sys:String x:Key="TagDescEmpVisaNumber">Číslo víza</sys:String>
@@ -1569,6 +1583,18 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="MsgDeleteError">Chyba mazání: {0}</sys:String>
     <sys:String x:Key="MsgRenameError">Chyba přejmenování: {0}</sys:String>
     <sys:String x:Key="MsgOpenFileError">Nepodařilo se otevřít soubor: {0}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationSuccess">Historie akcí byla přesunuta do SQLite. Importovaných záznamů: {0}. Záloha: {1}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationFailed">Migrace historie akcí do SQLite selhala. Program bude dál používat původní zdroj. Detaily: {0}</sys:String>
+    <sys:String x:Key="MsgActivityLogMigrationNoBackup">nevytvořeno</sys:String>
+    <sys:String x:Key="MsgEmployeeHistoryMigrationSuccess">Historie zaměstnanců byla přesunuta do SQLite. Importovaných záznamů: {0}. Zpracovaných složek: {1}. Přeskočeno: {2}</sys:String>
+    <sys:String x:Key="MsgEmployeeHistoryMigrationFailed">Migrace historie zaměstnanců do SQLite selhala. Program bude dál používat původní zdroj. Detaily: {0}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationSuccess">Protokol archivu byl přesunut do SQLite. Importovaných záznamů: {0}. Záloha: {1}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationFailed">Migrace protokolu archivu do SQLite selhala. Program bude dál používat původní zdroj. Detaily: {0}</sys:String>
+    <sys:String x:Key="MsgArchiveLogMigrationNoBackup">nevytvořeno</sys:String>
+    <sys:String x:Key="MsgEmployeeIndexBuildSuccess">Index zaměstnanců byl vytvořen v SQLite. Importovaných záznamů: {0}. Zpracovaných složek: {1}. Přeskočeno: {2}</sys:String>
+    <sys:String x:Key="MsgEmployeeIndexBuildFailed">Vytvoření indexu zaměstnanců v SQLite selhalo. Program bude dál používat současný zdroj. Detaily: {0}</sys:String>
+    <sys:String x:Key="MsgSalaryMigrationSuccess">Měsíční databáze výplat byly vytvořeny v SQLite. Zpracovaných souborů: {0}. Záznamů výplat: {1}. Nákladů: {2}</sys:String>
+    <sys:String x:Key="MsgSalaryMigrationFailed">Migrace výplat do SQLite selhala. Program bude dál používat JSON. Detaily: {0}</sys:String>
 
     <!-- Crop targets -->
     <sys:String x:Key="CropPassport">Pas</sys:String>
@@ -1720,6 +1746,8 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistFieldInsCompany">Pojišťovna</sys:String>
     <sys:String x:Key="HistFieldPassportCity">Město narození</sys:String>
     <sys:String x:Key="HistFieldPassportCountry">Země narození</sys:String>
+    <sys:String x:Key="HistFieldCitizenship">Státní občanství</sys:String>
+    <sys:String x:Key="HistFieldIssuingCountry">Země vydání</sys:String>
     <sys:String x:Key="HistFieldWorkPermitName">Název povolení</sys:String>
     <sys:String x:Key="HistFieldPosNumber">Číslo pozice</sys:String>
     <sys:String x:Key="MsgPdfSaved">PDF uloženo.</sys:String>
