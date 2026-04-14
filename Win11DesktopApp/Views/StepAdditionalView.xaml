@@ -12,7 +12,10 @@
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=6}"
             Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-        <StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Style="{StaticResource ThinScroll}">
+            <StackPanel>
             <StackPanel Margin="0,0,0,18">
                 <StackPanel Orientation="Horizontal">
                     <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource SuccessBrush}">
@@ -115,5 +118,6 @@
                 </Grid>
             </Border>
         </StackPanel>
+        </ScrollViewer>
     </Border>
 </UserControl>

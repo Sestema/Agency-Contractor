@@ -117,6 +117,8 @@ namespace Win11DesktopApp.ViewModels
 
         public ObservableCollection<WorkAddress> CompanyAddresses { get; }
         public ObservableCollection<Position> CompanyPositions { get; }
+        public ObservableCollection<InsuranceCompanyOption> InsuranceCompanies { get; } =
+            new ObservableCollection<InsuranceCompanyOption>(InsuranceCompanyCatalog.All);
 
         private WorkAddress? _selectedWorkAddress;
         public WorkAddress? SelectedWorkAddress
@@ -124,6 +126,25 @@ namespace Win11DesktopApp.ViewModels
             get => _selectedWorkAddress;
             set => SetProperty(ref _selectedWorkAddress, value);
         }
+
+        private InsuranceCompanyOption? _selectedInsuranceCompany;
+        public InsuranceCompanyOption? SelectedInsuranceCompany
+        {
+            get => _selectedInsuranceCompany;
+            set
+            {
+                if (SetProperty(ref _selectedInsuranceCompany, value) && value != null)
+                {
+                    Data.InsuranceCompanyShort = value.ShortName;
+                    Data.InsuranceCompanyFull = value.FullName;
+                    OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
+                    OnPropertyChanged(nameof(Data));
+                }
+            }
+        }
+
+        public string InsuranceCompanyFullDisplay => SelectedInsuranceCompany?.DisplayName
+            ?? (string.IsNullOrWhiteSpace(Data.InsuranceCompanyFull) ? string.Empty : Data.InsuranceCompanyFull);
 
         private Position? _selectedPosition;
         public Position? SelectedPosition
@@ -750,6 +771,8 @@ namespace Win11DesktopApp.ViewModels
                 else if (o is int idx2) SelectedCarouselIndex = idx2;
                 else if (o is string s && int.TryParse(s, out var i)) SelectedCarouselIndex = i;
             });
+
+            SyncInsuranceCompanySelection();
         }
 
         // ===== Step Navigation =====
@@ -1191,6 +1214,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
+                NormalizeInsuranceCompanyFields();
                 Data.WorkAddressTag = SelectedWorkAddress != null
                     ? $"{SelectedWorkAddress.Street} {SelectedWorkAddress.Number}, {SelectedWorkAddress.City} {SelectedWorkAddress.ZipCode}"
                     : string.Empty;
@@ -1590,8 +1614,12 @@ namespace Win11DesktopApp.ViewModels
 
                 case "insurance":
                     Set("InsuranceCompanyShort", v => Data.InsuranceCompanyShort = v);
+                    Set("InsuranceCompanyCode", v => ApplyNormalizedInsuranceCompany(v, v, null, null));
+                    Set("InsuranceCompanyFull", v => ApplyNormalizedInsuranceCompany(v, null, null, v));
+                    Set("InsuranceCompanyRaw", v => ApplyNormalizedInsuranceCompany(v, null, null, null));
                     Set("InsuranceNumber", v => Data.InsuranceNumber = v);
                     Set("InsuranceExpiry", v => Data.InsuranceExpiry = v);
+                    NormalizeInsuranceCompanyFields();
                     break;
 
                 case "visa":
@@ -1660,6 +1688,54 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(Data));
             OnPropertyChanged(nameof(IsGenderMale));
             OnPropertyChanged(nameof(IsGenderFemale));
+        }
+
+        private void NormalizeInsuranceCompanyFields()
+        {
+            var option = InsuranceCompanyNormalizer.Normalize(
+                Data.InsuranceCompanyShort,
+                shortName: Data.InsuranceCompanyShort,
+                fullName: Data.InsuranceCompanyFull);
+
+            if (option != null)
+            {
+                Data.InsuranceCompanyShort = option.ShortName;
+                Data.InsuranceCompanyFull = option.FullName;
+            }
+
+            SyncInsuranceCompanySelection();
+        }
+
+        private void ApplyNormalizedInsuranceCompany(string rawValue, string? code, string? shortName, string? fullName)
+        {
+            var option = InsuranceCompanyNormalizer.Normalize(rawValue, code, shortName, fullName);
+            if (option != null)
+            {
+                Data.InsuranceCompanyShort = option.ShortName;
+                Data.InsuranceCompanyFull = option.FullName;
+            }
+            else if (!string.IsNullOrWhiteSpace(rawValue))
+            {
+                Data.InsuranceCompanyShort = rawValue.Trim();
+                if (string.IsNullOrWhiteSpace(Data.InsuranceCompanyFull))
+                    Data.InsuranceCompanyFull = string.Empty;
+            }
+
+            SyncInsuranceCompanySelection();
+            OnPropertyChanged(nameof(Data));
+        }
+
+        private void SyncInsuranceCompanySelection()
+        {
+            var match = InsuranceCompanyNormalizer.Normalize(
+                Data.InsuranceCompanyShort,
+                shortName: Data.InsuranceCompanyShort,
+                fullName: Data.InsuranceCompanyFull);
+
+            _selectedInsuranceCompany = match;
+            OnPropertyChanged(nameof(SelectedInsuranceCompany));
+            OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
+            OnPropertyChanged(nameof(Data));
         }
 
         private static string NormalizeGender(string? value)

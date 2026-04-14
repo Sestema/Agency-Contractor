@@ -353,6 +353,8 @@
     <sys:String x:Key="ThemeDarkWord">Dark</sys:String>
     <sys:String x:Key="ThemeDark2">Night</sys:String>
     <sys:String x:Key="ThemeCustom">Warm</sys:String>
+    <sys:String x:Key="ThemeGlass">Glass</sys:String>
+    <sys:String x:Key="ThemeGlassDark">Dark Glass</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Companies</sys:String>
@@ -630,6 +632,8 @@
     <sys:String x:Key="DetFieldWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="DetSecInsurance">Insurance</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="DetFieldInsCompanyShort">Insurance company (short)</sys:String>
+    <sys:String x:Key="DetFieldInsCompanyFull">Insurance company (full name)</sys:String>
     <sys:String x:Key="DetFieldInsNum">Insurance number</sys:String>
     <sys:String x:Key="DetSecAddrLocal">Address (local)</sys:String>
     <sys:String x:Key="DetFieldStreet">Street</sys:String>
@@ -786,7 +790,9 @@
     <sys:String x:Key="WizCitizenship">Citizenship</sys:String>
     <sys:String x:Key="WizIssuingCountry">Issuing country</sys:String>
     <sys:String x:Key="WizPassportExpiry">Document expiry date</sys:String>
-    <sys:String x:Key="WizInsCompany">Insurance company (short)</sys:String>
+    <sys:String x:Key="WizInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="WizInsCompanyShort">Insurance company (short)</sys:String>
+    <sys:String x:Key="WizInsCompanyFull">Insurance company (full name)</sys:String>
     <sys:String x:Key="WizInsNumber">Insurance number</sys:String>
     <sys:String x:Key="WizInsExpiry">Insurance expiry date</sys:String>
     <sys:String x:Key="WizVisaNum">Visa number</sys:String>
@@ -1246,6 +1252,7 @@
 
     <!-- Tag Catalog Descriptions – Employee Insurance -->
     <sys:String x:Key="TagDescEmpInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="TagDescEmpInsCompanyFull">Insurance company full name</sys:String>
     <sys:String x:Key="TagDescEmpInsNumber">Insurance number</sys:String>
     <sys:String x:Key="TagDescEmpInsExpiry">Insurance expiry date</sys:String>
 
@@ -1730,6 +1737,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Visa type</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Insurance company</sys:String>
+    <sys:String x:Key="HistFieldInsCompanyFull">Insurance company full name</sys:String>
     <sys:String x:Key="HistFieldPassportCity">Birth city</sys:String>
     <sys:String x:Key="HistFieldPassportCountry">Birth country</sys:String>
     <sys:String x:Key="HistFieldCitizenship">Citizenship</sys:String>

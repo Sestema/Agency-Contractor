@@ -7,7 +7,7 @@
              d:DesignHeight="600" d:DesignWidth="900">
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
-        <Grid Margin="32,20,32,32">
+        <Grid Margin="{StaticResource PageOuterMargin}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -17,7 +17,7 @@
             </Grid.RowDefinitions>
 
             <!-- HEADER -->
-            <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid Grid.Row="0" Margin="{StaticResource PageHeaderMargin}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -29,13 +29,8 @@
                 </Button>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border CornerRadius="10" Width="44" Height="44">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#2196F3" Offset="0"/>
-                                <GradientStop Color="#00BCD4" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
+                    <Border CornerRadius="10" Width="44" Height="44"
+                            Background="{DynamicResource BrandInfoGradientBrush}">
                         <TextBlock Text="&#xE8D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
                                    Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
@@ -47,7 +42,7 @@
             <!-- Description -->
             <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="12" Padding="20,14" Margin="0,0,0,12">
+                    CornerRadius="12" Padding="{StaticResource CardInnerPaddingCompact}" Margin="0,0,0,12">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -59,7 +54,7 @@
             <!-- Parameters: Month + Date -->
             <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="14" Padding="20,16" Margin="0,0,0,12">
+                    CornerRadius="14" Padding="{StaticResource CardInnerPadding}" Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -103,7 +98,7 @@
             <!-- Firms list -->
             <Border Grid.Row="3" Background="{DynamicResource CardBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    CornerRadius="14" Padding="20,16" Margin="0,0,0,12">
+                    CornerRadius="14" Padding="{StaticResource CardInnerPadding}" Margin="0,0,0,12">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -150,8 +145,12 @@
                                                       Margin="0,0,12,0"/>
                                             <TextBlock Grid.Column="1" Text="{Binding FirmName}" FontSize="{DynamicResource FS14}" FontWeight="Medium"
                                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                                            <Border Grid.Column="2" Background="#E3F2FD" CornerRadius="8" Padding="10,4">
-                                                <TextBlock FontSize="{DynamicResource FS12}" Foreground="#1565C0" FontWeight="Medium">
+                                            <Border Grid.Column="2" Style="{StaticResource CounterChipBorder}"
+                                                    Background="{DynamicResource InfoChipBackgroundBrush}"
+                                                    CornerRadius="8" Padding="10,4">
+                                                <TextBlock Style="{StaticResource CounterChipText}"
+                                                           FontWeight="Medium"
+                                                           Foreground="{DynamicResource InfoChipForegroundBrush}">
                                                     <Run Text="{Binding EmployeeCount, Mode=OneWay}"/>
                                                     <Run Text=" "/>
                                                     <Run Text="{DynamicResource BtnEmployees}"/>
@@ -174,17 +173,14 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontSize="{DynamicResource FS13}"
-                           Foreground="#888" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource StatusMessageBrush}" VerticalAlignment="Center"/>
 
                 <Button Grid.Column="1" Command="{Binding GeneratePdfCommand}" Cursor="Hand">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Bd" CornerRadius="10" Padding="22,12">
                                 <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#2196F3" Offset="0"/>
-                                        <GradientStop Color="#00BCD4" Offset="1"/>
-                                    </LinearGradientBrush>
+                                    <DynamicResource ResourceKey="BrandInfoHorizontalGradientBrush"/>
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}"

@@ -52,6 +52,22 @@ namespace Win11DesktopApp.Services
                 : DocRes("VisaDocTypeSticker");
         }
 
+        private static string GetInsuranceCompanyFullDisplay(EmployeeModels.EmployeeData data)
+        {
+            var option = InsuranceCompanyNormalizer.Normalize(
+                data.InsuranceCompanyShort,
+                shortName: data.InsuranceCompanyShort,
+                fullName: data.InsuranceCompanyFull);
+
+            if (option != null)
+                return option.DisplayName;
+
+            if (!string.IsNullOrWhiteSpace(data.InsuranceCompanyFull))
+                return data.InsuranceCompanyFull;
+
+            return data.InsuranceCompanyShort;
+        }
+
         public void AddTagsForCompany(EmployerCompany employer, AgencyCompany agency)
         {
             AddTagsForEmployerOnly(employer);
@@ -117,6 +133,7 @@ namespace Win11DesktopApp.Services
             AddTag("EMPLOYEE_VisaExpiry", "Employee", companyName, Res("TagDescEmpVisaExpiry"), data.VisaExpiry);
 
             AddTag("EMPLOYEE_InsuranceCompany", "Employee", companyName, Res("TagDescEmpInsCompany"), data.InsuranceCompanyShort);
+            AddTag("EMPLOYEE_InsuranceCompanyFull", "Employee", companyName, Res("TagDescEmpInsCompanyFull"), GetInsuranceCompanyFullDisplay(data));
             AddTag("EMPLOYEE_InsuranceNumber", "Employee", companyName, Res("TagDescEmpInsNumber"), data.InsuranceNumber);
             AddTag("EMPLOYEE_InsuranceExpiry", "Employee", companyName, Res("TagDescEmpInsExpiry"), data.InsuranceExpiry);
 
@@ -198,6 +215,7 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_VisaType"] = employeeData.VisaType;
             map["EMPLOYEE_VisaExpiry"] = employeeData.VisaExpiry;
             map["EMPLOYEE_InsuranceCompany"] = employeeData.InsuranceCompanyShort;
+            map["EMPLOYEE_InsuranceCompanyFull"] = GetInsuranceCompanyFullDisplay(employeeData);
             map["EMPLOYEE_InsuranceNumber"] = employeeData.InsuranceNumber;
             map["EMPLOYEE_InsuranceExpiry"] = employeeData.InsuranceExpiry;
             map["EMPLOYEE_WorkPermitName"] = employeeData.WorkPermitName;
@@ -375,6 +393,7 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_VisaExpiry", Category = "Employee.Visa", Description = Res("TagDescEmpVisaExpiry") },
 
                 new() { Tag = "EMPLOYEE_InsuranceCompany", Category = "Employee.Insurance", Description = Res("TagDescEmpInsCompany") },
+                new() { Tag = "EMPLOYEE_InsuranceCompanyFull", Category = "Employee.Insurance", Description = Res("TagDescEmpInsCompanyFull") },
                 new() { Tag = "EMPLOYEE_InsuranceNumber", Category = "Employee.Insurance", Description = Res("TagDescEmpInsNumber") },
                 new() { Tag = "EMPLOYEE_InsuranceExpiry", Category = "Employee.Insurance", Description = Res("TagDescEmpInsExpiry") },
 

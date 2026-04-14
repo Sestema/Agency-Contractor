@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly Dictionary<string, CancellationTokenSource> _ratePropagationCtsByKey = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? _notePropagationCts;
         private readonly SemaphoreSlim _saveReportGate = new(1, 1);
+        private int _advanceRefreshVersion;
         // key: folderKey|firmName → note value at load time (for forward propagation)
         private Dictionary<string, string> _originalNotes = new(StringComparer.OrdinalIgnoreCase);
 
@@ -456,15 +458,74 @@ namespace Win11DesktopApp.ViewModels
         private static bool ArchivedWorkedInMonth(ArchivedEmployeeSummary arc, int year, int month) =>
             WorkedInMonth(arc.StartDate, arc.EndDate, year, month);
 
+        private sealed class SalaryEmployeesSnapshot
+        {
+            public Dictionary<string, List<EmployeeSummary>> EmployeesByFirm { get; } =
+                new(StringComparer.OrdinalIgnoreCase);
+
+            public Dictionary<string, string> FirstEmployeeIdByFullName { get; } =
+                new(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private sealed class BuildEntriesTimingMetrics
+        {
+            public long TotalMs { get; set; }
+            public long ArchivedMs { get; set; }
+            public long FirmHistoryMs { get; set; }
+            public long PeriodMapMs { get; set; }
+            public long PrevMonthMs { get; set; }
+            public long CurrentMonthMs { get; set; }
+            public long CanonicalizeMs { get; set; }
+            public long CanonicalizeResolveMs { get; set; }
+            public long CanonicalizeIdLookupMs { get; set; }
+            public long ActiveMissingMs { get; set; }
+            public long ArchivedLoopMs { get; set; }
+            public int CompaniesCount { get; set; }
+            public int SharedEntriesCount { get; set; }
+            public int PrevEntriesCount { get; set; }
+            public int HistoryEntriesCount { get; set; }
+            public int ActiveEmployeesCount { get; set; }
+        }
+
+        private SalaryEmployeesSnapshot BuildEmployeesSnapshot(List<EmployerCompany> companies)
+        {
+            var snapshot = new SalaryEmployeesSnapshot();
+
+            foreach (var company in companies)
+            {
+                var employees = _employeeService.GetEmployeesForFirm(company.Name).ToList();
+                snapshot.EmployeesByFirm[company.Name] = employees;
+
+                foreach (var employee in employees)
+                {
+                    if (string.IsNullOrWhiteSpace(employee.FullName) || string.IsNullOrWhiteSpace(employee.UniqueId))
+                        continue;
+
+                    snapshot.FirstEmployeeIdByFullName.TryAdd(employee.FullName, employee.UniqueId);
+                }
+            }
+
+            return snapshot;
+        }
+
         private async Task LoadReportAsync()
         {
             try
             {
+            var totalSw = Stopwatch.StartNew();
+            long snapshotMs = 0;
+            long buildEntriesMs = 0;
+            long saveMs = 0;
+            long ghostsMs = 0;
+            long uiRecalcMs = 0;
+            long rebuildFirmFilterMs = 0;
+            long refreshActiveFieldsMs = 0;
+            long refreshAdvanceSumsMs = 0;
+            long expensesMs = 0;
+            long nextMonthMs = 0;
+
             IsLoading = true;
             UpdateMonthDisplay();
-
-            try { await Task.Run(() => _financeService.BuildEmployeeIdIndex()); }
-            catch (Exception ex) { LoggingService.LogError("SalaryViewModel.BuildIndex", ex); }
 
             // Capture UI-bound state before going to background
             var fieldList = ActiveCustomFields.ToList();
@@ -478,8 +539,16 @@ namespace Win11DesktopApp.ViewModels
                 ?? new List<EmployerCompany>();
 
             // Build all entries in background — no UI thread blocking
-            var (newEntries, needResave, activeFoldersByFirm) = await Task.Run(() =>
-                BuildEntriesBackground(fieldList, year, month, monthEnd, companiesSnapshot));
+            var snapshotSw = Stopwatch.StartNew();
+            var employeesSnapshot = await Task.Run(() => BuildEmployeesSnapshot(companiesSnapshot));
+            snapshotMs = snapshotSw.ElapsedMilliseconds;
+
+            BuildEntriesTimingMetrics buildTiming;
+            var buildEntriesSw = Stopwatch.StartNew();
+            var (newEntries, needResave, activeFoldersByFirm, timedBuildMetrics) = await Task.Run(() =>
+                BuildEntriesBackground(fieldList, year, month, monthEnd, companiesSnapshot, employeesSnapshot));
+            buildEntriesMs = buildEntriesSw.ElapsedMilliseconds;
+            buildTiming = timedBuildMetrics;
 
             // Set IsFinished (fast loop, no I/O)
             foreach (var entry in newEntries)
@@ -488,6 +557,10 @@ namespace Win11DesktopApp.ViewModels
                 entry.IsFinished = !activeFoldersByFirm.TryGetValue(entry.FirmName, out var active)
                                    || !active.Contains(fn);
             }
+
+            var refreshAdvanceSumsSw = Stopwatch.StartNew();
+            await ApplyAdvanceSumsToEntriesAsync(newEntries, year, month);
+            refreshAdvanceSumsMs = refreshAdvanceSumsSw.ElapsedMilliseconds;
 
             // Bulk-update ObservableCollection: DataGrid refreshes exactly once
             foreach (var old in Entries)
@@ -503,16 +576,49 @@ namespace Win11DesktopApp.ViewModels
             }
 
             if (needResave)
+            {
+                var saveSw = Stopwatch.StartNew();
                 await SaveReportAsync();
+                saveMs = saveSw.ElapsedMilliseconds;
+            }
 
-            try { await Task.Run(() => _financeService.CleanupGhostFolders()); }
-            catch (Exception ex) { LoggingService.LogError("SalaryViewModel.CleanupGhosts", ex); }
-
+            var uiRecalcSw = Stopwatch.StartNew();
+            var rebuildFirmFilterSw = Stopwatch.StartNew();
             RebuildFirmFilter();
+            rebuildFirmFilterMs = rebuildFirmFilterSw.ElapsedMilliseconds;
+
+            var refreshActiveFieldsSw = Stopwatch.StartNew();
             RefreshActiveFields();
-            RefreshAdvanceSums();
+            refreshActiveFieldsMs = refreshActiveFieldsSw.ElapsedMilliseconds;
+            uiRecalcMs = uiRecalcSw.ElapsedMilliseconds;
+
+            var expensesSw = Stopwatch.StartNew();
             LoadExpenses();
+            expensesMs = expensesSw.ElapsedMilliseconds;
+
+            var nextMonthSw = Stopwatch.StartNew();
             await CheckNextMonthExistsAsync();
+            nextMonthMs = nextMonthSw.ElapsedMilliseconds;
+
+            totalSw.Stop();
+            LoggingService.LogInfo(
+                "Timing.BuildEntries",
+                $"BuildEntriesBackground {year:D4}-{month:D2} total={buildTiming.TotalMs}ms | " +
+                $"archived={buildTiming.ArchivedMs}ms | firmHistory={buildTiming.FirmHistoryMs}ms | " +
+                $"periodMap={buildTiming.PeriodMapMs}ms | prev={buildTiming.PrevMonthMs}ms | " +
+                $"current={buildTiming.CurrentMonthMs}ms | canonicalize={buildTiming.CanonicalizeMs}ms" +
+                $"(resolve={buildTiming.CanonicalizeResolveMs}ms,idLookup={buildTiming.CanonicalizeIdLookupMs}ms) | " +
+                $"activeMissing={buildTiming.ActiveMissingMs}ms | archivedLoop={buildTiming.ArchivedLoopMs}ms | " +
+                $"companies={buildTiming.CompaniesCount} | sharedEntries={buildTiming.SharedEntriesCount} | " +
+                $"prevEntries={buildTiming.PrevEntriesCount} | historyEntries={buildTiming.HistoryEntriesCount} | " +
+                $"activeEmployees={buildTiming.ActiveEmployeesCount}");
+            LoggingService.LogInfo(
+                "Timing.LoadReport",
+                $"LoadReportAsync {year:D4}-{month:D2} total={totalSw.ElapsedMilliseconds}ms | " +
+                $"Snapshot={snapshotMs}ms | BuildEntries={buildEntriesMs}ms | Save={saveMs}ms | " +
+                $"Ghosts={ghostsMs}ms | UIRecalc={uiRecalcMs}ms(rebuild={rebuildFirmFilterMs}ms,activeFields={refreshActiveFieldsMs}ms,advanceSums={refreshAdvanceSumsMs}ms) | Expenses={expensesMs}ms | " +
+                $"NextMonth={nextMonthMs}ms");
+
             IsLoading = false;
             DataLoaded?.Invoke();
             }
@@ -523,23 +629,36 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private (List<SalaryEntry> entries, bool needResave, Dictionary<string, HashSet<string>> activeFoldersByFirm)
+        private (List<SalaryEntry> entries, bool needResave, Dictionary<string, HashSet<string>> activeFoldersByFirm, BuildEntriesTimingMetrics timing)
             BuildEntriesBackground(List<CustomSalaryField> fieldList, int year, int month, DateTime monthEnd,
-                                   List<EmployerCompany> companies)
+                                   List<EmployerCompany> companies, SalaryEmployeesSnapshot employeesSnapshot)
         {
+            var totalSw = Stopwatch.StartNew();
+            var timing = new BuildEntriesTimingMetrics
+            {
+                CompaniesCount = companies.Count,
+                ActiveEmployeesCount = employeesSnapshot.EmployeesByFirm.Values.Sum(v => v.Count)
+            };
             var entries = new List<SalaryEntry>();
             var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             bool needResave = false;
             var activeFoldersByFirm = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
             var allHistory = new List<ArchivedEmployeeSummary>();
+            var archivedSw = Stopwatch.StartNew();
             allHistory.AddRange(_employeeService.GetArchivedEmployees());
+            timing.ArchivedMs = archivedSw.ElapsedMilliseconds;
+
+            var firmHistorySw = Stopwatch.StartNew();
             allHistory.AddRange(_employeeService.GetActiveEmployeeFirmHistory());
+            timing.FirmHistoryMs = firmHistorySw.ElapsedMilliseconds;
+            timing.HistoryEntriesCount = allHistory.Count;
 
             // Build employment period map for both active and archived/history employees.
+            var periodMapSw = Stopwatch.StartNew();
             var employmentByKey = new Dictionary<string, (string StartDate, string EndDate)>(StringComparer.OrdinalIgnoreCase);
             foreach (var company in companies)
-                foreach (var emp in _employeeService.GetEmployeesForFirm(company.Name))
+                foreach (var emp in GetEmployeesForFirmSnapshot(company.Name, employeesSnapshot))
                 {
                     var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
                     employmentByKey.TryAdd(key, (emp.StartDate, emp.EndDate));
@@ -553,21 +672,33 @@ namespace Win11DesktopApp.ViewModels
                 var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, arc.FirmName);
                 employmentByKey.TryAdd(key, (arc.StartDate, arc.EndDate));
             }
+            timing.PeriodMapMs = periodMapSw.ElapsedMilliseconds;
 
             // Load previous month notes for carry-forward (must be before sharedEntries loop)
             int prevYear = month == 1 ? year - 1 : year;
             int prevMonth = month == 1 ? 12 : month - 1;
+            var prevMonthSw = Stopwatch.StartNew();
             var (prevEntries, _) = _financeService.LoadAllFirmPayments(prevYear, prevMonth);
+            timing.PrevMonthMs = prevMonthSw.ElapsedMilliseconds;
+            timing.PrevEntriesCount = prevEntries.Count;
             var prevNotes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var pe in prevEntries)
                 if (!string.IsNullOrEmpty(pe.Note))
                     prevNotes[BuildEmployeeFirmKey(pe.EmployeeId, pe.EmployeeFolder, pe.FirmName)] = pe.Note;
 
             // Load saved payments
+            var currentMonthSw = Stopwatch.StartNew();
             var (sharedEntries, _) = _financeService.LoadAllFirmPayments(year, month);
+            timing.CurrentMonthMs = currentMonthSw.ElapsedMilliseconds;
+            timing.SharedEntriesCount = sharedEntries.Count;
+
+            var canonicalizeSw = Stopwatch.StartNew();
             foreach (var entry in sharedEntries)
             {
-                var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, companies);
+                var idLookupSw = Stopwatch.StartNew();
+                var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, employeesSnapshot, out var resolveInsideLookupMs);
+                timing.CanonicalizeResolveMs += resolveInsideLookupMs;
+                timing.CanonicalizeIdLookupMs += Math.Max(0, idLookupSw.ElapsedMilliseconds - resolveInsideLookupMs);
                 if (!string.IsNullOrEmpty(canonicalId)
                     && !string.Equals(entry.EmployeeId, canonicalId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -575,7 +706,9 @@ namespace Win11DesktopApp.ViewModels
                     needResave = true;
                 }
 
+                var resolveSw = Stopwatch.StartNew();
                 var resolved = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
+                timing.CanonicalizeResolveMs += resolveSw.ElapsedMilliseconds;
                 if (resolved != entry.EmployeeFolder) { entry.EmployeeFolder = resolved; needResave = true; }
 
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
@@ -593,11 +726,13 @@ namespace Win11DesktopApp.ViewModels
                 entries.Add(entry);
                 existingKeys.Add(key);
             }
+            timing.CanonicalizeMs = canonicalizeSw.ElapsedMilliseconds;
 
             // Add active employees missing from saved data
+            var activeMissingSw = Stopwatch.StartNew();
             foreach (var company in companies)
             {
-                var employees = _employeeService.GetEmployeesForFirm(company.Name);
+                var employees = GetEmployeesForFirmSnapshot(company.Name, employeesSnapshot);
                 var activeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var emp in employees)
                 {
@@ -629,7 +764,9 @@ namespace Win11DesktopApp.ViewModels
                 }
                 activeFoldersByFirm[company.Name] = activeNames;
             }
+            timing.ActiveMissingMs = activeMissingSw.ElapsedMilliseconds;
 
+            var archivedLoopSw = Stopwatch.StartNew();
             foreach (var arc in allHistory)
             {
                 if (!ArchivedWorkedInMonth(arc, year, month)) continue;
@@ -656,27 +793,35 @@ namespace Win11DesktopApp.ViewModels
                 entries.Add(entry);
                 existingKeys.Add(key);
             }
+            timing.ArchivedLoopMs = archivedLoopSw.ElapsedMilliseconds;
+            timing.TotalMs = totalSw.ElapsedMilliseconds;
 
-            return (entries, needResave, activeFoldersByFirm);
+            return (entries, needResave, activeFoldersByFirm, timing);
+        }
+
+        private static List<EmployeeSummary> GetEmployeesForFirmSnapshot(string companyName, SalaryEmployeesSnapshot snapshot)
+        {
+            return snapshot.EmployeesByFirm.TryGetValue(companyName, out var employees)
+                ? employees
+                : new List<EmployeeSummary>();
         }
 
         private string? TryResolveEmployeeIdBackground(string employeeFolder, string fullName,
-                                                        List<EmployerCompany> companies)
+                                                        SalaryEmployeesSnapshot employeesSnapshot, out long resolveMs)
         {
+            var resolveSw = Stopwatch.StartNew();
             var folder = _financeService.ResolveEmployeeFolder(employeeFolder);
+            resolveMs = resolveSw.ElapsedMilliseconds;
             if (!string.IsNullOrEmpty(folder) && System.IO.Directory.Exists(folder))
             {
                 var data = _employeeService.LoadEmployeeData(folder);
                 if (data != null && !string.IsNullOrEmpty(data.UniqueId))
                     return data.UniqueId;
             }
-            foreach (var company in companies)
-            {
-                var match = _employeeService.GetEmployeesForFirm(company.Name)
-                    .FirstOrDefault(e => e.FullName == fullName && !string.IsNullOrEmpty(e.UniqueId));
-                if (match != null) return match.UniqueId;
-            }
-            return null;
+
+            return employeesSnapshot.FirstEmployeeIdByFullName.TryGetValue(fullName, out var employeeId)
+                ? employeeId
+                : null;
         }
 
         private string? TryResolveEmployeeId(string employeeFolder, string fullName)
@@ -710,11 +855,7 @@ namespace Win11DesktopApp.ViewModels
                 var year = _selectedYear;
                 var month = _selectedMonth;
                 var next = new DateTime(year, month, 1).AddMonths(1);
-                var hasEntries = await Task.Run(() =>
-                {
-                    var (entries, _) = _financeService.LoadAllFirmPayments(next.Year, next.Month);
-                    return entries.Count > 0;
-                });
+                var hasEntries = await Task.Run(() => _financeService.MonthDataExists(next.Year, next.Month));
 
                 if (_selectedYear != year || _selectedMonth != month)
                     return;
@@ -968,7 +1109,7 @@ namespace Win11DesktopApp.ViewModels
 
             RebuildFirmFilter();
             RefreshActiveFields();
-            RefreshAdvanceSums();
+            await RefreshAdvanceSumsAsync();
             LoadExpenses();
             await SaveReportAsync();
             await CheckNextMonthExistsAsync();
@@ -1103,8 +1244,9 @@ namespace Win11DesktopApp.ViewModels
 
                 var saveYear = _selectedYear;
                 var saveMonth = _selectedMonth;
+                var expensesForSave = BuildExpensesForSave(saveYear, saveMonth);
 
-                if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, Entries.ToList(), FirmExpenses.ToList()))
+                if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, Entries.ToList(), expensesForSave))
                 {
                     StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
                         ? _financeService.LastSalaryConflictMessage
@@ -1285,10 +1427,11 @@ namespace Win11DesktopApp.ViewModels
         {
             var companyService = App.CompanyService;
             var companies = companyService?.Companies?.ToList() ?? new List<EmployerCompany>();
+            var employeesSnapshot = BuildEmployeesSnapshot(companies);
 
             foreach (var entry in entries)
             {
-                var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, companies);
+                var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, employeesSnapshot, out _);
                 if (!string.IsNullOrEmpty(canonicalId)
                     && !string.Equals(entry.EmployeeId, canonicalId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -1363,13 +1506,108 @@ namespace Win11DesktopApp.ViewModels
 
         private void RefreshAdvanceSums()
         {
-            var monthKey = $"{_selectedYear:D4}-{_selectedMonth:D2}";
-            foreach (var entry in Entries)
+            _ = RefreshAdvanceSumsAsync();
+        }
+
+        private async Task ApplyAdvanceSumsToEntriesAsync(IReadOnlyList<SalaryEntry> entries, int year, int month)
+        {
+            var monthKey = $"{year:D4}-{month:D2}";
+            var requests = entries
+                .Select(entry => (
+                    requestKey: BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName),
+                    employeeId: entry.EmployeeId,
+                    employeeFolder: entry.EmployeeFolder,
+                    firmName: entry.FirmName))
+                .Distinct()
+                .ToList();
+
+            var advanceRequests = requests
+                .Select(request => (request.requestKey, request.employeeId, request.employeeFolder, request.firmName))
+                .ToList();
+
+            var advancesTask = Task.Run(() =>
+                _financeService.GetTotalAdvancesForEmployeeFirms(advanceRequests, monthKey));
+            var debtTask = Task.Run(() =>
+                _financeService.CalculateCarriedDebtForEntries(requests, year, month));
+
+            await Task.WhenAll(advancesTask, debtTask);
+            var currentAdvancesByRequest = advancesTask.Result;
+            var carriedDebtByRequest = debtTask.Result;
+
+            foreach (var entry in entries)
             {
-                var currentAdvances = _financeService.GetTotalAdvancesForEmployeeFirm(entry.EmployeeFolder, entry.FirmName, monthKey);
-                var (carriedDebt, _) = _financeService.CalculateCarriedDebtForFirm(entry.EmployeeFolder, entry.FirmName, _selectedYear, _selectedMonth);
+                var requestKey = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                currentAdvancesByRequest.TryGetValue(requestKey, out var currentAdvances);
+                carriedDebtByRequest.TryGetValue(requestKey, out var carriedDebt);
                 entry.Advance = currentAdvances + carriedDebt;
             }
+        }
+
+        private async Task RefreshAdvanceSumsAsync()
+        {
+            var totalSw = Stopwatch.StartNew();
+            var monthKey = $"{_selectedYear:D4}-{_selectedMonth:D2}";
+            var year = _selectedYear;
+            var month = _selectedMonth;
+            var version = Interlocked.Increment(ref _advanceRefreshVersion);
+            long advancesTaskMs = 0;
+            long debtTaskMs = 0;
+            long applyMs = 0;
+            var requests = Entries
+                .Select(entry => (
+                    requestKey: BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName),
+                    employeeId: entry.EmployeeId,
+                    employeeFolder: entry.EmployeeFolder,
+                    firmName: entry.FirmName))
+                .Distinct()
+                .ToList();
+
+            var advanceRequests = requests
+                .Select(request => (request.requestKey, request.employeeId, request.employeeFolder, request.firmName))
+                .ToList();
+
+            var advancesTask = Task.Run(() =>
+            {
+                var sw = Stopwatch.StartNew();
+                var result = _financeService.GetTotalAdvancesForEmployeeFirms(advanceRequests, monthKey);
+                advancesTaskMs = sw.ElapsedMilliseconds;
+                return result;
+            });
+            var debtTask = Task.Run(() =>
+            {
+                var sw = Stopwatch.StartNew();
+                var result = _financeService.CalculateCarriedDebtForEntries(requests, year, month);
+                debtTaskMs = sw.ElapsedMilliseconds;
+                return result;
+            });
+
+            await Task.WhenAll(advancesTask, debtTask);
+            var currentAdvancesByRequest = advancesTask.Result;
+            var carriedDebtByRequest = debtTask.Result;
+
+            if (version != Volatile.Read(ref _advanceRefreshVersion)
+                || year != _selectedYear
+                || month != _selectedMonth)
+            {
+                return;
+            }
+
+            var applySw = Stopwatch.StartNew();
+            foreach (var entry in Entries)
+            {
+                var requestKey = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                currentAdvancesByRequest.TryGetValue(requestKey, out var currentAdvances);
+                carriedDebtByRequest.TryGetValue(requestKey, out var carriedDebt);
+                entry.Advance = currentAdvances + carriedDebt;
+            }
+            applyMs = applySw.ElapsedMilliseconds;
+
+            totalSw.Stop();
+            LoggingService.LogInfo(
+                "Timing.RefreshAdvanceSums",
+                $"RefreshAdvanceSumsAsync {year:D4}-{month:D2} total={totalSw.ElapsedMilliseconds}ms | " +
+                $"advancesTask={advancesTaskMs}ms | debtTask={debtTaskMs}ms | apply={applyMs}ms | " +
+                $"requests={requests.Count} | entries={Entries.Count}");
         }
 
         public List<AdvancePayment> GetAdvancesForEmployeeFirm(string employeeFolder, string firmName)
@@ -2037,7 +2275,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 item.PropertyChanged -= OnExpenseChanged;
                 FirmExpenses.Remove(item);
-                _financeService.RemoveFirmExpense(expenseId);
+                _financeService.RemoveFirmExpense(expenseId, item.Year, item.Month);
                 OnPropertyChanged(nameof(ExpenseHeaderText));
                 RecalcTotals();
             }
@@ -2119,7 +2357,23 @@ namespace Win11DesktopApp.ViewModels
             if (!PolicyService.EnsureWriteAllowed("зберегти витрати"))
                 return;
 
-            _financeService.SaveFirmExpenses(FirmExpenses.ToList(), _selectedYear, _selectedMonth);
+            var allLabel = L("FinFilterAll") ?? "All";
+            var isAll = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel;
+            _financeService.SaveFirmExpenses(FirmExpenses.ToList(), _selectedYear, _selectedMonth, isAll ? null : _selectedFirmFilter);
+        }
+
+        private List<FirmExpense> BuildExpensesForSave(int year, int month)
+        {
+            var allLabel = L("FinFilterAll") ?? "All";
+            var isAll = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel;
+            if (isAll)
+                return FirmExpenses.ToList();
+
+            var monthExpenses = _financeService.GetFirmExpenses(year, month)
+                .Where(expense => !string.Equals(expense.FirmName, _selectedFirmFilter, StringComparison.Ordinal))
+                .ToList();
+            monthExpenses.AddRange(FirmExpenses.ToList());
+            return monthExpenses;
         }
 
         private void OnSalaryDetailsClose()

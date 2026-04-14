@@ -26,6 +26,60 @@
     <SolidColorBrush x:Key="InfoLightBrush" Color="#162E2C"/>
     <SolidColorBrush x:Key="PurpleBrush" Color="#BC8CFF"/>
     <SolidColorBrush x:Key="PurpleLightBrush" Color="#281E3C"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#8C939E"/>
+    <SolidColorBrush x:Key="StatusMessageBrush" Color="#8C939E"/>
+    <SolidColorBrush x:Key="DangerOutlineBrush" Color="#F85149"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#DA3633"/>
+    <SolidColorBrush x:Key="ErrorChipBackgroundBrush" Color="#3D1518"/>
+    <SolidColorBrush x:Key="ErrorChipBorderBrush" Color="#6E2A2E"/>
+    <SolidColorBrush x:Key="ErrorChipForegroundBrush" Color="#FFB3AD"/>
+    <SolidColorBrush x:Key="WarningChipBackgroundBrush" Color="#302916"/>
+    <SolidColorBrush x:Key="WarningChipBorderBrush" Color="#5B4B1D"/>
+    <SolidColorBrush x:Key="WarningChipForegroundBrush" Color="#F2CC60"/>
+    <SolidColorBrush x:Key="InfoChipBackgroundBrush" Color="#162C3A"/>
+    <SolidColorBrush x:Key="InfoChipBorderBrush" Color="#30556E"/>
+    <SolidColorBrush x:Key="InfoChipForegroundBrush" Color="#79C0FF"/>
+    <SolidColorBrush x:Key="SuccessChipBackgroundBrush" Color="#1C2E20"/>
+    <SolidColorBrush x:Key="SuccessChipBorderBrush" Color="#335C3B"/>
+    <SolidColorBrush x:Key="SuccessChipForegroundBrush" Color="#3FB950"/>
+    <SolidColorBrush x:Key="MutedDescriptionBrush" Color="#8C939E"/>
+
+    <LinearGradientBrush x:Key="BrandPrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#6F7BF7" Offset="0"/>
+        <GradientStop Color="#A78BFA" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandPrimaryHorizontalGradientBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#6F7BF7" Offset="0"/>
+        <GradientStop Color="#A78BFA" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandSuccessGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2EA043" Offset="0"/>
+        <GradientStop Color="#3FB950" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandSuccessHorizontalGradientBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#2EA043" Offset="0"/>
+        <GradientStop Color="#3FB950" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandWarmGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#F97316" Offset="0"/>
+        <GradientStop Color="#F59E0B" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandDangerGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#F59E0B" Offset="0"/>
+        <GradientStop Color="#EF4444" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandInfoGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#38BDF8" Offset="0"/>
+        <GradientStop Color="#22D3EE" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandInfoHorizontalGradientBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#38BDF8" Offset="0"/>
+        <GradientStop Color="#22D3EE" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandAiGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#8B5CF6" Offset="0"/>
+        <GradientStop Color="#60A5FA" Offset="1"/>
+    </LinearGradientBrush>
 
     <DropShadowEffect x:Key="CardShadow" BlurRadius="16" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.3"/>
 </ResourceDictionary>

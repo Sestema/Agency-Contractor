@@ -16,14 +16,14 @@
     </UserControl.Resources>
     
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
-        <Grid Margin="32,20,32,32">
+        <Grid Margin="{StaticResource PageOuterMargin}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <!-- ===== HEADER ===== -->
-            <Grid Grid.Row="0" Margin="0,0,0,24">
+            <Grid Grid.Row="0" Margin="{StaticResource PageHeaderMargin}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -36,13 +36,8 @@
                 </Button>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Style="{StaticResource PageHeaderIconBadge}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#11998E" Offset="0"/>
-                                <GradientStop Color="#38EF7D" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
+                    <Border Style="{StaticResource PageHeaderIconBadge}"
+                            Background="{DynamicResource BrandSuccessGradientBrush}">
                         <TextBlock Text="&#xE8A5;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
@@ -63,13 +58,8 @@
                         Command="{Binding AddTemplateCommand}"
                         Style="{StaticResource FilledActionButton}"
                         Padding="18,10"
-                        VerticalAlignment="Center">
-                    <Button.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="#11998E" Offset="0"/>
-                            <GradientStop Color="#38EF7D" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Button.Background>
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource BrandSuccessHorizontalGradientBrush}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                    Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -123,34 +113,13 @@
                                             VerticalAlignment="Center">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                            <GradientStop Color="#667EEA" Offset="0"/>
-                                                            <GradientStop Color="#764BA2" Offset="1"/>
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
+                                                <Setter Property="Background" Value="{DynamicResource BrandPrimaryGradientBrush}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Format}" Value="XLSX">
-                                                        <Setter Property="Background">
-                                                            <Setter.Value>
-                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                                    <GradientStop Color="#11998E" Offset="0"/>
-                                                                    <GradientStop Color="#38EF7D" Offset="1"/>
-                                                                </LinearGradientBrush>
-                                                            </Setter.Value>
-                                                        </Setter>
+                                                        <Setter Property="Background" Value="{DynamicResource BrandSuccessGradientBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Format}" Value="PDF">
-                                                        <Setter Property="Background">
-                                                            <Setter.Value>
-                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                                    <GradientStop Color="#FF512F" Offset="0"/>
-                                                                    <GradientStop Color="#F09819" Offset="1"/>
-                                                                </LinearGradientBrush>
-                                                            </Setter.Value>
-                                                        </Setter>
+                                                        <Setter Property="Background" Value="{DynamicResource BrandWarmGradientBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -183,15 +152,16 @@
                                                    Foreground="{DynamicResource ForegroundBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                            <Border Background="{DynamicResource SurfaceBrush}"
-                                                    BorderBrush="{DynamicResource CardBorderBrush}"
-                                                    BorderThickness="1"
+                                            <Border Style="{StaticResource CounterChipBorder}"
                                                     CornerRadius="8"
                                                     Padding="8,3"
-                                                    Margin="0,0,8,0">
+                                                    Margin="0,0,8,0"
+                                                    Background="{DynamicResource SurfaceBrush}"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                                    BorderThickness="1">
                                                 <TextBlock Text="{Binding Format}"
+                                                           Style="{StaticResource StatusChipText}"
                                                            FontSize="{DynamicResource FS10}"
-                                                           FontWeight="SemiBold"
                                                            Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                             </Border>
                                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
@@ -301,7 +271,7 @@
                 </ItemsControl>
 
             <!-- Empty state -->
-            <Border Grid.Row="1" Style="{StaticResource EmptyStateCard}"
+            <Border Grid.Row="1" Style="{StaticResource AnimatedEmptyStateCard}"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding HasTemplates, Converter={StaticResource InverseBoolToVis}}">
                 <StackPanel HorizontalAlignment="Center">
@@ -312,13 +282,15 @@
         </Grid>
 
         <!-- ===== Modal Dialog Overlay — Add Template ===== -->
-        <Grid Visibility="{Binding IsAddDialogOpen, Converter={StaticResource BoolToVis}}">
+        <Grid Visibility="{Binding IsAddDialogOpen, Converter={StaticResource BoolToVis}}"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                  <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAddDialogCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <ContentControl Content="{Binding AddTemplateVm}" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <ContentControl Content="{Binding AddTemplateVm}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Style="{StaticResource DialogEntranceContentControl}">
                 <ContentControl.Resources>
                     <DataTemplate DataType="{x:Type vm:AddTemplateViewModel}" xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels">
                         <views:AddTemplateView/>
@@ -328,13 +300,14 @@
         </Grid>
 
         <!-- ===== Copy Template Dialog Overlay ===== -->
-        <Grid Visibility="{Binding IsCopyDialogOpen, Converter={StaticResource BoolToVis}}">
+        <Grid Visibility="{Binding IsCopyDialogOpen, Converter={StaticResource BoolToVis}}"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CancelCopyTemplateCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Style="{StaticResource DialogSectionCard}"
+            <Border Style="{StaticResource AnimatedDialogSectionCard}"
                     Width="460"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -347,9 +320,9 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal">
-                            <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
-                                <TextBlock Text="&#xE8FA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                           Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Style="{StaticResource SoftIconBadge}" Background="{DynamicResource AccentLightBrush}" Margin="0,0,10,0">
+                                <TextBlock Text="&#xE8FA;" Style="{StaticResource SoftIconBadgeText}"
+                                           Foreground="{DynamicResource AccentBrush}"/>
                             </Border>
                             <TextBlock Text="{DynamicResource TplCopyDialogTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
@@ -426,13 +399,14 @@
         </Grid>
 
         <!-- ===== Rename Dialog Overlay ===== -->
-        <Grid Visibility="{Binding IsRenameDialogOpen, Converter={StaticResource BoolToVis}}">
+        <Grid Visibility="{Binding IsRenameDialogOpen, Converter={StaticResource BoolToVis}}"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CancelRenameCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Style="{StaticResource DialogSectionCard}"
+            <Border Style="{StaticResource AnimatedDialogSectionCard}"
                     Width="420"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -445,9 +419,9 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal">
-                            <Border Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
-                                <TextBlock Text="&#xE8AC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                           Foreground="{DynamicResource WarningBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Style="{StaticResource SoftIconBadge}" Background="{DynamicResource WarningLightBrush}" Margin="0,0,10,0">
+                                <TextBlock Text="&#xE8AC;" Style="{StaticResource SoftIconBadgeText}"
+                                           Foreground="{DynamicResource WarningBrush}"/>
                             </Border>
                             <TextBlock Text="{DynamicResource TplRenameTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
@@ -509,13 +483,14 @@
         </Grid>
 
         <!-- ===== Tags Panel Overlay ===== -->
-        <Grid Visibility="{Binding IsTagsPanelOpen, Converter={StaticResource BoolToVis}}">
+        <Grid Visibility="{Binding IsTagsPanelOpen, Converter={StaticResource BoolToVis}}"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseTagsPanelCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Style="{StaticResource DialogSectionCard}"
+            <Border Style="{StaticResource AnimatedDialogSectionCard}"
                     Width="650"
                     MaxHeight="600"
                     HorizontalAlignment="Center"
@@ -533,9 +508,9 @@
                     <!-- Title -->
                     <Grid Grid.Row="0" Margin="0,0,0,12">
                         <StackPanel Orientation="Horizontal">
-                            <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Width="32" Height="32" Margin="0,0,10,0">
-                                <TextBlock Text="&#xE8EC;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                           Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Style="{StaticResource SoftIconBadge}" Background="{DynamicResource AccentLightBrush}" Margin="0,0,10,0">
+                                <TextBlock Text="&#xE8EC;" Style="{StaticResource SoftIconBadgeText}"
+                                           Foreground="{DynamicResource AccentDarkBrush}"/>
                             </Border>
                             <TextBlock Text="{DynamicResource TplTagsTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>

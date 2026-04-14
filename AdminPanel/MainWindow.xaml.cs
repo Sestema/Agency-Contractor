@@ -546,8 +546,8 @@ namespace AdminPanel
                 RefreshSessionSummaries();
                 UpdateStats(_activeTelemetry, expectedClientId);
                 PopulateClientDetails(_selected);
-                PopulateTelemetryEventFilter();
-                ApplyTelemetryFilters();
+                    PopulateTelemetryEventFilter();
+                    ApplyTelemetryFilters();
                 UpdateActionButtons();
             }
             catch (Exception ex)
@@ -571,7 +571,7 @@ namespace AdminPanel
                 return;
 
             if (string.Equals(_profileLoadingClientId, expectedClientId, StringComparison.Ordinal))
-                return;
+                    return;
 
             _profileLoadingClientId = expectedClientId;
             UpdateActionButtons();

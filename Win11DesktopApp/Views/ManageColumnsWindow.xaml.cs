@@ -26,7 +26,7 @@ namespace Win11DesktopApp.Views
             _ => "?"
         };
 
-        public string FirmDisplay => string.IsNullOrEmpty(FirmName) || FirmName == FinanceService.AllFirmsKey
+        public string FirmDisplay => string.IsNullOrEmpty(FirmName) || FirmName == FinanceConstants.AllFirmsKey
             ? L("FinFilterAll") ?? "All firms"
             : FirmName;
 
@@ -49,7 +49,7 @@ namespace Win11DesktopApp.Views
             FieldsList.DataContext = _items;
 
             var allLabel = TryL("FinFilterAll") ?? "All firms";
-            NewFieldFirm.Items.Add(new ComboBoxItem { Content = allLabel, Tag = FinanceService.AllFirmsKey });
+            NewFieldFirm.Items.Add(new ComboBoxItem { Content = allLabel, Tag = FinanceConstants.AllFirmsKey });
             foreach (var f in firmNames)
                 NewFieldFirm.Items.Add(new ComboBoxItem { Content = f, Tag = f });
             NewFieldFirm.SelectedIndex = 0;
@@ -88,7 +88,7 @@ namespace Win11DesktopApp.Views
             };
 
             var firmItem = NewFieldFirm.SelectedItem as ComboBoxItem;
-            var firmName = firmItem?.Tag?.ToString() ?? FinanceService.AllFirmsKey;
+            var firmName = firmItem?.Tag?.ToString() ?? FinanceConstants.AllFirmsKey;
 
             var maxOrder = _items.Count > 0 ? _items.Max(i => i.Order) + 1 : 0;
 
@@ -113,7 +113,7 @@ namespace Win11DesktopApp.Views
                 if (item == null) return;
 
                 var editWin = new EditFieldWindow(item.Name, item.Operation, item.FirmName,
-                    _items.Select(i => i.FirmName).Distinct().Where(f => f != FinanceService.AllFirmsKey).ToList());
+                    _items.Select(i => i.FirmName).Distinct().Where(f => f != FinanceConstants.AllFirmsKey).ToList());
                 editWin.Owner = this;
 
                 if (editWin.ShowDialog() == true)

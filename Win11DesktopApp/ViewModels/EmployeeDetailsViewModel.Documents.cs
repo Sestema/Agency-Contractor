@@ -314,6 +314,7 @@ namespace Win11DesktopApp.ViewModels
                     }
 
                     SideField(DocRes("DetFieldInsCompany"), Data.InsuranceCompanyShort, ref sy);
+                    SideField(DocRes("DetFieldInsCompanyFull"), Data.InsuranceCompanyFull, ref sy);
                     SideField(DocRes("PdfFieldNumber"), Data.InsuranceNumber, ref sy);
                     SideField(DocRes("PdfFieldValidToF"), Data.InsuranceExpiry, ref sy);
                 }

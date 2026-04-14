@@ -1514,6 +1514,7 @@ namespace Win11DesktopApp.Services
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(newFirmName, destFolder, restoredData);
                 if (restoredData != null)
                     UpsertEmployeeIndex(destFolder, restoredData, newFirmName);
+                App.FinanceService?.CleanupGhostFolders();
                 return new RestoreEmployeeResult
                 {
                     RestoredFolder = destFolder,
@@ -1903,6 +1904,7 @@ namespace Win11DesktopApp.Services
                 App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
                 if (verifyData != null)
                     UpsertEmployeeIndex(destFolder, verifyData, firmName);
+                App.FinanceService?.CleanupGhostFolders();
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
@@ -2236,6 +2238,7 @@ namespace Win11DesktopApp.Services
                 Check(Res("HistFieldVisaExp"), oldData.VisaExpiry, newData.VisaExpiry);
                 Check(Res("HistFieldInsNum"), oldData.InsuranceNumber, newData.InsuranceNumber);
                 Check(Res("HistFieldInsCompany"), oldData.InsuranceCompanyShort, newData.InsuranceCompanyShort);
+                Check(Res("HistFieldInsCompanyFull"), oldData.InsuranceCompanyFull, newData.InsuranceCompanyFull);
                 Check(Res("HistFieldInsExp"), oldData.InsuranceExpiry, newData.InsuranceExpiry);
                 Check(Res("HistFieldPhone"), oldData.Phone, newData.Phone);
                 Check(Res("HistFieldEmail"), oldData.Email, newData.Email);

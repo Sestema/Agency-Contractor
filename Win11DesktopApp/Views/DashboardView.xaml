@@ -14,44 +14,6 @@
         <conv:IntToVisibilityConverter x:Key="IntToVis"/>
         <CubicEase x:Key="Ease" EasingMode="EaseOut"/>
 
-        <Style x:Key="ThinScrollBar" TargetType="ScrollViewer">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollViewer">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ScrollContentPresenter Grid.Column="0"/>
-                            <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1"
-                                       Orientation="Vertical" Width="4" Opacity="0.4" Margin="4,0,0,0"
-                                       Value="{TemplateBinding VerticalOffset}"
-                                       Maximum="{TemplateBinding ScrollableHeight}"
-                                       ViewportSize="{TemplateBinding ViewportHeight}"
-                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}">
-                                <ScrollBar.Template>
-                                    <ControlTemplate TargetType="ScrollBar">
-                                        <Track x:Name="PART_Track" IsDirectionReversed="True">
-                                            <Track.Thumb>
-                                                <Thumb>
-                                                    <Thumb.Template>
-                                                        <ControlTemplate TargetType="Thumb">
-                                                            <Border Background="{DynamicResource SecondaryForegroundBrush}" CornerRadius="2" MinHeight="20"/>
-                                                        </ControlTemplate>
-                                                    </Thumb.Template>
-                                                </Thumb>
-                                            </Track.Thumb>
-                                        </Track>
-                                    </ControlTemplate>
-                                </ScrollBar.Template>
-                            </ScrollBar>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="StatCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
             <Setter Property="CornerRadius" Value="16"/>
@@ -139,7 +101,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#E9D8FD"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PurpleLightBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
@@ -190,7 +152,7 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScrollBar}"
+                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
                               Visibility="{Binding DataContext.ExpiringDocs.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
                     <ItemsControl ItemsSource="{Binding DataContext.ExpiringDocs, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <ItemsControl.ItemTemplate>
@@ -254,7 +216,7 @@
                     <TextBlock Text="{DynamicResource SearchCatCompanies}" FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </StackPanel>
-                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScrollBar}">
+                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}">
                     <ItemsControl ItemsSource="{Binding DataContext.CompanyStats, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -346,7 +308,7 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScrollBar}"
+                <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}"
                               Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
                     <ItemsControl ItemsSource="{Binding DataContext.SalaryMonths, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <ItemsControl.ItemTemplate>
@@ -773,7 +735,7 @@
                     </StackPanel>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="380"
-                                  Style="{StaticResource ThinScrollBar}">
+                                  Style="{StaticResource ThinScroll}">
                         <TextBox Text="{Binding AIReportText, Mode=OneWay}" 
                                  IsReadOnly="True" TextWrapping="Wrap"
                                  BorderThickness="0" Background="Transparent" Padding="0"

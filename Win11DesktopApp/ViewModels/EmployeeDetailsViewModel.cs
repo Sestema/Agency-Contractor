@@ -904,6 +904,8 @@ namespace Win11DesktopApp.ViewModels
         // Company positions for ComboBox
         public ObservableCollection<Position> CompanyPositions { get; } = new();
         public ObservableCollection<WorkAddress> CompanyAddresses { get; } = new();
+        public ObservableCollection<InsuranceCompanyOption> InsuranceCompanies { get; } =
+            new ObservableCollection<InsuranceCompanyOption>(InsuranceCompanyCatalog.All);
 
         private bool _isInitializingSelectedPosition;
         private Position? _selectedPosition;
@@ -939,6 +941,29 @@ namespace Win11DesktopApp.ViewModels
                 }
             }
         }
+
+        private bool _isInitializingSelectedInsuranceCompany;
+        private InsuranceCompanyOption? _selectedInsuranceCompany;
+        public InsuranceCompanyOption? SelectedInsuranceCompany
+        {
+            get => _selectedInsuranceCompany;
+            set
+            {
+                if (SetProperty(ref _selectedInsuranceCompany, value) && value != null)
+                {
+                    if (_isInitializingSelectedInsuranceCompany)
+                        return;
+
+                    Data.InsuranceCompanyShort = value.ShortName;
+                    Data.InsuranceCompanyFull = value.FullName;
+                    OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
+                    OnPropertyChanged(nameof(Data));
+                }
+            }
+        }
+
+        public string InsuranceCompanyFullDisplay => SelectedInsuranceCompany?.DisplayName
+            ?? (string.IsNullOrWhiteSpace(Data.InsuranceCompanyFull) ? string.Empty : Data.InsuranceCompanyFull);
 
         // Profile completion
         public int ProfileCompletionPercent => CalcProfileCompletion();
@@ -998,6 +1023,7 @@ namespace Win11DesktopApp.ViewModels
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
+            NormalizeInsuranceCompanyFields();
             NotifyBankAccountStateChanged();
             TryAutofillBankName(Data.BankAccountNumber);
             RefreshDocuments();
@@ -1361,6 +1387,7 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 SetBusyState(true, Res("EditorSaving") ?? "Збереження...");
+                NormalizeInsuranceCompanyFields();
                 var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
 
                 if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
@@ -1398,6 +1425,8 @@ namespace Win11DesktopApp.ViewModels
             if (data != null)
             {
                 Data = data;
+                NormalizeInsuranceCompanyFields();
+                OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
                 OnPropertyChanged(nameof(Data));
                 OnPropertyChanged(nameof(FullName));
                 NotifyBankAccountStateChanged();
@@ -1462,7 +1491,7 @@ namespace Win11DesktopApp.ViewModels
                 "passport" => "Pass",
                 "visa" => "Viza",
                 "passport_page2" => "PassPage2",
-                "insurance" => Data.InsuranceCompanyShort,
+                "insurance" => string.IsNullOrWhiteSpace(Data.InsuranceCompanyShort) ? "Insurance" : Data.InsuranceCompanyShort,
                 "work_permit" => "WorkPermit",
                 _ => type
             };
@@ -2071,12 +2100,46 @@ namespace Win11DesktopApp.ViewModels
 
             var data = _employeeService.LoadEmployeeData(_employeeFolder);
             if (data != null)
+            {
+                NormalizeInsuranceCompanyFields(data);
                 return data;
+            }
 
             LoggingService.LogWarning("EmployeeDetailsViewModel.LoadInitialEmployeeData",
                 $"Employee profile could not be loaded from {_employeeFolder}");
             NotifyProfileUnavailable(Res("MsgEmployeeProfileMissing"));
             return new EmployeeData();
+        }
+
+        private void NormalizeInsuranceCompanyFields()
+        {
+            NormalizeInsuranceCompanyFields(Data);
+        }
+
+        private void NormalizeInsuranceCompanyFields(EmployeeData data)
+        {
+            var option = InsuranceCompanyNormalizer.Normalize(
+                data.InsuranceCompanyShort,
+                shortName: data.InsuranceCompanyShort,
+                fullName: data.InsuranceCompanyFull);
+
+            if (option != null)
+            {
+                data.InsuranceCompanyShort = option.ShortName;
+                data.InsuranceCompanyFull = option.FullName;
+            }
+
+            _isInitializingSelectedInsuranceCompany = true;
+            try
+            {
+                SelectedInsuranceCompany = option;
+            }
+            finally
+            {
+                _isInitializingSelectedInsuranceCompany = false;
+            }
+
+            OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
         }
 
         private bool EnsureEmployeeFolderAvailable(string source, bool notifyUser = false)
@@ -2457,6 +2520,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             if (!IsEuIdCardEmployee)
                 CompareAIField(items, visaData, "VisaType", Data.VisaType, Res("HistFieldVisaType") ?? "Visa Type", SecondaryDocumentSourceDocumentKey);
 
+            CompareAIField(items, insuranceData, "InsuranceCompanyShort", Data.InsuranceCompanyShort, Res("HistFieldInsCompany") ?? "Insurance Company", "insurance");
+            CompareAIField(items, insuranceData, "InsuranceCompanyFull", Data.InsuranceCompanyFull, Res("HistFieldInsCompanyFull") ?? "Insurance Company Full", "insurance");
             CompareAIField(items, insuranceData, "InsuranceNumber", Data.InsuranceNumber, Res("HistFieldInsNum") ?? "Insurance Number", "insurance");
             CompareAIField(items, insuranceData, "InsuranceExpiry", Data.InsuranceExpiry, Res("HistFieldInsExp") ?? "Insurance Expiry", "insurance");
 
@@ -2687,7 +2752,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             string displayName,
             string sourceDocument)
         {
-            if (!extracted.TryGetValue(fieldKey, out var suggestedValue))
+            if (!TryGetSuggestedValue(extracted, fieldKey, out var suggestedValue))
                 return;
 
             var current = currentValue?.Trim() ?? string.Empty;
@@ -2743,6 +2808,36 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             items.Add(item);
         }
 
+        private static bool TryGetSuggestedValue(Dictionary<string, string> extracted, string fieldKey, out string suggestedValue)
+        {
+            suggestedValue = string.Empty;
+
+            if (extracted.TryGetValue(fieldKey, out var directValue) && !string.IsNullOrWhiteSpace(directValue))
+            {
+                suggestedValue = directValue;
+                return true;
+            }
+
+            if (string.Equals(fieldKey, "InsuranceCompanyShort", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "InsuranceCompanyFull", StringComparison.OrdinalIgnoreCase))
+            {
+                extracted.TryGetValue("InsuranceCompanyRaw", out var rawValue);
+                extracted.TryGetValue("InsuranceCompanyCode", out var codeValue);
+                extracted.TryGetValue("InsuranceCompanyShort", out var shortValue);
+                extracted.TryGetValue("InsuranceCompanyFull", out var fullValue);
+                var option = InsuranceCompanyNormalizer.Normalize(rawValue, codeValue, shortValue, fullValue);
+                if (option != null)
+                {
+                    suggestedValue = string.Equals(fieldKey, "InsuranceCompanyFull", StringComparison.OrdinalIgnoreCase)
+                        ? option.FullName
+                        : option.ShortName;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static bool ValuesMatch(string fieldKey, string current, string suggested)
         {
             if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(suggested))
@@ -2756,6 +2851,15 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
             current = current.Trim();
             suggested = suggested.Trim();
+
+            if (string.Equals(fieldKey, "InsuranceCompanyShort", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "InsuranceCompanyFull", StringComparison.OrdinalIgnoreCase))
+            {
+                var currentOption = InsuranceCompanyNormalizer.Normalize(current);
+                var suggestedOption = InsuranceCompanyNormalizer.Normalize(suggested);
+                if (currentOption != null && suggestedOption != null)
+                    return string.Equals(currentOption.Code, suggestedOption.Code, StringComparison.OrdinalIgnoreCase);
+            }
 
             if (string.Equals(fieldKey, "PassportCountry", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(fieldKey, "Citizenship", StringComparison.OrdinalIgnoreCase)
@@ -2926,6 +3030,21 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 case "VisaExpiry": Data.VisaExpiry = item.SuggestedValue; break;
                 case "VisaAuthority": Data.VisaAuthority = item.SuggestedValue; break;
                 case "VisaType": Data.VisaType = item.SuggestedValue; break;
+                case "InsuranceCompanyShort":
+                case "InsuranceCompanyFull":
+                    var insuranceOption = InsuranceCompanyNormalizer.Normalize(item.SuggestedValue);
+                    if (insuranceOption != null)
+                    {
+                        Data.InsuranceCompanyShort = insuranceOption.ShortName;
+                        Data.InsuranceCompanyFull = insuranceOption.FullName;
+                        NormalizeInsuranceCompanyFields();
+                    }
+                    else
+                    {
+                        Data.InsuranceCompanyShort = item.SuggestedValue;
+                        Data.InsuranceCompanyFull = string.Empty;
+                    }
+                    break;
                 case "InsuranceNumber": Data.InsuranceNumber = item.SuggestedValue; break;
                 case "InsuranceExpiry": Data.InsuranceExpiry = item.SuggestedValue; break;
                 case "WorkPermitNumber": Data.WorkPermitNumber = item.SuggestedValue; break;

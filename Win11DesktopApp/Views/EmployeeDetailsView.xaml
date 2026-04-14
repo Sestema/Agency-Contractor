@@ -503,10 +503,7 @@
                                             <Border CornerRadius="4" HorizontalAlignment="Stretch"
                                                     RenderTransformOrigin="0,0.5">
                                                 <Border.Background>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#11998E" Offset="0"/>
-                                                        <GradientStop Color="#38EF7D" Offset="1"/>
-                                                    </LinearGradientBrush>
+                                                    <DynamicResource ResourceKey="BrandSuccessHorizontalGradientBrush"/>
                                                 </Border.Background>
                                                 <Border.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding ProfileCompletionPercent, Converter={StaticResource PercentToScale}, FallbackValue=0}" ScaleY="1"/>
@@ -1352,8 +1349,16 @@
                                                 </StackPanel>
                                                 <Border Style="{StaticResource DetailsSectionCard}">
                                                     <StackPanel>
-                                                        <TextBlock Text="{DynamicResource DetFieldInsCompany}" Style="{StaticResource FieldLabel}"/>
-                                                        <TextBox Text="{Binding Data.InsuranceCompanyShort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                        <TextBlock Text="{DynamicResource DetFieldInsCompany}" Style="{StaticResource FieldLabel}"
+                                                                   Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                                                        <ComboBox ItemsSource="{Binding InsuranceCompanies}" SelectedItem="{Binding SelectedInsuranceCompany}"
+                                                                  Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"
+                                                                  DisplayMemberPath="DisplayName"
+                                                                  Padding="8,6" Margin="0,0,0,8" FontSize="13" IsEditable="False"/>
+                                                        <TextBlock Text="{DynamicResource DetFieldInsCompanyShort}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBox Text="{Binding Data.InsuranceCompanyShort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="True"/>
+                                                        <TextBlock Text="{DynamicResource DetFieldInsCompanyFull}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBox Text="{Binding InsuranceCompanyFullDisplay, Mode=OneWay}" Style="{StaticResource FieldInput}" IsReadOnly="True"/>
                                                         <TextBlock Text="{DynamicResource DetFieldInsNum}" Style="{StaticResource FieldLabel}"/>
                                                         <TextBox Text="{Binding Data.InsuranceNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                         <TextBlock Text="{DynamicResource DetFieldExpiry}" Style="{StaticResource FieldLabel}"/>
@@ -1807,10 +1812,10 @@
                                                         <Border Grid.Column="0" CornerRadius="12,0,0,12">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="#4CAF50"/>
+                                                                    <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding IsNegativeNet}" Value="True">
-                                                                            <Setter Property="Background" Value="#C62828"/>
+                                                                            <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
@@ -1881,10 +1886,10 @@
                                                                         <TextBlock Text="{Binding Salary.NetSalary, StringFormat='{}{0:N0}'}" FontSize="{DynamicResource FS13}" FontWeight="Bold">
                                                                             <TextBlock.Style>
                                                                                 <Style TargetType="TextBlock">
-                                                                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
                                                                                     <Style.Triggers>
                                                                                         <DataTrigger Binding="{Binding IsNegativeNet}" Value="True">
-                                                                                            <Setter Property="Foreground" Value="#C62828"/>
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
                                                                                         </DataTrigger>
                                                                                     </Style.Triggers>
                                                                                 </Style>
@@ -1972,7 +1977,7 @@
                                                                         <Border CornerRadius="6" Padding="8,5" Margin="0,0,0,3">
                                                                             <Border.Style>
                                                                                 <Style TargetType="Border">
-                                                                                    <Setter Property="Background" Value="#FFF8E1"/>
+                                                                                    <Setter Property="Background" Value="{DynamicResource WarningLightBrush}"/>
                                                                                     <Style.Triggers>
                                                                                         <DataTrigger Binding="{Binding IsDeducted}" Value="True">
                                                                                             <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
@@ -1995,11 +2000,11 @@
                                                                                     <TextBlock.Style>
                                                                                         <Style TargetType="TextBlock">
                                                                                             <Setter Property="Text" Value="&#xE9CE;"/>
-                                                                                            <Setter Property="Foreground" Value="#FF9800"/>
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
                                                                                             <Style.Triggers>
                                                                                                 <DataTrigger Binding="{Binding IsDeducted}" Value="True">
                                                                                                     <Setter Property="Text" Value="&#xE73E;"/>
-                                                                                                    <Setter Property="Foreground" Value="#4CAF50"/>
+                                                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                                                                                 </DataTrigger>
                                                                                             </Style.Triggers>
                                                                                         </Style>
@@ -2021,10 +2026,10 @@
                                                                                            VerticalAlignment="Center" Margin="0,0,6,0">
                                                                                     <TextBlock.Style>
                                                                                         <Style TargetType="TextBlock">
-                                                                                            <Setter Property="Foreground" Value="#E65100"/>
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
                                                                                             <Style.Triggers>
                                                                                                 <DataTrigger Binding="{Binding IsDeducted}" Value="True">
-                                                                                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
                                                                                                 </DataTrigger>
                                                                                             </Style.Triggers>
                                                                                         </Style>
@@ -2040,7 +2045,7 @@
                                                                                             <Setter Property="Background" Value="{DynamicResource WarningLightBrush}"/>
                                                                                             <Style.Triggers>
                                                                                                 <DataTrigger Binding="{Binding IsDeducted}" Value="True">
-                                                                                                    <Setter Property="Background" Value="#C8E6C9"/>
+                                                                                                    <Setter Property="Background" Value="{DynamicResource SuccessChipBorderBrush}"/>
                                                                                                 </DataTrigger>
                                                                                             </Style.Triggers>
                                                                                         </Style>
@@ -2049,11 +2054,11 @@
                                                                                         <TextBlock.Style>
                                                                                             <Style TargetType="TextBlock">
                                                                                                 <Setter Property="Text" Value="{DynamicResource FinAdvanceNotDeducted}"/>
-                                                                                                <Setter Property="Foreground" Value="#E65100"/>
+                                                                                                <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
                                                                                                 <Style.Triggers>
                                                                                                     <DataTrigger Binding="{Binding IsDeducted}" Value="True">
                                                                                                         <Setter Property="Text" Value="{DynamicResource FinAdvanceDeducted}"/>
-                                                                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
                                                                                                     </DataTrigger>
                                                                                                 </Style.Triggers>
                                                                                             </Style>
@@ -2355,7 +2360,7 @@
 
         <!-- AI Validation Result Overlay -->
         <Grid Visibility="{Binding IsAIValidationOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#40000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAIValidationCommand}"/>
                 </Border.InputBindings>
@@ -2419,8 +2424,10 @@
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <Border Background="#FDECEC" BorderBrush="#F5C2C7" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
-                                                                    <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#B42318"/>
+                                                                <Border Style="{StaticResource StatusChipBorder}" Margin="0,0,8,0"
+                                                                        Background="{DynamicResource ErrorChipBackgroundBrush}"
+                                                                        BorderBrush="{DynamicResource ErrorChipBorderBrush}">
+                                                                    <TextBlock Style="{StaticResource StatusChipText}" Text="{Binding SourceDocumentDisplay}" Foreground="{DynamicResource ErrorChipForegroundBrush}"/>
                                                                 </Border>
                                                                 <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                            Foreground="{DynamicResource ForegroundBrush}"
@@ -2483,8 +2490,10 @@
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <Border Background="#FFF4E5" BorderBrush="#F5C97A" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
-                                                                    <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#B54708"/>
+                                                                <Border Style="{StaticResource StatusChipBorder}" Margin="0,0,8,0"
+                                                                        Background="{DynamicResource WarningChipBackgroundBrush}"
+                                                                        BorderBrush="{DynamicResource WarningChipBorderBrush}">
+                                                                    <TextBlock Style="{StaticResource StatusChipText}" Text="{Binding SourceDocumentDisplay}" Foreground="{DynamicResource WarningChipForegroundBrush}"/>
                                                                 </Border>
                                                                 <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                            Foreground="{DynamicResource ForegroundBrush}"
@@ -2533,8 +2542,10 @@
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel>
                                                             <StackPanel Orientation="Horizontal">
-                                                                <Border Background="#EEF4FF" BorderBrush="#B2CCFF" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
-                                                                    <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#175CD3"/>
+                                                                <Border Style="{StaticResource StatusChipBorder}" Margin="0,0,8,0"
+                                                                        Background="{DynamicResource InfoChipBackgroundBrush}"
+                                                                        BorderBrush="{DynamicResource InfoChipBorderBrush}">
+                                                                    <TextBlock Style="{StaticResource StatusChipText}" Text="{Binding SourceDocumentDisplay}" Foreground="{DynamicResource InfoChipForegroundBrush}"/>
                                                                 </Border>
                                                                 <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                            Foreground="{DynamicResource ForegroundBrush}"
@@ -2602,8 +2613,10 @@
                                                         Background="{DynamicResource ContentBackgroundBrush}">
                                                     <StackPanel>
                                                         <StackPanel Orientation="Horizontal">
-                                                            <Border Background="#F0F9F4" BorderBrush="#ABEFC6" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="0,0,8,0">
-                                                                <TextBlock Text="{Binding SourceDocumentDisplay}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold" Foreground="#067647"/>
+                                                            <Border Style="{StaticResource StatusChipBorder}" Margin="0,0,8,0"
+                                                                    Background="{DynamicResource SuccessChipBackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource SuccessChipBorderBrush}">
+                                                                <TextBlock Style="{StaticResource StatusChipText}" Text="{Binding SourceDocumentDisplay}" Foreground="{DynamicResource SuccessChipForegroundBrush}"/>
                                                             </Border>
                                                             <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                        Foreground="{DynamicResource ForegroundBrush}"
@@ -2646,7 +2659,7 @@
                             <Border.BorderBrush>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                     <GradientStop Color="#7B1FA2" Offset="0"/>
-                                    <GradientStop Color="#CE93D8" Offset="0.5"/>
+                                    <GradientStop Color="#F3E5F5" Offset="0.5"/>
                                     <GradientStop Color="Transparent" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.BorderBrush>

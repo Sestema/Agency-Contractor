@@ -31,13 +31,8 @@
                     <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
                         <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
-                    <Border Style="{StaticResource PageHeaderIconBadge}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#7C4DFF" Offset="0"/>
-                                <GradientStop Color="#448AFF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
+                    <Border Style="{StaticResource PageHeaderIconBadge}"
+                            Background="{DynamicResource BrandAiGradientBrush}">
                         <Path Data="{StaticResource IconAIAssistant}"
                               Fill="White" Stretch="Uniform" Width="18" Height="18"
                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -149,7 +144,7 @@
                                                     <Image Source="{Binding FilePath}" MaxWidth="200" MaxHeight="150" Stretch="UniformToFill"/>
                                                 </Border>
                                                 <Border CornerRadius="8" Margin="0,0,0,4" Padding="10,6"
-                                                        HorizontalAlignment="Right" Background="#E3F2FD">
+                                                        HorizontalAlignment="Right" Background="{DynamicResource InfoChipBackgroundBrush}">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -166,17 +161,17 @@
                                                     </Border.Style>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                                                   Foreground="#1565C0" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                                   Foreground="{DynamicResource InfoChipForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                         <TextBlock Text="{Binding FileName}" FontSize="{DynamicResource FS11}"
-                                                                   Foreground="#1565C0" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                                   Foreground="{DynamicResource InfoChipForegroundBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Border>
-                                                <Border Background="#7C4DFF" CornerRadius="16,16,4,16" Padding="14,10"
+                                                <Border Background="{DynamicResource PurpleBrush}" CornerRadius="16,16,4,16" Padding="14,10"
                                                         HorizontalAlignment="Right">
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Text}" Foreground="White" 
                                                                    FontSize="{DynamicResource FS13}" TextWrapping="Wrap"/>
-                                                        <TextBlock Text="{Binding TimeDisplay}" Foreground="#AAFFFFFF" 
+                                                        <TextBlock Text="{Binding TimeDisplay}" Foreground="White" Opacity="0.67"
                                                                    FontSize="10" HorizontalAlignment="Right" Margin="0,4,0,0"/>
                                                     </StackPanel>
                                                 </Border>
@@ -284,14 +279,14 @@
                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                       Foreground="#7C4DFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                       Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding AttachedFileName}" FontSize="{DynamicResource FS11}"
                                        Foreground="{DynamicResource ForegroundBrush}" MaxWidth="300" 
                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                             <Button Command="{Binding RemoveFileCommand}" Background="Transparent" 
                                     BorderThickness="0" Cursor="Hand" Margin="8,0,0,0" Width="20" Height="20">
                                 <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                           Foreground="#FF5252"/>
+                                           Foreground="{DynamicResource ErrorBrush}"/>
                             </Button>
                         </StackPanel>
                     </Border>
@@ -332,10 +327,7 @@
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="SendBorder" CornerRadius="8" Padding="6">
                                             <Border.Background>
-                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                    <GradientStop Color="#7C4DFF" Offset="0"/>
-                                                    <GradientStop Color="#448AFF" Offset="1"/>
-                                                </LinearGradientBrush>
+                                                <DynamicResource ResourceKey="BrandAiGradientBrush"/>
                                             </Border.Background>
                                             <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" 
                                                        FontSize="16" Foreground="White"

@@ -29,7 +29,7 @@ namespace Win11DesktopApp.Views
             OpBox.SelectedIndex = opIdx;
 
             var allLabel = TryL("FinFilterAll") ?? "All firms";
-            FirmBox.Items.Add(new ComboBoxItem { Content = allLabel, Tag = FinanceService.AllFirmsKey });
+            FirmBox.Items.Add(new ComboBoxItem { Content = allLabel, Tag = FinanceConstants.AllFirmsKey });
             int selectedIdx = 0;
             for (int i = 0; i < availableFirms.Count; i++)
             {
@@ -37,7 +37,7 @@ namespace Win11DesktopApp.Views
                 if (availableFirms[i] == firmName)
                     selectedIdx = i + 1;
             }
-            if (firmName == FinanceService.AllFirmsKey || string.IsNullOrEmpty(firmName))
+            if (firmName == FinanceConstants.AllFirmsKey || string.IsNullOrEmpty(firmName))
                 selectedIdx = 0;
             FirmBox.SelectedIndex = selectedIdx;
         }
@@ -59,7 +59,7 @@ namespace Win11DesktopApp.Views
             };
 
             var firmItem = FirmBox.SelectedItem as ComboBoxItem;
-            FieldFirmName = firmItem?.Tag?.ToString() ?? FinanceService.AllFirmsKey;
+            FieldFirmName = firmItem?.Tag?.ToString() ?? FinanceConstants.AllFirmsKey;
 
             DialogResult = true;
             Close();

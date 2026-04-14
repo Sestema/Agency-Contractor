@@ -31,10 +31,48 @@ namespace Win11DesktopApp.Services
                 : Path.Combine(folder, $"salary_{year:D4}_{month:D2}.db");
         }
 
+        public string ResolveMonthDbPath(int year, int month)
+        {
+            var folder = SalaryDbFolder;
+            if (string.IsNullOrWhiteSpace(folder))
+                return string.Empty;
+
+            Directory.CreateDirectory(folder);
+
+            var canonicalPath = GetMonthDbPath(year, month);
+            if (File.Exists(canonicalPath))
+                return canonicalPath;
+
+            var prefix = $"salary_{year:D4}_{month:D2}";
+            var candidates = Directory.GetFiles(folder, $"{prefix}*.db")
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (candidates.Count == 1)
+                return candidates[0];
+
+            if (candidates.Count > 1)
+            {
+                var details = string.Join("; ", candidates.Select(Path.GetFileName));
+                throw new InvalidOperationException(
+                    $"Multiple salary DB files found for {year:D4}-{month:D2}: {details}");
+            }
+
+            return canonicalPath;
+        }
+
         public bool MonthDbExists(int year, int month)
         {
-            var path = GetMonthDbPath(year, month);
-            return !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+            try
+            {
+                var path = ResolveMonthDbPath(year, month);
+                return !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+            }
+            catch (InvalidOperationException ex)
+            {
+                LoggingService.LogWarning("SalaryDbService.MonthDbExists", ex.Message);
+                return true;
+            }
         }
 
         public IEnumerable<(int year, int month, string path)> EnumerateMonthDatabases()
@@ -43,23 +81,38 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
                 yield break;
 
-            foreach (var path in Directory.GetFiles(folder, "salary_????_??.db").OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+            var seen = new HashSet<(int year, int month)>();
+            foreach (var path in Directory.GetFiles(folder, "salary_*_*.db").OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
             {
                 var fileName = Path.GetFileNameWithoutExtension(path);
                 var parts = fileName.Split('_');
-                if (parts.Length != 3)
+                if (parts.Length < 3)
                     continue;
 
                 if (!int.TryParse(parts[1], out var year) || !int.TryParse(parts[2], out var month))
                     continue;
 
-                yield return (year, month, path);
+                if (!seen.Add((year, month)))
+                    continue;
+
+                string resolvedPath;
+                try
+                {
+                    resolvedPath = ResolveMonthDbPath(year, month);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    LoggingService.LogWarning("SalaryDbService.EnumerateMonthDatabases", ex.Message);
+                    continue;
+                }
+
+                yield return (year, month, resolvedPath);
             }
         }
 
         public SqliteConnection OpenMonthConnection(int year, int month)
         {
-            var dbPath = GetMonthDbPath(year, month);
+            var dbPath = ResolveMonthDbPath(year, month);
             if (string.IsNullOrWhiteSpace(dbPath))
                 throw new InvalidOperationException("Salary SQLite path is not available.");
 
@@ -215,6 +268,192 @@ LIMIT 1;";
             return result;
         }
 
+        public Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>> GetSavedPaymentsForEmployees(
+            string firmName,
+            string beforeMonthKey,
+            IReadOnlyList<(string requestKey, string employeeFolder, string? employeeId)> requests)
+        {
+            var result = new Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(firmName) || requests.Count == 0)
+                return result;
+
+            var requestsByEmployeeId = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var requestsByFolder = new Dictionary<string, List<(string requestKey, bool hasEmployeeId)>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var request in requests)
+            {
+                result[request.requestKey] = new Dictionary<string, (decimal netSalary, bool paid)>(StringComparer.OrdinalIgnoreCase);
+
+                var normalizedFolder = NormalizeEmployeePath(request.employeeFolder);
+                if (!requestsByFolder.TryGetValue(normalizedFolder, out var folderRequests))
+                {
+                    folderRequests = new List<(string requestKey, bool hasEmployeeId)>();
+                    requestsByFolder[normalizedFolder] = folderRequests;
+                }
+
+                var hasEmployeeId = !string.IsNullOrWhiteSpace(request.employeeId);
+                folderRequests.Add((request.requestKey, hasEmployeeId));
+
+                if (!hasEmployeeId)
+                    continue;
+
+                var employeeId = request.employeeId ?? string.Empty;
+                if (!requestsByEmployeeId.TryGetValue(employeeId, out var employeeRequests))
+                {
+                    employeeRequests = new List<string>();
+                    requestsByEmployeeId[employeeId] = employeeRequests;
+                }
+
+                employeeRequests.Add(request.requestKey);
+            }
+
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                var monthKey = $"{monthDb.year:D4}-{monthDb.month:D2}";
+                if (string.Compare(monthKey, beforeMonthKey, StringComparison.Ordinal) >= 0)
+                    continue;
+
+                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT employee_id, employee_folder, saved_net_salary, status
+FROM salary_entries
+WHERE lower(firm_name) = lower(@firmName);";
+                command.Parameters.AddWithValue("@firmName", firmName);
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    var rowEmployeeId = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                    var rowEmployeeFolder = reader.IsDBNull(1) ? string.Empty : NormalizeEmployeePath(reader.GetString(1));
+                    var netSalary = reader.IsDBNull(2) ? 0m : ParseDecimal(reader.GetString(2));
+                    var status = reader.IsDBNull(3) ? string.Empty : reader.GetString(3);
+                    var matchedRequestKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    if (!string.IsNullOrWhiteSpace(rowEmployeeId)
+                        && requestsByEmployeeId.TryGetValue(rowEmployeeId, out var employeeMatches))
+                    {
+                        foreach (var requestKey in employeeMatches)
+                            matchedRequestKeys.Add(requestKey);
+                    }
+
+                    if (requestsByFolder.TryGetValue(rowEmployeeFolder, out var folderMatches))
+                    {
+                        foreach (var folderMatch in folderMatches)
+                        {
+                            if (string.IsNullOrWhiteSpace(rowEmployeeId) || !folderMatch.hasEmployeeId)
+                                matchedRequestKeys.Add(folderMatch.requestKey);
+                        }
+                    }
+
+                    foreach (var requestKey in matchedRequestKeys)
+                    {
+                        if (!result.TryGetValue(requestKey, out var requestResult))
+                            continue;
+
+                        requestResult.TryAdd(monthKey, (netSalary, string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase)));
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>> GetSavedPaymentsForAllRequests(
+            string beforeMonthKey,
+            IReadOnlyList<(string requestKey, string firmName, string employeeFolder, string? employeeId)> requests)
+        {
+            var result = new Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>>(StringComparer.OrdinalIgnoreCase);
+            if (requests.Count == 0)
+                return result;
+
+            var requestsByFirmAndEmployeeId = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var requestsByFirmAndFolder = new Dictionary<string, List<(string requestKey, bool hasEmployeeId)>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var request in requests)
+            {
+                result[request.requestKey] = new Dictionary<string, (decimal netSalary, bool paid)>(StringComparer.OrdinalIgnoreCase);
+
+                var normalizedFirmName = request.firmName ?? string.Empty;
+                var normalizedFolder = NormalizeEmployeePath(request.employeeFolder);
+                var folderKey = BuildRequestLookupKey(normalizedFirmName, normalizedFolder);
+                if (!requestsByFirmAndFolder.TryGetValue(folderKey, out var folderRequests))
+                {
+                    folderRequests = new List<(string requestKey, bool hasEmployeeId)>();
+                    requestsByFirmAndFolder[folderKey] = folderRequests;
+                }
+
+                var hasEmployeeId = !string.IsNullOrWhiteSpace(request.employeeId);
+                folderRequests.Add((request.requestKey, hasEmployeeId));
+
+                if (!hasEmployeeId)
+                    continue;
+
+                var employeeIdKey = BuildRequestLookupKey(normalizedFirmName, request.employeeId ?? string.Empty);
+                if (!requestsByFirmAndEmployeeId.TryGetValue(employeeIdKey, out var employeeRequests))
+                {
+                    employeeRequests = new List<string>();
+                    requestsByFirmAndEmployeeId[employeeIdKey] = employeeRequests;
+                }
+
+                employeeRequests.Add(request.requestKey);
+            }
+
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                var monthKey = $"{monthDb.year:D4}-{monthDb.month:D2}";
+                if (string.Compare(monthKey, beforeMonthKey, StringComparison.Ordinal) >= 0)
+                    continue;
+
+                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT firm_name, employee_id, employee_folder, saved_net_salary, status
+FROM salary_entries;";
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    var rowFirmName = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                    var rowEmployeeId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                    var rowEmployeeFolder = reader.IsDBNull(2) ? string.Empty : NormalizeEmployeePath(reader.GetString(2));
+                    var netSalary = reader.IsDBNull(3) ? 0m : ParseDecimal(reader.GetString(3));
+                    var status = reader.IsDBNull(4) ? string.Empty : reader.GetString(4);
+                    var matchedRequestKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    if (!string.IsNullOrWhiteSpace(rowEmployeeId))
+                    {
+                        var employeeIdKey = BuildRequestLookupKey(rowFirmName, rowEmployeeId);
+                        if (requestsByFirmAndEmployeeId.TryGetValue(employeeIdKey, out var employeeMatches))
+                        {
+                            foreach (var requestKey in employeeMatches)
+                                matchedRequestKeys.Add(requestKey);
+                        }
+                    }
+
+                    var folderKey = BuildRequestLookupKey(rowFirmName, rowEmployeeFolder);
+                    if (requestsByFirmAndFolder.TryGetValue(folderKey, out var folderMatches))
+                    {
+                        foreach (var folderMatch in folderMatches)
+                        {
+                            if (string.IsNullOrWhiteSpace(rowEmployeeId) || !folderMatch.hasEmployeeId)
+                                matchedRequestKeys.Add(folderMatch.requestKey);
+                        }
+                    }
+
+                    foreach (var requestKey in matchedRequestKeys)
+                    {
+                        if (!result.TryGetValue(requestKey, out var requestResult))
+                            continue;
+
+                        requestResult.TryAdd(monthKey, (netSalary, string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase)));
+                    }
+                }
+            }
+
+            return result;
+        }
+
         public void UpdateHourlyRateForward(
             string? employeeId,
             string employeeFolder,
@@ -250,6 +489,11 @@ WHERE lower(firm_name) = lower(@firmName)
                 command.Parameters.AddWithValue("@employeeFolder", normalizedEmployeeFolder);
                 command.ExecuteNonQuery();
             }
+        }
+
+        private static string BuildRequestLookupKey(string firmName, string employeeKey)
+        {
+            return $"{firmName ?? string.Empty}\n{employeeKey ?? string.Empty}";
         }
 
         public void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)

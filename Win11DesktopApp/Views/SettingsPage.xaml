@@ -320,7 +320,7 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <UniformGrid Columns="4" HorizontalAlignment="Left" MaxWidth="700">
+                    <UniformGrid Columns="3" HorizontalAlignment="Left" MaxWidth="700">
                         <!-- Light theme preview -->
                         <Button Command="{Binding ChangeThemeCommand}" CommandParameter="Light"
                                 Margin="0,0,10,0" Cursor="Hand">
@@ -542,7 +542,7 @@
 
                         <!-- Custom (Warm) theme preview -->
                         <Button Command="{Binding ChangeThemeCommand}" CommandParameter="Custom"
-                                Margin="0,0,0,0" Cursor="Hand">
+                                Margin="0,0,10,0" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="OuterBd" CornerRadius="10" BorderThickness="2.5"
@@ -583,6 +583,161 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <DataTrigger Binding="{Binding CurrentTheme}" Value="Custom">
+                                            <Setter TargetName="OuterBd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.03" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.03" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <!-- Glass (Light) theme preview -->
+                        <Button Command="{Binding ChangeThemeCommand}" CommandParameter="Glass"
+                                Margin="0,10,10,0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="OuterBd" CornerRadius="10" BorderThickness="2.5"
+                                            BorderBrush="Transparent" Padding="3"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                        </Border.RenderTransform>
+                                        <Border x:Name="InnerBd" CornerRadius="8" Width="136" Height="90" ClipToBounds="True">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#C8E0F0FF" Offset="0"/>
+                                                    <GradientStop Color="#C8F0E8FF" Offset="0.5"/>
+                                                    <GradientStop Color="#C8FFE8F0" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="28"/>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="22"/>
+                                                </Grid.RowDefinitions>
+                                                <Border Grid.Row="0" Background="#99FFFFFF" BorderBrush="#33000000" BorderThickness="0,0,0,1">
+                                                    <StackPanel Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center">
+                                                        <Ellipse Width="6" Height="6" Fill="#FF605C" Margin="0,0,3,0"/>
+                                                        <Ellipse Width="6" Height="6" Fill="#FFBD44" Margin="0,0,3,0"/>
+                                                        <Ellipse Width="6" Height="6" Fill="#00CA4E"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel Grid.Row="1" Margin="8,5,8,0">
+                                                    <Border Background="#66FFFFFF" CornerRadius="2" Height="4" Width="60" HorizontalAlignment="Left" Margin="0,0,0,3"/>
+                                                    <Border Background="#66FFFFFF" CornerRadius="2" Height="4" Width="44" HorizontalAlignment="Left" Margin="0,0,0,3"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                        <Border Background="#99FFFFFF" CornerRadius="3" Width="36" Height="18" BorderBrush="#33000000" BorderThickness="1" Margin="0,0,4,0"/>
+                                                        <Border Background="#99FFFFFF" CornerRadius="3" Width="36" Height="18" BorderBrush="#33000000" BorderThickness="1"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <Border Grid.Row="2" Background="#007AFF" CornerRadius="0,0,8,8">
+                                                    <TextBlock Text="{DynamicResource ThemeGlass}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentTheme}" Value="Glass">
+                                            <Setter TargetName="OuterBd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.03" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.03" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- Glass Dark theme preview -->
+                        <Button Command="{Binding ChangeThemeCommand}" CommandParameter="GlassDark"
+                                Margin="0,10,0,0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="OuterBd" CornerRadius="10" BorderThickness="2.5"
+                                            BorderBrush="Transparent" Padding="3"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                        </Border.RenderTransform>
+                                        <Border x:Name="InnerBd" CornerRadius="8" Width="136" Height="90" ClipToBounds="True">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#CC1A1A2E" Offset="0"/>
+                                                    <GradientStop Color="#CC2A1A3E" Offset="0.5"/>
+                                                    <GradientStop Color="#CC1A2A3E" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="28"/>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="22"/>
+                                                </Grid.RowDefinitions>
+                                                <Border Grid.Row="0" Background="#993A3A3C" BorderBrush="#26FFFFFF" BorderThickness="0,0,0,1">
+                                                    <StackPanel Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center">
+                                                        <Ellipse Width="6" Height="6" Fill="#FF605C" Margin="0,0,3,0"/>
+                                                        <Ellipse Width="6" Height="6" Fill="#FFBD44" Margin="0,0,3,0"/>
+                                                        <Ellipse Width="6" Height="6" Fill="#00CA4E"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel Grid.Row="1" Margin="8,5,8,0">
+                                                    <Border Background="#4DFFFFFF" CornerRadius="2" Height="4" Width="60" HorizontalAlignment="Left" Margin="0,0,0,3"/>
+                                                    <Border Background="#4DFFFFFF" CornerRadius="2" Height="4" Width="44" HorizontalAlignment="Left" Margin="0,0,0,3"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                        <Border Background="#663A3A3C" CornerRadius="3" Width="36" Height="18" BorderBrush="#26FFFFFF" BorderThickness="1" Margin="0,0,4,0"/>
+                                                        <Border Background="#663A3A3C" CornerRadius="3" Width="36" Height="18" BorderBrush="#26FFFFFF" BorderThickness="1"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <Border Grid.Row="2" Background="#0A84FF" CornerRadius="0,0,8,8">
+                                                    <TextBlock Text="{DynamicResource ThemeGlassDark}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentTheme}" Value="GlassDark">
                                             <Setter TargetName="OuterBd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                         </DataTrigger>
                                         <Trigger Property="IsMouseOver" Value="True">

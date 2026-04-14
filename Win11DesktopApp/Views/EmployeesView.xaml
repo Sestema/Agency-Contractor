@@ -15,10 +15,10 @@
         <local:StatusColorConverter x:Key="StatusColor"/>
         <local:StatusBackgroundConverter x:Key="StatusBg"/>
         <Style x:Key="StatusMessageText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#666"/>
+            <Setter Property="Foreground" Value="{DynamicResource StatusMessageBrush}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsError}" Value="True">
-                    <Setter Property="Foreground" Value="#c62828"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsLoading}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
@@ -54,20 +54,20 @@
 
         <Style x:Key="DarkAwareDeleteBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="#EF5350"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerOutlineBrush}"/>
             <Setter Property="MinWidth" Value="34"/>
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{DynamicResource CardHoverBrush}"
-                                BorderBrush="#EF5350" BorderThickness="1"
+                                BorderBrush="{DynamicResource DangerOutlineBrush}" BorderThickness="1"
                                 CornerRadius="9" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -95,13 +95,13 @@
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="Margin" Value="0,0,4,4"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#E8F5E9"/>
-            <Setter Property="BorderBrush" Value="#C8E6C9"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessChipBorderBrush}"/>
         </Style>
 
         <Style x:Key="EmployeeDocChipText" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
-            <Setter Property="Foreground" Value="#2E7D32"/>
+            <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 

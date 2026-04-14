@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -324,6 +325,96 @@ namespace Win11DesktopApp
                 }
             }
 
+            var salaryHistoryMigration = FinanceService.EnsureSalaryHistoryMigratedToLocalDb();
+            if (salaryHistoryMigration.WasMigrationAttempted)
+            {
+                if (salaryHistoryMigration.IsSuccessful)
+                {
+                    var successMessage = $"Salary history was migrated to SQLite. Folders: {salaryHistoryMigration.FoldersScanned}. Records: {salaryHistoryMigration.RecordsImported}.";
+                    LoggingService.LogInfo("App.SalaryHistoryMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = $"Salary history migration to SQLite failed. The program will keep using JSON fallback. Details: {salaryHistoryMigration.Message}";
+                    LoggingService.LogWarning("App.SalaryHistoryMigration", failedMessage);
+                }
+            }
+
+            var advancesMigration = FinanceService.EnsureAdvancesMigratedToLocalDb();
+            if (advancesMigration.WasMigrationAttempted)
+            {
+                if (advancesMigration.IsSuccessful)
+                {
+                    var successMessage = $"Advances were migrated to app SQLite. Records: {advancesMigration.RecordsImported}.";
+                    LoggingService.LogInfo("App.AdvancesMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = $"Advances migration to app SQLite failed. The program will keep using legacy fallback. Details: {advancesMigration.Message}";
+                    LoggingService.LogWarning("App.AdvancesMigration", failedMessage);
+                }
+            }
+
+            var customFieldsMigration = FinanceService.EnsureCustomFieldsMigratedToLocalDb();
+            if (customFieldsMigration.WasMigrationAttempted)
+            {
+                if (customFieldsMigration.IsSuccessful)
+                {
+                    var successMessage = $"Custom fields were migrated to app SQLite. Records: {customFieldsMigration.RecordsImported}.";
+                    LoggingService.LogInfo("App.CustomFieldsMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = $"Custom fields migration to app SQLite failed. The program will keep using legacy fallback. Details: {customFieldsMigration.Message}";
+                    LoggingService.LogWarning("App.CustomFieldsMigration", failedMessage);
+                }
+            }
+
+            var accommodationsMigration = FinanceService.EnsureAccommodationsMigratedToLocalDb();
+            if (accommodationsMigration.WasMigrationAttempted)
+            {
+                if (accommodationsMigration.IsSuccessful)
+                {
+                    var successMessage = $"Accommodations were migrated to app SQLite. Records: {accommodationsMigration.RecordsImported}.";
+                    LoggingService.LogInfo("App.AccommodationsMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = $"Accommodations migration to app SQLite failed. The program will keep using legacy fallback. Details: {accommodationsMigration.Message}";
+                    LoggingService.LogWarning("App.AccommodationsMigration", failedMessage);
+                }
+            }
+
+            var reportsMigration = FinanceService.EnsureReportsMigratedToLocalDb();
+            if (reportsMigration.WasMigrationAttempted)
+            {
+                if (reportsMigration.IsSuccessful)
+                {
+                    var successMessage = $"Reports were migrated to app SQLite. Records: {reportsMigration.RecordsImported}.";
+                    LoggingService.LogInfo("App.ReportsMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = $"Reports migration to app SQLite failed. The program will keep using legacy fallback. Details: {reportsMigration.Message}";
+                    LoggingService.LogWarning("App.ReportsMigration", failedMessage);
+                }
+            }
+
+            var firmExpensesMigration = FinanceService.EnsureFirmExpensesMigratedToSalaryDb();
+            if (firmExpensesMigration.WasMigrationAttempted)
+            {
+                if (firmExpensesMigration.IsSuccessful)
+                {
+                    var successMessage = $"Firm expenses were migrated to salary month SQLite. Expenses: {firmExpensesMigration.ExpensesImported}.";
+                    LoggingService.LogInfo("App.FirmExpensesMigration", successMessage);
+                }
+                else
+                {
+                    var failedMessage = $"Firm expenses migration to salary month SQLite failed. The program will keep using legacy fallback. Details: {firmExpensesMigration.Message}";
+                    LoggingService.LogWarning("App.FirmExpensesMigration", failedMessage);
+                }
+            }
+
             try
             {
                 if (LocalDbService != null)
@@ -342,6 +433,13 @@ namespace Win11DesktopApp
                 {
                     LoggingService.LogInfo("App.MigratedBackupCleanup",
                         $"Deleted history.json.migrated backups after confirmed SQLite migration. Files: {deletedEmployeeHistoryBackups}.");
+                }
+
+                var deletedSalaryHistoryBackups = FinanceService.CleanupMigratedSalaryHistoryBackups();
+                if (deletedSalaryHistoryBackups > 0)
+                {
+                    LoggingService.LogInfo("App.MigratedBackupCleanup",
+                        $"Deleted salary_history.json.migrated backups after confirmed SQLite migration. Files: {deletedSalaryHistoryBackups}.");
                 }
             }
             catch (Exception ex)
@@ -580,6 +678,40 @@ namespace Win11DesktopApp
 
             _ = Task.Run(() => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies));
             _ = Task.Run(() => RecentlyDeletedService.PurgeExpired());
+            _ = Task.Run(PrewarmSalaryPath);
+        }
+
+        private static void PrewarmSalaryPath()
+        {
+            try
+            {
+                var sw = Stopwatch.StartNew();
+
+                LocalDbService?.IsSalaryHistoryMigrationCompleted();
+
+                if (SalaryDbService != null)
+                {
+                    var monthDbs = SalaryDbService.EnumerateMonthDatabases()
+                        .OrderByDescending(monthDb => monthDb.year)
+                        .ThenByDescending(monthDb => monthDb.month)
+                        .Take(12)
+                        .ToList();
+
+                    foreach (var monthDb in monthDbs)
+                    {
+                        using var connection = SalaryDbService.OpenMonthConnection(monthDb.year, monthDb.month);
+                        using var command = connection.CreateCommand();
+                        command.CommandText = "SELECT COUNT(*) FROM salary_entries;";
+                        command.ExecuteScalar();
+                    }
+                }
+
+                LoggingService.LogInfo("App.SalaryPrewarm", $"Completed in {sw.ElapsedMilliseconds} ms.");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("App.SalaryPrewarm", ex.Message);
+            }
         }
 
         private static async Task StartHeartbeatLoopAsync(CancellationToken ct)

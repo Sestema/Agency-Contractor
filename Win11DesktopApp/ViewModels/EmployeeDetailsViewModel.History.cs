@@ -207,6 +207,7 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldVisaExp"), oldData.VisaExpiry, newData.VisaExpiry);
             Check(Res("HistFieldInsNum"), oldData.InsuranceNumber, newData.InsuranceNumber);
             Check(Res("HistFieldInsCompany"), oldData.InsuranceCompanyShort, newData.InsuranceCompanyShort);
+            Check(Res("HistFieldInsCompanyFull"), oldData.InsuranceCompanyFull, newData.InsuranceCompanyFull);
             Check(Res("HistFieldInsExp"), oldData.InsuranceExpiry, newData.InsuranceExpiry);
             Check(Res("HistFieldPhone"), oldData.Phone, newData.Phone);
             Check(Res("HistFieldEmail"), oldData.Email, newData.Email);

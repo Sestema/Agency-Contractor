@@ -26,15 +26,9 @@
                 </Button>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border CornerRadius="10" Width="44" Height="44">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#11998E" Offset="0"/>
-                                <GradientStop Color="#38EF7D" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
-                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Style="{StaticResource PageHeaderIconBadge}"
+                            Background="{DynamicResource BrandSuccessGradientBrush}">
+                        <TextBlock Text="&#xE80A;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
                     <TextBlock Text="{DynamicResource TablesMenuTitle}" FontSize="{DynamicResource FS26}" FontWeight="SemiBold"
                                Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="14,0,0,0"/>
@@ -46,151 +40,39 @@
                          MaxWidth="700" MaxHeight="350">
 
                 <!-- Advance Payment Card -->
-                <Border Margin="12" CornerRadius="18" Padding="28,32"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                        Cursor="Hand" RenderTransformOrigin="0.5,0.5">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.12"/>
-                    </Border.Effect>
-                    <Border.RenderTransform>
-                        <ScaleTransform ScaleX="1" ScaleY="1"/>
-                    </Border.RenderTransform>
+                <Border Style="{StaticResource HoverLiftCard}" Margin="12" CornerRadius="18" Padding="28,32">
                     <Border.InputBindings>
                         <MouseBinding MouseAction="LeftClick" Command="{Binding OpenAdvanceCommand}"/>
                     </Border.InputBindings>
-                    <Border.Triggers>
-                        <EventTrigger RoutedEvent="MouseEnter">
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                     To="1.05" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                     To="1.05" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                     To="36" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                     To="10" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                     To="0.22" Duration="0:0:0.2"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                        <EventTrigger RoutedEvent="MouseLeave">
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                     To="1.0" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                     To="1.0" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                     To="20" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                     To="4" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                     To="0.12" Duration="0:0:0.2"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                    </Border.Triggers>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Width="64" Height="64" CornerRadius="16" HorizontalAlignment="Center" Margin="0,0,0,16">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#FF9800" Offset="0"/>
-                                    <GradientStop Color="#F44336" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
+                        <Border Width="64" Height="64" CornerRadius="16" HorizontalAlignment="Center" Margin="0,0,0,16"
+                                Background="{DynamicResource BrandDangerGradientBrush}">
                             <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS28}"
                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="{DynamicResource TablesAdvance}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"
                                    TextWrapping="Wrap" TextAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource TablesAdvanceDesc}" FontSize="{DynamicResource FS12}" Foreground="#999"
+                        <TextBlock Text="{DynamicResource TablesAdvanceDesc}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource MutedDescriptionBrush}"
                                    HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Payment Signatures Card -->
-                <Border Margin="12" CornerRadius="18" Padding="28,32"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                        Cursor="Hand" RenderTransformOrigin="0.5,0.5">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.12"/>
-                    </Border.Effect>
-                    <Border.RenderTransform>
-                        <ScaleTransform ScaleX="1" ScaleY="1"/>
-                    </Border.RenderTransform>
+                <Border Style="{StaticResource HoverLiftCard}" Margin="12" CornerRadius="18" Padding="28,32">
                     <Border.InputBindings>
                         <MouseBinding MouseAction="LeftClick" Command="{Binding OpenPaymentSignCommand}"/>
                     </Border.InputBindings>
-                    <Border.Triggers>
-                        <EventTrigger RoutedEvent="MouseEnter">
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                     To="1.05" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                     To="1.05" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                     To="36" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                     To="10" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                     To="0.22" Duration="0:0:0.2"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                        <EventTrigger RoutedEvent="MouseLeave">
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                     To="1.0" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                     To="1.0" Duration="0:0:0.2">
-                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                     To="20" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                     To="4" Duration="0:0:0.2"/>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                     To="0.12" Duration="0:0:0.2"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                    </Border.Triggers>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Width="64" Height="64" CornerRadius="16" HorizontalAlignment="Center" Margin="0,0,0,16">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#2196F3" Offset="0"/>
-                                    <GradientStop Color="#00BCD4" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
+                        <Border Width="64" Height="64" CornerRadius="16" HorizontalAlignment="Center" Margin="0,0,0,16"
+                                Background="{DynamicResource BrandInfoGradientBrush}">
                             <TextBlock Text="&#xE8D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS28}"
                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="{DynamicResource TablesPayment}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"
                                    TextWrapping="Wrap" TextAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource TablesPaymentDesc}" FontSize="{DynamicResource FS12}" Foreground="#999"
+                        <TextBlock Text="{DynamicResource TablesPaymentDesc}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource MutedDescriptionBrush}"
                                    HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
                     </StackPanel>
                 </Border>

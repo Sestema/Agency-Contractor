@@ -424,6 +424,8 @@
     <sys:String x:Key="ThemeDarkWord">Tmavý</sys:String>
     <sys:String x:Key="ThemeDark2">Noční</sys:String>
     <sys:String x:Key="ThemeCustom">Teplý</sys:String>
+    <sys:String x:Key="ThemeGlass">Sklo</sys:String>
+    <sys:String x:Key="ThemeGlassDark">Tmavé sklo</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Firmy</sys:String>
@@ -644,6 +646,8 @@
     <sys:String x:Key="DetFieldWorkPermitName">Název pracovního povolení</sys:String>
     <sys:String x:Key="DetSecInsurance">Pojištění</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Pojišťovna</sys:String>
+    <sys:String x:Key="DetFieldInsCompanyShort">Pojišťovna (zkratka)</sys:String>
+    <sys:String x:Key="DetFieldInsCompanyFull">Pojišťovna (plný název)</sys:String>
     <sys:String x:Key="DetFieldInsNum">Číslo pojištění</sys:String>
     <sys:String x:Key="DetSecAddrLocal">Adresa (v zemi)</sys:String>
     <sys:String x:Key="DetFieldStreet">Ulice</sys:String>
@@ -800,7 +804,9 @@
     <sys:String x:Key="WizCitizenship">Státní občanství</sys:String>
     <sys:String x:Key="WizIssuingCountry">Země vydání</sys:String>
     <sys:String x:Key="WizPassportExpiry">Datum expirace dokumentu</sys:String>
-    <sys:String x:Key="WizInsCompany">Pojišťovna (zkratka)</sys:String>
+    <sys:String x:Key="WizInsCompany">Pojišťovna</sys:String>
+    <sys:String x:Key="WizInsCompanyShort">Pojišťovna (zkratka)</sys:String>
+    <sys:String x:Key="WizInsCompanyFull">Pojišťovna (plný název)</sys:String>
     <sys:String x:Key="WizInsNumber">Číslo pojištění</sys:String>
     <sys:String x:Key="WizInsExpiry">Datum expirace pojištění</sys:String>
     <sys:String x:Key="WizVisaNum">Číslo víza</sys:String>
@@ -1260,6 +1266,7 @@
 
     <!-- Tag Catalog Descriptions – Employee Insurance -->
     <sys:String x:Key="TagDescEmpInsCompany">Pojišťovna</sys:String>
+    <sys:String x:Key="TagDescEmpInsCompanyFull">Pojišťovna - plný název</sys:String>
     <sys:String x:Key="TagDescEmpInsNumber">Číslo pojištění</sys:String>
     <sys:String x:Key="TagDescEmpInsExpiry">Datum expirace pojištění</sys:String>
 
@@ -1744,6 +1751,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Typ víza</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Pojišťovna</sys:String>
+    <sys:String x:Key="HistFieldInsCompanyFull">Pojišťovna - plný název</sys:String>
     <sys:String x:Key="HistFieldPassportCity">Město narození</sys:String>
     <sys:String x:Key="HistFieldPassportCountry">Země narození</sys:String>
     <sys:String x:Key="HistFieldCitizenship">Státní občanství</sys:String>

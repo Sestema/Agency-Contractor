@@ -43,16 +43,19 @@ Return ONLY this JSON (FirstName=given name, LastName=surname):
 
                 "insurance" => @"Read this insurance card/document photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
-This is a Czech health insurance card (průkaz pojištěnce). Extract these fields:
+This is a Czech health insurance card (prukaz pojistence). Extract these fields:
 - FirstName: holder's first/given name if it is clearly printed on the card. If not clearly visible, leave empty.
 - LastName: holder's last name/surname if it is clearly printed on the card. If not clearly visible, leave empty.
 - BirthDate: holder's birth date in DD.MM.YYYY ONLY if it is explicitly printed on the card as a date. If it is NOT explicitly printed, leave empty. Do NOT derive it from the insurance number.
-- InsuranceCompanyShort: short name of the insurance company (e.g. VZP CR, ZPMV, OZP, CPZP)
+- InsuranceCompanyCode: 3-digit insurance company code if visible (111, 201, 205, 207, 209, 211, 213)
+- InsuranceCompanyShort: short insurance company name if visible (e.g. VZP, ZPMV, OZP, CPZP, RBP)
+- InsuranceCompanyFull: full insurance company name if visible
+- InsuranceCompanyRaw: the exact insurance company text as seen on the card if code/short/full are unclear
 - InsuranceNumber: the field labeled ""Číslo pojištěnce"" (personal insurance number, usually 10 digits like birth number). This is NOT ""Číslo průkazu"" (card number which is much longer). Look specifically for ""Číslo pojištěnce"" or ""Cislo pojistence"".
 - InsuranceExpiry: the ""Do:"" date (expiry) in DD.MM.YYYY format
 
 Return ONLY valid JSON, no other text:
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""InsuranceCompanyShort"":"""",""InsuranceNumber"":"""",""InsuranceExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""InsuranceCompanyCode"":"""",""InsuranceCompanyShort"":"""",""InsuranceCompanyFull"":"""",""InsuranceCompanyRaw"":"""",""InsuranceNumber"":"""",""InsuranceExpiry"":""""}",
 
                 "visa" => @"Read this Czech visa/residence permit document photo. CRITICAL: ALL output in Latin alphabet ONLY, never Cyrillic.
 

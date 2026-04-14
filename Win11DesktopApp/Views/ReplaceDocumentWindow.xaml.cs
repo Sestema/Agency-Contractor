@@ -143,6 +143,7 @@ namespace Win11DesktopApp.Views
                 "insurance" => new()
                 {
                     ("InsuranceCompanyShort", Res("DetFieldInsCompany"), _data.InsuranceCompanyShort),
+                    ("InsuranceCompanyFull", Res("DetFieldInsCompanyFull"), _data.InsuranceCompanyFull),
                     ("InsuranceNumber", Res("DetFieldInsNum"), _data.InsuranceNumber),
                     ("InsuranceExpiry", Res("DetFieldExpiry"), _data.InsuranceExpiry),
                 },
@@ -338,6 +339,31 @@ namespace Win11DesktopApp.Views
                 int filled = 0;
                 foreach (var (key, value) in parsed)
                 {
+                    if (_docType == "insurance" && (key == "InsuranceCompanyCode" || key == "InsuranceCompanyShort" || key == "InsuranceCompanyFull" || key == "InsuranceCompanyRaw"))
+                    {
+                        var option = InsuranceCompanyNormalizer.Normalize(
+                            parsed.TryGetValue("InsuranceCompanyRaw", out var rawValue) ? rawValue : value,
+                            parsed.TryGetValue("InsuranceCompanyCode", out var codeValue) ? codeValue : null,
+                            parsed.TryGetValue("InsuranceCompanyShort", out var shortValue) ? shortValue : null,
+                            parsed.TryGetValue("InsuranceCompanyFull", out var fullValue) ? fullValue : null);
+
+                        if (option != null)
+                        {
+                            if (_fields.TryGetValue("InsuranceCompanyShort", out var shortField))
+                            {
+                                shortField.newBox.Text = option.ShortName;
+                                filled++;
+                            }
+                            if (_fields.TryGetValue("InsuranceCompanyFull", out var fullField))
+                            {
+                                fullField.newBox.Text = option.FullName;
+                                filled++;
+                            }
+                        }
+
+                        continue;
+                    }
+
                     if (_fields.TryGetValue(key, out var field))
                     {
                         field.newBox.Text = value;

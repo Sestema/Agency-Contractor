@@ -353,6 +353,8 @@
     <sys:String x:Key="ThemeDarkWord">Тёмная</sys:String>
     <sys:String x:Key="ThemeDark2">Ночная</sys:String>
     <sys:String x:Key="ThemeCustom">Тёплая</sys:String>
+    <sys:String x:Key="ThemeGlass">Стекло</sys:String>
+    <sys:String x:Key="ThemeGlassDark">Тёмн. стекло</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Фирмы</sys:String>
@@ -627,6 +629,8 @@
     <sys:String x:Key="DetFieldWorkPermitName">Название разрешения на работу</sys:String>
     <sys:String x:Key="DetSecInsurance">Страховка</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Страховая компания</sys:String>
+    <sys:String x:Key="DetFieldInsCompanyShort">Страховая компания (сокращенно)</sys:String>
+    <sys:String x:Key="DetFieldInsCompanyFull">Страховая компания (полное название)</sys:String>
     <sys:String x:Key="DetFieldInsNum">Номер страховки</sys:String>
     <sys:String x:Key="DetSecAddrLocal">Адрес (в стране)</sys:String>
     <sys:String x:Key="DetFieldStreet">Улица</sys:String>
@@ -783,7 +787,9 @@
     <sys:String x:Key="WizCitizenship">Гражданство</sys:String>
     <sys:String x:Key="WizIssuingCountry">Страна выдачи</sys:String>
     <sys:String x:Key="WizPassportExpiry">Дата окончания действия документа</sys:String>
-    <sys:String x:Key="WizInsCompany">Страховая компания (сокращенно)</sys:String>
+    <sys:String x:Key="WizInsCompany">Страховая компания</sys:String>
+    <sys:String x:Key="WizInsCompanyShort">Страховая компания (сокращенно)</sys:String>
+    <sys:String x:Key="WizInsCompanyFull">Страховая компания (полное название)</sys:String>
     <sys:String x:Key="WizInsNumber">Номер страховки</sys:String>
     <sys:String x:Key="WizInsExpiry">Дата окончания страховки</sys:String>
     <sys:String x:Key="WizVisaNum">Номер визы</sys:String>
@@ -1243,6 +1249,7 @@
 
     <!-- Tag Catalog Descriptions – Employee Insurance -->
     <sys:String x:Key="TagDescEmpInsCompany">Страховая компания</sys:String>
+    <sys:String x:Key="TagDescEmpInsCompanyFull">Страховая компания - полное название</sys:String>
     <sys:String x:Key="TagDescEmpInsNumber">Номер страховки</sys:String>
     <sys:String x:Key="TagDescEmpInsExpiry">Дата окончания страховки</sys:String>
 
@@ -1727,6 +1734,7 @@
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
     <sys:String x:Key="HistFieldVisaType">Тип визы</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Страховая компания</sys:String>
+    <sys:String x:Key="HistFieldInsCompanyFull">Страховая компания - полное название</sys:String>
     <sys:String x:Key="HistFieldPassportCity">Город рождения</sys:String>
     <sys:String x:Key="HistFieldPassportCountry">Страна рождения</sys:String>
     <sys:String x:Key="HistFieldCitizenship">Гражданство</sys:String>

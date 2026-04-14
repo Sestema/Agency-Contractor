@@ -62,7 +62,15 @@
                         </Border>
                     </StackPanel>
                     <TextBlock Text="{DynamicResource WizInsCompany}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.InsuranceCompanyShort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <ComboBox Style="{StaticResource WizCombo}"
+                              ItemsSource="{Binding InsuranceCompanies}"
+                              SelectedItem="{Binding SelectedInsuranceCompany}"
+                              DisplayMemberPath="DisplayName"
+                              IsEditable="False"/>
+                    <TextBlock Text="{DynamicResource WizInsCompanyShort}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.InsuranceCompanyShort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}" IsReadOnly="True"/>
+                    <TextBlock Text="{DynamicResource WizInsCompanyFull}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding InsuranceCompanyFullDisplay, Mode=OneWay}" Style="{StaticResource WizInput}" IsReadOnly="True"/>
                     <TextBlock Text="{DynamicResource WizInsNumber}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.InsuranceNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizInsExpiry}" Style="{StaticResource WizLabel}"/>

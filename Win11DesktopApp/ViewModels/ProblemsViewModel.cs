@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
@@ -15,11 +17,15 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class ProblemsViewModel : ViewModelBase
+    public class ProblemsViewModel : ViewModelBase, ICleanable
     {
+        private const int LoadProblemsDebounceMs = 150;
         private readonly EmployeeService _employeeService;
         private readonly Action _onProbDetailsClose;
         private readonly Action _onProbDetailsChanged;
+        private int _loadProblemsVersion;
+        private CancellationTokenSource? _loadProblemsDebounceCts;
+        private CancellationTokenSource? _loadProblemsCts;
 
         public ICommand GoBackCommand { get; }
         public ICommand OpenEmployeeCommand { get; }
@@ -299,90 +305,177 @@ namespace Win11DesktopApp.ViewModels
 
         private void LoadProblems()
         {
+            var debounceCts = new CancellationTokenSource();
+            var previousDebounce = Interlocked.Exchange(ref _loadProblemsDebounceCts, debounceCts);
+            previousDebounce?.Cancel();
+            previousDebounce?.Dispose();
+            _ = DebounceLoadProblemsAsync(debounceCts);
+        }
+
+        private async Task DebounceLoadProblemsAsync(CancellationTokenSource debounceCts)
+        {
+            try
+            {
+                await Task.Delay(LoadProblemsDebounceMs, debounceCts.Token);
+                if (!ReferenceEquals(Interlocked.CompareExchange(ref _loadProblemsDebounceCts, null, debounceCts), debounceCts))
+                    return;
+
+                var loadCts = new CancellationTokenSource();
+                var previousLoad = Interlocked.Exchange(ref _loadProblemsCts, loadCts);
+                previousLoad?.Cancel();
+                previousLoad?.Dispose();
+
+                var version = Interlocked.Increment(ref _loadProblemsVersion);
+                await LoadProblemsAsync(version, loadCts);
+            }
+            catch (OperationCanceledException)
+            {
+                // A newer debounce request superseded this one.
+            }
+            finally
+            {
+                if (ReferenceEquals(_loadProblemsDebounceCts, debounceCts))
+                    _loadProblemsDebounceCts = null;
+
+                debounceCts.Dispose();
+            }
+        }
+
+        private async Task LoadProblemsAsync(int version, CancellationTokenSource loadCts)
+        {
+            var token = loadCts.Token;
             try
             {
                 var cs = App.CompanyService;
                 var allCompanies = cs?.Companies;
-                if (allCompanies == null) return;
-                var activeProblems = new List<DocumentExpiryInfo>();
-                var ignoredProblems = new List<DocumentExpiryInfo>();
+                if (allCompanies == null || token.IsCancellationRequested) return;
 
-                foreach (var company in allCompanies.Where(c => cs!.IsCompanyVisible(c)))
+                var visibleCompanies = allCompanies.Where(c => cs!.IsCompanyVisible(c)).ToList();
+                var snapshot = await Task.Run(() =>
                 {
-                    try
-                    {
-                        var employees = _employeeService.GetEmployeesForFirm(company.Name);
-                        foreach (var emp in employees)
-                        {
-                            CollectProblem(activeProblems, ignoredProblems, emp, DocKeyPassport, emp.PassportExpiry);
-                            if (emp.EmployeeType != "eu_citizen")
-                                CollectProblem(activeProblems, ignoredProblems, emp, DocKeyVisa, emp.VisaExpiry);
-                            CollectProblem(activeProblems, ignoredProblems, emp, DocKeyInsurance, emp.InsuranceExpiry);
-                            if (emp.EmployeeType == "work_permit")
-                                CollectProblem(activeProblems, ignoredProblems, emp, DocKeyWorkPermit, emp.WorkPermitExpiry);
+                    token.ThrowIfCancellationRequested();
+                    var activeProblems = new List<DocumentExpiryInfo>();
+                    var ignoredProblems = new List<DocumentExpiryInfo>();
 
-                            try
+                    foreach (var company in visibleCompanies)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        try
+                        {
+                            var employees = _employeeService.GetEmployeesForFirm(company.Name);
+                            foreach (var emp in employees)
                             {
-                                var empData = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
-                                if (empData?.CustomDocuments != null)
+                                token.ThrowIfCancellationRequested();
+
+                                EmployeeData? employeeData = null;
+                                try
                                 {
-                                    foreach (var cd in empData.CustomDocuments)
+                                    employeeData = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LoggingService.LogError("ProblemsViewModel.LoadProblems.EmployeeData", ex);
+                                }
+
+                                var ignoredDocuments = employeeData?.IgnoredDocuments;
+                                var needsPassport = IsProblematic(emp.PassportExpiry);
+                                var needsVisa = emp.EmployeeType != "eu_citizen" && IsProblematic(emp.VisaExpiry);
+                                var needsInsurance = IsProblematic(emp.InsuranceExpiry);
+                                var needsWorkPermit = emp.EmployeeType == "work_permit" && IsProblematic(emp.WorkPermitExpiry);
+
+                                if (needsPassport)
+                                    CollectProblem(activeProblems, ignoredProblems, emp, DocKeyPassport, emp.PassportExpiry, ignoredDocuments);
+                                if (needsVisa)
+                                    CollectProblem(activeProblems, ignoredProblems, emp, DocKeyVisa, emp.VisaExpiry, ignoredDocuments);
+                                if (needsInsurance)
+                                    CollectProblem(activeProblems, ignoredProblems, emp, DocKeyInsurance, emp.InsuranceExpiry, ignoredDocuments);
+                                if (needsWorkPermit)
+                                    CollectProblem(activeProblems, ignoredProblems, emp, DocKeyWorkPermit, emp.WorkPermitExpiry, ignoredDocuments);
+
+                                if (employeeData?.CustomDocuments != null)
+                                {
+                                    foreach (var cd in employeeData.CustomDocuments)
                                     {
+                                        token.ThrowIfCancellationRequested();
                                         if (!cd.IsHidden && !string.IsNullOrWhiteSpace(cd.ExpiryDate))
-                                            CollectProblem(activeProblems, ignoredProblems, emp, cd.Name, cd.ExpiryDate);
+                                            CollectProblem(activeProblems, ignoredProblems, emp, cd.Name, cd.ExpiryDate, ignoredDocuments);
                                     }
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                LoggingService.LogError("ProblemsViewModel.LoadCustomDocs", ex);
-                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogError("ProblemsViewModel.LoadProblems", ex);
+                            Debug.WriteLine($"ProblemsViewModel: error loading {company.Name}: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        LoggingService.LogError("ProblemsViewModel.LoadProblems", ex);
-                        Debug.WriteLine($"ProblemsViewModel: error loading {company.Name}: {ex.Message}");
-                    }
-                }
 
-                // Group active problems by employee
-                var groups = activeProblems
-                    .GroupBy(p => p.EmployeeFolder)
-                    .Select(g =>
-                    {
-                        var first = g.First();
-                        return new EmployeeProblemGroup
+                    var groups = activeProblems
+                        .GroupBy(p => p.EmployeeFolder)
+                        .Select(g =>
                         {
-                            UniqueId = first.UniqueId,
-                            EmployeeName = first.EmployeeName,
-                            EmployeeFolder = first.EmployeeFolder,
-                            FirmName = first.FirmName,
-                            Issues = new ObservableCollection<DocumentExpiryInfo>(
-                                g.OrderBy(x => x.DaysRemaining))
-                        };
-                    })
-                    .OrderBy(g => g.Issues.Min(i => i.DaysRemaining))
-                    .ToList();
+                            var first = g.First();
+                            return new EmployeeProblemGroup
+                            {
+                                UniqueId = first.UniqueId,
+                                EmployeeName = first.EmployeeName,
+                                EmployeeFolder = first.EmployeeFolder,
+                                FirmName = first.FirmName,
+                                Issues = new ObservableCollection<DocumentExpiryInfo>(
+                                    g.OrderBy(x => x.DaysRemaining))
+                            };
+                        })
+                        .OrderBy(g => g.Issues.Min(i => i.DaysRemaining))
+                        .ToList();
+
+                    return new ProblemsSnapshot
+                    {
+                        Groups = groups,
+                        IgnoredProblems = ignoredProblems.OrderBy(p => p.EmployeeName).ToList(),
+                        ActiveProblemCount = activeProblems.Count,
+                        GroupCount = groups.Count,
+                        ExpiredCount = activeProblems.Count(p => p.Severity == "Expired" || p.Severity == "Critical"),
+                        ExpiredPeople = groups.Count(g => g.Issues.Any(i => i.Severity == "Expired" || i.Severity == "Critical")),
+                        WarningCount = activeProblems.Count(p => p.Severity == "Warning"),
+                        WarningPeople = groups.Count(g => g.Issues.Any(i => i.Severity == "Warning"))
+                    };
+                }, token);
+
+                if (token.IsCancellationRequested || version != Volatile.Read(ref _loadProblemsVersion))
+                    return;
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    _allGroups = groups;
-                    IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(ignoredProblems.OrderBy(p => p.EmployeeName));
-                    TotalProblems = activeProblems.Count;
-                    TotalPeople = groups.Count;
-                    ExpiredCount = activeProblems.Count(p => p.Severity == "Expired" || p.Severity == "Critical");
-                    ExpiredPeople = groups.Count(g => g.Issues.Any(i => i.Severity == "Expired" || i.Severity == "Critical"));
-                    WarningCount = activeProblems.Count(p => p.Severity == "Warning");
-                    WarningPeople = groups.Count(g => g.Issues.Any(i => i.Severity == "Warning"));
-                    IgnoredCount = ignoredProblems.Count;
+                    if (token.IsCancellationRequested || version != Volatile.Read(ref _loadProblemsVersion))
+                        return;
+
+                    _allGroups = snapshot.Groups;
+                    IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(snapshot.IgnoredProblems);
+                    TotalProblems = snapshot.ActiveProblemCount;
+                    TotalPeople = snapshot.GroupCount;
+                    ExpiredCount = snapshot.ExpiredCount;
+                    ExpiredPeople = snapshot.ExpiredPeople;
+                    WarningCount = snapshot.WarningCount;
+                    WarningPeople = snapshot.WarningPeople;
+                    IgnoredCount = snapshot.IgnoredProblems.Count;
                     ApplyFilter();
                 });
+            }
+            catch (OperationCanceledException)
+            {
+                // A newer problems refresh superseded this one.
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("ProblemsViewModel.LoadProblems", ex);
                 Debug.WriteLine($"ProblemsViewModel.LoadProblems error: {ex.Message}");
+            }
+            finally
+            {
+                if (ReferenceEquals(_loadProblemsCts, loadCts))
+                    _loadProblemsCts = null;
+
+                loadCts.Dispose();
             }
         }
 
@@ -443,13 +536,13 @@ namespace Win11DesktopApp.ViewModels
             });
         }
 
-        private void CollectProblem(List<DocumentExpiryInfo> activeList, List<DocumentExpiryInfo> ignoredList,
-            EmployeeSummary emp, string docType, string expiryDate)
+        private static bool CollectProblem(List<DocumentExpiryInfo> activeList, List<DocumentExpiryInfo> ignoredList,
+            EmployeeSummary emp, string docType, string expiryDate, IReadOnlyDictionary<string, string>? ignoredDocuments)
         {
-            if (string.IsNullOrWhiteSpace(expiryDate)) return;
+            if (string.IsNullOrWhiteSpace(expiryDate)) return false;
 
             var severity = DateParsingHelper.GetSeverity(expiryDate);
-            if (severity == "Ok" || severity == "Unknown") return;
+            if (severity == "Ok" || severity == "Unknown") return false;
 
             var days = DateParsingHelper.GetDaysRemaining(expiryDate);
             var info = new DocumentExpiryInfo
@@ -466,16 +559,17 @@ namespace Win11DesktopApp.ViewModels
                 Severity = severity
             };
 
-            if (_employeeService.IsDocumentIgnored(emp.EmployeeFolder, docType))
+            if (TryGetIgnoredUntil(ignoredDocuments, docType, out var untilStr))
             {
-                var untilStr = _employeeService.GetIgnoredUntil(emp.EmployeeFolder, docType);
-                info.IgnoredUntil = untilStr ?? string.Empty;
+                info.IgnoredUntil = untilStr;
                 ignoredList.Add(info);
             }
             else
             {
                 activeList.Add(info);
             }
+
+            return true;
         }
 
         /// <summary>
@@ -499,10 +593,18 @@ namespace Win11DesktopApp.ViewModels
                         var employees = empService.GetEmployeesForFirm(company.Name);
                         foreach (var emp in employees)
                         {
-                            if (IsProblematic(emp.PassportExpiry) && !empService.IsDocumentIgnored(emp.EmployeeFolder, DocKeyPassport)) count++;
-                            if (emp.EmployeeType != "eu_citizen" && IsProblematic(emp.VisaExpiry) && !empService.IsDocumentIgnored(emp.EmployeeFolder, DocKeyVisa)) count++;
-                            if (IsProblematic(emp.InsuranceExpiry) && !empService.IsDocumentIgnored(emp.EmployeeFolder, DocKeyInsurance)) count++;
-                            if (emp.EmployeeType == "work_permit" && IsProblematic(emp.WorkPermitExpiry) && !empService.IsDocumentIgnored(emp.EmployeeFolder, DocKeyWorkPermit)) count++;
+                            var needsPassport = IsProblematic(emp.PassportExpiry);
+                            var needsVisa = emp.EmployeeType != "eu_citizen" && IsProblematic(emp.VisaExpiry);
+                            var needsInsurance = IsProblematic(emp.InsuranceExpiry);
+                            var needsWorkPermit = emp.EmployeeType == "work_permit" && IsProblematic(emp.WorkPermitExpiry);
+                            if (!needsPassport && !needsVisa && !needsInsurance && !needsWorkPermit)
+                                continue;
+
+                            var ignoredDocuments = empService.LoadEmployeeData(emp.EmployeeFolder)?.IgnoredDocuments;
+                            if (needsPassport && !TryGetIgnoredUntil(ignoredDocuments, DocKeyPassport, out _)) count++;
+                            if (needsVisa && !TryGetIgnoredUntil(ignoredDocuments, DocKeyVisa, out _)) count++;
+                            if (needsInsurance && !TryGetIgnoredUntil(ignoredDocuments, DocKeyInsurance, out _)) count++;
+                            if (needsWorkPermit && !TryGetIgnoredUntil(ignoredDocuments, DocKeyWorkPermit, out _)) count++;
                         }
                     }
                     catch (Exception ex) { LoggingService.LogError("ProblemsViewModel.CountAllProblems", ex); }
@@ -516,6 +618,48 @@ namespace Win11DesktopApp.ViewModels
         {
             var s = DateParsingHelper.GetSeverity(dateStr);
             return s == "Expired" || s == "Critical" || s == "Warning";
+        }
+
+        private static bool TryGetIgnoredUntil(IReadOnlyDictionary<string, string>? ignoredDocuments, string docType, out string untilStr)
+        {
+            untilStr = string.Empty;
+            if (ignoredDocuments == null || !ignoredDocuments.TryGetValue(docType, out var candidate) || string.IsNullOrWhiteSpace(candidate))
+                return false;
+
+            if (!DateTime.TryParse(candidate, out var until) || DateTime.Now > until)
+                return false;
+
+            untilStr = candidate;
+            return true;
+        }
+
+        public void Cleanup()
+        {
+            if (EmployeeDetailsVm != null)
+            {
+                EmployeeDetailsVm.RequestClose -= _onProbDetailsClose;
+                EmployeeDetailsVm.DataChanged -= _onProbDetailsChanged;
+            }
+
+            var debounceCts = Interlocked.Exchange(ref _loadProblemsDebounceCts, null);
+            debounceCts?.Cancel();
+            debounceCts?.Dispose();
+
+            var loadCts = Interlocked.Exchange(ref _loadProblemsCts, null);
+            loadCts?.Cancel();
+            loadCts?.Dispose();
+        }
+
+        private sealed class ProblemsSnapshot
+        {
+            public List<EmployeeProblemGroup> Groups { get; init; } = new();
+            public List<DocumentExpiryInfo> IgnoredProblems { get; init; } = new();
+            public int ActiveProblemCount { get; init; }
+            public int GroupCount { get; init; }
+            public int ExpiredCount { get; init; }
+            public int ExpiredPeople { get; init; }
+            public int WarningCount { get; init; }
+            public int WarningPeople { get; init; }
         }
 
         private bool EnsureExportPathReady(string? filePath)

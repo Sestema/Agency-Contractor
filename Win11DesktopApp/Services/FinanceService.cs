@@ -19,11 +19,13 @@ namespace Win11DesktopApp.Services
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
         private readonly SalaryDbService? _salaryDbService;
         private readonly LocalDbService? _localDbService;
-        private readonly object _paymentsCacheLock = new();
-        private readonly Dictionary<(int year, int month), (List<SalaryEntry> entries, List<FirmExpense> expenses)> _paymentsCache = new();
-
-        public const string GlobalKey = "__GLOBAL__";
-        public const string AllFirmsKey = "__ALL__";
+        public const string GlobalKey = FinanceConstants.GlobalKey;
+        public const string AllFirmsKey = FinanceConstants.AllFirmsKey;
+        public FinanceAdvancesService AdvancesService { get; private set; } = null!;
+        public FinanceSalaryHistoryService SalaryHistoryService { get; private set; } = null!;
+        public FinanceMonthPaymentsService MonthPaymentsService { get; private set; } = null!;
+        public FinanceCustomFieldsService CustomFieldsService { get; private set; } = null!;
+        public FinanceReportsService ReportsService { get; private set; } = null!;
         public bool WasRecoveredFromBackupOnLoad { get; private set; }
         public bool WasResetToDefaultsOnLoad { get; private set; }
         public string LastSalaryConflictMessage { get; private set; } = string.Empty;
@@ -50,6 +52,28 @@ namespace Win11DesktopApp.Services
             }
             _db = Load();
             MigrateIfNeeded();
+            AdvancesService = new FinanceAdvancesService(
+                _localDbService,
+                _db,
+                ResolveEmployeeId,
+                ResolveEmployeeFolder);
+            SalaryHistoryService = new FinanceSalaryHistoryService(
+                _localDbService,
+                ResolveEmployeeId,
+                ResolveEmployeeFolder);
+            MonthPaymentsService = new FinanceMonthPaymentsService(
+                _salaryDbService,
+                _localDbService,
+                _db,
+                () => LastSaveRecoveryPath = null,
+                () =>
+                {
+                    LastSalaryConflictMessage = string.Empty;
+                    LastSaveRecoveryPath = null;
+                },
+                message => LastSalaryConflictMessage = message);
+            CustomFieldsService = new FinanceCustomFieldsService(_localDbService, _db.CustomFields);
+            ReportsService = new FinanceReportsService(_localDbService, _db.Reports);
         }
 
         public SalaryDbMigrationResult EnsureSalaryMigratedToLocalDb()
@@ -153,6 +177,7 @@ namespace Win11DesktopApp.Services
             if (_db.Version == "2.0") return;
 
             bool changed = false;
+            var useCustomFieldsLocalDb = _localDbService?.IsCustomFieldsMigrationCompleted() == true;
 
             CustomSalaryField? surchargeField = null;
             CustomSalaryField? accomField = null;
@@ -178,6 +203,8 @@ namespace Win11DesktopApp.Services
                             };
                             if (!_db.CustomFields.Any(f => f.Id == surchargeField.Id))
                                 _db.CustomFields.Add(surchargeField);
+                            if (useCustomFieldsLocalDb)
+                                _localDbService!.UpsertCustomSalaryField(surchargeField);
                         }
                         entry.CustomValues[surchargeField.Id] = entry.Surcharge;
                         changed = true;
@@ -197,6 +224,8 @@ namespace Win11DesktopApp.Services
                             };
                             if (!_db.CustomFields.Any(f => f.Id == accomField.Id))
                                 _db.CustomFields.Add(accomField);
+                            if (useCustomFieldsLocalDb)
+                                _localDbService!.UpsertCustomSalaryField(accomField);
                         }
                         entry.CustomValues[accomField.Id] = entry.Accommodation;
                         changed = true;
@@ -402,7 +431,7 @@ WHERE stage = 'salary_entries'
                             }
 
                             bucket.entries.AddRange(data.Entries.Select(CloneSalaryEntryForMigration));
-                            bucket.expenses.AddRange(data.Expenses.Select(CloneFirmExpenseForMigration));
+                            bucket.expenses.AddRange(data.Expenses.Select(CloneFirmExpenseForSalaryMigration));
                             monthBuckets[monthKey] = bucket;
 
                             recordsFound += data.Entries.Count;
@@ -483,32 +512,9 @@ WHERE stage = 'salary_entries'
         }
 
         private static SalaryEntry CloneSalaryEntryForMigration(SalaryEntry entry)
-        {
-#pragma warning disable CS0618
-            return new SalaryEntry
-            {
-                EmployeeId = entry.EmployeeId,
-                EmployeeFolder = entry.EmployeeFolder,
-                FullName = entry.FullName,
-                FirmName = entry.FirmName,
-                HoursWorked = entry.HoursWorked,
-                HourlyRate = entry.HourlyRate,
-                Advance = entry.Advance,
-                Advances = entry.Advances,
-                Surcharge = entry.Surcharge,
-                Accommodation = entry.Accommodation,
-                OtherDeductions = entry.OtherDeductions,
-                CustomValues = new Dictionary<string, decimal>(entry.CustomValues, StringComparer.OrdinalIgnoreCase),
-                SavedNetSalary = entry.SavedNetSalary,
-                Status = entry.Status,
-                Note = entry.Note,
-                ColorTag = entry.ColorTag,
-                IsFinished = entry.IsFinished
-            };
-#pragma warning restore CS0618
-        }
+            => SalaryEntryCloneHelper.CloneEntry(entry);
 
-        private static FirmExpense CloneFirmExpenseForMigration(FirmExpense expense)
+        private static FirmExpense CloneFirmExpenseForSalaryMigration(FirmExpense expense)
         {
             return new FirmExpense
             {
@@ -574,173 +580,161 @@ WHERE stage = 'salary_entries'
             });
         }
 
-        #region Custom Fields
+        #region Facade Delegations
+
+        public LocalDbMigrationResult EnsureSalaryHistoryMigratedToLocalDb()
+            => SalaryHistoryService.EnsureMigratedToLocalDb();
+
+        public LocalDbMigrationResult EnsureAdvancesMigratedToLocalDb()
+            => AdvancesService.EnsureMigratedToLocalDb();
+
+        public LocalDbMigrationResult EnsureCustomFieldsMigratedToLocalDb()
+            => CustomFieldsService.EnsureMigratedToLocalDb();
+
+        public LocalDbMigrationResult EnsureAccommodationsMigratedToLocalDb()
+        {
+            if (_localDbService == null)
+                return new LocalDbMigrationResult { Message = "LocalDbService not available." };
+
+            return _localDbService.MigrateAccommodationsIfNeeded(_db.Accommodations.ToList());
+        }
+
+        public LocalDbMigrationResult EnsureReportsMigratedToLocalDb()
+            => ReportsService.EnsureMigratedToLocalDb();
+
+        public SalaryDbMigrationResult EnsureFirmExpensesMigratedToSalaryDb()
+            => MonthPaymentsService.EnsureMigratedToSalaryDb();
 
         public List<CustomSalaryField> GetCustomFields()
-        {
-            return _db.CustomFields.OrderBy(f => f.FirmName).ThenBy(f => f.Order).ToList();
-        }
+            => CustomFieldsService.GetCustomFields();
 
         public List<CustomSalaryField> GetFieldsForFirm(string firmName)
-        {
-            return _db.CustomFields
-                .Where(f => f.FirmName == AllFirmsKey || f.FirmName == firmName)
-                .OrderBy(f => f.Order)
-                .ToList();
-        }
+            => CustomFieldsService.GetFieldsForFirm(firmName);
 
         public List<CustomSalaryField> GetActiveFields(IEnumerable<string> visibleFirms)
-        {
-            var firmSet = visibleFirms.ToHashSet();
-            return _db.CustomFields
-                .Where(f => f.FirmName == AllFirmsKey || firmSet.Contains(f.FirmName))
-                .OrderBy(f => f.Order)
-                .ToList();
-        }
+            => CustomFieldsService.GetActiveFields(visibleFirms);
 
         public void AddCustomField(CustomSalaryField field)
-        {
-            if (string.IsNullOrEmpty(field.Id))
-                field.Id = Guid.NewGuid().ToString();
-            _db.CustomFields.Add(field);
-            Save();
-        }
+            => CustomFieldsService.AddCustomField(field);
 
         public void UpdateCustomField(CustomSalaryField updated)
-        {
-            var idx = _db.CustomFields.FindIndex(f => f.Id == updated.Id);
-            if (idx >= 0)
-                _db.CustomFields[idx] = updated;
-            Save();
-        }
+            => CustomFieldsService.UpdateCustomField(updated);
 
         public void RemoveCustomField(string fieldId)
         {
-            _db.CustomFields.RemoveAll(f => f.Id == fieldId);
-            foreach (var report in _db.Reports)
-                foreach (var entry in report.Entries)
-                    entry.CustomValues.Remove(fieldId);
-            Save();
+            CustomFieldsService.RemoveCustomField(fieldId);
+            ReportsService.RemoveCustomFieldReferences(fieldId);
         }
 
         public void ReorderCustomFields(List<CustomSalaryField> orderedFields)
-        {
-            for (int i = 0; i < orderedFields.Count; i++)
-            {
-                var db = _db.CustomFields.FirstOrDefault(f => f.Id == orderedFields[i].Id);
-                if (db != null) db.Order = i;
-            }
-            Save();
-        }
-
-        #endregion
-
-        #region Reports
+            => CustomFieldsService.ReorderCustomFields(orderedFields);
 
         public MonthlySalaryReport? GetReport(string companyId, int year, int month)
-        {
-            return _db.Reports.FirstOrDefault(r => r.CompanyId == companyId && r.Year == year && r.Month == month);
-        }
+            => ReportsService.GetReport(companyId, year, month);
 
         public MonthlySalaryReport? GetGlobalReport(int year, int month)
-        {
-            return _db.Reports.FirstOrDefault(r => r.CompanyId == GlobalKey && r.Year == year && r.Month == month);
-        }
+            => ReportsService.GetGlobalReport(year, month);
 
         public MonthlySalaryReport GetOrCreateReport(string companyId, string companyName, int year, int month)
-        {
-            var report = GetReport(companyId, year, month);
-            if (report == null)
-            {
-                report = new MonthlySalaryReport
-                {
-                    CompanyId = companyId,
-                    CompanyName = companyName,
-                    Year = year,
-                    Month = month
-                };
-                _db.Reports.Add(report);
-            }
-            return report;
-        }
+            => ReportsService.GetOrCreateReport(companyId, companyName, year, month);
 
         public MonthlySalaryReport GetOrCreateGlobalReport(int year, int month)
-        {
-            var report = GetGlobalReport(year, month);
-            if (report == null)
-            {
-                report = new MonthlySalaryReport
-                {
-                    CompanyId = GlobalKey,
-                    CompanyName = "All",
-                    Year = year,
-                    Month = month
-                };
-                _db.Reports.Add(report);
-            }
-            return report;
-        }
+            => ReportsService.GetOrCreateGlobalReport(year, month);
 
         public void SaveReport(MonthlySalaryReport report)
-        {
-            report.UpdatedAt = DateTime.Now;
-            var idx = _db.Reports.FindIndex(r => r.Id == report.Id);
-            if (idx >= 0)
-                _db.Reports[idx] = report;
-            else
-                _db.Reports.Add(report);
-            Save();
-        }
+            => ReportsService.SaveReport(report);
 
         public List<MonthlySalaryReport> GetReportsForCompany(string companyId)
-        {
-            return _db.Reports.Where(r => r.CompanyId == companyId).OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ToList();
-        }
+            => ReportsService.GetReportsForCompany(companyId);
 
         public List<string> GetAvailableMonths(string companyId)
+            => ReportsService.GetAvailableMonths(companyId);
+
+        public void AddAdvance(AdvancePayment advance)
+            => AdvancesService.AddAdvance(advance);
+
+        public List<AdvancePayment> GetAdvances(string companyId, string monthKey)
+            => AdvancesService.GetAdvances(companyId, monthKey);
+
+        public decimal GetTotalAdvancesForEmployee(string employeeFolder, string companyId, string monthKey)
+            => AdvancesService.GetTotalAdvancesForEmployee(employeeFolder, companyId, monthKey);
+
+        public decimal GetTotalAdvancesForEmployee(string employeeFolder, string monthKey)
+            => AdvancesService.GetTotalAdvancesForEmployee(employeeFolder, monthKey);
+
+        public void RemoveAdvance(string advanceId)
+            => AdvancesService.RemoveAdvance(advanceId);
+
+        public List<AdvancePayment> GetAdvancesForEmployeeMonth(string employeeFolder, string monthKey)
+            => AdvancesService.GetAdvancesForEmployeeMonth(employeeFolder, monthKey);
+
+        public List<AdvancePayment> GetAdvancesForEmployeeFirmMonth(string employeeFolder, string firmName, string monthKey)
+            => AdvancesService.GetAdvancesForEmployeeFirmMonth(employeeFolder, firmName, monthKey);
+
+        public decimal GetTotalAdvancesForEmployeeFirm(string employeeFolder, string firmName, string monthKey)
+            => AdvancesService.GetTotalAdvancesForEmployeeFirm(employeeFolder, firmName, monthKey);
+
+        public Dictionary<string, decimal> GetTotalAdvancesForEmployeeFirms(
+            IReadOnlyList<(string requestKey, string employeeId, string employeeFolder, string firmName)> requests,
+            string monthKey)
+            => AdvancesService.GetTotalAdvancesForEmployeeFirms(requests, monthKey);
+
+        public List<AdvancePayment> GetAllAdvancesForEmployee(string employeeFolder)
+            => AdvancesService.GetAllAdvancesForEmployee(employeeFolder);
+
+        public List<FirmExpense> GetFirmExpenses(int year, int month)
+            => MonthPaymentsService.GetFirmExpenses(year, month);
+
+        public List<FirmExpense> GetFirmExpenses(int year, int month, string firmName)
+            => MonthPaymentsService.GetFirmExpenses(year, month, firmName);
+
+        public List<FirmExpense> GetFirmExpensesForFirms(int year, int month, IEnumerable<string> firmNames)
+            => MonthPaymentsService.GetFirmExpensesForFirms(year, month, firmNames);
+
+        public void AddFirmExpense(FirmExpense expense)
+            => MonthPaymentsService.AddFirmExpense(expense);
+
+        public void UpdateFirmExpense(FirmExpense updated)
+            => MonthPaymentsService.UpdateFirmExpense(updated);
+
+        public void RemoveFirmExpense(string expenseId)
+            => MonthPaymentsService.RemoveFirmExpense(expenseId);
+
+        public void RemoveFirmExpense(string expenseId, int year, int month)
+            => MonthPaymentsService.RemoveFirmExpense(expenseId, year, month);
+
+        public void SaveFirmExpenses(List<FirmExpense> expenses, int year, int month, string? firmNameFilter = null)
+            => MonthPaymentsService.SaveFirmExpenses(expenses, year, month, firmNameFilter);
+
+        public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
+            => MonthPaymentsService.SaveAllFirmPayments(year, month, allEntries, allExpenses);
+
+        public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
+            => MonthPaymentsService.LoadAllFirmPayments(year, month, forceReload);
+
+        public void InvalidatePaymentsCache(int? year = null, int? month = null)
+            => MonthPaymentsService.InvalidatePaymentsCache(year, month);
+
+        public bool MonthDataExists(int year, int month)
         {
-            return _db.Reports
-                .Where(r => r.CompanyId == companyId)
-                .OrderByDescending(r => r.Year).ThenByDescending(r => r.Month)
-                .Select(r => r.MonthKey)
-                .Distinct()
-                .ToList();
+            return _salaryDbService?.MonthDbExists(year, month) == true;
         }
+
+        public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
+            => SalaryHistoryService.SaveSalaryHistoryRecord(employeeFolder, record);
+
+        public void RemoveSalaryHistoryRecord(string employeeFolder, int year, int month, string firmName)
+            => SalaryHistoryService.RemoveSalaryHistoryRecord(employeeFolder, year, month, firmName);
+
+        public List<SalaryHistoryRecord> LoadSalaryHistory(string employeeFolder)
+            => SalaryHistoryService.LoadSalaryHistory(employeeFolder);
+
+        public int CleanupMigratedSalaryHistoryBackups()
+            => SalaryHistoryService.CleanupMigratedSalaryHistoryBackups();
 
         #endregion
 
-        #region Advances
-
-        public void AddAdvance(AdvancePayment advance)
-        {
-            _db.Advances.Add(advance);
-            Save();
-        }
-
-        public List<AdvancePayment> GetAdvances(string companyId, string monthKey)
-        {
-            return _db.Advances.Where(a => a.CompanyId == companyId && a.Month == monthKey).ToList();
-        }
-
-        public decimal GetTotalAdvancesForEmployee(string employeeFolder, string companyId, string monthKey)
-        {
-            return _db.Advances
-                .Where(a => a.EmployeeFolder == employeeFolder && a.CompanyId == companyId && a.Month == monthKey)
-                .Sum(a => a.Amount);
-        }
-
-        public decimal GetTotalAdvancesForEmployee(string employeeFolder, string monthKey)
-        {
-            return _db.Advances
-                .Where(a => a.EmployeeFolder == employeeFolder && a.Month == monthKey)
-                .Sum(a => a.Amount);
-        }
-
-        public void RemoveAdvance(string advanceId)
-        {
-            _db.Advances.RemoveAll(a => a.Id == advanceId);
-            Save();
-        }
+        #region Cross-Cutting Finance Operations
 
         public void RemoveEmployeeReferences(string originalFolder, string deletedFolder, string? employeeId = null)
         {
@@ -754,57 +748,26 @@ WHERE stage = 'salary_entries'
                     || (!string.IsNullOrWhiteSpace(deletedFolder) && string.Equals(folder, deletedFolder, StringComparison.OrdinalIgnoreCase));
             }
 
-            var changed = false;
+            AdvancesService.RemoveAdvancesForEmployee(employeeId, originalFolder, deletedFolder);
 
-            changed |= _db.Advances.RemoveAll(a => Matches(a.EmployeeFolder)) > 0;
-            changed |= _db.Accommodations.RemoveAll(a => Matches(a.EmployeeFolder)) > 0;
-
-            foreach (var report in _db.Reports)
+            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
             {
-                var removed = report.Entries.RemoveAll(e => Matches(e.EmployeeFolder, e.EmployeeId));
-                if (removed > 0)
-                {
-                    report.UpdatedAt = DateTime.Now;
-                    changed = true;
-                }
+                _localDbService.RemoveAccommodationsForEmployee(originalFolder);
+                if (!string.IsNullOrEmpty(deletedFolder))
+                    _localDbService.RemoveAccommodationsForEmployee(deletedFolder);
             }
-
-            if (changed)
-                Save();
+            else
+            {
+                _db.Accommodations.RemoveAll(a => Matches(a.EmployeeFolder));
+            }
+            ReportsService.RemoveEmployeeEntries(employeeId, originalFolder, deletedFolder);
 
             CleanupPaymentFiles(Matches);
         }
 
-        public List<AdvancePayment> GetAdvancesForEmployeeMonth(string employeeFolder, string monthKey)
-        {
-            return _db.Advances
-                .Where(a => a.EmployeeFolder == employeeFolder && a.Month == monthKey)
-                .OrderBy(a => a.Date)
-                .ToList();
-        }
+        #endregion
 
-        public List<AdvancePayment> GetAdvancesForEmployeeFirmMonth(string employeeFolder, string firmName, string monthKey)
-        {
-            return _db.Advances
-                .Where(a => a.EmployeeFolder == employeeFolder && (a.CompanyId == firmName || a.CompanyId == GlobalKey) && a.Month == monthKey)
-                .OrderBy(a => a.Date)
-                .ToList();
-        }
-
-        public decimal GetTotalAdvancesForEmployeeFirm(string employeeFolder, string firmName, string monthKey)
-        {
-            return _db.Advances
-                .Where(a => a.EmployeeFolder == employeeFolder && (a.CompanyId == firmName || a.CompanyId == GlobalKey) && a.Month == monthKey)
-                .Sum(a => a.Amount);
-        }
-
-        public List<AdvancePayment> GetAllAdvancesForEmployee(string employeeFolder)
-        {
-            return _db.Advances
-                .Where(a => a.EmployeeFolder == employeeFolder)
-                .OrderByDescending(a => a.Date)
-                .ToList();
-        }
+        #region Core Finance Orchestration
 
         public (decimal totalDebt, List<DebtInfoItem> details) CalculateCarriedDebt(string employeeFolder, int targetYear, int targetMonth)
         {
@@ -844,6 +807,175 @@ WHERE stage = 'salary_entries'
             }
 
             return (runningDebt, debtDetails);
+        }
+
+        public Dictionary<string, decimal> CalculateCarriedDebtForEntries(
+            IReadOnlyList<(string requestKey, string employeeId, string employeeFolder, string firmName)> requests,
+            int targetYear,
+            int targetMonth)
+        {
+            var totalSw = System.Diagnostics.Stopwatch.StartNew();
+            var resolveCacheMs = 0L;
+            var salaryHistoryLoadMs = 0L;
+            var sqliteSavedPaymentsMs = 0L;
+            var mergeMs = 0L;
+            var salaryHistoryRecordsLoaded = 0;
+            var result = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            if (requests.Count == 0)
+                return result;
+
+            var targetKey = $"{targetYear:D4}-{targetMonth:D2}";
+            var salaryHistoryByRequest = new Dictionary<string, List<SalaryHistoryRecord>>(StringComparer.OrdinalIgnoreCase);
+            var sqliteRequestMap = new Dictionary<string, (string employeeFolder, string? employeeId)>(StringComparer.OrdinalIgnoreCase);
+            var originalFolderByNormalizedKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var employeeIdByNormalizedKey = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var request in requests)
+            {
+                var normalizedFolder = NormalizeEmployeePath(request.employeeFolder);
+                if (!originalFolderByNormalizedKey.ContainsKey(normalizedFolder))
+                    originalFolderByNormalizedKey[normalizedFolder] = request.employeeFolder;
+
+                if (!string.IsNullOrWhiteSpace(request.employeeId) && !employeeIdByNormalizedKey.ContainsKey(normalizedFolder))
+                    employeeIdByNormalizedKey[normalizedFolder] = request.employeeId;
+            }
+
+            var resolvedFolderCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var employeeIdCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            var salaryHistoryCache = new Dictionary<string, List<SalaryHistoryRecord>>(StringComparer.OrdinalIgnoreCase);
+
+            var resolveCacheSw = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var pair in originalFolderByNormalizedKey)
+            {
+                var normalizedFolder = pair.Key;
+                var originalFolder = pair.Value;
+                employeeIdByNormalizedKey.TryGetValue(normalizedFolder, out var knownEmployeeId);
+                var resolvedEmployeeFolder = !string.IsNullOrWhiteSpace(knownEmployeeId)
+                    ? ResolveEmployeeFolder(originalFolder, knownEmployeeId)
+                    : ResolveEmployeeFolder(originalFolder);
+                resolvedFolderCache[normalizedFolder] = resolvedEmployeeFolder;
+                employeeIdCache[normalizedFolder] = !string.IsNullOrWhiteSpace(knownEmployeeId)
+                    ? knownEmployeeId
+                    : ResolveEmployeeId(resolvedEmployeeFolder);
+            }
+            resolveCacheMs = resolveCacheSw.ElapsedMilliseconds;
+
+            var salaryHistoryLoadSw = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var pair in originalFolderByNormalizedKey)
+            {
+                var normalizedFolder = pair.Key;
+                try
+                {
+                    var resolvedEmployeeFolder = resolvedFolderCache[normalizedFolder];
+                    var salaryHistory = SalaryHistoryService.LoadSalaryHistoryFromResolvedFolder(resolvedEmployeeFolder, employeeIdCache[normalizedFolder]);
+                    salaryHistoryCache[normalizedFolder] = salaryHistory;
+                    salaryHistoryRecordsLoaded += salaryHistory.Count;
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("FinanceService.CalculateCarriedDebtForEntries", ex);
+                    salaryHistoryCache[normalizedFolder] = new List<SalaryHistoryRecord>();
+                }
+            }
+            salaryHistoryLoadMs = salaryHistoryLoadSw.ElapsedMilliseconds;
+
+            foreach (var request in requests)
+            {
+                result[request.requestKey] = 0m;
+                var normalizedFolder = NormalizeEmployeePath(request.employeeFolder);
+                salaryHistoryByRequest[request.requestKey] = salaryHistoryCache.TryGetValue(normalizedFolder, out var salaryHistory)
+                    ? salaryHistory
+                    : new List<SalaryHistoryRecord>();
+
+                var resolvedEmployeeFolder = resolvedFolderCache.TryGetValue(normalizedFolder, out var resolvedFolder)
+                    ? resolvedFolder
+                    : ResolveEmployeeFolder(request.employeeFolder);
+                var employeeId = employeeIdCache.TryGetValue(normalizedFolder, out var cachedEmployeeId)
+                    ? cachedEmployeeId
+                    : ResolveEmployeeId(resolvedEmployeeFolder);
+                sqliteRequestMap[request.requestKey] = (resolvedEmployeeFolder, employeeId);
+            }
+
+            var sqliteSavedPaymentsByRequest = new Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>>(StringComparer.OrdinalIgnoreCase);
+            if (_salaryDbService != null)
+            {
+                var sqliteSavedPaymentsSw = System.Diagnostics.Stopwatch.StartNew();
+                var sqliteRequests = requests
+                    .Select(request =>
+                    {
+                        var sqliteRequest = sqliteRequestMap[request.requestKey];
+                        return (
+                            request.requestKey,
+                            request.firmName,
+                            sqliteRequest.employeeFolder,
+                            sqliteRequest.employeeId);
+                    })
+                    .ToList();
+
+                sqliteSavedPaymentsByRequest = _salaryDbService.GetSavedPaymentsForAllRequests(targetKey, sqliteRequests);
+                sqliteSavedPaymentsMs = sqliteSavedPaymentsSw.ElapsedMilliseconds;
+            }
+
+            var mergeSw = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var request in requests)
+            {
+                var savedPayments = new Dictionary<string, (decimal netSalary, bool paid)>(StringComparer.OrdinalIgnoreCase);
+
+                if (salaryHistoryByRequest.TryGetValue(request.requestKey, out var salaryHistory))
+                {
+                    foreach (var record in salaryHistory)
+                    {
+                        var monthKey = $"{record.Year:D4}-{record.Month:D2}";
+                        if (string.Compare(monthKey, targetKey, StringComparison.Ordinal) >= 0)
+                            continue;
+
+                        if (!string.Equals(record.FirmName, request.firmName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        savedPayments[monthKey] = (record.NetSalary, true);
+                    }
+                }
+
+                if (sqliteSavedPaymentsByRequest.TryGetValue(request.requestKey, out var sqliteSavedPayments))
+                {
+                    foreach (var pair in sqliteSavedPayments)
+                        savedPayments.TryAdd(pair.Key, pair.Value);
+                }
+
+                if (savedPayments.Count == 0)
+                    continue;
+
+                decimal runningDebt = 0;
+                foreach (var monthKey in savedPayments.Keys.OrderBy(m => m, StringComparer.OrdinalIgnoreCase))
+                {
+                    var saved = savedPayments[monthKey];
+                    if (!saved.paid)
+                        continue;
+
+                    if (saved.netSalary < 0)
+                    {
+                        runningDebt = Math.Abs(saved.netSalary);
+                    }
+                    else
+                    {
+                        runningDebt = 0;
+                    }
+                }
+
+                result[request.requestKey] = runningDebt;
+            }
+            mergeMs = mergeSw.ElapsedMilliseconds;
+
+            totalSw.Stop();
+            LoggingService.LogInfo(
+                "Timing.CalculateCarriedDebtForEntries",
+                $"CalculateCarriedDebtForEntries {targetYear:D4}-{targetMonth:D2} total={totalSw.ElapsedMilliseconds}ms | " +
+                $"resolveCache={resolveCacheMs}ms | salaryHistoryLoad={salaryHistoryLoadMs}ms | " +
+                $"sqliteSavedPayments={sqliteSavedPaymentsMs}ms | merge={mergeMs}ms | " +
+                $"requests={requests.Count} | uniqueFolders={originalFolderByNormalizedKey.Count} | " +
+                $"salaryHistoryRecords={salaryHistoryRecordsLoaded}");
+
+            return result;
         }
 
         private Dictionary<string, (decimal netSalary, bool paid)> LoadSavedPaymentsForEmployee(
@@ -891,87 +1023,6 @@ WHERE stage = 'salary_entries'
             return result;
         }
 
-        #endregion
-
-        #region Accommodations
-
-        public void AddAccommodation(AccommodationRecord rec)
-        {
-            _db.Accommodations.Add(rec);
-            Save();
-        }
-
-        public decimal GetAccommodationForEmployee(string employeeFolder, string companyId, int year, int month)
-        {
-            return _db.Accommodations
-                .Where(a => a.EmployeeFolder == employeeFolder && a.CompanyId == companyId && a.Year == year && a.Month == month)
-                .Sum(a => a.Amount);
-        }
-
-        public decimal GetAccommodationForEmployee(string employeeFolder, int year, int month)
-        {
-            return _db.Accommodations
-                .Where(a => a.EmployeeFolder == employeeFolder && a.Year == year && a.Month == month)
-                .Sum(a => a.Amount);
-        }
-
-        #endregion
-
-        #region Firm Expenses
-
-        public List<FirmExpense> GetFirmExpenses(int year, int month)
-        {
-            return _db.FirmExpenses.Where(e => e.Year == year && e.Month == month).ToList();
-        }
-
-        public List<FirmExpense> GetFirmExpenses(int year, int month, string firmName)
-        {
-            return _db.FirmExpenses.Where(e => e.Year == year && e.Month == month && e.FirmName == firmName).ToList();
-        }
-
-        public List<FirmExpense> GetFirmExpensesForFirms(int year, int month, IEnumerable<string> firmNames)
-        {
-            var set = new HashSet<string>(firmNames);
-            return _db.FirmExpenses.Where(e => e.Year == year && e.Month == month && set.Contains(e.FirmName)).ToList();
-        }
-
-        public void AddFirmExpense(FirmExpense expense)
-        {
-            if (string.IsNullOrEmpty(expense.Id))
-                expense.Id = Guid.NewGuid().ToString();
-            _db.FirmExpenses.Add(expense);
-            InvalidatePaymentsCache(expense.Year, expense.Month);
-            Save();
-        }
-
-        public void UpdateFirmExpense(FirmExpense updated)
-        {
-            var idx = _db.FirmExpenses.FindIndex(e => e.Id == updated.Id);
-            if (idx >= 0)
-                _db.FirmExpenses[idx] = updated;
-            InvalidatePaymentsCache(updated.Year, updated.Month);
-            Save();
-        }
-
-        public void RemoveFirmExpense(string expenseId)
-        {
-            var removed = _db.FirmExpenses.FirstOrDefault(e => e.Id == expenseId);
-            _db.FirmExpenses.RemoveAll(e => e.Id == expenseId);
-            if (removed != null)
-                InvalidatePaymentsCache(removed.Year, removed.Month);
-            Save();
-        }
-
-        public void SaveFirmExpenses(List<FirmExpense> expenses, int year, int month)
-        {
-            _db.FirmExpenses.RemoveAll(e => e.Year == year && e.Month == month);
-            _db.FirmExpenses.AddRange(expenses);
-            InvalidatePaymentsCache(year, month);
-            Save();
-        }
-
-        #endregion
-
         public void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, int fromYear, int fromMonth, CancellationToken cancellationToken = default)
         {
             var fromKey = $"{fromYear:D4}-{fromMonth:D2}";
@@ -993,238 +1044,83 @@ WHERE stage = 'salary_entries'
             InvalidatePaymentsCache();
         }
 
-        private static string NormalizeEmployeePath(string? path)
-            => (path ?? string.Empty).Replace('/', '\\').Trim().TrimEnd('\\');
-
-        private static bool MatchesEmployee(SalaryEntry entry, string? employeeId, string normalizedEmployeeFolder)
+        public SalaryHistoryRecord BuildHistoryRecord(SalaryEntry entry, int year, int month, List<CustomSalaryField>? fields)
         {
-            if (!string.IsNullOrWhiteSpace(employeeId) && !string.IsNullOrWhiteSpace(entry.EmployeeId))
-                return string.Equals(entry.EmployeeId, employeeId, StringComparison.OrdinalIgnoreCase);
-
-            return string.Equals(NormalizeEmployeePath(entry.EmployeeFolder), normalizedEmployeeFolder, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
-        {
-            LastSaveRecoveryPath = null;
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath))
-                return false;
-
-            try
+            var record = new SalaryHistoryRecord
             {
-                _salaryDbService?.SaveMonthPayments(year, month, CloneSalaryEntries(allEntries), CloneFirmExpenses(allExpenses));
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("FinanceService.SaveAllFirmPayments.SQLite", ex);
-                return false;
-            }
-
-            InvalidatePaymentsCache(year, month);
-            LastSalaryConflictMessage = string.Empty;
-            LastSaveRecoveryPath = null;
-            return true;
-        }
-
-        public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
-        {
-            var cacheKey = (year, month);
-            if (!forceReload)
-            {
-                lock (_paymentsCacheLock)
-                {
-                    if (_paymentsCache.TryGetValue(cacheKey, out var cached))
-                        return (CloneSalaryEntries(cached.entries), CloneFirmExpenses(cached.expenses));
-                }
-            }
-
-            if (_salaryDbService != null)
-            {
-                try
-                {
-                    if (_salaryDbService.MonthDbExists(year, month))
-                    {
-                        var sqliteResult = _salaryDbService.LoadMonthPayments(year, month);
-                        var sqliteEntries = CloneSalaryEntries(sqliteResult.entries);
-                        var sqliteExpenses = CloneFirmExpenses(sqliteResult.expenses);
-                        lock (_paymentsCacheLock)
-                        {
-                            _paymentsCache[cacheKey] = (sqliteEntries, sqliteExpenses);
-                        }
-
-                        return (CloneSalaryEntries(sqliteEntries), CloneFirmExpenses(sqliteExpenses));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("FinanceService.LoadAllFirmPayments.SQLite", ex.Message);
-                }
-            }
-            return (new List<SalaryEntry>(), new List<FirmExpense>());
-        }
-
-        private string? ResolveEmployeeId(string employeeFolder)
-        {
-            if (string.IsNullOrWhiteSpace(employeeFolder))
-                return null;
-
-            try
-            {
-                return App.EmployeeService?.LoadEmployeeData(employeeFolder)?.UniqueId;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public void InvalidatePaymentsCache(int? year = null, int? month = null)
-        {
-            lock (_paymentsCacheLock)
-            {
-                if (year.HasValue && month.HasValue)
-                {
-                    _paymentsCache.Remove((year.Value, month.Value));
-                    return;
-                }
-
-                _paymentsCache.Clear();
-            }
-        }
-
-        private static List<SalaryEntry> CloneSalaryEntries(IEnumerable<SalaryEntry> source)
-        {
-#pragma warning disable CS0618
-            return source.Select(entry => new SalaryEntry
-            {
-                EmployeeId = entry.EmployeeId,
-                EmployeeFolder = entry.EmployeeFolder,
-                FullName = entry.FullName,
+                Year = year,
+                Month = month,
                 FirmName = entry.FirmName,
+                FullName = entry.FullName,
                 HoursWorked = entry.HoursWorked,
                 HourlyRate = entry.HourlyRate,
+                GrossSalary = entry.GrossSalary,
                 Advance = entry.Advance,
-                Advances = entry.Advances,
-                Surcharge = entry.Surcharge,
-                Accommodation = entry.Accommodation,
-                OtherDeductions = entry.OtherDeductions,
-                CustomValues = new Dictionary<string, decimal>(entry.CustomValues, StringComparer.OrdinalIgnoreCase),
-                SavedNetSalary = entry.SavedNetSalary,
-                Status = entry.Status,
+                NetSalary = entry.NetSalary,
                 Note = entry.Note,
-                ColorTag = entry.ColorTag,
-                IsFinished = entry.IsFinished
-            }).ToList();
-#pragma warning restore CS0618
-        }
+                CustomValues = new Dictionary<string, decimal>(entry.CustomValues)
+            };
 
-        private static List<FirmExpense> CloneFirmExpenses(IEnumerable<FirmExpense> source)
-        {
-            return source.Select(expense => new FirmExpense
+            if (fields != null)
             {
-                Id = expense.Id,
-                FirmName = expense.FirmName,
-                Year = expense.Year,
-                Month = expense.Month,
-                Name = expense.Name,
-                Amount = expense.Amount
-            }).ToList();
-        }
-
-        private void CleanupPaymentFiles(Func<string?, string?, bool> matches)
-        {
-            var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var paymentFolder in EnumeratePaymentFolders())
-            {
-                if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
-                    continue;
-
-                foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
+                foreach (var f in fields.Where(fd => fd.FirmName == AllFirmsKey || fd.FirmName == entry.FirmName))
                 {
-                    if (!processedFiles.Add(file))
-                        continue;
-
-                    try
+                    if (entry.CustomValues.TryGetValue(f.Id, out var val) && val != 0)
                     {
-                        var data = ReadJson<FirmPaymentData>(file);
-                        if (data == null)
-                            continue;
-
-                        var removed = data.Entries.RemoveAll(e => matches(e.EmployeeFolder, e.EmployeeId));
-                        if (removed <= 0)
-                            continue;
-
-                        data.UpdatedAt = DateTime.Now;
-                        WriteJsonAtomic(file, data);
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggingService.LogError("FinanceService.CleanupPaymentFiles", ex);
+                        record.CustomFields.Add(new CustomFieldSnapshot
+                        {
+                            Name = f.Name,
+                            Operation = f.Operation.ToString(),
+                            Value = val
+                        });
                     }
                 }
             }
+
+            return record;
         }
 
-        private IEnumerable<string> EnumeratePaymentFolders()
+        #endregion
+
+        #region Accommodations
+
+        public void AddAccommodation(AccommodationRecord rec)
         {
-            var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var folderService = App.FolderService;
-            var companies = App.CompanyService?.Companies;
-
-            if (folderService == null || companies == null)
-                return folders;
-
-            foreach (var company in companies)
+            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
             {
-                var paymentFolder = folderService.GetPaymentFolder(company.Name);
-                if (!string.IsNullOrWhiteSpace(paymentFolder))
-                    folders.Add(paymentFolder);
+                _localDbService.UpsertAccommodation(rec);
+                return;
             }
 
-            var archiveFolder = folderService.GetArchiveFolder();
-            if (!string.IsNullOrWhiteSpace(archiveFolder) && Directory.Exists(archiveFolder))
-            {
-                foreach (var dir in Directory.GetDirectories(archiveFolder))
-                {
-                    var paymentFolder = FindPaymentFolder(dir);
-                    if (!string.IsNullOrWhiteSpace(paymentFolder))
-                        folders.Add(paymentFolder);
-                }
-            }
-
-            return folders;
+            _db.Accommodations.Add(rec);
         }
 
-        private static string? FindPaymentFolder(string parentDir)
+        public decimal GetAccommodationForEmployee(string employeeFolder, string companyId, int year, int month)
         {
-            foreach (var name in Helpers.FolderNames.AllPaymentFolderNames)
-            {
-                var path = Path.Combine(parentDir, name);
-                if (Directory.Exists(path)) return path;
-            }
-            return null;
+            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
+                return _localDbService.GetAccommodationSum(employeeFolder, companyId, year, month);
+
+            return _db.Accommodations
+                .Where(a => a.EmployeeFolder == employeeFolder && a.CompanyId == companyId && a.Year == year && a.Month == month)
+                .Sum(a => a.Amount);
         }
 
-        #region Salary History per Employee
+        public decimal GetAccommodationForEmployee(string employeeFolder, int year, int month)
+        {
+            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
+                return _localDbService.GetAccommodationSum(employeeFolder, year, month);
 
-        private const string SalaryHistoryFile = "salary_history.json";
+            return _db.Accommodations
+                .Where(a => a.EmployeeFolder == employeeFolder && a.Year == year && a.Month == month)
+                .Sum(a => a.Amount);
+        }
+
+        #endregion
+
+        #region Employee Resolution
 
         private readonly Dictionary<string, string> _idToFolderCache = new();
         private readonly HashSet<string> _ghostFolders = new(StringComparer.OrdinalIgnoreCase);
-
-        private static bool IsGhostFolder(string dir)
-        {
-            var jsonPath = Path.Combine(dir, "employee.json");
-            if (!File.Exists(jsonPath)) return false;
-            try
-            {
-                var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
-                return data != null && data.IsArchived;
-            }
-            catch (Exception ex) { LoggingService.LogError("FinanceService.IsGhostFolder", ex); return false; }
-        }
 
         public void BuildEmployeeIdIndex()
         {
@@ -1404,99 +1300,105 @@ WHERE stage = 'salary_entries'
             return originalFolder ?? "";
         }
 
-        public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
+        #endregion
+
+        #region Legacy Cleanup
+
+        internal static string NormalizeEmployeePath(string? path)
+            => (path ?? string.Empty).Replace('/', '\\').Trim().TrimEnd('\\');
+
+        internal string? ResolveEmployeeId(string employeeFolder)
         {
-            employeeFolder = ResolveEmployeeFolder(employeeFolder);
-            if (string.IsNullOrEmpty(employeeFolder) || !Directory.Exists(employeeFolder)) return;
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
             try
             {
-                var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
-                var records = LoadSalaryHistory(employeeFolder);
+                var indexRow = App.EmployeeIndexDbService?.GetEmployeeRowByFolder(employeeFolder);
+                if (indexRow != null && !string.IsNullOrWhiteSpace(indexRow.UniqueId))
+                    return indexRow.UniqueId;
 
-                records.RemoveAll(r => r.Year == record.Year && r.Month == record.Month && r.FirmName == record.FirmName);
-                records.Add(record);
-                records = records.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ToList();
-
-                WriteJsonAtomic(filePath, records);
+                return App.EmployeeService?.LoadEmployeeData(employeeFolder)?.UniqueId;
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"SaveSalaryHistoryRecord error: {ex.Message}");
-                LoggingService.LogError("FinanceService.SaveSalaryHistoryRecord", ex);
+                return null;
             }
         }
 
-        public void RemoveSalaryHistoryRecord(string employeeFolder, int year, int month, string firmName)
+        private void CleanupPaymentFiles(Func<string?, string?, bool> matches)
         {
-            employeeFolder = ResolveEmployeeFolder(employeeFolder);
-            if (string.IsNullOrEmpty(employeeFolder) || !Directory.Exists(employeeFolder)) return;
-            try
-            {
-                var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
-                var records = LoadSalaryHistory(employeeFolder);
-                var before = records.Count;
-                records.RemoveAll(r => r.Year == year && r.Month == month && r.FirmName == firmName);
-                if (records.Count == before) return;
+            var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                WriteJsonAtomic(filePath, records);
-            }
-            catch (Exception ex)
+            foreach (var paymentFolder in EnumeratePaymentFolders())
             {
-                System.Diagnostics.Debug.WriteLine($"RemoveSalaryHistoryRecord error: {ex.Message}");
-                LoggingService.LogError("FinanceService.RemoveSalaryHistoryRecord", ex);
-            }
-        }
+                if (string.IsNullOrWhiteSpace(paymentFolder) || !Directory.Exists(paymentFolder))
+                    continue;
 
-        public List<SalaryHistoryRecord> LoadSalaryHistory(string employeeFolder)
-        {
-            try
-            {
-                employeeFolder = ResolveEmployeeFolder(employeeFolder);
-                var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
-                if (!File.Exists(filePath)) return new List<SalaryHistoryRecord>();
-                return ReadJsonOrDefault(filePath, new List<SalaryHistoryRecord>());
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("FinanceService.LoadSalaryHistory", ex);
-                return new List<SalaryHistoryRecord>();
-            }
-        }
-
-        public SalaryHistoryRecord BuildHistoryRecord(SalaryEntry entry, int year, int month, List<CustomSalaryField>? fields)
-        {
-            var record = new SalaryHistoryRecord
-            {
-                Year = year,
-                Month = month,
-                FirmName = entry.FirmName,
-                FullName = entry.FullName,
-                HoursWorked = entry.HoursWorked,
-                HourlyRate = entry.HourlyRate,
-                GrossSalary = entry.GrossSalary,
-                Advance = entry.Advance,
-                NetSalary = entry.NetSalary,
-                Note = entry.Note,
-                CustomValues = new Dictionary<string, decimal>(entry.CustomValues)
-            };
-
-            if (fields != null)
-            {
-                foreach (var f in fields.Where(fd => fd.FirmName == AllFirmsKey || fd.FirmName == entry.FirmName))
+                foreach (var file in Directory.GetFiles(paymentFolder, "salary_*.json"))
                 {
-                    if (entry.CustomValues.TryGetValue(f.Id, out var val) && val != 0)
+                    if (!processedFiles.Add(file))
+                        continue;
+
+                    try
                     {
-                        record.CustomFields.Add(new CustomFieldSnapshot
-                        {
-                            Name = f.Name,
-                            Operation = f.Operation.ToString(),
-                            Value = val
-                        });
+                        var data = ReadJson<FirmPaymentData>(file);
+                        if (data == null)
+                            continue;
+
+                        var removed = data.Entries.RemoveAll(e => matches(e.EmployeeFolder, e.EmployeeId));
+                        if (removed <= 0)
+                            continue;
+
+                        data.UpdatedAt = DateTime.Now;
+                        WriteJsonAtomic(file, data);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError("FinanceService.CleanupPaymentFiles", ex);
                     }
                 }
             }
+        }
 
-            return record;
+        private IEnumerable<string> EnumeratePaymentFolders()
+        {
+            var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var folderService = App.FolderService;
+            var companies = App.CompanyService?.Companies;
+
+            if (folderService == null || companies == null)
+                return folders;
+
+            foreach (var company in companies)
+            {
+                var paymentFolder = folderService.GetPaymentFolder(company.Name);
+                if (!string.IsNullOrWhiteSpace(paymentFolder))
+                    folders.Add(paymentFolder);
+            }
+
+            var archiveFolder = folderService.GetArchiveFolder();
+            if (!string.IsNullOrWhiteSpace(archiveFolder) && Directory.Exists(archiveFolder))
+            {
+                foreach (var dir in Directory.GetDirectories(archiveFolder))
+                {
+                    var paymentFolder = FindPaymentFolder(dir);
+                    if (!string.IsNullOrWhiteSpace(paymentFolder))
+                        folders.Add(paymentFolder);
+                }
+            }
+
+            return folders;
+        }
+
+        private static string? FindPaymentFolder(string parentDir)
+        {
+            foreach (var name in Helpers.FolderNames.AllPaymentFolderNames)
+            {
+                var path = Path.Combine(parentDir, name);
+                if (Directory.Exists(path)) return path;
+            }
+            return null;
         }
 
         #endregion

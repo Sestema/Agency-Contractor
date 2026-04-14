@@ -186,6 +186,34 @@ ORDER BY full_name, start_date;";
             return ReadRows(command);
         }
 
+        public EmployeeIndexRow? GetEmployeeRowByFolder(string employeeFolder)
+        {
+            EnsureInitialized();
+            if (!IsAvailable || string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
+            var portableFolder = ToPortablePath(employeeFolder);
+            var absoluteFolder = NormalizeFullPath(employeeFolder);
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
+       start_date, end_date, contract_type, position_title, position_number, phone, email,
+       passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
+       work_permit_name, work_permit_expiry, bank_account_number, bank_name,
+       is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+FROM employee_index
+WHERE lower(employee_folder) = lower(@portableFolder)
+   OR lower(employee_folder) = lower(@absoluteFolder)
+LIMIT 1;";
+            command.Parameters.AddWithValue("@portableFolder", portableFolder);
+            command.Parameters.AddWithValue("@absoluteFolder", absoluteFolder);
+
+            var rows = ReadRows(command);
+            return rows.Count > 0 ? rows[0] : null;
+        }
+
         public EmployeeIndexRebuildResult RebuildEmployeeIndex(IReadOnlyList<EmployeeIndexRow> rows, LocalDbService? localDbService = null, int foldersScanned = 0, int foldersSkipped = 0)
         {
             EnsureInitialized();
