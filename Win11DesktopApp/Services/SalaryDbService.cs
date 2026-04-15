@@ -123,7 +123,7 @@ namespace Win11DesktopApp.Services
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
+                command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
                 command.ExecuteNonQuery();
             }
 
@@ -501,6 +501,101 @@ WHERE lower(firm_name) = lower(@firmName)
             ReplaceMonthData(year, month, entries, expenses);
         }
 
+        public void UpsertFirmExpense(int year, int month, FirmExpense expense)
+        {
+            using var connection = OpenMonthConnection(year, month);
+            using var transaction = connection.BeginTransaction();
+            InsertSalaryExpense(connection, transaction, year, month, expense);
+            transaction.Commit();
+        }
+
+        public bool DeleteFirmExpense(int year, int month, string expenseId)
+        {
+            if (string.IsNullOrWhiteSpace(expenseId))
+                return false;
+
+            using var connection = OpenMonthConnection(year, month);
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM salary_expenses WHERE id = @id;";
+            command.Parameters.AddWithValue("@id", expenseId);
+            return command.ExecuteNonQuery() > 0;
+        }
+
+        public void ReplaceFirmExpensesForFirm(int year, int month, string firmName, IReadOnlyList<FirmExpense> expenses)
+        {
+            using var connection = OpenMonthConnection(year, month);
+            using var transaction = connection.BeginTransaction();
+
+            using (var deleteCommand = connection.CreateCommand())
+            {
+                deleteCommand.Transaction = transaction;
+                deleteCommand.CommandText = "DELETE FROM salary_expenses WHERE lower(firm_name) = lower(@firmName);";
+                deleteCommand.Parameters.AddWithValue("@firmName", firmName ?? string.Empty);
+                deleteCommand.ExecuteNonQuery();
+            }
+
+            foreach (var expense in expenses ?? Array.Empty<FirmExpense>())
+                InsertSalaryExpense(connection, transaction, year, month, expense);
+
+            transaction.Commit();
+        }
+
+        public int RemapCustomFieldIdAcrossMonths(string oldFieldId, string newFieldId)
+        {
+            if (string.IsNullOrWhiteSpace(oldFieldId)
+                || string.IsNullOrWhiteSpace(newFieldId)
+                || string.Equals(oldFieldId, newFieldId, StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            var updatedRows = 0;
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var transaction = connection.BeginTransaction();
+                var entriesToUpdate = new List<(long rowId, string customValuesJson)>();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.Transaction = transaction;
+                    command.CommandText = "SELECT id, custom_values FROM salary_entries;";
+                    using var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var rowId = reader.GetInt64(0);
+                        var customValuesJson = reader.IsDBNull(1) ? "{}" : reader.GetString(1);
+                        var customValues = JsonSerializer.Deserialize<Dictionary<string, decimal>>(customValuesJson)
+                                           ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+                        if (!TryMoveCustomValueKey(customValues, oldFieldId, newFieldId))
+                            continue;
+
+                        entriesToUpdate.Add((rowId, JsonSerializer.Serialize(customValues)));
+                    }
+                }
+
+                foreach (var entry in entriesToUpdate)
+                {
+                    using var updateCommand = connection.CreateCommand();
+                    updateCommand.Transaction = transaction;
+                    updateCommand.CommandText = @"
+UPDATE salary_entries
+SET custom_values = @customValues,
+    updated_at = @updatedAt
+WHERE id = @id;";
+                    updateCommand.Parameters.AddWithValue("@customValues", entry.customValuesJson);
+                    updateCommand.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+                    updateCommand.Parameters.AddWithValue("@id", entry.rowId);
+                    updatedRows += updateCommand.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+
+            return updatedRows;
+        }
+
         private void EnsureMonthSchema(string dbPath)
         {
             lock (_initLock)
@@ -681,6 +776,18 @@ ON CONFLICT(id) DO UPDATE SET
             return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
                 ? parsed
                 : 0m;
+        }
+
+        private static bool TryMoveCustomValueKey(Dictionary<string, decimal> customValues, string oldFieldId, string newFieldId)
+        {
+            if (!customValues.TryGetValue(oldFieldId, out var oldValue))
+                return false;
+
+            if (!customValues.ContainsKey(newFieldId))
+                customValues[newFieldId] = oldValue;
+
+            customValues.Remove(oldFieldId);
+            return true;
         }
 
         private static string NormalizeEmployeePath(string? path)

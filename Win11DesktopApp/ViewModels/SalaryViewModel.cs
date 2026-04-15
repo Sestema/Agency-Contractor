@@ -575,13 +575,6 @@ namespace Win11DesktopApp.ViewModels
                 _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
             }
 
-            if (needResave)
-            {
-                var saveSw = Stopwatch.StartNew();
-                await SaveReportAsync();
-                saveMs = saveSw.ElapsedMilliseconds;
-            }
-
             var uiRecalcSw = Stopwatch.StartNew();
             var rebuildFirmFilterSw = Stopwatch.StartNew();
             RebuildFirmFilter();
@@ -595,6 +588,13 @@ namespace Win11DesktopApp.ViewModels
             var expensesSw = Stopwatch.StartNew();
             LoadExpenses();
             expensesMs = expensesSw.ElapsedMilliseconds;
+
+            if (needResave)
+            {
+                var saveSw = Stopwatch.StartNew();
+                await SaveReportAsync();
+                saveMs = saveSw.ElapsedMilliseconds;
+            }
 
             var nextMonthSw = Stopwatch.StartNew();
             await CheckNextMonthExistsAsync();

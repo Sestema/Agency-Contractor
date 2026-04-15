@@ -216,6 +216,114 @@ namespace Win11DesktopApp.Tests
             Assert.Equal(77m, updated.HourlyRate);
         }
 
+        [Fact]
+        public void UpsertFirmExpense_ShouldInsertOrUpdateSingleExpense()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 8, new List<SalaryEntry>(), new List<FirmExpense>());
+
+            _salaryDbService.UpsertFirmExpense(2026, 8, new FirmExpense
+            {
+                Id = "exp-1",
+                FirmName = "Firm A",
+                Year = 2026,
+                Month = 8,
+                Name = "Fuel",
+                Amount = 100m
+            });
+
+            _salaryDbService.UpsertFirmExpense(2026, 8, new FirmExpense
+            {
+                Id = "exp-1",
+                FirmName = "Firm A",
+                Year = 2026,
+                Month = 8,
+                Name = "Fuel Updated",
+                Amount = 250m
+            });
+
+            var (_, expenses) = _salaryDbService.LoadMonthPayments(2026, 8);
+            var stored = Assert.Single(expenses);
+            Assert.Equal("exp-1", stored.Id);
+            Assert.Equal("Fuel Updated", stored.Name);
+            Assert.Equal(250m, stored.Amount);
+        }
+
+        [Fact]
+        public void DeleteFirmExpense_ShouldRemoveOnlyMatchingExpense()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 9,
+                new List<SalaryEntry>(),
+                new List<FirmExpense>
+                {
+                    new() { Id = "exp-1", FirmName = "Firm A", Year = 2026, Month = 9, Name = "Fuel", Amount = 100m },
+                    new() { Id = "exp-2", FirmName = "Firm B", Year = 2026, Month = 9, Name = "Hotel", Amount = 200m }
+                });
+
+            var deleted = _salaryDbService.DeleteFirmExpense(2026, 9, "exp-1");
+
+            Assert.True(deleted);
+            var (_, expenses) = _salaryDbService.LoadMonthPayments(2026, 9);
+            var remaining = Assert.Single(expenses);
+            Assert.Equal("exp-2", remaining.Id);
+        }
+
+        [Fact]
+        public void ReplaceFirmExpensesForFirm_ShouldAffectOnlyTargetFirm()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 10,
+                new List<SalaryEntry>(),
+                new List<FirmExpense>
+                {
+                    new() { Id = "exp-a1", FirmName = "Firm A", Year = 2026, Month = 10, Name = "Fuel", Amount = 100m },
+                    new() { Id = "exp-b1", FirmName = "Firm B", Year = 2026, Month = 10, Name = "Hotel", Amount = 200m }
+                });
+
+            _salaryDbService.ReplaceFirmExpensesForFirm(2026, 10, "Firm A",
+                new List<FirmExpense>
+                {
+                    new() { Id = "exp-a2", FirmName = "Firm A", Year = 2026, Month = 10, Name = "Parking", Amount = 300m }
+                });
+
+            var (_, expenses) = _salaryDbService.LoadMonthPayments(2026, 10);
+            Assert.Equal(2, expenses.Count);
+            Assert.Contains(expenses, e => e.Id == "exp-a2" && e.FirmName == "Firm A");
+            Assert.Contains(expenses, e => e.Id == "exp-b1" && e.FirmName == "Firm B");
+            Assert.DoesNotContain(expenses, e => e.Id == "exp-a1");
+        }
+
+        [Fact]
+        public void RemapCustomFieldIdAcrossMonths_ShouldMoveStoredCustomValuesToLegacyId()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 11,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-1",
+                        EmployeeFolder = @"C:\Employees\John",
+                        FullName = "John Doe",
+                        FirmName = "Firm A",
+                        SavedNetSalary = 1000m,
+                        Status = "paid",
+                        CustomValues = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["sqlite-id"] = 333m
+                        }
+                    }
+                },
+                new List<FirmExpense>());
+
+            var updatedRows = _salaryDbService.RemapCustomFieldIdAcrossMonths("sqlite-id", "legacy-id");
+
+            Assert.Equal(1, updatedRows);
+
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 11);
+            var entry = Assert.Single(entries);
+            Assert.True(entry.CustomValues.ContainsKey("legacy-id"));
+            Assert.Equal(333m, entry.CustomValues["legacy-id"]);
+            Assert.False(entry.CustomValues.ContainsKey("sqlite-id"));
+        }
+
         public void Dispose()
         {
             try { Directory.Delete(_testRootPath, true); } catch { }

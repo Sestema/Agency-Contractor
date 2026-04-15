@@ -1,11 +1,17 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
 
 namespace Win11DesktopApp.Services
 {
     public static class RetryHelper
     {
+        private static bool IsTransientSqliteLock(SqliteException ex)
+        {
+            return ex.SqliteErrorCode is 5 or 6;
+        }
+
         public static void Execute(Action action, int maxRetries = 3, int initialDelayMs = 150)
         {
             for (int i = 0; i <= maxRetries; i++)
@@ -20,6 +26,10 @@ namespace Win11DesktopApp.Services
                     System.Threading.Thread.Sleep(initialDelayMs * (int)Math.Pow(2, i));
                 }
                 catch (UnauthorizedAccessException) when (i < maxRetries)
+                {
+                    System.Threading.Thread.Sleep(initialDelayMs * (int)Math.Pow(2, i));
+                }
+                catch (SqliteException ex) when (i < maxRetries && IsTransientSqliteLock(ex))
                 {
                     System.Threading.Thread.Sleep(initialDelayMs * (int)Math.Pow(2, i));
                 }
@@ -39,6 +49,10 @@ namespace Win11DesktopApp.Services
                     System.Threading.Thread.Sleep(initialDelayMs * (int)Math.Pow(2, i));
                 }
                 catch (UnauthorizedAccessException) when (i < maxRetries)
+                {
+                    System.Threading.Thread.Sleep(initialDelayMs * (int)Math.Pow(2, i));
+                }
+                catch (SqliteException ex) when (i < maxRetries && IsTransientSqliteLock(ex))
                 {
                     System.Threading.Thread.Sleep(initialDelayMs * (int)Math.Pow(2, i));
                 }
@@ -63,6 +77,10 @@ namespace Win11DesktopApp.Services
                 {
                     await Task.Delay(initialDelayMs * (int)Math.Pow(2, i));
                 }
+                catch (SqliteException ex) when (i < maxRetries && IsTransientSqliteLock(ex))
+                {
+                    await Task.Delay(initialDelayMs * (int)Math.Pow(2, i));
+                }
             }
         }
 
@@ -79,6 +97,10 @@ namespace Win11DesktopApp.Services
                     await Task.Delay(initialDelayMs * (int)Math.Pow(2, i));
                 }
                 catch (UnauthorizedAccessException) when (i < maxRetries)
+                {
+                    await Task.Delay(initialDelayMs * (int)Math.Pow(2, i));
+                }
+                catch (SqliteException ex) when (i < maxRetries && IsTransientSqliteLock(ex))
                 {
                     await Task.Delay(initialDelayMs * (int)Math.Pow(2, i));
                 }

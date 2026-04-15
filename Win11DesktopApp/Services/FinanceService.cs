@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+using System.Text.Json;
 using Win11DesktopApp.Models;
 using System.Globalization;
 
@@ -90,9 +91,166 @@ namespace Win11DesktopApp.Services
             return SafeFileService.ReadJsonShared<T>(path);
         }
 
+        public LocalDbMigrationResult EnsureCustomFieldsMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var sourceFields = LoadLegacyCustomFields();
+                return _localDbService.MigrateCustomFieldsIfNeeded(sourceFields);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.EnsureCustomFieldsMigratedToLocalDb", ex);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
         private static void WriteJsonAtomic<T>(string path, T value)
         {
             SafeFileService.WriteJsonAtomic(path, value);
+        }
+
+        private List<CustomSalaryField> LoadLegacyCustomFields()
+        {
+            var folderService = App.FolderService;
+            if (folderService == null || string.IsNullOrWhiteSpace(folderService.RootPath))
+                return new List<CustomSalaryField>();
+
+            var financePath = Path.Combine(folderService.RootPath, "finance_data.json");
+            if (!File.Exists(financePath))
+                return new List<CustomSalaryField>();
+
+            try
+            {
+                using var document = JsonDocument.Parse(SafeFileService.ReadAllTextShared(financePath));
+                var root = document.RootElement;
+                if (root.ValueKind != JsonValueKind.Object)
+                    return new List<CustomSalaryField>();
+
+                if (!TryGetCustomFieldsArray(root, out var fieldsArray))
+                    return new List<CustomSalaryField>();
+
+                var result = new List<CustomSalaryField>();
+                foreach (var item in fieldsArray.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.Object)
+                        continue;
+
+                    var name = ReadStringProperty(item, "Name", "name");
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    var field = new CustomSalaryField
+                    {
+                        Id = ReadStringProperty(item, "Id", "id"),
+                        Name = name.Trim(),
+                        FirmName = ReadStringProperty(item, "FirmName", "firmName"),
+                        Order = ReadIntProperty(item, "Order", "order"),
+                        Operation = ReadFieldOperationProperty(item, "Operation", "operation")
+                    };
+
+                    result.Add(field);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.LoadLegacyCustomFields", ex.Message);
+                return new List<CustomSalaryField>();
+            }
+        }
+
+        private static bool TryGetCustomFieldsArray(JsonElement root, out JsonElement fieldsArray)
+        {
+            string[] candidateNames =
+            {
+                "CustomSalaryFields",
+                "customSalaryFields",
+                "CustomFields",
+                "customFields"
+            };
+
+            foreach (var name in candidateNames)
+            {
+                if (root.TryGetProperty(name, out fieldsArray) && fieldsArray.ValueKind == JsonValueKind.Array)
+                    return true;
+            }
+
+            fieldsArray = default;
+            return false;
+        }
+
+        private static string ReadStringProperty(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (!element.TryGetProperty(name, out var value))
+                    continue;
+
+                if (value.ValueKind == JsonValueKind.String)
+                    return value.GetString() ?? string.Empty;
+
+                if (value.ValueKind != JsonValueKind.Null && value.ValueKind != JsonValueKind.Undefined)
+                    return value.ToString();
+            }
+
+            return string.Empty;
+        }
+
+        private static int ReadIntProperty(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (!element.TryGetProperty(name, out var value))
+                    continue;
+
+                if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number))
+                    return number;
+
+                if (value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
+                    return number;
+            }
+
+            return 0;
+        }
+
+        private static FieldOperation ReadFieldOperationProperty(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (!element.TryGetProperty(name, out var value))
+                    continue;
+
+                if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var numericValue)
+                    && Enum.IsDefined(typeof(FieldOperation), numericValue))
+                {
+                    return (FieldOperation)numericValue;
+                }
+
+                if (value.ValueKind == JsonValueKind.String)
+                {
+                    var stringValue = value.GetString();
+                    if (Enum.TryParse<FieldOperation>(stringValue, ignoreCase: true, out var parsed))
+                        return parsed;
+
+                    if (int.TryParse(stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out numericValue)
+                        && Enum.IsDefined(typeof(FieldOperation), numericValue))
+                    {
+                        return (FieldOperation)numericValue;
+                    }
+                }
+            }
+
+            return FieldOperation.Subtract;
         }
 
         private bool IsSalaryMigrationCompleted()

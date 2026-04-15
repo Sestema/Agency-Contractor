@@ -85,7 +85,7 @@ namespace Win11DesktopApp.Services
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
+                command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
                 command.ExecuteNonQuery();
             }
 
@@ -1151,12 +1151,58 @@ ON CONFLICT(id) DO UPDATE SET
 
                 normalizedFields.Add(new CustomSalaryField
                 {
-                    Id = string.IsNullOrWhiteSpace(source.Id) ? Guid.NewGuid().ToString() : source.Id,
+                    Id = source.Id?.Trim() ?? string.Empty,
                     Name = source.Name ?? string.Empty,
                     Operation = source.Operation,
                     FirmName = source.FirmName ?? string.Empty,
                     Order = source.Order
                 });
+            }
+
+            var existingFields = GetCustomSalaryFields();
+            var existingIds = new HashSet<string>(
+                existingFields
+                    .Where(f => !string.IsNullOrWhiteSpace(f.Id))
+                    .Select(f => f.Id),
+                StringComparer.OrdinalIgnoreCase);
+            var existingFieldsByKey = existingFields
+                .GroupBy(BuildCustomSalaryFieldMergeKey, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            var fieldsToUpsert = new List<CustomSalaryField>();
+            var fieldIdRemaps = new List<(string oldId, CustomSalaryField targetField)>();
+            foreach (var field in normalizedFields)
+            {
+                var mergeKey = BuildCustomSalaryFieldMergeKey(field);
+                if (existingFieldsByKey.TryGetValue(mergeKey, out var existingField))
+                {
+                    if (!string.IsNullOrWhiteSpace(field.Id)
+                        && !string.IsNullOrWhiteSpace(existingField.Id)
+                        && !string.Equals(field.Id, existingField.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        fieldIdRemaps.Add((existingField.Id, field));
+                        existingIds.Remove(existingField.Id);
+                        existingIds.Add(field.Id);
+                        existingFieldsByKey[mergeKey] = field;
+                        fieldsToUpsert.Add(field);
+                    }
+                    else if (string.IsNullOrWhiteSpace(field.Id) && !string.IsNullOrWhiteSpace(existingField.Id))
+                    {
+                        field.Id = existingField.Id;
+                    }
+
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(field.Id) && existingIds.Contains(field.Id))
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(field.Id))
+                    field.Id = Guid.NewGuid().ToString();
+
+                fieldsToUpsert.Add(field);
+                existingIds.Add(field.Id);
+                existingFieldsByKey[mergeKey] = field;
             }
 
             var recordsFound = normalizedFields.Count;
@@ -1168,16 +1214,16 @@ ON CONFLICT(id) DO UPDATE SET
                 using var connection = OpenConnection();
                 using var transaction = connection.BeginTransaction();
 
-                foreach (var field in normalizedFields)
+                foreach (var remap in fieldIdRemaps)
+                    RemapCustomFieldId(connection, transaction, remap.oldId, remap.targetField);
+
+                foreach (var field in fieldsToUpsert)
                 {
                     UpsertCustomSalaryField(connection, transaction, field);
                     recordsImported++;
                 }
 
                 transaction.Commit();
-
-                if (recordsImported != recordsFound)
-                    throw new InvalidOperationException($"Custom fields migration mismatch: expected {recordsFound}, imported {recordsImported}.");
 
                 InsertMigrationJournal("custom_fields", "completed", recordsFound, recordsImported, null, 0, 0);
                 return new LocalDbMigrationResult
@@ -1186,7 +1232,9 @@ ON CONFLICT(id) DO UPDATE SET
                     IsSuccessful = true,
                     RecordsFound = recordsFound,
                     RecordsImported = recordsImported,
-                    Message = $"Migrated {recordsImported} custom salary fields to SQLite."
+                    Message = recordsImported == 0
+                        ? "Custom salary fields migration completed; no missing fields needed import."
+                        : $"Migrated {recordsImported} missing custom salary fields to SQLite."
                 };
             }
             catch (Exception ex)
@@ -1202,6 +1250,132 @@ ON CONFLICT(id) DO UPDATE SET
                     Message = ex.Message
                 };
             }
+        }
+
+        private static string BuildCustomSalaryFieldMergeKey(CustomSalaryField field)
+        {
+            static string Normalize(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
+
+            return string.Join("|",
+                Normalize(field.FirmName),
+                Normalize(field.Name),
+                ((int)field.Operation).ToString(CultureInfo.InvariantCulture));
+        }
+
+        private void RemapCustomFieldId(SqliteConnection connection, SqliteTransaction transaction, string oldFieldId, CustomSalaryField targetField)
+        {
+            if (string.IsNullOrWhiteSpace(oldFieldId)
+                || string.IsNullOrWhiteSpace(targetField.Id)
+                || string.Equals(oldFieldId, targetField.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            RemapCustomFieldIdInReports(connection, transaction, oldFieldId, targetField.Id);
+            RemapCustomFieldIdInSalaryHistory(connection, transaction, oldFieldId, targetField.Id);
+            _ = Win11DesktopApp.App.SalaryDbService?.RemapCustomFieldIdAcrossMonths(oldFieldId, targetField.Id);
+
+            using var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM custom_salary_fields WHERE id = @id;";
+            deleteCommand.Parameters.AddWithValue("@id", oldFieldId);
+            deleteCommand.ExecuteNonQuery();
+        }
+
+        private void RemapCustomFieldIdInReports(SqliteConnection connection, SqliteTransaction transaction, string oldFieldId, string newFieldId)
+        {
+            var reports = LoadAllSalaryReports(connection);
+            var updatedAt = DateTime.Now;
+
+            foreach (var report in reports)
+            {
+                var changed = false;
+                foreach (var entry in report.Entries)
+                {
+                    if (TryMoveCustomValueKey(entry.CustomValues, oldFieldId, newFieldId))
+                        changed = true;
+                }
+
+                if (!changed)
+                    continue;
+
+                report.UpdatedAt = updatedAt;
+                UpsertSalaryReport(connection, transaction, report);
+            }
+        }
+
+        private void RemapCustomFieldIdInSalaryHistory(SqliteConnection connection, SqliteTransaction transaction, string oldFieldId, string newFieldId)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+SELECT id, employee_id, employee_folder, year, month, firm_name, full_name, paid_at,
+       hours_worked, hourly_rate, gross_salary, advance, net_salary, note, custom_values_json, custom_fields_json
+FROM salary_history;";
+
+            using var reader = command.ExecuteReader();
+            var recordsToUpdate = new List<(string employeeId, string employeeFolder, SalaryHistoryRecord record)>();
+            while (reader.Read())
+            {
+                var customValuesJson = reader.IsDBNull(14) ? "{}" : reader.GetString(14);
+                var customFieldsJson = reader.IsDBNull(15) ? "[]" : reader.GetString(15);
+                var customValues = JsonSerializer.Deserialize<Dictionary<string, decimal>>(customValuesJson)
+                                   ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+                if (!TryMoveCustomValueKey(customValues, oldFieldId, newFieldId))
+                    continue;
+
+                var customFields = JsonSerializer.Deserialize<List<CustomFieldSnapshot>>(customFieldsJson)
+                                   ?? new List<CustomFieldSnapshot>();
+
+                recordsToUpdate.Add((
+                    reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    new SalaryHistoryRecord
+                    {
+                        Id = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                        PaidAt = reader.IsDBNull(7)
+                            ? DateTime.Now
+                            : (DateTime.TryParse(reader.GetString(7), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var paidAt)
+                                ? paidAt
+                                : DateTime.Now),
+                        Year = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
+                        Month = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                        FirmName = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                        FullName = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        HoursWorked = reader.IsDBNull(8) ? 0m : ParseDecimal(reader.GetString(8)),
+                        HourlyRate = reader.IsDBNull(9) ? 0m : ParseDecimal(reader.GetString(9)),
+                        GrossSalary = reader.IsDBNull(10) ? 0m : ParseDecimal(reader.GetString(10)),
+                        Advance = reader.IsDBNull(11) ? 0m : ParseDecimal(reader.GetString(11)),
+                        NetSalary = reader.IsDBNull(12) ? 0m : ParseDecimal(reader.GetString(12)),
+                        Note = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                        CustomValues = customValues,
+                        CustomFields = customFields
+                    }));
+            }
+
+            reader.Close();
+
+            foreach (var item in recordsToUpdate)
+                UpsertSalaryHistoryRecord(connection, transaction, item.employeeId, item.employeeFolder, item.record);
+        }
+
+        private static bool TryMoveCustomValueKey(Dictionary<string, decimal>? customValues, string oldFieldId, string newFieldId)
+        {
+            if (customValues == null
+                || string.IsNullOrWhiteSpace(oldFieldId)
+                || string.IsNullOrWhiteSpace(newFieldId)
+                || string.Equals(oldFieldId, newFieldId, StringComparison.OrdinalIgnoreCase)
+                || !customValues.TryGetValue(oldFieldId, out var oldValue))
+            {
+                return false;
+            }
+
+            if (!customValues.ContainsKey(newFieldId))
+                customValues[newFieldId] = oldValue;
+
+            customValues.Remove(oldFieldId);
+            return true;
         }
 
         public void UpsertAccommodation(AccommodationRecord record)

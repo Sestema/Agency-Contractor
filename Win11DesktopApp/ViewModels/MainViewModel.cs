@@ -263,7 +263,7 @@ namespace Win11DesktopApp.ViewModels
 
         private void OnVisibilityChanged()
         {
-            App.Current?.Dispatcher?.Invoke(RefreshVisibleCompanies);
+            _ = App.Current?.Dispatcher?.BeginInvoke((Action)RefreshVisibleCompanies);
         }
 
         public void Cleanup()
@@ -392,12 +392,12 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var count = await Task.Run(() => ProblemsViewModel.CountAllProblems());
-                Application.Current?.Dispatcher?.Invoke(() => ProblemsCount = count);
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() => ProblemsCount = count));
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("MainViewModel.RefreshProblemsCount", ex);
-                Application.Current?.Dispatcher?.Invoke(() => ProblemsCount = 0);
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() => ProblemsCount = 0));
             }
         }
 
@@ -411,7 +411,7 @@ namespace Win11DesktopApp.ViewModels
                 HasNoSearchResults = false;
                 return;
             }
-            _searchDebounce = new Timer(_ => Application.Current?.Dispatcher?.Invoke(() => RunSearch()), null, 300, Timeout.Infinite);
+            _searchDebounce = new Timer(_ => _ = Application.Current?.Dispatcher?.BeginInvoke((Action)RunSearch), null, 300, Timeout.Infinite);
         }
 
         private async void RunSearch()
@@ -428,12 +428,12 @@ namespace Win11DesktopApp.ViewModels
 
                 var results = await Task.Run(() => PerformSearch(query, ct), ct);
                 if (ct.IsCancellationRequested) return;
-                Application.Current?.Dispatcher?.Invoke(() =>
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
                 {
                     SearchResults = new ObservableCollection<SearchResultItem>(results);
                     HasNoSearchResults = results.Count == 0;
                     IsSearchOpen = true;
-                });
+                }));
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { LoggingService.LogError("MainViewModel.RunSearch", ex); }
@@ -632,27 +632,27 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
                     });
                 }
 
-                Application.Current?.Dispatcher?.Invoke(() =>
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
                 {
                     SearchResults = new ObservableCollection<SearchResultItem>(results);
                     HasNoSearchResults = results.Count == 0;
-                });
+                }));
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("MainViewModel.RunAISearch", ex);
-                Application.Current?.Dispatcher?.Invoke(() =>
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
                 {
                     SearchResults = new ObservableCollection<SearchResultItem>(new[]
                     {
                         new SearchResultItem { Category = "AI", CategoryIcon = "\uE9D9", CategoryColor = "#E53935",
                             Title = Res("TitleError"), Subtitle = ex.Message }
                     });
-                });
+                }));
             }
             finally
             {
-                Application.Current?.Dispatcher?.Invoke(() => IsAISearching = false);
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() => IsAISearching = false));
             }
         }
 

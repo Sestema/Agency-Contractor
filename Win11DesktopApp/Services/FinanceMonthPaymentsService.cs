@@ -51,24 +51,17 @@ namespace Win11DesktopApp.Services
                 expense.Id = Guid.NewGuid().ToString();
 
             EnsureSalaryDbConfigured();
-            var monthEntries = LoadAllFirmPayments(expense.Year, expense.Month).entries;
-            var monthExpenses = LoadFirmExpensesForMonth(expense.Year, expense.Month);
-            monthExpenses.Add(CloneFirmExpense(expense));
-            SaveAllFirmPayments(expense.Year, expense.Month, monthEntries, monthExpenses);
+            _salaryDbService!.UpsertFirmExpense(expense.Year, expense.Month, CloneFirmExpense(expense));
+            InvalidatePaymentsCache(expense.Year, expense.Month);
+            _clearSalarySaveState();
         }
 
         public void UpdateFirmExpense(FirmExpense updated)
         {
             EnsureSalaryDbConfigured();
-            var monthEntries = LoadAllFirmPayments(updated.Year, updated.Month).entries;
-            var monthExpenses = LoadFirmExpensesForMonth(updated.Year, updated.Month);
-            var idx = monthExpenses.FindIndex(e => e.Id == updated.Id);
-            if (idx >= 0)
-                monthExpenses[idx] = CloneFirmExpense(updated);
-            else
-                monthExpenses.Add(CloneFirmExpense(updated));
-
-            SaveAllFirmPayments(updated.Year, updated.Month, monthEntries, monthExpenses);
+            _salaryDbService!.UpsertFirmExpense(updated.Year, updated.Month, CloneFirmExpense(updated));
+            InvalidatePaymentsCache(updated.Year, updated.Month);
+            _clearSalarySaveState();
         }
 
         public void RemoveFirmExpense(string expenseId)
@@ -89,31 +82,30 @@ namespace Win11DesktopApp.Services
         public void RemoveFirmExpense(string expenseId, int year, int month)
         {
             EnsureSalaryDbConfigured();
-            var monthEntries = LoadAllFirmPayments(year, month).entries;
-            var monthExpenses = LoadFirmExpensesForMonth(year, month);
-            var removedCount = monthExpenses.RemoveAll(e => e.Id == expenseId);
-            if (removedCount > 0)
-                SaveAllFirmPayments(year, month, monthEntries, monthExpenses);
+            if (_salaryDbService!.DeleteFirmExpense(year, month, expenseId))
+            {
+                InvalidatePaymentsCache(year, month);
+                _clearSalarySaveState();
+            }
         }
 
         public void SaveFirmExpenses(List<FirmExpense> expenses, int year, int month, string? firmNameFilter = null)
         {
             EnsureSalaryDbConfigured();
-            List<FirmExpense> monthExpenses;
             if (string.IsNullOrWhiteSpace(firmNameFilter))
             {
-                monthExpenses = CloneFirmExpenses(expenses);
+                var monthEntries = LoadAllFirmPayments(year, month).entries;
+                SaveAllFirmPayments(year, month, monthEntries, CloneFirmExpenses(expenses));
             }
             else
             {
-                monthExpenses = LoadFirmExpensesForMonth(year, month)
-                    .Where(expense => !string.Equals(expense.FirmName, firmNameFilter, StringComparison.Ordinal))
+                var filteredExpenses = CloneFirmExpenses(expenses)
+                    .Where(expense => string.Equals(expense.FirmName, firmNameFilter, StringComparison.Ordinal))
                     .ToList();
-                monthExpenses.AddRange(CloneFirmExpenses(expenses));
+                _salaryDbService!.ReplaceFirmExpensesForFirm(year, month, firmNameFilter, filteredExpenses);
+                InvalidatePaymentsCache(year, month);
+                _clearSalarySaveState();
             }
-
-            var monthEntries = LoadAllFirmPayments(year, month).entries;
-            SaveAllFirmPayments(year, month, monthEntries, monthExpenses);
         }
 
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)

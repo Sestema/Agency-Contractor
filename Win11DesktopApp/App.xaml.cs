@@ -99,75 +99,25 @@ namespace Win11DesktopApp
                 args.Handled = true;
             };
 
-            NavigationService = new NavigationService();
-            ThemeService = new ThemeService();
-            LanguageService = new LanguageService();
-            AppSettingsService = new AppSettingsService(suppressStartupNotifications: true);
-            AccessStatusService = new AccessStatusService();
-            FolderService = new FolderService(AppSettingsService);
-
-            if (!string.IsNullOrEmpty(FolderService.RootPath))
-                LoggingService.Initialize(FolderService.RootPath);
-
-            LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
+            StartupIntegrityService startupIntegrityService;
             var startupStopwatch = Stopwatch.StartNew();
             void LogStartupPhase(string phase) =>
                 LoggingService.LogInfo("App.Startup", $"{phase} at {startupStopwatch.ElapsedMilliseconds} ms");
-            LogStartupPhase("startup_begin");
 
-            PersistenceService = new PersistenceService(AppSettingsService, FolderService);
-            var startupIntegrityService = new StartupIntegrityService(FolderService, PersistenceService);
-            startupIntegrityService.IncludeSettingsStartupState(AppSettingsService);
-            startupIntegrityService.RunQuickCheck();
-            TagCatalogService = new TagCatalogService();
-            CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
-            TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
-            StarterTemplateCatalogService = new StarterTemplateCatalogService();
-            LocalDbService = new LocalDbService(FolderService);
-            EmployeeIndexDbService = new EmployeeIndexDbService(FolderService);
-            SalaryDbService = new SalaryDbService(FolderService);
-            EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService, LocalDbService, EmployeeIndexDbService);
-            AdminMirrorSyncService = new AdminMirrorSyncService();
-            RecentlyDeletedService = new RecentlyDeletedService(FolderService, EmployeeService);
-            FinanceService = new FinanceService(FolderService, SalaryDbService, LocalDbService, suppressStartupNotifications: true);
-            InvoiceStorageService = new InvoiceStorageService(FolderService);
-            AresLookupService = new AresLookupService(InvoiceStorageService);
-            InvoiceQrPaymentService = new InvoiceQrPaymentService();
-            InvoicePdfRenderService = new InvoicePdfRenderService(InvoiceStorageService, InvoiceQrPaymentService);
-            startupIntegrityService.IncludeFinanceStartupState(FinanceService);
-            ActivityLogService = new ActivityLogService(FolderService, LocalDbService);
-            CandidateService = new CandidateService(FolderService);
-            GeminiApiService = new GeminiApiService();
-            NewsService = new NewsService();
-            ProfileAuthService = new ProfileAuthService();
-            ProfileSessionService = new ProfileSessionService(AppSettingsService);
-            if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiModel))
-                GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
-            DocumentGenerationService = new DocumentGenerationService();
-            DocumentLocalizationService = new DocumentLocalizationService();
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory);
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("App.PendingCleanupStartup", ex.Message);
-                }
-            });
-
-            _ = Task.Run(() =>
+                startupIntegrityService = InitializeCoreServices();
+                LogStartupPhase("startup_begin");
+                startupIntegrityService.IncludeFinanceStartupState(FinanceService);
+                RunBackgroundWarmupTasks();
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    NetPdfFormHelper.WarmUp();
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("App.NetPdfWarmUp", ex.Message);
-                }
-            });
+                LoggingService.LogError("App.OnStartup.Init", ex);
+                ErrorHandler.Report("App.OnStartup", ex, ErrorSeverity.Critical, showUser: true);
+                Shutdown(-1);
+                return;
+            }
 
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
@@ -337,6 +287,20 @@ namespace Win11DesktopApp
                 {
                     var failedMessage = $"Salary history migration to SQLite failed. The program will keep using JSON fallback. Details: {salaryHistoryMigration.Message}";
                     LoggingService.LogWarning("App.SalaryHistoryMigration", failedMessage);
+                }
+            }
+
+            var customFieldsMigration = FinanceService.EnsureCustomFieldsMigratedToLocalDb();
+            if (customFieldsMigration.WasMigrationAttempted)
+            {
+                if (customFieldsMigration.IsSuccessful)
+                {
+                    LoggingService.LogInfo("App.CustomFieldsMigration", customFieldsMigration.Message);
+                }
+                else
+                {
+                    var failedMessage = $"Custom fields migration to SQLite failed. Details: {customFieldsMigration.Message}";
+                    LoggingService.LogWarning("App.CustomFieldsMigration", failedMessage);
                 }
             }
 
@@ -604,6 +568,80 @@ namespace Win11DesktopApp
             _ = Task.Run(() => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies));
             _ = Task.Run(() => RecentlyDeletedService.PurgeExpired());
             _ = Task.Run(PrewarmSalaryPath);
+        }
+
+        private static StartupIntegrityService InitializeCoreServices()
+        {
+            NavigationService = new NavigationService();
+            ThemeService = new ThemeService();
+            LanguageService = new LanguageService();
+            AppSettingsService = new AppSettingsService(suppressStartupNotifications: true);
+            AccessStatusService = new AccessStatusService();
+            FolderService = new FolderService(AppSettingsService);
+
+            if (!string.IsNullOrEmpty(FolderService.RootPath))
+                LoggingService.Initialize(FolderService.RootPath);
+
+            LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
+
+            PersistenceService = new PersistenceService(AppSettingsService, FolderService);
+            var startupIntegrityService = new StartupIntegrityService(FolderService, PersistenceService);
+            startupIntegrityService.IncludeSettingsStartupState(AppSettingsService);
+            startupIntegrityService.RunQuickCheck();
+            TagCatalogService = new TagCatalogService();
+            CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
+            TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
+            StarterTemplateCatalogService = new StarterTemplateCatalogService();
+            LocalDbService = new LocalDbService(FolderService);
+            EmployeeIndexDbService = new EmployeeIndexDbService(FolderService);
+            SalaryDbService = new SalaryDbService(FolderService);
+            EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService, LocalDbService, EmployeeIndexDbService);
+            AdminMirrorSyncService = new AdminMirrorSyncService();
+            RecentlyDeletedService = new RecentlyDeletedService(FolderService, EmployeeService);
+            FinanceService = new FinanceService(FolderService, SalaryDbService, LocalDbService, suppressStartupNotifications: true);
+            InvoiceStorageService = new InvoiceStorageService(FolderService);
+            AresLookupService = new AresLookupService(InvoiceStorageService);
+            InvoiceQrPaymentService = new InvoiceQrPaymentService();
+            InvoicePdfRenderService = new InvoicePdfRenderService(InvoiceStorageService, InvoiceQrPaymentService);
+            ActivityLogService = new ActivityLogService(FolderService, LocalDbService);
+            CandidateService = new CandidateService(FolderService);
+            GeminiApiService = new GeminiApiService();
+            NewsService = new NewsService();
+            ProfileAuthService = new ProfileAuthService();
+            ProfileSessionService = new ProfileSessionService(AppSettingsService);
+            if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiModel))
+                GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
+            DocumentGenerationService = new DocumentGenerationService();
+            DocumentLocalizationService = new DocumentLocalizationService();
+
+            return startupIntegrityService;
+        }
+
+        private static void RunBackgroundWarmupTasks()
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("App.PendingCleanupStartup", ex.Message);
+                }
+            });
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    NetPdfFormHelper.WarmUp();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("App.NetPdfWarmUp", ex.Message);
+                }
+            });
         }
 
         private static void PrewarmSalaryPath()

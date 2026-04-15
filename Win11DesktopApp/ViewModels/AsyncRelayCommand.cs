@@ -45,9 +45,12 @@ namespace Win11DesktopApp.ViewModels
             {
                 await _executeAsync(parameter);
             }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
-                ErrorHandler.Report("AsyncRelayCommand.Execute", ex, ErrorSeverity.Error, showUser: false);
+                ErrorHandler.Report("AsyncRelayCommand.Execute", ex, ErrorSeverity.Error, showUser: true);
             }
             finally
             {
