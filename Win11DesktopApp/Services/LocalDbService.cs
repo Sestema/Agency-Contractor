@@ -249,24 +249,6 @@ WHERE stage = 'accommodations'
             return Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
         }
 
-        public bool IsFirmExpensesMigrationCompleted()
-        {
-            EnsureInitialized();
-            if (!IsAvailable)
-                return false;
-
-            using var connection = OpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = @"
-SELECT COUNT(1)
-FROM migration_journal
-WHERE stage = 'firm_expenses_salary_db'
-  AND status = 'completed';";
-
-            var result = command.ExecuteScalar();
-            return Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
-        }
-
         public bool HasEmployeeHistoryEntries(string employeeId)
         {
             EnsureInitialized();

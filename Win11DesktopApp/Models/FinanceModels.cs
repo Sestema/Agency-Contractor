@@ -47,16 +47,6 @@ namespace Win11DesktopApp.Models
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
-    public class FinanceDatabase
-    {
-        public string Version { get; set; } = "2.0";
-        public List<MonthlySalaryReport> Reports { get; set; } = new();
-        public List<AdvancePayment> Advances { get; set; } = new();
-        public List<AccommodationRecord> Accommodations { get; set; } = new();
-        public List<CustomSalaryField> CustomFields { get; set; } = new();
-        public List<FirmExpense> FirmExpenses { get; set; } = new();
-    }
-
     public class FirmPaymentData
     {
         public int Year { get; set; }

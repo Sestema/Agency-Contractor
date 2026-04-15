@@ -8,55 +8,15 @@ namespace Win11DesktopApp.Services
     public class FinanceCustomFieldsService
     {
         private readonly LocalDbService? _localDbService;
-        private readonly IList<CustomSalaryField> _customFields;
-        private bool _useLocalDb;
 
-        public FinanceCustomFieldsService(LocalDbService? localDbService, IList<CustomSalaryField> customFields)
+        public FinanceCustomFieldsService(LocalDbService? localDbService)
         {
             _localDbService = localDbService;
-            _customFields = customFields;
-        }
-
-        public bool UseLocalDb => _useLocalDb;
-
-        public LocalDbMigrationResult EnsureMigratedToLocalDb()
-        {
-            try
-            {
-                if (_localDbService == null)
-                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
-
-                var result = _localDbService.MigrateCustomFieldsIfNeeded(_customFields.ToList());
-                _useLocalDb = result.IsSuccessful;
-
-                if (!result.WasMigrationAttempted && _localDbService.IsCustomFieldsMigrationCompleted())
-                    _useLocalDb = true;
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _useLocalDb = false;
-                LoggingService.LogError("FinanceCustomFieldsService.EnsureMigratedToLocalDb", ex);
-                return new LocalDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = false,
-                    Message = ex.Message
-                };
-            }
         }
 
         public List<CustomSalaryField> GetCustomFields()
         {
-            if (_useLocalDb && _localDbService != null)
-            {
-                var dbFields = _localDbService.GetCustomSalaryFields();
-                if (dbFields.Count > 0 || _localDbService.IsCustomFieldsMigrationCompleted())
-                    return dbFields;
-            }
-
-            return _customFields
+            return RequireLocalDb().GetCustomSalaryFields()
                 .OrderBy(f => f.FirmName)
                 .ThenBy(f => f.Order)
                 .ToList();
@@ -84,50 +44,20 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(field.Id))
                 field.Id = Guid.NewGuid().ToString();
 
-            if (_useLocalDb && _localDbService != null)
-            {
-                _localDbService.UpsertCustomSalaryField(field);
-                return;
-            }
-
-            _customFields.Add(field);
+            RequireLocalDb().UpsertCustomSalaryField(field);
         }
 
         public void UpdateCustomField(CustomSalaryField updated)
         {
-            if (_useLocalDb && _localDbService != null)
-            {
-                _localDbService.UpsertCustomSalaryField(updated);
-                return;
-            }
-
-            for (int i = 0; i < _customFields.Count; i++)
-            {
-                if (_customFields[i].Id != updated.Id)
-                    continue;
-
-                _customFields[i] = updated;
-                break;
-            }
+            RequireLocalDb().UpsertCustomSalaryField(updated);
         }
 
         public void ReorderCustomFields(List<CustomSalaryField> orderedFields)
         {
-            if (_useLocalDb && _localDbService != null)
-            {
-                for (int i = 0; i < orderedFields.Count; i++)
-                    orderedFields[i].Order = i;
-
-                _localDbService.ReplaceCustomSalaryFields(orderedFields);
-                return;
-            }
-
             for (int i = 0; i < orderedFields.Count; i++)
-            {
-                var db = _customFields.FirstOrDefault(f => f.Id == orderedFields[i].Id);
-                if (db != null)
-                    db.Order = i;
-            }
+                orderedFields[i].Order = i;
+
+            RequireLocalDb().ReplaceCustomSalaryFields(orderedFields);
         }
 
         public bool RemoveCustomField(string fieldId)
@@ -135,35 +65,21 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrWhiteSpace(fieldId))
                 return false;
 
-            if (_useLocalDb && _localDbService != null)
-            {
-                _localDbService.DeleteCustomSalaryField(fieldId);
-                return true;
-            }
-
-            var removed = false;
-            for (int i = _customFields.Count - 1; i >= 0; i--)
-            {
-                if (_customFields[i].Id != fieldId)
-                    continue;
-
-                _customFields.RemoveAt(i);
-                removed = true;
-            }
-
-            return removed;
+            RequireLocalDb().DeleteCustomSalaryField(fieldId);
+            return true;
         }
 
         private List<CustomSalaryField> GetFieldsSnapshot()
         {
-            if (_useLocalDb && _localDbService != null)
-            {
-                var dbFields = _localDbService.GetCustomSalaryFields();
-                if (dbFields.Count > 0 || _localDbService.IsCustomFieldsMigrationCompleted())
-                    return dbFields;
-            }
+            return RequireLocalDb().GetCustomSalaryFields();
+        }
 
-            return _customFields.ToList();
+        private LocalDbService RequireLocalDb()
+        {
+            if (_localDbService == null)
+                throw new InvalidOperationException("LocalDbService is required for custom fields storage.");
+
+            return _localDbService;
         }
     }
 }

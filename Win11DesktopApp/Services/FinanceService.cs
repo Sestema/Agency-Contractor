@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using Win11DesktopApp.Models;
@@ -12,11 +11,7 @@ namespace Win11DesktopApp.Services
 {
     public class FinanceService
     {
-        private const string FinanceFileName = "finance_data.json";
         private readonly bool _suppressStartupNotifications;
-        private readonly string _filePath;
-        private FinanceDatabase _db;
-        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
         private readonly SalaryDbService? _salaryDbService;
         private readonly LocalDbService? _localDbService;
         public const string GlobalKey = FinanceConstants.GlobalKey;
@@ -36,25 +31,8 @@ namespace Win11DesktopApp.Services
             _suppressStartupNotifications = suppressStartupNotifications;
             _salaryDbService = salaryDbService;
             _localDbService = localDbService;
-            var rootPath = folderService.RootPath;
-            if (!string.IsNullOrEmpty(rootPath))
-            {
-                Directory.CreateDirectory(rootPath);
-                _filePath = Path.Combine(rootPath, FinanceFileName);
-                MigrateFromAppDataIfNeeded(rootPath);
-            }
-            else
-            {
-                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                var appFolder = Path.Combine(appData, "AgencyContractor");
-                Directory.CreateDirectory(appFolder);
-                _filePath = Path.Combine(appFolder, FinanceFileName);
-            }
-            _db = Load();
-            MigrateIfNeeded();
             AdvancesService = new FinanceAdvancesService(
                 _localDbService,
-                _db,
                 ResolveEmployeeId,
                 ResolveEmployeeFolder);
             SalaryHistoryService = new FinanceSalaryHistoryService(
@@ -63,8 +41,6 @@ namespace Win11DesktopApp.Services
                 ResolveEmployeeFolder);
             MonthPaymentsService = new FinanceMonthPaymentsService(
                 _salaryDbService,
-                _localDbService,
-                _db,
                 () => LastSaveRecoveryPath = null,
                 () =>
                 {
@@ -72,8 +48,8 @@ namespace Win11DesktopApp.Services
                     LastSaveRecoveryPath = null;
                 },
                 message => LastSalaryConflictMessage = message);
-            CustomFieldsService = new FinanceCustomFieldsService(_localDbService, _db.CustomFields);
-            ReportsService = new FinanceReportsService(_localDbService, _db.Reports);
+            CustomFieldsService = new FinanceCustomFieldsService(_localDbService);
+            ReportsService = new FinanceReportsService(_localDbService);
         }
 
         public SalaryDbMigrationResult EnsureSalaryMigratedToLocalDb()
@@ -111,250 +87,13 @@ namespace Win11DesktopApp.Services
         {
             // Salary files can be read while a save is in flight; allow shared read access
             // so the app is less likely to block its own replace/copy path.
-            return SafeFileService.ReadJsonShared<T>(path, _jsonOptions);
-        }
-
-        private static T ReadJsonOrDefault<T>(string path, T fallback)
-        {
-            return SafeFileService.ReadJsonOrDefault(path, fallback, _jsonOptions);
+            return SafeFileService.ReadJsonShared<T>(path);
         }
 
         private static void WriteJsonAtomic<T>(string path, T value)
         {
-            SafeFileService.WriteJsonAtomic(path, value, _jsonOptions);
+            SafeFileService.WriteJsonAtomic(path, value);
         }
-
-        private void MigrateFromAppDataIfNeeded(string rootPath)
-        {
-            try
-            {
-                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                var oldPath = Path.Combine(appData, "AgencyContractor", FinanceFileName);
-                var newPath = Path.Combine(rootPath, FinanceFileName);
-
-                if (File.Exists(oldPath) && !File.Exists(newPath))
-                {
-                    SafeFileService.CopyFile(oldPath, newPath, overwrite: false);
-                    SafeFileService.MoveFile(oldPath, oldPath + ".migrated");
-                    LoggingService.LogInfo("FinanceService", $"Migrated {FinanceFileName} from AppData to RootPath");
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("FinanceService.MigrateFromAppData", ex);
-            }
-        }
-
-        private FinanceDatabase Load()
-        {
-            if (!File.Exists(_filePath))
-            {
-                if (TryRestoreFromBackup(out var restoredFromBackup))
-                    return restoredFromBackup;
-
-                return new FinanceDatabase();
-            }
-
-            try
-            {
-                return ReadJsonOrDefault(_filePath, new FinanceDatabase());
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("FinanceService.Load", ex);
-                BackupUnreadableFile(_filePath, "finance");
-                if (TryRestoreFromBackup(out var restoredFromBackup))
-                    return restoredFromBackup;
-
-                WasResetToDefaultsOnLoad = true;
-                NotifyStartupWarning(Res("MsgFinanceResetToDefaults"));
-                return new FinanceDatabase();
-            }
-        }
-
-        private void MigrateIfNeeded()
-        {
-            if (_db.Version == "2.0") return;
-
-            bool changed = false;
-            var useCustomFieldsLocalDb = _localDbService?.IsCustomFieldsMigrationCompleted() == true;
-
-            CustomSalaryField? surchargeField = null;
-            CustomSalaryField? accomField = null;
-
-            foreach (var report in _db.Reports)
-            {
-                foreach (var entry in report.Entries)
-                {
-                    if (entry.CustomValues.Count > 0) continue;
-
-#pragma warning disable CS0618
-                    if (entry.Surcharge != 0)
-                    {
-                        if (surchargeField == null)
-                        {
-                            surchargeField = new CustomSalaryField
-                            {
-                                Id = "migrated_surcharge",
-                                Name = "Doplatek",
-                                Operation = FieldOperation.Add,
-                                FirmName = AllFirmsKey,
-                                Order = 0
-                            };
-                            if (!_db.CustomFields.Any(f => f.Id == surchargeField.Id))
-                                _db.CustomFields.Add(surchargeField);
-                            if (useCustomFieldsLocalDb)
-                                _localDbService!.UpsertCustomSalaryField(surchargeField);
-                        }
-                        entry.CustomValues[surchargeField.Id] = entry.Surcharge;
-                        changed = true;
-                    }
-
-                    if (entry.Accommodation != 0)
-                    {
-                        if (accomField == null)
-                        {
-                            accomField = new CustomSalaryField
-                            {
-                                Id = "migrated_accommodation",
-                                Name = "Ubytovna",
-                                Operation = FieldOperation.Subtract,
-                                FirmName = AllFirmsKey,
-                                Order = 1
-                            };
-                            if (!_db.CustomFields.Any(f => f.Id == accomField.Id))
-                                _db.CustomFields.Add(accomField);
-                            if (useCustomFieldsLocalDb)
-                                _localDbService!.UpsertCustomSalaryField(accomField);
-                        }
-                        entry.CustomValues[accomField.Id] = entry.Accommodation;
-                        changed = true;
-                    }
-#pragma warning restore CS0618
-                }
-            }
-
-            _db.Version = "2.0";
-            if (changed) Save();
-        }
-
-        public void Save()
-        {
-            try
-            {
-                LoggingService.LogInfo("FinanceService", "Saving finance database");
-                CreateBackupIfNeeded();
-                WriteJsonAtomic(_filePath, _db);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"FinanceService.Save error: {ex.Message}");
-                LoggingService.LogError("FinanceService.Save", ex);
-            }
-        }
-
-        private void CreateBackupIfNeeded()
-        {
-            try
-            {
-                if (!File.Exists(_filePath)) return;
-                var dir = Path.GetDirectoryName(_filePath);
-                if (string.IsNullOrEmpty(dir)) return;
-                var backupDir = Path.Combine(dir, "backups");
-                Directory.CreateDirectory(backupDir);
-
-                var backupFile = Path.Combine(backupDir, $"finance_data_{DateTime.Now:yyyyMMdd_HHmmss}.json.bak");
-                SafeFileService.CopyFile(_filePath, backupFile);
-
-                var files = new DirectoryInfo(backupDir)
-                    .GetFiles("finance_data_*.json.bak")
-                    .OrderByDescending(f => f.CreationTime)
-                    .ToList();
-                for (int i = 5; i < files.Count; i++)
-                {
-                    try { files[i].Delete(); } catch (Exception ex) { LoggingService.LogWarning("FinanceService.CreateBackupIfNeeded", $"Cleanup failed: {ex.Message}"); }
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("FinanceService.CreateBackup", ex.Message);
-            }
-        }
-
-        private bool TryRestoreFromBackup(out FinanceDatabase database)
-        {
-            database = new FinanceDatabase();
-
-            try
-            {
-                var backupPath = GetLatestBackupPath();
-                if (string.IsNullOrWhiteSpace(backupPath) || !File.Exists(backupPath))
-                    return false;
-
-                database = ReadJsonOrDefault(backupPath, new FinanceDatabase());
-                WasRecoveredFromBackupOnLoad = true;
-                WriteJsonAtomic(_filePath, database);
-                LoggingService.LogWarning("FinanceService", $"Restored finance data from backup: {backupPath}");
-                NotifyStartupWarning(Res("MsgFinanceRecoveredFromBackup"));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("FinanceService.TryRestoreFromBackup", ex.Message);
-                return false;
-            }
-        }
-
-        private string? GetLatestBackupPath()
-        {
-            try
-            {
-                var dir = Path.GetDirectoryName(_filePath);
-                if (string.IsNullOrWhiteSpace(dir))
-                    return null;
-
-                var backupDir = Path.Combine(dir, "backups");
-                if (!Directory.Exists(backupDir))
-                    return null;
-
-                return new DirectoryInfo(backupDir)
-                    .GetFiles("finance_data_*.json.bak")
-                    .OrderByDescending(f => f.CreationTimeUtc)
-                    .Select(f => f.FullName)
-                    .FirstOrDefault();
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("FinanceService.GetLatestBackupPath", ex.Message);
-                return null;
-            }
-        }
-
-        private static void BackupUnreadableFile(string path, string label)
-        {
-            try
-            {
-                if (!File.Exists(path))
-                    return;
-
-                var directory = Path.GetDirectoryName(path);
-                var fileName = Path.GetFileName(path);
-                var quarantineName = $"{fileName}.corrupt.{DateTime.Now:yyyyMMdd_HHmmss}";
-                var quarantinePath = string.IsNullOrWhiteSpace(directory)
-                    ? quarantineName
-                    : Path.Combine(directory, quarantineName);
-                SafeFileService.MoveFile(path, quarantinePath);
-                LoggingService.LogWarning("FinanceService.BackupUnreadableFile",
-                    $"Moved unreadable {label} file to {quarantinePath}");
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("FinanceService.BackupUnreadableFile", ex.Message);
-            }
-        }
-
-        private static string Res(string key) =>
-            Application.Current?.TryFindResource(key) as string ?? key;
 
         private bool IsSalaryMigrationCompleted()
         {
@@ -555,55 +294,10 @@ WHERE stage = 'salary_entries'
             }
         }
 
-        private void NotifyStartupWarning(string message)
-        {
-            if (_suppressStartupNotifications)
-                return;
-
-            NotifyWarning(message);
-        }
-
-        private static void NotifyWarning(string message)
-        {
-            if (string.IsNullOrWhiteSpace(message))
-                return;
-
-            Application.Current?.Dispatcher?.BeginInvoke(() =>
-            {
-                if (Application.Current?.MainWindow?.IsVisible == true)
-                {
-                    ToastService.Instance.Warning(message);
-                    return;
-                }
-
-                MessageBox.Show(message, Res("TitleWarning"), MessageBoxButton.OK, MessageBoxImage.Warning);
-            });
-        }
-
         #region Facade Delegations
 
         public LocalDbMigrationResult EnsureSalaryHistoryMigratedToLocalDb()
             => SalaryHistoryService.EnsureMigratedToLocalDb();
-
-        public LocalDbMigrationResult EnsureAdvancesMigratedToLocalDb()
-            => AdvancesService.EnsureMigratedToLocalDb();
-
-        public LocalDbMigrationResult EnsureCustomFieldsMigratedToLocalDb()
-            => CustomFieldsService.EnsureMigratedToLocalDb();
-
-        public LocalDbMigrationResult EnsureAccommodationsMigratedToLocalDb()
-        {
-            if (_localDbService == null)
-                return new LocalDbMigrationResult { Message = "LocalDbService not available." };
-
-            return _localDbService.MigrateAccommodationsIfNeeded(_db.Accommodations.ToList());
-        }
-
-        public LocalDbMigrationResult EnsureReportsMigratedToLocalDb()
-            => ReportsService.EnsureMigratedToLocalDb();
-
-        public SalaryDbMigrationResult EnsureFirmExpensesMigratedToSalaryDb()
-            => MonthPaymentsService.EnsureMigratedToSalaryDb();
 
         public List<CustomSalaryField> GetCustomFields()
             => CustomFieldsService.GetCustomFields();
@@ -749,17 +443,9 @@ WHERE stage = 'salary_entries'
             }
 
             AdvancesService.RemoveAdvancesForEmployee(employeeId, originalFolder, deletedFolder);
-
-            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
-            {
-                _localDbService.RemoveAccommodationsForEmployee(originalFolder);
-                if (!string.IsNullOrEmpty(deletedFolder))
-                    _localDbService.RemoveAccommodationsForEmployee(deletedFolder);
-            }
-            else
-            {
-                _db.Accommodations.RemoveAll(a => Matches(a.EmployeeFolder));
-            }
+            RequireLocalDb().RemoveAccommodationsForEmployee(originalFolder);
+            if (!string.IsNullOrEmpty(deletedFolder))
+                RequireLocalDb().RemoveAccommodationsForEmployee(deletedFolder);
             ReportsService.RemoveEmployeeEntries(employeeId, originalFolder, deletedFolder);
 
             CleanupPaymentFiles(Matches);
@@ -1086,33 +772,17 @@ WHERE stage = 'salary_entries'
 
         public void AddAccommodation(AccommodationRecord rec)
         {
-            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
-            {
-                _localDbService.UpsertAccommodation(rec);
-                return;
-            }
-
-            _db.Accommodations.Add(rec);
+            RequireLocalDb().UpsertAccommodation(rec);
         }
 
         public decimal GetAccommodationForEmployee(string employeeFolder, string companyId, int year, int month)
         {
-            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
-                return _localDbService.GetAccommodationSum(employeeFolder, companyId, year, month);
-
-            return _db.Accommodations
-                .Where(a => a.EmployeeFolder == employeeFolder && a.CompanyId == companyId && a.Year == year && a.Month == month)
-                .Sum(a => a.Amount);
+            return RequireLocalDb().GetAccommodationSum(employeeFolder, companyId, year, month);
         }
 
         public decimal GetAccommodationForEmployee(string employeeFolder, int year, int month)
         {
-            if (_localDbService != null && _localDbService.IsAccommodationsMigrationCompleted())
-                return _localDbService.GetAccommodationSum(employeeFolder, year, month);
-
-            return _db.Accommodations
-                .Where(a => a.EmployeeFolder == employeeFolder && a.Year == year && a.Month == month)
-                .Sum(a => a.Amount);
+            return RequireLocalDb().GetAccommodationSum(employeeFolder, year, month);
         }
 
         #endregion
@@ -1121,6 +791,14 @@ WHERE stage = 'salary_entries'
 
         private readonly Dictionary<string, string> _idToFolderCache = new();
         private readonly HashSet<string> _ghostFolders = new(StringComparer.OrdinalIgnoreCase);
+
+        private LocalDbService RequireLocalDb()
+        {
+            if (_localDbService == null)
+                throw new InvalidOperationException("LocalDbService is required for finance runtime storage.");
+
+            return _localDbService;
+        }
 
         public void BuildEmployeeIdIndex()
         {

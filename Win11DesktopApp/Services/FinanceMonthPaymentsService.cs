@@ -9,8 +9,6 @@ namespace Win11DesktopApp.Services
     public class FinanceMonthPaymentsService
     {
         private readonly SalaryDbService? _salaryDbService;
-        private readonly LocalDbService? _localDbService;
-        private readonly FinanceDatabase _db;
         private readonly Action _clearLastSaveRecoveryPath;
         private readonly Action _clearSalarySaveState;
         private readonly Action<string> _setSalaryConflictMessage;
@@ -19,129 +17,14 @@ namespace Win11DesktopApp.Services
 
         public FinanceMonthPaymentsService(
             SalaryDbService? salaryDbService,
-            LocalDbService? localDbService,
-            FinanceDatabase db,
             Action clearLastSaveRecoveryPath,
             Action clearSalarySaveState,
             Action<string> setSalaryConflictMessage)
         {
             _salaryDbService = salaryDbService;
-            _localDbService = localDbService;
-            _db = db;
             _clearLastSaveRecoveryPath = clearLastSaveRecoveryPath;
             _clearSalarySaveState = clearSalarySaveState;
             _setSalaryConflictMessage = setSalaryConflictMessage;
-        }
-
-        public SalaryDbMigrationResult EnsureMigratedToSalaryDb()
-        {
-            try
-            {
-                if (_localDbService != null && _localDbService.IsFirmExpensesMigrationCompleted())
-                {
-                    return new SalaryDbMigrationResult
-                    {
-                        WasMigrationAttempted = false,
-                        IsSuccessful = true,
-                        Message = "Firm expenses migration already completed."
-                    };
-                }
-
-                if (_salaryDbService == null)
-                {
-                    return new SalaryDbMigrationResult
-                    {
-                        WasMigrationAttempted = false,
-                        IsSuccessful = false,
-                        Message = "SalaryDbService is not configured."
-                    };
-                }
-
-                var legacyExpenses = CloneFirmExpenses(_db.FirmExpenses);
-                if (legacyExpenses.Count == 0)
-                {
-                    _localDbService?.RecordMigrationJournal("firm_expenses_salary_db", "completed", 0, 0, null, 0, 0);
-                    return new SalaryDbMigrationResult
-                    {
-                        WasMigrationAttempted = false,
-                        IsSuccessful = true,
-                        Message = "No legacy firm expenses found for migration."
-                    };
-                }
-
-                var monthBuckets = legacyExpenses
-                    .GroupBy(expense => (expense.Year, expense.Month))
-                    .OrderBy(group => group.Key.Year)
-                    .ThenBy(group => group.Key.Month)
-                    .ToList();
-
-                var importedExpenses = 0;
-                var databasesCreated = 0;
-                _localDbService?.RecordMigrationJournal("firm_expenses_salary_db", "started", legacyExpenses.Count, 0, null, 0, 0);
-
-                foreach (var bucket in monthBuckets)
-                {
-                    var year = bucket.Key.Year;
-                    var month = bucket.Key.Month;
-                    var monthDbExists = _salaryDbService.MonthDbExists(year, month);
-                    if (!monthDbExists)
-                        databasesCreated++;
-
-                    var monthData = _salaryDbService.LoadMonthPayments(year, month);
-                    var mergedExpenses = new Dictionary<string, FirmExpense>(StringComparer.OrdinalIgnoreCase);
-
-                    foreach (var existingExpense in monthData.expenses)
-                    {
-                        var id = string.IsNullOrWhiteSpace(existingExpense.Id) ? Guid.NewGuid().ToString() : existingExpense.Id;
-                        existingExpense.Id = id;
-                        mergedExpenses[id] = existingExpense;
-                    }
-
-                    foreach (var legacyExpense in bucket)
-                    {
-                        var id = string.IsNullOrWhiteSpace(legacyExpense.Id) ? Guid.NewGuid().ToString() : legacyExpense.Id;
-                        legacyExpense.Id = id;
-                        mergedExpenses[id] = legacyExpense;
-                        importedExpenses++;
-                    }
-
-                    _salaryDbService.SaveMonthPayments(
-                        year,
-                        month,
-                        CloneSalaryEntries(monthData.entries),
-                        CloneFirmExpenses(mergedExpenses.Values
-                            .OrderBy(expense => expense.FirmName, StringComparer.Ordinal)
-                            .ThenBy(expense => expense.Name, StringComparer.Ordinal)
-                            .ThenBy(expense => expense.Id, StringComparer.Ordinal)));
-
-                    InvalidatePaymentsCache(year, month);
-                }
-
-                _db.FirmExpenses.Clear();
-                _localDbService?.RecordMigrationJournal("firm_expenses_salary_db", "completed", legacyExpenses.Count, importedExpenses, null, 0, 0);
-
-                return new SalaryDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = true,
-                    ExpensesFound = legacyExpenses.Count,
-                    ExpensesImported = importedExpenses,
-                    DatabasesCreated = databasesCreated,
-                    Message = $"Migrated {importedExpenses} legacy firm expenses to salary month SQLite."
-                };
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("FinanceMonthPaymentsService.EnsureMigratedToSalaryDb", ex);
-                _localDbService?.RecordMigrationJournal("firm_expenses_salary_db", "failed", _db.FirmExpenses.Count, 0, ex.Message, 0, 0);
-                return new SalaryDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = false,
-                    ExpensesFound = _db.FirmExpenses.Count,
-                    Message = ex.Message
-                };
-            }
         }
 
         public List<FirmExpense> GetFirmExpenses(int year, int month)
@@ -167,113 +50,70 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(expense.Id))
                 expense.Id = Guid.NewGuid().ToString();
 
-            if (_salaryDbService != null)
-            {
-                var monthEntries = LoadAllFirmPayments(expense.Year, expense.Month).entries;
-                var monthExpenses = LoadFirmExpensesForMonth(expense.Year, expense.Month);
-                monthExpenses.Add(CloneFirmExpense(expense));
-                SaveAllFirmPayments(expense.Year, expense.Month, monthEntries, monthExpenses);
-                return;
-            }
-
-            _db.FirmExpenses.Add(expense);
-            InvalidatePaymentsCache(expense.Year, expense.Month);
+            EnsureSalaryDbConfigured();
+            var monthEntries = LoadAllFirmPayments(expense.Year, expense.Month).entries;
+            var monthExpenses = LoadFirmExpensesForMonth(expense.Year, expense.Month);
+            monthExpenses.Add(CloneFirmExpense(expense));
+            SaveAllFirmPayments(expense.Year, expense.Month, monthEntries, monthExpenses);
         }
 
         public void UpdateFirmExpense(FirmExpense updated)
         {
-            if (_salaryDbService != null)
-            {
-                var monthEntries = LoadAllFirmPayments(updated.Year, updated.Month).entries;
-                var monthExpenses = LoadFirmExpensesForMonth(updated.Year, updated.Month);
-                var idx = monthExpenses.FindIndex(e => e.Id == updated.Id);
-                if (idx >= 0)
-                    monthExpenses[idx] = CloneFirmExpense(updated);
-                else
-                    monthExpenses.Add(CloneFirmExpense(updated));
+            EnsureSalaryDbConfigured();
+            var monthEntries = LoadAllFirmPayments(updated.Year, updated.Month).entries;
+            var monthExpenses = LoadFirmExpensesForMonth(updated.Year, updated.Month);
+            var idx = monthExpenses.FindIndex(e => e.Id == updated.Id);
+            if (idx >= 0)
+                monthExpenses[idx] = CloneFirmExpense(updated);
+            else
+                monthExpenses.Add(CloneFirmExpense(updated));
 
-                SaveAllFirmPayments(updated.Year, updated.Month, monthEntries, monthExpenses);
-                return;
-            }
-
-            var legacyIdx = _db.FirmExpenses.FindIndex(e => e.Id == updated.Id);
-            if (legacyIdx >= 0)
-                _db.FirmExpenses[legacyIdx] = updated;
-            InvalidatePaymentsCache(updated.Year, updated.Month);
+            SaveAllFirmPayments(updated.Year, updated.Month, monthEntries, monthExpenses);
         }
 
         public void RemoveFirmExpense(string expenseId)
         {
-            var removed = _db.FirmExpenses.FirstOrDefault(e => e.Id == expenseId);
-            if (removed != null)
+            EnsureSalaryDbConfigured();
+            foreach (var monthDb in _salaryDbService!.EnumerateMonthDatabases())
             {
-                RemoveFirmExpense(expenseId, removed.Year, removed.Month);
+                var monthExpenses = LoadFirmExpensesForMonth(monthDb.year, monthDb.month);
+                var match = monthExpenses.FirstOrDefault(e => e.Id == expenseId);
+                if (match == null)
+                    continue;
+
+                RemoveFirmExpense(expenseId, monthDb.year, monthDb.month);
                 return;
             }
-
-            if (_salaryDbService != null)
-            {
-                foreach (var monthDb in _salaryDbService.EnumerateMonthDatabases())
-                {
-                    var monthExpenses = LoadFirmExpensesForMonth(monthDb.year, monthDb.month);
-                    var match = monthExpenses.FirstOrDefault(e => e.Id == expenseId);
-                    if (match == null)
-                        continue;
-
-                    RemoveFirmExpense(expenseId, monthDb.year, monthDb.month);
-                    return;
-                }
-            }
-
-            _db.FirmExpenses.RemoveAll(e => e.Id == expenseId);
         }
 
         public void RemoveFirmExpense(string expenseId, int year, int month)
         {
-            if (_salaryDbService != null)
-            {
-                var monthEntries = LoadAllFirmPayments(year, month).entries;
-                var monthExpenses = LoadFirmExpensesForMonth(year, month);
-                var removedCount = monthExpenses.RemoveAll(e => e.Id == expenseId);
-                if (removedCount > 0)
-                    SaveAllFirmPayments(year, month, monthEntries, monthExpenses);
-                return;
-            }
-
-            var removed = _db.FirmExpenses.FirstOrDefault(e => e.Id == expenseId);
-            _db.FirmExpenses.RemoveAll(e => e.Id == expenseId);
-            if (removed != null)
-                InvalidatePaymentsCache(removed.Year, removed.Month);
+            EnsureSalaryDbConfigured();
+            var monthEntries = LoadAllFirmPayments(year, month).entries;
+            var monthExpenses = LoadFirmExpensesForMonth(year, month);
+            var removedCount = monthExpenses.RemoveAll(e => e.Id == expenseId);
+            if (removedCount > 0)
+                SaveAllFirmPayments(year, month, monthEntries, monthExpenses);
         }
 
         public void SaveFirmExpenses(List<FirmExpense> expenses, int year, int month, string? firmNameFilter = null)
         {
-            if (_salaryDbService != null)
+            EnsureSalaryDbConfigured();
+            List<FirmExpense> monthExpenses;
+            if (string.IsNullOrWhiteSpace(firmNameFilter))
             {
-                List<FirmExpense> monthExpenses;
-                if (string.IsNullOrWhiteSpace(firmNameFilter))
-                {
-                    monthExpenses = CloneFirmExpenses(expenses);
-                }
-                else
-                {
-                    monthExpenses = LoadFirmExpensesForMonth(year, month)
-                        .Where(expense => !string.Equals(expense.FirmName, firmNameFilter, StringComparison.Ordinal))
-                        .ToList();
-                    monthExpenses.AddRange(CloneFirmExpenses(expenses));
-                }
-
-                var monthEntries = LoadAllFirmPayments(year, month).entries;
-                SaveAllFirmPayments(year, month, monthEntries, monthExpenses);
-                return;
+                monthExpenses = CloneFirmExpenses(expenses);
+            }
+            else
+            {
+                monthExpenses = LoadFirmExpensesForMonth(year, month)
+                    .Where(expense => !string.Equals(expense.FirmName, firmNameFilter, StringComparison.Ordinal))
+                    .ToList();
+                monthExpenses.AddRange(CloneFirmExpenses(expenses));
             }
 
-            _db.FirmExpenses.RemoveAll(e =>
-                e.Year == year
-                && e.Month == month
-                && (string.IsNullOrWhiteSpace(firmNameFilter) || string.Equals(e.FirmName, firmNameFilter, StringComparison.Ordinal)));
-            _db.FirmExpenses.AddRange(CloneFirmExpenses(expenses));
-            InvalidatePaymentsCache(year, month);
+            var monthEntries = LoadAllFirmPayments(year, month).entries;
+            SaveAllFirmPayments(year, month, monthEntries, monthExpenses);
         }
 
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
@@ -364,23 +204,24 @@ namespace Win11DesktopApp.Services
 
         private List<FirmExpense> LoadFirmExpensesForMonth(int year, int month)
         {
-            if (_salaryDbService != null)
+            EnsureSalaryDbConfigured();
+            try
             {
-                try
-                {
-                    if (_salaryDbService.MonthDbExists(year, month))
-                        return LoadAllFirmPayments(year, month).expenses;
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("FinanceMonthPaymentsService.LoadFirmExpensesForMonth.SQLite", ex.Message);
-                }
+                if (_salaryDbService!.MonthDbExists(year, month))
+                    return LoadAllFirmPayments(year, month).expenses;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceMonthPaymentsService.LoadFirmExpensesForMonth.SQLite", ex.Message);
             }
 
-            return _db.FirmExpenses
-                .Where(e => e.Year == year && e.Month == month)
-                .Select(CloneFirmExpense)
-                .ToList();
+            return new List<FirmExpense>();
+        }
+
+        private void EnsureSalaryDbConfigured()
+        {
+            if (_salaryDbService == null)
+                throw new InvalidOperationException("SalaryDbService is required for firm expenses storage.");
         }
 
         private static FirmExpense CloneFirmExpense(FirmExpense expense)
