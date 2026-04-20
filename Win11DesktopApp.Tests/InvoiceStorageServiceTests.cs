@@ -24,7 +24,7 @@ public class InvoiceStorageServiceTests : IDisposable
         settings.Settings.RootFolderPath = _testRootPath;
         settings.Settings.LanguageCode = "en";
         var folderService = new FolderService(settings);
-        _storageService = new InvoiceStorageService(folderService);
+        _storageService = new InvoiceStorageService(folderService, settings);
     }
 
     [Fact]

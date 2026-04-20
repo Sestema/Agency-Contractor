@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
+using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Fonts;
 using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Helpers;
@@ -17,6 +18,7 @@ namespace Win11DesktopApp
 {
     public partial class App : Application
     {
+        private static ServiceProvider? _serviceProvider;
         private static CancellationTokenSource? _heartbeatCts;
         private static bool _heartbeatFailureActive;
         private static ClientAccessState _currentGeminiAccessState = new();
@@ -25,42 +27,40 @@ namespace Win11DesktopApp
         private const string AccessPlanTrial = "trial";
         private const string AccessPlanStandard = "standard";
         private const string AccessPlanPro = "pro";
-        public static NavigationService NavigationService { get; private set; } = null!;
-        public static ThemeService ThemeService { get; private set; } = null!;
-        public static LanguageService LanguageService { get; private set; } = null!;
-        public static AppSettingsService AppSettingsService { get; private set; } = null!;
-        public static FolderService FolderService { get; private set; } = null!;
-        public static TagCatalogService TagCatalogService { get; private set; } = null!;
-        public static CompanyService CompanyService { get; private set; } = null!;
-        public static TemplateService TemplateService { get; private set; } = null!;
-        public static StarterTemplateCatalogService StarterTemplateCatalogService { get; private set; } = null!;
-        public static PersistenceService PersistenceService { get; private set; } = null!;
-        public static EmployeeService EmployeeService { get; private set; } = null!;
-        public static AdminMirrorSyncService AdminMirrorSyncService { get; private set; } = null!;
-        public static RecentlyDeletedService RecentlyDeletedService { get; private set; } = null!;
-        public static DocumentGenerationService DocumentGenerationService { get; private set; } = null!;
-        public static DocumentLocalizationService DocumentLocalizationService { get; private set; } = null!;
-        public static InvoiceStorageService InvoiceStorageService { get; private set; } = null!;
-        public static AresLookupService AresLookupService { get; private set; } = null!;
-        public static InvoiceQrPaymentService InvoiceQrPaymentService { get; private set; } = null!;
-        public static InvoicePdfRenderService InvoicePdfRenderService { get; private set; } = null!;
+        private static IServiceProvider Services =>
+            _serviceProvider ?? throw new InvalidOperationException("Service provider is not initialized.");
 
-        public static FinanceService FinanceService { get; private set; } = null!;
-        public static LocalDbService LocalDbService { get; private set; } = null!;
-        public static EmployeeIndexDbService EmployeeIndexDbService { get; private set; } = null!;
-        public static SalaryDbService SalaryDbService { get; private set; } = null!;
-        public static ActivityLogService ActivityLogService { get; private set; } = null!;
-        public static CandidateService CandidateService { get; private set; } = null!;
-        public static GeminiApiService GeminiApiService { get; private set; } = null!;
-        public static NewsService NewsService { get; private set; } = null!;
-        public static ProfileAuthService ProfileAuthService { get; private set; } = null!;
-        public static ProfileSessionService ProfileSessionService { get; private set; } = null!;
-        public static AccessStatusService AccessStatusService { get; private set; } = null!;
-        public static ClientProfileRecord? CurrentProfile { get; private set; }
+        private static T GetRequiredService<T>() where T : notnull => Services.GetRequiredService<T>();
 
-        public static void SetCurrentProfile(ClientProfileRecord? profile)
+        private static NavigationService NavigationService => GetRequiredService<NavigationService>();
+        private static ThemeService ThemeService => GetRequiredService<ThemeService>();
+        private static LanguageService LanguageService => GetRequiredService<LanguageService>();
+        private static AppSettingsService AppSettingsService => GetRequiredService<AppSettingsService>();
+        private static FolderService FolderService => GetRequiredService<FolderService>();
+        private static CompanyService CompanyService => GetRequiredService<CompanyService>();
+        private static EmployeeService EmployeeService => GetRequiredService<EmployeeService>();
+        private static AdminMirrorSyncService AdminMirrorSyncService => GetRequiredService<AdminMirrorSyncService>();
+        private static RecentlyDeletedService RecentlyDeletedService => GetRequiredService<RecentlyDeletedService>();
+        private static DocumentLocalizationService DocumentLocalizationService => GetRequiredService<DocumentLocalizationService>();
+        private static FinanceService FinanceService => GetRequiredService<FinanceService>();
+        private static LocalDbService LocalDbService => GetRequiredService<LocalDbService>();
+        private static SalaryDbService SalaryDbService => GetRequiredService<SalaryDbService>();
+        private static ActivityLogService ActivityLogService => GetRequiredService<ActivityLogService>();
+        private static GeminiApiService GeminiApiService => GetRequiredService<GeminiApiService>();
+        private static ProfileDialogFactory ProfileDialogFactory => GetRequiredService<ProfileDialogFactory>();
+        private static ProfileAuthService ProfileAuthService => GetRequiredService<ProfileAuthService>();
+        private static ProfileSessionService ProfileSessionService => GetRequiredService<ProfileSessionService>();
+        private static AccessStatusService AccessStatusService => GetRequiredService<AccessStatusService>();
+        private static CurrentProfileService CurrentProfileService => GetRequiredService<CurrentProfileService>();
+
+        private sealed class StartupFlowState
         {
-            CurrentProfile = profile;
+            public bool SkipLicenseGate { get; init; }
+            public LocalLicenseStatus LocalLicenseStatus { get; set; } = null!;
+            public ClientAccessState StartupAccess { get; set; } = new();
+            public string? StartupClientId { get; set; }
+            public bool IsRemoteTrialExpired { get; set; }
+            public RemotePolicy? StartupPolicy { get; set; }
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -119,6 +119,25 @@ namespace Win11DesktopApp
                 return;
             }
 
+            ApplySavedLanguageAndTheme();
+            RunStartupMigrations();
+            LoggingService.LogInfo("App", "All services initialized");
+            LogStartupPhase("services_initialized");
+
+            var startupState = CreateStartupFlowState();
+            await ResolveStartupAccessAsync(startupState, LogStartupPhase);
+            if (!await RunProfileGateAsync(startupState, LogStartupPhase))
+                return;
+            await TryMigrateLegacyLicenseAsync(startupState, LogStartupPhase);
+            if (!await ApplyStartupPolicyAsync(startupState, LogStartupPhase))
+                return;
+
+            ShowMainWindow(LogStartupPhase);
+            await FinalizeStartupAsync(startupIntegrityService, startupState);
+        }
+
+        private static void ApplySavedLanguageAndTheme()
+        {
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
                 LanguageService.SetLanguage(AppSettingsService.Settings.LanguageCode);
@@ -137,7 +156,10 @@ namespace Win11DesktopApp
             {
                 ThemeService.SetTheme(AppSettingsService.Settings.ThemeName);
             }
+        }
 
+        private static void RunStartupMigrations()
+        {
             var activityLogMigration = ActivityLogService.EnsureMigratedToLocalDb();
             if (activityLogMigration.WasMigrationAttempted)
             {
@@ -304,18 +326,60 @@ namespace Win11DesktopApp
                 }
             }
 
+            var advancesMigration = FinanceService.EnsureAdvancesMigratedToLocalDb();
+            if (advancesMigration.WasMigrationAttempted)
+            {
+                if (advancesMigration.IsSuccessful)
+                {
+                    LoggingService.LogInfo("App.AdvancesMigration", advancesMigration.Message);
+                }
+                else
+                {
+                    var failedMessage = $"Advances migration to SQLite failed. Details: {advancesMigration.Message}";
+                    LoggingService.LogWarning("App.AdvancesMigration", failedMessage);
+                }
+            }
+
+            var reportsMigration = FinanceService.EnsureReportsMigratedToLocalDb();
+            if (reportsMigration.WasMigrationAttempted)
+            {
+                if (reportsMigration.IsSuccessful)
+                {
+                    LoggingService.LogInfo("App.ReportsMigration", reportsMigration.Message);
+                }
+                else
+                {
+                    var failedMessage = $"Reports migration to SQLite failed. Details: {reportsMigration.Message}";
+                    LoggingService.LogWarning("App.ReportsMigration", failedMessage);
+                }
+            }
+
+            var accommodationsMigration = FinanceService.EnsureAccommodationsMigratedToLocalDb();
+            if (accommodationsMigration.WasMigrationAttempted)
+            {
+                if (accommodationsMigration.IsSuccessful)
+                {
+                    LoggingService.LogInfo("App.AccommodationsMigration", accommodationsMigration.Message);
+                }
+                else
+                {
+                    var failedMessage = $"Accommodations migration to SQLite failed. Details: {accommodationsMigration.Message}";
+                    LoggingService.LogWarning("App.AccommodationsMigration", failedMessage);
+                }
+            }
+
+            if (FinanceService.CloseMigratedFinanceDataIfSafe())
+                LoggingService.LogInfo("App.FinanceDataMigration", "Renamed finance_data.json to finance_data.json.migrated after confirmed SQLite migration.");
+
             try
             {
-                if (LocalDbService != null)
-                {
-                    var deletedActivityLogBackup = LocalDbService.CleanupMigratedActivityLogBackup();
-                    if (deletedActivityLogBackup)
-                        LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted activity_log.json.migrated after confirmed SQLite migration.");
+                var deletedActivityLogBackup = LocalDbService.CleanupMigratedActivityLogBackup();
+                if (deletedActivityLogBackup)
+                    LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted activity_log.json.migrated after confirmed SQLite migration.");
 
-                    var deletedArchiveLogBackup = LocalDbService.CleanupMigratedArchiveLogBackup();
-                    if (deletedArchiveLogBackup)
-                        LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted archive_log.json.migrated after confirmed SQLite migration.");
-                }
+                var deletedArchiveLogBackup = LocalDbService.CleanupMigratedArchiveLogBackup();
+                if (deletedArchiveLogBackup)
+                    LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted archive_log.json.migrated after confirmed SQLite migration.");
 
                 var deletedEmployeeHistoryBackups = EmployeeService.CleanupMigratedEmployeeHistoryBackups();
                 if (deletedEmployeeHistoryBackups > 0)
@@ -337,48 +401,61 @@ namespace Win11DesktopApp
             }
 
             RecentlyDeletedService.EnsureStorage();
+        }
 
-            LoggingService.LogInfo("App", "All services initialized");
-            LogStartupPhase("services_initialized");
-
-            var skipLicenseGate =
+        private static StartupFlowState CreateStartupFlowState()
+        {
+            return new StartupFlowState
+            {
+                SkipLicenseGate =
 #if DEBUG
-                true;
+                    true,
 #else
-                Debugger.IsAttached;
+                    Debugger.IsAttached,
 #endif
+                LocalLicenseStatus = LicenseService.GetLocalLicenseStatus()
+            };
+        }
 
-            var localLicenseStatus = LicenseService.GetLocalLicenseStatus();
+        private static void SetCurrentProfile(ClientProfileRecord? profile)
+        {
+            CurrentProfileService.SetCurrentProfile(profile);
+        }
+
+        private static async Task ResolveStartupAccessAsync(StartupFlowState state, Action<string> logStartupPhase)
+        {
             var startupClientTask = TelemetryService.GetStartupAccessStateAsync();
-            var startupAccess = new ClientAccessState();
-            string? startupClientId = null;
             var startupTelemetryCompleted = await Task.WhenAny(startupClientTask, Task.Delay(3500)) == startupClientTask;
             if (startupTelemetryCompleted)
             {
-                startupAccess = await startupClientTask;
-                startupClientId = startupAccess.ClientId;
-                LogStartupPhase("telemetry_completed");
+                state.StartupAccess = await startupClientTask;
+                state.StartupClientId = state.StartupAccess.ClientId;
+                logStartupPhase("telemetry_completed");
             }
             else
             {
-                startupAccess = TelemetryService.GetCachedAccessStateSnapshot();
-                if (startupAccess.HasKnownState)
+                state.StartupAccess = TelemetryService.GetCachedAccessStateSnapshot();
+                if (state.StartupAccess.HasKnownState)
                 {
-                    startupAccess.IsStale = true;
-                    startupAccess.Source = startupAccess.IsOfflineGraceActive ? "cache_offline_grace" : "cache_stale";
+                    state.StartupAccess.IsStale = true;
+                    state.StartupAccess.Source = state.StartupAccess.IsOfflineGraceActive ? "cache_offline_grace" : "cache_stale";
                 }
-                startupClientId = startupAccess.ClientId;
+
+                state.StartupClientId = state.StartupAccess.ClientId;
                 LoggingService.LogWarning("App.ProfileGate",
-                    startupAccess.IsOfflineGraceActive
+                    state.StartupAccess.IsOfflineGraceActive
                         ? "Telemetry startup sync timed out. Continuing with cached offline access state."
                         : "Telemetry startup sync timed out. Continuing without profile gate.");
-                LogStartupPhase("telemetry_timeout");
+                logStartupPhase("telemetry_timeout");
             }
+        }
 
-            if (!string.IsNullOrWhiteSpace(startupClientId))
+        private async Task<bool> RunProfileGateAsync(StartupFlowState state, Action<string> logStartupPhase)
+        {
+            if (!string.IsNullOrWhiteSpace(state.StartupClientId))
             {
-                AdminMirrorSyncService.Start(startupClientId);
-                var profileCheckTask = ProfileAuthService.CheckProfileAsync(startupClientId);
+                AdminMirrorSyncService.Start(state.StartupClientId);
+                var profileCheckTask = ProfileAuthService.CheckProfileAsync(state.StartupClientId);
                 ProfileCheckResult profileCheck;
                 if (await Task.WhenAny(profileCheckTask, Task.Delay(2000)) == profileCheckTask)
                 {
@@ -394,9 +471,10 @@ namespace Win11DesktopApp
                         ErrorMessage = "Profile check timed out"
                     };
                 }
+
                 if (profileCheck.IsFeatureAvailable && profileCheck.RequiresSetup)
                 {
-                    var profileWindow = new Views.ProfileSetupWindow(ProfileAuthService, startupClientId);
+                    var profileWindow = ProfileDialogFactory.CreateSetupWindow(state.StartupClientId);
                     MainWindow = profileWindow;
                     var profileAccepted = profileWindow.ShowDialog() == true && profileWindow.IsProfileCreated;
                     MainWindow = null;
@@ -404,10 +482,10 @@ namespace Win11DesktopApp
                     if (!profileAccepted)
                     {
                         Shutdown();
-                        return;
+                        return false;
                     }
 
-                    SetCurrentProfile(await ProfileAuthService.GetProfileByClientIdAsync(startupClientId));
+                    SetCurrentProfile(await ProfileAuthService.GetProfileByClientIdAsync(state.StartupClientId));
                 }
                 else if (profileCheck.IsFeatureAvailable && profileCheck.Profile != null)
                 {
@@ -416,7 +494,7 @@ namespace Win11DesktopApp
                     {
                         ProfileSessionService.ClearRememberedSession();
 
-                        var resetWindow = new Views.ProfileResetPasswordWindow(ProfileAuthService, profile);
+                        var resetWindow = ProfileDialogFactory.CreateResetPasswordWindow(profile);
                         MainWindow = resetWindow;
                         var resetAccepted = resetWindow.ShowDialog() == true && resetWindow.IsPasswordReset;
                         MainWindow = null;
@@ -424,7 +502,7 @@ namespace Win11DesktopApp
                         if (!resetAccepted || resetWindow.ResetProfile == null)
                         {
                             Shutdown();
-                            return;
+                            return false;
                         }
 
                         SetCurrentProfile(resetWindow.ResetProfile);
@@ -435,7 +513,7 @@ namespace Win11DesktopApp
                     }
                     else
                     {
-                        var loginWindow = new Views.ProfileLoginWindow(ProfileAuthService, ProfileSessionService, profile);
+                        var loginWindow = ProfileDialogFactory.CreateLoginWindow(profile);
                         MainWindow = loginWindow;
                         var loginAccepted = loginWindow.ShowDialog() == true && loginWindow.IsAuthenticated;
                         MainWindow = null;
@@ -443,7 +521,7 @@ namespace Win11DesktopApp
                         if (!loginAccepted || loginWindow.AuthenticatedProfile == null)
                         {
                             Shutdown();
-                            return;
+                            return false;
                         }
 
                         SetCurrentProfile(loginWindow.AuthenticatedProfile);
@@ -454,38 +532,46 @@ namespace Win11DesktopApp
                     LoggingService.LogWarning("App.ProfileGate",
                         $"Profile gate skipped: {profileCheck.ErrorMessage}");
                 }
-            LogStartupPhase("profile_gate_completed");
-            }
-            else
-            {
-                AdminMirrorSyncService.Start();
-                LoggingService.LogWarning("App.ProfileGate",
-                    "Client ID unavailable during startup. Continuing without profile gate.");
-            LogStartupPhase("profile_gate_skipped");
+
+                logStartupPhase("profile_gate_completed");
+                return true;
             }
 
-            if (startupAccess.IsLive
-                && !startupAccess.IsBlocked
-                && localLicenseStatus.IsValid
+            AdminMirrorSyncService.Start();
+            LoggingService.LogWarning("App.ProfileGate",
+                "Client ID unavailable during startup. Continuing without profile gate.");
+            logStartupPhase("profile_gate_skipped");
+            return true;
+        }
+
+        private static async Task TryMigrateLegacyLicenseAsync(StartupFlowState state, Action<string> logStartupPhase)
+        {
+            if (state.StartupAccess.IsLive
+                && !state.StartupAccess.IsBlocked
+                && state.LocalLicenseStatus.IsValid
                 && string.IsNullOrWhiteSpace(AppSettingsService.Settings.LegacyLicenseMigratedAtUtc)
-                && LocalLicenseIsStronger(localLicenseStatus, startupAccess))
+                && LocalLicenseIsStronger(state.LocalLicenseStatus, state.StartupAccess))
             {
                 var migrated = await TelemetryService.MigrateLegacyLicenseAsync(
-                    localLicenseStatus.Plan,
-                    localLicenseStatus.ExpiresOn,
-                    localLicenseStatus.ActivatedOn,
-                    localLicenseStatus.IsUnlimited);
+                    state.LocalLicenseStatus.Plan,
+                    state.LocalLicenseStatus.ExpiresOn,
+                    state.LocalLicenseStatus.ActivatedOn,
+                    state.LocalLicenseStatus.IsUnlimited);
                 if (migrated != null)
                 {
-                    startupAccess = migrated;
-                    startupClientId = migrated.ClientId;
+                    state.StartupAccess = migrated;
+                    state.StartupClientId = migrated.ClientId;
                     AppSettingsService.Settings.LegacyLicenseMigratedAtUtc = DateTime.UtcNow.ToString("o");
                     AppSettingsService.SaveSettings();
-                    LogStartupPhase("legacy_license_migrated");
+                    state.LocalLicenseStatus = LicenseService.GetLocalLicenseStatus();
+                    logStartupPhase("legacy_license_migrated");
                 }
             }
+        }
 
-            if (startupAccess.IsBlocked)
+        private async Task<bool> ApplyStartupPolicyAsync(StartupFlowState state, Action<string> logStartupPhase)
+        {
+            if (state.StartupAccess.IsBlocked)
             {
                 MessageBox.Show(
                     "Доступ до програми заблоковано адміністратором.",
@@ -493,23 +579,22 @@ namespace Win11DesktopApp
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 Shutdown();
-                return;
+                return false;
             }
 
-            var startupPolicy = startupAccess.Policy;
+            state.StartupPolicy = state.StartupAccess.Policy;
+            state.IsRemoteTrialExpired = state.StartupAccess.HasKnownState && state.StartupAccess.IsExpired;
+            state.StartupPolicy = BuildEffectivePolicy(state.LocalLicenseStatus, state.StartupAccess, state.StartupPolicy);
 
-            var isRemoteTrialExpired = startupAccess.HasKnownState && startupAccess.IsExpired;
-            startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupPolicy);
+            await PolicyService.ApplyPolicyAsync(state.StartupPolicy);
+            _currentGeminiAccessState = state.StartupAccess;
+            ApplyEffectiveGeminiApiKey(state.StartupAccess, state.StartupPolicy);
+            if (!await EnforceVersionPolicyAsync(state.StartupPolicy))
+                return false;
 
-            await PolicyService.ApplyPolicyAsync(startupPolicy);
-            _currentGeminiAccessState = startupAccess;
-            ApplyEffectiveGeminiApiKey(startupAccess, startupPolicy);
-            if (!await EnforceVersionPolicyAsync(startupPolicy))
-                return;
-
-            if (!skipLicenseGate && !localLicenseStatus.IsValid && !startupAccess.HasKnownState)
+            if (!state.SkipLicenseGate && !state.LocalLicenseStatus.IsValid && !state.StartupAccess.HasKnownState)
             {
-                var licenseWindow = new Views.LicenseWindow(shutdownOnCloseWithoutAccess: true, initialAccessState: startupAccess);
+                var licenseWindow = new Views.LicenseWindow(AccessStatusService, shutdownOnCloseWithoutAccess: true, initialAccessState: state.StartupAccess);
                 MainWindow = licenseWindow;
                 var licenseAccepted = licenseWindow.ShowDialog() == true && licenseWindow.IsActivated;
                 MainWindow = null;
@@ -517,35 +602,42 @@ namespace Win11DesktopApp
                 if (!licenseAccepted)
                 {
                     Shutdown();
-                    return;
+                    return false;
                 }
 
-                localLicenseStatus = LicenseService.GetLocalLicenseStatus();
-                startupAccess = licenseWindow.LatestAccessState.HasKnownState ? licenseWindow.LatestAccessState : startupAccess;
-                startupPolicy = BuildEffectivePolicy(localLicenseStatus, startupAccess, startupAccess.Policy ?? startupPolicy);
-                await PolicyService.ApplyPolicyAsync(startupPolicy);
-                _currentGeminiAccessState = startupAccess;
-                ApplyEffectiveGeminiApiKey(startupAccess, startupPolicy);
-                if (!await EnforceVersionPolicyAsync(startupPolicy))
-                    return;
+                state.LocalLicenseStatus = LicenseService.GetLocalLicenseStatus();
+                state.StartupAccess = licenseWindow.LatestAccessState.HasKnownState ? licenseWindow.LatestAccessState : state.StartupAccess;
+                state.StartupPolicy = BuildEffectivePolicy(state.LocalLicenseStatus, state.StartupAccess, state.StartupAccess.Policy ?? state.StartupPolicy);
+                await PolicyService.ApplyPolicyAsync(state.StartupPolicy);
+                _currentGeminiAccessState = state.StartupAccess;
+                ApplyEffectiveGeminiApiKey(state.StartupAccess, state.StartupPolicy);
+                if (!await EnforceVersionPolicyAsync(state.StartupPolicy))
+                    return false;
             }
-        LogStartupPhase("license_gate_completed");
 
-            AccessStatusService.Initialize(localLicenseStatus, startupAccess, startupPolicy);
+            logStartupPhase("license_gate_completed");
+            AccessStatusService.Initialize(state.LocalLicenseStatus, state.StartupAccess, state.StartupPolicy);
+            return true;
+        }
 
-            NavigationService.NavigateTo(new MainViewModel());
-            
-            var mainWindow = new MainWindow
+        private void ShowMainWindow(Action<string> logStartupPhase)
+        {
+            NavigationService.NavigateTo<MainViewModel>();
+
+            var mainWindow = new MainWindow(AppSettingsService)
             {
-                DataContext = new MainWindowViewModel(NavigationService)
+                DataContext = _serviceProvider!.GetRequiredService<MainWindowViewModel>()
             };
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
-        LogStartupPhase("main_window_shown");
+            logStartupPhase("main_window_shown");
+        }
 
-            if (startupAccess.PendingCommands.Count > 0)
-                await CommandService.ExecutePendingCommandsAsync(startupAccess.PendingCommands, startupClientId);
+        private static async Task FinalizeStartupAsync(StartupIntegrityService startupIntegrityService, StartupFlowState state)
+        {
+            if (state.StartupAccess.PendingCommands.Count > 0)
+                await CommandService.ExecutePendingCommandsAsync(state.StartupAccess.PendingCommands, state.StartupClientId);
 
             _heartbeatCts = new CancellationTokenSource();
             _ = StartHeartbeatLoopAsync(_heartbeatCts.Token);
@@ -559,7 +651,7 @@ namespace Win11DesktopApp
                 AppSettingsService.PendingUpdateFrom = null;
             }
 
-            if (isRemoteTrialExpired)
+            if (state.IsRemoteTrialExpired)
             {
                 ToastService.Instance.Warning(
                     "Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel.");
@@ -572,49 +664,142 @@ namespace Win11DesktopApp
 
         private static StartupIntegrityService InitializeCoreServices()
         {
-            NavigationService = new NavigationService();
-            ThemeService = new ThemeService();
-            LanguageService = new LanguageService();
-            AppSettingsService = new AppSettingsService(suppressStartupNotifications: true);
-            AccessStatusService = new AccessStatusService();
-            FolderService = new FolderService(AppSettingsService);
+            _serviceProvider = BuildServiceProvider();
 
+            // Resolve the minimum set first so logging is configured before other services can emit startup diagnostics.
             if (!string.IsNullOrEmpty(FolderService.RootPath))
                 LoggingService.Initialize(FolderService.RootPath);
 
             LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
 
-            PersistenceService = new PersistenceService(AppSettingsService, FolderService);
-            var startupIntegrityService = new StartupIntegrityService(FolderService, PersistenceService);
+            InitializeStartupServices();
+
+            var startupIntegrityService = _serviceProvider.GetRequiredService<StartupIntegrityService>();
             startupIntegrityService.IncludeSettingsStartupState(AppSettingsService);
             startupIntegrityService.RunQuickCheck();
-            TagCatalogService = new TagCatalogService();
-            CompanyService = new CompanyService(TagCatalogService, AppSettingsService, PersistenceService, FolderService);
-            TemplateService = new TemplateService(AppSettingsService, FolderService, TagCatalogService);
-            StarterTemplateCatalogService = new StarterTemplateCatalogService();
-            LocalDbService = new LocalDbService(FolderService);
-            EmployeeIndexDbService = new EmployeeIndexDbService(FolderService);
-            SalaryDbService = new SalaryDbService(FolderService);
-            EmployeeService = new EmployeeService(AppSettingsService, TagCatalogService, FolderService, LocalDbService, EmployeeIndexDbService);
-            AdminMirrorSyncService = new AdminMirrorSyncService();
-            RecentlyDeletedService = new RecentlyDeletedService(FolderService, EmployeeService);
-            FinanceService = new FinanceService(FolderService, SalaryDbService, LocalDbService, suppressStartupNotifications: true);
-            InvoiceStorageService = new InvoiceStorageService(FolderService);
-            AresLookupService = new AresLookupService(InvoiceStorageService);
-            InvoiceQrPaymentService = new InvoiceQrPaymentService();
-            InvoicePdfRenderService = new InvoicePdfRenderService(InvoiceStorageService, InvoiceQrPaymentService);
-            ActivityLogService = new ActivityLogService(FolderService, LocalDbService);
-            CandidateService = new CandidateService(FolderService);
-            GeminiApiService = new GeminiApiService();
-            NewsService = new NewsService();
-            ProfileAuthService = new ProfileAuthService();
-            ProfileSessionService = new ProfileSessionService(AppSettingsService);
+
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.GeminiModel))
                 GeminiApiService.SetModel(AppSettingsService.Settings.GeminiModel);
-            DocumentGenerationService = new DocumentGenerationService();
-            DocumentLocalizationService = new DocumentLocalizationService();
 
             return startupIntegrityService;
+        }
+
+        private static ServiceProvider BuildServiceProvider()
+        {
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            return services.BuildServiceProvider();
+        }
+
+        private static void ConfigureServices(IServiceCollection services)
+        {
+            services.AddSingleton(sp => new NavigationService(sp));
+            services.AddSingleton<ThemeService>();
+            services.AddSingleton<LanguageService>();
+            services.AddSingleton(_ => new AppSettingsService(suppressStartupNotifications: true));
+            services.AddSingleton<AccessStatusService>();
+            services.AddSingleton(sp => new FolderService(sp.GetRequiredService<AppSettingsService>()));
+            services.AddSingleton(sp => new PersistenceService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new StartupIntegrityService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<PersistenceService>()));
+            services.AddSingleton<TagCatalogService>();
+            services.AddSingleton(sp => new CompanyService(
+                sp.GetRequiredService<TagCatalogService>(),
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<PersistenceService>(),
+                sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new TemplateService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<TagCatalogService>()));
+            services.AddSingleton<StarterTemplateCatalogService>();
+            services.AddSingleton(sp => new LocalDbService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<SalaryDbService>()));
+            services.AddSingleton(sp => new EmployeeIndexDbService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new SalaryDbService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new AdminMirrorSyncService(
+                sp.GetRequiredService<CompanyService>()));
+            services.AddSingleton(sp => new EmployeeService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<TagCatalogService>(),
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<EmployeeIndexDbService>(),
+                sp.GetRequiredService<CurrentProfileService>(),
+                sp.GetRequiredService<AdminMirrorSyncService>(),
+                companyService: sp.GetRequiredService<CompanyService>()));
+            services.AddSingleton(sp => new RecentlyDeletedService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<EmployeeService>(),
+                sp.GetRequiredService<CurrentProfileService>(),
+                sp.GetRequiredService<FinanceService>(),
+                sp.GetRequiredService<ActivityLogService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<EmployeeIndexDbService>()));
+            services.AddSingleton(sp => new FinanceService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<SalaryDbService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<CompanyService>(),
+                sp.GetRequiredService<EmployeeIndexDbService>(),
+                suppressStartupNotifications: true));
+            services.AddSingleton(sp => new InvoiceStorageService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<AppSettingsService>()));
+            services.AddSingleton(sp => new AresLookupService(sp.GetRequiredService<InvoiceStorageService>()));
+            services.AddSingleton<InvoiceQrPaymentService>();
+            services.AddSingleton(sp => new InvoicePdfRenderService(
+                sp.GetRequiredService<InvoiceStorageService>(),
+                sp.GetRequiredService<InvoiceQrPaymentService>()));
+            services.AddSingleton(sp => new ActivityLogService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<CurrentProfileService>()));
+            services.AddSingleton(sp => new CandidateService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton<ChatPersistenceService>();
+            services.AddSingleton<GeminiApiService>();
+            services.AddSingleton<NewsService>();
+            services.AddSingleton<EmployeeDetailsViewModelFactory>();
+            services.AddSingleton<AddEmployeeWizardViewModelFactory>();
+            services.AddSingleton<AddCompanyViewModelFactory>();
+            services.AddSingleton<CandidateViewModelFactory>();
+            services.AddSingleton<TemplateViewModelFactory>();
+            services.AddSingleton<InvoiceViewModelFactory>();
+            services.AddSingleton<MainModuleViewModelFactory>();
+            services.AddSingleton<FinanceModuleViewModelFactory>();
+            services.AddSingleton<AiWindowFactory>();
+            services.AddSingleton<ProfileDialogFactory>();
+            services.AddSingleton<ProfileAuthService>();
+            services.AddSingleton(sp => new ProfileSessionService(sp.GetRequiredService<AppSettingsService>()));
+            services.AddSingleton<DocumentGenerationService>();
+            services.AddSingleton<DocumentLocalizationService>();
+            services.AddSingleton<ReportColumnLayoutService>();
+            services.AddSingleton<CurrentProfileService>();
+            services.AddSingleton<GeminiApiKeyConfigurationService>();
+            services.AddTransient<MainViewModel>();
+            services.AddTransient<MainWindowViewModel>();
+            services.AddTransient<SettingsViewModel>();
+            services.AddTransient<DashboardViewModel>();
+            services.AddTransient<ReportViewModel>();
+            services.AddTransient<ActivityLogViewModel>();
+            services.AddTransient<FinanceTablesViewModel>();
+            services.AddTransient<CandidatesViewModel>();
+            services.AddTransient<NewsViewModel>();
+        }
+
+        private static void InitializeStartupServices()
+        {
+            LicenseService.Initialize(AppSettingsService);
+            PolicyService.Initialize(AppSettingsService);
+            TelemetryService.Initialize(AppSettingsService, CompanyService);
+            CompanyService.InitializeAdminMirrorSyncService(AdminMirrorSyncService);
+            AdminMirrorSyncService.InitializeEmployeeService(EmployeeService);
+            EmployeeService.InitializeFinanceService(FinanceService);
+            CommandService.Initialize(AccessStatusService);
         }
 
         private static void RunBackgroundWarmupTasks()
@@ -650,23 +835,20 @@ namespace Win11DesktopApp
             {
                 var sw = Stopwatch.StartNew();
 
-                LocalDbService?.IsSalaryHistoryMigrationCompleted();
+                LocalDbService.IsSalaryHistoryMigrationCompleted();
 
-                if (SalaryDbService != null)
+                var monthDbs = SalaryDbService.EnumerateMonthDatabases()
+                    .OrderByDescending(monthDb => monthDb.year)
+                    .ThenByDescending(monthDb => monthDb.month)
+                    .Take(12)
+                    .ToList();
+
+                foreach (var monthDb in monthDbs)
                 {
-                    var monthDbs = SalaryDbService.EnumerateMonthDatabases()
-                        .OrderByDescending(monthDb => monthDb.year)
-                        .ThenByDescending(monthDb => monthDb.month)
-                        .Take(12)
-                        .ToList();
-
-                    foreach (var monthDb in monthDbs)
-                    {
-                        using var connection = SalaryDbService.OpenMonthConnection(monthDb.year, monthDb.month);
-                        using var command = connection.CreateCommand();
-                        command.CommandText = "SELECT COUNT(*) FROM salary_entries;";
-                        command.ExecuteScalar();
-                    }
+                    using var connection = SalaryDbService.OpenMonthConnection(monthDb.year, monthDb.month);
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "SELECT COUNT(*) FROM salary_entries;";
+                    command.ExecuteScalar();
                 }
 
                 LoggingService.LogInfo("App.SalaryPrewarm", $"Completed in {sw.ElapsedMilliseconds} ms.");
@@ -791,9 +973,6 @@ namespace Win11DesktopApp
 
         private static void ApplyEffectiveGeminiApiKey(ClientAccessState accessState, RemotePolicy? policy)
         {
-            if (GeminiApiService == null || AppSettingsService == null)
-                return;
-
             if (policy?.DisableAI == true || PolicyService.IsAIDisabled)
             {
                 GeminiApiService.SetApiKey(null);

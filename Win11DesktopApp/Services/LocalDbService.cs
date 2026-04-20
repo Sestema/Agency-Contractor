@@ -39,12 +39,14 @@ namespace Win11DesktopApp.Services
     {
         private const int CurrentSchemaVersion = 1;
         private readonly FolderService _folderService;
+        private readonly SalaryDbService _salaryDbService;
         private readonly object _initLock = new();
         private bool _isInitialized;
 
-        public LocalDbService(FolderService folderService)
+        public LocalDbService(FolderService folderService, SalaryDbService salaryDbService)
         {
             _folderService = folderService;
+            _salaryDbService = salaryDbService;
         }
 
         public string DatabasePath => _folderService.LocalDbPath;
@@ -249,6 +251,24 @@ WHERE stage = 'accommodations'
             return Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
         }
 
+        public bool IsFinanceDataMigrationCompleted()
+        {
+            EnsureInitialized();
+            if (!IsAvailable)
+                return false;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT COUNT(1)
+FROM migration_journal
+WHERE stage = 'finance_data'
+  AND status = 'completed';";
+
+            var result = command.ExecuteScalar();
+            return Convert.ToInt32(result, CultureInfo.InvariantCulture) > 0;
+        }
+
         public bool HasEmployeeHistoryEntries(string employeeId)
         {
             EnsureInitialized();
@@ -370,6 +390,28 @@ WHERE ((@employeeId <> '' AND lower(employee_id) = lower(@employeeId))
             }
 
             return deletedCount;
+        }
+
+        public bool CloseMigratedFinanceDataBackup(string jsonPath)
+        {
+            EnsureInitialized();
+            if (!IsAvailable
+                || string.IsNullOrWhiteSpace(jsonPath)
+                || !File.Exists(jsonPath)
+                || !IsAdvancesMigrationCompleted()
+                || !IsReportsMigrationCompleted()
+                || !IsCustomFieldsMigrationCompleted()
+                || !IsAccommodationsMigrationCompleted())
+            {
+                return false;
+            }
+
+            var backupPath = RenameMigratedJson(jsonPath);
+            if (string.IsNullOrWhiteSpace(backupPath))
+                return false;
+
+            InsertMigrationJournal("finance_data", "completed", 0, 0, null, 0, 0);
+            return true;
         }
 
         public LocalDbMigrationResult MigrateActivityLogIfNeeded(string jsonPath, IReadOnlyList<ActivityLogEntry> sourceEntries)
@@ -998,17 +1040,23 @@ ORDER BY year DESC, month DESC;";
             {
                 using var connection = OpenConnection();
                 using var transaction = connection.BeginTransaction();
+                var existingReports = LoadAllSalaryReports(connection)
+                    .ToDictionary(
+                        report => $"{report.CompanyId}|{report.Year:D4}|{report.Month:D2}",
+                        report => report,
+                        StringComparer.OrdinalIgnoreCase);
 
-                foreach (var report in normalizedReports.Values)
+                foreach (var pair in normalizedReports)
                 {
+                    if (existingReports.ContainsKey(pair.Key))
+                        continue;
+
+                    var report = pair.Value;
                     UpsertSalaryReport(connection, transaction, report);
                     recordsImported++;
                 }
 
                 transaction.Commit();
-
-                if (recordsImported != recordsFound)
-                    throw new InvalidOperationException($"Reports migration mismatch: expected {recordsFound}, imported {recordsImported}.");
 
                 InsertMigrationJournal("reports", "completed", recordsFound, recordsImported, null, 0, 0);
                 return new LocalDbMigrationResult
@@ -1017,7 +1065,9 @@ ORDER BY year DESC, month DESC;";
                     IsSuccessful = true,
                     RecordsFound = recordsFound,
                     RecordsImported = recordsImported,
-                    Message = $"Migrated {recordsImported} salary reports to SQLite."
+                    Message = recordsImported == 0
+                        ? "Reports migration completed; no missing reports needed import."
+                        : $"Migrated {recordsImported} missing salary reports to SQLite."
                 };
             }
             catch (Exception ex)
@@ -1273,7 +1323,7 @@ ON CONFLICT(id) DO UPDATE SET
 
             RemapCustomFieldIdInReports(connection, transaction, oldFieldId, targetField.Id);
             RemapCustomFieldIdInSalaryHistory(connection, transaction, oldFieldId, targetField.Id);
-            _ = Win11DesktopApp.App.SalaryDbService?.RemapCustomFieldIdAcrossMonths(oldFieldId, targetField.Id);
+            _salaryDbService.RemapCustomFieldIdAcrossMonths(oldFieldId, targetField.Id);
 
             using var deleteCommand = connection.CreateCommand();
             deleteCommand.Transaction = transaction;
@@ -1527,7 +1577,7 @@ ORDER BY year DESC, month DESC, employee_name, id;";
 
                 var normalized = new AccommodationRecord
                 {
-                    Id = string.IsNullOrWhiteSpace(source.Id) ? Guid.NewGuid().ToString() : source.Id,
+                    Id = source.Id?.Trim() ?? string.Empty,
                     EmployeeFolder = source.EmployeeFolder ?? string.Empty,
                     EmployeeName = source.EmployeeName ?? string.Empty,
                     CompanyId = source.CompanyId ?? string.Empty,
@@ -1537,7 +1587,7 @@ ORDER BY year DESC, month DESC, employee_name, id;";
                     Address = source.Address ?? string.Empty
                 };
 
-                normalizedRecords[normalized.Id] = normalized;
+                normalizedRecords[BuildAccommodationMigrationKey(normalized)] = normalized;
             }
 
             var recordsFound = normalizedRecords.Count;
@@ -1548,17 +1598,23 @@ ORDER BY year DESC, month DESC, employee_name, id;";
             {
                 using var connection = OpenConnection();
                 using var transaction = connection.BeginTransaction();
+                var existingRecords = GetAllAccommodations()
+                    .ToDictionary(BuildAccommodationMigrationKey, StringComparer.OrdinalIgnoreCase);
 
-                foreach (var record in normalizedRecords.Values)
+                foreach (var pair in normalizedRecords)
                 {
+                    if (existingRecords.ContainsKey(pair.Key))
+                        continue;
+
+                    var record = pair.Value;
+                    if (string.IsNullOrWhiteSpace(record.Id))
+                        record.Id = Guid.NewGuid().ToString();
+
                     UpsertAccommodation(connection, transaction, record);
                     recordsImported++;
                 }
 
                 transaction.Commit();
-
-                if (recordsImported != recordsFound)
-                    throw new InvalidOperationException($"Accommodations migration mismatch: expected {recordsFound}, imported {recordsImported}.");
 
                 InsertMigrationJournal("accommodations", "completed", recordsFound, recordsImported, null, 0, 0);
                 return new LocalDbMigrationResult
@@ -1567,7 +1623,9 @@ ORDER BY year DESC, month DESC, employee_name, id;";
                     IsSuccessful = true,
                     RecordsFound = recordsFound,
                     RecordsImported = recordsImported,
-                    Message = $"Migrated {recordsImported} accommodations to SQLite."
+                    Message = recordsImported == 0
+                        ? "Accommodations migration completed; no missing records needed import."
+                        : $"Migrated {recordsImported} missing accommodations to SQLite."
                 };
             }
             catch (Exception ex)
@@ -1898,17 +1956,22 @@ WHERE year = @year
             {
                 using var connection = OpenConnection();
                 using var transaction = connection.BeginTransaction();
+                var existingAdvanceIds = GetAllAdvanceIds(connection, transaction);
 
                 foreach (var source in sourceList)
                 {
-                    UpsertAdvance(connection, transaction, source.EmployeeId, source.EmployeeFolder, source.Advance);
+                    var advance = source.Advance ?? new AdvancePayment();
+                    var advanceId = source.Advance?.Id?.Trim() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(advanceId) && existingAdvanceIds.Contains(advanceId))
+                        continue;
+
+                    UpsertAdvance(connection, transaction, source.EmployeeId, source.EmployeeFolder, advance);
+                    if (!string.IsNullOrWhiteSpace(advanceId))
+                        existingAdvanceIds.Add(advanceId);
                     recordsImported++;
                 }
 
                 transaction.Commit();
-
-                if (recordsImported != recordsFound)
-                    throw new InvalidOperationException($"Advances migration mismatch: expected {recordsFound}, imported {recordsImported}.");
 
                 InsertMigrationJournal("advances_import", "completed", recordsFound, recordsImported, null, 0, 0);
                 return new LocalDbMigrationResult
@@ -1917,7 +1980,9 @@ WHERE year = @year
                     IsSuccessful = true,
                     RecordsFound = recordsFound,
                     RecordsImported = recordsImported,
-                    Message = $"Migrated {recordsImported} advances to SQLite."
+                    Message = recordsImported == 0
+                        ? "Advances migration completed; no missing advances needed import."
+                        : $"Migrated {recordsImported} missing advances to SQLite."
                 };
             }
             catch (Exception ex)
@@ -2944,9 +3009,11 @@ WHERE id IN (
             if (string.IsNullOrWhiteSpace(value))
                 return 0m;
 
-            return decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
-                ? parsed
-                : 0m;
+            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+
+            LoggingService.LogWarning("LocalDbService.ParseDecimal", $"Failed to parse decimal value '{value}'. Using 0.");
+            return 0m;
         }
 
         private static MonthlySalaryReport CloneReport(MonthlySalaryReport report)
@@ -2963,6 +3030,35 @@ WHERE id IN (
                 UpdatedAt = report.UpdatedAt,
                 Notes = report.Notes
             };
+        }
+
+        private static string BuildAccommodationMigrationKey(AccommodationRecord record)
+        {
+            static string Normalize(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
+
+            return string.Join("|",
+                Normalize(record.EmployeeFolder),
+                Normalize(record.CompanyId),
+                record.Year.ToString(CultureInfo.InvariantCulture),
+                record.Month.ToString(CultureInfo.InvariantCulture),
+                record.Amount.ToString(CultureInfo.InvariantCulture),
+                Normalize(record.Address));
+        }
+
+        private static HashSet<string> GetAllAdvanceIds(SqliteConnection connection, SqliteTransaction transaction)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "SELECT id FROM advances WHERE ifnull(id, '') <> '';";
+            using var reader = command.ExecuteReader();
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            while (reader.Read())
+            {
+                if (!reader.IsDBNull(0))
+                    ids.Add(reader.GetString(0));
+            }
+
+            return ids;
         }
 
         private string SerializeReportEntries(IEnumerable<SalaryEntry> entries)

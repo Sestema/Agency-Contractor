@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using Win11DesktopApp.Invoices.Services;
 using System.Collections.ObjectModel;
 using Win11DesktopApp.Invoices.ViewModels;
 using Win11DesktopApp.EmployeeModels;
@@ -45,6 +46,17 @@ namespace Win11DesktopApp.ViewModels
 
     public class MainViewModel : ViewModelBase, ICleanable
     {
+        private readonly NavigationService _navigationService;
+        private readonly CompanyService _companyService;
+        private readonly EmployeeService _employeeService;
+        private readonly TemplateService _templateService;
+        private readonly CandidateService _candidateService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly InvoiceViewModelFactory _invoiceViewModelFactory;
+        private readonly MainModuleViewModelFactory _mainModuleViewModelFactory;
+        private readonly AddCompanyViewModelFactory _addCompanyViewModelFactory;
+
         public ICommand GoToSettingsCommand { get; }
         public ICommand ToggleDrawerCommand { get; }
         public ICommand OpenAddCompanyDialogCommand { get; }
@@ -141,8 +153,7 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _addCompanyVm, value);
         }
 
-        public ObservableCollection<EmployerCompany> Companies =>
-            App.CompanyService?.Companies ?? new ObservableCollection<EmployerCompany>();
+        public ObservableCollection<EmployerCompany> Companies => _companyService.Companies;
 
         private ObservableCollection<EmployerCompany> _visibleCompanies = new();
         public ObservableCollection<EmployerCompany> VisibleCompanies => _visibleCompanies;
@@ -150,7 +161,7 @@ namespace Win11DesktopApp.ViewModels
         private void RefreshVisibleCompanies()
         {
             _visibleCompanies.Clear();
-            var cs = App.CompanyService;
+            var cs = _companyService;
             if (cs == null) return;
             foreach (var c in cs.Companies)
                 if (cs.IsCompanyVisible(c))
@@ -159,11 +170,10 @@ namespace Win11DesktopApp.ViewModels
 
         public EmployerCompany? SelectedCompany
         {
-            get => App.CompanyService?.SelectedCompany;
+            get => _companyService.SelectedCompany;
             set
             {
-                if (App.CompanyService != null)
-                    App.CompanyService.SelectedCompany = value;
+                _companyService.SelectedCompany = value;
                 OnPropertyChanged(nameof(SelectedCompany));
                 OnPropertyChanged(nameof(HasSelectedCompany));
                 CommandManager.InvalidateRequerySuggested();
@@ -172,15 +182,35 @@ namespace Win11DesktopApp.ViewModels
 
         public bool HasSelectedCompany => SelectedCompany != null;
 
-        public MainViewModel()
+        public MainViewModel(
+            NavigationService navigationService,
+            CompanyService companyService,
+            EmployeeService employeeService,
+            TemplateService templateService,
+            CandidateService candidateService,
+            GeminiApiService geminiApiService,
+            AppSettingsService appSettingsService,
+            InvoiceViewModelFactory invoiceViewModelFactory,
+            MainModuleViewModelFactory mainModuleViewModelFactory,
+            AddCompanyViewModelFactory addCompanyViewModelFactory)
         {
-            GoToSettingsCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new SettingsViewModel()));
+            _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+            _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
+            _employeeService = employeeService ?? throw new ArgumentNullException(nameof(employeeService));
+            _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+            _candidateService = candidateService ?? throw new ArgumentNullException(nameof(candidateService));
+            _geminiApiService = geminiApiService ?? throw new ArgumentNullException(nameof(geminiApiService));
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            _invoiceViewModelFactory = invoiceViewModelFactory ?? throw new ArgumentNullException(nameof(invoiceViewModelFactory));
+            _mainModuleViewModelFactory = mainModuleViewModelFactory ?? throw new ArgumentNullException(nameof(mainModuleViewModelFactory));
+            _addCompanyViewModelFactory = addCompanyViewModelFactory ?? throw new ArgumentNullException(nameof(addCompanyViewModelFactory));
+
+            GoToSettingsCommand = new RelayCommand(o => _navigationService.NavigateTo<SettingsViewModel>());
             ButtonCommand = new RelayCommand(o => { });
             ToggleDrawerCommand = new RelayCommand(o => IsDrawerOpen = !IsDrawerOpen);
 
             RefreshVisibleCompanies();
-            if (App.CompanyService != null)
-                App.CompanyService.VisibilityChanged += OnVisibilityChanged;
+            _companyService.VisibilityChanged += OnVisibilityChanged;
 
             BuildMenuCards();
 
@@ -190,7 +220,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 CleanupAddCompanyVm();
-                AddCompanyVm = new AddCompanyViewModel();
+                AddCompanyVm = _addCompanyViewModelFactory.CreateAdd();
                 AddCompanyVm.RequestClose += OnAddCompanyClose;
                 IsAddCompanyDialogOpen = true;
                 IsDrawerOpen = false;
@@ -204,7 +234,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 CleanupAddCompanyVm();
-                AddCompanyVm = new AddCompanyViewModel(company);
+                AddCompanyVm = _addCompanyViewModelFactory.CreateEdit(company);
                 AddCompanyVm.RequestClose += OnEditCompanyClose;
                 IsAddCompanyDialogOpen = true;
                 IsDrawerOpen = false;
@@ -214,13 +244,13 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
                     return;
-                if (o is EmployerCompany c) App.CompanyService?.MoveCompanyUp(c);
+                if (o is EmployerCompany c) _companyService.MoveCompanyUp(c);
             });
             MoveCompanyDownCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
                     return;
-                if (o is EmployerCompany c) App.CompanyService?.MoveCompanyDown(c);
+                if (o is EmployerCompany c) _companyService.MoveCompanyDown(c);
             });
 
             CloseAddCompanyDialogCommand = new RelayCommand(o => IsAddCompanyDialogOpen = false);
@@ -248,8 +278,7 @@ namespace Win11DesktopApp.ViewModels
                 NavigateToResult(item);
             });
 
-            if (App.CompanyService != null)
-                App.CompanyService.SelectedCompanyChanged += OnSelectedCompanyChanged;
+            _companyService.SelectedCompanyChanged += OnSelectedCompanyChanged;
 
             RefreshProblemsCount();
         }
@@ -268,11 +297,8 @@ namespace Win11DesktopApp.ViewModels
 
         public void Cleanup()
         {
-            if (App.CompanyService != null)
-            {
-                App.CompanyService.SelectedCompanyChanged -= OnSelectedCompanyChanged;
-                App.CompanyService.VisibilityChanged -= OnVisibilityChanged;
-            }
+            _companyService.SelectedCompanyChanged -= OnSelectedCompanyChanged;
+            _companyService.VisibilityChanged -= OnVisibilityChanged;
             _searchDebounce?.Dispose();
             _searchCts?.Cancel();
             _searchCts?.Dispose();
@@ -284,46 +310,46 @@ namespace Win11DesktopApp.ViewModels
             {
                 new() { Id = "dashboard", TitleKey = "DashboardTitle", IconKey = "IconDashboard",
                     GradientStart = "#00C9FF", GradientEnd = "#92FE9D",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new DashboardViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<DashboardViewModel>()) },
                 new() { Id = "employees", TitleKey = "BtnEmployees", IconKey = "IconPeople",
                     GradientStart = "#667EEA", GradientEnd = "#764BA2",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new EmployeesViewModel(SelectedCompany))) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(SelectedCompany))) },
                 new() { Id = "templates", TitleKey = "BtnTemplates", IconKey = "IconTemplates",
                     GradientStart = "#11998E", GradientEnd = "#38EF7D",
-                    Command = new RelayCommand(_ => { if (SelectedCompany != null) App.NavigationService?.NavigateTo(new TemplatesViewModel(SelectedCompany)); }, _ => SelectedCompany != null) },
+                    Command = new RelayCommand(_ => { if (SelectedCompany != null) _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateTemplates(SelectedCompany)); }, _ => SelectedCompany != null) },
                 new() { Id = "problems", TitleKey = "BtnProblems", IconKey = "IconProblems",
                     GradientStart = "#FF512F", GradientEnd = "#F09819",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ProblemsViewModel())), BadgeCount = _problemsCount },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateProblems())), BadgeCount = _problemsCount },
                 new() { Id = "report", TitleKey = "BtnReport", IconKey = "IconReport",
                     GradientStart = "#4FACFE", GradientEnd = "#00F2FE",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ReportViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<ReportViewModel>()) },
                 new() { Id = "finances", TitleKey = "BtnFinances", IconKey = "IconFinances",
                     GradientStart = "#A18CD1", GradientEnd = "#FBC2EB",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new FinanceTablesViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<FinanceTablesViewModel>()) },
                 new() { Id = "invoices", TitleKey = "BtnInvoices", IconKey = "IconInvoices",
                     GradientStart = "#26A69A", GradientEnd = "#66BB6A",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new InvoicesViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoices())) },
                 new() { Id = "archive", TitleKey = "BtnArchive", IconKey = "IconArchive",
                     GradientStart = "#89F7FE", GradientEnd = "#66A6FF",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ArchiveViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateArchive())) },
                 new() { Id = "recentlydeleted", TitleKey = "BtnRecentlyDeleted", IconKey = "IconRecentlyDeleted",
                     GradientStart = "#FF9A9E", GradientEnd = "#FAD0C4",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new RecentlyDeletedViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateRecentlyDeleted())) },
                 new() { Id = "activitylog", TitleKey = "BtnActivityLog", IconKey = "IconActivityLog",
                     GradientStart = "#FFD54F", GradientEnd = "#FF8A65",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ActivityLogViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<ActivityLogViewModel>()) },
                 new() { Id = "candidates", TitleKey = "BtnCandidates", IconKey = "IconCandidates",
                     GradientStart = "#FF9800", GradientEnd = "#F57C00",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new CandidatesViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<CandidatesViewModel>()) },
                 new() { Id = "news", TitleKey = "BtnNews", IconKey = "IconNews",
                     GradientStart = "#36D1DC", GradientEnd = "#5B86E5",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new NewsViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo<NewsViewModel>()) },
                 new() { Id = "aichat", TitleKey = "BtnAIAssistant", IconKey = "IconAIAssistant",
                     GradientStart = "#7C4DFF", GradientEnd = "#448AFF",
-                    Command = new RelayCommand(_ => App.NavigationService?.NavigateTo(new AIChatViewModel())) },
+                    Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateAiChat())) },
             };
 
-            var savedOrder = App.AppSettingsService?.Settings?.MenuCardOrder;
+            var savedOrder = _appSettingsService.Settings.MenuCardOrder;
             if (savedOrder != null && savedOrder.Count > 0)
             {
                 var ordered = new List<MenuCardItem>();
@@ -356,10 +382,8 @@ namespace Win11DesktopApp.ViewModels
 
         private async void SaveCardOrder()
         {
-            if (App.AppSettingsService?.Settings != null)
-                App.AppSettingsService.Settings.MenuCardOrder = MenuCards.Select(c => c.Id).ToList();
-            if (App.AppSettingsService != null)
-                await App.AppSettingsService.SaveSettingsImmediate();
+            _appSettingsService.Settings.MenuCardOrder = MenuCards.Select(c => c.Id).ToList();
+            await _appSettingsService.SaveSettingsImmediate();
         }
 
         private void CleanupAddCompanyVm()
@@ -391,7 +415,7 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                var count = await Task.Run(() => ProblemsViewModel.CountAllProblems());
+                var count = await Task.Run(() => ProblemsViewModel.CountAllProblems(_companyService, _employeeService));
                 _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() => ProblemsCount = count));
             }
             catch (Exception ex)
@@ -439,12 +463,11 @@ namespace Win11DesktopApp.ViewModels
             catch (Exception ex) { LoggingService.LogError("MainViewModel.RunSearch", ex); }
         }
 
-        private static List<SearchResultItem> PerformSearch(string query, CancellationToken ct)
+        private List<SearchResultItem> PerformSearch(string query, CancellationToken ct)
         {
             var results = new List<SearchResultItem>();
             var q = query;
-            var companies = App.CompanyService?.Companies?.ToList();
-            if (companies == null) return results;
+            var companies = _companyService.Companies.ToList();
 
             foreach (var company in companies)
             {
@@ -464,8 +487,7 @@ namespace Win11DesktopApp.ViewModels
                 if (ct.IsCancellationRequested) return results;
                 try
                 {
-                    var employees = App.EmployeeService?.GetEmployeesForFirm(company.Name);
-                    if (employees == null) continue;
+                    var employees = _employeeService.GetEmployeesForFirm(company.Name);
                     foreach (var emp in employees)
                     {
                         if (ct.IsCancellationRequested) return results;
@@ -493,8 +515,7 @@ namespace Win11DesktopApp.ViewModels
                 if (ct.IsCancellationRequested) return results;
                 try
                 {
-                    var templates = App.TemplateService?.GetTemplates(company.Name);
-                    if (templates == null) continue;
+                    var templates = _templateService.GetTemplates(company.Name);
                     foreach (var t in templates)
                     {
                         if (t.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
@@ -514,7 +535,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var archived = App.EmployeeService?.GetArchivedEmployees();
+                var archived = _employeeService.GetArchivedEmployees();
                 if (archived != null)
                 {
                     foreach (var a in archived)
@@ -537,7 +558,7 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var candidates = App.CandidateService?.GetAll();
+                var candidates = _candidateService.GetAll();
                 if (candidates != null)
                 {
                     foreach (var c in candidates)
@@ -567,7 +588,7 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                if (App.GeminiApiService?.IsConfigured != true)
+                if (!_geminiApiService.IsConfigured)
                 {
                     SearchResults = new ObservableCollection<SearchResultItem>(new[]
                     {
@@ -599,7 +620,7 @@ If no employees match, return [].
 Consider: names, companies, document expiry, salary, nationality, dates, status.";
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-                var response = await App.GeminiApiService.ChatAsync(
+                var response = await _geminiApiService.ChatAsync(
                     $"Employee database:\n{index.data}\n\nUser query: {query}", systemPrompt, cts.Token);
 
                 var indices = ParseIndices(response);
@@ -656,20 +677,18 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
             }
         }
 
-        private static (string data, List<EmployeeSummary> employees) BuildEmployeeIndex()
+        private (string data, List<EmployeeSummary> employees) BuildEmployeeIndex()
         {
             var all = new List<EmployeeSummary>();
             var sb = new StringBuilder();
             int idx = 0;
-            var companies = App.CompanyService?.Companies?.ToList();
-            if (companies == null) return (sb.ToString(), all);
+            var companies = _companyService.Companies.ToList();
 
             foreach (var company in companies)
             {
                 try
                 {
-                    var employees = App.EmployeeService?.GetEmployeesForFirm(company.Name);
-                    if (employees == null) continue;
+                    var employees = _employeeService.GetEmployeesForFirm(company.Name);
                     foreach (var emp in employees)
                     {
                         all.Add(emp);
@@ -708,7 +727,7 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
 
         private void NavigateToResult(SearchResultItem item)
         {
-            var companies = App.CompanyService?.Companies;
+            var companies = _companyService.Companies;
             switch (item.Category)
             {
                 case var c when c == Res("SearchCatEmployees"):
@@ -716,7 +735,7 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
                     if (company != null)
                     {
                         SelectedCompany = company;
-                        App.NavigationService?.NavigateTo(new EmployeesViewModel(company));
+                        _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(company));
                     }
                     break;
                 case var c when c == Res("SearchCatTemplates"):
@@ -724,14 +743,14 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
                     if (co2 != null)
                     {
                         SelectedCompany = co2;
-                        App.NavigationService?.NavigateTo(new TemplatesViewModel(co2));
+                        _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateTemplates(co2));
                     }
                     break;
                 case var c when c == Res("SearchCatArchive"):
-                    App.NavigationService?.NavigateTo(new ArchiveViewModel());
+                    _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateArchive());
                     break;
                 case var c when c == Res("SearchCatCandidates"):
-                    App.NavigationService?.NavigateTo(new CandidatesViewModel());
+                    _navigationService.NavigateTo<CandidatesViewModel>();
                     break;
                 case var c when c == Res("SearchCatCompanies"):
                     var co3 = companies?.FirstOrDefault(co => co.Name == item.Title);

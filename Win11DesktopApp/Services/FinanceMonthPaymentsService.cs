@@ -8,6 +8,7 @@ namespace Win11DesktopApp.Services
 {
     public class FinanceMonthPaymentsService
     {
+        private readonly FolderService _folderService;
         private readonly SalaryDbService? _salaryDbService;
         private readonly Action _clearLastSaveRecoveryPath;
         private readonly Action _clearSalarySaveState;
@@ -16,11 +17,13 @@ namespace Win11DesktopApp.Services
         private readonly Dictionary<(int year, int month), (List<SalaryEntry> entries, List<FirmExpense> expenses)> _paymentsCache = new();
 
         public FinanceMonthPaymentsService(
+            FolderService folderService,
             SalaryDbService? salaryDbService,
             Action clearLastSaveRecoveryPath,
             Action clearSalarySaveState,
             Action<string> setSalaryConflictMessage)
         {
+            _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _salaryDbService = salaryDbService;
             _clearLastSaveRecoveryPath = clearLastSaveRecoveryPath;
             _clearSalarySaveState = clearSalarySaveState;
@@ -94,7 +97,14 @@ namespace Win11DesktopApp.Services
             EnsureSalaryDbConfigured();
             if (string.IsNullOrWhiteSpace(firmNameFilter))
             {
-                var monthEntries = LoadAllFirmPayments(year, month).entries;
+                var monthResult = TryLoadAllFirmPayments(year, month);
+                if (!monthResult.success)
+                {
+                    LoggingService.LogWarning("FinanceMonthPaymentsService.SaveFirmExpenses", monthResult.errorMessage);
+                    return;
+                }
+
+                var monthEntries = monthResult.entries;
                 SaveAllFirmPayments(year, month, monthEntries, CloneFirmExpenses(expenses));
             }
             else
@@ -112,13 +122,18 @@ namespace Win11DesktopApp.Services
         {
             _clearLastSaveRecoveryPath();
 
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath))
+            if (string.IsNullOrEmpty(_folderService.RootPath))
                 return false;
+
+            if (_salaryDbService == null)
+            {
+                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveAllFirmPayments.SQLite", "SalaryDbService is not configured.");
+                return false;
+            }
 
             try
             {
-                _salaryDbService?.SaveMonthPayments(year, month, CloneSalaryEntries(allEntries), CloneFirmExpenses(allExpenses));
+                _salaryDbService.SaveMonthPayments(year, month, CloneSalaryEntries(allEntries), CloneFirmExpenses(allExpenses));
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("Multiple salary DB files found", StringComparison.Ordinal))
             {
@@ -140,13 +155,24 @@ namespace Win11DesktopApp.Services
 
         public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
         {
+            var result = TryLoadAllFirmPayments(year, month, forceReload);
+            return (result.entries, result.expenses);
+        }
+
+        public (bool success, List<SalaryEntry> entries, List<FirmExpense> expenses, string errorMessage) TryLoadAllFirmPayments(
+            int year,
+            int month,
+            bool forceReload = false)
+        {
             var cacheKey = (year, month);
             if (!forceReload)
             {
                 lock (_paymentsCacheLock)
                 {
                     if (_paymentsCache.TryGetValue(cacheKey, out var cached))
-                        return (CloneSalaryEntries(cached.entries), CloneFirmExpenses(cached.expenses));
+                    {
+                        return (true, CloneSalaryEntries(cached.entries), CloneFirmExpenses(cached.expenses), string.Empty);
+                    }
                 }
             }
 
@@ -164,20 +190,24 @@ namespace Win11DesktopApp.Services
                             _paymentsCache[cacheKey] = (sqliteEntries, sqliteExpenses);
                         }
 
-                        return (CloneSalaryEntries(sqliteEntries), CloneFirmExpenses(sqliteExpenses));
+                        return (true, CloneSalaryEntries(sqliteEntries), CloneFirmExpenses(sqliteExpenses), string.Empty);
                     }
+
+                    return (true, new List<SalaryEntry>(), new List<FirmExpense>(), string.Empty);
                 }
                 catch (InvalidOperationException ex) when (ex.Message.Contains("Multiple salary DB files found", StringComparison.Ordinal))
                 {
                     LoggingService.LogWarning("FinanceMonthPaymentsService.LoadAllFirmPayments.SQLite", ex.Message);
+                    return (false, new List<SalaryEntry>(), new List<FirmExpense>(), ex.Message);
                 }
                 catch (Exception ex)
                 {
                     LoggingService.LogWarning("FinanceMonthPaymentsService.LoadAllFirmPayments.SQLite", ex.Message);
+                    return (false, new List<SalaryEntry>(), new List<FirmExpense>(), ex.Message);
                 }
             }
 
-            return (new List<SalaryEntry>(), new List<FirmExpense>());
+            return (false, new List<SalaryEntry>(), new List<FirmExpense>(), "SalaryDbService is not configured.");
         }
 
         public void InvalidatePaymentsCache(int? year = null, int? month = null)

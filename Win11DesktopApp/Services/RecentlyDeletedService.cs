@@ -18,11 +18,28 @@ namespace Win11DesktopApp.Services
 
         private readonly FolderService _folderService;
         private readonly EmployeeService _employeeService;
+        private readonly CurrentProfileService _currentProfileService;
+        private readonly FinanceService? _financeService;
+        private readonly ActivityLogService? _activityLogService;
+        private readonly LocalDbService? _localDbService;
+        private readonly EmployeeIndexDbService? _employeeIndexDbService;
 
-        public RecentlyDeletedService(FolderService folderService, EmployeeService employeeService)
+        public RecentlyDeletedService(
+            FolderService folderService,
+            EmployeeService employeeService,
+            CurrentProfileService? currentProfileService = null,
+            FinanceService? financeService = null,
+            ActivityLogService? activityLogService = null,
+            LocalDbService? localDbService = null,
+            EmployeeIndexDbService? employeeIndexDbService = null)
         {
             _folderService = folderService;
             _employeeService = employeeService;
+            _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
+            _financeService = financeService;
+            _activityLogService = activityLogService;
+            _localDbService = localDbService;
+            _employeeIndexDbService = employeeIndexDbService;
         }
 
         public void EnsureStorage()
@@ -221,10 +238,10 @@ namespace Win11DesktopApp.Services
                 if (item == null)
                     return Fail("Item was not found.");
 
-                App.FinanceService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
-                App.ActivityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
-                App.LocalDbService?.DeleteEmployeeHistory(item.UniqueId);
-                App.EmployeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
+                _financeService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
+                _activityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
+                _localDbService?.DeleteEmployeeHistory(item.UniqueId);
+                _employeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
                 DeleteDirectory(item.DeletedEmployeeFolder);
                 manifest.Remove(item);
                 SaveManifest(manifest);
@@ -262,10 +279,10 @@ namespace Win11DesktopApp.Services
 
                     if (!isMissing)
                     {
-                        App.FinanceService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
-                        App.ActivityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
-                        App.LocalDbService?.DeleteEmployeeHistory(item.UniqueId);
-                        App.EmployeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
+                        _financeService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
+                        _activityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
+                        _localDbService?.DeleteEmployeeHistory(item.UniqueId);
+                        _employeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
                         DeleteDirectory(item.DeletedEmployeeFolder);
                     }
 
@@ -439,9 +456,9 @@ namespace Win11DesktopApp.Services
             });
         }
 
-        private static string GetCurrentActorName()
+        private string GetCurrentActorName()
         {
-            var profile = App.CurrentProfile;
+            var profile = _currentProfileService.CurrentProfile;
             if (profile == null)
                 return string.Empty;
 

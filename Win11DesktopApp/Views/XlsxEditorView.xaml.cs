@@ -228,9 +228,12 @@ namespace Win11DesktopApp.Views
 
         private void AIOverlay_Click(object sender, RoutedEventArgs e)
         {
+            if (_vm == null)
+                return;
+
             if (_aiOverlay == null || !_aiOverlay.IsLoaded)
             {
-                _aiOverlay = new AITemplateOverlayWindow();
+                _aiOverlay = _vm.AiWindowFactory.CreateTemplateOverlayWindow();
                 _aiOverlay.Owner = Window.GetWindow(this);
                 _aiOverlay.SetContentProviders(GetSpreadsheetContent, GetTagCatalogText);
             }

@@ -11,14 +11,19 @@ namespace Win11DesktopApp.Services
     {
         private readonly FolderService _folderService;
         private readonly LocalDbService? _localDbService;
+        private readonly CurrentProfileService _currentProfileService;
         private bool _useLocalDb;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
         private const int MaxEntries = 5000;
 
-        public ActivityLogService(FolderService folderService, LocalDbService? localDbService = null)
+        public ActivityLogService(
+            FolderService folderService,
+            LocalDbService? localDbService = null,
+            CurrentProfileService? currentProfileService = null)
         {
             _folderService = folderService;
             _localDbService = localDbService;
+            _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
         }
 
         private string LogFilePath
@@ -102,9 +107,9 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private static string GetCurrentActorName()
+        private string GetCurrentActorName()
         {
-            var profile = App.CurrentProfile;
+            var profile = _currentProfileService.CurrentProfile;
             if (profile == null)
                 return string.Empty;
 

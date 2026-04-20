@@ -14,13 +14,18 @@ namespace Win11DesktopApp.ViewModels
 {
     public class ArchiveViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
         private readonly EmployeeService _employeeService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly CompanyService _companyService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
+        private readonly ActivityLogService _activityLogService;
         private List<ArchivedEmployeeSummary> _allArchived = new();
         private string? _pendingEmployeeFolder;
-        private string _sortField = App.AppSettingsService?.Settings?.ArchiveSortField ?? "EndDate";
-        private bool _sortAscending = App.AppSettingsService?.Settings?.ArchiveSortAscending ?? false;
-        private string _viewMode = App.AppSettingsService?.Settings?.ArchiveViewMode ?? "List";
-        private double _zoomLevel = App.AppSettingsService?.Settings?.ArchiveZoomLevel ?? 1.0;
+        private string _sortField = "EndDate";
+        private bool _sortAscending;
+        private string _viewMode = "List";
+        private double _zoomLevel = 1.0;
         private string _statFilter = "all";
         private int _totalArchivedCount;
         private int _archivedThisMonthCount;
@@ -154,7 +159,7 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _employeeToRestore, value);
         }
 
-        public ObservableCollection<EmployerCompany> AvailableCompanies => App.CompanyService?.Companies ?? new ObservableCollection<EmployerCompany>();
+        public ObservableCollection<EmployerCompany> AvailableCompanies => _companyService.Companies;
 
         private EmployerCompany? _selectedCompany;
         public EmployerCompany? SelectedCompany
@@ -231,12 +236,28 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _employeeDetailsVm, value);
         }
 
-        public ArchiveViewModel(string? employeeToOpenFolder = null)
+        public ArchiveViewModel(
+            string? employeeToOpenFolder = null,
+            NavigationService? navigationService = null,
+            EmployeeService? employeeService = null,
+            AppSettingsService? appSettingsService = null,
+            CompanyService? companyService = null,
+            EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
+            ActivityLogService? activityLogService = null)
         {
-            _employeeService = App.EmployeeService;
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _pendingEmployeeFolder = employeeToOpenFolder;
+            _sortField = _appSettingsService.Settings.ArchiveSortField ?? "EndDate";
+            _sortAscending = _appSettingsService.Settings.ArchiveSortAscending;
+            _viewMode = _appSettingsService.Settings.ArchiveViewMode ?? "List";
+            _zoomLevel = _appSettingsService.Settings.ArchiveZoomLevel;
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
 
             OpenEmployeeFolderCommand = new RelayCommand(o =>
             {
@@ -296,7 +317,7 @@ namespace Win11DesktopApp.ViewModels
         private void OpenEmployeeDetails(ArchivedEmployeeSummary emp)
         {
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(emp.FirmName, emp.EmployeeFolder, _employeeService, employeeId: emp.UniqueId);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(emp.FirmName, emp.EmployeeFolder, _employeeService, employeeId: emp.UniqueId);
             EmployeeDetailsVm.IsArchiveMode = true;
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             IsEmployeeDetailsOpen = true;
@@ -408,14 +429,11 @@ namespace Win11DesktopApp.ViewModels
 
         private void SaveArchiveDisplaySettings()
         {
-            if (App.AppSettingsService == null)
-                return;
-
-            App.AppSettingsService.Settings.ArchiveSortField = SortField;
-            App.AppSettingsService.Settings.ArchiveSortAscending = SortAscending;
-            App.AppSettingsService.Settings.ArchiveViewMode = ViewMode;
-            App.AppSettingsService.Settings.ArchiveZoomLevel = ZoomLevel;
-            App.AppSettingsService.SaveSettings();
+            _appSettingsService.Settings.ArchiveSortField = SortField;
+            _appSettingsService.Settings.ArchiveSortAscending = SortAscending;
+            _appSettingsService.Settings.ArchiveViewMode = ViewMode;
+            _appSettingsService.Settings.ArchiveZoomLevel = ZoomLevel;
+            _appSettingsService.SaveSettings();
         }
 
         private void TryOpenPendingEmployee()
@@ -485,7 +503,7 @@ namespace Win11DesktopApp.ViewModels
                         Description = string.Format(Res("HistoryDescRestored"), EmployeeToRestore.FullName, SelectedCompany.Name)
                     });
 
-                    App.ActivityLogService?.Log("EmployeeRestored", "Archive", SelectedCompany.Name,
+                    _activityLogService.Log("EmployeeRestored", "Archive", SelectedCompany.Name,
                         EmployeeToRestore.FullName,
                         $"Відновлено {EmployeeToRestore.FullName} до {SelectedCompany.Name}, дата початку: {NewStartDate}",
                         EmployeeToRestore.FirmName, SelectedCompany.Name,

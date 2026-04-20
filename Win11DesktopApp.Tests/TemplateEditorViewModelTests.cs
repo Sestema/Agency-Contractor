@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
@@ -14,6 +15,14 @@ namespace Win11DesktopApp.Tests
         private readonly AppSettingsService _appSettingsService;
         private readonly TemplateService _templateService;
         private readonly TagCatalogService _tagCatalogService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
+        private readonly NavigationService _navigationService;
+        private readonly CompanyService _companyService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly StarterTemplateCatalogService _starterTemplateCatalogService;
+        private readonly TemplateViewModelFactory _templateViewModelFactory;
+        private readonly CurrentProfileService _currentProfileService;
+        private readonly AiWindowFactory _aiWindowFactory;
 
         public TemplateEditorViewModelTests()
         {
@@ -26,7 +35,26 @@ namespace Win11DesktopApp.Tests
 
             var folderService = new FolderService(_appSettingsService);
             _templateService = new TemplateService(_appSettingsService, folderService);
-            _tagCatalogService = new TagCatalogService();
+            _documentLocalizationService = new DocumentLocalizationService();
+            _tagCatalogService = new TagCatalogService(_documentLocalizationService);
+            _navigationService = new NavigationService(new ServiceCollection().BuildServiceProvider());
+            _currentProfileService = new CurrentProfileService();
+            _companyService = new CompanyService(_tagCatalogService, _appSettingsService, new PersistenceService(_appSettingsService, folderService), folderService);
+            _geminiApiService = new GeminiApiService();
+            _starterTemplateCatalogService = new StarterTemplateCatalogService();
+            _aiWindowFactory = new AiWindowFactory(
+                _geminiApiService,
+                new EmployeeService(_appSettingsService, _tagCatalogService, folderService, currentProfileService: _currentProfileService));
+            _templateViewModelFactory = new TemplateViewModelFactory(
+                _templateService,
+                new ActivityLogService(folderService, currentProfileService: _currentProfileService),
+                _navigationService,
+                _companyService,
+                _geminiApiService,
+                _tagCatalogService,
+                _appSettingsService,
+                _starterTemplateCatalogService,
+                _aiWindowFactory);
         }
 
         [Fact]
@@ -38,7 +66,18 @@ namespace Win11DesktopApp.Tests
 
             var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
 
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory);
 
             Assert.False(string.IsNullOrEmpty(vm.RtfFilePath));
             Assert.EndsWith("content.rtf", vm.RtfFilePath);
@@ -54,7 +93,18 @@ namespace Win11DesktopApp.Tests
 
             var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
 
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory);
 
             Assert.NotNull(vm.TagGroups);
         }
@@ -68,7 +118,18 @@ namespace Win11DesktopApp.Tests
 
             var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
 
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory);
 
             vm.TagSearchQuery = "EMPLOYEE";
 
@@ -81,7 +142,18 @@ namespace Win11DesktopApp.Tests
             var firmName = "TestFirm";
             var template = new TemplateEntry { FilePath = "Templates/Missing/missing.docx" };
 
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory);
 
             Assert.NotNull(vm.TagGroups);
         }
@@ -103,7 +175,18 @@ namespace Win11DesktopApp.Tests
 
             var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
 
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService);
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory);
 
             Assert.Equal("letter", vm.SelectedPageSize?.Key);
             Assert.Equal("landscape", vm.SelectedPageOrientation?.Key);
@@ -118,7 +201,18 @@ namespace Win11DesktopApp.Tests
             SetupTemplateFile(firmName, fileName, "dummy content");
 
             var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService)
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory)
             {
                 RequestGetRtfContent = () => "{\\rtf1\\ansi test}"
             };
@@ -146,7 +240,18 @@ namespace Win11DesktopApp.Tests
 
             var template = new TemplateEntry { FilePath = $"Templates/Test_Template/{fileName}" };
             var expectedBytes = new byte[] { 1, 2, 3, 4, 5 };
-            var vm = new TemplateEditorViewModel(firmName, template, _tagCatalogService, _templateService)
+            var vm = new TemplateEditorViewModel(
+                firmName,
+                template,
+                _tagCatalogService,
+                _templateService,
+                _navigationService,
+                _templateViewModelFactory,
+                _companyService,
+                _geminiApiService,
+                _starterTemplateCatalogService,
+                _appSettingsService,
+                _aiWindowFactory)
             {
                 RequestGetRtfContent = () => "{\\rtf1\\ansi test}",
                 RequestGetXamlPackageContent = () => expectedBytes

@@ -12,6 +12,7 @@ namespace Win11DesktopApp.ViewModels
     public class CandidateDetailsViewModel : ViewModelBase
     {
         private readonly CandidateService _service;
+        private readonly ActivityLogService _activityLogService;
         private readonly string _folder;
 
         public event Action? RequestClose;
@@ -72,9 +73,13 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isDeleteConfirmOpen, value);
         }
 
-        public CandidateDetailsViewModel(string candidateFolder)
+        public CandidateDetailsViewModel(
+            string candidateFolder,
+            CandidateService? candidateService = null,
+            ActivityLogService? activityLogService = null)
         {
-            _service = App.CandidateService;
+            _service = candidateService ?? throw new InvalidOperationException("CandidateService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _folder = candidateFolder;
 
             var loaded = _service.LoadData(candidateFolder);
@@ -137,7 +142,7 @@ namespace Win11DesktopApp.ViewModels
         private void Save()
         {
             _service.SaveData(_folder, Data);
-            App.ActivityLogService.Log("CandidateUpdated", "Candidate", "",
+            _activityLogService.Log("CandidateUpdated", "Candidate", "",
                 FullName, $"Оновлено кандидата: {FullName}");
             RequestClose?.Invoke();
         }
@@ -153,7 +158,7 @@ namespace Win11DesktopApp.ViewModels
             var name = FullName;
             _service.DeleteCandidate(_folder);
 
-            App.ActivityLogService.Log("CandidateDeleted", "Candidate", "",
+            _activityLogService.Log("CandidateDeleted", "Candidate", "",
                 name, $"Видалено кандидата: {name}");
 
             RequestClose?.Invoke();

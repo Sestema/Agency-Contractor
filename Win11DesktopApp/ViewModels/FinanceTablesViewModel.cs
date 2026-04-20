@@ -5,13 +5,21 @@ namespace Win11DesktopApp.ViewModels
 {
     public class FinanceTablesViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
+        private readonly FinanceModuleViewModelFactory _financeModuleViewModelFactory;
+
         public ICommand GoBackCommand { get; }
         public ICommand OpenFinancesCommand { get; }
         public ICommand OpenTablesCommand { get; }
 
-        public FinanceTablesViewModel()
+        public FinanceTablesViewModel(
+            NavigationService? navigationService = null,
+            FinanceModuleViewModelFactory? financeModuleViewModelFactory = null)
         {
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _financeModuleViewModelFactory = financeModuleViewModelFactory ?? throw new InvalidOperationException("FinanceModuleViewModelFactory is not initialized.");
+
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             OpenFinancesCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.IsFeatureVisible("finances"))
@@ -20,7 +28,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                App.NavigationService.NavigateTo(new SalaryViewModel());
+                _navigationService.NavigateTo(_financeModuleViewModelFactory.CreateSalary());
             });
             OpenTablesCommand = new RelayCommand(o =>
             {
@@ -30,7 +38,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                App.NavigationService.NavigateTo(new TablesMenuViewModel());
+                _navigationService.NavigateTo(_financeModuleViewModelFactory.CreateTablesMenu());
             });
         }
     }

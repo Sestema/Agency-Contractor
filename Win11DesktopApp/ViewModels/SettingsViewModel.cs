@@ -51,11 +51,20 @@ namespace Win11DesktopApp.ViewModels
 
     public class SettingsViewModel : ViewModelBase, ICleanable
     {
+        private readonly NavigationService _navigationService;
         private readonly AppSettingsService _appSettingsService;
         private readonly ThemeService _themeService;
-        private readonly CompanyService? _companyService;
+        private readonly LanguageService _languageService;
+        private readonly CompanyService _companyService;
+        private readonly TagCatalogService _tagCatalogService;
         private readonly ProfileAuthService _profileAuthService;
         private readonly ProfileSessionService _profileSessionService;
+        private readonly AccessStatusService _accessStatusService;
+        private readonly ActivityLogService _activityLogService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
+        private readonly CurrentProfileService _currentProfileService;
+        private readonly GeminiApiKeyConfigurationService _geminiApiKeyConfigurationService;
 
         public ICommand GoBackCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
@@ -131,7 +140,7 @@ namespace Win11DesktopApp.ViewModels
                     var oldPath = _appSettingsService.Settings.RootFolderPath;
                     _appSettingsService.Settings.RootFolderPath = value;
                     _appSettingsService.SaveSettings();
-                    App.ActivityLogService?.Log("RootFolderChanged", "Settings", "", "",
+                    _activityLogService.Log("RootFolderChanged", "Settings", "", "",
                         $"Змінено кореневу папку", oldPath ?? "", value);
                     OnPropertyChanged();
                 }
@@ -140,17 +149,17 @@ namespace Win11DesktopApp.ViewModels
 
         public string AppVersion => AppSettingsService.CurrentAppVersion;
 
-        public string AccessStatusTitle => App.AccessStatusService?.Title ?? string.Empty;
-        public string AccessStatusDetail => App.AccessStatusService?.Detail ?? string.Empty;
-        public string AccessStatusAdminMessage => App.AccessStatusService?.AdminMessage ?? string.Empty;
-        public bool HasAccessStatusAdminMessage => App.AccessStatusService?.HasAdminMessage == true;
-        public string AccessPlanCode => NormalizeAccessPlan(App.AccessStatusService?.Plan);
+        public string AccessStatusTitle => _accessStatusService.Title ?? string.Empty;
+        public string AccessStatusDetail => _accessStatusService.Detail ?? string.Empty;
+        public string AccessStatusAdminMessage => _accessStatusService.AdminMessage ?? string.Empty;
+        public bool HasAccessStatusAdminMessage => _accessStatusService.HasAdminMessage;
+        public string AccessPlanCode => NormalizeAccessPlan(_accessStatusService.Plan);
         public string AccessPlanDisplay => FormatPlanDisplay(AccessPlanCode);
         public bool HasAccessPlan => !string.IsNullOrWhiteSpace(AccessPlanCode);
-        public string AccessStatusSeverity => App.AccessStatusService?.Severity ?? "Info";
+        public string AccessStatusSeverity => _accessStatusService.Severity ?? "Info";
         public string MachineId => Services.LicenseService.GetMachineId();
-        public bool HasProfile => App.CurrentProfile != null;
-        public string ProfileClientId => App.CurrentProfile?.ClientId ?? string.Empty;
+        public bool HasProfile => _currentProfileService.CurrentProfile != null;
+        public string ProfileClientId => _currentProfileService.CurrentProfile?.ClientId ?? string.Empty;
 
         public string ProfileFirstName
         {
@@ -172,7 +181,7 @@ namespace Win11DesktopApp.ViewModels
                 if (!SetProperty(ref _profileRememberMeEnabled, value))
                     return;
 
-                if (_isInitializingProfileFields || _isSyncingRememberMe || App.CurrentProfile == null)
+                if (_isInitializingProfileFields || _isSyncingRememberMe || _currentProfileService.CurrentProfile == null)
                     return;
 
                 _ = SyncRememberMeAsync(value);
@@ -224,7 +233,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     _appSettingsService.Settings.GeminiApiKey = value;
                     _appSettingsService.SaveSettings();
-                    App.RefreshGeminiApiKeyConfiguration();
+                    _geminiApiKeyConfigurationService.RefreshEffectiveApiKey();
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(HasGeminiApiKey));
                     OnPropertyChanged(nameof(GeminiApiKeyMaskedDisplay));
@@ -266,12 +275,12 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _geminiApiKeyDraft, value);
         }
 
-        public bool IsGeminiConfigured => App.GeminiApiService?.IsConfigured ?? false;
+        public bool IsGeminiConfigured => _geminiApiService.IsConfigured;
 
         public bool IsManagedGeminiKeyActive =>
             !HasGeminiApiKey
             && !PolicyService.IsAIDisabled
-            && (App.GeminiApiService?.IsConfigured ?? false);
+            && _geminiApiService.IsConfigured;
 
         public bool ShowGeminiAccessHint => !HasGeminiApiKey;
 
@@ -292,7 +301,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     _appSettingsService.Settings.GeminiModel = value;
                     _appSettingsService.SaveSettings();
-                    App.GeminiApiService?.SetModel(value);
+                    _geminiApiService.SetModel(value);
                     OnPropertyChanged();
                 }
             }
@@ -341,17 +350,35 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public SettingsViewModel(
+            NavigationService? navigationService = null,
             AppSettingsService? appSettingsService = null,
             ThemeService? themeService = null,
+            LanguageService? languageService = null,
             CompanyService? companyService = null,
+            TagCatalogService? tagCatalogService = null,
             ProfileAuthService? profileAuthService = null,
-            ProfileSessionService? profileSessionService = null)
+            ProfileSessionService? profileSessionService = null,
+            AccessStatusService? accessStatusService = null,
+            ActivityLogService? activityLogService = null,
+            GeminiApiService? geminiApiService = null,
+            DocumentLocalizationService? documentLocalizationService = null,
+            CurrentProfileService? currentProfileService = null,
+            GeminiApiKeyConfigurationService? geminiApiKeyConfigurationService = null)
         {
-            _appSettingsService = appSettingsService ?? App.AppSettingsService;
-            _themeService = themeService ?? App.ThemeService;
-            _companyService = companyService ?? App.CompanyService;
-            _profileAuthService = profileAuthService ?? App.ProfileAuthService;
-            _profileSessionService = profileSessionService ?? App.ProfileSessionService;
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _themeService = themeService ?? throw new InvalidOperationException("ThemeService is not initialized.");
+            _languageService = languageService ?? throw new InvalidOperationException("LanguageService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _profileAuthService = profileAuthService ?? throw new InvalidOperationException("ProfileAuthService is not initialized.");
+            _profileSessionService = profileSessionService ?? throw new InvalidOperationException("ProfileSessionService is not initialized.");
+            _accessStatusService = accessStatusService ?? throw new InvalidOperationException("AccessStatusService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
+            _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
+            _geminiApiKeyConfigurationService = geminiApiKeyConfigurationService ?? throw new InvalidOperationException("GeminiApiKeyConfigurationService is not initialized.");
 
             _currentLanguage = _appSettingsService.Settings.LanguageCode;
             _currentTheme = DetectCurrentTheme();
@@ -360,20 +387,19 @@ namespace Win11DesktopApp.ViewModels
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
             _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
             InitializeProfileFields();
-            if (App.AccessStatusService != null)
-                App.AccessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
+            _accessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
 
             GoBackCommand = new RelayCommand(o =>
             {
-                App.NavigationService.NavigateTo(new MainViewModel());
+                _navigationService.NavigateTo<MainViewModel>();
             });
 
             ChangeLanguageCommand = new RelayCommand(param =>
             {
                 if (param is string code)
                 {
-                    LanguageService.SetLanguage(code);
-                    App.AccessStatusService?.RefreshPresentation();
+                    _languageService.SetLanguage(code);
+                    _accessStatusService.RefreshPresentation();
                     CurrentLanguage = code;
                     RaiseAccessStatusPropertiesChanged();
                 }
@@ -399,7 +425,7 @@ namespace Win11DesktopApp.ViewModels
 
             OpenTagVisibilityCommand = new RelayCommand(o =>
             {
-                var window = new TagVisibilityWindow
+                var window = new TagVisibilityWindow(_appSettingsService, _tagCatalogService)
                 {
                     Owner = System.Windows.Application.Current.MainWindow
                 };
@@ -409,11 +435,8 @@ namespace Win11DesktopApp.ViewModels
             OpenCompanyVisibilityCommand = new RelayCommand(o =>
             {
                 CompanyVisibilityItems.Clear();
-                if (_companyService != null)
-                {
-                    foreach (var company in _companyService.Companies)
-                        CompanyVisibilityItems.Add(new CompanyVisibilityItem(company, _companyService));
-                }
+                foreach (var company in _companyService.Companies)
+                    CompanyVisibilityItems.Add(new CompanyVisibilityItem(company, _companyService));
                 IsCompanyVisibilityOpen = true;
             });
 
@@ -451,7 +474,7 @@ namespace Win11DesktopApp.ViewModels
                     CurrentDocLanguage = lang;
                     _appSettingsService.Settings.DocumentLanguage = lang;
                     _appSettingsService.SaveSettings();
-                    App.DocumentLocalizationService.LoadLanguage(lang);
+                    _documentLocalizationService.LoadLanguage(lang);
                 }
             });
 
@@ -459,8 +482,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 GeminiTestResult = "Testing...";
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                if (App.GeminiApiService == null) { GeminiTestResult = "Service unavailable"; return; }
-                var (success, msg) = await App.GeminiApiService.TestConnectionAsync(cts.Token);
+                var (success, msg) = await _geminiApiService.TestConnectionAsync(cts.Token);
                 GeminiTestResult = msg;
             }, o => IsGeminiConfigured);
 
@@ -583,8 +605,7 @@ namespace Win11DesktopApp.ViewModels
 
         public void Cleanup()
         {
-            if (App.AccessStatusService != null)
-                App.AccessStatusService.PropertyChanged -= AccessStatusService_PropertyChanged;
+            _accessStatusService.PropertyChanged -= AccessStatusService_PropertyChanged;
         }
 
         public static double GetInterfaceSizeMultiplier(string size) => size switch
@@ -668,7 +689,7 @@ namespace Win11DesktopApp.ViewModels
             _isInitializingProfileFields = true;
             try
             {
-                if (App.CurrentProfile == null)
+                if (_currentProfileService.CurrentProfile == null)
                 {
                     ProfileFirstName = string.Empty;
                     ProfileLastName = string.Empty;
@@ -676,9 +697,9 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                ProfileFirstName = App.CurrentProfile.FirstName;
-                ProfileLastName = App.CurrentProfile.LastName;
-                ProfileRememberMeEnabled = App.CurrentProfile.RememberMeEnabled;
+                ProfileFirstName = _currentProfileService.CurrentProfile.FirstName;
+                ProfileLastName = _currentProfileService.CurrentProfile.LastName;
+                ProfileRememberMeEnabled = _currentProfileService.CurrentProfile.RememberMeEnabled;
             }
             finally
             {
@@ -688,7 +709,7 @@ namespace Win11DesktopApp.ViewModels
 
         private async System.Threading.Tasks.Task SaveProfileAsync()
         {
-            if (App.CurrentProfile == null)
+            if (_currentProfileService.CurrentProfile == null)
             {
                 SetProfileStatus(Res("SettingsProfileNotLoadedError"), true);
                 return;
@@ -707,7 +728,7 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var nameResult = await _profileAuthService.UpdateProfileNameAsync(
-                App.CurrentProfile.ClientId,
+                _currentProfileService.CurrentProfile.ClientId,
                 ProfileFirstName,
                 ProfileLastName);
 
@@ -739,7 +760,7 @@ namespace Win11DesktopApp.ViewModels
 
         private async System.Threading.Tasks.Task ChangeProfilePasswordAsync()
         {
-            if (App.CurrentProfile == null)
+            if (_currentProfileService.CurrentProfile == null)
             {
                 SetProfileStatus(Res("SettingsProfileNotLoadedError"), true);
                 return;
@@ -770,7 +791,7 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var result = await _profileAuthService.ChangePasswordAsync(
-                App.CurrentProfile.ClientId,
+                _currentProfileService.CurrentProfile.ClientId,
                 ProfileCurrentPassword,
                 ProfileNewPassword);
 
@@ -795,7 +816,7 @@ namespace Win11DesktopApp.ViewModels
 
         private void UpdateCurrentProfile(ClientProfileRecord profile)
         {
-            App.SetCurrentProfile(profile);
+            _currentProfileService.SetCurrentProfile(profile);
             InitializeProfileFields();
             OnPropertyChanged(nameof(HasProfile));
             OnPropertyChanged(nameof(ProfileClientId));
@@ -803,10 +824,10 @@ namespace Win11DesktopApp.ViewModels
 
         private async System.Threading.Tasks.Task SyncRememberMeAsync(bool enabled)
         {
-            if (App.CurrentProfile == null)
+            if (_currentProfileService.CurrentProfile == null)
                 return;
 
-            var currentProfile = App.CurrentProfile;
+            var currentProfile = _currentProfileService.CurrentProfile;
             _isSyncingRememberMe = true;
 
             try

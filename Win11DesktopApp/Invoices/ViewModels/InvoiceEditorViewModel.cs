@@ -65,9 +65,11 @@ public sealed class InvoicePaymentPreviewRow
 public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
 {
     private readonly AresLookupService _aresLookupService;
+    private readonly NavigationService _navigationService;
     private readonly InvoicePdfRenderService _pdfRenderService;
     private readonly InvoiceQrPaymentService _qrPaymentService;
     private readonly InvoiceStorageService _storageService;
+    private readonly InvoiceViewModelFactory _invoiceViewModelFactory;
     private readonly string _documentId;
     private InvoiceDocument _document = new();
     private InvoiceLineItem? _selectedLineItem;
@@ -81,13 +83,22 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
     private bool _numberEditedByUser;
     private bool _suppressNumberEditedTracking;
 
-    public InvoiceEditorViewModel(string documentId, InvoiceStorageService? storageService = null, AresLookupService? aresLookupService = null, InvoiceQrPaymentService? qrPaymentService = null, InvoicePdfRenderService? pdfRenderService = null)
+    public InvoiceEditorViewModel(
+        string documentId,
+        InvoiceStorageService storageService,
+        AresLookupService aresLookupService,
+        InvoiceQrPaymentService qrPaymentService,
+        InvoicePdfRenderService pdfRenderService,
+        NavigationService navigationService,
+        InvoiceViewModelFactory invoiceViewModelFactory)
     {
         _documentId = documentId;
-        _storageService = storageService ?? App.InvoiceStorageService;
-        _aresLookupService = aresLookupService ?? App.AresLookupService;
-        _qrPaymentService = qrPaymentService ?? App.InvoiceQrPaymentService;
-        _pdfRenderService = pdfRenderService ?? App.InvoicePdfRenderService;
+        _storageService = storageService ?? throw new InvalidOperationException("InvoiceStorageService is not initialized.");
+        _aresLookupService = aresLookupService ?? throw new InvalidOperationException("AresLookupService is not initialized.");
+        _qrPaymentService = qrPaymentService ?? throw new InvalidOperationException("InvoiceQrPaymentService is not initialized.");
+        _pdfRenderService = pdfRenderService ?? throw new InvalidOperationException("InvoicePdfRenderService is not initialized.");
+        _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+        _invoiceViewModelFactory = invoiceViewModelFactory ?? throw new InvalidOperationException("InvoiceViewModelFactory is not initialized.");
 
         DocumentTypes = new ObservableCollection<InvoiceTypeOption>
         {
@@ -206,7 +217,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
             if (_storageService.IsPendingDocument(_documentId))
                 _storageService.DiscardPendingDocument(_documentId);
 
-            App.NavigationService?.NavigateTo(new InvoicesViewModel(_storageService, InvoiceModuleSection.Documents));
+            NavigateToDocuments();
         });
         SaveCommand = new RelayCommand(_ => Save(openPreviewAfterSave: false), _ => _isLoaded);
         SaveAndPreviewCommand = new RelayCommand(_ => Save(openPreviewAfterSave: true), _ => _isLoaded);
@@ -1219,7 +1230,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         if (loaded == null)
         {
             ToastService.Instance.Warning(Res("InvoicesLoadDocumentFailed"));
-            App.NavigationService?.NavigateTo(new InvoicesViewModel(_storageService, InvoiceModuleSection.Documents));
+            NavigateToDocuments();
             return;
         }
 
@@ -1303,7 +1314,12 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
                 return;
         }
 
-        App.NavigationService?.NavigateTo(new InvoicesViewModel(_storageService, InvoiceModuleSection.Documents));
+        NavigateToDocuments();
+    }
+
+    private void NavigateToDocuments()
+    {
+        _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoices(InvoiceModuleSection.Documents));
     }
 
     private bool PrepareInvoiceNumberForSave()

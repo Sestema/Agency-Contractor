@@ -9,9 +9,9 @@
     <UseWPF>true</UseWPF>
     <AssemblyTitle>Agency Contractor</AssemblyTitle>
     <ProductName>Agency Contractor</ProductName>
-    <Version>0.1.52</Version>
-    <AssemblyVersion>0.1.52.0</AssemblyVersion>
-    <FileVersion>0.1.52.0</FileVersion>
+    <Version>0.1.54</Version>
+    <AssemblyVersion>0.1.54.0</AssemblyVersion>
+    <FileVersion>0.1.54.0</FileVersion>
     <ApplicationIcon>Resources\app_icon.ico</ApplicationIcon>
     <Copyright>© 2026 Oleksandr Kachalin. All rights reserved.</Copyright>
     <Authors>Oleksandr Kachalin</Authors>
@@ -53,6 +53,7 @@
     <PackageReference Include="MASES.JCOBridge" Version="2.6.6" GeneratePathProperty="true" />
     <PackageReference Include="MASES.JNet" Version="2.6.6" GeneratePathProperty="true" />
     <PackageReference Include="MASES.NetPDF" Version="3.0.10" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3800.47" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
     <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260214" />
@@ -66,26 +67,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(PkgMASES_NetPDF)\build\jars\**\*.*"
-          Link="jars\%(RecursiveDir)%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest"
-          Visible="false" />
-    <None Include="$(PkgMASES_NetPDF)\build\config\**\*.*"
-          Link="config\%(RecursiveDir)%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest"
-          Visible="false" />
-    <None Include="$(PkgMASES_JNet)\build\jars\**\*.*"
-          Link="jars\%(RecursiveDir)%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest"
-          Visible="false" />
-    <None Include="$(PkgMASES_JCOBridge)\content\common\*.jar"
-          Link="jars\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest"
-          Visible="false" />
+    <None Include="$(PkgMASES_NetPDF)\build\jars\**\*.*" Link="jars\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(PkgMASES_NetPDF)\build\config\**\*.*" Link="config\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(PkgMASES_JNet)\build\jars\**\*.*" Link="jars\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(PkgMASES_JCOBridge)\content\common\*.jar" Link="jars\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
 </Project>

@@ -20,8 +20,14 @@ namespace Win11DesktopApp.ViewModels
         private readonly string _firmName;
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
-        private readonly TagCatalogService? _tagCatalogService;
-        private readonly StarterTemplateCatalogService? _starterTemplateCatalogService;
+        private readonly NavigationService _navigationService;
+        private readonly TemplateViewModelFactory _templateViewModelFactory;
+        private readonly CompanyService _companyService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly TagCatalogService _tagCatalogService;
+        private readonly StarterTemplateCatalogService _starterTemplateCatalogService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly AiWindowFactory _aiWindowFactory;
         private bool _templateUnavailable;
         private bool _templateUnavailableNotified;
         private bool _navigateBackScheduled;
@@ -61,6 +67,7 @@ namespace Win11DesktopApp.ViewModels
 
         public ObservableCollection<TagGroupViewModel> FilteredTagGroups
             => TagGroups != null ? TagGroupViewModel.FilterTagGroups(TagGroups, TagSearchQuery) : new ObservableCollection<TagGroupViewModel>();
+        internal AiWindowFactory AiWindowFactory => _aiWindowFactory;
 
         public ICommand GoBackCommand { get; }
         public ICommand SaveCommand { get; }
@@ -282,13 +289,30 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _pagePadding, value);
         }
 
-        public TemplateEditorViewModel(string firmName, TemplateEntry template, TemplateService? templateService = null)
+        public TemplateEditorViewModel(
+            string firmName,
+            TemplateEntry template,
+            TemplateService? templateService = null,
+            NavigationService? navigationService = null,
+            TemplateViewModelFactory? templateViewModelFactory = null,
+            CompanyService? companyService = null,
+            GeminiApiService? geminiApiService = null,
+            TagCatalogService? tagCatalogService = null,
+            StarterTemplateCatalogService? starterTemplateCatalogService = null,
+            AppSettingsService? appSettingsService = null,
+            AiWindowFactory? aiWindowFactory = null)
         {
             _firmName = firmName;
             _template = template;
-            _templateService = templateService ?? App.TemplateService;
-            _tagCatalogService = App.TagCatalogService;
-            _starterTemplateCatalogService = App.StarterTemplateCatalogService;
+            _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _starterTemplateCatalogService = starterTemplateCatalogService ?? throw new InvalidOperationException("StarterTemplateCatalogService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
 
             try
             {
@@ -312,9 +336,9 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var allTags = _tagCatalogService?.GetAllTagDefinitions() ?? new List<TagEntry>();
+                var allTags = _tagCatalogService.GetAllTagDefinitions() ?? new List<TagEntry>();
                 var groups = TagGroupViewModel.BuildTagGroups(allTags);
-                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService?.Settings?.HiddenTags ?? new List<string>());
+                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, _appSettingsService.Settings?.HiddenTags ?? new List<string>());
             }
             catch
             {
@@ -338,13 +362,30 @@ namespace Win11DesktopApp.ViewModels
             StatusMessage = Res("EditorLoading");
         }
 
-        public TemplateEditorViewModel(string firmName, TemplateEntry template, TagCatalogService tagCatalogService, TemplateService templateService)
+        public TemplateEditorViewModel(
+            string firmName,
+            TemplateEntry template,
+            TagCatalogService tagCatalogService,
+            TemplateService templateService,
+            NavigationService? navigationService = null,
+            TemplateViewModelFactory? templateViewModelFactory = null,
+            CompanyService? companyService = null,
+            GeminiApiService? geminiApiService = null,
+            StarterTemplateCatalogService? starterTemplateCatalogService = null,
+            AppSettingsService? appSettingsService = null,
+            AiWindowFactory? aiWindowFactory = null)
         {
             _firmName = firmName;
             _template = template;
             _templateService = templateService;
-            _tagCatalogService = tagCatalogService;
-            _starterTemplateCatalogService = App.StarterTemplateCatalogService ?? new StarterTemplateCatalogService();
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _starterTemplateCatalogService = starterTemplateCatalogService ?? throw new InvalidOperationException("StarterTemplateCatalogService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
 
             try
             {
@@ -370,7 +411,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 var allTags = tagCatalogService.GetAllTagDefinitions();
                 var groups = TagGroupViewModel.BuildTagGroups(allTags);
-                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService?.Settings?.HiddenTags ?? new List<string>());
+                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, _appSettingsService.Settings?.HiddenTags ?? new List<string>());
             }
             catch
             {
@@ -555,11 +596,11 @@ namespace Win11DesktopApp.ViewModels
                     return;
             }
 
-            var company = App.CompanyService?.Companies?.FirstOrDefault(c => c.Name == _firmName);
+            var company = _companyService.Companies.FirstOrDefault(c => c.Name == _firmName);
             if (company != null)
-                App.NavigationService?.NavigateTo(new TemplatesViewModel(company));
+                _navigationService.NavigateTo(_templateViewModelFactory.CreateTemplates(company));
             else
-                App.NavigationService?.NavigateTo(new MainViewModel());
+                _navigationService.NavigateTo<MainViewModel>();
         }
 
         internal void HandleTemplateOpenFailure(string? details = null)
@@ -703,7 +744,7 @@ namespace Win11DesktopApp.ViewModels
             if (!PolicyService.EnsureWriteAllowed("змінити шаблон через AI"))
                 return;
 
-            var geminiService = App.GeminiApiService;
+            var geminiService = _geminiApiService;
             if (geminiService == null || !geminiService.IsConfigured)
             {
                 AITagsStatus = Res("AIChatNoModel");

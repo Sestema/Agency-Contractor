@@ -140,7 +140,10 @@ namespace Win11DesktopApp.Views
 
         private void ApplyColumnLayout(DataGrid grid)
         {
-            var layout = ReportViewModel.GetEffectiveEmployeeColumns();
+            if (DataContext is not ReportViewModel vm)
+                return;
+
+            var layout = vm.ReportColumnLayoutService.GetEffectiveEmployeeColumns();
             var layoutByKey = layout.ToDictionary(c => c.Key, System.StringComparer.OrdinalIgnoreCase);
 
             _isApplyingLayout = true;
@@ -184,7 +187,8 @@ namespace Win11DesktopApp.Views
                 });
             }
 
-            ReportViewModel.SaveEmployeeColumnLayout(layout);
+            if (DataContext is ReportViewModel vm)
+                vm.ReportColumnLayoutService.SaveEmployeeColumnLayout(layout);
         }
 
         private void SaveAndReapplyLayout(DataGrid grid)
@@ -293,7 +297,10 @@ namespace Win11DesktopApp.Views
 
         private void ColumnsButton_Click(object sender, RoutedEventArgs e)
         {
-            var window = new ReportColumnSettingsWindow
+            if (DataContext is not ReportViewModel vm)
+                return;
+
+            var window = new ReportColumnSettingsWindow(vm.ReportColumnLayoutService)
             {
                 Owner = Window.GetWindow(this)
             };
@@ -304,7 +311,8 @@ namespace Win11DesktopApp.Views
 
         private void ResetColumnsButton_Click(object sender, RoutedEventArgs e)
         {
-            ReportViewModel.ResetEmployeeColumnsToDefaults();
+            if (DataContext is ReportViewModel vm)
+                vm.ReportColumnLayoutService.ResetEmployeeColumnsToDefaults();
             ReapplyLayoutToAllEmployeeGrids();
         }
     }

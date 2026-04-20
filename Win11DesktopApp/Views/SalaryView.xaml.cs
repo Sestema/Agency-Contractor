@@ -250,8 +250,8 @@ namespace Win11DesktopApp.Views
 
         private void SaveColumnWidths()
         {
-            var svc = App.AppSettingsService;
-            if (svc == null) return;
+            if (DataContext is not SalaryViewModel vm) return;
+            var svc = vm.AppSettingsService;
             svc.Settings.SalaryColumnWidths = SalaryGrid.Columns
                 .Select(c => c.ActualWidth)
                 .ToList();
@@ -260,7 +260,7 @@ namespace Win11DesktopApp.Views
 
         private void RestoreColumnWidths()
         {
-            var widths = App.AppSettingsService?.Settings?.SalaryColumnWidths;
+            var widths = (DataContext as SalaryViewModel)?.AppSettingsService.Settings.SalaryColumnWidths;
             if (widths == null || widths.Count == 0) return;
             for (int i = 0; i < SalaryGrid.Columns.Count && i < widths.Count; i++)
             {
@@ -271,9 +271,10 @@ namespace Win11DesktopApp.Views
 
         private void RestoreSidebarRowRatio()
         {
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null)
+            if (DataContext is not SalaryViewModel vm)
                 return;
+
+            var settings = vm.AppSettingsService.Settings;
 
             var ratio = settings.SalarySidebarTopRatio;
             if (ratio <= 0.1 || ratio >= 20)
@@ -285,9 +286,10 @@ namespace Win11DesktopApp.Views
 
         private void RestoreSidebarWidth()
         {
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null)
+            if (DataContext is not SalaryViewModel vm)
                 return;
+
+            var settings = vm.AppSettingsService.Settings;
 
             var width = settings.SalarySidebarWidth;
             if (width < 210 || width > 420)
@@ -305,12 +307,13 @@ namespace Win11DesktopApp.Views
             if (ratio <= 0.1 || ratio >= 20)
                 return;
 
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null)
+            if (DataContext is not SalaryViewModel vm)
                 return;
 
+            var settings = vm.AppSettingsService.Settings;
+
             settings.SalarySidebarTopRatio = ratio;
-            App.AppSettingsService?.SaveSettings();
+            vm.AppSettingsService.SaveSettings();
         }
 
         private void SidebarColumnSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
@@ -322,12 +325,13 @@ namespace Win11DesktopApp.Views
             if (width < 210 || width > 420)
                 return;
 
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null)
+            if (DataContext is not SalaryViewModel vm)
                 return;
 
+            var settings = vm.AppSettingsService.Settings;
+
             settings.SalarySidebarWidth = width;
-            App.AppSettingsService?.SaveSettings();
+            vm.AppSettingsService.SaveSettings();
         }
 
         private void OnViewModelDataLoaded()

@@ -17,6 +17,12 @@ namespace Win11DesktopApp.ViewModels
     public class PaymentSignViewModel : ViewModelBase
     {
         private readonly EmployeeService _employeeService;
+        private readonly NavigationService _navigationService;
+        private readonly FinanceModuleViewModelFactory _financeModuleViewModelFactory;
+        private readonly FinanceService _financeService;
+        private readonly CompanyService _companyService;
+        private readonly ActivityLogService _activityLogService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
 
         public ObservableCollection<FirmCheckItem> Firms { get; } = new();
         public ObservableCollection<int> Months { get; } = new(Enumerable.Range(1, 12));
@@ -54,16 +60,29 @@ namespace Win11DesktopApp.ViewModels
         public ICommand GeneratePdfCommand { get; }
         public ICommand SelectAllCommand { get; }
 
-        public PaymentSignViewModel()
+        public PaymentSignViewModel(
+            EmployeeService? employeeService = null,
+            NavigationService? navigationService = null,
+            FinanceModuleViewModelFactory? financeModuleViewModelFactory = null,
+            FinanceService? financeService = null,
+            CompanyService? companyService = null,
+            ActivityLogService? activityLogService = null,
+            DocumentLocalizationService? documentLocalizationService = null)
         {
-            _employeeService = App.EmployeeService;
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _financeModuleViewModelFactory = financeModuleViewModelFactory ?? throw new InvalidOperationException("FinanceModuleViewModelFactory is not initialized.");
+            _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
 
             var now = DateTime.Now;
             _selectedMonth = now.Month;
             _selectedYear = now.Year;
             _paymentDate = now.ToString("dd.MM.yyyy");
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new TablesMenuViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo(_financeModuleViewModelFactory.CreateTablesMenu()));
             GeneratePdfCommand = new RelayCommand(o => GeneratePdf());
             SelectAllCommand = new RelayCommand(o => ToggleSelectAll());
 
@@ -75,15 +94,13 @@ namespace Win11DesktopApp.ViewModels
             var prevSelected = Firms.Where(f => f.IsSelected).Select(f => f.FirmName).ToHashSet();
             Firms.Clear();
 
-            var financeService = App.FinanceService;
-            var companyService = App.CompanyService;
-            var (salaryEntries, _) = financeService.LoadAllFirmPayments(_selectedYear, _selectedMonth);
+            var (salaryEntries, _) = _financeService.LoadAllFirmPayments(_selectedYear, _selectedMonth);
 
             var countByFirm = salaryEntries
                 .GroupBy(e => e.FirmName)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            foreach (var company in companyService.Companies.Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth)))
+            foreach (var company in _companyService.Companies.Where(c => _companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth)))
             {
                 countByFirm.TryGetValue(company.Name, out int count);
                 Firms.Add(new FirmCheckItem
@@ -107,8 +124,8 @@ namespace Win11DesktopApp.ViewModels
             return Application.Current?.TryFindResource(key) as string ?? key;
         }
 
-        private static string DocString(string key) =>
-            App.DocumentLocalizationService?.Get(key) ??
+        private string DocString(string key) =>
+            _documentLocalizationService.Get(key) ??
             (Application.Current?.TryFindResource(key) as string ?? key);
 
         private void GeneratePdf()
@@ -133,8 +150,7 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 var selectedFirmNames = new HashSet<string>(selectedFirms.Select(f => f.FirmName));
-                var financeService = App.FinanceService;
-                var (salaryEntries, _) = financeService.LoadAllFirmPayments(SelectedYear, SelectedMonth);
+                var (salaryEntries, _) = _financeService.LoadAllFirmPayments(SelectedYear, SelectedMonth);
 
                 var distinctRows = salaryEntries
                     .Where(e => selectedFirmNames.Contains(e.FirmName))
@@ -283,7 +299,7 @@ namespace Win11DesktopApp.ViewModels
 
                 gfx?.Dispose();
                 doc.Save(dlg.FileName);
-                App.ActivityLogService.Log("ExportPdf", "Export", "", "",
+                _activityLogService.Log("ExportPdf", "Export", "", "",
                     $"Згенеровано виплату на підписи → PDF");
                 StatusMessage = GetString("AdvTableSuccess");
                 MessageBox.Show(GetString("AdvTableSuccess"), GetString("TitleSuccess"), MessageBoxButton.OK, MessageBoxImage.Information);

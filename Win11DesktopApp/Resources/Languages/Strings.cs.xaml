@@ -1302,6 +1302,7 @@
     <sys:String x:Key="TagDescEmpContractType">Typ smlouvy</sys:String>
     <sys:String x:Key="TagDescEmpDepartment">Oddělení</sys:String>
     <sys:String x:Key="TagDescEmpStartDate">Datum nástupu do práce</sys:String>
+    <sys:String x:Key="TagDescEmpEndDate">Datum ukončení práce</sys:String>
     <sys:String x:Key="TagDescEmpSignDate">Datum podpisu smlouvy</sys:String>
 
     <!-- Template Editor ViewModel -->

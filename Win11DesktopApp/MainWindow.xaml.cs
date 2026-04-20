@@ -8,6 +8,7 @@ namespace Win11DesktopApp;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    private readonly AppSettingsService _appSettingsService;
     private const double BaseWidth = 900;
     private const double BaseHeight = 600;
 
@@ -41,14 +42,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public MainWindow()
+    public MainWindow(AppSettingsService appSettingsService)
     {
+        _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
         InitializeComponent();
         SizeChanged += OnWindowSizeChanged;
 
         Loaded += (_, _) =>
         {
-            var settings = App.AppSettingsService.Settings;
+            var settings = _appSettingsService.Settings;
             _interfaceSizeMultiplier = SettingsViewModel.GetInterfaceSizeMultiplier(settings.InterfaceSize ?? "Medium");
             SettingsViewModel.ApplyTextSize(settings.TextSize ?? "Medium");
             RestoreWindowBounds(settings);
@@ -106,7 +108,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         try
         {
-            var settings = App.AppSettingsService.Settings;
+            var settings = _appSettingsService.Settings;
             settings.WindowMaximized = WindowState == WindowState.Maximized;
             if (WindowState == WindowState.Normal)
             {
@@ -115,7 +117,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 settings.WindowWidth = Width;
                 settings.WindowHeight = Height;
             }
-            await App.AppSettingsService.SaveSettingsImmediate();
+            await _appSettingsService.SaveSettingsImmediate();
         }
         catch (Exception ex)
         {

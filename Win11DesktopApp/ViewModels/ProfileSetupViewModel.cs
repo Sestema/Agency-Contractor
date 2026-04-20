@@ -7,6 +7,7 @@ namespace Win11DesktopApp.ViewModels
 {
     public sealed class ProfileSetupViewModel : ViewModelBase
     {
+        private readonly LanguageService _languageService;
         private readonly ProfileAuthService _profileAuthService;
         private readonly string _clientId;
 
@@ -60,7 +61,7 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _currentLanguage, value))
-                    LanguageService.SetLanguage(value);
+                    _languageService.SetLanguage(value);
             }
         }
 
@@ -76,11 +77,17 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isBusy, value);
         }
 
-        public ProfileSetupViewModel(ProfileAuthService profileAuthService, string clientId)
+        public ProfileSetupViewModel(
+            LanguageService languageService,
+            ProfileAuthService profileAuthService,
+            string clientId,
+            AppSettingsService appSettingsService)
         {
+            _languageService = languageService ?? throw new InvalidOperationException("LanguageService is not initialized.");
+            var settingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
             _profileAuthService = profileAuthService;
             _clientId = clientId;
-            _currentLanguage = App.AppSettingsService?.Settings.LanguageCode ?? "uk";
+            _currentLanguage = settingsService.Settings.LanguageCode ?? "uk";
 
             CreateProfileCommand = new AsyncRelayCommand(_ => CreateProfileAsync(), _ => !IsBusy);
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke(false), _ => !IsBusy);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Xunit;
@@ -62,6 +63,18 @@ namespace Win11DesktopApp.Tests
             _salaryDbService.ReplaceMonthData(2026, 3, entries, expenses);
 
             Assert.True(File.Exists(_salaryDbService.GetMonthDbPath(2026, 3)));
+        }
+
+        [Fact]
+        public void MonthDbExists_ShouldRefreshIndex_WhenMonthFileAppearsAfterInitialMiss()
+        {
+            Assert.False(_salaryDbService.MonthDbExists(2026, 12));
+
+            var folder = _salaryDbService.SalaryDbFolder;
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "salary_2026_12.db"), string.Empty);
+
+            Assert.True(_salaryDbService.MonthDbExists(2026, 12));
         }
 
         [Fact]
@@ -183,6 +196,22 @@ namespace Win11DesktopApp.Tests
             Assert.Equal("2026-06", month.Key);
             Assert.Equal(1234m, month.Value.netSalary);
             Assert.True(month.Value.paid);
+        }
+
+        [Fact]
+        public void ParseDecimal_WhenValueIsInvalid_ShouldLogWarning_AndReturnZero()
+        {
+            LoggingService.Initialize(_testRootPath);
+            var parseMethod = typeof(SalaryDbService).GetMethod("ParseDecimal", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(parseMethod);
+
+            var result = (decimal)parseMethod!.Invoke(null, new object?[] { "not-a-number" })!;
+
+            Assert.Equal(0m, result);
+            Assert.Contains(LoggingService.GetRecentEntries(), entry =>
+                entry.Module == "SalaryDbService.ParseDecimal"
+                && entry.Severity == "WARN"
+                && entry.Message.Contains("not-a-number", StringComparison.Ordinal));
         }
 
         [Fact]

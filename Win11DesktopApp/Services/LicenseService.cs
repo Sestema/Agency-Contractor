@@ -33,6 +33,7 @@ namespace Win11DesktopApp.Services
 
     public static class LicenseService
     {
+        private static AppSettingsService? _appSettingsService;
         private static readonly string LicenseFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AgencyContractor");
@@ -47,6 +48,11 @@ namespace Win11DesktopApp.Services
         private static string? _cachedMachineId;
         private static bool _migrationDone;
         private static bool _legacyWarningLogged;
+
+        public static void Initialize(AppSettingsService appSettingsService)
+        {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+        }
 
         public static bool IsLicenseValid()
         {
@@ -149,6 +155,15 @@ namespace Win11DesktopApp.Services
                     };
                 }
 
+                if (!CanTrustLocalLicense(info))
+                {
+                    return new LocalLicenseStatus
+                    {
+                        IsValid = false,
+                        StatusText = "Локальна ліцензія перенесена на сервер"
+                    };
+                }
+
                 if (info.Plan == "unlimited")
                 {
                     UpdateLastCheckedIfNeeded(info);
@@ -217,6 +232,41 @@ namespace Win11DesktopApp.Services
                     StatusText = "Помилка перевірки"
                 };
             }
+        }
+
+        internal static bool CanTrustLocalLicense(LicenseInfo? info)
+        {
+            var migratedAtUtc = _appSettingsService?.Settings.LegacyLicenseMigratedAtUtc;
+            return CanTrustLocalLicense(info, migratedAtUtc);
+        }
+
+        internal static bool CanTrustLocalLicense(LicenseInfo? info, string? legacyLicenseMigratedAtUtc)
+        {
+            if (info == null)
+                return false;
+
+            if (!IsLegacyLicense(info))
+                return true;
+
+            return string.IsNullOrWhiteSpace(legacyLicenseMigratedAtUtc);
+        }
+
+        internal static bool ShouldLogLegacyLicenseWarning(LicenseInfo? info)
+        {
+            var migratedAtUtc = _appSettingsService?.Settings.LegacyLicenseMigratedAtUtc;
+            return ShouldLogLegacyLicenseWarning(info, migratedAtUtc);
+        }
+
+        internal static bool ShouldLogLegacyLicenseWarning(LicenseInfo? info, string? legacyLicenseMigratedAtUtc)
+        {
+            return IsLegacyLicense(info)
+                && string.IsNullOrWhiteSpace(legacyLicenseMigratedAtUtc);
+        }
+
+        internal static bool IsLegacyLicense(LicenseInfo? info)
+        {
+            return info != null
+                && (info.SignatureVersion < 2 || string.IsNullOrWhiteSpace(info.SignatureSecret));
         }
 
         public static string GetMachineId()
@@ -327,7 +377,7 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(info.ExpiresOn)) return false;
             if (info.SignatureVersion < 2 || string.IsNullOrWhiteSpace(info.SignatureSecret))
             {
-                if (!_legacyWarningLogged)
+                if (!_legacyWarningLogged && ShouldLogLegacyLicenseWarning(info))
                 {
                     LoggingService.LogWarning("LicenseService.VerifySignature", "Legacy license format detected; cryptographic verification is unavailable.");
                     _legacyWarningLogged = true;

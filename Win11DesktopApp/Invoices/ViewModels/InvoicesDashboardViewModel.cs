@@ -11,16 +11,19 @@ public sealed class InvoicesDashboardViewModel : ViewModelBase
     private readonly InvoiceStorageService _storageService;
     private readonly Action<InvoiceModuleSection> _openSection;
     private readonly Action<InvoiceDocumentType> _createDocument;
+    private readonly Action<string> _openDocument;
     private ObservableCollection<InvoiceDocumentSummary> _recentDocuments = new();
 
     public InvoicesDashboardViewModel(
         InvoiceStorageService storageService,
         Action<InvoiceModuleSection> openSection,
-        Action<InvoiceDocumentType> createDocument)
+        Action<InvoiceDocumentType> createDocument,
+        Action<string> openDocument)
     {
         _storageService = storageService;
         _openSection = openSection;
         _createDocument = createDocument;
+        _openDocument = openDocument;
 
         OpenDocumentsCommand = new RelayCommand(_ => _openSection(InvoiceModuleSection.Documents));
         OpenCompaniesCommand = new RelayCommand(_ => _openSection(InvoiceModuleSection.Companies));
@@ -93,6 +96,6 @@ public sealed class InvoicesDashboardViewModel : ViewModelBase
         if (parameter is not InvoiceDocumentSummary summary)
             return;
 
-        App.NavigationService?.NavigateTo(new InvoiceEditorViewModel(summary.Id, _storageService));
+        _openDocument(summary.Id);
     }
 }

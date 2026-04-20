@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using Win11DesktopApp.Models;
+using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -9,13 +10,16 @@ namespace Win11DesktopApp.Views
     public partial class TagVisibilityWindow : Window
     {
         private readonly List<TagVisibilityGroup> _groups;
+        private readonly AppSettingsService _appSettingsService;
 
-        public TagVisibilityWindow()
+        public TagVisibilityWindow(AppSettingsService appSettingsService, TagCatalogService tagCatalogService)
         {
+            _appSettingsService = appSettingsService ?? throw new System.ArgumentNullException(nameof(appSettingsService));
+            var resolvedTagCatalogService = tagCatalogService ?? throw new System.ArgumentNullException(nameof(tagCatalogService));
             InitializeComponent();
 
-            var hiddenTags = new HashSet<string>(App.AppSettingsService.Settings.HiddenTags ?? new List<string>());
-            var allTags = App.TagCatalogService.GetAllTagDefinitions();
+            var hiddenTags = new HashSet<string>(_appSettingsService.Settings.HiddenTags ?? new List<string>());
+            var allTags = resolvedTagCatalogService.GetAllTagDefinitions();
             var tagGroups = TagGroupViewModel.BuildTagGroups(allTags);
 
             _groups = tagGroups.Select(g => new TagVisibilityGroup
@@ -54,8 +58,8 @@ namespace Win11DesktopApp.Views
                 .Select(i => i.Tag)
                 .ToList();
 
-            App.AppSettingsService.Settings.HiddenTags = hiddenTags;
-            App.AppSettingsService.SaveSettings();
+            _appSettingsService.Settings.HiddenTags = hiddenTags;
+            _appSettingsService.SaveSettings();
             DialogResult = true;
             Close();
         }

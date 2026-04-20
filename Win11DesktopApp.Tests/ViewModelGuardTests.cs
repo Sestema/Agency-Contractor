@@ -78,5 +78,47 @@ namespace Win11DesktopApp.Tests
             Assert.False(ActivityLogViewModel.IsUndoEligible(wrongAction, new HashSet<string> { "op-1" }, now));
             Assert.False(ActivityLogViewModel.IsUndoEligible(missingOperation, new HashSet<string> { "op-1" }, now));
         }
+
+        [Fact]
+        public void ShouldResaveWhenCanonicalSavedEntryDuplicates_ShouldReturnTrue_WhenKeyAlreadyExists()
+        {
+            var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "emp-1|Firm A"
+            };
+
+            var result = SalaryViewModel.ShouldResaveWhenCanonicalSavedEntryDuplicates(existingKeys, "emp-1|Firm A");
+
+            Assert.True(result);
+        }
+
+        [Fact]
+        public void ShouldResaveWhenCanonicalSavedEntryDuplicates_ShouldReturnFalse_WhenKeyIsNew()
+        {
+            var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "emp-1|Firm A"
+            };
+
+            var result = SalaryViewModel.ShouldResaveWhenCanonicalSavedEntryDuplicates(existingKeys, "emp-2|Firm A");
+
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void ShouldReplaceFirmExpenseForSelectedFirm_ShouldIgnoreCase()
+        {
+            var result = SalaryViewModel.ShouldReplaceFirmExpenseForSelectedFirm("firma a", "FirmA");
+
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void ShouldReplaceFirmExpenseForSelectedFirm_ShouldMatchCaseInsensitiveFirmNames()
+        {
+            var result = SalaryViewModel.ShouldReplaceFirmExpenseForSelectedFirm("Firm A", "firm a");
+
+            Assert.True(result);
+        }
     }
 }

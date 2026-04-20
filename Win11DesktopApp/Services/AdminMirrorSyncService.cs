@@ -28,6 +28,8 @@ namespace Win11DesktopApp.Services
         private const int FullResyncEmployeeBatchSize = 50;
         private static readonly TimeSpan MirrorSyncTimeout = TimeSpan.FromSeconds(90);
 
+        private readonly CompanyService _companyService;
+        private EmployeeService? _employeeService;
         private readonly string _storageFolder;
         private readonly string _outboxPath;
         private readonly string _statePath;
@@ -42,14 +44,20 @@ namespace Win11DesktopApp.Services
 
         private bool _workerStarted;
 
-        public AdminMirrorSyncService()
+        public AdminMirrorSyncService(CompanyService companyService)
         {
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _storageFolder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "AgencyContractor",
                 "AdminMirror");
             _outboxPath = Path.Combine(_storageFolder, "outbox.json");
             _statePath = Path.Combine(_storageFolder, "state.json");
+        }
+
+        internal void InitializeEmployeeService(EmployeeService employeeService)
+        {
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
         }
 
         public void Start(string? startupClientId = null)
@@ -338,29 +346,33 @@ namespace Win11DesktopApp.Services
 
         private async Task PerformFullResyncAsync(string clientId)
         {
+            var employeeService = _employeeService;
+            if (employeeService == null)
+                throw new InvalidOperationException("EmployeeService is not initialized.");
+
             var employerPayloads = new List<AdminMirrorEmployerPayload>();
             var employeePayloads = new List<AdminMirrorEmployeePayload>();
-            var companies = App.CompanyService?.Companies?.ToList() ?? new List<EmployerCompany>();
+            var companies = _companyService.Companies.ToList();
             foreach (var company in companies)
             {
                 var employerPayload = BuildEmployerPayload(company);
                 if (employerPayload != null)
                     employerPayloads.Add(employerPayload);
 
-                var summaries = App.EmployeeService?.GetEmployeesForFirm(company.Name) ?? new List<EmployeeSummary>();
+                var summaries = employeeService.GetEmployeesForFirm(company.Name);
                 foreach (var summary in summaries)
                 {
-                    var data = App.EmployeeService?.LoadEmployeeData(summary.EmployeeFolder);
+                    var data = employeeService.LoadEmployeeData(summary.EmployeeFolder);
                     var employeePayload = BuildEmployeePayload(company.Name, summary.EmployeeFolder, data);
                     if (employeePayload != null)
                         employeePayloads.Add(employeePayload);
                 }
             }
 
-            var archivedEmployees = App.EmployeeService?.GetArchivedEmployees() ?? new List<ArchivedEmployeeSummary>();
+            var archivedEmployees = employeeService.GetArchivedEmployees();
             foreach (var archived in archivedEmployees)
             {
-                var data = App.EmployeeService?.LoadEmployeeData(archived.EmployeeFolder);
+                var data = employeeService.LoadEmployeeData(archived.EmployeeFolder);
                 var employeePayload = BuildEmployeePayload(archived.FirmName, archived.EmployeeFolder, data);
                 if (employeePayload != null)
                     employeePayloads.Add(employeePayload);
@@ -724,9 +736,7 @@ namespace Win11DesktopApp.Services
 
         private Guid? TryResolveEmployerId(params string?[] firmNames)
         {
-            var companies = App.CompanyService?.Companies?.ToList();
-            if (companies == null)
-                return null;
+            var companies = _companyService.Companies.ToList();
 
             foreach (var candidate in firmNames)
             {
@@ -752,9 +762,7 @@ namespace Win11DesktopApp.Services
                 return null;
 
             var companyFolderName = employeesFolder.Name;
-            var companies = App.CompanyService?.Companies?.ToList();
-            if (companies == null)
-                return companyFolderName;
+            var companies = _companyService.Companies.ToList();
 
             var match = companies.FirstOrDefault(company =>
                 string.Equals(FolderService.NormalizeFolderName(company.Name), companyFolderName, StringComparison.OrdinalIgnoreCase));
@@ -764,9 +772,7 @@ namespace Win11DesktopApp.Services
 
         private bool AgencyStillReferenced(string agencyId)
         {
-            var companies = App.CompanyService?.Companies?.ToList();
-            if (companies == null)
-                return false;
+            var companies = _companyService.Companies.ToList();
 
             return companies.Any(company =>
                 string.Equals(BuildAgencyId(company.Agency, company.Id), agencyId, StringComparison.OrdinalIgnoreCase));

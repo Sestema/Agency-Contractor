@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Data.Sqlite;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -14,6 +15,7 @@ namespace Win11DesktopApp.Tests
         private readonly string _testRootPath;
         private readonly AppSettingsService _appSettingsService;
         private readonly FolderService _folderService;
+        private readonly SalaryDbService _salaryDbService;
         private readonly LocalDbService _localDbService;
 
         public LocalDbServiceTests()
@@ -24,7 +26,8 @@ namespace Win11DesktopApp.Tests
             _appSettingsService = new AppSettingsService();
             _appSettingsService.Settings.RootFolderPath = _testRootPath;
             _folderService = new FolderService(_appSettingsService);
-            _localDbService = new LocalDbService(_folderService);
+            _salaryDbService = new SalaryDbService(_folderService);
+            _localDbService = new LocalDbService(_folderService, _salaryDbService);
         }
 
         [Fact]
@@ -61,6 +64,22 @@ namespace Win11DesktopApp.Tests
             Assert.Equal("Firm A", stored.FirmName);
             Assert.Equal(FieldOperation.Add, stored.Operation);
             Assert.Equal(3, stored.Order);
+        }
+
+        [Fact]
+        public void ParseDecimal_WhenValueIsInvalid_ShouldLogWarning_AndReturnZero()
+        {
+            LoggingService.Initialize(_testRootPath);
+            var parseMethod = typeof(LocalDbService).GetMethod("ParseDecimal", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(parseMethod);
+
+            var result = (decimal)parseMethod!.Invoke(null, new object?[] { "bad-decimal" })!;
+
+            Assert.Equal(0m, result);
+            Assert.Contains(LoggingService.GetRecentEntries(), entry =>
+                entry.Module == "LocalDbService.ParseDecimal"
+                && entry.Severity == "WARN"
+                && entry.Message.Contains("bad-decimal", StringComparison.Ordinal));
         }
 
         [Fact]
@@ -315,14 +334,108 @@ namespace Win11DesktopApp.Tests
 
             Assert.True(result.IsSuccessful);
             Assert.Equal(2, result.RecordsFound);
-            Assert.Equal(2, result.RecordsImported);
+            Assert.Equal(1, result.RecordsImported);
             Assert.True(_localDbService.IsAdvancesMigrationCompleted());
 
             var advances = _localDbService.GetAdvances("Firm A", "2026-04");
             var stored = Assert.Single(advances);
             Assert.Equal("adv-1", stored.Id);
-            Assert.Equal(1750m, stored.Amount);
-            Assert.Equal("updated", stored.Note);
+            Assert.Equal(1500m, stored.Amount);
+            Assert.Equal("first", stored.Note);
+        }
+
+        [Fact]
+        public void MigrateReportsIfNeeded_WhenReportAlreadyExistsInSqlite_ShouldNotOverwriteExistingReport()
+        {
+            _localDbService.UpsertSalaryReport(new MonthlySalaryReport
+            {
+                Id = "sqlite-report",
+                CompanyId = "Firm A",
+                CompanyName = "Firm A",
+                Year = 2026,
+                Month = 4,
+                Notes = "sqlite-current"
+            });
+
+            var result = _localDbService.MigrateReportsIfNeeded(new[]
+            {
+                new MonthlySalaryReport
+                {
+                    Id = "legacy-report",
+                    CompanyId = "Firm A",
+                    CompanyName = "Firm A",
+                    Year = 2026,
+                    Month = 4,
+                    Notes = "legacy-old"
+                }
+            });
+
+            Assert.True(result.IsSuccessful);
+            Assert.Equal(1, result.RecordsFound);
+            Assert.Equal(0, result.RecordsImported);
+
+            var stored = _localDbService.GetSalaryReport("Firm A", 2026, 4);
+            Assert.NotNull(stored);
+            Assert.Equal("sqlite-report", stored!.Id);
+            Assert.Equal("sqlite-current", stored.Notes);
+        }
+
+        [Fact]
+        public void MigrateAccommodationsIfNeeded_WhenEquivalentRecordAlreadyExists_ShouldNotDuplicateOrOverwrite()
+        {
+            _localDbService.UpsertAccommodation(new AccommodationRecord
+            {
+                Id = "sqlite-acc",
+                EmployeeFolder = @"C:\Employees\John",
+                EmployeeName = "John Doe",
+                CompanyId = "Firm A",
+                Year = 2026,
+                Month = 4,
+                Amount = 2500m,
+                Address = "Dorm 1"
+            });
+
+            var result = _localDbService.MigrateAccommodationsIfNeeded(new[]
+            {
+                new AccommodationRecord
+                {
+                    Id = string.Empty,
+                    EmployeeFolder = @"C:\Employees\John",
+                    EmployeeName = "John Legacy",
+                    CompanyId = "Firm A",
+                    Year = 2026,
+                    Month = 4,
+                    Amount = 2500m,
+                    Address = "Dorm 1"
+                }
+            });
+
+            Assert.True(result.IsSuccessful);
+            Assert.Equal(1, result.RecordsFound);
+            Assert.Equal(0, result.RecordsImported);
+
+            var stored = Assert.Single(_localDbService.GetAllAccommodations());
+            Assert.Equal("sqlite-acc", stored.Id);
+            Assert.Equal("John Doe", stored.EmployeeName);
+        }
+
+        [Fact]
+        public void CloseMigratedFinanceDataBackup_WhenAllStagesCompleted_ShouldRenameJsonToMigrated()
+        {
+            var financeJsonPath = Path.Combine(_testRootPath, "finance_data.json");
+            File.WriteAllText(financeJsonPath, "{}");
+
+            _localDbService.MigrateAdvancesIfNeeded(Array.Empty<AdvanceMigrationSource>());
+            _localDbService.MigrateReportsIfNeeded(Array.Empty<MonthlySalaryReport>());
+            _localDbService.MigrateCustomFieldsIfNeeded(Array.Empty<CustomSalaryField>());
+            _localDbService.MigrateAccommodationsIfNeeded(Array.Empty<AccommodationRecord>());
+
+            var renamed = _localDbService.CloseMigratedFinanceDataBackup(financeJsonPath);
+
+            Assert.True(renamed);
+            Assert.False(File.Exists(financeJsonPath));
+            Assert.True(File.Exists(financeJsonPath + ".migrated"));
+            Assert.True(_localDbService.IsFinanceDataMigrationCompleted());
         }
 
         private static bool TableExists(SqliteConnection connection, string tableName)

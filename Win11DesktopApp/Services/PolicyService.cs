@@ -26,11 +26,19 @@ namespace Win11DesktopApp.Services
 
     public static class PolicyService
     {
+        private static AppSettingsService? _appSettingsService;
         public static RemotePolicy CurrentPolicy { get; private set; } = new();
 
-        public static bool IsReadOnlyMode => CurrentPolicy.ReadOnlyMode || (App.AppSettingsService?.Settings.AdminReadOnlyMode ?? false);
-        public static bool IsExportsDisabled => CurrentPolicy.DisableExports || (App.AppSettingsService?.Settings.AdminDisableExports ?? false);
-        public static bool IsAIDisabled => CurrentPolicy.DisableAI || (App.AppSettingsService?.Settings.AdminDisableAI ?? false);
+        public static void Initialize(AppSettingsService appSettingsService)
+        {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+        }
+
+        private static AppSettingsService.AppSettings? Settings => _appSettingsService?.Settings;
+
+        public static bool IsReadOnlyMode => CurrentPolicy.ReadOnlyMode || (Settings?.AdminReadOnlyMode ?? false);
+        public static bool IsExportsDisabled => CurrentPolicy.DisableExports || (Settings?.AdminDisableExports ?? false);
+        public static bool IsAIDisabled => CurrentPolicy.DisableAI || (Settings?.AdminDisableAI ?? false);
 
         public static async Task<RemotePolicy?> FetchPolicyAsync(string? clientId)
         {
@@ -49,7 +57,7 @@ namespace Win11DesktopApp.Services
         {
             CurrentPolicy = policy ?? new RemotePolicy();
 
-            var settings = App.AppSettingsService?.Settings;
+            var settings = Settings;
             if (settings == null)
                 return;
 
@@ -66,13 +74,13 @@ namespace Win11DesktopApp.Services
             settings.AdminRecommendedVersion = CurrentPolicy.RecommendedVersion ?? string.Empty;
             settings.AdminForceUpdate = CurrentPolicy.ForceUpdate;
 
-            if (saveSettings && App.AppSettingsService != null)
-                await App.AppSettingsService.SaveSettingsImmediate();
+            if (saveSettings && _appSettingsService != null)
+                await _appSettingsService.SaveSettingsImmediate();
         }
 
         public static bool IsFeatureVisible(string featureId)
         {
-            var settings = App.AppSettingsService?.Settings;
+            var settings = Settings;
             return featureId switch
             {
                 "templates" => !CurrentPolicy.HideTemplates && !(settings?.AdminHideTemplates ?? false),

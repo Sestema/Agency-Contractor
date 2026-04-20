@@ -8,28 +8,30 @@ namespace Win11DesktopApp.Views
     public partial class LicenseWindow : Window
     {
         private readonly bool _shutdownOnCloseWithoutAccess;
+        private readonly AccessStatusService _accessStatusService;
         public bool IsActivated { get; private set; }
         public ClientAccessState LatestAccessState { get; private set; } = new();
 
-        public LicenseWindow(bool shutdownOnCloseWithoutAccess = false, ClientAccessState? initialAccessState = null)
+        public LicenseWindow(AccessStatusService accessStatusService, bool shutdownOnCloseWithoutAccess = false, ClientAccessState? initialAccessState = null)
         {
+            _accessStatusService = accessStatusService ?? throw new System.ArgumentNullException(nameof(accessStatusService));
             _shutdownOnCloseWithoutAccess = shutdownOnCloseWithoutAccess;
             LatestAccessState = initialAccessState ?? new ClientAccessState();
             InitializeComponent();
             TxtVersion.Text = $"Agency Contractor - {AppSettingsService.CurrentAppVersion}";
-            App.AccessStatusService.UpdateRemoteState(LatestAccessState, LatestAccessState.Policy);
+            _accessStatusService.UpdateRemoteState(LatestAccessState, LatestAccessState.Policy);
             RefreshStatus();
         }
 
         private void RefreshStatus()
         {
             TxtMachineId.Text = LicenseService.GetMachineId();
-            var snapshot = App.AccessStatusService.Current;
+            var snapshot = _accessStatusService.Current;
 
             if (!snapshot.HasStatus)
-                App.AccessStatusService.RefreshPresentation();
+                _accessStatusService.RefreshPresentation();
 
-            snapshot = App.AccessStatusService.Current;
+            snapshot = _accessStatusService.Current;
             TxtStatus.Text = snapshot.Title;
             TxtStatusDetail.Text = snapshot.Detail;
             TxtAdminMessage.Text = snapshot.AdminMessage;
@@ -81,7 +83,7 @@ namespace Win11DesktopApp.Views
 
             var (success, message) = LicenseService.Activate(dlg.FileName, days);
             LatestAccessState = TelemetryService.GetCachedAccessStateSnapshot();
-            App.AccessStatusService.UpdateRemoteState(LatestAccessState, LatestAccessState.Policy);
+            _accessStatusService.UpdateRemoteState(LatestAccessState, LatestAccessState.Policy);
             TxtResult.Text = message;
             TxtResult.Foreground = success
                 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x38, 0x8E, 0x3C))
@@ -100,8 +102,8 @@ namespace Win11DesktopApp.Views
             {
                 var accessState = await TelemetryService.GetStartupAccessStateAsync();
                 LatestAccessState = accessState;
-                App.AccessStatusService.UpdateRemoteState(accessState, accessState.Policy);
-                var snapshot = App.AccessStatusService.Current;
+                _accessStatusService.UpdateRemoteState(accessState, accessState.Policy);
+                var snapshot = _accessStatusService.Current;
                 var hasAccess = snapshot.Mode is AccessStatusMode.TrialActive
                     or AccessStatusMode.Activated
                     or AccessStatusMode.OfflineGrace

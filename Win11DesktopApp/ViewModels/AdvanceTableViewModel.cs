@@ -30,6 +30,11 @@ namespace Win11DesktopApp.ViewModels
     public class AdvanceTableViewModel : ViewModelBase
     {
         private readonly EmployeeService _employeeService;
+        private readonly NavigationService _navigationService;
+        private readonly FinanceModuleViewModelFactory _financeModuleViewModelFactory;
+        private readonly CompanyService _companyService;
+        private readonly ActivityLogService _activityLogService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
 
         public ObservableCollection<FirmCheckItem> Firms { get; } = new();
         public ICommand GoBackCommand { get; }
@@ -46,11 +51,22 @@ namespace Win11DesktopApp.ViewModels
         private const int EmptyRowsPerFirm = 4;
         private const int AdvanceColumns = 4;
 
-        public AdvanceTableViewModel()
+        public AdvanceTableViewModel(
+            EmployeeService? employeeService = null,
+            NavigationService? navigationService = null,
+            FinanceModuleViewModelFactory? financeModuleViewModelFactory = null,
+            CompanyService? companyService = null,
+            ActivityLogService? activityLogService = null,
+            DocumentLocalizationService? documentLocalizationService = null)
         {
-            _employeeService = App.EmployeeService;
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _financeModuleViewModelFactory = financeModuleViewModelFactory ?? throw new InvalidOperationException("FinanceModuleViewModelFactory is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new TablesMenuViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo(_financeModuleViewModelFactory.CreateTablesMenu()));
             GeneratePdfCommand = new RelayCommand(o => GeneratePdf());
             SelectAllCommand = new RelayCommand(o => ToggleSelectAll());
 
@@ -60,7 +76,7 @@ namespace Win11DesktopApp.ViewModels
         private void LoadFirms()
         {
             Firms.Clear();
-            foreach (var company in App.CompanyService.VisibleCompanies)
+            foreach (var company in _companyService.VisibleCompanies)
             {
                 var employees = _employeeService.GetEmployeesForFirm(company.Name);
                 Firms.Add(new FirmCheckItem
@@ -84,8 +100,8 @@ namespace Win11DesktopApp.ViewModels
             return Application.Current?.TryFindResource(key) as string ?? key;
         }
 
-        private static string DocString(string key) =>
-            App.DocumentLocalizationService?.Get(key) ??
+        private string DocString(string key) =>
+            _documentLocalizationService.Get(key) ??
             (Application.Current?.TryFindResource(key) as string ?? key);
 
         private void GeneratePdf()
@@ -287,7 +303,7 @@ namespace Win11DesktopApp.ViewModels
 
                 gfx?.Dispose();
                 doc.Save(dlg.FileName);
-                App.ActivityLogService.Log("ExportPdf", "Export", "", "",
+                _activityLogService.Log("ExportPdf", "Export", "", "",
                     $"Згенеровано авансову відомість → PDF");
                 StatusMessage = GetString("AdvTableSuccess");
                 MessageBox.Show(GetString("AdvTableSuccess"), GetString("TitleSuccess"), MessageBoxButton.OK, MessageBoxImage.Information);

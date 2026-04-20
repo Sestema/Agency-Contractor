@@ -8,6 +8,12 @@ namespace Win11DesktopApp.Services
     public class ThemeService
     {
         private static readonly string[] GlassThemes = { "Glass", "GlassDark" };
+        private readonly AppSettingsService _appSettingsService;
+
+        public ThemeService(AppSettingsService appSettingsService)
+        {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+        }
 
         public void SetTheme(string themeName)
         {
@@ -37,10 +43,10 @@ namespace Win11DesktopApp.Services
                 AcrylicHelper.DisableAcrylic(mainWindow);
             }
 
-            if (App.AppSettingsService != null && App.AppSettingsService.Settings.ThemeName != themeName)
+            if (_appSettingsService.Settings.ThemeName != themeName)
             {
-                App.AppSettingsService.Settings.ThemeName = themeName;
-                App.AppSettingsService.SaveSettings();
+                _appSettingsService.Settings.ThemeName = themeName;
+                _appSettingsService.SaveSettings();
             }
         }
     }

@@ -13,8 +13,11 @@ namespace Win11DesktopApp.Services
     public class FinanceService
     {
         private readonly bool _suppressStartupNotifications;
+        private readonly FolderService _folderService;
         private readonly SalaryDbService? _salaryDbService;
         private readonly LocalDbService? _localDbService;
+        private readonly CompanyService _companyService;
+        private readonly EmployeeIndexDbService? _employeeIndexDbService;
         public const string GlobalKey = FinanceConstants.GlobalKey;
         public const string AllFirmsKey = FinanceConstants.AllFirmsKey;
         public FinanceAdvancesService AdvancesService { get; private set; } = null!;
@@ -27,20 +30,32 @@ namespace Win11DesktopApp.Services
         public string LastSalaryConflictMessage { get; private set; } = string.Empty;
         public string? LastSaveRecoveryPath { get; private set; }
 
-        public FinanceService(FolderService folderService, SalaryDbService? salaryDbService = null, LocalDbService? localDbService = null, bool suppressStartupNotifications = false)
+        public FinanceService(
+            FolderService folderService,
+            SalaryDbService? salaryDbService = null,
+            LocalDbService? localDbService = null,
+            CompanyService? companyService = null,
+            EmployeeIndexDbService? employeeIndexDbService = null,
+            bool suppressStartupNotifications = false)
         {
+            _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _suppressStartupNotifications = suppressStartupNotifications;
             _salaryDbService = salaryDbService;
             _localDbService = localDbService;
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _employeeIndexDbService = employeeIndexDbService;
             AdvancesService = new FinanceAdvancesService(
                 _localDbService,
                 ResolveEmployeeId,
                 ResolveEmployeeFolder);
             SalaryHistoryService = new FinanceSalaryHistoryService(
+                _folderService,
                 _localDbService,
+                _companyService,
                 ResolveEmployeeId,
                 ResolveEmployeeFolder);
             MonthPaymentsService = new FinanceMonthPaymentsService(
+                _folderService,
                 _salaryDbService,
                 () => LastSaveRecoveryPath = null,
                 () =>
@@ -113,29 +128,136 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public LocalDbMigrationResult EnsureAdvancesMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var sourceAdvances = LoadLegacyAdvances();
+                return _localDbService.MigrateAdvancesIfNeeded(sourceAdvances);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.EnsureAdvancesMigratedToLocalDb", ex);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public LocalDbMigrationResult EnsureReportsMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var sourceReports = LoadLegacyReports();
+                return _localDbService.MigrateReportsIfNeeded(sourceReports);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.EnsureReportsMigratedToLocalDb", ex);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public LocalDbMigrationResult EnsureAccommodationsMigratedToLocalDb()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+
+                var sourceRecords = LoadLegacyAccommodations();
+                return _localDbService.MigrateAccommodationsIfNeeded(sourceRecords);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.EnsureAccommodationsMigratedToLocalDb", ex);
+                return new LocalDbMigrationResult
+                {
+                    WasMigrationAttempted = true,
+                    IsSuccessful = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public bool CloseMigratedFinanceDataIfSafe()
+        {
+            try
+            {
+                if (_localDbService == null)
+                    return false;
+
+                var financePath = GetLegacyFinanceDataPath();
+                if (string.IsNullOrWhiteSpace(financePath))
+                    return false;
+
+                return _localDbService.CloseMigratedFinanceDataBackup(financePath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.CloseMigratedFinanceDataIfSafe", ex.Message);
+                return false;
+            }
+        }
+
         private static void WriteJsonAtomic<T>(string path, T value)
         {
             SafeFileService.WriteJsonAtomic(path, value);
         }
 
-        private List<CustomSalaryField> LoadLegacyCustomFields()
+        private string? GetLegacyFinanceDataPath()
         {
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrWhiteSpace(folderService.RootPath))
-                return new List<CustomSalaryField>();
+            if (string.IsNullOrWhiteSpace(_folderService.RootPath))
+                return null;
 
-            var financePath = Path.Combine(folderService.RootPath, "finance_data.json");
-            if (!File.Exists(financePath))
-                return new List<CustomSalaryField>();
+            var financePath = Path.Combine(_folderService.RootPath, "finance_data.json");
+            return File.Exists(financePath) ? financePath : null;
+        }
+
+        private JsonElement? LoadLegacyFinanceRoot()
+        {
+            var financePath = GetLegacyFinanceDataPath();
+            if (string.IsNullOrWhiteSpace(financePath))
+                return null;
 
             try
             {
                 using var document = JsonDocument.Parse(SafeFileService.ReadAllTextShared(financePath));
-                var root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object)
-                    return new List<CustomSalaryField>();
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                    return null;
 
-                if (!TryGetCustomFieldsArray(root, out var fieldsArray))
+                return document.RootElement.Clone();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.LoadLegacyFinanceRoot", ex.Message);
+                return null;
+            }
+        }
+
+        private List<CustomSalaryField> LoadLegacyCustomFields()
+        {
+            var root = LoadLegacyFinanceRoot();
+            if (!root.HasValue)
+                return new List<CustomSalaryField>();
+
+            try
+            {
+                if (!TryGetCustomFieldsArray(root.Value, out var fieldsArray))
                     return new List<CustomSalaryField>();
 
                 var result = new List<CustomSalaryField>();
@@ -169,6 +291,151 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        private List<AdvanceMigrationSource> LoadLegacyAdvances()
+        {
+            var root = LoadLegacyFinanceRoot();
+            if (!root.HasValue || !TryGetArrayProperty(root.Value, out var array, "Advances", "advances"))
+                return new List<AdvanceMigrationSource>();
+
+            var result = new List<AdvanceMigrationSource>();
+            foreach (var item in array.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var employeeFolder = ReadStringProperty(item, "EmployeeFolder", "employeeFolder");
+                var month = ReadStringProperty(item, "Month", "month");
+                var companyId = ReadStringProperty(item, "CompanyId", "companyId", "FirmName", "firmName");
+                if (string.IsNullOrWhiteSpace(employeeFolder) || string.IsNullOrWhiteSpace(month))
+                    continue;
+
+                result.Add(new AdvanceMigrationSource
+                {
+                    EmployeeId = ResolveEmployeeId(employeeFolder) ?? string.Empty,
+                    EmployeeFolder = employeeFolder,
+                    Advance = new AdvancePayment
+                    {
+                        Id = ReadStringProperty(item, "Id", "id"),
+                        EmployeeFolder = employeeFolder,
+                        EmployeeName = ReadStringProperty(item, "EmployeeName", "employeeName", "FullName", "fullName"),
+                        CompanyId = companyId,
+                        Date = ReadDateTimeProperty(item, "Date", "date"),
+                        Amount = ReadDecimalProperty(item, "Amount", "amount"),
+                        Month = month,
+                        Note = ReadStringProperty(item, "Note", "note")
+                    }
+                });
+            }
+
+            return result;
+        }
+
+        private List<MonthlySalaryReport> LoadLegacyReports()
+        {
+            var root = LoadLegacyFinanceRoot();
+            if (!root.HasValue || !TryGetArrayProperty(root.Value, out var array, "Reports", "reports"))
+                return new List<MonthlySalaryReport>();
+
+            var result = new List<MonthlySalaryReport>();
+            foreach (var item in array.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var companyId = ReadStringProperty(item, "CompanyId", "companyId", "FirmName", "firmName");
+                var year = ReadIntProperty(item, "Year", "year");
+                var month = ReadIntProperty(item, "Month", "month");
+                if (string.IsNullOrWhiteSpace(companyId) || year <= 0 || month <= 0)
+                    continue;
+
+                var report = new MonthlySalaryReport
+                {
+                    Id = ReadStringProperty(item, "Id", "id"),
+                    CompanyId = companyId,
+                    CompanyName = ReadStringProperty(item, "CompanyName", "companyName", "FirmName", "firmName"),
+                    Year = year,
+                    Month = month,
+                    Notes = ReadStringProperty(item, "Notes", "notes"),
+                    CreatedAt = ReadDateTimeProperty(item, "CreatedAt", "createdAt"),
+                    UpdatedAt = ReadDateTimeProperty(item, "UpdatedAt", "updatedAt")
+                };
+
+                if (TryGetArrayProperty(item, out var entriesArray, "Entries", "entries"))
+                {
+                    foreach (var entry in entriesArray.EnumerateArray())
+                    {
+                        if (entry.ValueKind != JsonValueKind.Object)
+                            continue;
+
+                        var salaryEntry = new SalaryEntry
+                        {
+                            EmployeeId = ReadStringProperty(entry, "EmployeeId", "employeeId"),
+                            EmployeeFolder = ReadStringProperty(entry, "EmployeeFolder", "employeeFolder"),
+                            FullName = ReadStringProperty(entry, "FullName", "fullName", "EmployeeName", "employeeName"),
+                            FirmName = ReadStringProperty(entry, "FirmName", "firmName", "CompanyId", "companyId"),
+                            HoursWorked = ReadDecimalProperty(entry, "HoursWorked", "hoursWorked"),
+                            HourlyRate = ReadDecimalProperty(entry, "HourlyRate", "hourlyRate"),
+                            Advance = ReadDecimalProperty(entry, "Advance", "advance"),
+                            SavedNetSalary = ReadDecimalProperty(entry, "SavedNetSalary", "savedNetSalary", "NetSalary", "netSalary"),
+                            Status = ReadStringProperty(entry, "Status", "status"),
+                            Note = ReadStringProperty(entry, "Note", "note"),
+                            ColorTag = ReadStringProperty(entry, "ColorTag", "colorTag")
+                        };
+
+                        if (TryGetProperty(entry, out var customValuesElement, "CustomValues", "customValues")
+                            && customValuesElement.ValueKind == JsonValueKind.Object)
+                        {
+                            foreach (var property in customValuesElement.EnumerateObject())
+                            {
+                                if (TryReadDecimalValue(property.Value, out var decimalValue))
+                                    salaryEntry.CustomValues[property.Name] = decimalValue;
+                            }
+                        }
+
+                        report.Entries.Add(salaryEntry);
+                    }
+                }
+
+                result.Add(report);
+            }
+
+            return result;
+        }
+
+        private List<AccommodationRecord> LoadLegacyAccommodations()
+        {
+            var root = LoadLegacyFinanceRoot();
+            if (!root.HasValue || !TryGetArrayProperty(root.Value, out var array, "Accommodations", "accommodations"))
+                return new List<AccommodationRecord>();
+
+            var result = new List<AccommodationRecord>();
+            foreach (var item in array.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                    continue;
+
+                var employeeFolder = ReadStringProperty(item, "EmployeeFolder", "employeeFolder");
+                var year = ReadIntProperty(item, "Year", "year");
+                var month = ReadIntProperty(item, "Month", "month");
+                if (string.IsNullOrWhiteSpace(employeeFolder) || year <= 0 || month <= 0)
+                    continue;
+
+                result.Add(new AccommodationRecord
+                {
+                    Id = ReadStringProperty(item, "Id", "id"),
+                    EmployeeFolder = employeeFolder,
+                    EmployeeName = ReadStringProperty(item, "EmployeeName", "employeeName", "FullName", "fullName"),
+                    CompanyId = ReadStringProperty(item, "CompanyId", "companyId", "FirmName", "firmName"),
+                    Year = year,
+                    Month = month,
+                    Amount = ReadDecimalProperty(item, "Amount", "amount"),
+                    Address = ReadStringProperty(item, "Address", "address")
+                });
+            }
+
+            return result;
+        }
+
         private static bool TryGetCustomFieldsArray(JsonElement root, out JsonElement fieldsArray)
         {
             string[] candidateNames =
@@ -186,6 +453,27 @@ namespace Win11DesktopApp.Services
             }
 
             fieldsArray = default;
+            return false;
+        }
+
+        private static bool TryGetProperty(JsonElement element, out JsonElement value, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (element.TryGetProperty(name, out value))
+                    return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        private static bool TryGetArrayProperty(JsonElement element, out JsonElement value, params string[] names)
+        {
+            if (TryGetProperty(element, out value, names) && value.ValueKind == JsonValueKind.Array)
+                return true;
+
+            value = default;
             return false;
         }
 
@@ -221,6 +509,52 @@ namespace Win11DesktopApp.Services
             }
 
             return 0;
+        }
+
+        private static decimal ReadDecimalProperty(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (!element.TryGetProperty(name, out var value))
+                    continue;
+
+                if (TryReadDecimalValue(value, out var decimalValue))
+                    return decimalValue;
+            }
+
+            return 0m;
+        }
+
+        private static bool TryReadDecimalValue(JsonElement value, out decimal result)
+        {
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out result))
+                return true;
+
+            if (value.ValueKind == JsonValueKind.String
+                && decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out result))
+            {
+                return true;
+            }
+
+            result = 0m;
+            return false;
+        }
+
+        private static DateTime ReadDateTimeProperty(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (!element.TryGetProperty(name, out var value))
+                    continue;
+
+                if (value.ValueKind == JsonValueKind.String
+                    && DateTime.TryParse(value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            return DateTime.Now;
         }
 
         private static FieldOperation ReadFieldOperationProperty(JsonElement element, params string[] names)
@@ -563,6 +897,9 @@ WHERE stage = 'salary_entries'
 
         public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
             => MonthPaymentsService.LoadAllFirmPayments(year, month, forceReload);
+
+        public (bool success, List<SalaryEntry> entries, List<FirmExpense> expenses, string errorMessage) TryLoadAllFirmPayments(int year, int month, bool forceReload = false)
+            => MonthPaymentsService.TryLoadAllFirmPayments(year, month, forceReload);
 
         public void InvalidatePaymentsCache(int? year = null, int? month = null)
             => MonthPaymentsService.InvalidatePaymentsCache(year, month);
@@ -962,16 +1299,14 @@ WHERE stage = 'salary_entries'
         {
             _idToFolderCache.Clear();
             _ghostFolders.Clear();
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return;
+            if (string.IsNullOrEmpty(_folderService.RootPath)) return;
 
-            var archiveFolder = folderService.GetArchiveFolder();
+            var archiveFolder = _folderService.GetArchiveFolder();
 
-            var companies = App.CompanyService?.Companies;
-            if (companies == null) return;
+            var companies = _companyService.Companies;
             foreach (var company in companies)
             {
-                var empFolder = folderService.GetEmployeesFolder(company.Name);
+                var empFolder = _folderService.GetEmployeesFolder(company.Name);
                 if (string.IsNullOrEmpty(empFolder) || !Directory.Exists(empFolder)) continue;
                 try
                 {
@@ -1027,9 +1362,7 @@ WHERE stage = 'salary_entries'
                     if (!Directory.Exists(ghost)) continue;
                     var folderName = Path.GetFileName(ghost.TrimEnd('\\', '/'));
 
-                    var folderService = App.FolderService;
-                    if (folderService == null) continue;
-                    var archiveFolder = folderService.GetArchiveFolder();
+                    var archiveFolder = _folderService.GetArchiveFolder();
                     bool existsElsewhere = false;
 
                     if (!string.IsNullOrEmpty(archiveFolder))
@@ -1041,11 +1374,9 @@ WHERE stage = 'salary_entries'
 
                     if (!existsElsewhere)
                     {
-                        var ghostCompanies = App.CompanyService?.Companies;
-                        if (ghostCompanies != null)
-                        foreach (var company in ghostCompanies)
+                        foreach (var company in _companyService.Companies)
                         {
-                            var empFolder = folderService.GetEmployeesFolder(company.Name);
+                            var empFolder = _folderService.GetEmployeesFolder(company.Name);
                             if (string.IsNullOrEmpty(empFolder)) continue;
                             var candidate = Path.Combine(empFolder, folderName);
                             if (Directory.Exists(candidate) && !string.Equals(candidate, ghost, StringComparison.OrdinalIgnoreCase))
@@ -1112,21 +1443,17 @@ WHERE stage = 'salary_entries'
             var folderName = Path.GetFileName(trimmed);
             if (string.IsNullOrEmpty(folderName)) return originalFolder ?? "";
 
-            var folderService = App.FolderService;
-            if (folderService == null || string.IsNullOrEmpty(folderService.RootPath)) return originalFolder ?? "";
-
-            var companies = App.CompanyService?.Companies;
-            if (companies == null) return originalFolder ?? "";
-            foreach (var company in companies)
+            if (string.IsNullOrEmpty(_folderService.RootPath)) return originalFolder ?? "";
+            foreach (var company in _companyService.Companies)
             {
-                var empFolder = folderService.GetEmployeesFolder(company.Name);
+                var empFolder = _folderService.GetEmployeesFolder(company.Name);
                 if (string.IsNullOrEmpty(empFolder) || !Directory.Exists(empFolder)) continue;
                 var candidate = Path.Combine(empFolder, folderName);
                 if (Directory.Exists(candidate) && !_ghostFolders.Contains(candidate))
                     return candidate;
             }
 
-            var archiveFolder = folderService.GetArchiveFolder();
+            var archiveFolder = _folderService.GetArchiveFolder();
             if (!string.IsNullOrEmpty(archiveFolder) && Directory.Exists(archiveFolder))
             {
                 var candidate = Path.Combine(archiveFolder, folderName);
@@ -1150,11 +1477,14 @@ WHERE stage = 'salary_entries'
 
             try
             {
-                var indexRow = App.EmployeeIndexDbService?.GetEmployeeRowByFolder(employeeFolder);
+                var indexRow = _employeeIndexDbService?.GetEmployeeRowByFolder(employeeFolder);
                 if (indexRow != null && !string.IsNullOrWhiteSpace(indexRow.UniqueId))
                     return indexRow.UniqueId;
 
-                return App.EmployeeService?.LoadEmployeeData(employeeFolder)?.UniqueId;
+                var employeePath = Path.Combine(employeeFolder, "employee.json");
+                return File.Exists(employeePath)
+                    ? SafeFileService.ReadJson<EmployeeModels.EmployeeData>(employeePath)?.UniqueId
+                    : null;
             }
             catch
             {
@@ -1200,20 +1530,15 @@ WHERE stage = 'salary_entries'
         private IEnumerable<string> EnumeratePaymentFolders()
         {
             var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var folderService = App.FolderService;
-            var companies = App.CompanyService?.Companies;
 
-            if (folderService == null || companies == null)
-                return folders;
-
-            foreach (var company in companies)
+            foreach (var company in _companyService.Companies)
             {
-                var paymentFolder = folderService.GetPaymentFolder(company.Name);
+                var paymentFolder = _folderService.GetPaymentFolder(company.Name);
                 if (!string.IsNullOrWhiteSpace(paymentFolder))
                     folders.Add(paymentFolder);
             }
 
-            var archiveFolder = folderService.GetArchiveFolder();
+            var archiveFolder = _folderService.GetArchiveFolder();
             if (!string.IsNullOrWhiteSpace(archiveFolder) && Directory.Exists(archiveFolder))
             {
                 foreach (var dir in Directory.GetDirectories(archiveFolder))

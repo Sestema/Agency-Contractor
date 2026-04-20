@@ -1288,6 +1288,7 @@
     <sys:String x:Key="TagDescEmpContractType">Contract type</sys:String>
     <sys:String x:Key="TagDescEmpDepartment">Department</sys:String>
     <sys:String x:Key="TagDescEmpStartDate">Employment start date</sys:String>
+    <sys:String x:Key="TagDescEmpEndDate">Employment end date</sys:String>
     <sys:String x:Key="TagDescEmpSignDate">Contract sign date</sys:String>
 
     <!-- Template Editor ViewModel -->

@@ -31,12 +31,18 @@ namespace Win11DesktopApp.Services
 
     public sealed class AccessStatusService : INotifyPropertyChanged
     {
+        private readonly AppSettingsService _appSettingsService;
         private LocalLicenseStatus _localLicenseStatus = new();
         private ClientAccessState _clientAccessState = new();
         private RemotePolicy? _remotePolicy;
         private AccessStatusSnapshot _current = new();
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        public AccessStatusService(AppSettingsService appSettingsService)
+        {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+        }
 
         public AccessStatusSnapshot Current
         {
@@ -68,6 +74,7 @@ namespace Win11DesktopApp.Services
         public int? DaysLeft => Current.DaysLeft;
         public bool HasStatus => Current.HasStatus;
         public bool HasAdminMessage => Current.HasAdminMessage;
+        public ClientAccessState ClientAccessState => _clientAccessState;
 
         public void Initialize(LocalLicenseStatus localLicenseStatus, ClientAccessState clientAccessState, RemotePolicy? remotePolicy)
         {
@@ -100,7 +107,7 @@ namespace Win11DesktopApp.Services
 
         private AccessStatusSnapshot BuildSnapshot()
         {
-            var adminMessage = (_remotePolicy?.AdminMessage ?? App.AppSettingsService?.Settings.AdminMessage ?? string.Empty).Trim();
+            var adminMessage = (_remotePolicy?.AdminMessage ?? _appSettingsService.Settings.AdminMessage ?? string.Empty).Trim();
 
             if (_clientAccessState.IsBlocked)
             {
@@ -116,7 +123,7 @@ namespace Win11DesktopApp.Services
             }
 
             var isReadOnly = (_remotePolicy?.ReadOnlyMode ?? false)
-                             || (App.AppSettingsService?.Settings.AdminReadOnlyMode ?? false)
+                             || _appSettingsService.Settings.AdminReadOnlyMode
                              || (_clientAccessState.HasKnownState && _clientAccessState.IsExpired);
             if (isReadOnly)
             {

@@ -12,6 +12,10 @@ namespace Win11DesktopApp.ViewModels
 {
     public class AddCompanyViewModel : ViewModelBase
     {
+        private readonly CompanyService _companyService;
+        private readonly EmployeeService _employeeService;
+        private readonly FolderService _folderService;
+        private readonly ActivityLogService _activityLogService;
         private EmployerCompany _employer = new();
         public EmployerCompany Employer
         {
@@ -55,8 +59,17 @@ namespace Win11DesktopApp.ViewModels
         /// <summary>
         /// Constructor for ADD mode.
         /// </summary>
-        public AddCompanyViewModel()
+        public AddCompanyViewModel(
+            CompanyService? companyService = null,
+            EmployeeService? employeeService = null,
+            FolderService? folderService = null,
+            ActivityLogService? activityLogService = null)
         {
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+
             Employer.Addresses.Add(new WorkAddress());
             Employer.Positions.Add(new Position());
 
@@ -89,7 +102,13 @@ namespace Win11DesktopApp.ViewModels
         /// Constructor for EDIT mode — creates a working COPY of the company data.
         /// Changes are applied to the original only on Save.
         /// </summary>
-        public AddCompanyViewModel(EmployerCompany existingCompany) : this()
+        public AddCompanyViewModel(
+            EmployerCompany existingCompany,
+            CompanyService? companyService = null,
+            EmployeeService? employeeService = null,
+            FolderService? folderService = null,
+            ActivityLogService? activityLogService = null)
+            : this(companyService, employeeService, folderService, activityLogService)
         {
             IsEditMode = true;
             _originalCompany = existingCompany;
@@ -138,12 +157,12 @@ namespace Win11DesktopApp.ViewModels
                 _originalCompany.Agency.ICO = Agency.ICO;
                 _originalCompany.Agency.FullAddress = Agency.FullAddress;
 
-                await App.CompanyService.UpdateCompanyAsync(_originalCompany, _originalCompanyName);
+                await _companyService.UpdateCompanyAsync(_originalCompany, _originalCompanyName);
             }
             else
             {
-                await App.CompanyService.AddCompanyAsync(Employer, Agency);
-                App.ActivityLogService.Log("CompanyAdded", "Company", Employer.Name, "",
+                await _companyService.AddCompanyAsync(Employer, Agency);
+                _activityLogService.Log("CompanyAdded", "Company", Employer.Name, "",
                     $"Додано фірму: {Employer.Name}");
                 TelemetryService.TrackEvent("firm_created", new Dictionary<string, object>
                 {
@@ -160,8 +179,8 @@ namespace Win11DesktopApp.ViewModels
 
             if (_originalCompany == null) return;
 
-            var employees = App.EmployeeService.GetEmployeesForFirm(_originalCompany.Name);
-            var employeeFolderCount = App.FolderService.GetCompanyEmployeeFolderCount(_originalCompany.Name);
+            var employees = _employeeService.GetEmployeesForFirm(_originalCompany.Name);
+            var employeeFolderCount = _folderService.GetCompanyEmployeeFolderCount(_originalCompany.Name);
             var employeeCount = Math.Max(employees.Count, employeeFolderCount);
             if (employeeCount > 0)
             {
@@ -182,9 +201,9 @@ namespace Win11DesktopApp.ViewModels
             if (result == MessageBoxResult.Yes)
             {
                 var name = _originalCompany.Name;
-                if (await App.CompanyService.DeleteCompanyAsync(_originalCompany))
+                if (await _companyService.DeleteCompanyAsync(_originalCompany))
                 {
-                    App.ActivityLogService.Log("CompanyDeleted", "Company", name, "",
+                    _activityLogService.Log("CompanyDeleted", "Company", name, "",
                         $"Видалено фірму: {name}");
                     RequestClose?.Invoke();
                 }

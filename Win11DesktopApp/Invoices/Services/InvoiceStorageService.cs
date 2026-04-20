@@ -41,9 +41,11 @@ public sealed class InvoiceStorageService
     private readonly string _itemsCatalogFilePath;
     private readonly string _bankAccountsCatalogFilePath;
     private readonly string _tagsCatalogFilePath;
+    private readonly AppSettingsService _appSettingsService;
 
-    public InvoiceStorageService(FolderService folderService)
+    public InvoiceStorageService(FolderService folderService, AppSettingsService appSettingsService)
     {
+        _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
         var rootPath = folderService.RootPath;
         if (string.IsNullOrWhiteSpace(rootPath))
         {
@@ -86,7 +88,7 @@ public sealed class InvoiceStorageService
     {
         var fallback = new InvoiceModuleSettings
         {
-            Language = NormalizeLanguage(App.AppSettingsService?.Settings.LanguageCode)
+            Language = NormalizeLanguage(_appSettingsService.Settings.LanguageCode)
         };
         var settings = SafeFileService.ReadJsonOrDefault(_settingsFilePath, fallback, JsonOptions);
         settings.Language = NormalizeLanguage(settings.Language);

@@ -33,6 +33,12 @@ namespace Win11DesktopApp.ViewModels
         private readonly string _firmName;
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
+        private readonly NavigationService _navigationService;
+        private readonly TemplateViewModelFactory _templateViewModelFactory;
+        private readonly CompanyService _companyService;
+        private readonly TagCatalogService _tagCatalogService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly AiWindowFactory _aiWindowFactory;
         private readonly string _xlsxFilePath;
         private bool _templateUnavailable;
         private bool _templateUnavailableNotified;
@@ -47,6 +53,7 @@ namespace Win11DesktopApp.ViewModels
 
         /// <summary>Merge info for the currently displayed sheet.</summary>
         public Dictionary<(int row, int col), MergeInfo> CurrentMergeInfo => _currentMergeInfo;
+        internal AiWindowFactory AiWindowFactory => _aiWindowFactory;
 
         private static new string Res(string key)
         {
@@ -153,20 +160,35 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public XlsxEditorViewModel(string firmName, TemplateEntry template, TemplateService? templateService = null)
+        public XlsxEditorViewModel(
+            string firmName,
+            TemplateEntry template,
+            TemplateService? templateService = null,
+            NavigationService? navigationService = null,
+            TemplateViewModelFactory? templateViewModelFactory = null,
+            CompanyService? companyService = null,
+            TagCatalogService? tagCatalogService = null,
+            AppSettingsService? appSettingsService = null,
+            AiWindowFactory? aiWindowFactory = null)
         {
             _firmName = firmName;
             _template = template;
-            _templateService = templateService ?? App.TemplateService;
+            _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
 
             _xlsxFilePath = _templateService.GetTemplateFullPath(firmName, template.FilePath);
 
             // Build tag groups with subcategories
             try
             {
-                var allTags = App.TagCatalogService.GetAllTagDefinitions();
+                var allTags = _tagCatalogService.GetAllTagDefinitions();
                 var groups = TagGroupViewModel.BuildTagGroups(allTags);
-                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService.Settings.HiddenTags);
+                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, _appSettingsService.Settings.HiddenTags);
             }
             catch
             {
@@ -387,7 +409,8 @@ namespace Win11DesktopApp.ViewModels
         private void NavigateBack()
         {
             Dispose();
-            App.NavigationService?.NavigateTo(new TemplatesViewModel(App.CompanyService?.SelectedCompany));
+            var company = _companyService.Companies.FirstOrDefault(c => c.Name == _firmName) ?? _companyService.SelectedCompany;
+            _navigationService.NavigateTo(_templateViewModelFactory.CreateTemplates(company));
         }
 
         private void Save()

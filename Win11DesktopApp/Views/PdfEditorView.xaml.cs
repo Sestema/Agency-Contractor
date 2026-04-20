@@ -836,12 +836,13 @@ namespace Win11DesktopApp.Views
 
         private void ApplySavedLayout()
         {
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null)
+            if (DataContext is not PdfEditorViewModel vm)
             {
                 UpdateAiPanelLayoutState();
                 return;
             }
+
+            var settings = vm.AppSettingsService.Settings;
 
             _isApplyingSavedLayout = true;
             try
@@ -868,7 +869,7 @@ namespace Win11DesktopApp.Views
             if (isVisible)
             {
                 if (AiPanelRow.Height.Value <= 0)
-                    AiPanelRow.Height = new GridLength(Math.Max(160, App.AppSettingsService?.Settings?.PdfEditorAiPanelHeight ?? 280));
+                    AiPanelRow.Height = new GridLength(Math.Max(160, vm.AppSettingsService.Settings.PdfEditorAiPanelHeight));
             }
             else
             {
@@ -881,9 +882,10 @@ namespace Win11DesktopApp.Views
             if (_isApplyingSavedLayout)
                 return;
 
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null)
+            if (DataContext is not PdfEditorViewModel vm)
                 return;
+
+            var settings = vm.AppSettingsService.Settings;
 
             if (RightSidebarColumn.ActualWidth > 0)
                 settings.PdfEditorSidebarWidth = Math.Max(240, RightSidebarColumn.ActualWidth);
@@ -894,7 +896,7 @@ namespace Win11DesktopApp.Views
             if (AiPanelRow.ActualHeight > 0)
                 settings.PdfEditorAiPanelHeight = Math.Max(160, AiPanelRow.ActualHeight);
 
-            App.AppSettingsService?.SaveSettings();
+            vm.AppSettingsService.SaveSettings();
         }
 
         private void AiPanelGridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)

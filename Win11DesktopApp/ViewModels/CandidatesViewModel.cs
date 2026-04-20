@@ -10,14 +10,17 @@ namespace Win11DesktopApp.ViewModels
 {
     public class CandidatesViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
         private readonly CandidateService _service;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly CandidateViewModelFactory _candidateViewModelFactory;
 
         public ICommand GoBackCommand { get; }
         public ICommand AddCandidateCommand { get; }
         public ICommand OpenCandidateCommand { get; }
         public ICommand SetViewModeCommand { get; }
 
-        private string _viewMode = App.AppSettingsService.Settings.CandidateViewMode;
+        private string _viewMode;
         public string ViewMode
         {
             get => _viewMode;
@@ -27,8 +30,8 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(IsListView));
                     OnPropertyChanged(nameof(IsTilesView));
-                    App.AppSettingsService.Settings.CandidateViewMode = value;
-                    App.AppSettingsService.SaveSettings();
+                    _appSettingsService.Settings.CandidateViewMode = value;
+                    _appSettingsService.SaveSettings();
                 }
             }
         }
@@ -36,7 +39,7 @@ namespace Win11DesktopApp.ViewModels
         public bool IsListView => ViewMode == "List";
         public bool IsTilesView => ViewMode == "Tiles";
 
-        private double _zoomLevel = App.AppSettingsService.Settings.CandidateZoomLevel;
+        private double _zoomLevel;
         public double ZoomLevel
         {
             get => _zoomLevel;
@@ -44,8 +47,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _zoomLevel, value))
                 {
-                    App.AppSettingsService.Settings.CandidateZoomLevel = value;
-                    App.AppSettingsService.SaveSettings();
+                    _appSettingsService.Settings.CandidateZoomLevel = value;
+                    _appSettingsService.SaveSettings();
                 }
             }
         }
@@ -103,18 +106,27 @@ namespace Win11DesktopApp.ViewModels
 
         private System.Collections.Generic.List<CandidateSummary> _allCandidates = new();
 
-        public CandidatesViewModel()
+        public CandidatesViewModel(
+            CandidateService? candidateService = null,
+            AppSettingsService? appSettingsService = null,
+            NavigationService? navigationService = null,
+            CandidateViewModelFactory? candidateViewModelFactory = null)
         {
-            _service = App.CandidateService;
+            _service = candidateService ?? throw new InvalidOperationException("CandidateService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _candidateViewModelFactory = candidateViewModelFactory ?? throw new InvalidOperationException("CandidateViewModelFactory is not initialized.");
+            _viewMode = _appSettingsService.Settings.CandidateViewMode;
+            _zoomLevel = _appSettingsService.Settings.CandidateZoomLevel;
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             AddCandidateCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Додати кандидата"))
                     return;
 
-                AddCandidateVm = new AddCandidateViewModel();
+                AddCandidateVm = _candidateViewModelFactory.CreateAddCandidate();
                 AddCandidateVm.RequestClose += () =>
                 {
                     IsAddDialogOpen = false;
@@ -126,7 +138,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (o is CandidateSummary summary)
                 {
-                    DetailsVm = new CandidateDetailsViewModel(summary.CandidateFolder);
+                    DetailsVm = _candidateViewModelFactory.CreateCandidateDetails(summary.CandidateFolder);
                     DetailsVm.RequestClose += () =>
                     {
                         IsDetailsOpen = false;

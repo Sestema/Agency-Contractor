@@ -26,7 +26,15 @@ namespace Win11DesktopApp.ViewModels
 {
     public class ReportViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
         private readonly EmployeeService _employeeService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly CompanyService _companyService;
+        private readonly FinanceService _financeService;
+        private readonly ActivityLogService _activityLogService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
+        private readonly ReportColumnLayoutService _reportColumnLayoutService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private CancellationTokenSource? _refreshCts;
         private static readonly List<AppSettingsService.ReportColumnSetting> DefaultEmployeeColumns = new()
         {
@@ -54,6 +62,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ConfirmExportCommand { get; }
         public ICommand CancelExportCommand { get; }
         public ICommand OpenEmployeeCommand { get; }
+        internal ReportColumnLayoutService ReportColumnLayoutService => _reportColumnLayoutService;
 
         // ===== View Toggle =====
         private bool _isSummaryView = true;
@@ -141,11 +150,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _dateFrom, value))
                 {
-                    if (App.AppSettingsService?.Settings != null)
-                    {
-                        App.AppSettingsService.Settings.ReportDateFrom = value.ToString("yyyy-MM-dd");
-                        App.AppSettingsService.SaveSettings();
-                    }
+                    _appSettingsService.Settings.ReportDateFrom = value.ToString("yyyy-MM-dd");
+                    _appSettingsService.SaveSettings();
 
                     _ = RefreshReportAsync(reloadFilters: true);
                 }
@@ -160,11 +166,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _dateTo, value))
                 {
-                    if (App.AppSettingsService?.Settings != null)
-                    {
-                        App.AppSettingsService.Settings.ReportDateTo = value.ToString("yyyy-MM-dd");
-                        App.AppSettingsService.SaveSettings();
-                    }
+                    _appSettingsService.Settings.ReportDateTo = value.ToString("yyyy-MM-dd");
+                    _appSettingsService.SaveSettings();
 
                     _ = RefreshReportAsync(reloadFilters: true);
                 }
@@ -257,15 +260,32 @@ namespace Win11DesktopApp.ViewModels
         private string _statusMessage = string.Empty;
         public string StatusMessage { get => _statusMessage; set => SetProperty(ref _statusMessage, value); }
 
-        public ReportViewModel()
+        public ReportViewModel(
+            NavigationService? navigationService = null,
+            EmployeeService? employeeService = null,
+            AppSettingsService? appSettingsService = null,
+            CompanyService? companyService = null,
+            FinanceService? financeService = null,
+            ActivityLogService? activityLogService = null,
+            DocumentLocalizationService? documentLocalizationService = null,
+            ReportColumnLayoutService? reportColumnLayoutService = null,
+            EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null)
         {
-            var s = App.AppSettingsService?.Settings;
-            _dateFrom = s != null && DateTime.TryParse(s.ReportDateFrom, out var df) ? df : DateTime.Today.AddMonths(-1);
-            _dateTo = s != null && DateTime.TryParse(s.ReportDateTo, out var dt) ? dt : DateTime.Today;
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
+            _reportColumnLayoutService = reportColumnLayoutService ?? throw new InvalidOperationException("ReportColumnLayoutService is not initialized.");
+            _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
 
-            _employeeService = App.EmployeeService;
+            var s = _appSettingsService.Settings;
+            _dateFrom = DateTime.TryParse(s.ReportDateFrom, out var df) ? df : DateTime.Today.AddMonths(-1);
+            _dateTo = DateTime.TryParse(s.ReportDateTo, out var dt) ? dt : DateTime.Today;
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             GenerateReportCommand = new RelayCommand(async o => await GenerateReportAsync());
             ExportToExcelCommand = new RelayCommand(o => ExportToExcel(), o => HasData);
             ToggleAllCompaniesCommand = new RelayCommand(o => AllCompaniesSelected = !AllCompaniesSelected);
@@ -304,8 +324,8 @@ namespace Win11DesktopApp.ViewModels
             return Application.Current.Resources[key] as string ?? key;
         }
 
-        private static string DocString(string key) =>
-            App.DocumentLocalizationService?.Get(key) ?? GetString(key);
+        private string DocString(string key) =>
+            _documentLocalizationService.Get(key) ?? GetString(key);
 
         private static AppSettingsService.ReportColumnSetting CopyColumnSetting(AppSettingsService.ReportColumnSetting source)
         {
@@ -377,23 +397,19 @@ namespace Win11DesktopApp.ViewModels
             return NormalizeEmployeeColumnLayout(result);
         }
 
-        public static List<AppSettingsService.ReportColumnSetting> GetEffectiveEmployeeColumns()
+        public List<AppSettingsService.ReportColumnSetting> GetEffectiveEmployeeColumns()
         {
-            var saved = App.AppSettingsService?.Settings?.EmployeeReportColumns;
+            var saved = _appSettingsService.Settings.EmployeeReportColumns;
             return MergeEmployeeColumnsWithDefaults(saved);
         }
 
-        public static void SaveEmployeeColumnLayout(IEnumerable<AppSettingsService.ReportColumnSetting> layout)
+        public void SaveEmployeeColumnLayout(IEnumerable<AppSettingsService.ReportColumnSetting> layout)
         {
-            var settingsService = App.AppSettingsService;
-            if (settingsService == null)
-                return;
-
-            settingsService.Settings.EmployeeReportColumns = NormalizeEmployeeColumnLayout(layout);
-            settingsService.SaveSettings();
+            _appSettingsService.Settings.EmployeeReportColumns = NormalizeEmployeeColumnLayout(layout);
+            _appSettingsService.SaveSettings();
         }
 
-        public static List<AppSettingsService.ReportColumnSetting> ResetEmployeeColumnsToDefaults()
+        public List<AppSettingsService.ReportColumnSetting> ResetEmployeeColumnsToDefaults()
         {
             var reset = NormalizeEmployeeColumnLayout(DefaultEmployeeColumns.Select(CopyColumnSetting));
             SaveEmployeeColumnLayout(reset);
@@ -416,9 +432,9 @@ namespace Win11DesktopApp.ViewModels
             _ => key
         };
 
-        private static List<AppSettingsService.ReportColumnSetting> GetVisibleEmployeeColumnsForExport()
+        private List<AppSettingsService.ReportColumnSetting> GetVisibleEmployeeColumnsForExport()
         {
-            return GetEffectiveEmployeeColumns()
+            return _reportColumnLayoutService.GetEffectiveEmployeeColumns()
                 .Where(c => c.IsVisible)
                 .OrderBy(c => c.DisplayIndex)
                 .ToList();
@@ -480,7 +496,7 @@ namespace Win11DesktopApp.ViewModels
             return type;
         }
 
-        private static string GetDocTypeDisplay(string type)
+        private string GetDocTypeDisplay(string type)
         {
             var key = type switch
             {
@@ -506,8 +522,8 @@ namespace Win11DesktopApp.ViewModels
         {
             var selectedCompanies = CompanyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
             var selectedAgencies = AgencyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
-            var companies = App.CompanyService?.Companies?.ToList() ?? new List<EmployerCompany>();
-            var companyService = App.CompanyService;
+            var companies = _companyService.Companies.ToList();
+            var companyService = _companyService;
             var dateFrom = DateFrom;
             var dateTo = DateTo;
 
@@ -563,7 +579,7 @@ namespace Win11DesktopApp.ViewModels
                 if (reloadFilters)
                     await LoadFiltersAsync(cts.Token);
 
-                var companiesSnapshot = App.CompanyService?.Companies?.ToList() ?? new List<EmployerCompany>();
+                var companiesSnapshot = _companyService.Companies.ToList();
                 var filterSnapshot = CreateFilterSelectionSnapshot();
                 var dateFrom = DateFrom;
                 var dateTo = DateTo;
@@ -604,7 +620,7 @@ namespace Win11DesktopApp.ViewModels
                 AgencyFilters.Count > 0);
         }
 
-        private static Dictionary<string, string> CreateDocTypeDisplayMap()
+        private Dictionary<string, string> CreateDocTypeDisplayMap()
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -715,7 +731,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 token.ThrowIfCancellationRequested();
 
-                var companyService = App.CompanyService;
+                var companyService = _companyService;
                 if (companyService != null && !companyService.IsCompanyVisibleForRange(company, dateFrom, dateTo))
                     continue;
 
@@ -1007,7 +1023,7 @@ namespace Win11DesktopApp.ViewModels
             CancellationToken token)
         {
             var result = new Dictionary<string, List<EmployeeReportRow>>(StringComparer.OrdinalIgnoreCase);
-            var financeService = App.FinanceService;
+            var financeService = _financeService;
             if (financeService == null) return result;
             var alreadyAdded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var looseAdded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1164,20 +1180,17 @@ namespace Win11DesktopApp.ViewModels
             if (directMatch != null)
                 return directMatch.EmployeeFolder;
 
-            var companies = App.CompanyService?.Companies;
-            if (companies != null)
+            var companies = _companyService.Companies;
+            foreach (var company in companies)
             {
-                foreach (var company in companies)
-                {
-                    if (string.Equals(company.Name, firmName, StringComparison.OrdinalIgnoreCase))
-                        continue;
+                if (string.Equals(company.Name, firmName, StringComparison.OrdinalIgnoreCase))
+                    continue;
 
-                    var employees = getEmployeesCached(company.Name);
-                    var match = employees.FirstOrDefault(e =>
-                        string.Equals(e.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
-                    if (match != null)
-                        return match.EmployeeFolder;
-                }
+                var employees = getEmployeesCached(company.Name);
+                var match = employees.FirstOrDefault(e =>
+                    string.Equals(e.FullName, employeeName, StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                    return match.EmployeeFolder;
             }
 
             var archivedMatchInFirm = archivedEmployees.FirstOrDefault(a =>
@@ -1204,7 +1217,7 @@ namespace Win11DesktopApp.ViewModels
                 var resolvedFolder = employeeFolder;
                 if (!string.IsNullOrEmpty(resolvedFolder))
                 {
-                    var financeService = App.FinanceService;
+                    var financeService = _financeService;
                     resolvedFolder = financeService?.ResolveEmployeeFolder(resolvedFolder) ?? resolvedFolder;
                 }
 
@@ -1254,7 +1267,7 @@ namespace Win11DesktopApp.ViewModels
                 var resolvedFolder = employeeFolder;
                 if (!string.IsNullOrWhiteSpace(resolvedFolder))
                 {
-                    var financeService = App.FinanceService;
+                    var financeService = _financeService;
                     resolvedFolder = financeService?.ResolveEmployeeFolder(resolvedFolder) ?? resolvedFolder;
                 }
 
@@ -1357,7 +1370,7 @@ namespace Win11DesktopApp.ViewModels
         private void OpenEmployee(EmployeeReportRow? row)
         {
             if (row == null || string.IsNullOrEmpty(row.EmployeeFolder)) return;
-            var financeService = App.FinanceService;
+            var financeService = _financeService;
             if (financeService == null) return;
             var resolvedFolder = financeService.ResolveEmployeeFolder(row.EmployeeFolder);
             if (!Directory.Exists(resolvedFolder))
@@ -1371,7 +1384,7 @@ namespace Win11DesktopApp.ViewModels
             }
 
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(row.FirmName, resolvedFolder, _employeeService);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(row.FirmName, resolvedFolder, _employeeService);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
@@ -1700,7 +1713,7 @@ namespace Win11DesktopApp.ViewModels
                         for (int colIndex = 0; colIndex < visibleColumns.Count; colIndex++)
                         {
                             var column = visibleColumns[colIndex];
-                            wsE.Cell(row, colIndex + 1).Value = DocString(GetEmployeeColumnHeaderResourceKey(column.Key));
+                            wsE.Cell(row, colIndex + 1).Value = DocString(_reportColumnLayoutService.GetEmployeeColumnHeaderResourceKey(column.Key));
                             wsE.Cell(row, colIndex + 1).Style.Alignment.Horizontal = GetEmployeeExcelAlignment(column.Key);
                         }
                         var hdr = wsE.Range(row, 1, row, colCount);
@@ -1783,7 +1796,7 @@ namespace Win11DesktopApp.ViewModels
 
                 workbook.SaveAs(dialog.FileName);
                 StatusMessage = GetString("ReportExported");
-                App.ActivityLogService?.Log("ExportExcel", "Export", "", "",
+                _activityLogService.Log("ExportExcel", "Export", "", "",
                     $"Експортовано звіт → Excel", details: BuildReportExportDetails(dialog.FileName));
 
                 try { Process.Start(new ProcessStartInfo(dialog.FileName) { UseShellExecute = true }); }
@@ -1973,7 +1986,7 @@ namespace Win11DesktopApp.ViewModels
                         .Select(c => contentW * (c.Width / totalWidthWeight))
                         .ToArray();
                     string[] empHeaders = visibleColumns
-                        .Select(c => DocString(GetEmployeeColumnHeaderResourceKey(c.Key)))
+                        .Select(c => DocString(_reportColumnLayoutService.GetEmployeeColumnHeaderResourceKey(c.Key)))
                         .ToArray();
                     XStringFormat[] empFmts = visibleColumns
                         .Select(c => GetEmployeePdfFormat(c.Key))
@@ -2068,7 +2081,7 @@ namespace Win11DesktopApp.ViewModels
                 gfx?.Dispose();
                 doc.Save(dialog.FileName);
                 StatusMessage = GetString("ReportExportedPdf");
-                App.ActivityLogService?.Log("ExportPdf", "Export", "", "",
+                _activityLogService.Log("ExportPdf", "Export", "", "",
                     $"Експортовано звіт → PDF", details: BuildReportExportDetails(dialog.FileName));
 
                 try { Process.Start(new ProcessStartInfo(dialog.FileName) { UseShellExecute = true }); }

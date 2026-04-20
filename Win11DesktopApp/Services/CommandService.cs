@@ -24,11 +24,17 @@ namespace Win11DesktopApp.Services
 
     public static class CommandService
     {
+        private static AccessStatusService? _accessStatusService;
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
             PropertyNameCaseInsensitive = true
         };
+
+        public static void Initialize(AccessStatusService accessStatusService)
+        {
+            _accessStatusService = accessStatusService ?? throw new ArgumentNullException(nameof(accessStatusService));
+        }
 
         public static Task<List<RemoteCommand>> GetPendingCommandsAsync(string? clientId)
         {
@@ -75,7 +81,7 @@ namespace Win11DesktopApp.Services
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         // Backward-compatible command name: now opens the server-first access window.
-                        var window = new LicenseWindow
+                        var window = new LicenseWindow(_accessStatusService ?? throw new InvalidOperationException("AccessStatusService is not initialized."))
                         {
                             Owner = Application.Current.MainWindow
                         };

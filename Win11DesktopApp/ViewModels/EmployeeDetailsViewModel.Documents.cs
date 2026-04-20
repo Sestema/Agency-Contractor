@@ -22,8 +22,8 @@ namespace Win11DesktopApp.ViewModels
                 return;
 
             GenerateStatusMessage = string.Empty;
-            var templates = App.TemplateService?.GetTemplates(_firmName);
-            AvailableTemplates = new ObservableCollection<TemplateEntry>(templates ?? new List<TemplateEntry>());
+            var templates = _templateService.GetTemplates(_firmName);
+            AvailableTemplates = new ObservableCollection<TemplateEntry>(templates);
             IsGenerateDialogOpen = true;
         }
 
@@ -43,7 +43,7 @@ namespace Win11DesktopApp.ViewModels
                 IsGenerating = true;
                 GenerateStatusMessage = Res("MsgGenerating");
 
-                var templateFullPath = App.TemplateService?.GetTemplateFullPath(_firmName, template.FilePath) ?? string.Empty;
+                var templateFullPath = _templateService.GetTemplateFullPath(_firmName, template.FilePath) ?? string.Empty;
                 var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
                 var ext = Path.GetExtension(templateFullPath).ToLower();
                 var format = template.Format?.ToUpper() ?? ext.TrimStart('.').ToUpper();
@@ -59,23 +59,16 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                if (App.DocumentGenerationService == null)
-                {
-                    GenerateStatusMessage = "[Error] Document generation service unavailable";
-                    IsGenerating = false;
-                    return;
-                }
-
                 if (format == "PDF" && hasTemplateFile)
                 {
-                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
+                    var tagValues = _tagCatalogService.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
                     var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.pdf";
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                    await Task.Run(() => App.DocumentGenerationService?.GeneratePdf(templateFullPath, outputPath, tagValues));
+                    await Task.Run(() => _documentGenerationService.GeneratePdf(templateFullPath, outputPath, tagValues));
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
-                    App.ActivityLogService?.Log("DocGenerated", "Document", _firmName, FullName,
+                    _activityLogService.Log("DocGenerated", "Document", _firmName, FullName,
                         $"Згенеровано документ «{template.Name}» для {FullName}",
                         employeeFolder: _employeeFolder);
                     DocumentGenerationService.OpenFile(outputPath);
@@ -85,7 +78,7 @@ namespace Win11DesktopApp.ViewModels
 
                 if (format == "DOCX" || hasRtfContent)
                 {
-                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
+                    var tagValues = _tagCatalogService.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
 
                     if (hasRtfContent)
                     {
@@ -93,7 +86,7 @@ namespace Win11DesktopApp.ViewModels
                         var sanitized = SanitizeFileName(outputFileName);
                         var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                        await Task.Run(() => App.DocumentGenerationService?.GenerateDocxFromRtf(rtfPath, outputPath, tagValues));
+                        await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(rtfPath, outputPath, tagValues));
                         GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                         DocumentGenerationService.OpenFile(outputPath);
                     }
@@ -103,19 +96,19 @@ namespace Win11DesktopApp.ViewModels
                         var sanitized = SanitizeFileName(outputFileName);
                         var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                        await Task.Run(() => App.DocumentGenerationService?.GenerateDocx(templateFullPath, outputPath, tagValues));
+                        await Task.Run(() => _documentGenerationService.GenerateDocx(templateFullPath, outputPath, tagValues));
                         GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                         DocumentGenerationService.OpenFile(outputPath);
                     }
                 }
                 else if (format == "XLSX" && hasTemplateFile)
                 {
-                    var tagValues = App.TagCatalogService?.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
+                    var tagValues = _tagCatalogService.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
                     var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.xlsx";
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                    await Task.Run(() => App.DocumentGenerationService?.GenerateXlsx(templateFullPath, outputPath, tagValues));
+                    await Task.Run(() => _documentGenerationService.GenerateXlsx(templateFullPath, outputPath, tagValues));
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                     DocumentGenerationService.OpenFile(outputPath);
                 }
@@ -403,7 +396,7 @@ namespace Win11DesktopApp.ViewModels
 
                 gfx.Dispose();
                 doc.Save(dlg.FileName);
-                App.ActivityLogService?.Log("ExportPdf", "Export", _firmName, FullName,
+                _activityLogService.Log("ExportPdf", "Export", _firmName, FullName,
                     $"Експортовано анкету {FullName} → PDF",
                     details: $"Фірма: {_firmName}; Документ: анкета працівника; Файл: {Path.GetFileName(dlg.FileName)}",
                     employeeFolder: _employeeFolder);

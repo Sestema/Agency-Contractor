@@ -34,7 +34,10 @@ namespace Win11DesktopApp.ViewModels
             public bool IsPending { get; init; }
         }
 
+        private readonly NavigationService _navigationService;
         private readonly NewsService _newsService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly GeminiApiService _geminiApiService;
         private CancellationTokenSource? _loadCts;
         private readonly ObservableCollection<NewsArticle> _allArticles = new();
         private readonly Dictionary<string, List<(string role, string text)>> _aiHistoryByContext = new(StringComparer.OrdinalIgnoreCase);
@@ -250,16 +253,18 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        public NewsViewModel()
-            : this(App.NewsService)
+        public NewsViewModel(
+            NewsService newsService,
+            NavigationService? navigationService = null,
+            AppSettingsService? appSettingsService = null,
+            GeminiApiService? geminiApiService = null)
         {
-        }
-
-        public NewsViewModel(NewsService newsService)
-        {
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _newsService = newsService;
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
 
-            GoBackCommand = new RelayCommand(_ => App.NavigationService?.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(_ => _navigationService.NavigateTo<MainViewModel>());
             RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync(true), _ => !IsLoading);
             OpenOriginalCommand = new RelayCommand(_ => OpenOriginalArticle(), _ => SelectedArticle != null && !string.IsNullOrWhiteSpace(SelectedArticle.Url));
             TranslateSelectedArticleCommand = new AsyncRelayCommand(_ => TranslateSelectedArticleAsync(), _ => CanTranslateSelectedArticle());
@@ -279,7 +284,7 @@ namespace Win11DesktopApp.ViewModels
             TranslationLanguages.Add(new NewsTranslationLanguageOption { Code = "ru", DisplayName = "Русский", PromptName = "Russian" });
 
             SelectedSource = SourceFilters.FirstOrDefault() ?? string.Empty;
-            var preferredLanguageCode = App.AppSettingsService?.Settings.LanguageCode ?? "uk";
+            var preferredLanguageCode = _appSettingsService.Settings.LanguageCode ?? "uk";
             SelectedTranslationLanguage = TranslationLanguages.FirstOrDefault(x => string.Equals(x.Code, preferredLanguageCode, StringComparison.OrdinalIgnoreCase))
                 ?? TranslationLanguages.FirstOrDefault();
 
@@ -338,7 +343,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
 
             var translationLanguage = SelectedTranslationLanguage;
-            if (App.GeminiApiService?.IsConfigured != true)
+            if (_geminiApiService?.IsConfigured != true)
             {
                 StatusMessage = Res("NewsTranslateConfigureAi");
                 return;
@@ -351,7 +356,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 var articleText = await GetSelectedArticleTextAsync();
                 var prompt = BuildTranslationPrompt(SelectedArticle, articleText, translationLanguage);
-                var response = await App.GeminiApiService.ChatAsync(
+                var response = await _geminiApiService.ChatAsync(
                     prompt,
                     "Translate official news articles accurately. Return plain text only, no markdown, no explanations.",
                     CancellationToken.None);
@@ -391,7 +396,7 @@ namespace Win11DesktopApp.ViewModels
             if (SelectedArticle == null || SelectedTranslationLanguage == null)
                 return;
 
-            if (App.GeminiApiService?.IsConfigured != true)
+            if (_geminiApiService?.IsConfigured != true)
             {
                 StatusMessage = Res("NewsAiConfigure");
                 return;
@@ -423,7 +428,7 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 var prompt = BuildAiInsightPrompt(SelectedArticle, articleText, aiLanguage);
-                var response = await App.GeminiApiService.ChatAsync(
+                var response = await _geminiApiService.ChatAsync(
                     prompt,
                     "Analyze official news articles accurately. Use only the extracted article text. Do not guess or add outside legal knowledge. Return plain text only.",
                     CancellationToken.None);
@@ -473,7 +478,7 @@ namespace Win11DesktopApp.ViewModels
             if (string.IsNullOrWhiteSpace(question))
                 return;
 
-            if (App.GeminiApiService?.IsConfigured != true)
+            if (_geminiApiService?.IsConfigured != true)
             {
                 StatusMessage = Res("NewsAiConfigure");
                 return;
@@ -526,7 +531,7 @@ namespace Win11DesktopApp.ViewModels
                 LoadConversation(conversationKey);
 
                 var systemPrompt = BuildAiQuestionSystemPrompt(SelectedArticle, articleText, aiLanguage);
-                var response = await App.GeminiApiService.ChatWithHistoryAsync(history, question, systemPrompt, CancellationToken.None);
+                var response = await _geminiApiService.ChatWithHistoryAsync(history, question, systemPrompt, CancellationToken.None);
                 if (IsInvalidModelResponse(response))
                 {
                     ReplacePendingAiMessage(conversation, Res("NewsAiAskFailed"));
@@ -667,7 +672,7 @@ namespace Win11DesktopApp.ViewModels
 
         private NewsTranslationLanguageOption GetCurrentAiLanguage()
         {
-            var code = App.AppSettingsService?.Settings.LanguageCode ?? "uk";
+            var code = _appSettingsService.Settings.LanguageCode ?? "uk";
             return TranslationLanguages.FirstOrDefault(x => string.Equals(x.Code, code, StringComparison.OrdinalIgnoreCase))
                 ?? new NewsTranslationLanguageOption
                 {

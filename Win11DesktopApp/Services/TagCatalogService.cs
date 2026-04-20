@@ -9,8 +9,14 @@ namespace Win11DesktopApp.Services
 {
     public class TagCatalogService
     {
+        private readonly DocumentLocalizationService _documentLocalizationService;
         private readonly List<TagEntry> _tags = new List<TagEntry>();
         private readonly object _lock = new();
+
+        public TagCatalogService(DocumentLocalizationService documentLocalizationService)
+        {
+            _documentLocalizationService = documentLocalizationService ?? throw new System.ArgumentNullException(nameof(documentLocalizationService));
+        }
 
         private static string Res(string key)
         {
@@ -18,9 +24,9 @@ namespace Win11DesktopApp.Services
             catch { return key; }
         }
 
-        private static string DocRes(string key)
+        private string DocRes(string key)
         {
-            try { return App.DocumentLocalizationService?.Get(key) ?? Res(key); }
+            try { return _documentLocalizationService.Get(key) ?? Res(key); }
             catch { return Res(key); }
         }
 
@@ -31,14 +37,14 @@ namespace Win11DesktopApp.Services
             catch { return fmt; }
         }
 
-        private static string GetPrimaryDocumentType(EmployeeModels.EmployeeData data)
+        private string GetPrimaryDocumentType(EmployeeModels.EmployeeData data)
         {
             return string.Equals(data.EuDocumentType, "id_card", System.StringComparison.OrdinalIgnoreCase)
                 ? DocRes("EuDocTypeIdCard")
                 : DocRes("DetDocPassport");
         }
 
-        private static string GetResidenceDocumentType(EmployeeModels.EmployeeData data)
+        private string GetResidenceDocumentType(EmployeeModels.EmployeeData data)
         {
             var hasResidenceDocument =
                 string.Equals(data.EmployeeType, "visa", System.StringComparison.OrdinalIgnoreCase) ||
@@ -52,7 +58,7 @@ namespace Win11DesktopApp.Services
                 : DocRes("VisaDocTypeSticker");
         }
 
-        private static string GetInsuranceCompanyFullDisplay(EmployeeModels.EmployeeData data)
+        private string GetInsuranceCompanyFullDisplay(EmployeeModels.EmployeeData data)
         {
             var option = InsuranceCompanyNormalizer.Normalize(
                 data.InsuranceCompanyShort,
@@ -178,6 +184,7 @@ namespace Win11DesktopApp.Services
             AddTag("EMPLOYEE_Status", "Employee", companyName, Res("TagDescEmpStatus"), StatusHelper.GetDisplayText(data.Status));
 
             AddTag("EMPLOYEE_StartDate", "Employee", companyName, Res("TagDescEmpStartDate"), data.StartDate);
+            AddTag("EMPLOYEE_EndDate", "Employee", companyName, Res("TagDescEmpEndDate"), data.EndDate);
             AddTag("EMPLOYEE_ContractSignDate", "Employee", companyName, Res("TagDescEmpSignDate"), data.ContractSignDate);
         }
 
@@ -250,6 +257,7 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_BankName"] = employeeData.HasBankAccountData ? employeeData.BankName : string.Empty;
             map["EMPLOYEE_Status"] = StatusHelper.GetDisplayText(employeeData.Status);
             map["EMPLOYEE_StartDate"] = employeeData.StartDate;
+            map["EMPLOYEE_EndDate"] = employeeData.EndDate;
             map["EMPLOYEE_ContractSignDate"] = employeeData.ContractSignDate;
 
             return map;
@@ -425,6 +433,7 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_ContractType", Category = "Employee.Work", Description = Res("TagDescEmpContractType") },
                 new() { Tag = "EMPLOYEE_Department", Category = "Employee.Work", Description = Res("TagDescEmpDepartment") },
                 new() { Tag = "EMPLOYEE_StartDate", Category = "Employee.Work", Description = Res("TagDescEmpStartDate") },
+                new() { Tag = "EMPLOYEE_EndDate", Category = "Employee.Work", Description = Res("TagDescEmpEndDate") },
                 new() { Tag = "EMPLOYEE_ContractSignDate", Category = "Employee.Work", Description = Res("TagDescEmpSignDate") },
             };
 

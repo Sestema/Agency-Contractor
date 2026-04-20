@@ -8,6 +8,7 @@ namespace Win11DesktopApp.ViewModels
 {
     public sealed class ProfileLoginViewModel : ViewModelBase
     {
+        private readonly LanguageService _languageService;
         private readonly ProfileAuthService _profileAuthService;
         private readonly ProfileSessionService _profileSessionService;
         private readonly ClientProfileRecord _profile;
@@ -44,7 +45,7 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _currentLanguage, value))
-                    LanguageService.SetLanguage(value);
+                    _languageService.SetLanguage(value);
             }
         }
 
@@ -67,14 +68,18 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public ProfileLoginViewModel(
+            LanguageService languageService,
             ProfileAuthService profileAuthService,
             ProfileSessionService profileSessionService,
-            ClientProfileRecord profile)
+            ClientProfileRecord profile,
+            AppSettingsService appSettingsService)
         {
+            _languageService = languageService ?? throw new InvalidOperationException("LanguageService is not initialized.");
+            var settingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
             _profileAuthService = profileAuthService;
             _profileSessionService = profileSessionService;
             _profile = profile;
-            _currentLanguage = App.AppSettingsService?.Settings.LanguageCode ?? "uk";
+            _currentLanguage = settingsService.Settings.LanguageCode ?? "uk";
             _rememberMe = profile.RememberMeEnabled;
 
             LoginCommand = new AsyncRelayCommand(_ => LoginAsync(), _ => !IsBusy);

@@ -54,6 +54,16 @@ namespace Win11DesktopApp.ViewModels
 
     public class DashboardViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
+        private readonly CompanyService _companyService;
+        private readonly EmployeeService _employeeService;
+        private readonly TemplateService _templateService;
+        private readonly FolderService _folderService;
+        private readonly FinanceService _financeService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
+        private readonly MainModuleViewModelFactory _mainModuleViewModelFactory;
         private CancellationTokenSource? _loadCts;
         public ICommand GoBackCommand { get; }
         public ICommand OpenEmployeesCommand { get; }
@@ -187,21 +197,42 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _companyStats, value);
         }
 
-        public DashboardViewModel()
+        public DashboardViewModel(
+            NavigationService navigationService,
+            CompanyService companyService,
+            EmployeeService employeeService,
+            TemplateService templateService,
+            FolderService folderService,
+            FinanceService financeService,
+            GeminiApiService geminiApiService,
+            AppSettingsService appSettingsService,
+            EmployeeDetailsViewModelFactory employeeDetailsViewModelFactory,
+            MainModuleViewModelFactory mainModuleViewModelFactory)
         {
-            GoBackCommand = new RelayCommand(_ => App.NavigationService?.NavigateTo(new MainViewModel()));
+            _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+            _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
+            _employeeService = employeeService ?? throw new ArgumentNullException(nameof(employeeService));
+            _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+            _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+            _financeService = financeService ?? throw new ArgumentNullException(nameof(financeService));
+            _geminiApiService = geminiApiService ?? throw new ArgumentNullException(nameof(geminiApiService));
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new ArgumentNullException(nameof(employeeDetailsViewModelFactory));
+            _mainModuleViewModelFactory = mainModuleViewModelFactory ?? throw new ArgumentNullException(nameof(mainModuleViewModelFactory));
+
+            GoBackCommand = new RelayCommand(_ => _navigationService.NavigateTo<MainViewModel>());
             OpenEmployeesCommand = new RelayCommand(_ =>
             {
-                var company = App.CompanyService?.SelectedCompany;
+                var company = _companyService.SelectedCompany;
                 if (company != null)
-                    App.NavigationService?.NavigateTo(new EmployeesViewModel(company));
+                    _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(company));
             });
-            OpenProblemsCommand = new RelayCommand(_ => App.NavigationService?.NavigateTo(new ProblemsViewModel()));
+            OpenProblemsCommand = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateProblems()));
             OpenTemplatesCommand = new RelayCommand(_ =>
             {
-                var company = App.CompanyService?.SelectedCompany;
+                var company = _companyService.SelectedCompany;
                 if (company != null)
-                    App.NavigationService?.NavigateTo(new TemplatesViewModel(company));
+                    _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateTemplates(company));
             });
             OpenEmployeeDetailCommand = new RelayCommand(o =>
             {
@@ -212,7 +243,7 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                         EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
                     }
-                    EmployeeDetailsVm = new EmployeeDetailsViewModel(item.CompanyName, item.EmployeeFolder, employeeId: item.UniqueId);
+                    EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(item.CompanyName, item.EmployeeFolder, employeeId: item.UniqueId);
                     EmployeeDetailsVm.RequestClose += OnDetailsClose;
                     EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
                     IsEmployeeDetailsOpen = true;
@@ -238,7 +269,7 @@ namespace Win11DesktopApp.ViewModels
 
         private async void GenerateAIReport()
         {
-            if (!(App.GeminiApiService?.IsConfigured ?? false))
+            if (!_geminiApiService.IsConfigured)
             {
                 AIReportText = Res("AIChatNoModel");
                 IsAIReportOpen = true;
@@ -281,7 +312,7 @@ namespace Win11DesktopApp.ViewModels
                         sb.AppendLine($"  - {sm.MonthLabel}: Gross={sm.GrossText}, Net={sm.TotalNet:N0} CZK, Paid={sm.TotalPaid:N0}/{sm.TotalNet:N0} CZK, Workers={sm.TotalEntries}, Fully paid={sm.IsFullyPaid}");
                 }
 
-                var uiLang = (App.AppSettingsService?.Settings?.LanguageCode ?? "uk") switch
+                var uiLang = (_appSettingsService.Settings.LanguageCode ?? "uk") switch
                 {
                     "en" => "English",
                     "cs" => "Czech (čeština)",
@@ -300,7 +331,7 @@ Include:
 Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]. NEVER use emoji — they won't render in the app. Be concise but actionable. Max 15-20 lines.";
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-                AIReportText = await (App.GeminiApiService?.ChatAsync(sb.ToString(), systemPrompt, cts.Token) ?? Task.FromResult("Error: API service not available"));
+                AIReportText = await _geminiApiService.ChatAsync(sb.ToString(), systemPrompt, cts.Token);
             }
             catch (Exception ex)
             {
@@ -328,8 +359,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
         private void LoadLayout()
         {
-            var s = App.AppSettingsService?.Settings;
-            if (s == null) return;
+            var s = _appSettingsService.Settings;
             Slot0 = string.IsNullOrEmpty(s.DashSlot0) ? "expiring" : s.DashSlot0;
             Slot1 = string.IsNullOrEmpty(s.DashSlot1) ? "companies" : s.DashSlot1;
             Slot2 = string.IsNullOrEmpty(s.DashSlot2) ? "salary" : s.DashSlot2;
@@ -339,14 +369,13 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
         public void SaveLayout()
         {
-            var s = App.AppSettingsService?.Settings;
-            if (s == null) return;
+            var s = _appSettingsService.Settings;
             s.DashSlot0 = Slot0;
             s.DashSlot1 = Slot1;
             s.DashSlot2 = Slot2;
             s.DashColumnRatio = ColumnRatio;
             s.DashRowRatio = RowRatio;
-            App.AppSettingsService?.SaveSettings();
+            _appSettingsService.SaveSettings();
         }
 
         private async void LoadDataAsync()
@@ -401,12 +430,10 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             }
         }
 
-        private static DashboardData GatherDashboardData()
+        private DashboardData GatherDashboardData()
         {
             var result = new DashboardData();
-            var companySvc = App.CompanyService;
-            var companies = companySvc?.VisibleCompanies?.ToList();
-            if (companies == null) return result;
+            var companies = _companyService.VisibleCompanies.ToList();
 
             result.TotalCompanies = companies.Count;
             int thisMonthAdded = 0;
@@ -417,10 +444,10 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             {
                 try
                 {
-                    var employees = App.EmployeeService?.GetEmployeesForFirm(company.Name) ?? new List<EmployeeSummary>();
+                    var employees = _employeeService.GetEmployeesForFirm(company.Name) ?? new List<EmployeeSummary>();
                     result.TotalEmployees += employees.Count;
 
-                    var templates = App.TemplateService?.GetTemplates(company.Name) ?? new List<TemplateEntry>();
+                    var templates = _templateService.GetTemplates(company.Name) ?? new List<TemplateEntry>();
                     result.TotalTemplates += templates.Count;
 
                     int companyProblems = 0;
@@ -474,15 +501,13 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             try
             {
                 var availableMonths = new HashSet<(int year, int month)>();
-                var folderService = App.FolderService;
-
-                if (folderService != null && !string.IsNullOrEmpty(folderService.RootPath))
+                if (!string.IsNullOrEmpty(_folderService.RootPath))
                 {
                     foreach (var company in companies)
                     {
                         try
                         {
-                            var paymentFolder = folderService.GetPaymentFolder(company.Name);
+                            var paymentFolder = _folderService.GetPaymentFolder(company.Name);
                             if (string.IsNullOrEmpty(paymentFolder) || !System.IO.Directory.Exists(paymentFolder)) continue;
                             foreach (var file in System.IO.Directory.GetFiles(paymentFolder, "salary_*.json"))
                             {
@@ -501,7 +526,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                 foreach (var (year, month) in availableMonths)
                 {
-                    var (entries, expenses) = App.FinanceService?.LoadAllFirmPayments(year, month) ?? (new List<SalaryEntry>(), new List<FirmExpense>());
+                    var (entries, expenses) = _financeService.LoadAllFirmPayments(year, month);
                     if (entries.Count == 0) continue;
 
                     var mk = $"{year:D4}-{month:D2}";

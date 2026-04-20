@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
+using System.Threading;
 
 namespace Win11DesktopApp.Views
 {
@@ -18,7 +19,7 @@ namespace Win11DesktopApp.Views
         {
             InitializeComponent();
 
-            var code = App.AppSettingsService?.Settings?.LanguageCode ?? "uk";
+            var code = Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName;
             var xmlLang = LangMap.TryGetValue(code, out var v) ? v : "uk-UA";
             Language = XmlLanguage.GetLanguage(xmlLang);
         }

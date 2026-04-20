@@ -21,10 +21,20 @@ namespace Win11DesktopApp.ViewModels
 {
     public partial class EmployeeDetailsViewModel : ViewModelBase
     {
-        private static string DocRes(string key) =>
-            App.DocumentLocalizationService?.Get(key) ?? Res(key);
+        private string DocRes(string key) =>
+            _documentLocalizationService.Get(key) ?? Res(key);
 
         private readonly EmployeeService _employeeService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly FinanceService _financeService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly ActivityLogService _activityLogService;
+        private readonly CompanyService _companyService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
+        private readonly TemplateService _templateService;
+        private readonly DocumentGenerationService _documentGenerationService;
+        private readonly TagCatalogService _tagCatalogService;
+        private readonly AiWindowFactory _aiWindowFactory;
         private readonly string _employeeFolder;
         private readonly string _firmName;
         private bool _profileUnavailable;
@@ -1009,17 +1019,42 @@ namespace Win11DesktopApp.ViewModels
         // Export PDF
         public ICommand ExportProfilePdfCommand { get; }
 
-        public EmployeeDetailsViewModel(string firmName, string employeeFolder, EmployeeService? employeeService = null, bool isReadOnlyMode = false, string? employeeId = null)
+        public EmployeeDetailsViewModel(
+            string firmName,
+            string employeeFolder,
+            EmployeeService? employeeService = null,
+            bool isReadOnlyMode = false,
+            string? employeeId = null,
+            GeminiApiService? geminiApiService = null,
+            FinanceService? financeService = null,
+            AppSettingsService? appSettingsService = null,
+            ActivityLogService? activityLogService = null,
+            CompanyService? companyService = null,
+            DocumentLocalizationService? documentLocalizationService = null,
+            TemplateService? templateService = null,
+            DocumentGenerationService? documentGenerationService = null,
+            TagCatalogService? tagCatalogService = null,
+            AiWindowFactory? aiWindowFactory = null)
         {
             _firmName = firmName;
-            _employeeService = employeeService ?? App.EmployeeService;
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
+            _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
+            _documentGenerationService = documentGenerationService ?? throw new InvalidOperationException("DocumentGenerationService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
             _isReadOnlyMode = isReadOnlyMode;
             _employeeFolder = Directory.Exists(employeeFolder)
                 ? employeeFolder
-                : (App.FinanceService?.ResolveEmployeeFolder(employeeFolder, employeeId) ?? employeeFolder);
+                : (_financeService.ResolveEmployeeFolder(employeeFolder, employeeId) ?? employeeFolder);
 
-            var settings = App.AppSettingsService?.Settings;
-            _tabIndex = settings != null ? Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 3) : 0;
+            var settings = _appSettingsService.Settings;
+            _tabIndex = Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 3);
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
@@ -1269,7 +1304,7 @@ namespace Win11DesktopApp.ViewModels
                         Description = $"{fieldName}: {oldDate} → {NewExpiryDate}"
                     });
 
-                    App.ActivityLogService?.Log(_extendType == "visa" ? "VisaExtended" : "InsuranceExtended",
+                    _activityLogService.Log(_extendType == "visa" ? "VisaExtended" : "InsuranceExtended",
                         "Document", _firmName, FullName,
                         $"{fieldName}: {oldDate} → {NewExpiryDate}",
                         oldDate, NewExpiryDate, employeeFolder: _employeeFolder);
@@ -1346,7 +1381,7 @@ namespace Win11DesktopApp.ViewModels
                 var result = await _employeeService.ArchiveEmployee(_employeeFolder, _firmName, ArchiveEndDate);
                 if (result.Success)
                 {
-                    App.ActivityLogService?.Log("EmployeeArchived", "Archive", _firmName, FullName,
+                    _activityLogService.Log("EmployeeArchived", "Archive", _firmName, FullName,
                         $"Архівовано {FullName} з {_firmName}, дата закінчення: {ArchiveEndDate}",
                         _firmName, ArchiveEndDate, employeeFolder: _employeeFolder,
                         relatedOperationId: result.OperationId);
@@ -1451,7 +1486,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                var window = new Views.ReplaceDocumentWindow(type, Data);
+                var window = _aiWindowFactory.CreateReplaceDocumentWindow(type, Data);
                 window.Owner = Application.Current?.MainWindow;
                 if (window.ShowDialog() != true || !window.Saved) return;
                 var tempFile = window.ResultFilePath;
@@ -1740,7 +1775,7 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                var company = App.CompanyService.Companies.FirstOrDefault(c => c.Name == _firmName);
+                var company = _companyService.Companies.FirstOrDefault(c => c.Name == _firmName);
                 if (company == null) return;
 
                 CompanyPositions.Clear();
@@ -1780,7 +1815,7 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                var company = App.CompanyService.Companies.FirstOrDefault(c => c.Name == _firmName);
+                var company = _companyService.Companies.FirstOrDefault(c => c.Name == _firmName);
                 if (company == null) return;
 
                 CompanyAddresses.Clear();
@@ -2016,8 +2051,7 @@ namespace Win11DesktopApp.ViewModels
 
         public void SaveLayoutSettings()
         {
-            var settingsService = App.AppSettingsService;
-            if (settingsService == null) return;
+            var settingsService = _appSettingsService;
             settingsService.Settings.EmployeeDetailsLastTabIndex = Math.Clamp(TabIndex, 0, 3);
             settingsService.SaveSettings();
         }
@@ -2290,7 +2324,7 @@ namespace Win11DesktopApp.ViewModels
                     Description = string.Format(Res("HistoryDescRenewWp"), oldNumber, RenewWpNumber, oldExpiry, RenewWpExpiry)
                 });
 
-                App.ActivityLogService?.Log("WorkPermitRenewed", "Document", _firmName, FullName,
+                _activityLogService.Log("WorkPermitRenewed", "Document", _firmName, FullName,
                     $"{FullName}: дозвіл на роботу оновлено {oldNumber} → {RenewWpNumber}",
                     $"{oldNumber}, до {oldExpiry}", $"{RenewWpNumber}, до {RenewWpExpiry}",
                     employeeFolder: _employeeFolder);
@@ -2316,7 +2350,7 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                var geminiService = App.GeminiApiService;
+                var geminiService = _geminiApiService;
                 if (geminiService == null || !geminiService.IsConfigured)
                 {
                     AIValidationResult = Res("AIChatNoModel");
@@ -2424,9 +2458,9 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             }
         }
 
-        private static string GetUILanguageName()
+        private string GetUILanguageName()
         {
-            var code = App.AppSettingsService?.Settings?.LanguageCode ?? "uk";
+            var code = _appSettingsService.Settings.LanguageCode ?? "uk";
             return code switch
             {
                 "en" => "English",
@@ -3232,7 +3266,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 Description = histDesc
             });
 
-            App.ActivityLogService?.Log("CustomDocAdded", "Document", _firmName, FullName,
+            _activityLogService.Log("CustomDocAdded", "Document", _firmName, FullName,
                 histDesc, employeeFolder: _employeeFolder);
 
             CustomDocuments.Add(doc);
@@ -3276,7 +3310,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 Description = histDesc
             });
 
-            App.ActivityLogService?.Log("CustomDocDeleted", "Document", _firmName, FullName,
+            _activityLogService.Log("CustomDocDeleted", "Document", _firmName, FullName,
                 histDesc, employeeFolder: _employeeFolder);
 
             CustomDocuments.Remove(doc);

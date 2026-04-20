@@ -14,7 +14,12 @@ namespace Win11DesktopApp.Services
         private const int CurrentSchemaVersion = 1;
         private readonly FolderService _folderService;
         private readonly object _initLock = new();
+        private readonly object _monthDbIndexLock = new();
         private readonly HashSet<string> _initializedDatabases = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<(int year, int month), List<string>> _monthDbIndex = new();
+        private string _monthDbIndexFolder = string.Empty;
+        private DateTime _monthDbIndexFolderLastWriteUtc = DateTime.MinValue;
+        private bool _monthDbIndexDirty = true;
 
         public SalaryDbService(FolderService folderService)
         {
@@ -38,15 +43,8 @@ namespace Win11DesktopApp.Services
                 return string.Empty;
 
             Directory.CreateDirectory(folder);
-
             var canonicalPath = GetMonthDbPath(year, month);
-            if (File.Exists(canonicalPath))
-                return canonicalPath;
-
-            var prefix = $"salary_{year:D4}_{month:D2}";
-            var candidates = Directory.GetFiles(folder, $"{prefix}*.db")
-                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var candidates = GetMonthDbCandidates(year, month);
 
             if (candidates.Count == 1)
                 return candidates[0];
@@ -81,32 +79,23 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
                 yield break;
 
-            var seen = new HashSet<(int year, int month)>();
-            foreach (var path in Directory.GetFiles(folder, "salary_*_*.db").OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+            foreach (var pair in GetMonthDbIndexSnapshot())
             {
-                var fileName = Path.GetFileNameWithoutExtension(path);
-                var parts = fileName.Split('_');
-                if (parts.Length < 3)
+                var year = pair.Key.year;
+                var month = pair.Key.month;
+                var candidates = pair.Value;
+                if (candidates.Count == 0)
                     continue;
 
-                if (!int.TryParse(parts[1], out var year) || !int.TryParse(parts[2], out var month))
-                    continue;
-
-                if (!seen.Add((year, month)))
-                    continue;
-
-                string resolvedPath;
-                try
+                if (candidates.Count > 1)
                 {
-                    resolvedPath = ResolveMonthDbPath(year, month);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    LoggingService.LogWarning("SalaryDbService.EnumerateMonthDatabases", ex.Message);
+                    var details = string.Join("; ", candidates.Select(Path.GetFileName));
+                    LoggingService.LogWarning("SalaryDbService.EnumerateMonthDatabases",
+                        $"Multiple salary DB files found for {year:D4}-{month:D2}: {details}");
                     continue;
                 }
 
-                yield return (year, month, resolvedPath);
+                yield return (year, month, candidates[0]);
             }
         }
 
@@ -156,6 +145,7 @@ namespace Win11DesktopApp.Services
                 InsertSalaryExpense(connection, transaction, year, month, expense);
 
             transaction.Commit();
+            MarkMonthDbIndexDirty();
         }
 
         public (int EntryCount, int ExpenseCount, decimal SavedNetSalaryTotal, Dictionary<string, int> StatusCounts) GetMonthValidationSnapshot(int year, int month)
@@ -507,6 +497,7 @@ WHERE lower(firm_name) = lower(@firmName)
             using var transaction = connection.BeginTransaction();
             InsertSalaryExpense(connection, transaction, year, month, expense);
             transaction.Commit();
+            MarkMonthDbIndexDirty();
         }
 
         public bool DeleteFirmExpense(int year, int month, string expenseId)
@@ -518,7 +509,11 @@ WHERE lower(firm_name) = lower(@firmName)
             using var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM salary_expenses WHERE id = @id;";
             command.Parameters.AddWithValue("@id", expenseId);
-            return command.ExecuteNonQuery() > 0;
+            var deleted = command.ExecuteNonQuery() > 0;
+            if (deleted)
+                MarkMonthDbIndexDirty();
+
+            return deleted;
         }
 
         public void ReplaceFirmExpensesForFirm(int year, int month, string firmName, IReadOnlyList<FirmExpense> expenses)
@@ -538,6 +533,77 @@ WHERE lower(firm_name) = lower(@firmName)
                 InsertSalaryExpense(connection, transaction, year, month, expense);
 
             transaction.Commit();
+            MarkMonthDbIndexDirty();
+        }
+
+        private void MarkMonthDbIndexDirty()
+        {
+            lock (_monthDbIndexLock)
+                _monthDbIndexDirty = true;
+        }
+
+        private List<string> GetMonthDbCandidates(int year, int month)
+        {
+            var index = GetMonthDbIndexSnapshot();
+            return index.TryGetValue((year, month), out var candidates)
+                ? candidates
+                : new List<string>();
+        }
+
+        private Dictionary<(int year, int month), List<string>> GetMonthDbIndexSnapshot()
+        {
+            var folder = SalaryDbFolder;
+            if (string.IsNullOrWhiteSpace(folder))
+                return new Dictionary<(int year, int month), List<string>>();
+
+            Directory.CreateDirectory(folder);
+
+            var folderLastWriteUtc = Directory.GetLastWriteTimeUtc(folder);
+            lock (_monthDbIndexLock)
+            {
+                if (_monthDbIndexDirty
+                    || !string.Equals(_monthDbIndexFolder, folder, StringComparison.OrdinalIgnoreCase)
+                    || _monthDbIndexFolderLastWriteUtc != folderLastWriteUtc)
+                {
+                    _monthDbIndex = BuildMonthDbIndex(folder);
+                    _monthDbIndexFolder = folder;
+                    _monthDbIndexFolderLastWriteUtc = folderLastWriteUtc;
+                    _monthDbIndexDirty = false;
+                }
+
+                return _monthDbIndex.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value.ToList());
+            }
+        }
+
+        private static Dictionary<(int year, int month), List<string>> BuildMonthDbIndex(string folder)
+        {
+            var result = new Dictionary<(int year, int month), List<string>>();
+            foreach (var path in Directory.EnumerateFiles(folder, "salary_*_*.db"))
+            {
+                var fileName = Path.GetFileNameWithoutExtension(path);
+                var parts = fileName.Split('_');
+                if (parts.Length < 3)
+                    continue;
+
+                if (!int.TryParse(parts[1], out var year) || !int.TryParse(parts[2], out var month))
+                    continue;
+
+                var key = (year, month);
+                if (!result.TryGetValue(key, out var candidates))
+                {
+                    candidates = new List<string>();
+                    result[key] = candidates;
+                }
+
+                candidates.Add(path);
+            }
+
+            foreach (var candidates in result.Values)
+                candidates.Sort(StringComparer.OrdinalIgnoreCase);
+
+            return result;
         }
 
         public int RemapCustomFieldIdAcrossMonths(string oldFieldId, string newFieldId)
@@ -771,11 +837,16 @@ ON CONFLICT(id) DO UPDATE SET
             };
         }
 
-        private static decimal ParseDecimal(string value)
+        private static decimal ParseDecimal(string? value)
         {
-            return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
-                ? parsed
-                : 0m;
+            if (string.IsNullOrWhiteSpace(value))
+                return 0m;
+
+            if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+
+            LoggingService.LogWarning("SalaryDbService.ParseDecimal", $"Failed to parse decimal value '{value}'. Using 0.");
+            return 0m;
         }
 
         private static bool TryMoveCustomValueKey(Dictionary<string, decimal> customValues, string oldFieldId, string newFieldId)

@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using Win11DesktopApp.Models;
-using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -13,11 +12,11 @@ namespace Win11DesktopApp.Views
         public bool IsPasswordReset { get; private set; }
         public ClientProfileRecord? ResetProfile { get; private set; }
 
-        public ProfileResetPasswordWindow(ProfileAuthService profileAuthService, ClientProfileRecord profile)
+        public ProfileResetPasswordWindow(ProfileResetPasswordViewModel viewModel)
         {
             InitializeComponent();
 
-            _viewModel = new ProfileResetPasswordViewModel(profileAuthService, profile);
+            _viewModel = viewModel;
             _viewModel.RequestClose += OnRequestClose;
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             DataContext = _viewModel;

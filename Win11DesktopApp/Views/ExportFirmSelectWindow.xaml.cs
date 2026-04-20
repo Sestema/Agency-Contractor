@@ -26,13 +26,15 @@ namespace Win11DesktopApp.Views
 
     public partial class ExportFirmSelectWindow : Window
     {
+        private readonly AppSettingsService _appSettingsService;
         private readonly ObservableCollection<FirmExportItem> _items = new();
         private bool _syncingSelectAllState;
 
         public HashSet<string> SelectedFirms { get; private set; } = new();
 
-        public ExportFirmSelectWindow(List<(string firmName, int count)> firms)
+        public ExportFirmSelectWindow(List<(string firmName, int count)> firms, AppSettingsService appSettingsService)
         {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
             InitializeComponent();
             RestoreWindowSize();
             Closing += (_, _) => SaveWindowSize();
@@ -97,8 +99,7 @@ namespace Win11DesktopApp.Views
 
         private void RestoreWindowSize()
         {
-            var settings = App.AppSettingsService?.Settings;
-            if (settings == null) return;
+            var settings = _appSettingsService.Settings;
 
             if (settings.ExportFirmSelectWindowWidth >= MinWidth)
                 Width = settings.ExportFirmSelectWindowWidth;
@@ -111,16 +112,13 @@ namespace Win11DesktopApp.Views
         {
             try
             {
-                var appSettings = App.AppSettingsService;
-                if (appSettings == null) return;
-
-                var settings = appSettings.Settings;
+                var settings = _appSettingsService.Settings;
                 var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
 
                 settings.ExportFirmSelectWindowWidth = bounds.Width;
                 settings.ExportFirmSelectWindowHeight = bounds.Height;
 
-                await appSettings.SaveSettingsImmediate();
+                await _appSettingsService.SaveSettingsImmediate();
             }
             catch (Exception ex)
             {

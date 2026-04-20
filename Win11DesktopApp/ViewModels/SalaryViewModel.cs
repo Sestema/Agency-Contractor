@@ -21,8 +21,14 @@ namespace Win11DesktopApp.ViewModels
 {
     public class SalaryViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
         private readonly FinanceService _financeService;
         private readonly EmployeeService _employeeService;
+        private readonly AppSettingsService _appSettingsService;
+        private readonly ActivityLogService _activityLogService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
+        private readonly DocumentLocalizationService _documentLocalizationService;
+        private readonly CompanyService _companyService;
         private readonly object _ratePropagationGate = new();
         private readonly Dictionary<string, CancellationTokenSource> _ratePropagationCtsByKey = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? _notePropagationCts;
@@ -30,6 +36,8 @@ namespace Win11DesktopApp.ViewModels
         private int _advanceRefreshVersion;
         // key: folderKey|firmName → note value at load time (for forward propagation)
         private Dictionary<string, string> _originalNotes = new(StringComparer.OrdinalIgnoreCase);
+
+        internal AppSettingsService AppSettingsService => _appSettingsService;
 
         public event Action? DataLoaded;
 
@@ -180,28 +188,28 @@ namespace Win11DesktopApp.ViewModels
 
         public bool ShowStatPaid
         {
-            get => App.AppSettingsService?.Settings?.ShowStatPaid ?? false;
-            set { var s = App.AppSettingsService?.Settings; if (s != null) s.ShowStatPaid = value; App.AppSettingsService?.SaveSettings(); OnPropertyChanged(nameof(ShowStatPaid)); }
+            get => _appSettingsService.Settings.ShowStatPaid;
+            set { _appSettingsService.Settings.ShowStatPaid = value; _appSettingsService.SaveSettings(); OnPropertyChanged(nameof(ShowStatPaid)); }
         }
         public bool ShowStatRemaining
         {
-            get => App.AppSettingsService?.Settings?.ShowStatRemaining ?? false;
-            set { var s = App.AppSettingsService?.Settings; if (s != null) s.ShowStatRemaining = value; App.AppSettingsService?.SaveSettings(); OnPropertyChanged(nameof(ShowStatRemaining)); }
+            get => _appSettingsService.Settings.ShowStatRemaining;
+            set { _appSettingsService.Settings.ShowStatRemaining = value; _appSettingsService.SaveSettings(); OnPropertyChanged(nameof(ShowStatRemaining)); }
         }
         public bool ShowStatAdvances
         {
-            get => App.AppSettingsService?.Settings?.ShowStatAdvances ?? false;
-            set { var s = App.AppSettingsService?.Settings; if (s != null) s.ShowStatAdvances = value; App.AppSettingsService?.SaveSettings(); OnPropertyChanged(nameof(ShowStatAdvances)); }
+            get => _appSettingsService.Settings.ShowStatAdvances;
+            set { _appSettingsService.Settings.ShowStatAdvances = value; _appSettingsService.SaveSettings(); OnPropertyChanged(nameof(ShowStatAdvances)); }
         }
         public bool ShowStatCustomAdd
         {
-            get => App.AppSettingsService?.Settings?.ShowStatCustomAdd ?? false;
-            set { var s = App.AppSettingsService?.Settings; if (s != null) s.ShowStatCustomAdd = value; App.AppSettingsService?.SaveSettings(); OnPropertyChanged(nameof(ShowStatCustomAdd)); }
+            get => _appSettingsService.Settings.ShowStatCustomAdd;
+            set { _appSettingsService.Settings.ShowStatCustomAdd = value; _appSettingsService.SaveSettings(); OnPropertyChanged(nameof(ShowStatCustomAdd)); }
         }
         public bool ShowStatCustomSub
         {
-            get => App.AppSettingsService?.Settings?.ShowStatCustomSub ?? false;
-            set { var s = App.AppSettingsService?.Settings; if (s != null) s.ShowStatCustomSub = value; App.AppSettingsService?.SaveSettings(); OnPropertyChanged(nameof(ShowStatCustomSub)); }
+            get => _appSettingsService.Settings.ShowStatCustomSub;
+            set { _appSettingsService.Settings.ShowStatCustomSub = value; _appSettingsService.SaveSettings(); OnPropertyChanged(nameof(ShowStatCustomSub)); }
         }
 
         private bool _isStatsSettingsOpen;
@@ -283,10 +291,24 @@ namespace Win11DesktopApp.ViewModels
             int FromYear,
             int FromMonth);
 
-        public SalaryViewModel()
+        public SalaryViewModel(
+            NavigationService? navigationService = null,
+            FinanceService? financeService = null,
+            EmployeeService? employeeService = null,
+            AppSettingsService? appSettingsService = null,
+            ActivityLogService? activityLogService = null,
+            EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
+            DocumentLocalizationService? documentLocalizationService = null,
+            CompanyService? companyService = null)
         {
-            _financeService = App.FinanceService;
-            _employeeService = App.EmployeeService;
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
 
             _selectedYear = DateTime.Now.Year;
             _selectedMonth = DateTime.Now.Month;
@@ -300,7 +322,7 @@ namespace Win11DesktopApp.ViewModels
             GoBackCommand = new AsyncRelayCommand(async o =>
             {
                 if (await SaveReportAsync())
-                    App.NavigationService?.NavigateTo(new FinanceTablesViewModel());
+                    _navigationService.NavigateTo<FinanceTablesViewModel>();
             });
             SaveCommand = new AsyncRelayCommand(async o => await SaveReportAsync());
             ExportExcelCommand = new RelayCommand(o => ExportToExcel());
@@ -353,8 +375,13 @@ namespace Win11DesktopApp.ViewModels
             var date = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(delta);
             try
             {
-                var (testEntries, _) = await Task.Run(() =>
-                    _financeService.LoadAllFirmPayments(date.Year, date.Month)).ConfigureAwait(true);
+                var monthResult = await Task.Run(() =>
+                    _financeService.TryLoadAllFirmPayments(date.Year, date.Month)).ConfigureAwait(true);
+
+                if (!monthResult.success)
+                    return;
+
+                var testEntries = monthResult.entries;
 
                 if (delta > 0 && testEntries.Count == 0)
                     return;
@@ -395,6 +422,16 @@ namespace Win11DesktopApp.ViewModels
                 identity = FolderKey(employeeFolder ?? string.Empty);
 
             return identity + "|" + (firmName ?? string.Empty);
+        }
+
+        internal static bool ShouldResaveWhenCanonicalSavedEntryDuplicates(HashSet<string> existingKeys, string key)
+        {
+            return existingKeys.Contains(key);
+        }
+
+        internal static bool ShouldReplaceFirmExpenseForSelectedFirm(string? expenseFirmName, string? selectedFirmFilter)
+        {
+            return string.Equals(expenseFirmName, selectedFirmFilter, StringComparison.OrdinalIgnoreCase);
         }
 
         private bool MatchesSalaryEntry(SalaryEntry existingEntry, string? employeeId, string employeeFolder, string firmName)
@@ -532,7 +569,7 @@ namespace Win11DesktopApp.ViewModels
             var year = _selectedYear;
             var month = _selectedMonth;
             var monthEnd = new DateTime(year, month, 1).AddMonths(1).AddDays(-1);
-            var companyService = App.CompanyService;
+            var companyService = _companyService;
             var companiesSnapshot = companyService?.Companies?
                 .Where(c => companyService.IsCompanyVisibleForPeriod(c, year, month))
                 .ToList()
@@ -678,7 +715,8 @@ namespace Win11DesktopApp.ViewModels
             int prevYear = month == 1 ? year - 1 : year;
             int prevMonth = month == 1 ? 12 : month - 1;
             var prevMonthSw = Stopwatch.StartNew();
-            var (prevEntries, _) = _financeService.LoadAllFirmPayments(prevYear, prevMonth);
+            var prevMonthResult = _financeService.TryLoadAllFirmPayments(prevYear, prevMonth);
+            var prevEntries = prevMonthResult.success ? prevMonthResult.entries : new List<SalaryEntry>();
             timing.PrevMonthMs = prevMonthSw.ElapsedMilliseconds;
             timing.PrevEntriesCount = prevEntries.Count;
             var prevNotes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -688,7 +726,8 @@ namespace Win11DesktopApp.ViewModels
 
             // Load saved payments
             var currentMonthSw = Stopwatch.StartNew();
-            var (sharedEntries, _) = _financeService.LoadAllFirmPayments(year, month);
+            var currentMonthResult = _financeService.TryLoadAllFirmPayments(year, month);
+            var sharedEntries = currentMonthResult.success ? currentMonthResult.entries : new List<SalaryEntry>();
             timing.CurrentMonthMs = currentMonthSw.ElapsedMilliseconds;
             timing.SharedEntriesCount = sharedEntries.Count;
 
@@ -719,7 +758,11 @@ namespace Win11DesktopApp.ViewModels
                     continue;
                 }
 
-                if (existingKeys.Contains(key)) continue;
+                if (ShouldResaveWhenCanonicalSavedEntryDuplicates(existingKeys, key))
+                {
+                    needResave = true;
+                    continue;
+                }
 
                 entry.FieldDefinitions = fieldList;
                 entry.RecalcNet();
@@ -834,7 +877,7 @@ namespace Win11DesktopApp.ViewModels
                     return data.UniqueId;
             }
 
-            var companiesForResolve = App.CompanyService?.Companies;
+            var companiesForResolve = _companyService.Companies;
             if (companiesForResolve != null)
             {
                 foreach (var company in companiesForResolve)
@@ -952,7 +995,7 @@ namespace Win11DesktopApp.ViewModels
             var fieldList = ActiveCustomFields.ToList();
             var initMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
 
-            var companyService = App.CompanyService;
+            var companyService = _companyService;
             var companiesInit = companyService?.Companies?
                 .Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
                 .ToList();
@@ -1029,7 +1072,7 @@ namespace Win11DesktopApp.ViewModels
             var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var nextMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
-            var companyService = App.CompanyService;
+            var companyService = _companyService;
             var companiesCreate = companyService?.Companies?
                 .Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
                 .ToList();
@@ -1364,7 +1407,12 @@ namespace Win11DesktopApp.ViewModels
             for (int i = 0; i < 24; i++) // max 24 months forward
             {
                 token.ThrowIfCancellationRequested();
-                var (futureEntries, futureExpenses) = _financeService.LoadAllFirmPayments(date.Year, date.Month);
+                var futureMonthResult = _financeService.TryLoadAllFirmPayments(date.Year, date.Month);
+                if (!futureMonthResult.success)
+                    break;
+
+                var futureEntries = futureMonthResult.entries;
+                var futureExpenses = futureMonthResult.expenses;
                 if (futureEntries.Count == 0) break;
 
                 CanonicalizeSalaryEntriesForPropagation(futureEntries);
@@ -1425,7 +1473,7 @@ namespace Win11DesktopApp.ViewModels
 
         private void CanonicalizeSalaryEntriesForPropagation(List<SalaryEntry> entries)
         {
-            var companyService = App.CompanyService;
+            var companyService = _companyService;
             var companies = companyService?.Companies?.ToList() ?? new List<EmployerCompany>();
             var employeesSnapshot = BuildEmployeesSnapshot(companies);
 
@@ -1492,7 +1540,7 @@ namespace Win11DesktopApp.ViewModels
             };
             _financeService.AddAdvance(advance);
 
-            App.ActivityLogService?.Log("AdvanceAdded", "Advance", target.FirmName, target.FullName,
+            _activityLogService.Log("AdvanceAdded", "Advance", target.FirmName, target.FullName,
                 $"Аванс {amount:N0} Kč → {target.FullName} ({target.FirmName})",
                 "", amount.ToString("N0"),
                 employeeFolder: target.EmployeeFolder);
@@ -1638,7 +1686,7 @@ namespace Win11DesktopApp.ViewModels
             _financeService.RemoveAdvance(advanceId);
             RefreshAdvanceSums();
             if (!string.IsNullOrEmpty(employeeName))
-                App.ActivityLogService?.Log("AdvanceDeleted", "Advance", firmName, employeeName,
+                _activityLogService.Log("AdvanceDeleted", "Advance", firmName, employeeName,
                     $"Видалено аванс {amount:N0} Kč ← {employeeName} ({firmName})");
         }
 
@@ -1698,7 +1746,7 @@ namespace Win11DesktopApp.ViewModels
                 .Select(g => (firmName: g.Key, count: g.Count()))
                 .ToList();
 
-            var selectDialog = new Views.ExportFirmSelectWindow(firmData);
+            var selectDialog = new Views.ExportFirmSelectWindow(firmData, _appSettingsService);
             selectDialog.Owner = Application.Current.MainWindow;
             if (selectDialog.ShowDialog() != true) return;
 
@@ -1754,7 +1802,7 @@ namespace Win11DesktopApp.ViewModels
                 wb.SaveAs(dlg.FileName);
                 StatusMessage = L("FinSalaryExported") is string ex && ex.Length > 0 ? ex : "Exported!";
                 ToastService.Instance.Success(StatusMessage);
-                App.ActivityLogService?.Log("ExportExcel", "Export", "", "",
+                _activityLogService.Log("ExportExcel", "Export", "", "",
                     $"Експортовано виплату {MonthDisplay} → Excel",
                     details: BuildSalaryExportDetails(selectedFirms, exportEntries, fields, dlg.FileName));
             }
@@ -2295,7 +2343,7 @@ namespace Win11DesktopApp.ViewModels
             await SaveReportAsync();
 
             var firmNames = VisibleEntries().Select(e => e.FirmName).Distinct().ToList();
-            App.ActivityLogService?.Log("MonthPaid", "Salary", string.Join(", ", firmNames), "",
+            _activityLogService.Log("MonthPaid", "Salary", string.Join(", ", firmNames), "",
                 $"Позначено оплачено: {MonthDisplay} ({VisibleEntries().Count()} працівників)");
         }
 
@@ -2370,7 +2418,7 @@ namespace Win11DesktopApp.ViewModels
                 return FirmExpenses.ToList();
 
             var monthExpenses = _financeService.GetFirmExpenses(year, month)
-                .Where(expense => !string.Equals(expense.FirmName, _selectedFirmFilter, StringComparison.Ordinal))
+                .Where(expense => !ShouldReplaceFirmExpenseForSelectedFirm(expense.FirmName, _selectedFirmFilter))
                 .ToList();
             monthExpenses.AddRange(FirmExpenses.ToList());
             return monthExpenses;
@@ -2404,7 +2452,7 @@ namespace Win11DesktopApp.ViewModels
 
             if (EmployeeDetailsVm != null)
                 EmployeeDetailsVm.RequestClose -= OnSalaryDetailsClose;
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(entry.FirmName, resolvedFolder, _employeeService);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(entry.FirmName, resolvedFolder, _employeeService);
             EmployeeDetailsVm.RequestClose += OnSalaryDetailsClose;
             IsEmployeeDetailsOpen = true;
         }
@@ -2415,9 +2463,9 @@ namespace Win11DesktopApp.ViewModels
             catch { return null; }
         }
 
-        private static string? DocL(string key)
+        private string? DocL(string key)
         {
-            try { return App.DocumentLocalizationService?.Get(key) ?? L(key); }
+            try { return _documentLocalizationService.Get(key) ?? L(key); }
             catch { return L(key); }
         }
     }

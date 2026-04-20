@@ -87,15 +87,13 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var financeService = App.FinanceService;
-                if (financeService == null) return;
-                var records = financeService.LoadSalaryHistory(_employeeFolder);
+                var records = _financeService.LoadSalaryHistory(_employeeFolder);
                 SalaryHistoryEntries = new ObservableCollection<SalaryHistoryRecord>(records);
                 HasSalaryHistory = SalaryHistoryEntries.Count > 0;
                 TotalSalaryEarned = records.Sum(r => r.NetSalary);
                 TotalHoursAll = records.Sum(r => r.HoursWorked);
 
-                var advances = financeService.GetAllAdvancesForEmployee(_employeeFolder);
+                var advances = _financeService.GetAllAdvancesForEmployee(_employeeFolder);
                 HasAdvances = advances.Count > 0;
                 TotalAdvances = advances.Sum(a => a.Amount);
 
@@ -183,7 +181,7 @@ namespace Win11DesktopApp.ViewModels
             void Check(string field, string oldVal, string newVal)
             {
                 if (string.Equals(oldVal, newVal, StringComparison.Ordinal)) return;
-                App.ActivityLogService?.Log("ProfileChanged", "Employee", _firmName, FullName,
+                _activityLogService.Log("ProfileChanged", "Employee", _firmName, FullName,
                     $"{FullName}: {field}: {oldVal} → {newVal}", oldVal ?? "", newVal ?? "",
                     employeeFolder: _employeeFolder);
             }
@@ -222,13 +220,13 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldStartDate"), oldData.StartDate, newData.StartDate);
 
             if (oldData.MonthlySalaryBrutto != newData.MonthlySalaryBrutto)
-                App.ActivityLogService?.Log("SalaryChanged", "Salary", _firmName, FullName,
+                _activityLogService.Log("SalaryChanged", "Salary", _firmName, FullName,
                     $"{FullName}: зарплата {oldData.MonthlySalaryBrutto} → {newData.MonthlySalaryBrutto}",
                     oldData.MonthlySalaryBrutto.ToString(), newData.MonthlySalaryBrutto.ToString(),
                     employeeFolder: _employeeFolder);
 
             if (oldData.HourlySalary != newData.HourlySalary)
-                App.ActivityLogService?.Log("RateChanged", "Salary", _firmName, FullName,
+                _activityLogService.Log("RateChanged", "Salary", _firmName, FullName,
                     $"{FullName}: ставка змінена {oldData.HourlySalary} → {newData.HourlySalary}",
                     oldData.HourlySalary.ToString(), newData.HourlySalary.ToString(),
                     employeeFolder: _employeeFolder);

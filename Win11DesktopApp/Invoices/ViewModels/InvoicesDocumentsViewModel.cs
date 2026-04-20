@@ -38,7 +38,9 @@ public sealed class InvoiceYearFilterOption
 public sealed class InvoicesDocumentsViewModel : ViewModelBase
 {
     private readonly InvoicePdfRenderService _pdfRenderService;
+    private readonly NavigationService _navigationService;
     private readonly InvoiceStorageService _storageService;
+    private readonly InvoiceViewModelFactory _invoiceViewModelFactory;
     private readonly Action? _onDocumentsChanged;
     private List<InvoiceDocumentSummary> _allDocuments = new();
     private ObservableCollection<InvoiceDocumentSummary> _documents = new();
@@ -52,11 +54,18 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
     private DateTime? _dateFrom;
     private DateTime? _dateTo;
 
-    public InvoicesDocumentsViewModel(InvoiceStorageService storageService, Action? onDocumentsChanged = null)
+    public InvoicesDocumentsViewModel(
+        InvoiceStorageService storageService,
+        InvoicePdfRenderService pdfRenderService,
+        NavigationService navigationService,
+        InvoiceViewModelFactory invoiceViewModelFactory,
+        Action? onDocumentsChanged = null)
     {
-        _storageService = storageService;
+        _storageService = storageService ?? throw new InvalidOperationException("InvoiceStorageService is not initialized.");
         _onDocumentsChanged = onDocumentsChanged;
-        _pdfRenderService = App.InvoicePdfRenderService;
+        _pdfRenderService = pdfRenderService ?? throw new InvalidOperationException("InvoicePdfRenderService is not initialized.");
+        _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+        _invoiceViewModelFactory = invoiceViewModelFactory ?? throw new InvalidOperationException("InvoiceViewModelFactory is not initialized.");
 
         DocumentTabs = new ObservableCollection<InvoiceDocumentListTabOption>
         {
@@ -367,7 +376,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
             : InvoiceDocumentType.Invoice;
 
         var document = _storageService.CreateDocument(type);
-        App.NavigationService?.NavigateTo(new InvoiceEditorViewModel(document.Id, _storageService));
+        _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoiceEditor(document.Id));
     }
 
     private void OpenDocument(object? parameter)
@@ -375,7 +384,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
         if (parameter is not InvoiceDocumentSummary summary)
             return;
 
-        App.NavigationService?.NavigateTo(new InvoiceEditorViewModel(summary.Id, _storageService));
+        _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoiceEditor(summary.Id));
     }
 
     private void PreviewDocument(object? parameter)
@@ -426,7 +435,7 @@ public sealed class InvoicesDocumentsViewModel : ViewModelBase
         ToastService.Instance.Success(string.Format(Res("InvoicesDuplicateSuccess"), clone.Number));
         _onDocumentsChanged?.Invoke();
         LoadDocuments();
-        App.NavigationService?.NavigateTo(new InvoiceEditorViewModel(clone.Id, _storageService));
+        _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoiceEditor(clone.Id));
     }
 
     private void MoveToTrash(object? parameter)

@@ -1306,6 +1306,7 @@
     <sys:String x:Key="TagDescEmpContractType">Тип договору</sys:String>
     <sys:String x:Key="TagDescEmpDepartment">Відділ</sys:String>
     <sys:String x:Key="TagDescEmpStartDate">Дата наступу на роботу</sys:String>
+    <sys:String x:Key="TagDescEmpEndDate">Дата закінчення роботи</sys:String>
     <sys:String x:Key="TagDescEmpSignDate">Дата підписання договору</sys:String>
 
     <!-- Template Editor ViewModel -->

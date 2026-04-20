@@ -13,7 +13,13 @@ namespace Win11DesktopApp.ViewModels
 {
     public class TemplatesViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
         private readonly TemplateService _templateService;
+        private readonly TemplateViewModelFactory _templateViewModelFactory;
+        private readonly ActivityLogService _activityLogService;
+        private readonly CompanyService _companyService;
+        private readonly TagCatalogService _tagCatalogService;
+        private readonly AppSettingsService _appSettingsService;
         private int _loadGeneration;
         private ObservableCollection<TemplateEntry> _templates = new ObservableCollection<TemplateEntry>();
         public ObservableCollection<TemplateEntry> Templates
@@ -120,9 +126,23 @@ namespace Win11DesktopApp.ViewModels
 
         private string _pendingTemplateFilePath = string.Empty;
 
-        public TemplatesViewModel(EmployerCompany? company, TemplateService? templateService = null)
+        public TemplatesViewModel(
+            EmployerCompany? company,
+            TemplateService? templateService = null,
+            NavigationService? navigationService = null,
+            TemplateViewModelFactory? templateViewModelFactory = null,
+            ActivityLogService? activityLogService = null,
+            CompanyService? companyService = null,
+            TagCatalogService? tagCatalogService = null,
+            AppSettingsService? appSettingsService = null)
         {
-            _templateService = templateService ?? App.TemplateService;
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
+            _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
 
             if (company == null)
             {
@@ -134,7 +154,7 @@ namespace Win11DesktopApp.ViewModels
                 _ = LoadTemplatesAsync();
             }
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
 
             AddTemplateCommand = new RelayCommand(o =>
             {
@@ -142,7 +162,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 CleanupAddTemplateVm();
-                AddTemplateVm = new AddTemplateViewModel(_firmName);
+                AddTemplateVm = _templateViewModelFactory.CreateAddTemplate(_firmName);
                 AddTemplateVm.RequestClose += OnAddTemplateClose;
                 IsAddDialogOpen = true;
             });
@@ -160,7 +180,7 @@ namespace Win11DesktopApp.ViewModels
                     if (format == "DOCX")
                     {
                         // DOCX may not have a source file — editor handles this gracefully
-                        App.NavigationService?.NavigateTo(new TemplateEditorViewModel(_firmName, template));
+                        _navigationService.NavigateTo(_templateViewModelFactory.CreateTemplateEditor(_firmName, template));
                     }
                     else if (format == "XLSX")
                     {
@@ -169,7 +189,7 @@ namespace Win11DesktopApp.ViewModels
                             MessageBox.Show(GetString("MsgTemplateNotFound") ?? "Template not found.", GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
-                        App.NavigationService?.NavigateTo(new XlsxEditorViewModel(_firmName, template));
+                        _navigationService.NavigateTo(_templateViewModelFactory.CreateXlsxEditor(_firmName, template));
                     }
                     else if (format == "PDF")
                     {
@@ -178,7 +198,7 @@ namespace Win11DesktopApp.ViewModels
                             MessageBox.Show(GetString("MsgTemplateNotFound") ?? "Template not found.", GetString("TitleError") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
-                        App.NavigationService?.NavigateTo(new PdfEditorViewModel(_firmName, template));
+                        _navigationService.NavigateTo(_templateViewModelFactory.CreatePdfEditor(_firmName, template));
                     }
                     else
                     {
@@ -216,7 +236,7 @@ namespace Win11DesktopApp.ViewModels
                             var tName = template.Name;
                             await _templateService.DeleteTemplateAsync(_firmName, template);
                             Templates.Remove(template);
-                            App.ActivityLogService?.Log("TemplateDeleted", "Template", _firmName, "",
+                            _activityLogService.Log("TemplateDeleted", "Template", _firmName, "",
                                 $"Видалено шаблон «{tName}» з {_firmName}");
                         }
                         catch (System.Exception ex)
@@ -262,7 +282,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     var oldName = _renamingTemplate.Name;
                     _templateService.RenameTemplate(_firmName, _renamingTemplate, newName);
-                    App.ActivityLogService?.Log("TemplateRenamed", "Template", _firmName, "",
+                    _activityLogService.Log("TemplateRenamed", "Template", _firmName, "",
                         $"Перейменовано шаблон «{oldName}» → «{newName}» ({_firmName})",
                         oldName, newName);
                     IsRenameDialogOpen = false;
@@ -288,10 +308,10 @@ namespace Win11DesktopApp.ViewModels
                 if (o is not TemplateEntry template)
                     return;
 
-                var companies = App.CompanyService?.Companies?
+                var companies = _companyService.Companies
                     .Where(c => !string.Equals(c.Name, _firmName, System.StringComparison.OrdinalIgnoreCase))
                     .OrderBy(c => c.Name)
-                    .ToList() ?? new List<EmployerCompany>();
+                    .ToList();
 
                 if (companies.Count == 0)
                 {
@@ -338,7 +358,7 @@ namespace Win11DesktopApp.ViewModels
                 try
                 {
                     var created = _templateService.CopyTemplateToCompany(_firmName, _copyingTemplate, SelectedCopyTargetCompany.Name, targetName);
-                    App.ActivityLogService?.Log(
+                    _activityLogService.Log(
                         "TemplateCopiedToCompany",
                         "Template",
                         SelectedCopyTargetCompany.Name,
@@ -432,8 +452,8 @@ namespace Win11DesktopApp.ViewModels
 
         private void LoadAvailableTags()
         {
-            var tags = App.TagCatalogService?.GetAllTagDefinitions() ?? new List<TagEntry>();
-            var hiddenTags = App.AppSettingsService?.Settings?.HiddenTags;
+            var tags = _tagCatalogService.GetAllTagDefinitions() ?? new List<TagEntry>();
+            var hiddenTags = _appSettingsService.Settings?.HiddenTags;
             if (hiddenTags != null && hiddenTags.Count > 0)
             {
                 var hidden = new HashSet<string>(hiddenTags);

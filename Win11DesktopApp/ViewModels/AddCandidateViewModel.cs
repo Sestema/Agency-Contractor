@@ -17,6 +17,7 @@ namespace Win11DesktopApp.ViewModels
     {
         private readonly CandidateService _service;
         private readonly EmployeeService _employeeService;
+        private readonly ActivityLogService _activityLogService;
         private readonly string _tempFolder;
 
         public event Action? RequestClose;
@@ -155,10 +156,14 @@ namespace Win11DesktopApp.ViewModels
         public ICommand RotateRightCommand { get; }
         public ICommand EnhanceDocumentCommand { get; }
 
-        public AddCandidateViewModel()
+        public AddCandidateViewModel(
+            CandidateService? candidateService = null,
+            EmployeeService? employeeService = null,
+            ActivityLogService? activityLogService = null)
         {
-            _service = App.CandidateService;
-            _employeeService = App.EmployeeService;
+            _service = candidateService ?? throw new InvalidOperationException("CandidateService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _tempFolder = _employeeService.CreateTempFolder();
 
             var positions = _service.GetAllPositions();
@@ -242,7 +247,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            App.ActivityLogService?.Log("CandidateAdded", "Candidate", "",
+            _activityLogService.Log("CandidateAdded", "Candidate", "",
                 $"{Data.FirstName} {Data.LastName}",
                 $"{Data.FirstName} {Data.LastName} ({Data.DesiredPosition})");
 

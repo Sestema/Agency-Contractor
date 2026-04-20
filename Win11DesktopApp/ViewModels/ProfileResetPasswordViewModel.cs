@@ -8,6 +8,7 @@ namespace Win11DesktopApp.ViewModels
 {
     public sealed class ProfileResetPasswordViewModel : ViewModelBase
     {
+        private readonly LanguageService _languageService;
         private readonly ProfileAuthService _profileAuthService;
         private readonly ClientProfileRecord _profile;
 
@@ -49,7 +50,7 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _currentLanguage, value))
-                    LanguageService.SetLanguage(value);
+                    _languageService.SetLanguage(value);
             }
         }
 
@@ -65,11 +66,17 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isBusy, value);
         }
 
-        public ProfileResetPasswordViewModel(ProfileAuthService profileAuthService, ClientProfileRecord profile)
+        public ProfileResetPasswordViewModel(
+            LanguageService languageService,
+            ProfileAuthService profileAuthService,
+            ClientProfileRecord profile,
+            AppSettingsService appSettingsService)
         {
+            _languageService = languageService ?? throw new InvalidOperationException("LanguageService is not initialized.");
+            var settingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
             _profileAuthService = profileAuthService;
             _profile = profile;
-            _currentLanguage = App.AppSettingsService?.Settings.LanguageCode ?? "uk";
+            _currentLanguage = settingsService.Settings.LanguageCode ?? "uk";
 
             ResetPasswordCommand = new AsyncRelayCommand(_ => ResetPasswordAsync(), _ => !IsBusy);
             CancelCommand = new RelayCommand(_ => RequestClose?.Invoke(false, null), _ => !IsBusy);

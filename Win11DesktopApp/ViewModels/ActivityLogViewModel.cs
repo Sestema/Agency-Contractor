@@ -25,7 +25,13 @@ namespace Win11DesktopApp.ViewModels
 
     public class ActivityLogViewModel : ViewModelBase
     {
+        private readonly NavigationService _navigationService;
         private readonly ActivityLogService _logService;
+        private readonly RecentlyDeletedService _recentlyDeletedService;
+        private readonly EmployeeService _employeeService;
+        private readonly ProfileAuthService _profileAuthService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
+        private readonly CurrentProfileService _currentProfileService;
         private List<ActivityLogEntry> _allEntries = new();
         private HashSet<string> _undoableArchiveOperationIds = new(StringComparer.OrdinalIgnoreCase);
 
@@ -115,15 +121,28 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _employeeDetailsVm, value);
         }
 
-        public ActivityLogViewModel()
+        public ActivityLogViewModel(
+            ActivityLogService? activityLogService = null,
+            NavigationService? navigationService = null,
+            RecentlyDeletedService? recentlyDeletedService = null,
+            EmployeeService? employeeService = null,
+            ProfileAuthService? profileAuthService = null,
+            EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
+            CurrentProfileService? currentProfileService = null)
         {
-            _logService = App.ActivityLogService;
+            _logService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _recentlyDeletedService = recentlyDeletedService ?? throw new InvalidOperationException("RecentlyDeletedService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _profileAuthService = profileAuthService ?? throw new InvalidOperationException("ProfileAuthService is not initialized.");
+            _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
+            _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
 
             GroupedEntries = CollectionViewSource.GetDefaultView(Entries);
             GroupedEntries.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ActivityLogEntry.Timestamp),
                 new DateGroupConverter()));
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             ClearFilterCommand = new RelayCommand(o =>
             {
                 SearchText = "";
@@ -170,7 +189,7 @@ namespace Win11DesktopApp.ViewModels
 
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
             {
-                var recentlyDeleted = App.RecentlyDeletedService?.FindItem(entry.EmployeeFolder, entry.FirmName, entry.EmployeeName);
+                var recentlyDeleted = _recentlyDeletedService.FindItem(entry.EmployeeFolder, entry.FirmName, entry.EmployeeName);
                 if (recentlyDeleted != null && Directory.Exists(recentlyDeleted.DeletedEmployeeFolder))
                 {
                     folder = recentlyDeleted.DeletedEmployeeFolder;
@@ -196,7 +215,10 @@ namespace Win11DesktopApp.ViewModels
             }
 
             CleanupDetailsVm();
-            EmployeeDetailsVm = new EmployeeDetailsViewModel(firmName, folder, employeeService: null, isReadOnlyMode: isReadOnlyPreview);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(
+                firmName,
+                folder,
+                isReadOnlyMode: isReadOnlyPreview);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
@@ -222,13 +244,13 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!string.IsNullOrEmpty(firmName))
                 {
-                    var employees = App.EmployeeService.GetEmployeesForFirm(firmName);
+                    var employees = _employeeService.GetEmployeesForFirm(firmName);
                     var match = employees.FirstOrDefault(e => e.FullName == employeeName);
                     if (match != null && Directory.Exists(match.EmployeeFolder))
                         return (match.EmployeeFolder, firmName);
                 }
 
-                var archived = App.EmployeeService.GetArchivedEmployees();
+                var archived = _employeeService.GetArchivedEmployees();
                 var archiveMatch = archived.FirstOrDefault(a => a.FullName == employeeName
                     && (string.IsNullOrEmpty(firmName) || a.FirmName == firmName));
                 if (archiveMatch != null && Directory.Exists(archiveMatch.EmployeeFolder))
@@ -245,7 +267,7 @@ namespace Win11DesktopApp.ViewModels
         private void LoadEntries()
         {
             _allEntries = _logService.GetAll();
-            _undoableArchiveOperationIds = App.EmployeeService.LoadArchiveLog()
+            _undoableArchiveOperationIds = _employeeService.LoadArchiveLog()
                 .Where(entry =>
                     string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
                     && !entry.IsReverted
@@ -361,7 +383,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            var currentProfile = App.CurrentProfile;
+            var currentProfile = _currentProfileService.CurrentProfile;
             if (currentProfile == null || string.IsNullOrWhiteSpace(currentProfile.ClientId))
             {
                 MessageBox.Show(
@@ -379,7 +401,7 @@ namespace Win11DesktopApp.ViewModels
             if (passwordWindow.ShowDialog() != true || !passwordWindow.IsConfirmed)
                 return;
 
-            var authResult = await App.ProfileAuthService.AuthenticateAsync(currentProfile.ClientId, passwordWindow.EnteredPassword);
+            var authResult = await _profileAuthService.AuthenticateAsync(currentProfile.ClientId, passwordWindow.EnteredPassword);
             if (!authResult.Success)
             {
                 MessageBox.Show(
@@ -398,7 +420,7 @@ namespace Win11DesktopApp.ViewModels
             if (confirm != MessageBoxResult.Yes)
                 return;
 
-            var result = await App.EmployeeService.UndoArchiveAsync(entry.RelatedOperationId);
+            var result = await _employeeService.UndoArchiveAsync(entry.RelatedOperationId);
             if (!result.Success)
             {
                 MessageBox.Show(
@@ -409,7 +431,7 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            App.ActivityLogService?.Log(
+            _logService.Log(
                 "ArchiveUndone",
                 "Archive",
                 entry.FirmName,

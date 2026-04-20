@@ -20,6 +20,7 @@ namespace Win11DesktopApp.Services
         private readonly AppSettingsService _appSettingsService;
         private readonly PersistenceService _persistenceService;
         private readonly FolderService _folderService;
+        private AdminMirrorSyncService? _adminMirrorSyncService;
         private EmployerCompany? _selectedCompany;
 
         public ObservableCollection<EmployerCompany> Companies => _companies;
@@ -131,6 +132,11 @@ namespace Win11DesktopApp.Services
             ApplySavedSelection();
         }
 
+        internal void InitializeAdminMirrorSyncService(AdminMirrorSyncService adminMirrorSyncService)
+        {
+            _adminMirrorSyncService = adminMirrorSyncService ?? throw new InvalidOperationException("AdminMirrorSyncService is not initialized.");
+        }
+
         private static bool HasHideSchedule(EmployerCompany company)
             => company.HiddenFromYear > 0 && company.HiddenFromMonth is >= 1 and <= 12;
 
@@ -192,7 +198,7 @@ namespace Win11DesktopApp.Services
             _tagCatalogService.AddTagsForCompany(employer, agency);
             _folderService.EnsureCompanyStructure(employer.Name);
             await _persistenceService.SaveCompaniesAsync(_companies);
-            App.AdminMirrorSyncService?.EnqueueEmployerUpsert(employer);
+            _adminMirrorSyncService?.EnqueueEmployerUpsert(employer);
             LoggingService.LogInfo("CompanyService", $"Company added: {employer.Name}");
             VisibilityChanged?.Invoke();
         }
@@ -215,7 +221,7 @@ namespace Win11DesktopApp.Services
                     _tagCatalogService.AddTagsForEmployerOnly(company);
 
                 await _persistenceService.SaveCompaniesAsync(_companies);
-                App.AdminMirrorSyncService?.EnqueueEmployerUpsert(company);
+                _adminMirrorSyncService?.EnqueueEmployerUpsert(company);
                 LoggingService.LogInfo("CompanyService", $"Company updated: {company.Name} (was: {oldName})");
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
                 VisibilityChanged?.Invoke();
@@ -245,7 +251,7 @@ namespace Win11DesktopApp.Services
                 {
                     LoggingService.LogWarning("CompanyService.DeleteCompany", $"Company deleted, but folder cleanup failed for {company.Name}.");
                 }
-                App.AdminMirrorSyncService?.EnqueueEmployerDelete(company);
+                _adminMirrorSyncService?.EnqueueEmployerDelete(company);
                 LoggingService.LogInfo("CompanyService", $"Company deleted: {company.Name}");
                 VisibilityChanged?.Invoke();
                 return true;

@@ -41,6 +41,8 @@ namespace Win11DesktopApp.ViewModels
     public class AddEmployeeWizardViewModel : ViewModelBase
     {
         private readonly EmployeeService _employeeService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly ActivityLogService _activityLogService;
         private readonly EmployerCompany _company;
         private readonly string _tempFolder;
         private CancellationTokenSource _cts = new();
@@ -730,10 +732,16 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _aiScanStatus, value);
         }
 
-        public AddEmployeeWizardViewModel(EmployerCompany company, EmployeeService? employeeService = null)
+        public AddEmployeeWizardViewModel(
+            EmployerCompany company,
+            EmployeeService? employeeService = null,
+            GeminiApiService? geminiApiService = null,
+            ActivityLogService? activityLogService = null)
         {
             _company = company;
-            _employeeService = employeeService ?? App.EmployeeService ?? throw new InvalidOperationException("EmployeeService is not available");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not available");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _tempFolder = _employeeService.CreateTempFolder();
 
             CompanyAddresses = company.Addresses;
@@ -757,7 +765,7 @@ namespace Win11DesktopApp.ViewModels
             EnhanceDocumentCommand = new RelayCommand(o => EnhanceCurrentDocument(), o => !IsCropPhotoMode);
             SetEuDocTypeCommand = new RelayCommand(o => EuDocumentType = o?.ToString() ?? "passport");
             AIScanDocumentCommand = new AsyncRelayCommand(_ => AIScanCurrentStepAsync(),
-                _ => !_isAIScanning && App.GeminiApiService?.IsConfigured == true);
+                _ => !_isAIScanning && _geminiApiService.IsConfigured);
             OpenCurrentPreviewFileCommand = new RelayCommand(_ => OpenCurrentPreviewFile());
             CarouselPrevCommand = new RelayCommand(o => CarouselPrev(), o => _selectedCarouselIndex > 0);
             CarouselNextCommand = new RelayCommand(o => CarouselNext(), o => _selectedCarouselIndex < CarouselItems.Count - 1);
@@ -1240,7 +1248,7 @@ namespace Win11DesktopApp.ViewModels
                     Description = string.Format(Res("HistoryDescCreated"), $"{Data.FirstName} {Data.LastName}")
                 });
 
-                App.ActivityLogService?.Log("EmployeeAdded", "Employee", _company.Name,
+                _activityLogService.Log("EmployeeAdded", "Employee", _company.Name,
                     $"{Data.FirstName} {Data.LastName}",
                     $"Додано працівника {Data.FirstName} {Data.LastName} до {_company.Name}",
                     employeeFolder: folder);
@@ -1299,7 +1307,7 @@ namespace Win11DesktopApp.ViewModels
         // ===== AI Document Scanning =====
         private async Task AIScanCurrentStepAsync()
         {
-            if (!(App.GeminiApiService?.IsConfigured ?? false))
+            if (!_geminiApiService.IsConfigured)
                 return;
 
             if (IsEuIdCard && (StepIndex == 2 || StepIndex == 4 || StepIndex == 8))
@@ -1341,9 +1349,9 @@ namespace Win11DesktopApp.ViewModels
                 var prompt = AIScanPrompts.GetPrompt(docKey);
                 string result;
                 if (docKey == "permit" && WorkPermitDoc != null && WorkPermitDoc.IsPdf && !string.IsNullOrEmpty(WorkPermitDoc.PdfPath) && File.Exists(WorkPermitDoc.PdfPath))
-                    result = await (App.GeminiApiService?.ChatWithFileAsync(WorkPermitDoc.PdfPath, prompt, null, token) ?? Task.FromResult(""));
+                    result = await _geminiApiService.ChatWithFileAsync(WorkPermitDoc.PdfPath, prompt, null, token);
                 else
-                    result = await (App.GeminiApiService?.ChatWithImageAsync(imagePath, prompt, null, token) ?? Task.FromResult(""));
+                    result = await _geminiApiService.ChatWithImageAsync(imagePath, prompt, null, token);
 
                 token.ThrowIfCancellationRequested();
 
@@ -1438,7 +1446,7 @@ namespace Win11DesktopApp.ViewModels
         private async Task<Dictionary<string, string>> ScanImageDocumentAsync(string docKey, string imagePath, CancellationToken token)
         {
             var prompt = AIScanPrompts.GetPrompt(docKey);
-            var result = await (App.GeminiApiService?.ChatWithImageAsync(imagePath, prompt, null, token) ?? Task.FromResult(""));
+            var result = await _geminiApiService.ChatWithImageAsync(imagePath, prompt, null, token);
             if (result.StartsWith("["))
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

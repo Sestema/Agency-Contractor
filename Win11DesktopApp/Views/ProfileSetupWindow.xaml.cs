@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -12,11 +11,11 @@ namespace Win11DesktopApp.Views
 
         public bool IsProfileCreated { get; private set; }
 
-        public ProfileSetupWindow(ProfileAuthService profileAuthService, string clientId)
+        public ProfileSetupWindow(ProfileSetupViewModel viewModel)
         {
             InitializeComponent();
 
-            _viewModel = new ProfileSetupViewModel(profileAuthService, clientId);
+            _viewModel = viewModel;
             _viewModel.RequestClose += OnRequestClose;
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             DataContext = _viewModel;

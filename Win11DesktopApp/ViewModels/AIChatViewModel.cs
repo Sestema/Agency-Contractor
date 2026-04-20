@@ -44,7 +44,9 @@ namespace Win11DesktopApp.ViewModels
     public class AIChatViewModel : ViewModelBase
     {
         private CancellationTokenSource? _cts;
-        private readonly ChatPersistenceService _chatService = new();
+        private readonly NavigationService _navigationService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly ChatPersistenceService _chatService;
         private ChatSession? _currentSession;
 
         private const string SystemPrompt =
@@ -178,14 +180,21 @@ CRITICAL RULES:
             set => SetProperty(ref _isTyping, value);
         }
 
-        public bool IsGeminiConfigured => App.GeminiApiService?.IsConfigured ?? false;
+        public bool IsGeminiConfigured => _geminiApiService.IsConfigured;
 
-        public AIChatViewModel()
+        public AIChatViewModel(
+            NavigationService navigationService,
+            GeminiApiService geminiApiService,
+            ChatPersistenceService chatPersistenceService)
         {
+            _navigationService = navigationService;
+            _geminiApiService = geminiApiService;
+            _chatService = chatPersistenceService;
+
             GoBackCommand = new RelayCommand(o =>
             {
                 SaveCurrentSession();
-                App.NavigationService.NavigateTo(new MainViewModel());
+                _navigationService.NavigateTo<MainViewModel>();
             });
 
             SendMessageCommand = new RelayCommand(async o => await SendMessage(), o => !IsBusy);
@@ -467,20 +476,20 @@ CRITICAL RULES:
             return history;
         }
 
-        private static async Task<string> ProcessMessageAsync(
+        private async Task<string> ProcessMessageAsync(
             string text, string? filePath, string systemPrompt,
             List<(string role, string text)>? history, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-                return await App.GeminiApiService.ChatWithHistoryAsync(history, text, systemPrompt, ct);
+                return await _geminiApiService.ChatWithHistoryAsync(history, text, systemPrompt, ct);
 
             var ext = Path.GetExtension(filePath).ToLowerInvariant();
 
             if (GeminiApiService.IsImageFile(filePath))
-                return await App.GeminiApiService.ChatWithImageAsync(filePath, text, systemPrompt, ct);
+                return await _geminiApiService.ChatWithImageAsync(filePath, text, systemPrompt, ct);
 
             if (ext == ".pdf")
-                return await App.GeminiApiService.ChatWithFileAsync(filePath, text, systemPrompt, ct);
+                return await _geminiApiService.ChatWithFileAsync(filePath, text, systemPrompt, ct);
 
             var docText = ext switch
             {
@@ -494,10 +503,10 @@ CRITICAL RULES:
                 var combined = $"The user attached a document ({Path.GetFileName(filePath)}). Here is the document content:\n\n" +
                                $"---DOCUMENT START---\n{docText}\n---DOCUMENT END---\n\n" +
                                $"User message: {text}";
-                return await App.GeminiApiService.ChatWithHistoryAsync(history, combined, systemPrompt, ct);
+                return await _geminiApiService.ChatWithHistoryAsync(history, combined, systemPrompt, ct);
             }
 
-            return await App.GeminiApiService.ChatWithHistoryAsync(history, text, systemPrompt, ct);
+            return await _geminiApiService.ChatWithHistoryAsync(history, text, systemPrompt, ct);
         }
 
         private static string ExtractXlsxText(string path)

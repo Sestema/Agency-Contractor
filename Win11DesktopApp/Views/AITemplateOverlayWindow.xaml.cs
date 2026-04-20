@@ -18,6 +18,7 @@ namespace Win11DesktopApp.Views
 
     public partial class AITemplateOverlayWindow : Window
     {
+        private readonly GeminiApiService _geminiApiService;
         private readonly ObservableCollection<OverlayMessage> _messages = new();
         private readonly List<(string role, string text)> _history = new();
         private Func<string?>? _getTemplateContent;
@@ -43,8 +44,9 @@ RULES:
 - Be concise — this is a small overlay chat
 - Remember everything discussed in this conversation";
 
-        public AITemplateOverlayWindow()
+        public AITemplateOverlayWindow(GeminiApiService geminiApiService)
         {
+            _geminiApiService = geminiApiService;
             InitializeComponent();
             MessagesList.ItemsSource = _messages;
 
@@ -168,7 +170,7 @@ RULES:
 
         private async Task SendToAI(string fullPrompt, string? displayMessage = null)
         {
-            if (!App.GeminiApiService.IsConfigured)
+            if (!_geminiApiService.IsConfigured)
             {
                 _messages.Add(new OverlayMessage { Text = Res("AIChatNoModel"), IsUser = false });
                 ScrollToEnd();
@@ -193,7 +195,7 @@ RULES:
                     ? _history.GetRange(0, _history.Count - 1)
                     : null;
 
-                var response = await App.GeminiApiService.ChatWithHistoryAsync(
+                var response = await _geminiApiService.ChatWithHistoryAsync(
                     historyForApi, fullPrompt, SystemPrompt, _cts.Token);
 
                 _history.Add(("model", response));

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using Win11DesktopApp.Invoices.Services;
+using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Invoices.ViewModels;
@@ -18,18 +19,26 @@ public enum InvoiceModuleSection
 
 public sealed class InvoicesViewModel : ViewModelBase
 {
+    private readonly NavigationService _navigationService;
     private readonly InvoiceStorageService _storageService;
+    private readonly InvoiceViewModelFactory _invoiceViewModelFactory;
     private InvoiceModuleSection _selectedSection;
 
-    public InvoicesViewModel(InvoiceStorageService? storageService = null, InvoiceModuleSection initialSection = InvoiceModuleSection.Dashboard)
+    public InvoicesViewModel(
+        InvoiceStorageService storageService,
+        NavigationService navigationService,
+        InvoiceViewModelFactory invoiceViewModelFactory,
+        InvoiceModuleSection initialSection = InvoiceModuleSection.Dashboard)
     {
-        _storageService = storageService ?? App.InvoiceStorageService;
+        _storageService = storageService ?? throw new InvalidOperationException("InvoiceStorageService is not initialized.");
+        _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+        _invoiceViewModelFactory = invoiceViewModelFactory ?? throw new InvalidOperationException("InvoiceViewModelFactory is not initialized.");
 
-        GoBackCommand = new RelayCommand(_ => App.NavigationService?.NavigateTo(new MainViewModel()));
+        GoBackCommand = new RelayCommand(_ => _navigationService.NavigateTo<MainViewModel>());
         OpenDashboardCommand = new RelayCommand(_ => OpenSection(InvoiceModuleSection.Dashboard));
 
-        DashboardSection = new InvoicesDashboardViewModel(_storageService, OpenSection, OpenEditor);
-        DocumentsSection = new InvoicesDocumentsViewModel(_storageService, RefreshSections);
+        DashboardSection = new InvoicesDashboardViewModel(_storageService, OpenSection, OpenEditor, OpenDocument);
+        DocumentsSection = new InvoicesDocumentsViewModel(_storageService, _invoiceViewModelFactory.PdfRenderService, _navigationService, _invoiceViewModelFactory, RefreshSections);
         CompaniesSection = new InvoicesPlaceholderSectionViewModel("InvoicesSectionCompanies", "InvoicesPlaceholderCompanies", "InvoicesPlaceholderCompaniesHint");
         CustomersSection = new InvoicesPlaceholderSectionViewModel("InvoicesSectionCustomers", "InvoicesPlaceholderCustomers", "InvoicesPlaceholderCustomersHint");
         ItemsSection = new InvoicesPlaceholderSectionViewModel("InvoicesSectionItems", "InvoicesPlaceholderItems", "InvoicesPlaceholderItemsHint");
@@ -109,7 +118,12 @@ public sealed class InvoicesViewModel : ViewModelBase
     private void OpenEditor(Models.InvoiceDocumentType type)
     {
         var document = _storageService.CreateDocument(type);
-        App.NavigationService?.NavigateTo(new InvoiceEditorViewModel(document.Id, _storageService));
+        OpenDocument(document.Id);
+    }
+
+    private void OpenDocument(string documentId)
+    {
+        _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoiceEditor(documentId));
     }
 
     private void RefreshSections()

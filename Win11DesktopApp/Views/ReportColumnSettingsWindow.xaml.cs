@@ -37,9 +37,11 @@ namespace Win11DesktopApp.Views
     public partial class ReportColumnSettingsWindow : Window
     {
         private readonly ObservableCollection<ReportColumnDisplayItem> _items = new();
+        private readonly ReportColumnLayoutService _reportColumnLayoutService;
 
-        public ReportColumnSettingsWindow()
+        public ReportColumnSettingsWindow(ReportColumnLayoutService reportColumnLayoutService)
         {
+            _reportColumnLayoutService = reportColumnLayoutService ?? throw new System.ArgumentNullException(nameof(reportColumnLayoutService));
             InitializeComponent();
             ColumnsList.DataContext = _items;
             LoadItems();
@@ -48,12 +50,12 @@ namespace Win11DesktopApp.Views
         private void LoadItems()
         {
             _items.Clear();
-            foreach (var col in ReportViewModel.GetEffectiveEmployeeColumns())
+            foreach (var col in _reportColumnLayoutService.GetEffectiveEmployeeColumns())
             {
                 _items.Add(new ReportColumnDisplayItem
                 {
                     Key = col.Key,
-                    DisplayName = TryL(ReportViewModel.GetEmployeeColumnHeaderResourceKey(col.Key)) ?? col.Key,
+                    DisplayName = TryL(_reportColumnLayoutService.GetEmployeeColumnHeaderResourceKey(col.Key)) ?? col.Key,
                     CanToggle = !string.Equals(col.Key, "name", System.StringComparison.OrdinalIgnoreCase),
                     IsVisible = string.Equals(col.Key, "name", System.StringComparison.OrdinalIgnoreCase) || col.IsVisible,
                     Width = col.Width
@@ -85,7 +87,7 @@ namespace Win11DesktopApp.Views
                 Width = item.Width
             });
 
-            ReportViewModel.SaveEmployeeColumnLayout(layout);
+            _reportColumnLayoutService.SaveEmployeeColumnLayout(layout);
         }
 
         private void MoveUp_Click(object sender, RoutedEventArgs e)
@@ -102,7 +104,7 @@ namespace Win11DesktopApp.Views
 
         private void Reset_Click(object sender, RoutedEventArgs e)
         {
-            ReportViewModel.ResetEmployeeColumnsToDefaults();
+            _reportColumnLayoutService.ResetEmployeeColumnsToDefaults();
             LoadItems();
         }
 

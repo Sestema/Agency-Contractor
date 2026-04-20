@@ -62,6 +62,8 @@ namespace Win11DesktopApp.Services
 
     public static class TelemetryService
     {
+        private static AppSettingsService? _appSettingsService;
+        private static CompanyService? _companyService;
         private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -80,6 +82,12 @@ namespace Win11DesktopApp.Services
         internal static RemotePolicy? GetCachedPolicy() => _cachedPolicy;
         internal static HttpClient HttpClient => _http;
         internal static string BaseUrl => _baseUrl;
+
+        public static void Initialize(AppSettingsService appSettingsService, CompanyService companyService)
+        {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
+        }
 
         private static string GetKey()
         {
@@ -107,16 +115,17 @@ namespace Win11DesktopApp.Services
             var stats = new Dictionary<string, object>();
             try
             {
-                var companies = App.CompanyService?.Companies?.ToList();
-                if (companies != null)
+                var companyService = _companyService;
+                if (companyService != null)
                 {
+                    var companies = companyService.Companies.ToList();
                     stats["firms_count"] = companies.Count;
                     if (includeEmployeeCounts)
                     {
                         int totalEmployees = 0;
                         foreach (var c in companies)
                         {
-                            try { totalEmployees += App.CompanyService!.GetActiveEmployeeCount(c); }
+                            try { totalEmployees += companyService.GetActiveEmployeeCount(c); }
                             catch (Exception ex) { LoggingService.LogWarning("Telemetry.CountEmployees", ex.Message); }
                         }
 
@@ -403,7 +412,7 @@ namespace Win11DesktopApp.Services
 
         private static ClientAccessState LoadCachedAccessState()
         {
-            var settings = App.AppSettingsService?.Settings;
+            var settings = _appSettingsService?.Settings;
             if (settings == null)
                 return new ClientAccessState();
 
@@ -447,7 +456,7 @@ namespace Win11DesktopApp.Services
             _isBlocked = gateway.IsBlocked;
             _cachedPolicy = gateway.Policy;
 
-            var settings = App.AppSettingsService?.Settings;
+            var settings = _appSettingsService?.Settings;
             if (settings == null)
                 return;
 
@@ -457,7 +466,7 @@ namespace Win11DesktopApp.Services
             settings.CachedAccessLastCheckedAtUtc = accessState.LastServerCheckUtc?.ToString("o") ?? DateTime.UtcNow.ToString("o");
             settings.CachedAccessSource = "server";
             settings.CachedAccessPlan = accessState.Plan;
-            App.AppSettingsService?.SaveSettings();
+            _appSettingsService?.SaveSettings();
         }
     }
 }

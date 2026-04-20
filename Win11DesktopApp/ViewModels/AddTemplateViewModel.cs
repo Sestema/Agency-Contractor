@@ -9,6 +9,8 @@ namespace Win11DesktopApp.ViewModels
 {
     public class AddTemplateViewModel : ViewModelBase
     {
+        private readonly TemplateService _templateService;
+        private readonly ActivityLogService _activityLogService;
         private string _name = string.Empty;
         public string Name { get => _name; set => SetProperty(ref _name, value); }
 
@@ -61,9 +63,14 @@ namespace Win11DesktopApp.ViewModels
 
         private readonly string _firmName;
 
-        public AddTemplateViewModel(string firmName)
+        public AddTemplateViewModel(
+            string firmName,
+            TemplateService? templateService = null,
+            ActivityLogService? activityLogService = null)
         {
             _firmName = firmName;
+            _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
 
             UploadFileCommand = new RelayCommand(o => UploadFile(), o => IsFileRequired);
             SaveCommand = new RelayCommand(o => Save(), o => CanSave());
@@ -79,7 +86,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 UploadedFilePath = dialog.FileName;
 
-                var detected = App.TemplateService.DetectTemplateFormat(UploadedFilePath);
+                var detected = _templateService.DetectTemplateFormat(UploadedFilePath);
                 if (detected == null)
                 {
                     UploadedFilePath = string.Empty;
@@ -112,21 +119,21 @@ namespace Win11DesktopApp.ViewModels
             if (SelectedFormat == "DOCX")
             {
                 // Create template without a source file
-                App.TemplateService.AddTemplateWithoutFile(_firmName, Name, Description, SelectedFormat);
+                _templateService.AddTemplateWithoutFile(_firmName, Name, Description, SelectedFormat);
             }
             else
             {
-                if (!App.TemplateService.TryValidateTemplateFile(UploadedFilePath, out var detectedFormat, out var error))
+                if (!_templateService.TryValidateTemplateFile(UploadedFilePath, out var detectedFormat, out var error))
                 {
-                    App.TemplateService.LogTemplateError($"AddTemplate validation failed: {UploadedFilePath} | {error}");
+                    _templateService.LogTemplateError($"AddTemplate validation failed: {UploadedFilePath} | {error}");
                     MessageBox.Show(error, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
                 SelectedFormat = detectedFormat;
-                App.TemplateService.AddTemplate(_firmName, Name, Description, SelectedFormat, UploadedFilePath);
+                _templateService.AddTemplate(_firmName, Name, Description, SelectedFormat, UploadedFilePath);
             }
-            App.ActivityLogService.Log("TemplateAdded", "Template", _firmName, "",
+            _activityLogService.Log("TemplateAdded", "Template", _firmName, "",
                 $"Додано шаблон «{Name}» ({SelectedFormat}) до {_firmName}");
             RequestClose?.Invoke();
         }

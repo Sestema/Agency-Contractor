@@ -222,6 +222,12 @@ namespace Win11DesktopApp.ViewModels
         private readonly string _firmName;
         private readonly TemplateEntry _template;
         private readonly TemplateService _templateService;
+        private readonly NavigationService _navigationService;
+        private readonly TemplateViewModelFactory _templateViewModelFactory;
+        private readonly CompanyService _companyService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly TagCatalogService _tagCatalogService;
+        private readonly AppSettingsService _appSettingsService;
         private readonly string _pdfFilePath;
         private readonly string _tagMapPath;
         private bool _templateUnavailable;
@@ -245,6 +251,8 @@ namespace Win11DesktopApp.ViewModels
             try { return string.Format(fmt, args); }
             catch { return fmt; }
         }
+
+        internal AppSettingsService AppSettingsService => _appSettingsService;
 
         public string Title => ResF("PdfEditorTitle", _template.Name);
 
@@ -376,7 +384,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(IsAIPdfSuggestionsVisible));
 
-                    var settingsService = App.AppSettingsService;
+                    var settingsService = _appSettingsService;
                     var settings = settingsService?.Settings;
                     if (settings != null && settingsService != null)
                     {
@@ -741,21 +749,36 @@ namespace Win11DesktopApp.ViewModels
         /// <summary>Raised when overlays need to be re-rendered in the View.</summary>
         public event Action? RequestRenderOverlays;
 
-        public PdfEditorViewModel(string firmName, TemplateEntry template, TemplateService? templateService = null)
+        public PdfEditorViewModel(
+            string firmName,
+            TemplateEntry template,
+            TemplateService? templateService = null,
+            NavigationService? navigationService = null,
+            TemplateViewModelFactory? templateViewModelFactory = null,
+            CompanyService? companyService = null,
+            GeminiApiService? geminiApiService = null,
+            TagCatalogService? tagCatalogService = null,
+            AppSettingsService? appSettingsService = null)
         {
             _firmName = firmName;
             _template = template;
-            _templateService = templateService ?? App.TemplateService;
+            _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
             _pdfFilePath = _templateService.GetTemplateFullPath(firmName, template.FilePath);
             _tagMapPath = Path.ChangeExtension(_pdfFilePath, ".tags.json");
 
             try
             {
-                var allTags = App.TagCatalogService.GetAllTagDefinitions();
+                var allTags = _tagCatalogService.GetAllTagDefinitions();
                 foreach (var tag in allTags)
                     _tagLookup[tag.Tag] = tag;
                 var groups = TagGroupViewModel.BuildTagGroups(allTags);
-                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, App.AppSettingsService.Settings.HiddenTags);
+                TagGroups = TagGroupViewModel.ApplyHiddenTagsFilter(groups, _appSettingsService.Settings.HiddenTags);
             }
             catch
             {
@@ -792,7 +815,7 @@ namespace Win11DesktopApp.ViewModels
             LoadTagMap();
             AttachPlacementCollection(AllPlacements);
 
-            IsAIPdfSuggestionsOpen = App.AppSettingsService?.Settings?.PdfEditorAiPanelOpen ?? false;
+            IsAIPdfSuggestionsOpen = _appSettingsService.Settings.PdfEditorAiPanelOpen;
         }
 
         private void LoadPdf()
@@ -1240,11 +1263,11 @@ namespace Win11DesktopApp.ViewModels
 
         private void NavigateBack()
         {
-            var company = App.CompanyService.Companies.FirstOrDefault(c => c.Name == _firmName);
+            var company = _companyService.Companies.FirstOrDefault(c => c.Name == _firmName);
             if (company != null)
-                App.NavigationService.NavigateTo(new TemplatesViewModel(company));
+                _navigationService.NavigateTo(_templateViewModelFactory.CreateTemplates(company));
             else
-                App.NavigationService.NavigateTo(new MainViewModel());
+                _navigationService.NavigateTo<MainViewModel>();
         }
 
         private void MarkTemplateUnavailable(string message)
@@ -1338,7 +1361,7 @@ namespace Win11DesktopApp.ViewModels
             if (!PolicyService.EnsureWriteAllowed("проаналізувати PDF-поля через AI"))
                 return;
 
-            var geminiService = App.GeminiApiService;
+            var geminiService = _geminiApiService;
             if (geminiService == null || !geminiService.IsConfigured)
             {
                 AIPdfSuggestionsStatus = Res("AIChatNoModel");

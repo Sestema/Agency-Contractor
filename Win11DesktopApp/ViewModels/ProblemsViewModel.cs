@@ -20,7 +20,12 @@ namespace Win11DesktopApp.ViewModels
     public class ProblemsViewModel : ViewModelBase, ICleanable
     {
         private const int LoadProblemsDebounceMs = 150;
+        private readonly NavigationService _navigationService;
         private readonly EmployeeService _employeeService;
+        private readonly CompanyService _companyService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
+        private readonly ActivityLogService _activityLogService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
         private readonly Action _onProbDetailsClose;
         private readonly Action _onProbDetailsChanged;
         private int _loadProblemsVersion;
@@ -170,13 +175,13 @@ namespace Win11DesktopApp.ViewModels
             return fmt != null ? string.Format(fmt, args) : string.Join(" ", args);
         }
 
-        private static string? DocRes(string key)
+        private string? DocRes(string key)
         {
-            try { return App.DocumentLocalizationService?.Get(key) ?? Res(key); }
+            try { return _documentLocalizationService.Get(key) ?? Res(key); }
             catch (Exception ex) { LoggingService.LogError("ProblemsViewModel.DocRes", ex); return Res(key); }
         }
 
-        private static string DocResF(string key, params object[] args)
+        private string DocResF(string key, params object[] args)
         {
             var fmt = DocRes(key);
             return fmt != null ? string.Format(fmt, args) : string.Join(" ", args);
@@ -196,7 +201,7 @@ namespace Win11DesktopApp.ViewModels
             _ => internalKey
         };
 
-        internal static string DocLocalizeDocType(string internalKey) => internalKey switch
+        private string DocLocalizeDocType(string internalKey) => internalKey switch
         {
             DocKeyPassport => DocRes("ProbDocPassport") ?? internalKey,
             DocKeyVisa => DocRes("ProbDocVisa") ?? internalKey,
@@ -214,7 +219,7 @@ namespace Win11DesktopApp.ViewModels
             return ResF("ProbDaysLeft", days);
         }
 
-        private static string DocDaysRemainingText(int days)
+        private string DocDaysRemainingText(int days)
         {
             if (days < 0)
                 return DocResF("ProbDaysExpired", Math.Abs(days));
@@ -223,13 +228,24 @@ namespace Win11DesktopApp.ViewModels
             return DocResF("ProbDaysLeft", days);
         }
 
-        public ProblemsViewModel()
+        public ProblemsViewModel(
+            NavigationService? navigationService = null,
+            EmployeeService? employeeService = null,
+            CompanyService? companyService = null,
+            EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
+            ActivityLogService? activityLogService = null,
+            DocumentLocalizationService? documentLocalizationService = null)
         {
-            _employeeService = App.EmployeeService;
+            _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
+            _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
             _onProbDetailsClose = () => IsEmployeeDetailsOpen = false;
             _onProbDetailsChanged = () => LoadProblems();
 
-            GoBackCommand = new RelayCommand(o => App.NavigationService?.NavigateTo(new MainViewModel()));
+            GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             OpenEmployeeCommand = new RelayCommand(o =>
             {
                 if (o is EmployeeProblemGroup group)
@@ -239,7 +255,7 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeDetailsVm.RequestClose -= _onProbDetailsClose;
                         EmployeeDetailsVm.DataChanged -= _onProbDetailsChanged;
                     }
-                    EmployeeDetailsVm = new EmployeeDetailsViewModel(group.FirmName, group.EmployeeFolder, employeeId: group.UniqueId);
+                    EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(group.FirmName, group.EmployeeFolder, employeeId: group.UniqueId);
                     EmployeeDetailsVm.RequestClose += _onProbDetailsClose;
                     EmployeeDetailsVm.DataChanged += _onProbDetailsChanged;
                     IsEmployeeDetailsOpen = true;
@@ -346,9 +362,9 @@ namespace Win11DesktopApp.ViewModels
             var token = loadCts.Token;
             try
             {
-                var cs = App.CompanyService;
-                var allCompanies = cs?.Companies;
-                if (allCompanies == null || token.IsCancellationRequested) return;
+                var cs = _companyService;
+                var allCompanies = cs.Companies;
+                if (token.IsCancellationRequested) return;
 
                 var visibleCompanies = allCompanies.Where(c => cs!.IsCompanyVisible(c)).ToList();
                 var snapshot = await Task.Run(() =>
@@ -575,14 +591,13 @@ namespace Win11DesktopApp.ViewModels
         /// <summary>
         /// Static helper to count problems across ALL companies (used by MainViewModel for badge).
         /// </summary>
-        public static int CountAllProblems()
+        public static int CountAllProblems(CompanyService companyService, EmployeeService employeeService)
         {
             try
             {
-                var cs2 = App.CompanyService;
-                var companies = cs2?.Companies;
-                var empService = App.EmployeeService;
-                if (companies == null || empService == null) return 0;
+                var cs2 = companyService;
+                var companies = cs2.Companies;
+                var empService = employeeService;
 
                 var visibleCompanies = companies.Where(c => cs2!.IsCompanyVisible(c)).ToList();
                 int count = 0;
@@ -920,7 +935,7 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 doc.Save(dialog.FileName);
-                App.ActivityLogService?.Log("ExportPdf", "Export", "", "",
+                _activityLogService.Log("ExportPdf", "Export", "", "",
                     $"Експортовано звіт проблем → PDF",
                     details: BuildProblemsExportDetails(dialog.FileName, exportFilterLabel, exportTotalPeople, exportTotalProblems, exportIgnoredCount));
                 DocumentGenerationService.OpenFile(dialog.FileName);

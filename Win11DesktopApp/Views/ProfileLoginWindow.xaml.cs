@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using Win11DesktopApp.Models;
-using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -13,14 +12,11 @@ namespace Win11DesktopApp.Views
         public bool IsAuthenticated { get; private set; }
         public ClientProfileRecord? AuthenticatedProfile { get; private set; }
 
-        public ProfileLoginWindow(
-            ProfileAuthService profileAuthService,
-            ProfileSessionService profileSessionService,
-            ClientProfileRecord profile)
+        public ProfileLoginWindow(ProfileLoginViewModel viewModel)
         {
             InitializeComponent();
 
-            _viewModel = new ProfileLoginViewModel(profileAuthService, profileSessionService, profile);
+            _viewModel = viewModel;
             _viewModel.RequestClose += OnRequestClose;
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             DataContext = _viewModel;

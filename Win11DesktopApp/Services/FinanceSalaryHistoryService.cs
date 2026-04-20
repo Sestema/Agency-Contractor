@@ -10,17 +10,23 @@ namespace Win11DesktopApp.Services
     {
         private const string SalaryHistoryFile = "salary_history.json";
 
+        private readonly FolderService _folderService;
         private readonly LocalDbService? _localDbService;
+        private readonly CompanyService _companyService;
         private readonly Func<string, string?> _resolveEmployeeId;
         private readonly Func<string, string?, string> _resolveEmployeeFolder;
         private bool _useLocalDb;
 
         public FinanceSalaryHistoryService(
+            FolderService folderService,
             LocalDbService? localDbService,
+            CompanyService companyService,
             Func<string, string?> resolveEmployeeId,
             Func<string, string?, string> resolveEmployeeFolder)
         {
+            _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _localDbService = localDbService;
+            _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _resolveEmployeeId = resolveEmployeeId;
             _resolveEmployeeFolder = resolveEmployeeFolder;
         }
@@ -215,26 +221,20 @@ namespace Win11DesktopApp.Services
         private IEnumerable<string> EnumerateSalaryHistoryEmployeeFolders()
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var folderService = App.FolderService;
-            var companies = App.CompanyService?.Companies;
-
-            if (folderService != null && companies != null)
+            foreach (var company in _companyService.Companies)
             {
-                foreach (var company in companies)
-                {
-                    var employeesFolder = folderService.GetEmployeesFolder(company.Name);
-                    if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
-                        continue;
+                var employeesFolder = _folderService.GetEmployeesFolder(company.Name);
+                if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
+                    continue;
 
-                    foreach (var folder in Directory.GetDirectories(employeesFolder))
-                    {
-                        if (seen.Add(folder))
-                            yield return folder;
-                    }
+                foreach (var folder in Directory.GetDirectories(employeesFolder))
+                {
+                    if (seen.Add(folder))
+                        yield return folder;
                 }
             }
 
-            var archiveFolder = folderService?.GetArchiveFolder();
+            var archiveFolder = _folderService.GetArchiveFolder();
             if (string.IsNullOrWhiteSpace(archiveFolder) || !Directory.Exists(archiveFolder))
                 yield break;
 

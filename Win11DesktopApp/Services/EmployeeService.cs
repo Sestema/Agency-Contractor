@@ -47,19 +47,41 @@ namespace Win11DesktopApp.Services
         private readonly FolderService _folderService;
         private readonly LocalDbService? _localDbService;
         private readonly EmployeeIndexDbService? _employeeIndexDbService;
+        private readonly CurrentProfileService _currentProfileService;
+        private readonly AdminMirrorSyncService? _adminMirrorSyncService;
+        private FinanceService? _financeService;
+        private readonly CompanyService? _companyService;
         private bool _useLocalDbArchiveLog;
         private bool _useLocalDbHistory;
         private static readonly SemaphoreSlim _historyLock = new(1, 1);
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-        public EmployeeService(AppSettingsService appSettingsService, TagCatalogService tagCatalogService, FolderService folderService, LocalDbService? localDbService = null, EmployeeIndexDbService? employeeIndexDbService = null)
+        public EmployeeService(
+            AppSettingsService appSettingsService,
+            TagCatalogService tagCatalogService,
+            FolderService folderService,
+            LocalDbService? localDbService = null,
+            EmployeeIndexDbService? employeeIndexDbService = null,
+            CurrentProfileService? currentProfileService = null,
+            AdminMirrorSyncService? adminMirrorSyncService = null,
+            FinanceService? financeService = null,
+            CompanyService? companyService = null)
         {
             _appSettingsService = appSettingsService;
             _tagCatalogService = tagCatalogService;
             _folderService = folderService;
             _localDbService = localDbService;
             _employeeIndexDbService = employeeIndexDbService;
+            _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
+            _adminMirrorSyncService = adminMirrorSyncService;
+            _financeService = financeService;
+            _companyService = companyService;
             CleanupStaleTempFolders();
+        }
+
+        internal void InitializeFinanceService(FinanceService financeService)
+        {
+            _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
         }
 
         private static T? ReadJson<T>(string path)
@@ -528,8 +550,8 @@ namespace Win11DesktopApp.Services
                     data.UniqueId = Guid.NewGuid().ToString();
                 var jsonPath = Path.Combine(employeeFolder, "employee.json");
                 WriteJsonAtomic(jsonPath, data);
-                var firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
-                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, employeeFolder, data);
+                var firmName = _adminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
+                _adminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, employeeFolder, data);
                 UpsertEmployeeIndex(employeeFolder, data, firmName);
                 return true;
             }
@@ -584,12 +606,12 @@ namespace Win11DesktopApp.Services
             {
                 var data = LoadEmployeeData(employeeFolder);
                 var employeeId = data?.UniqueId ?? string.Empty;
-                var firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
+                var firmName = _adminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
                 if (Directory.Exists(employeeFolder))
                 {
                     Directory.Delete(employeeFolder, true);
                 }
-                App.AdminMirrorSyncService?.EnqueueEmployeeDelete(firmName, data);
+                _adminMirrorSyncService?.EnqueueEmployeeDelete(firmName, data);
                 DeleteEmployeeIndex(employeeId);
                 LoggingService.LogInfo("EmployeeService", $"Employee deleted: {employeeFolder}");
                 return true;
@@ -821,7 +843,7 @@ namespace Win11DesktopApp.Services
             };
         }
 
-        private static EmployeeSummary BuildSummaryFromIndexRow(EmployeeIndexRow row)
+        private EmployeeSummary BuildSummaryFromIndexRow(EmployeeIndexRow row)
         {
             var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
             var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
@@ -862,7 +884,7 @@ namespace Win11DesktopApp.Services
             };
         }
 
-        private static ArchivedEmployeeSummary BuildArchivedSummaryFromIndexRow(EmployeeIndexRow row)
+        private ArchivedEmployeeSummary BuildArchivedSummaryFromIndexRow(EmployeeIndexRow row)
         {
             var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
             var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
@@ -881,10 +903,10 @@ namespace Win11DesktopApp.Services
             };
         }
 
-        private static string ResolveEmployeeFolderFromIndexRow(EmployeeIndexRow row)
+        private string ResolveEmployeeFolderFromIndexRow(EmployeeIndexRow row)
         {
             var employeeFolder = row.EmployeeFolder ?? string.Empty;
-            return App.FinanceService?.ResolveEmployeeFolder(employeeFolder, row.UniqueId) ?? employeeFolder;
+            return _financeService?.ResolveEmployeeFolder(employeeFolder, row.UniqueId) ?? employeeFolder;
         }
 
         private static string ResolvePhotoPathFromIndexRow(EmployeeIndexRow row, string employeeFolder)
@@ -1100,7 +1122,7 @@ namespace Win11DesktopApp.Services
                 if (data.IsArchived && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm))
                     firmName = data.ArchivedFromFirm;
                 else
-                    firmName = App.AdminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder) ?? ResolveFirmNameForHistory(employeeFolder);
+                    firmName = _adminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder) ?? ResolveFirmNameForHistory(employeeFolder);
             }
 
             _employeeIndexDbService.UpsertEmployeeIndex(BuildEmployeeIndexRow(data, firmName ?? string.Empty, employeeFolder));
@@ -1433,7 +1455,10 @@ namespace Win11DesktopApp.Services
         public List<ArchivedEmployeeSummary> GetActiveEmployeeFirmHistory()
         {
             var result = new List<ArchivedEmployeeSummary>();
-            foreach (var company in App.CompanyService.Companies)
+            if (_companyService == null)
+                return result;
+
+            foreach (var company in _companyService.Companies)
             {
                 var employeesFolder = _folderService.GetEmployeesFolder(company.Name);
                 if (string.IsNullOrEmpty(employeesFolder) || !Directory.Exists(employeesFolder))
@@ -1511,10 +1536,10 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee restored to {newFirmName}: {destFolder}");
-                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(newFirmName, destFolder, restoredData);
+                _adminMirrorSyncService?.EnqueueEmployeeUpsert(newFirmName, destFolder, restoredData);
                 if (restoredData != null)
                     UpsertEmployeeIndex(destFolder, restoredData, newFirmName);
-                App.FinanceService?.CleanupGhostFolders();
+                _financeService?.CleanupGhostFolders();
                 return new RestoreEmployeeResult
                 {
                     RestoredFolder = destFolder,
@@ -1587,7 +1612,7 @@ namespace Win11DesktopApp.Services
                 });
 
                 var restoredData = LoadEmployeeData(restoredFolder);
-                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(target.FirmName, restoredFolder, restoredData);
+                _adminMirrorSyncService?.EnqueueEmployeeUpsert(target.FirmName, restoredFolder, restoredData);
                 if (restoredData != null)
                     UpsertEmployeeIndex(restoredFolder, restoredData, target.FirmName);
                 return new UndoArchiveResult
@@ -1901,10 +1926,10 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived: {employeeName} from {firmName}");
-                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
+                _adminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
                 if (verifyData != null)
                     UpsertEmployeeIndex(destFolder, verifyData, firmName);
-                App.FinanceService?.CleanupGhostFolders();
+                _financeService?.CleanupGhostFolders();
                 return new ArchiveEmployeeResult
                 {
                     ArchiveFolder = destFolder,
@@ -2060,7 +2085,7 @@ namespace Win11DesktopApp.Services
                 });
 
                 LoggingService.LogInfo("EmployeeService", $"Employee archived from Recently Deleted: {employeeName} from {firmName}");
-                App.AdminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
+                _adminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, destFolder, verifyData);
                 if (verifyData != null)
                     UpsertEmployeeIndex(destFolder, verifyData, firmName);
                 return new ArchiveEmployeeResult
@@ -2111,7 +2136,7 @@ namespace Win11DesktopApp.Services
             {
                 if (string.IsNullOrWhiteSpace(entry.ActorName))
                 {
-                    var profile = App.CurrentProfile;
+                    var profile = _currentProfileService.CurrentProfile;
                     if (profile != null)
                         entry.ActorName = $"{profile.FirstName} {profile.LastName}".Trim();
                 }
@@ -2363,7 +2388,7 @@ namespace Win11DesktopApp.Services
 
         private IEnumerable<(string EmployeeFolder, string FirmName)> EnumerateEmployeeFolders()
         {
-            var companies = App.CompanyService?.Companies;
+            var companies = _companyService?.Companies;
             if (companies != null)
             {
                 foreach (var company in companies)
@@ -2395,7 +2420,7 @@ namespace Win11DesktopApp.Services
             if (data?.IsArchived == true && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm))
                 return data.ArchivedFromFirm;
 
-            var companies = App.CompanyService?.Companies;
+            var companies = _companyService?.Companies;
             if (companies == null)
                 return string.Empty;
 

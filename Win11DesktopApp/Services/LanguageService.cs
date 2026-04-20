@@ -10,8 +10,18 @@ namespace Win11DesktopApp.Services
 {
     public class LanguageService
     {
+        private readonly AppSettingsService _appSettingsService;
+        private readonly DocumentLocalizationService _documentLocalizationService;
         private static bool _languageMetadataOverridden;
         private static ResourceDictionary? _activeLangDict;
+
+        public LanguageService(
+            AppSettingsService appSettingsService,
+            DocumentLocalizationService documentLocalizationService)
+        {
+            _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            _documentLocalizationService = documentLocalizationService ?? throw new ArgumentNullException(nameof(documentLocalizationService));
+        }
 
         public static ResourceDictionary LoadDictionary(string langCode)
         {
@@ -30,7 +40,7 @@ namespace Win11DesktopApp.Services
             };
         }
 
-        public static void SetLanguage(string langCode)
+        public void SetLanguage(string langCode)
         {
             var newDict = LoadDictionary(langCode);
             var merged = Application.Current.Resources.MergedDictionaries;
@@ -69,13 +79,13 @@ namespace Win11DesktopApp.Services
                 _languageMetadataOverridden = true;
             }
 
-            if (App.AppSettingsService != null && App.AppSettingsService.Settings.LanguageCode != langCode)
+            if (_appSettingsService.Settings.LanguageCode != langCode)
             {
-                App.AppSettingsService.Settings.LanguageCode = langCode;
-                App.AppSettingsService.SaveSettings();
+                _appSettingsService.Settings.LanguageCode = langCode;
+                _appSettingsService.SaveSettings();
             }
 
-            App.DocumentLocalizationService?.SyncWithUiLanguage(langCode);
+            _documentLocalizationService.SyncWithUiLanguage(langCode);
         }
     }
 }

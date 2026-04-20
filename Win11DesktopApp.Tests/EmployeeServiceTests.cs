@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -17,7 +18,22 @@ namespace Win11DesktopApp.Tests
         private readonly TagCatalogService _tagCatalogService;
         private readonly FolderService _folderService;
         private readonly EmployeeIndexDbService _employeeIndexDbService;
+        private readonly CurrentProfileService _currentProfileService;
         private readonly EmployeeService _employeeService;
+        private readonly NavigationService _navigationService;
+        private readonly ProfileAuthService _profileAuthService;
+        private readonly RecentlyDeletedService _recentlyDeletedService;
+        private readonly GeminiApiService _geminiApiService;
+        private readonly AddEmployeeWizardViewModelFactory _addEmployeeWizardViewModelFactory;
+        private readonly DocumentLocalizationService _documentLocalizationService;
+        private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
+        private readonly ActivityLogService _activityLogService;
+        private readonly TemplateService _templateService;
+        private readonly DocumentGenerationService _documentGenerationService;
+        private readonly PersistenceService _persistenceService;
+        private readonly CompanyService _companyService;
+        private readonly FinanceService _financeService;
+        private readonly AiWindowFactory _aiWindowFactory;
 
         public EmployeeServiceTests()
         {
@@ -26,10 +42,44 @@ namespace Win11DesktopApp.Tests
 
             _appSettingsService = new AppSettingsService();
             _appSettingsService.Settings.RootFolderPath = _testRootPath;
-            _tagCatalogService = new TagCatalogService();
+            _documentLocalizationService = new DocumentLocalizationService();
+            _tagCatalogService = new TagCatalogService(_documentLocalizationService);
             _folderService = new FolderService(_appSettingsService);
             _employeeIndexDbService = new EmployeeIndexDbService(_folderService);
-            _employeeService = new EmployeeService(_appSettingsService, _tagCatalogService, _folderService, employeeIndexDbService: _employeeIndexDbService);
+            _currentProfileService = new CurrentProfileService();
+            _navigationService = new NavigationService(new ServiceCollection().BuildServiceProvider());
+            _profileAuthService = new ProfileAuthService();
+            _employeeService = new EmployeeService(
+                _appSettingsService,
+                _tagCatalogService,
+                _folderService,
+                employeeIndexDbService: _employeeIndexDbService,
+                currentProfileService: _currentProfileService);
+            _recentlyDeletedService = new RecentlyDeletedService(_folderService, _employeeService, _currentProfileService);
+            _geminiApiService = new GeminiApiService();
+            _activityLogService = new ActivityLogService(_folderService, currentProfileService: _currentProfileService);
+            _addEmployeeWizardViewModelFactory = new AddEmployeeWizardViewModelFactory(_employeeService, _geminiApiService, _activityLogService);
+            _templateService = new TemplateService(_appSettingsService, _folderService, _tagCatalogService);
+            _documentGenerationService = new DocumentGenerationService();
+            _persistenceService = new PersistenceService(_appSettingsService, _folderService);
+            _companyService = new CompanyService(_tagCatalogService, _appSettingsService, _persistenceService, _folderService);
+            _financeService = new FinanceService(
+                _folderService,
+                companyService: _companyService,
+                employeeIndexDbService: _employeeIndexDbService);
+            _aiWindowFactory = new AiWindowFactory(_geminiApiService, _employeeService);
+            _employeeDetailsViewModelFactory = new EmployeeDetailsViewModelFactory(
+                _employeeService,
+                _geminiApiService,
+                _financeService,
+                _appSettingsService,
+                _activityLogService,
+                _companyService,
+                _documentLocalizationService,
+                _templateService,
+                _documentGenerationService,
+                _tagCatalogService,
+                _aiWindowFactory);
         }
 
         [Fact]
@@ -81,7 +131,21 @@ namespace Win11DesktopApp.Tests
             File.WriteAllText(jsonPath, JsonSerializer.Serialize(data));
 
             var company = new EmployerCompany { Name = firmName };
-            var vm = new EmployeesViewModel(company, _employeeService);
+            var vm = new EmployeesViewModel(
+                company,
+                _employeeService,
+                _addEmployeeWizardViewModelFactory,
+                _navigationService,
+                _currentProfileService,
+                _profileAuthService,
+                _recentlyDeletedService,
+                _appSettingsService,
+                _documentLocalizationService,
+                _employeeDetailsViewModelFactory,
+                _activityLogService,
+                _templateService,
+                _documentGenerationService,
+                _tagCatalogService);
 
             await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count >= 1);
             Assert.True(vm.Employees.Count >= 1);
@@ -105,7 +169,21 @@ namespace Win11DesktopApp.Tests
             File.WriteAllText(Path.Combine(folder2, "employee.json"), JsonSerializer.Serialize(data2));
 
             var company = new EmployerCompany { Name = firmName };
-            var vm = new EmployeesViewModel(company, _employeeService);
+            var vm = new EmployeesViewModel(
+                company,
+                _employeeService,
+                _addEmployeeWizardViewModelFactory,
+                _navigationService,
+                _currentProfileService,
+                _profileAuthService,
+                _recentlyDeletedService,
+                _appSettingsService,
+                _documentLocalizationService,
+                _employeeDetailsViewModelFactory,
+                _activityLogService,
+                _templateService,
+                _documentGenerationService,
+                _tagCatalogService);
             await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count == 2);
 
             vm.SearchQuery = "AA111";
@@ -175,10 +253,17 @@ namespace Win11DesktopApp.Tests
             {
                 var movedSettings = new AppSettingsService();
                 movedSettings.Settings.RootFolderPath = movedRootPath;
-                var movedTagCatalog = new TagCatalogService();
+                var movedDocumentLocalizationService = new DocumentLocalizationService();
+                var movedTagCatalog = new TagCatalogService(movedDocumentLocalizationService);
                 var movedFolderService = new FolderService(movedSettings);
                 var movedIndexDbService = new EmployeeIndexDbService(movedFolderService);
-                var movedEmployeeService = new EmployeeService(movedSettings, movedTagCatalog, movedFolderService, employeeIndexDbService: movedIndexDbService);
+                var movedCurrentProfileService = new CurrentProfileService();
+                var movedEmployeeService = new EmployeeService(
+                    movedSettings,
+                    movedTagCatalog,
+                    movedFolderService,
+                    employeeIndexDbService: movedIndexDbService,
+                    currentProfileService: movedCurrentProfileService);
 
                 var list = movedEmployeeService.GetEmployeesForFirm(firmName);
 
@@ -206,7 +291,21 @@ namespace Win11DesktopApp.Tests
             _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
 
             var employee = Assert.Single(_employeeService.GetEmployeesForFirm(firmName));
-            var detailsViewModel = new EmployeeDetailsViewModel(firmName, employeeFolder, _employeeService, employeeId: "emp-photo-profile-1");
+            var detailsViewModel = new EmployeeDetailsViewModel(
+                firmName,
+                employeeFolder,
+                _employeeService,
+                employeeId: "emp-photo-profile-1",
+                geminiApiService: _geminiApiService,
+                financeService: _financeService,
+                appSettingsService: _appSettingsService,
+                activityLogService: _activityLogService,
+                companyService: _companyService,
+                documentLocalizationService: _documentLocalizationService,
+                templateService: _templateService,
+                documentGenerationService: _documentGenerationService,
+                tagCatalogService: _tagCatalogService,
+                aiWindowFactory: _aiWindowFactory);
 
             Assert.True(employee.HasPhoto);
             Assert.False(string.IsNullOrWhiteSpace(detailsViewModel.PhotoFilePath));
@@ -239,7 +338,7 @@ namespace Win11DesktopApp.Tests
             var employeeFolder = Path.Combine(_testRootPath, "TestFirm", "Employees", "John_Doe - 2026-03-01");
             Directory.CreateDirectory(employeeFolder);
 
-            App.SetCurrentProfile(new ClientProfileRecord
+            _currentProfileService.SetCurrentProfile(new ClientProfileRecord
             {
                 FirstName = "Ivan",
                 LastName = "Petrenko"
@@ -260,7 +359,7 @@ namespace Win11DesktopApp.Tests
             }
             finally
             {
-                App.SetCurrentProfile(null);
+                _currentProfileService.SetCurrentProfile(null);
             }
         }
 

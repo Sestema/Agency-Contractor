@@ -12,6 +12,8 @@ namespace Win11DesktopApp.Views
 {
     public partial class ReplaceDocumentWindow : Window
     {
+        private readonly GeminiApiService _geminiApiService;
+        private readonly EmployeeService _employeeService;
         private readonly string _docType;
         private readonly EmployeeData _data;
         private string? _selectedFilePath;
@@ -24,9 +26,15 @@ namespace Win11DesktopApp.Views
         public string? ResultFilePath => _selectedFilePath;
         public Dictionary<string, string> NewValues { get; } = new();
 
-        public ReplaceDocumentWindow(string docType, EmployeeData data)
+        public ReplaceDocumentWindow(
+            string docType,
+            EmployeeData data,
+            GeminiApiService geminiApiService,
+            EmployeeService employeeService)
         {
             InitializeComponent();
+            _geminiApiService = geminiApiService;
+            _employeeService = employeeService;
             _docType = docType;
             _data = data;
 
@@ -199,7 +207,7 @@ namespace Win11DesktopApp.Views
                 _pdfPreviewTempFolder = Path.Combine(Path.GetTempPath(), "AC_ReplDoc_" + Guid.NewGuid().ToString("N")[..8]);
                 Directory.CreateDirectory(_pdfPreviewTempFolder);
 
-                var pages = App.EmployeeService?.RenderPdfPages(path, _pdfPreviewTempFolder, "preview") ?? new List<string>();
+                var pages = _employeeService.RenderPdfPages(path, _pdfPreviewTempFolder, "preview");
                 if (pages.Count == 0)
                 {
                     CleanupPdfTemp();
@@ -295,7 +303,7 @@ namespace Win11DesktopApp.Views
 
         private async void BtnAIScan_Click(object sender, RoutedEventArgs e)
         {
-            if (!App.GeminiApiService.IsConfigured)
+            if (!_geminiApiService.IsConfigured)
             {
                 MessageBox.Show(Res("AIChatNoModel"), Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -321,7 +329,7 @@ namespace Win11DesktopApp.Views
                 else if (docKey == "passport_page2")
                     docKey = "passport2";
                 var prompt = AIScanPrompts.GetPrompt(docKey);
-                var result = await App.GeminiApiService.ChatWithImageAsync(_selectedFilePath, prompt, null);
+                var result = await _geminiApiService.ChatWithImageAsync(_selectedFilePath, prompt, null);
 
                 if (result.StartsWith("["))
                 {
