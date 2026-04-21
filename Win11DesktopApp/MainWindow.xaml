@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:local="clr-namespace:Win11DesktopApp"
         xmlns:views="clr-namespace:Win11DesktopApp.Views"
         xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
@@ -14,7 +15,19 @@
         Background="{DynamicResource WindowBackgroundBrush}"
         Icon="pack://application:,,,/Resources/app_icon.ico"
         WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        TextElement.FontFamily="{StaticResource AppFontFamily}"
+        TextElement.Foreground="{DynamicResource ForegroundBrush}"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="ClearType"
         x:Name="RootWindow">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36"
+                            GlassFrameThickness="0"
+                            ResizeBorderThickness="6"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
     
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:MainViewModel}">
@@ -91,14 +104,61 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid ClipToBounds="False">
-        <ContentControl x:Name="PageHost" Content="{Binding CurrentView, NotifyOnTargetUpdated=True}" ClipToBounds="False"
+    <Grid x:Name="RootLayout" ClipToBounds="False">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Custom Win11-style title bar -->
+        <Grid x:Name="TitleBar" Grid.Row="0" Background="Transparent" Height="36">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- App icon + title (left, compact) -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal"
+                        VerticalAlignment="Center" Margin="12,0,0,0">
+                <Image Source="pack://application:,,,/Resources/app_icon.ico"
+                       Width="16" Height="16" Margin="0,0,10,0"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <TextBlock Text="{DynamicResource AppTitle}"
+                           FontFamily="{StaticResource AppFontFamily}"
+                           FontSize="12"
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           VerticalAlignment="Center"
+                           Opacity="0.85"
+                           TextOptions.TextRenderingMode="ClearType"/>
+            </StackPanel>
+
+            <!-- Caption buttons (right) -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button x:Name="BtnMinimize"
+                        Style="{StaticResource WindowCaptionButton}"
+                        Click="OnMinimizeClick"
+                        Content="&#xE921;"
+                        ToolTip="Minimize"/>
+                <Button x:Name="BtnMaximize"
+                        Style="{StaticResource WindowCaptionButton}"
+                        Click="OnMaximizeRestoreClick"
+                        Content="&#xE922;"
+                        ToolTip="Maximize"/>
+                <Button x:Name="BtnClose"
+                        Style="{StaticResource WindowCloseButton}"
+                        Click="OnCloseClick"
+                        Content="&#xE8BB;"
+                        ToolTip="Close"/>
+            </StackPanel>
+        </Grid>
+
+        <ContentControl x:Name="PageHost" Grid.Row="1"
+                        Content="{Binding CurrentView, NotifyOnTargetUpdated=True}" ClipToBounds="False"
                         RenderTransformOrigin="0.5,0.5">
             <ContentControl.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform x:Name="PageScale" ScaleX="1" ScaleY="1"/>
-                    <TranslateTransform x:Name="PageSlide" Y="0"/>
-                </TransformGroup>
+                <TranslateTransform x:Name="PageSlide" X="0"/>
             </ContentControl.RenderTransform>
             <ContentControl.LayoutTransform>
                 <ScaleTransform
@@ -112,25 +172,13 @@
                             <BeginStoryboard>
                                 <Storyboard>
                                     <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                     From="0" To="1" Duration="0:0:0.28">
+                                                     From="0" To="1" Duration="0:0:0.30">
                                         <DoubleAnimation.EasingFunction>
                                             <QuarticEase EasingMode="EaseOut"/>
                                         </DoubleAnimation.EasingFunction>
                                     </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
-                                                     From="0.97" To="1" Duration="0:0:0.32">
-                                        <DoubleAnimation.EasingFunction>
-                                            <QuarticEase EasingMode="EaseOut"/>
-                                        </DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
-                                                     From="0.97" To="1" Duration="0:0:0.32">
-                                        <DoubleAnimation.EasingFunction>
-                                            <QuarticEase EasingMode="EaseOut"/>
-                                        </DoubleAnimation.EasingFunction>
-                                    </DoubleAnimation>
-                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
-                                                     From="18" To="0" Duration="0:0:0.32">
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                     From="28" To="0" Duration="0:0:0.36">
                                         <DoubleAnimation.EasingFunction>
                                             <QuarticEase EasingMode="EaseOut"/>
                                         </DoubleAnimation.EasingFunction>
@@ -144,7 +192,8 @@
         </ContentControl>
 
         <!-- Toast notifications overlay -->
-        <ItemsControl ItemsSource="{Binding Toasts, Source={x:Static local:ToastServiceLocator.Instance}}"
+        <ItemsControl Grid.Row="0" Grid.RowSpan="2"
+                      ItemsSource="{Binding Toasts, Source={x:Static local:ToastServiceLocator.Instance}}"
                       VerticalAlignment="Bottom" HorizontalAlignment="Right"
                       Margin="0,0,24,24" Panel.ZIndex="9999"
                       IsHitTestVisible="False">

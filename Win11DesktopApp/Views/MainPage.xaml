@@ -22,7 +22,7 @@
         <!-- Main Content -->
         <Grid>
             <!-- Top Bar -->
-            <Grid VerticalAlignment="Top" Height="60" Margin="24,14,24,0">
+            <Grid VerticalAlignment="Top" Height="60" Margin="24,4,24,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -216,7 +216,7 @@
         </Grid>
         
         <!-- Drawer Overlay (Click to close) -->
-        <Border x:Name="DrawerOverlay" Background="#44000000" Opacity="0"
+        <Border x:Name="DrawerOverlay" Background="{DynamicResource OverlayBrush}" Opacity="0"
                 IsHitTestVisible="{Binding IsDrawerOpen}">
             <Border.InputBindings>
                 <MouseBinding MouseAction="LeftClick" Command="{Binding ToggleDrawerCommand}"/>

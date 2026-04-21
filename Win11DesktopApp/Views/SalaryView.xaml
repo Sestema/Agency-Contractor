@@ -18,7 +18,7 @@
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid Margin="24,16,24,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -1293,7 +1293,7 @@
 
         <!-- ===== ADVANCE DIALOG ===== -->
         <Grid Visibility="{Binding IsAdvanceDialogOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#88000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAdvanceDialogCommand}"/>
                 </Border.InputBindings>
@@ -1387,7 +1387,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                 </Border.InputBindings>

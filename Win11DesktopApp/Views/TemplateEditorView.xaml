@@ -645,9 +645,9 @@
                         ToolTip="✨ AI автоматично вставить теги в потрібні місця документа">
                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                                   VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#388E3C"/>
+                                                   VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource SuccessBrush}"/>
                                         <TextBlock Text="✨ AI теги" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                   Foreground="#388E3C" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                             </StackPanel>
@@ -669,7 +669,7 @@
             <!-- RichTextBox Editor - A4 Page -->
             <Border Grid.Column="0" CornerRadius="6"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    Background="#E0E0E0" ClipToBounds="True">
+                    Background="{DynamicResource SurfaceBrush}" ClipToBounds="True">
                 <ScrollViewer x:Name="PageScrollViewer"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Auto"
@@ -865,7 +865,7 @@
         <!-- ===== Starter Templates Overlay ===== -->
         <Grid Grid.RowSpan="4"
               Visibility="{Binding IsStarterTemplatesOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#50000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseStarterTemplatesCommand}"/>
                 </Border.InputBindings>
@@ -1019,7 +1019,7 @@
         <!-- ===== AI Insert Tags Overlay ===== -->
         <Grid Grid.RowSpan="4"
               Visibility="{Binding IsAITagsOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#50000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAITagsCommand}"/>
                 </Border.InputBindings>
@@ -1040,7 +1040,7 @@
                     <!-- Header -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="22"
-                                   Foreground="#388E3C" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                   Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <StackPanel>
                             <TextBlock Text="✨ AI Вставка тегів" FontSize="{DynamicResource FS18}"
                                        FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
@@ -1107,7 +1107,7 @@
                         <!-- Run AI -->
                         <Button Grid.Column="2" Command="{Binding AIInsertTagsCommand}"
                                 Padding="18,10" Cursor="Hand" FontWeight="SemiBold"
-                                Background="#388E3C" Foreground="White" BorderThickness="0">
+                                Background="{DynamicResource SuccessBrush}" Foreground="White" BorderThickness="0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                            Margin="0,0,6,0" VerticalAlignment="Center"/>

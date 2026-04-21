@@ -910,6 +910,8 @@
     <sys:String x:Key="SettingsDocLangHint">Мова для генерованих документів (PDF, Excel)</sys:String>
     <sys:String x:Key="DocLangSameAsUI">Як інтерфейс</sys:String>
     <sys:String x:Key="SettingsThemeHint">Оберіть тему оформлення</sys:String>
+    <sys:String x:Key="SettingsAccentColor">Акцентний колір</sys:String>
+    <sys:String x:Key="SettingsAccentColorHint">Оберіть колір кнопок та акцентів</sys:String>
     <sys:String x:Key="SettingsInterfaceSize">Розмір інтерфейсу</sys:String>
     <sys:String x:Key="SettingsInterfaceSizeHint">Масштаб елементів інтерфейсу</sys:String>
     <sys:String x:Key="SettingsTextSize">Розмір тексту</sys:String>

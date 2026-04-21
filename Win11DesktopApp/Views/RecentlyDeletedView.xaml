@@ -23,7 +23,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -41,7 +41,7 @@
                     <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
                         <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
-                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="#EF5350">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource ErrorBrush}">
                         <TextBlock Text="&#xE74D;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
@@ -247,7 +247,7 @@
             </Grid>
 
             <Grid Visibility="{Binding IsArchiveDialogOpen, Converter={StaticResource BoolToVis}}">
-                <Border Background="#66000000"/>
+                <Border Background="{DynamicResource OverlayBrush}"/>
                 <Border Background="{DynamicResource CardBackgroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}"
                         BorderThickness="1"
@@ -298,7 +298,7 @@
             </Grid>
 
             <Grid Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
-                <Border Background="#66000000">
+                <Border Background="{DynamicResource OverlayBrush}">
                     <Border.InputBindings>
                         <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                     </Border.InputBindings>

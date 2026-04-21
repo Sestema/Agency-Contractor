@@ -16,7 +16,7 @@
         <conv:ExpirySeverityBackgroundConverter x:Key="SeverityBg"/>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}" Margin="24,14,24,24" ClipToBounds="False">
+    <Grid Background="{DynamicResource PageBackgroundBrush}" Margin="24,14,24,24" ClipToBounds="False">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>

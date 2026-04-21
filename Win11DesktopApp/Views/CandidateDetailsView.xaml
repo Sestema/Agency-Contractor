@@ -94,7 +94,7 @@
                     <Button Command="{Binding CloseCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
                         <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
-                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="#FFB74D">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource WarningBrush}">
                         <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
@@ -134,12 +134,12 @@
                         <MouseBinding MouseAction="LeftClick" Command="{Binding BrowsePhotoCommand}"/>
                     </Border.InputBindings>
                     <Grid>
-                        <Border Background="#E8EAF6" CornerRadius="14">
+                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="14">
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="48"
-                                           Foreground="#9FA8DA" HorizontalAlignment="Center"/>
+                                           Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                                           Foreground="#B0B8E8" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                           Foreground="{DynamicResource TertiaryForegroundBrush}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                         <Image Source="{Binding PhotoImage}" Stretch="UniformToFill" Width="160" Height="160"/>
@@ -151,9 +151,9 @@
                     <StackPanel>
                         <!-- Section header -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Background="#E3F2FD" Style="{StaticResource SectionHeaderBadge}">
+                            <Border Background="{DynamicResource InfoChipBackgroundBrush}" Style="{StaticResource SectionHeaderBadge}">
                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                           Foreground="#1565C0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource InfoChipForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Text="{DynamicResource CandPersonalSection}" Style="{StaticResource SectionHeaderTitle}"/>
                         </StackPanel>
@@ -209,9 +209,9 @@
                 <Border Grid.Column="0" Style="{StaticResource SectionCard}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Background="#FFF3E0" Style="{StaticResource SectionHeaderBadge}">
+                            <Border Background="{DynamicResource WarningChipBackgroundBrush}" Style="{StaticResource SectionHeaderBadge}">
                                 <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                           Foreground="#E65100" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource WarningChipForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Text="{DynamicResource CandPassport}" Style="{StaticResource SectionHeaderTitle}"/>
                         </StackPanel>
@@ -255,9 +255,9 @@
                 <Border Grid.Column="2" Style="{StaticResource SectionCard}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Background="#E8F5E9" Style="{StaticResource SectionHeaderBadge}">
+                            <Border Background="{DynamicResource SuccessChipBackgroundBrush}" Style="{StaticResource SectionHeaderBadge}">
                                 <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                           Foreground="#2E7D32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource SuccessChipForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Text="{DynamicResource CandWorkSection}" Style="{StaticResource SectionHeaderTitle}"/>
                         </StackPanel>
@@ -284,9 +284,9 @@
                         <!-- Notes inside work section to balance columns -->
                         <StackPanel Margin="0,14,0,0">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <Border Background="#F3E5F5" Style="{StaticResource SectionHeaderBadge}">
+                                <Border Background="{DynamicResource PurpleLightBrush}" Style="{StaticResource SectionHeaderBadge}">
                                     <TextBlock Text="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                               Foreground="#7B1FA2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource PurpleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <TextBlock Text="{DynamicResource CandNotes}" Style="{StaticResource SectionHeaderTitle}"/>
                             </StackPanel>
@@ -314,13 +314,13 @@
                         Cursor="Hand" BorderThickness="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="#FFEBEE" CornerRadius="10" Padding="{TemplateBinding Padding}"
+                            <Border x:Name="Bd" Background="{DynamicResource ErrorChipBackgroundBrush}" CornerRadius="10" Padding="{TemplateBinding Padding}"
                                     Height="{TemplateBinding Height}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" 
-                                               Foreground="#D32F2F" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource ErrorBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource CandDelete}" FontSize="{DynamicResource FS12}" 
-                                               FontWeight="SemiBold" Foreground="#D32F2F" VerticalAlignment="Center"/>
+                                               FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                             <ControlTemplate.Triggers>

@@ -1,21 +1,21 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F3F3"/>
-    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="ForegroundBrush" Color="#000000"/>
-    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#888888"/>
-    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#888888"/>
-    <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#AAAAAA"/>
-    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F3F3F3"/>
-    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="CardHoverBrush" Color="#Fbfbfb"/>
-    <SolidColorBrush x:Key="CardBorderBrush" Color="#E5E5E5"/>
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="ForegroundBrush" Color="#1A1A1A"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#5F6368"/>
+    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#6B6B6B"/>
+    <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#8A8A8A"/>
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#00000000"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FDFDFD"/>
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#F7F7F7"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#E4E4E4"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#F6F6F6"/>
     <SolidColorBrush x:Key="DividerBrush" Color="#E0E0E0"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#66000000"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#0078D4"/>
-    <SolidColorBrush x:Key="AccentDarkBrush" Color="#1565C0"/>
-    <SolidColorBrush x:Key="AccentLightBrush" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#005FB8"/>
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="#003D7A"/>
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#E1EFFE"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#2E7D32"/>
     <SolidColorBrush x:Key="SuccessLightBrush" Color="#E8F5E9"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#E65100"/>
@@ -42,7 +42,7 @@
     <SolidColorBrush x:Key="SuccessChipBackgroundBrush" Color="#E8F5E9"/>
     <SolidColorBrush x:Key="SuccessChipBorderBrush" Color="#C8E6C9"/>
     <SolidColorBrush x:Key="SuccessChipForegroundBrush" Color="#2E7D32"/>
-    <SolidColorBrush x:Key="MutedDescriptionBrush" Color="#999999"/>
+    <SolidColorBrush x:Key="MutedDescriptionBrush" Color="#6B6B6B"/>
 
     <LinearGradientBrush x:Key="BrandPrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#667EEA" Offset="0"/>
@@ -81,5 +81,7 @@
         <GradientStop Color="#448AFF" Offset="1"/>
     </LinearGradientBrush>
 
-    <DropShadowEffect x:Key="CardShadow" BlurRadius="10" ShadowDepth="2" Direction="270" Color="#D0D0D0" Opacity="0.4"/>
+    <DropShadowEffect x:Key="CardShadow" BlurRadius="16" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.08"/>
+    <DropShadowEffect x:Key="CardShadowHover" BlurRadius="24" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.14"/>
+    <DropShadowEffect x:Key="DialogShadow" BlurRadius="40" ShadowDepth="12" Direction="270" Color="#000000" Opacity="0.22"/>
 </ResourceDictionary>

@@ -15,7 +15,7 @@
         <CubicEase x:Key="SmoothEase" EasingMode="EaseOut"/>
     </UserControl.Resources>
     
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid Margin="{StaticResource PageOuterMargin}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>

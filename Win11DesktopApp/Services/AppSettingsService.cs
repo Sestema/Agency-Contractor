@@ -39,6 +39,7 @@ namespace Win11DesktopApp.Services
             public string RootFolderPath { get; set; } = string.Empty;
             public string LanguageCode { get; set; } = "uk";
             public string ThemeName { get; set; } = "Light";
+            public string AccentColor { get; set; } = string.Empty;
             public List<string> HiddenTags { get; set; } = new List<string>();
             public List<string> HiddenCompanyIds { get; set; } = new List<string>();
             public string SelectedCompanyId { get; set; } = string.Empty;

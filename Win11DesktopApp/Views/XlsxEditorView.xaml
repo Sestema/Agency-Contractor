@@ -93,7 +93,7 @@
 
                 <!-- Name Box -->
                 <Border Grid.Column="0" BorderBrush="{DynamicResource DividerBrush}" 
-                        BorderThickness="1" Background="White" Margin="2,0">
+                        BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Margin="2,0">
                     <TextBlock Text="{Binding CellAddress}" 
                                FontSize="{DynamicResource FS11}" FontWeight="Bold" FontFamily="Consolas"
                                Foreground="{DynamicResource ForegroundBrush}" Padding="6,3"
@@ -114,7 +114,7 @@
                          FontSize="{DynamicResource FS12}" FontFamily="Consolas"
                          BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
                          Padding="4,3" VerticalAlignment="Center"
-                         Background="White" Foreground="{DynamicResource ForegroundBrush}"/>
+                         Background="{DynamicResource ContentBackgroundBrush}" Foreground="{DynamicResource ForegroundBrush}"/>
             </Grid>
         </Border>
 
@@ -142,8 +142,8 @@
                       VerticalGridLinesBrush="{DynamicResource DividerBrush}"
                       FontSize="{DynamicResource FS12}" FontFamily="Segoe UI"
                       BorderThickness="0"
-                      Background="White"
-                      RowBackground="White"
+                      Background="{DynamicResource CardBackgroundBrush}"
+                      RowBackground="{DynamicResource CardBackgroundBrush}"
                       AlternatingRowBackground="{DynamicResource SurfaceBrush}"
                       CurrentCellChanged="XlsxGrid_CurrentCellChanged"
                       LoadingRow="XlsxGrid_LoadingRow"
@@ -357,13 +357,13 @@
                                 <RadioButton.Template>
                                     <ControlTemplate TargetType="RadioButton">
                                         <Border x:Name="TabBd" Padding="{TemplateBinding Padding}"
-                                                Background="White"
+                                                Background="{DynamicResource CardBackgroundBrush}"
                                                 BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1,1,1,0">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="TabBd" Property="Background" Value="White"/>
+                                                <Setter TargetName="TabBd" Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
                                                 <Setter TargetName="TabBd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                 <Setter TargetName="TabBd" Property="BorderThickness" Value="1,2,1,0"/>
                                                 <Setter Property="FontWeight" Value="SemiBold"/>

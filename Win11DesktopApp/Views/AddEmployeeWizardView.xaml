@@ -91,7 +91,7 @@
                     <views:StepAdditionalView/>
 
             <!-- AI Scan overlay -->
-            <Border Panel.ZIndex="1000" Background="#80000000" CornerRadius="12"
+            <Border Panel.ZIndex="1000" Background="{DynamicResource OverlayBrush}" CornerRadius="12"
                     Visibility="{Binding IsAIScanning, Converter={StaticResource BoolToVis}}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <ProgressBar IsIndeterminate="True" Width="48" Height="48" Margin="0,0,0,12"/>

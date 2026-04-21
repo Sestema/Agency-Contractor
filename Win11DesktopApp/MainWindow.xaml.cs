@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Shell;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
@@ -47,6 +48,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
         InitializeComponent();
         SizeChanged += OnWindowSizeChanged;
+        StateChanged += OnWindowStateChanged;
+
+        SourceInitialized += (_, _) =>
+        {
+            var themeName = _appSettingsService.Settings.ThemeName;
+            if (!string.IsNullOrWhiteSpace(themeName))
+            {
+                ThemeService.ApplyBackdrop(this, themeName);
+            }
+        };
 
         Loaded += (_, _) =>
         {
@@ -54,9 +65,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _interfaceSizeMultiplier = SettingsViewModel.GetInterfaceSizeMultiplier(settings.InterfaceSize ?? "Medium");
             SettingsViewModel.ApplyTextSize(settings.TextSize ?? "Medium");
             RestoreWindowBounds(settings);
+            UpdateMaximizedVisuals();
         };
 
-        Closing += (_, _) => SaveWindowBounds();
+        Closing += (_, _) => SaveWindowBoundsAndFlushSettings();
+    }
+
+    private void OnMinimizeClick(object sender, RoutedEventArgs e)
+        => SystemCommands.MinimizeWindow(this);
+
+    private void OnMaximizeRestoreClick(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+            SystemCommands.RestoreWindow(this);
+        else
+            SystemCommands.MaximizeWindow(this);
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+        => SystemCommands.CloseWindow(this);
+
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+        => UpdateMaximizedVisuals();
+
+    private void UpdateMaximizedVisuals()
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            // WindowChrome quirk: maximized WPF window extends ~8px beyond screen on each edge.
+            RootLayout.Margin = new Thickness(8);
+            if (BtnMaximize != null)
+            {
+                BtnMaximize.Content = "\uE923";
+                BtnMaximize.ToolTip = "Restore";
+            }
+        }
+        else
+        {
+            RootLayout.Margin = new Thickness(0);
+            if (BtnMaximize != null)
+            {
+                BtnMaximize.Content = "\uE922";
+                BtnMaximize.ToolTip = "Maximize";
+            }
+        }
     }
 
     private void RestoreWindowBounds(AppSettingsService.AppSettings settings)
@@ -104,7 +156,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                top < screenBottom - 40;
     }
 
-    private async void SaveWindowBounds()
+    /// <summary>
+    /// Called during Closing. Updates window bounds AND synchronously flushes
+    /// any pending debounced settings writes (e.g. DataGrid column widths edited
+    /// moments before the user hit the close button) so they actually land on
+    /// disk before the process exits.
+    /// </summary>
+    private void SaveWindowBoundsAndFlushSettings()
     {
         try
         {
@@ -117,11 +175,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 settings.WindowWidth = Width;
                 settings.WindowHeight = Height;
             }
-            await _appSettingsService.SaveSettingsImmediate();
+
+            // Block until the write completes so we don't lose data to process shutdown.
+            _appSettingsService.SaveSettingsImmediate().GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
-            LoggingService.LogError("MainWindow.SaveWindowBounds", ex);
+            LoggingService.LogError("MainWindow.SaveWindowBoundsAndFlushSettings", ex);
         }
     }
 

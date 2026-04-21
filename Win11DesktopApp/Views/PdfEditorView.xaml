@@ -788,7 +788,7 @@
                                                         CornerRadius="10"
                                                         Padding="6,2"
                                                         Margin="8,0,0,0"
-                                                        Background="#FFE8F0FE">
+                                                        Background="{DynamicResource AccentLightBrush}">
                                                     <TextBlock Text="{Binding Confidence}"
                                                                FontSize="9"
                                                                Foreground="{DynamicResource AccentBrush}"
@@ -879,7 +879,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
                     <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,4,0"
-                            Background="{DynamicResource AccentLightBrush}" BorderBrush="#93C5FD" BorderThickness="1"/>
+                            Background="{DynamicResource AccentLightBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"/>
                     <TextBlock Text="{DynamicResource PdfTagMarker}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
                                VerticalAlignment="Center"/>
                 </StackPanel>

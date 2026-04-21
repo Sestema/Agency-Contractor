@@ -89,8 +89,8 @@
                     <Button x:Name="BtnSuggestTags"
                             Click="SuggestTags_Click"
                             Style="{StaticResource DialogAccentSoftButton}"
-                            Background="#FFF4E3"
-                            Foreground="#C77700"
+                            Background="{DynamicResource WarningChipBackgroundBrush}"
+                            Foreground="{DynamicResource WarningChipForegroundBrush}"
                             Padding="10,6">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8EC;" FontFamily="Segoe MDL2 Assets" FontSize="12"

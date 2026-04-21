@@ -81,7 +81,8 @@
                 <wv2:WebView2 x:Name="PdfWebView"/>
 
                 <Border x:Name="PreviewMessageOverlay"
-                        Background="#CCFFFFFF"
+                        Background="{DynamicResource ContentBackgroundBrush}"
+                        Opacity="0.92"
                         CornerRadius="12">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
                         <TextBlock x:Name="TxtOverlayTitle"

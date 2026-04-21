@@ -120,7 +120,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <ScrollViewer x:Name="MainScrollViewer" Style="{StaticResource ThinScroll}"
                       PreviewMouseWheel="MainScrollViewer_PreviewMouseWheel">
             <StackPanel Margin="{StaticResource PageOuterMargin}" MaxWidth="1100">
@@ -717,7 +717,7 @@
                                                 <StaticResource ResourceKey="ReportDataGridColumnHeaderStyle"/>
                                             </DataGrid.ColumnHeaderStyle>
                                             <DataGrid.RowStyle>
-                                                <Style TargetType="DataGridRow">
+                                                <Style TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRow}">
                                                     <Setter Property="Cursor" Value="Hand"/>
                                                     <EventSetter Event="MouseDoubleClick" Handler="EmployeeRow_DoubleClick"/>
                                                     <Style.Triggers>
@@ -726,9 +726,6 @@
                                                             <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
                                                             <Setter Property="FontStyle" Value="Italic"/>
                                                         </DataTrigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
-                                                        </Trigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </DataGrid.RowStyle>

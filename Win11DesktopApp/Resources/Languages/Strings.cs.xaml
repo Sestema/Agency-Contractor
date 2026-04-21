@@ -906,6 +906,8 @@
     <sys:String x:Key="SettingsDocLangHint">Jazyk pro generované dokumenty (PDF, Excel)</sys:String>
     <sys:String x:Key="DocLangSameAsUI">Stejný jako rozhraní</sys:String>
     <sys:String x:Key="SettingsThemeHint">Zvolte vizuální motiv</sys:String>
+    <sys:String x:Key="SettingsAccentColor">Barva zvýraznění</sys:String>
+    <sys:String x:Key="SettingsAccentColorHint">Vyberte barvu pro tlačítka a zvýraznění</sys:String>
     <sys:String x:Key="SettingsInterfaceSize">Velikost rozhraní</sys:String>
     <sys:String x:Key="SettingsInterfaceSizeHint">Měřítko prvků rozhraní</sys:String>
     <sys:String x:Key="SettingsTextSize">Velikost textu</sys:String>

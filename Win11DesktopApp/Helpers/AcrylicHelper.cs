@@ -46,10 +46,35 @@ namespace Win11DesktopApp.Helpers
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
         private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
 
+        private const int DWMSBT_AUTO = 0;
+        private const int DWMSBT_NONE = 1;
+        private const int DWMSBT_MAINWINDOW = 2;      // Mica
+        private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic
+        private const int DWMSBT_TABBEDWINDOW = 4;    // Mica Alt
+
+        public enum BackdropKind
+        {
+            Mica = DWMSBT_MAINWINDOW,
+            Acrylic = DWMSBT_TRANSIENTWINDOW,
+            MicaAlt = DWMSBT_TABBEDWINDOW
+        }
+
         private static bool _isEnabled;
         private static Color _previousCompositionColor;
 
+        public static bool IsWindows11 => Environment.OSVersion.Version.Build >= 22000;
+
         public static void EnableAcrylic(Window window, bool isDark)
+        {
+            EnableBackdrop(window, isDark, BackdropKind.Acrylic);
+        }
+
+        public static void EnableMica(Window window, bool isDark)
+        {
+            EnableBackdrop(window, isDark, BackdropKind.Mica);
+        }
+
+        public static void EnableBackdrop(Window window, bool isDark, BackdropKind kind)
         {
             if (window == null) return;
 
@@ -61,7 +86,7 @@ namespace Win11DesktopApp.Helpers
 
             _previousCompositionColor = hwndSource.CompositionTarget.BackgroundColor;
 
-            if (TryEnableWin11Backdrop(hwnd, isDark))
+            if (TryEnableWin11Backdrop(hwnd, isDark, kind))
             {
                 var margins = new MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
                 DwmExtendFrameIntoClientArea(hwnd, ref margins);
@@ -72,7 +97,7 @@ namespace Win11DesktopApp.Helpers
                 return;
             }
 
-            if (TryEnableWin10Acrylic(hwnd, isDark))
+            if (kind == BackdropKind.Acrylic && TryEnableWin10Acrylic(hwnd, isDark))
             {
                 _isEnabled = true;
             }
@@ -102,7 +127,20 @@ namespace Win11DesktopApp.Helpers
             _isEnabled = false;
         }
 
-        private static bool TryEnableWin11Backdrop(IntPtr hwnd, bool isDark)
+        public static void ApplyImmersiveDarkMode(Window window, bool isDark)
+        {
+            if (window == null) return;
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            try
+            {
+                int darkMode = isDark ? 1 : 0;
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
+            }
+            catch { }
+        }
+
+        private static bool TryEnableWin11Backdrop(IntPtr hwnd, bool isDark, BackdropKind kind)
         {
             try
             {
@@ -112,7 +150,7 @@ namespace Win11DesktopApp.Helpers
                 int darkMode = isDark ? 1 : 0;
                 DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
 
-                int backdropType = 3; // DWMSBT_TRANSIENTWINDOW = Acrylic
+                int backdropType = (int)kind;
                 int hr = DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
                 return hr == 0;
             }
@@ -126,7 +164,7 @@ namespace Win11DesktopApp.Helpers
         {
             try
             {
-                uint tintColor = isDark ? 0xCC1A1A2Eu : 0xB3F3F3F3u;
+                uint tintColor = isDark ? 0xA01E2235u : 0xA0FAFAFAu;
 
                 var accent = new AccentPolicy
                 {

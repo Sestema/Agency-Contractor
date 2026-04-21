@@ -121,7 +121,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid Margin="18,12,18,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -250,7 +250,7 @@
                         <TextBlock Text="{Binding WithoutPhotoCount, Mode=OneWay}"
                                    FontSize="{DynamicResource FS20}"
                                    FontWeight="Bold"
-                                   Foreground="#FF8F00"
+                                   Foreground="{DynamicResource WarningBrush}"
                                    Margin="0,2,0,0"/>
                         <TextBlock Text="{DynamicResource ArchiveFilterNoPhoto}"
                                    FontSize="{DynamicResource FS10}"
@@ -473,8 +473,8 @@
                                                                FontWeight="Bold"
                                                                Foreground="{DynamicResource ForegroundBrush}"
                                                                Margin="0,0,10,0"/>
-                                                    <Border Background="#FFF3E0"
-                                                            BorderBrush="#FFE0B2"
+                                                    <Border Background="{DynamicResource WarningChipBackgroundBrush}"
+                                                            BorderBrush="{DynamicResource WarningChipBorderBrush}"
                                                             BorderThickness="1"
                                                             CornerRadius="8"
                                                             Padding="8,2"
@@ -482,7 +482,7 @@
                                                         <TextBlock Text="{Binding FirmName}"
                                                                    FontSize="{DynamicResource FS10}"
                                                                    FontWeight="SemiBold"
-                                                                   Foreground="#EF6C00"/>
+                                                                   Foreground="{DynamicResource WarningChipForegroundBrush}"/>
                                                     </Border>
                                                 </StackPanel>
 
@@ -518,8 +518,8 @@
                                                     </StackPanel>
                                                 </WrapPanel>
 
-                                                <Border Background="#FFF8E1"
-                                                        BorderBrush="#FFE082"
+                                                <Border Background="{DynamicResource WarningChipBackgroundBrush}"
+                                                        BorderBrush="{DynamicResource WarningChipBorderBrush}"
                                                         BorderThickness="1"
                                                         CornerRadius="8"
                                                         Padding="8,3"
@@ -528,7 +528,7 @@
                                                     <TextBlock Text="{DynamicResource DetNoPhoto}"
                                                                FontSize="{DynamicResource FS10}"
                                                                FontWeight="SemiBold"
-                                                               Foreground="#FF8F00"/>
+                                                               Foreground="{DynamicResource WarningBrush}"/>
                                                 </Border>
                                             </StackPanel>
 
@@ -670,8 +670,8 @@
                                                        Margin="0,2,0,6"
                                                        TextTrimming="CharacterEllipsis"/>
 
-                                            <Border Background="#FFF3E0"
-                                                    BorderBrush="#FFE0B2"
+                                            <Border Background="{DynamicResource WarningChipBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource WarningChipBorderBrush}"
                                                     BorderThickness="1"
                                                     CornerRadius="8"
                                                     Padding="8,2"
@@ -680,7 +680,7 @@
                                                 <TextBlock Text="{Binding FirmName}"
                                                            FontSize="{DynamicResource FS10}"
                                                            FontWeight="SemiBold"
-                                                           Foreground="#EF6C00"/>
+                                                           Foreground="{DynamicResource WarningChipForegroundBrush}"/>
                                             </Border>
 
                                             <TextBlock FontSize="{DynamicResource FS11}"
@@ -697,8 +697,8 @@
                                                 <Run Text="{Binding EndDate, Mode=OneWay}"/>
                                             </TextBlock>
 
-                                            <Border Background="#FFF8E1"
-                                                    BorderBrush="#FFE082"
+                                            <Border Background="{DynamicResource WarningChipBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource WarningChipBorderBrush}"
                                                     BorderThickness="1"
                                                     CornerRadius="8"
                                                     Padding="8,3"
@@ -708,7 +708,7 @@
                                                 <TextBlock Text="{DynamicResource DetNoPhoto}"
                                                            FontSize="{DynamicResource FS10}"
                                                            FontWeight="SemiBold"
-                                                           Foreground="#FF8F00"/>
+                                                           Foreground="{DynamicResource WarningBrush}"/>
                                             </Border>
 
                                             <Button Style="{StaticResource FilledActionButton}"
@@ -796,7 +796,7 @@
                 </Border>
 
                 <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-                    <Border Background="#66FFFFFF" CornerRadius="12"/>
+                    <Border Background="{DynamicResource CardBackgroundBrush}" Opacity="0.4" CornerRadius="12"/>
                     <Border HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Padding="22,18"
@@ -970,7 +970,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                 </Border.InputBindings>

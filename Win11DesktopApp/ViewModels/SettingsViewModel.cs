@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -69,6 +70,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand GoBackCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
         public ICommand ChangeThemeCommand { get; }
+        public ICommand ChangeAccentColorCommand { get; }
         public ICommand SelectRootFolderCommand { get; }
         public ICommand OpenTagVisibilityCommand { get; }
         public ICommand OpenCompanyVisibilityCommand { get; }
@@ -328,6 +330,80 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _currentTheme, value);
         }
 
+        public ObservableCollection<AccentPresetItem> AccentPresets { get; } = new();
+
+        public string CurrentAccentColor
+        {
+            get => _appSettingsService.Settings.AccentColor ?? string.Empty;
+            set
+            {
+                var normalized = value ?? string.Empty;
+                if (_appSettingsService.Settings.AccentColor != normalized)
+                {
+                    _themeService.SetAccentColor(normalized);
+                    OnPropertyChanged(nameof(CurrentAccentColor));
+                    RefreshAccentSelection();
+                }
+            }
+        }
+
+        private void InitializeAccentPresets()
+        {
+            AccentPresets.Clear();
+            foreach (var preset in ThemeService.AccentPresets)
+            {
+                AccentPresets.Add(new AccentPresetItem(preset.Name, preset.Hex));
+            }
+            RefreshAccentSelection();
+        }
+
+        private void RefreshAccentSelection()
+        {
+            var current = CurrentAccentColor ?? string.Empty;
+            foreach (var item in AccentPresets)
+            {
+                item.IsSelected = string.Equals(item.Hex ?? string.Empty, current, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        public class AccentPresetItem : ViewModelBase
+        {
+            public AccentPresetItem(string name, string hex)
+            {
+                Name = name;
+                Hex = hex ?? string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(Hex))
+                {
+                    try
+                    {
+                        var obj = System.Windows.Media.ColorConverter.ConvertFromString(Hex);
+                        if (obj is System.Windows.Media.Color c)
+                        {
+                            var brush = new System.Windows.Media.SolidColorBrush(c);
+                            brush.Freeze();
+                            Brush = brush;
+                        }
+                    }
+                    catch { }
+                }
+                Brush ??= System.Windows.Media.Brushes.Transparent;
+            }
+
+            public string Name { get; }
+            public string Hex { get; }
+            public System.Windows.Media.Brush Brush { get; }
+
+            private bool _isSelected;
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set => SetProperty(ref _isSelected, value);
+            }
+
+            public bool IsDefault => string.IsNullOrEmpty(Hex);
+        }
+
         private string _currentInterfaceSize = "Medium";
         public string CurrentInterfaceSize
         {
@@ -387,6 +463,7 @@ namespace Win11DesktopApp.ViewModels
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
             _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
             InitializeProfileFields();
+            InitializeAccentPresets();
             _accessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
 
             GoBackCommand = new RelayCommand(o =>
@@ -412,6 +489,12 @@ namespace Win11DesktopApp.ViewModels
                     _themeService.SetTheme(theme);
                     CurrentTheme = theme;
                 }
+            });
+
+            ChangeAccentColorCommand = new RelayCommand(param =>
+            {
+                var hex = param as string ?? string.Empty;
+                CurrentAccentColor = hex;
             });
 
             SelectRootFolderCommand = new RelayCommand(o =>
@@ -645,19 +728,12 @@ namespace Win11DesktopApp.ViewModels
 
         private string DetectCurrentTheme()
         {
-            var dicts = System.Windows.Application.Current.Resources.MergedDictionaries;
-            foreach (var d in dicts)
-            {
-                if (d.Source != null && d.Source.OriginalString.Contains("Resources/Themes/Theme."))
-                {
-                    var name = d.Source.OriginalString;
-                    if (name.Contains("Light")) return "Light";
-                    if (name.Contains("DarkWord")) return "DarkWord";
-                    if (name.Contains("Dark2")) return "Dark2";
-                    if (name.Contains("Custom")) return "Custom";
-                }
-            }
-            return "Light";
+            // Source of truth is the persisted setting — not a scan of merged
+            // dictionaries. The old implementation used String.Contains and did
+            // not know about Glass / GlassDark, so those themes always fell
+            // through to "Light" after a restart (picker mismatched the window).
+            var saved = _appSettingsService.Settings.ThemeName;
+            return string.IsNullOrWhiteSpace(saved) ? "Light" : saved;
         }
 
         public void BeginGeminiApiKeyEdit()

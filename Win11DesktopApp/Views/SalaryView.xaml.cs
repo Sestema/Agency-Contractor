@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.ViewModels;
 
@@ -20,6 +21,13 @@ namespace Win11DesktopApp.Views
     {
         private const int FixedBeforeCount = 5;
         private int _dynamicColumnCount = 0;
+
+        // Live column-width persistence: subscribe to DataGridColumn.WidthProperty so
+        // resize is persisted immediately (no reliance on Unloaded, which does not
+        // fire when the user closes the window via X).
+        private readonly List<(DataGridColumn Column, EventHandler Handler)> _columnWidthSubscriptions = new();
+        private DispatcherTimer? _saveWidthsTimer;
+        private bool _suppressWidthSave;
 
         public SalaryView()
         {
@@ -168,6 +176,11 @@ namespace Win11DesktopApp.Views
         {
             if (DataContext is not SalaryViewModel vm) return;
 
+            // Rebuilding columns invalidates subscriptions. Also suppress spurious
+            // width-changed notifications from the remove/add churn below.
+            _suppressWidthSave = true;
+            DetachColumnWidthListeners();
+
             for (int i = 0; i < _dynamicColumnCount; i++)
             {
                 if (SalaryGrid.Columns.Count > FixedBeforeCount)
@@ -235,17 +248,79 @@ namespace Win11DesktopApp.Views
                 insertIdx++;
                 _dynamicColumnCount++;
             }
+
+            // Re-subscribe to all (fixed + dynamic) columns after rebuild.
+            if (SalaryGrid.IsLoaded)
+            {
+                RestoreColumnWidths();
+                AttachColumnWidthListeners();
+            }
+            _suppressWidthSave = false;
         }
 
         private void SalaryGrid_Loaded(object sender, RoutedEventArgs e)
         {
+            // Rebuild will now also Restore + Attach (since grid is loaded).
             RebuildDynamicColumns();
-            RestoreColumnWidths();
         }
 
         private void SalaryGrid_Unloaded(object sender, RoutedEventArgs e)
         {
-            SaveColumnWidths();
+            DetachColumnWidthListeners();
+            // Flush any pending debounced save.
+            if (_saveWidthsTimer?.IsEnabled == true)
+            {
+                _saveWidthsTimer.Stop();
+                SaveColumnWidths();
+            }
+        }
+
+        private void AttachColumnWidthListeners()
+        {
+            DetachColumnWidthListeners();
+
+            var descriptor = DependencyPropertyDescriptor.FromProperty(
+                DataGridColumn.WidthProperty, typeof(DataGridColumn));
+            if (descriptor == null) return;
+
+            foreach (var column in SalaryGrid.Columns)
+            {
+                EventHandler handler = OnColumnWidthChanged;
+                descriptor.AddValueChanged(column, handler);
+                _columnWidthSubscriptions.Add((column, handler));
+            }
+        }
+
+        private void DetachColumnWidthListeners()
+        {
+            if (_columnWidthSubscriptions.Count == 0) return;
+
+            var descriptor = DependencyPropertyDescriptor.FromProperty(
+                DataGridColumn.WidthProperty, typeof(DataGridColumn));
+            if (descriptor != null)
+            {
+                foreach (var (col, h) in _columnWidthSubscriptions)
+                    descriptor.RemoveValueChanged(col, h);
+            }
+            _columnWidthSubscriptions.Clear();
+        }
+
+        private void OnColumnWidthChanged(object? sender, EventArgs e)
+        {
+            if (_suppressWidthSave) return;
+
+            // Debounce rapid drag updates so we don't hammer the settings file.
+            if (_saveWidthsTimer == null)
+            {
+                _saveWidthsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                _saveWidthsTimer.Tick += (_, _) =>
+                {
+                    _saveWidthsTimer!.Stop();
+                    SaveColumnWidths();
+                };
+            }
+            _saveWidthsTimer.Stop();
+            _saveWidthsTimer.Start();
         }
 
         private void SaveColumnWidths()
@@ -262,10 +337,20 @@ namespace Win11DesktopApp.Views
         {
             var widths = (DataContext as SalaryViewModel)?.AppSettingsService.Settings.SalaryColumnWidths;
             if (widths == null || widths.Count == 0) return;
-            for (int i = 0; i < SalaryGrid.Columns.Count && i < widths.Count; i++)
+
+            // Prevent our own programmatic width assignment from triggering a save loop.
+            _suppressWidthSave = true;
+            try
             {
-                if (widths[i] > 0)
-                    SalaryGrid.Columns[i].Width = new DataGridLength(widths[i]);
+                for (int i = 0; i < SalaryGrid.Columns.Count && i < widths.Count; i++)
+                {
+                    if (widths[i] > 0)
+                        SalaryGrid.Columns[i].Width = new DataGridLength(widths[i]);
+                }
+            }
+            finally
+            {
+                _suppressWidthSave = false;
             }
         }
 

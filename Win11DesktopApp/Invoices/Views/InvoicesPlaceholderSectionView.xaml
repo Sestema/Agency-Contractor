@@ -37,7 +37,7 @@
                 <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS28}" Style="{StaticResource PageHeaderTitleText}" TextAlignment="Center" Margin="0,18,0,0"/>
                 <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS14}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                            TextAlignment="Center" Margin="0,12,0,0" TextWrapping="Wrap"/>
-                <Border Background="#CCFFFFFF"
+                <Border Background="{DynamicResource CardBackgroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}"
                         BorderThickness="1"
                         CornerRadius="18"

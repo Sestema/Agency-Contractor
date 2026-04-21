@@ -70,7 +70,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -89,7 +89,7 @@
                     <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,10,0">
                         <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                     </Button>
-                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="#FFB74D">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource WarningBrush}">
                         <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
@@ -253,8 +253,8 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Photo -->
-                                    <Border Grid.Column="0" Width="46" Height="46" CornerRadius="23" Background="#E3F2FD"
-                                            VerticalAlignment="Top" Margin="0,0,12,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                    <Border Grid.Column="0" Width="46" Height="46" CornerRadius="23" Background="{DynamicResource InfoChipBackgroundBrush}"
+                                            VerticalAlignment="Top" Margin="0,0,12,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                         <Border.Clip>
                                             <EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22"/>
                                         </Border.Clip>
@@ -262,7 +262,7 @@
                                             <Image Source="{Binding PhotoPath}" Stretch="UniformToFill"
                                                    Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                             <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9">
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Visibility" Value="Visible"/>
@@ -310,21 +310,21 @@
                                         </WrapPanel>
                                         <WrapPanel Margin="0,2,0,0">
                                             <Border Style="{StaticResource CandidateChipBorder}"
-                                                    Background="#E3F2FD" BorderBrush="#BBDEFB">
-                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="#1565C0">
+                                                    Background="{DynamicResource InfoChipBackgroundBrush}" BorderBrush="{DynamicResource InfoChipBorderBrush}">
+                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="{DynamicResource InfoChipForegroundBrush}">
                                                     <Run Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets"/>
                                                     <Run Text=" "/>
                                                     <Run Text="{Binding PassportNumber, Mode=OneWay}"/>
                                                 </TextBlock>
                                             </Border>
                                             <Border Style="{StaticResource CandidateChipBorder}"
-                                                    Background="#E8F5E9" BorderBrush="#C8E6C9">
-                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="#2E7D32"
+                                                    Background="{DynamicResource SuccessChipBackgroundBrush}" BorderBrush="{DynamicResource SuccessChipBorderBrush}">
+                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="{DynamicResource SuccessChipForegroundBrush}"
                                                            Text="{Binding PassportCountry}"/>
                                             </Border>
                                             <Border Style="{StaticResource CandidateChipBorder}"
-                                                    Background="#FFF3E0" BorderBrush="#FFE0B2">
-                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="#E65100">
+                                                    Background="{DynamicResource WarningChipBackgroundBrush}" BorderBrush="{DynamicResource WarningChipBorderBrush}">
+                                                <TextBlock Style="{StaticResource CandidateChipText}" Foreground="{DynamicResource WarningChipForegroundBrush}">
                                                     <Run Text="{DynamicResource CandAddedOn}"/>
                                                     <Run Text="{Binding DateAdded, Mode=OneWay}"/>
                                                 </TextBlock>
@@ -374,8 +374,8 @@
                                 <StackPanel>
                                     <!-- Photo + Name -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,7">
-                                        <Border Width="36" Height="36" CornerRadius="18" Background="#E3F2FD"
-                                                Margin="0,0,9,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                        <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource InfoChipBackgroundBrush}"
+                                                Margin="0,0,9,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                             <Border.Clip>
                                                 <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/>
                                             </Border.Clip>
@@ -384,7 +384,7 @@
                                                        Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets"
                                                            FontSize="{DynamicResource FS15}" HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center" Foreground="#90CAF9">
+                                                           VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Visibility" Value="Visible"/>
@@ -429,21 +429,21 @@
                                     <!-- Badges -->
                                     <WrapPanel Margin="0,5,0,0">
                                         <Border Style="{StaticResource CandidateChipBorder}"
-                                                Background="#E3F2FD" BorderBrush="#BBDEFB">
-                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="#1565C0">
+                                                Background="{DynamicResource InfoChipBackgroundBrush}" BorderBrush="{DynamicResource InfoChipBorderBrush}">
+                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="{DynamicResource InfoChipForegroundBrush}">
                                                 <Run Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets"/>
                                                 <Run Text=" "/>
                                                 <Run Text="{Binding PassportNumber, Mode=OneWay}"/>
                                             </TextBlock>
                                         </Border>
                                         <Border Style="{StaticResource CandidateChipBorder}"
-                                                Background="#E8F5E9" BorderBrush="#C8E6C9">
-                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="#2E7D32"
+                                                Background="{DynamicResource SuccessChipBackgroundBrush}" BorderBrush="{DynamicResource SuccessChipBorderBrush}">
+                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="{DynamicResource SuccessChipForegroundBrush}"
                                                        Text="{Binding PassportCountry}"/>
                                         </Border>
                                         <Border Style="{StaticResource CandidateChipBorder}"
-                                                Background="#FFF3E0" BorderBrush="#FFE0B2">
-                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="#E65100">
+                                                Background="{DynamicResource WarningChipBackgroundBrush}" BorderBrush="{DynamicResource WarningChipBorderBrush}">
+                                            <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="{DynamicResource WarningChipForegroundBrush}">
                                                 <Run Text="{DynamicResource CandAddedOn}"/>
                                                 <Run Text="{Binding DateAdded, Mode=OneWay}"/>
                                             </TextBlock>
@@ -529,7 +529,7 @@
 
         <!-- ADD CANDIDATE OVERLAY -->
         <Grid Visibility="{Binding IsAddDialogOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100">
-            <Border Background="#88000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{x:Null}"/>
                 </Border.InputBindings>
@@ -551,7 +551,7 @@
 
         <!-- DETAILS OVERLAY -->
         <Grid Visibility="{Binding IsDetailsOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100">
-            <Border Background="#88000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{x:Null}"/>
                 </Border.InputBindings>

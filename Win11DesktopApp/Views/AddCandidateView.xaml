@@ -165,7 +165,7 @@
                     </Button>
 
                     <!-- File name -->
-                    <TextBlock Text="{Binding PassportFileName}" FontSize="{DynamicResource FS12}" Foreground="#4CAF50"
+                    <TextBlock Text="{Binding PassportFileName}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SuccessBrush}"
                                HorizontalAlignment="Center" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"/>
 
                     <!-- Preview -->
@@ -268,7 +268,7 @@
                                 Visibility="{Binding IsCropPhotoMode, Converter={StaticResource InverseBoolToVis}}">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="#4CAF50" CornerRadius="8" Padding="12,8">
+                                    <Border x:Name="Bd" Background="{DynamicResource SuccessBrush}" CornerRadius="8" Padding="12,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                             <TextBlock Text="&#xE771;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                                        Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>

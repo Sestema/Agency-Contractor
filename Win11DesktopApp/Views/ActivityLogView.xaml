@@ -457,11 +457,11 @@
                                                 </Style>
                                             </StackPanel.Style>
                                             <TextBlock Text="{Binding OldValue}" FontSize="{DynamicResource FS11}"
-                                                       Foreground="#C62828" TextDecorations="Strikethrough"/>
+                                                       Foreground="{DynamicResource ErrorBrush}" TextDecorations="Strikethrough"/>
                                             <TextBlock Text=" → " FontSize="{DynamicResource FS11}"
                                                        Foreground="{DynamicResource ForegroundBrush}" Opacity="0.4"/>
                                             <TextBlock Text="{Binding NewValue}" FontSize="{DynamicResource FS11}"
-                                                       Foreground="#2E7D32" FontWeight="SemiBold"/>
+                                                       Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </StackPanel>
 
@@ -540,7 +540,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                 </Border.InputBindings>

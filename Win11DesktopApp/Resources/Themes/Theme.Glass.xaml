@@ -1,18 +1,30 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#D9EEF2FA"/>
-    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#CCE8ECF6"/>
-    <SolidColorBrush x:Key="ForegroundBrush" Color="#1A1A1A"/>
-    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#6E6E6E"/>
-    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#888888"/>
-    <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#AAAAAA"/>
-    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#D9EEF2FA"/>
-    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#CCF5F7FC"/>
-    <SolidColorBrush x:Key="CardHoverBrush" Color="#E6F8F9FE"/>
-    <SolidColorBrush x:Key="CardBorderBrush" Color="#40A0B0CC"/>
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#B3E8ECF6"/>
-    <SolidColorBrush x:Key="DividerBrush" Color="#40A0B0CC"/>
-    <SolidColorBrush x:Key="OverlayBrush" Color="#66000000"/>
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#80F6F9FF"/>
+    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#BFFFFFFF"/>
+    <SolidColorBrush x:Key="ForegroundBrush" Color="#121214"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#5E6670"/>
+    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#72788A"/>
+    <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#9AA0AE"/>
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#80F6F9FF"/>
+    <LinearGradientBrush x:Key="CardBackgroundBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#BFFFFFFF" Offset="0"/>
+        <GradientStop Color="#80FFFFFF" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CardHoverBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#D9FFFFFF" Offset="0"/>
+        <GradientStop Color="#B3FFFFFF" Offset="1"/>
+    </LinearGradientBrush>
+    <!-- Glass rim: bright top → soft bottom so light appears to hit the top edge. -->
+    <LinearGradientBrush x:Key="CardBorderBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#59FFFFFF" Offset="0"/>
+        <GradientStop Color="#33FFFFFF" Offset="0.4"/>
+        <GradientStop Color="#26000000" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="GlassInnerHighlightBrush" Color="#66FFFFFF"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#99F4F7FB"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#33000000"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#4D000000"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#007AFF"/>
     <SolidColorBrush x:Key="AccentDarkBrush" Color="#0056CC"/>
     <SolidColorBrush x:Key="AccentLightBrush" Color="#D6EAFF"/>
@@ -81,5 +93,7 @@
         <GradientStop Color="#5856D6" Offset="1"/>
     </LinearGradientBrush>
 
-    <DropShadowEffect x:Key="CardShadow" BlurRadius="16" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.12"/>
+    <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="4" Direction="270" Color="#0A0E1C" Opacity="0.18"/>
+    <DropShadowEffect x:Key="CardShadowHover" BlurRadius="36" ShadowDepth="10" Direction="270" Color="#0A0E1C" Opacity="0.26"/>
+    <DropShadowEffect x:Key="DialogShadow" BlurRadius="56" ShadowDepth="18" Direction="270" Color="#05081A" Opacity="0.38"/>
 </ResourceDictionary>

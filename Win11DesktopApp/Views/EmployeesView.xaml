@@ -116,7 +116,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}" ClipToBounds="False">
+    <Grid Background="{DynamicResource PageBackgroundBrush}" ClipToBounds="False">
         <Grid ClipToBounds="False">
             <Grid Margin="24,16,24,20" ClipToBounds="False">
                 <Grid.RowDefinitions>
@@ -302,8 +302,8 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                            <TextBlock Text="{Binding ProblemsCount}" FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="#EF6C00"/>
-                            <TextBlock Text="{DynamicResource EmpStatProblems}" FontSize="{DynamicResource FS11}" Foreground="#EF6C00"/>
+                            <TextBlock Text="{Binding ProblemsCount}" FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
+                            <TextBlock Text="{DynamicResource EmpStatProblems}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource WarningBrush}"/>
                         </StackPanel>
                     </Border>
                     <!-- New this month -->
@@ -325,8 +325,8 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                            <TextBlock Text="{Binding NewThisMonth}" FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="#42A5F5"/>
-                            <TextBlock Text="{DynamicResource EmpStatNewMonth}" FontSize="{DynamicResource FS11}" Foreground="#42A5F5"/>
+                            <TextBlock Text="{Binding NewThisMonth}" FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                            <TextBlock Text="{DynamicResource EmpStatNewMonth}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource AccentBrush}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -416,7 +416,7 @@
                             </Style>
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="#EF6C00"/>
+                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource WarningBrush}"/>
                             <TextBlock Text="{DynamicResource EmpSortProblems}" FontSize="{DynamicResource FS12}"/>
                         </StackPanel>
                     </Button>
@@ -432,12 +432,12 @@
                                        Foreground="White" FontWeight="SemiBold" FontSize="{DynamicResource FS13}" 
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <Button Command="{Binding SelectAllCommand}" Padding="10,4" Margin="0,0,6,0"
-                                    Background="#FFFFFF" Foreground="{DynamicResource AccentBrush}" 
+                                    Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource AccentBrush}" 
                                     BorderThickness="0" Cursor="Hand" FontSize="{DynamicResource FS12}">
                                 <TextBlock Text="{DynamicResource EmpSelectAll}"/>
                             </Button>
                             <Button Command="{Binding BatchGenerateCommand}" Padding="10,4" Margin="0,0,6,0"
-                                    Background="#FFFFFF" Foreground="{DynamicResource AccentBrush}" 
+                                    Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource AccentBrush}" 
                                     BorderThickness="0" Cursor="Hand" FontSize="{DynamicResource FS12}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
@@ -558,11 +558,11 @@
                                       Visibility="{Binding IsTableView, Converter={StaticResource BoolToVis}}"
                                       MouseDoubleClick="DataGrid_MouseDoubleClick">
                                 <DataGrid.RowStyle>
-                                    <Style TargetType="DataGridRow">
+                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRow}">
                                         <Setter Property="Cursor" Value="Hand"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
-                                                <Setter Property="Background" Value="#E3F2FD"/>
+                                                <Setter Property="Background" Value="{DynamicResource InfoLightBrush}"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -658,8 +658,8 @@
                                                     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
-                                                            <Setter Property="Background" Value="#E3F2FD"/>
-                                                            <Setter Property="BorderBrush" Value="#90CAF9"/>
+                                                            <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -673,11 +673,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"
                                                           Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}"/>
-                                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="22" Background="#E3F2FD" VerticalAlignment="Top" Margin="0,0,10,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                <Border Grid.Column="1" Width="44" Height="44" CornerRadius="22" Background="{DynamicResource InfoChipBackgroundBrush}" VerticalAlignment="Top" Margin="0,0,10,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                     <Border.Clip><EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22"/></Border.Clip>
                                                     <Grid>
                                                         <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
-                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Grid.Column="2" Margin="0,0,8,0">
@@ -865,19 +865,19 @@
                                                     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
-                                                            <Setter Property="Background" Value="#E3F2FD"/>
-                                                            <Setter Property="BorderBrush" Value="#90CAF9"/>
+                                                            <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                    <Border Width="36" Height="36" CornerRadius="18" Background="#E3F2FD" Margin="0,0,8,0" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                    <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource InfoChipBackgroundBrush}" Margin="0,0,8,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                         <Border.Clip><EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/></Border.Clip>
                                                         <Grid>
                                                             <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
-                                                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
                                                         </Grid>
                                                     </Border>
                                                     <StackPanel VerticalAlignment="Center">
@@ -988,22 +988,22 @@
                                                     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
-                                                            <Setter Property="Background" Value="#E3F2FD"/>
-                                                            <Setter Property="BorderBrush" Value="#90CAF9"/>
+                                                            <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
                                             <StackPanel HorizontalAlignment="Center">
-                                                <Border Width="48" Height="48" CornerRadius="24" Background="#E3F2FD" HorizontalAlignment="Center" Margin="0,0,0,4" BorderBrush="#BBDEFB" BorderThickness="1.5">
+                                                <Border Width="48" Height="48" CornerRadius="24" Background="{DynamicResource InfoChipBackgroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                     <Border.Clip><EllipseGeometry Center="24,24" RadiusX="24" RadiusY="24"/></Border.Clip>
                                                     <Grid>
                                                         <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
-                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#90CAF9" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
+                                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
                                                     </Grid>
                                                 </Border>
                                                 <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS9}" Foreground="#888" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS9}" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                 <Border CornerRadius="6" Padding="4,1" HorizontalAlignment="Center" Margin="0,2,0,2" Background="{Binding Status, Converter={StaticResource StatusBg}}">
                                                     <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
                                                 </Border>
@@ -1116,7 +1116,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000"/>
+            <Border Background="{DynamicResource OverlayBrush}"/>
             <ContentControl Content="{Binding AddEmployeeVm}" 
                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
                             Margin="10">
@@ -1147,7 +1147,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                 </Border.InputBindings>
@@ -1180,7 +1180,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000"/>
+            <Border Background="{DynamicResource OverlayBrush}"/>
             <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" Padding="24" 
                     Width="420" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
@@ -1188,10 +1188,10 @@
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS32}" 
-                               HorizontalAlignment="Center" Foreground="#D32F2F" Margin="0,0,0,12"/>
+                               HorizontalAlignment="Center" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
                     <TextBlock Text="{DynamicResource MsgDeleteEmployee}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold" 
                                Margin="0,0,0,6" TextAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
-                    <TextBlock Text="{Binding EmployeeToDelete.FullName}" Foreground="#666" FontSize="{DynamicResource FS14}"
+                            <TextBlock Text="{Binding EmployeeToDelete.FullName}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="{DynamicResource FS14}"
                                Margin="0,0,0,20" TextAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Command="{Binding CancelDeleteCommand}" Padding="18,8" Margin="0,0,10,0"
@@ -1201,7 +1201,7 @@
                             <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}"/>
                         </Button>
                         <Button Command="{Binding ConfirmDeleteCommand}" Padding="18,8"
-                                Background="#D32F2F" Foreground="White" BorderThickness="0"
+                                Background="{DynamicResource DangerHoverBrush}" Foreground="White" BorderThickness="0"
                                 FontWeight="SemiBold" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
@@ -1232,7 +1232,7 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Border Background="#66000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseBatchGenerateCommand}"/>
                 </Border.InputBindings>
@@ -1280,7 +1280,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Border Grid.Column="0" Width="40" Height="40" CornerRadius="6" 
-                                                    Background="#E3F2FD" Margin="0,0,12,0">
+                                                    Background="{DynamicResource InfoChipBackgroundBrush}" Margin="0,0,12,0">
                                                 <TextBlock Text="{Binding Format}" VerticalAlignment="Center" 
                                                            HorizontalAlignment="Center" FontWeight="Bold" FontSize="{DynamicResource FS11}"
                                                            Foreground="{DynamicResource AccentBrush}"/>
@@ -1288,7 +1288,7 @@
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
                                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                                <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}" Foreground="#888" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                             <Button Grid.Column="2" 
                                                     Command="{Binding DataContext.BatchGenerateFromTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"

@@ -892,6 +892,8 @@
     <sys:String x:Key="SettingsDocLangHint">Language for generated documents (PDF, Excel)</sys:String>
     <sys:String x:Key="DocLangSameAsUI">Same as UI</sys:String>
     <sys:String x:Key="SettingsThemeHint">Choose your visual theme</sys:String>
+    <sys:String x:Key="SettingsAccentColor">Accent color</sys:String>
+    <sys:String x:Key="SettingsAccentColorHint">Pick the color used for buttons and highlights</sys:String>
     <sys:String x:Key="SettingsInterfaceSize">Interface Size</sys:String>
     <sys:String x:Key="SettingsInterfaceSizeHint">Scale of interface elements</sys:String>
     <sys:String x:Key="SettingsTextSize">Text Size</sys:String>

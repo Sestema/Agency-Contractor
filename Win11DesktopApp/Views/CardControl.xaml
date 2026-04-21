@@ -33,40 +33,89 @@
                         <Border.Effect>
                             <DropShadowEffect x:Name="CardShadow" BlurRadius="12" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.08"/>
                         </Border.Effect>
-                        <Grid Margin="16">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <!-- Gradient icon circle -->
-                            <Border x:Name="IconCircle" Grid.Row="0" 
-                                    Width="64" Height="64" CornerRadius="18"
-                                    HorizontalAlignment="Center" Margin="0,4,0,0"
-                                    RenderTransformOrigin="0.5,0.5"
-                                    Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                <Border.RenderTransform>
-                                    <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
-                                </Border.RenderTransform>
-                                <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      Fill="White"
-                                      Stretch="Uniform"
-                                      Width="30" Height="30"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <!-- Gradient icon circle -->
+                                <Border x:Name="IconCircle" Grid.Row="0"
+                                        Width="64" Height="64" CornerRadius="18"
+                                        HorizontalAlignment="Center" Margin="0,4,0,0"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
+                                    </Border.RenderTransform>
+                                    <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          Fill="White"
+                                          Stretch="Uniform"
+                                          Width="30" Height="30"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <!-- Title -->
+                                <TextBlock x:Name="TitleText" Grid.Row="2"
+                                           Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           FontSize="{DynamicResource FS14}"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Bottom"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,2"/>
+                            </Grid>
+
+                            <!-- Win11 Reveal highlight layer (follows cursor) -->
+                            <Border x:Name="RevealLayer"
+                                    CornerRadius="16"
+                                    IsHitTestVisible="False"
+                                    Opacity="0"
+                                    SnapsToDevicePixels="True">
+                                <Border.Background>
+                                    <RadialGradientBrush x:Name="RevealBrush"
+                                                         Center="0.5,0.5"
+                                                         GradientOrigin="0.5,0.5"
+                                                         RadiusX="0.55" RadiusY="0.55">
+                                        <GradientStop Color="#66FFFFFF" Offset="0.0"/>
+                                        <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                                    </RadialGradientBrush>
+                                </Border.Background>
                             </Border>
 
-                            <!-- Title -->
-                            <TextBlock x:Name="TitleText" Grid.Row="2" 
-                                       Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                       Foreground="{DynamicResource ForegroundBrush}"
-                                       FontSize="{DynamicResource FS14}"
-                                       FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" 
-                                       VerticalAlignment="Bottom"
-                                       TextAlignment="Center"
-                                       TextWrapping="Wrap"
-                                       Margin="0,8,0,2"/>
+                            <!-- Reveal border highlight (edge glow that also follows cursor) -->
+                            <Border x:Name="RevealBorder"
+                                    CornerRadius="16"
+                                    BorderThickness="1"
+                                    IsHitTestVisible="False"
+                                    Opacity="0"
+                                    SnapsToDevicePixels="True">
+                                <Border.BorderBrush>
+                                    <RadialGradientBrush x:Name="RevealBorderBrush"
+                                                         Center="0.5,0.5"
+                                                         GradientOrigin="0.5,0.5"
+                                                         RadiusX="0.5" RadiusY="0.5">
+                                        <GradientStop Color="#CCFFFFFF" Offset="0.0"/>
+                                        <GradientStop Color="#44FFFFFF" Offset="0.5"/>
+                                        <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                                    </RadialGradientBrush>
+                                </Border.BorderBrush>
+                            </Border>
+
+                            <!-- Static inner highlight rim: visible only in Glass themes
+                                 where GlassInnerHighlightBrush is defined. In other themes
+                                 the DynamicResource does not resolve, so nothing is drawn. -->
+                            <Border x:Name="GlassHighlight"
+                                    CornerRadius="16"
+                                    BorderThickness="1,1,1,0"
+                                    BorderBrush="{DynamicResource GlassInnerHighlightBrush}"
+                                    Margin="1"
+                                    IsHitTestVisible="False"
+                                    SnapsToDevicePixels="True"/>
                         </Grid>
                     </Border>
 

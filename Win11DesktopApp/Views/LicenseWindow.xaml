@@ -58,7 +58,7 @@
                                            Text="Перевірка..."
                                            FontSize="{DynamicResource FS16}"
                                            FontWeight="SemiBold"
-                                           Foreground="#D32F2F"
+                                           Foreground="{DynamicResource ErrorBrush}"
                                            TextWrapping="Wrap"/>
                                 <TextBlock x:Name="TxtStatusDetail"
                                            Text=""
@@ -187,7 +187,7 @@
                                    Foreground="{DynamicResource SecondaryForegroundBrush}"
                                    Margin="0,0,0,6"/>
                         <TextBlock x:Name="TxtResult" Text="" FontSize="{DynamicResource FS12}" TextWrapping="Wrap"
-                                   Foreground="#388E3C"/>
+                                   Foreground="{DynamicResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

@@ -889,6 +889,8 @@
     <sys:String x:Key="SettingsDocLangHint">Язык для генерируемых документов (PDF, Excel)</sys:String>
     <sys:String x:Key="DocLangSameAsUI">Как интерфейс</sys:String>
     <sys:String x:Key="SettingsThemeHint">Выберите визуальную тему</sys:String>
+    <sys:String x:Key="SettingsAccentColor">Акцентный цвет</sys:String>
+    <sys:String x:Key="SettingsAccentColorHint">Выберите цвет для кнопок и акцентов</sys:String>
     <sys:String x:Key="SettingsInterfaceSize">Размер интерфейса</sys:String>
     <sys:String x:Key="SettingsInterfaceSizeHint">Масштаб элементов интерфейса</sys:String>
     <sys:String x:Key="SettingsTextSize">Размер текста</sys:String>

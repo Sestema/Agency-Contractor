@@ -70,6 +70,12 @@ namespace Win11DesktopApp
 
             GlobalFontSettings.FontResolver = new PdfFontResolver();
 
+            // Gentle fade-in for all windows (dialogs feel lighter, less jarring).
+            EventManager.RegisterClassHandler(
+                typeof(Window),
+                FrameworkElement.LoadedEvent,
+                new RoutedEventHandler(OnAnyWindowLoaded_FadeIn));
+
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
                 if (args.ExceptionObject is Exception ex)
@@ -918,6 +924,23 @@ namespace Win11DesktopApp
             _heartbeatCts?.Cancel();
             _heartbeatCts?.Dispose();
             base.OnExit(e);
+        }
+
+        private static void OnAnyWindowLoaded_FadeIn(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Window window) return;
+            if (window.AllowsTransparency) return; // layered windows animate poorly
+            var anim = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(180),
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                {
+                    EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+                }
+            };
+            window.BeginAnimation(UIElement.OpacityProperty, anim);
         }
 
         private static RemotePolicy? BuildEffectivePolicy(LocalLicenseStatus localLicenseStatus, ClientAccessState accessState, RemotePolicy? policy)

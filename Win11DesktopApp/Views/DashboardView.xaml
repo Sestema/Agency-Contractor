@@ -692,7 +692,7 @@
 
         <!-- Employee Details Overlay -->
         <Grid Grid.RowSpan="3" Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#66000000" Margin="-24,-16">
+            <Border Background="{DynamicResource OverlayBrush}" Margin="-24,-16">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                 </Border.InputBindings>
@@ -708,7 +708,7 @@
 
         <!-- AI Report Overlay -->
         <Grid Visibility="{Binding IsAIReportOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="#40000000">
+            <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CloseAIReportCommand}"/>
                 </Border.InputBindings>
