@@ -633,6 +633,8 @@
     <sys:String x:Key="DetFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="DetFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="DetFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
+    <sys:String x:Key="DetFieldGender">Стать</sys:String>
     <sys:String x:Key="DetSecPassport">Паспортні дані</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="DetFieldPassportAuthority">Орган, що видав документ</sys:String>
@@ -760,6 +762,8 @@
     <sys:String x:Key="ArchiveSortEndDate">Дата завершення</sys:String>
     <sys:String x:Key="ArchiveSortFirm">Фірма</sys:String>
     <sys:String x:Key="ArchiveResultsLabel">Показано</sys:String>
+    <sys:String x:Key="ArchiveNoMatchesDesc">Спробуйте змінити пошуковий запит або скинути поточний фільтр.</sys:String>
+    <sys:String x:Key="ArchiveClearFilter">Скинути фільтр</sys:String>
     <sys:String x:Key="ArchiveFirm">Фірма</sys:String>
     <sys:String x:Key="ArchiveStartDate">Дата наступу</sys:String>
     <sys:String x:Key="ArchiveSignDate">Дата підписання договору</sys:String>
@@ -982,7 +986,17 @@
     <sys:String x:Key="ReportFirmsCount">фірм</sys:String>
     <sys:String x:Key="ReportEmpCount">працівників</sys:String>
     <sys:String x:Key="ReportColName">Ім'я</sys:String>
-    <sys:String x:Key="ReportColType">Тип</sys:String>
+    <sys:String x:Key="ReportColType">Назва дозволу на роботу</sys:String>
+    <sys:String x:Key="ReportColDocumentType">Тип документа</sys:String>
+    <sys:String x:Key="ReportColPassportNumber">Номер паспорта або ID-карти</sys:String>
+    <sys:String x:Key="ReportColWorkAddress">Адреса виконання роботи</sys:String>
+    <sys:String x:Key="ReportColHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
+    <sys:String x:Key="ReportColAddressCz">Повна адреса проживання</sys:String>
+    <sys:String x:Key="ReportColAddressAbroad">Адреса за кордоном</sys:String>
+    <sys:String x:Key="ReportColBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="ReportColGender">Стать</sys:String>
+    <sys:String x:Key="ReportColPassportIssuedBy">Орган видачі паспорта</sys:String>
+    <sys:String x:Key="ReportColPositionCode">Код позиції CZ-NACE</sys:String>
     <sys:String x:Key="ReportColPassportExp">Паспорт до</sys:String>
     <sys:String x:Key="ReportColVisaExp">Віза до</sys:String>
     <sys:String x:Key="ReportColInsExp">Страх. до</sys:String>
@@ -1246,6 +1260,7 @@
     <sys:String x:Key="TagDescEmpLastName">Прізвище працівника</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Повне ім'я працівника</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="TagDescEmpHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="TagDescEmpGender">Стать (Чоловік / Жінка)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
@@ -1729,6 +1744,7 @@
     <sys:String x:Key="HistFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="HistFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="HistFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Термін паспорту</sys:String>

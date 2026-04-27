@@ -77,6 +77,7 @@ public sealed class AdminMirrorEmployeeDto
     public string EuDocumentType { get; set; } = string.Empty;
     public string VisaDocType { get; set; } = string.Empty;
     public string Gender { get; set; } = string.Empty;
+    public string HighestEducationCode { get; set; } = string.Empty;
     public string PassportNumber { get; set; } = string.Empty;
     public string PassportCity { get; set; } = string.Empty;
     public string PassportCountry { get; set; } = string.Empty;

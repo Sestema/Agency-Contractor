@@ -630,6 +630,7 @@
     <sys:String x:Key="DetFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="DetFieldLastName">Příjmení</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="DetFieldHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="DetFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="DetSecPassport">Pasové údaje</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Číslo pasu</sys:String>
@@ -758,6 +759,8 @@
     <sys:String x:Key="ArchiveSortEndDate">Datum ukončení</sys:String>
     <sys:String x:Key="ArchiveSortFirm">Firma</sys:String>
     <sys:String x:Key="ArchiveResultsLabel">Zobrazeno</sys:String>
+    <sys:String x:Key="ArchiveNoMatchesDesc">Zkuste změnit vyhledávací dotaz nebo zrušit aktuální filtr.</sys:String>
+    <sys:String x:Key="ArchiveClearFilter">Vymazat filtr</sys:String>
     <sys:String x:Key="ArchiveFirm">Firma</sys:String>
     <sys:String x:Key="ArchiveStartDate">Datum nástupu</sys:String>
     <sys:String x:Key="ArchiveSignDate">Datum podpisu smlouvy</sys:String>
@@ -978,7 +981,17 @@
     <sys:String x:Key="ReportFirmsCount">firem</sys:String>
     <sys:String x:Key="ReportEmpCount">zaměstnanců</sys:String>
     <sys:String x:Key="ReportColName">Jméno</sys:String>
-    <sys:String x:Key="ReportColType">Typ</sys:String>
+    <sys:String x:Key="ReportColType">Název pracovního povolení</sys:String>
+    <sys:String x:Key="ReportColDocumentType">Typ karty/víza/pasu</sys:String>
+    <sys:String x:Key="ReportColPassportNumber">Číslo pasu nebo ID karty</sys:String>
+    <sys:String x:Key="ReportColWorkAddress">Adresa výkonu práce</sys:String>
+    <sys:String x:Key="ReportColHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
+    <sys:String x:Key="ReportColAddressCz">Celá adresa bydliště</sys:String>
+    <sys:String x:Key="ReportColAddressAbroad">Zahraniční adresa</sys:String>
+    <sys:String x:Key="ReportColBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="ReportColGender">Pohlaví</sys:String>
+    <sys:String x:Key="ReportColPassportIssuedBy">Orgán vydání pasu</sys:String>
+    <sys:String x:Key="ReportColPositionCode">Kód pozice CZ-NACE</sys:String>
     <sys:String x:Key="ReportColPassportExp">Pas do</sys:String>
     <sys:String x:Key="ReportColVisaExp">Vízum do</sys:String>
     <sys:String x:Key="ReportColInsExp">Poj. do</sys:String>
@@ -1242,6 +1255,7 @@
     <sys:String x:Key="TagDescEmpLastName">Příjmení zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Celé jméno zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="TagDescEmpHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="TagDescEmpGender">Pohlaví (Muž / Žena)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Telefon</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
@@ -1727,6 +1741,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="HistFieldLastName">Příjmení</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="HistFieldHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="HistFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Číslo pasu</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Orgán vydávající doklad</sys:String>

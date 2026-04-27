@@ -387,27 +387,67 @@
             </Border>
 
             <Grid Grid.Row="3" ClipToBounds="False">
-                <ScrollViewer Style="{StaticResource ThinScroll}"
-                              Visibility="{Binding HasArchived, Converter={StaticResource BoolToVis}}"
-                              ClipToBounds="False">
-                    <Grid Margin="4,8,4,12" ClipToBounds="False">
-                        <Grid.LayoutTransform>
-                            <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
-                        </Grid.LayoutTransform>
+                <!-- Data area. Split into two siblings so list-mode gets real
+                     virtualization (ListBox owns its own ScrollViewer) while
+                     tiles keep the outer ScrollViewer + LayoutTransform zoom. -->
+                <Grid Visibility="{Binding HasArchivedData, Converter={StaticResource BoolToVis}}"
+                      ClipToBounds="False">
 
-                        <ItemsControl ItemsSource="{Binding ArchivedEmployees}"
-                                      Visibility="{Binding IsListView, Converter={StaticResource BoolToVis}}"
-                                      ClipToBounds="False"
-                                      VirtualizingStackPanel.IsVirtualizing="True"
-                                      VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                      ScrollViewer.CanContentScroll="True">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <VirtualizingStackPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
+                    <!-- LIST MODE: ListBox so VirtualizingStackPanel actually
+                         virtualizes (the previous ItemsControl lost this
+                         because it sat inside an outer ScrollViewer +
+                         LayoutTransform). ZoomLevel is applied per-item via
+                         LayoutTransform inside the item template, which is
+                         safe for virtualization. -->
+                    <ListBox ItemsSource="{Binding ArchivedEmployees}"
+                             Visibility="{Binding IsListView, Converter={StaticResource BoolToVis}}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Padding="0"
+                             Margin="4,8,4,12"
+                             ClipToBounds="False"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.CanContentScroll="True"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             VirtualizingStackPanel.IsVirtualizing="True"
+                             VirtualizingStackPanel.VirtualizationMode="Recycling">
+                        <ListBox.Resources>
+                            <!-- Apply the thin scroll visual to the internal ScrollViewer. -->
+                            <Style TargetType="ScrollViewer" BasedOn="{StaticResource ThinScroll}"/>
+                        </ListBox.Resources>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <!-- Neutralize default ListBoxItem selection / focus
+                             visuals; the inner card Border already owns hover
+                             and click, matching the previous ItemsControl UX. -->
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ClipToBounds="False">
+                                    <Grid.LayoutTransform>
+                                        <ScaleTransform ScaleX="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        ScaleY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                    </Grid.LayoutTransform>
                                     <Border Background="{DynamicResource CardBackgroundBrush}"
                                             CornerRadius="14"
                                             Padding="16,15"
@@ -453,7 +493,7 @@
                                                     <EllipseGeometry Center="27,27" RadiusX="27" RadiusY="27"/>
                                                 </Border.Clip>
                                                 <Grid>
-                                                    <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}"
+                                                    <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=128}"
                                                            Stretch="UniformToFill"
                                                            Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                                     <TextBlock Text="&#xE77B;"
@@ -593,18 +633,29 @@
                                             </EventTrigger>
                                         </Border.Triggers>
                                     </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-                        <ItemsControl ItemsSource="{Binding ArchivedEmployees}"
-                                      Visibility="{Binding IsTilesView, Converter={StaticResource BoolToVis}}"
-                                      ClipToBounds="False">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel ClipToBounds="False"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
+                    <!-- TILES MODE: kept with outer ScrollViewer + LayoutTransform
+                         zoom because WrapPanel does not virtualize; reworking it
+                         is deferred to a later pass (see performance plan). -->
+                    <ScrollViewer Style="{StaticResource ThinScroll}"
+                                  Visibility="{Binding IsTilesView, Converter={StaticResource BoolToVis}}"
+                                  ClipToBounds="False">
+                        <Grid Margin="4,8,4,12" ClipToBounds="False">
+                            <Grid.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
+                            </Grid.LayoutTransform>
+
+                            <ItemsControl ItemsSource="{Binding ArchivedEmployees}"
+                                          ClipToBounds="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel ClipToBounds="False"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Width="256"
@@ -644,7 +695,7 @@
                                                     <EllipseGeometry Center="29,29" RadiusX="29" RadiusY="29"/>
                                                 </Border.Clip>
                                                 <Grid>
-                                                    <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}"
+                                                    <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=128}"
                                                            Stretch="UniformToFill"
                                                            Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                                     <TextBlock Text="&#xE77B;"
@@ -770,14 +821,15 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </Grid>
-                </ScrollViewer>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
 
                 <Border Padding="28,24"
-                        Visibility="{Binding HasArchived, Converter={StaticResource InverseBoolToVis}}">
+                        Visibility="{Binding HasArchivedData, Converter={StaticResource InverseBoolToVis}}">
                     <Border.Style>
                         <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
-                            <Setter Property="Visibility" Value="{Binding HasArchived, Converter={StaticResource InverseBoolToVis}}"/>
+                            <Setter Property="Visibility" Value="{Binding HasArchivedData, Converter={StaticResource InverseBoolToVis}}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsLoading}" Value="True">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -792,6 +844,38 @@
                                    Style="{StaticResource CompactEmptyStateDescriptionText}"
                                    TextAlignment="Center"
                                    MaxWidth="360"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="28,24"
+                        Visibility="{Binding ShowNoMatchesState, Converter={StaticResource BoolToVis}}">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
+                            <Setter Property="Visibility" Value="{Binding ShowNoMatchesState, Converter={StaticResource BoolToVis}}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE721;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}"/>
+                        <TextBlock Text="{DynamicResource GlobalSearchNoResults}" Style="{StaticResource CompactEmptyStateTitleText}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource ArchiveNoMatchesDesc}"
+                                   Style="{StaticResource CompactEmptyStateDescriptionText}"
+                                   TextAlignment="Center"
+                                   MaxWidth="360"/>
+                        <Button Command="{Binding ClearFilterCommand}"
+                                Margin="0,18,0,0"
+                                Padding="14,8"
+                                HorizontalAlignment="Center"
+                                Style="{StaticResource FilledActionButton}">
+                            <TextBlock Text="{DynamicResource ArchiveClearFilter}"
+                                       FontSize="{DynamicResource FS12}"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"/>
+                        </Button>
                     </StackPanel>
                 </Border>
 

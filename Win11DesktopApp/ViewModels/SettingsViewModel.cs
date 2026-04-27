@@ -6,9 +6,11 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
+using Win11DesktopApp.Telegram;
 using Win11DesktopApp.Views;
 
 namespace Win11DesktopApp.ViewModels
@@ -66,6 +68,8 @@ namespace Win11DesktopApp.ViewModels
         private readonly DocumentLocalizationService _documentLocalizationService;
         private readonly CurrentProfileService _currentProfileService;
         private readonly GeminiApiKeyConfigurationService _geminiApiKeyConfigurationService;
+        private readonly TelegramBotService _telegramBotService;
+        private readonly TelegramPairingService _telegramPairingService;
 
         public ICommand GoBackCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
@@ -85,6 +89,11 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ChangeProfilePasswordCommand { get; }
         public ICommand EditProfileCommand { get; }
         public ICommand CancelProfileEditCommand { get; }
+        public ICommand ConnectTelegramBotCommand { get; }
+        public ICommand DisconnectTelegramBotCommand { get; }
+        public ICommand GenerateTelegramQrCommand { get; }
+        public ICommand RemoveTelegramAuthorizedUserCommand { get; }
+        public ICommand OpenBotFatherCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -131,6 +140,15 @@ namespace Win11DesktopApp.ViewModels
         private bool _isProfileEditMode;
         private bool _isEditingGeminiApiKey;
         private string _geminiApiKeyDraft = string.Empty;
+        private bool _telegramEnabled;
+        private bool _telegramIsBusy;
+        private string _telegramBotTokenInput = string.Empty;
+        private string _telegramBotStatus = string.Empty;
+        private BitmapImage? _telegramQrCodeImage;
+        private string _telegramPairingCode = string.Empty;
+        private string _telegramPairingExpiryText = string.Empty;
+
+        public ObservableCollection<TelegramAuthorizedUser> TelegramAuthorizedUsers { get; } = new();
 
         public string RootFolderPath
         {
@@ -150,6 +168,129 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public string AppVersion => AppSettingsService.CurrentAppVersion;
+
+        public bool TelegramEnabled
+        {
+            get => _telegramEnabled;
+            set
+            {
+                if (!SetProperty(ref _telegramEnabled, value))
+                    return;
+
+                _appSettingsService.Settings.Telegram.Enabled = value;
+                _appSettingsService.SaveSettings();
+
+                if (!value)
+                {
+                    _telegramBotService.Stop();
+                    TelegramBotStatus = "Telegram-бот вимкнений.";
+                }
+                else if (HasTelegramBotToken)
+                {
+                    _ = RestartTelegramBotAsync();
+                }
+                else
+                {
+                    TelegramBotStatus = "Вставте токен від BotFather, щоб активувати бота.";
+                }
+
+                OnPropertyChanged(nameof(TelegramNeedsToken));
+                OnPropertyChanged(nameof(TelegramCanGenerateQr));
+            }
+        }
+
+        public bool TelegramNeedsToken => TelegramEnabled && !HasTelegramBotToken;
+
+        public bool TelegramIsBusy
+        {
+            get => _telegramIsBusy;
+            set => SetProperty(ref _telegramIsBusy, value);
+        }
+
+        public string TelegramBotTokenInput
+        {
+            get => _telegramBotTokenInput;
+            set => SetProperty(ref _telegramBotTokenInput, value);
+        }
+
+        public string TelegramBotStatus
+        {
+            get => _telegramBotStatus;
+            set => SetProperty(ref _telegramBotStatus, value);
+        }
+
+        public string TelegramBotUsername => _appSettingsService.Settings.Telegram.BotUsername;
+
+        public bool HasTelegramBotToken => !string.IsNullOrWhiteSpace(_appSettingsService.Settings.Telegram.EncryptedBotToken);
+
+        public bool TelegramIsConnected => TelegramEnabled && HasTelegramBotToken;
+
+        public BitmapImage? TelegramQrCodeImage
+        {
+            get => _telegramQrCodeImage;
+            set => SetProperty(ref _telegramQrCodeImage, value);
+        }
+
+        public bool HasTelegramQrCode => TelegramQrCodeImage != null;
+
+        public string TelegramPairingCode
+        {
+            get => _telegramPairingCode;
+            set => SetProperty(ref _telegramPairingCode, value);
+        }
+
+        public string TelegramPairingExpiryText
+        {
+            get => _telegramPairingExpiryText;
+            set => SetProperty(ref _telegramPairingExpiryText, value);
+        }
+
+        public bool HasTelegramAuthorizedUsers => TelegramAuthorizedUsers.Count > 0;
+
+        public bool TelegramAllowAiQuestions
+        {
+            get => _appSettingsService.Settings.Telegram.AllowAiQuestions;
+            set
+            {
+                if (_appSettingsService.Settings.Telegram.AllowAiQuestions == value)
+                    return;
+
+                _appSettingsService.Settings.Telegram.AllowAiQuestions = value;
+                _appSettingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public bool TelegramDailyDigestEnabled
+        {
+            get => _appSettingsService.Settings.Telegram.DailyDigestEnabled;
+            set
+            {
+                if (_appSettingsService.Settings.Telegram.DailyDigestEnabled == value)
+                    return;
+
+                _appSettingsService.Settings.Telegram.DailyDigestEnabled = value;
+                _appSettingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public string TelegramDailyDigestTime
+        {
+            get => _appSettingsService.Settings.Telegram.DailyDigestTime;
+            set
+            {
+                var normalized = string.IsNullOrWhiteSpace(value) ? "08:00" : value.Trim();
+                if (_appSettingsService.Settings.Telegram.DailyDigestTime == normalized)
+                    return;
+
+                _appSettingsService.Settings.Telegram.DailyDigestTime = normalized;
+                _appSettingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public bool TelegramCanGenerateQr => TelegramIsConnected && !string.IsNullOrWhiteSpace(TelegramBotUsername);
 
         public string AccessStatusTitle => _accessStatusService.Title ?? string.Empty;
         public string AccessStatusDetail => _accessStatusService.Detail ?? string.Empty;
@@ -439,7 +580,9 @@ namespace Win11DesktopApp.ViewModels
             GeminiApiService? geminiApiService = null,
             DocumentLocalizationService? documentLocalizationService = null,
             CurrentProfileService? currentProfileService = null,
-            GeminiApiKeyConfigurationService? geminiApiKeyConfigurationService = null)
+            GeminiApiKeyConfigurationService? geminiApiKeyConfigurationService = null,
+            TelegramBotService? telegramBotService = null,
+            TelegramPairingService? telegramPairingService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
@@ -455,6 +598,8 @@ namespace Win11DesktopApp.ViewModels
             _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
             _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
             _geminiApiKeyConfigurationService = geminiApiKeyConfigurationService ?? throw new InvalidOperationException("GeminiApiKeyConfigurationService is not initialized.");
+            _telegramBotService = telegramBotService ?? throw new InvalidOperationException("TelegramBotService is not initialized.");
+            _telegramPairingService = telegramPairingService ?? throw new InvalidOperationException("TelegramPairingService is not initialized.");
 
             _currentLanguage = _appSettingsService.Settings.LanguageCode;
             _currentTheme = DetectCurrentTheme();
@@ -462,9 +607,12 @@ namespace Win11DesktopApp.ViewModels
             _currentTextSize = _appSettingsService.Settings.TextSize ?? "Medium";
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
             _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
+            _telegramEnabled = _appSettingsService.Settings.Telegram.Enabled;
             InitializeProfileFields();
             InitializeAccentPresets();
+            RefreshTelegramState();
             _accessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
+            _telegramBotService.StateChanged += TelegramBotService_StateChanged;
 
             GoBackCommand = new RelayCommand(o =>
             {
@@ -638,6 +786,32 @@ namespace Win11DesktopApp.ViewModels
                 SetProfileStatus(string.Empty, false);
                 IsProfileEditMode = false;
             }, _ => HasProfile);
+
+            ConnectTelegramBotCommand = new AsyncRelayCommand(_ => ConnectTelegramBotAsync(), _ => !TelegramIsBusy && TelegramEnabled);
+            DisconnectTelegramBotCommand = new AsyncRelayCommand(_ => DisconnectTelegramBotAsync(), _ => !TelegramIsBusy && HasTelegramBotToken);
+            GenerateTelegramQrCommand = new RelayCommand(_ => GenerateTelegramQr(), _ => TelegramCanGenerateQr);
+            RemoveTelegramAuthorizedUserCommand = new RelayCommand(param =>
+            {
+                if (param is long userId)
+                {
+                    _telegramBotService.RemoveAuthorizedUser(userId);
+                    RefreshTelegramState();
+                }
+            });
+            OpenBotFatherCommand = new RelayCommand(_ =>
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://t.me/BotFather")
+                    {
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("Settings.OpenBotFather", ex.Message);
+                }
+            });
         }
 
         private void AccessStatusService_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -686,9 +860,137 @@ namespace Win11DesktopApp.ViewModels
             };
         }
 
+        private void TelegramBotService_StateChanged(object? sender, EventArgs e)
+        {
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(RefreshTelegramState));
+        }
+
+        private void RefreshTelegramState()
+        {
+            TelegramAuthorizedUsers.Clear();
+            foreach (var user in _appSettingsService.Settings.Telegram.AuthorizedUsers
+                         .OrderBy(u => u.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            {
+                TelegramAuthorizedUsers.Add(user);
+            }
+
+            SetProperty(ref _telegramEnabled, _appSettingsService.Settings.Telegram.Enabled, nameof(TelegramEnabled));
+            TelegramBotStatus = string.IsNullOrWhiteSpace(_telegramBotService.LastStatus)
+                ? (HasTelegramBotToken
+                    ? $"Підключено: @{TelegramBotUsername}"
+                    : "Telegram-бот ще не налаштований.")
+                : _telegramBotService.LastStatus;
+
+            if (!HasTelegramQrCode && TelegramCanGenerateQr)
+                GenerateTelegramQr();
+
+            OnPropertyChanged(nameof(TelegramBotUsername));
+            OnPropertyChanged(nameof(HasTelegramBotToken));
+            OnPropertyChanged(nameof(TelegramIsConnected));
+            OnPropertyChanged(nameof(TelegramNeedsToken));
+            OnPropertyChanged(nameof(TelegramCanGenerateQr));
+            OnPropertyChanged(nameof(HasTelegramAuthorizedUsers));
+            OnPropertyChanged(nameof(HasTelegramQrCode));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async System.Threading.Tasks.Task ConnectTelegramBotAsync()
+        {
+            var token = TelegramBotTokenInput?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                TelegramBotStatus = "Вставте токен, який BotFather прислав для вашого бота.";
+                return;
+            }
+
+            TelegramIsBusy = true;
+            TelegramBotStatus = "Перевіряю токен і запускаю бота...";
+            try
+            {
+                var result = await _telegramBotService.ConnectAsync(token);
+                TelegramBotStatus = result.message;
+                if (result.ok)
+                {
+                    TelegramBotTokenInput = string.Empty;
+                    TelegramEnabled = true;
+                    GenerateTelegramQr();
+                }
+            }
+            catch (Exception ex)
+            {
+                TelegramBotStatus = $"Помилка підключення: {ex.Message}";
+                LoggingService.LogWarning("Settings.ConnectTelegramBot", ex.Message);
+            }
+            finally
+            {
+                TelegramIsBusy = false;
+                RefreshTelegramState();
+            }
+        }
+
+        private async System.Threading.Tasks.Task DisconnectTelegramBotAsync()
+        {
+            TelegramIsBusy = true;
+            TelegramBotStatus = "Відключаю Telegram-бота...";
+            try
+            {
+                await _telegramBotService.DisconnectAsync();
+                TelegramQrCodeImage = null;
+                TelegramPairingCode = string.Empty;
+                TelegramPairingExpiryText = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                TelegramBotStatus = $"Помилка відключення: {ex.Message}";
+                LoggingService.LogWarning("Settings.DisconnectTelegramBot", ex.Message);
+            }
+            finally
+            {
+                TelegramIsBusy = false;
+                RefreshTelegramState();
+            }
+        }
+
+        private async System.Threading.Tasks.Task RestartTelegramBotAsync()
+        {
+            try
+            {
+                await _telegramBotService.RestartAsync();
+            }
+            catch (Exception ex)
+            {
+                TelegramBotStatus = $"Не вдалося запустити Telegram-бота: {ex.Message}";
+                LoggingService.LogWarning("Settings.RestartTelegramBot", ex.Message);
+            }
+            finally
+            {
+                RefreshTelegramState();
+            }
+        }
+
+        private void GenerateTelegramQr()
+        {
+            if (!TelegramCanGenerateQr)
+            {
+                TelegramQrCodeImage = null;
+                TelegramPairingCode = string.Empty;
+                TelegramPairingExpiryText = string.Empty;
+                OnPropertyChanged(nameof(HasTelegramQrCode));
+                return;
+            }
+
+            TelegramPairingCode = _telegramPairingService.GenerateCode();
+            var expiresAt = _telegramPairingService.GetExpiryUtc(TelegramPairingCode).ToLocalTime();
+            var deepLink = _telegramPairingService.BuildDeepLink(TelegramBotUsername, TelegramPairingCode);
+            TelegramQrCodeImage = _telegramPairingService.BuildQrImage(deepLink);
+            TelegramPairingExpiryText = $"Код діє до {expiresAt:HH:mm}";
+            OnPropertyChanged(nameof(HasTelegramQrCode));
+        }
+
         public void Cleanup()
         {
             _accessStatusService.PropertyChanged -= AccessStatusService_PropertyChanged;
+            _telegramBotService.StateChanged -= TelegramBotService_StateChanged;
         }
 
         public static double GetInterfaceSizeMultiplier(string size) => size switch

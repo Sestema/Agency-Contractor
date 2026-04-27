@@ -616,6 +616,7 @@
     <sys:String x:Key="DetFieldFirstName">First name</sys:String>
     <sys:String x:Key="DetFieldLastName">Last name</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="DetFieldHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="DetFieldGender">Gender</sys:String>
     <sys:String x:Key="DetSecPassport">Passport data</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Passport number</sys:String>
@@ -744,6 +745,8 @@
     <sys:String x:Key="ArchiveSortEndDate">End date</sys:String>
     <sys:String x:Key="ArchiveSortFirm">Company</sys:String>
     <sys:String x:Key="ArchiveResultsLabel">Showing</sys:String>
+    <sys:String x:Key="ArchiveNoMatchesDesc">Try changing the search text or clearing the current filter.</sys:String>
+    <sys:String x:Key="ArchiveClearFilter">Clear filter</sys:String>
     <sys:String x:Key="ArchiveFirm">Company</sys:String>
     <sys:String x:Key="ArchiveStartDate">Start date</sys:String>
     <sys:String x:Key="ArchiveSignDate">Contract sign date</sys:String>
@@ -964,7 +967,17 @@
     <sys:String x:Key="ReportFirmsCount">companies</sys:String>
     <sys:String x:Key="ReportEmpCount">employees</sys:String>
     <sys:String x:Key="ReportColName">Name</sys:String>
-    <sys:String x:Key="ReportColType">Type</sys:String>
+    <sys:String x:Key="ReportColType">Work permit name</sys:String>
+    <sys:String x:Key="ReportColDocumentType">Card/visa/passport type</sys:String>
+    <sys:String x:Key="ReportColPassportNumber">Passport or ID card number</sys:String>
+    <sys:String x:Key="ReportColWorkAddress">Work address</sys:String>
+    <sys:String x:Key="ReportColHighestEducation">Highest attained education</sys:String>
+    <sys:String x:Key="ReportColAddressCz">Full country address</sys:String>
+    <sys:String x:Key="ReportColAddressAbroad">Foreign address</sys:String>
+    <sys:String x:Key="ReportColBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="ReportColGender">Gender</sys:String>
+    <sys:String x:Key="ReportColPassportIssuedBy">Passport issuing authority</sys:String>
+    <sys:String x:Key="ReportColPositionCode">CZ-NACE position code</sys:String>
     <sys:String x:Key="ReportColPassportExp">Passport Exp.</sys:String>
     <sys:String x:Key="ReportColVisaExp">Visa Exp.</sys:String>
     <sys:String x:Key="ReportColInsExp">Ins. Exp.</sys:String>
@@ -1228,6 +1241,7 @@
     <sys:String x:Key="TagDescEmpLastName">Employee last name</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Employee full name</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="TagDescEmpHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="TagDescEmpGender">Gender (Male / Female)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Phone</sys:String>
     <sys:String x:Key="TagDescEmpEmail">Email</sys:String>
@@ -1713,6 +1727,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistFieldFirstName">First name</sys:String>
     <sys:String x:Key="HistFieldLastName">Last name</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="HistFieldHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="HistFieldGender">Gender</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Passport number</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Document issuing authority</sys:String>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
@@ -61,15 +62,43 @@ namespace Win11DesktopApp.Services
             EnsureStorage();
 
             var manifest = LoadManifest();
-            var filtered = manifest
-                .Where(item => !string.IsNullOrWhiteSpace(item.Id) && Directory.Exists(item.DeletedEmployeeFolder))
-                .OrderByDescending(item => item.DeletedAtUtc)
-                .ToList();
+            var filtered = new List<RecentlyDeletedItem>();
+
+            foreach (var item in manifest)
+            {
+                if (string.IsNullOrWhiteSpace(item.Id))
+                    continue;
+
+                if (!Directory.Exists(item.DeletedEmployeeFolder))
+                    continue;
+
+                if (IsDirectoryEffectivelyEmpty(item.DeletedEmployeeFolder))
+                {
+                    DeleteDirectoryRobust(item.DeletedEmployeeFolder);
+                    continue;
+                }
+
+                filtered.Add(item);
+            }
+
+            filtered = filtered.OrderByDescending(item => item.DeletedAtUtc).ToList();
 
             if (filtered.Count != manifest.Count)
                 SaveManifest(filtered);
 
             return filtered;
+        }
+
+        private static bool IsDirectoryEffectivelyEmpty(string path)
+        {
+            try
+            {
+                return Directory.Exists(path) && !Directory.EnumerateFileSystemEntries(path).Any();
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public RecentlyDeletedItem? FindItem(string? employeeFolder, string? firmName, string? fullName)
@@ -112,7 +141,7 @@ namespace Win11DesktopApp.Services
 
                 var deletedFolder = BuildDeletedFolderPath(data, employee.EmployeeFolder);
                 MoveDirectory(employee.EmployeeFolder, deletedFolder);
-                _employeeService.SyncEmployeeIndexForFolder(deletedFolder, employee.FirmName);
+                _employeeIndexDbService?.DeleteEmployeeIndex(data.UniqueId ?? string.Empty);
 
                 var item = new RecentlyDeletedItem
                 {
@@ -242,7 +271,9 @@ namespace Win11DesktopApp.Services
                 _activityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
                 _localDbService?.DeleteEmployeeHistory(item.UniqueId);
                 _employeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
-                DeleteDirectory(item.DeletedEmployeeFolder);
+
+                DeleteDirectoryRobust(item.DeletedEmployeeFolder);
+
                 manifest.Remove(item);
                 SaveManifest(manifest);
 
@@ -283,7 +314,7 @@ namespace Win11DesktopApp.Services
                         _activityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
                         _localDbService?.DeleteEmployeeHistory(item.UniqueId);
                         _employeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
-                        DeleteDirectory(item.DeletedEmployeeFolder);
+                        DeleteDirectoryRobust(item.DeletedEmployeeFolder);
                     }
 
                     manifest.Remove(item);
@@ -337,12 +368,16 @@ namespace Win11DesktopApp.Services
             SafeFileService.WriteJsonAtomic(manifestPath, items, JsonOptions, Encoding.UTF8);
         }
 
+        private static readonly Regex ExistingUniqueSuffix = new(@"__[0-9a-fA-F]{6,}(_\d+)?$", RegexOptions.Compiled);
+
         private string BuildDeletedFolderPath(EmployeeData data, string originalEmployeeFolder)
         {
             var deletedRoot = GetEmployeesFolderPath();
             var baseFolderName = Path.GetFileName(originalEmployeeFolder);
             if (string.IsNullOrWhiteSpace(baseFolderName))
                 baseFolderName = FolderService.NormalizeFolderName($"{data.FirstName}_{data.LastName}");
+
+            baseFolderName = ExistingUniqueSuffix.Replace(baseFolderName, string.Empty);
 
             var uniqueTail = string.IsNullOrWhiteSpace(data.UniqueId)
                 ? Guid.NewGuid().ToString("N")[..8]
@@ -442,18 +477,31 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private static void DeleteDirectory(string path)
+        private static bool DeleteDirectoryRobust(string path)
         {
             if (!Directory.Exists(path))
-                return;
+                return true;
 
-            RetryHelper.Execute(() =>
+            if (EmployeeService.TryCleanupDeferredDirectory(path))
+                return true;
+
+            _ = ScheduleCleanupAsync(path);
+            return false;
+        }
+
+        private static async Task ScheduleCleanupAsync(string path)
+        {
+            try
             {
-                foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
-                    File.SetAttributes(file, FileAttributes.Normal);
-
-                Directory.Delete(path, true);
-            });
+                await PendingCleanupService.EnqueueAsync(path, "permanent-delete-deferred");
+                await Task.Delay(15_000);
+                if (EmployeeService.TryCleanupDeferredDirectory(path))
+                    await PendingCleanupService.RemoveAsync(path);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("RecentlyDeletedService.ScheduleCleanupAsync", ex.Message);
+            }
         }
 
         private string GetCurrentActorName()

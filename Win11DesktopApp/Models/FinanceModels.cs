@@ -242,6 +242,10 @@ namespace Win11DesktopApp.Models
         public bool HasSalary => Salary != null;
         public bool HasAdvances => Advances.Count > 0;
         public string MonthKey { get; set; } = "";
+        // FirmName is tracked on the display itself so that when one calendar
+        // month has payments in two different firms, each firm gets its own
+        // card (salary + advances + debt scoped per firm).
+        public string FirmName { get; set; } = string.Empty;
         public string MonthLabel => HasSalary ? Salary!.MonthDisplay : FormatMonthKey(MonthKey);
 
         public decimal CarriedDebt { get; set; }

@@ -538,6 +538,7 @@ namespace Win11DesktopApp.Services
                 eu_document_type = payload.Employee.EuDocumentType,
                 visa_doc_type = payload.Employee.VisaDocType,
                 gender = payload.Employee.Gender,
+                highest_education_code = payload.Employee.HighestEducationCode,
                 passport_number = payload.Employee.PassportNumber,
                 passport_city = payload.Employee.PassportCity,
                 passport_country = payload.Employee.PassportCountry,
@@ -680,6 +681,7 @@ namespace Win11DesktopApp.Services
                     EuDocumentType = data.EuDocumentType ?? string.Empty,
                     VisaDocType = data.VisaDocType ?? string.Empty,
                     Gender = data.Gender ?? string.Empty,
+                    HighestEducationCode = data.HighestEducationCode ?? string.Empty,
                     PassportNumber = data.PassportNumber ?? string.Empty,
                     PassportCity = data.PassportCity ?? string.Empty,
                     PassportCountry = data.PassportCountry ?? string.Empty,
@@ -767,7 +769,7 @@ namespace Win11DesktopApp.Services
             var match = companies.FirstOrDefault(company =>
                 string.Equals(FolderService.NormalizeFolderName(company.Name), companyFolderName, StringComparison.OrdinalIgnoreCase));
 
-            return match?.Name ?? companyFolderName;
+            return match?.Name;
         }
 
         private bool AgencyStillReferenced(string agencyId)

@@ -405,6 +405,12 @@ namespace Win11DesktopApp.Services
                     data.UniqueId = Guid.NewGuid().ToString();
                     changed = true;
                 }
+                var normalizedEducationCode = EducationCatalog.NormalizeCode(data.HighestEducationCode);
+                if (!string.Equals(data.HighestEducationCode, normalizedEducationCode, StringComparison.Ordinal))
+                {
+                    data.HighestEducationCode = normalizedEducationCode;
+                    changed = true;
+                }
                 if (AutoDiscoverFiles(employeeFolder, data))
                     changed = true;
 
@@ -497,7 +503,7 @@ namespace Win11DesktopApp.Services
                     && !nameLower.Contains("- povolen") && !nameLower.Contains("work permit")
                     && !nameLower.EndsWith(".json") && !nameLower.EndsWith(".tmp")
                     && !nameLower.EndsWith(".bak") && !nameLower.EndsWith(".xlsx")
-                    && !nameLower.EndsWith(".rtf") && !nameLower.EndsWith(".pdf")
+                    && !nameLower.EndsWith(".rtf")
                     && !nameLower.EndsWith(".docx")
                     && nameLower.StartsWith(fullNameLower))
                 {
@@ -550,7 +556,12 @@ namespace Win11DesktopApp.Services
                     data.UniqueId = Guid.NewGuid().ToString();
                 var jsonPath = Path.Combine(employeeFolder, "employee.json");
                 WriteJsonAtomic(jsonPath, data);
-                var firmName = _adminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder);
+                string? firmName = null;
+                if (data.IsArchived && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm))
+                    firmName = data.ArchivedFromFirm;
+                else
+                    firmName = _adminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder)
+                        ?? ResolveFirmNameForHistory(employeeFolder);
                 _adminMirrorSyncService?.EnqueueEmployeeUpsert(firmName, employeeFolder, data);
                 UpsertEmployeeIndex(employeeFolder, data, firmName);
                 return true;
@@ -889,6 +900,8 @@ namespace Win11DesktopApp.Services
             var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
             var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
             var hasPhoto = !string.IsNullOrWhiteSpace(photoPath);
+            var parsedStartDate = DateParsingHelper.TryParseDate(row.StartDate);
+            var parsedEndDate = DateParsingHelper.TryParseDate(row.EndDate);
             return new ArchivedEmployeeSummary
             {
                 UniqueId = row.UniqueId,
@@ -899,7 +912,9 @@ namespace Win11DesktopApp.Services
                 EndDate = row.EndDate,
                 EmployeeFolder = employeeFolder,
                 PhotoPath = hasPhoto ? photoPath : string.Empty,
-                HasPhoto = hasPhoto
+                HasPhoto = hasPhoto,
+                ParsedStartDate = parsedStartDate,
+                ParsedEndDate = parsedEndDate
             };
         }
 
@@ -1038,7 +1053,9 @@ namespace Win11DesktopApp.Services
                             EndDate = last.EndDate,
                             EmployeeFolder = folder,
                             PhotoPath = photo,
-                            HasPhoto = hasPhoto
+                            HasPhoto = hasPhoto,
+                            ParsedStartDate = DateParsingHelper.TryParseDate(last.StartDate),
+                            ParsedEndDate = DateParsingHelper.TryParseDate(last.EndDate)
                         });
                     }
                     else
@@ -1053,7 +1070,9 @@ namespace Win11DesktopApp.Services
                             EndDate = data.EndDate,
                             EmployeeFolder = folder,
                             PhotoPath = photo,
-                            HasPhoto = hasPhoto
+                            HasPhoto = hasPhoto,
+                            ParsedStartDate = DateParsingHelper.TryParseDate(data.StartDate),
+                            ParsedEndDate = DateParsingHelper.TryParseDate(data.EndDate)
                         });
                     }
                 }
@@ -1494,7 +1513,9 @@ namespace Win11DesktopApp.Services
                                 EndDate = fh.EndDate,
                                 EmployeeFolder = folder,
                                 PhotoPath = photo,
-                                HasPhoto = hasPhoto
+                                HasPhoto = hasPhoto,
+                                ParsedStartDate = DateParsingHelper.TryParseDate(fh.StartDate),
+                                ParsedEndDate = DateParsingHelper.TryParseDate(fh.EndDate)
                             });
                         }
                     }

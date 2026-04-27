@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Win11DesktopApp.Telegram;
 
 namespace Win11DesktopApp.Services
 {
@@ -114,6 +115,7 @@ namespace Win11DesktopApp.Services
             public string CachedAccessSource { get; set; } = string.Empty;
             public string CachedAccessPlan { get; set; } = string.Empty;
             public string LegacyLicenseMigratedAtUtc { get; set; } = string.Empty;
+            public TelegramBotSettings Telegram { get; set; } = new TelegramBotSettings();
         }
 
         public AppSettings Settings { get; private set; } = new AppSettings();
@@ -279,6 +281,14 @@ namespace Win11DesktopApp.Services
 
         private void SanitizeSettings()
         {
+            Settings.Telegram ??= new TelegramBotSettings();
+            Settings.Telegram.AuthorizedUsers ??= new List<TelegramAuthorizedUser>();
+            Settings.Telegram.BotUsername ??= string.Empty;
+            Settings.Telegram.EncryptedBotToken ??= string.Empty;
+            Settings.Telegram.DailyDigestTime = string.IsNullOrWhiteSpace(Settings.Telegram.DailyDigestTime)
+                ? "08:00"
+                : Settings.Telegram.DailyDigestTime.Trim();
+
             Settings.WindowLeft = SafeDouble(Settings.WindowLeft);
             Settings.WindowTop = SafeDouble(Settings.WindowTop);
             Settings.WindowWidth = SafeDouble(Settings.WindowWidth);

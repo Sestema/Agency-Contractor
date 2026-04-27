@@ -15,6 +15,9 @@ using Microsoft.Win32;
 using OxyPlot;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using Win11DesktopApp.Helpers;
 using OxyPlot.Axes;
 using OxyPlot.Series;
@@ -36,19 +39,32 @@ namespace Win11DesktopApp.ViewModels
         private readonly ReportColumnLayoutService _reportColumnLayoutService;
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private CancellationTokenSource? _refreshCts;
+        private CancellationTokenSource? _searchCts;
+        private List<EmployeeReportRow>? _dateFilteredCache;
         private static readonly List<AppSettingsService.ReportColumnSetting> DefaultEmployeeColumns = new()
         {
             new() { Key = "name", IsVisible = true, DisplayIndex = 0, Width = 200 },
             new() { Key = "type", IsVisible = true, DisplayIndex = 1, Width = 180 },
-            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 2, Width = 100 },
-            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 3, Width = 100 },
-            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 4, Width = 100 },
-            new() { Key = "startDate", IsVisible = true, DisplayIndex = 5, Width = 90 },
-            new() { Key = "endDate", IsVisible = true, DisplayIndex = 6, Width = 90 },
-            new() { Key = "phone", IsVisible = true, DisplayIndex = 7, Width = 110 },
-            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 8, Width = 150 },
-            new() { Key = "bankName", IsVisible = false, DisplayIndex = 9, Width = 150 },
-            new() { Key = "position", IsVisible = true, DisplayIndex = 10, Width = 110 },
+            new() { Key = "documentType", IsVisible = false, DisplayIndex = 2, Width = 130 },
+            new() { Key = "passportNumber", IsVisible = false, DisplayIndex = 3, Width = 170 },
+            new() { Key = "workAddress", IsVisible = false, DisplayIndex = 4, Width = 220 },
+            new() { Key = "highestEducation", IsVisible = false, DisplayIndex = 5, Width = 220 },
+            new() { Key = "birthDate", IsVisible = false, DisplayIndex = 6, Width = 100 },
+            new() { Key = "gender", IsVisible = false, DisplayIndex = 7, Width = 90 },
+            new() { Key = "addressCz", IsVisible = false, DisplayIndex = 8, Width = 220 },
+            new() { Key = "addressAbroad", IsVisible = false, DisplayIndex = 9, Width = 220 },
+            new() { Key = "passportIssuedBy", IsVisible = false, DisplayIndex = 10, Width = 180 },
+            new() { Key = "positionCode", IsVisible = false, DisplayIndex = 11, Width = 110 },
+            new() { Key = "agency", IsVisible = false, DisplayIndex = 12, Width = 150 },
+            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 13, Width = 100 },
+            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 14, Width = 100 },
+            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 15, Width = 100 },
+            new() { Key = "startDate", IsVisible = true, DisplayIndex = 16, Width = 90 },
+            new() { Key = "endDate", IsVisible = true, DisplayIndex = 17, Width = 90 },
+            new() { Key = "phone", IsVisible = true, DisplayIndex = 18, Width = 110 },
+            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 19, Width = 150 },
+            new() { Key = "bankName", IsVisible = false, DisplayIndex = 20, Width = 150 },
+            new() { Key = "position", IsVisible = true, DisplayIndex = 21, Width = 110 },
         };
 
         public ICommand GoBackCommand { get; }
@@ -244,7 +260,7 @@ namespace Win11DesktopApp.ViewModels
         public string EmployeeSearchText
         {
             get => _employeeSearchText;
-            set { if (SetProperty(ref _employeeSearchText, value)) FilterEmployees(); }
+            set { if (SetProperty(ref _employeeSearchText, value)) FilterEmployeesDebounced(); }
         }
 
         // ===== Chart =====
@@ -420,6 +436,17 @@ namespace Win11DesktopApp.ViewModels
         {
             "name" => "ReportColName",
             "type" => "ReportColType",
+            "documentType" => "ReportColDocumentType",
+            "passportNumber" => "ReportColPassportNumber",
+            "workAddress" => "ReportColWorkAddress",
+            "highestEducation" => "ReportColHighestEducation",
+            "addressCz" => "ReportColAddressCz",
+            "addressAbroad" => "ReportColAddressAbroad",
+            "birthDate" => "ReportColBirthDate",
+            "gender" => "ReportColGender",
+            "passportIssuedBy" => "ReportColPassportIssuedBy",
+            "positionCode" => "ReportColPositionCode",
+            "agency" => "ReportColAgency",
             "passportExpiry" => "ReportColPassportExpFull",
             "visaExpiry" => "ReportColVisaExpFull",
             "insuranceExpiry" => "ReportColInsExpFull",
@@ -444,6 +471,17 @@ namespace Win11DesktopApp.ViewModels
         {
             "name" => employee.FullName,
             "type" => employee.EmployeeType,
+            "documentType" => employee.DocumentType,
+            "passportNumber" => employee.PassportNumber,
+            "workAddress" => employee.WorkAddress,
+            "highestEducation" => employee.HighestEducation,
+            "addressCz" => employee.AddressCz,
+            "addressAbroad" => employee.AddressAbroad,
+            "birthDate" => employee.BirthDate,
+            "gender" => employee.Gender,
+            "passportIssuedBy" => employee.PassportIssuedBy,
+            "positionCode" => employee.PositionCode,
+            "agency" => employee.Agency,
             "passportExpiry" => employee.PassportExpiry,
             "visaExpiry" => employee.VisaExpiry,
             "insuranceExpiry" => employee.InsuranceExpiry,
@@ -467,6 +505,8 @@ namespace Win11DesktopApp.ViewModels
         private static XLAlignmentHorizontalValues GetEmployeeExcelAlignment(string key) => key switch
         {
             "name" => XLAlignmentHorizontalValues.Left,
+            "addressCz" => XLAlignmentHorizontalValues.Left,
+            "addressAbroad" => XLAlignmentHorizontalValues.Left,
             "bankAccount" => XLAlignmentHorizontalValues.Left,
             "bankName" => XLAlignmentHorizontalValues.Left,
             "position" => XLAlignmentHorizontalValues.Left,
@@ -476,6 +516,8 @@ namespace Win11DesktopApp.ViewModels
         private static XStringFormat GetEmployeePdfFormat(string key) => key switch
         {
             "name" => XStringFormats.CenterLeft,
+            "addressCz" => XStringFormats.CenterLeft,
+            "addressAbroad" => XStringFormats.CenterLeft,
             "bankAccount" => XStringFormats.CenterLeft,
             "bankName" => XStringFormats.CenterLeft,
             "position" => XStringFormats.CenterLeft,
@@ -494,6 +536,28 @@ namespace Win11DesktopApp.ViewModels
             };
             if (key != null && Application.Current.Resources[key] is string s) return s;
             return type;
+        }
+
+        private string GetGenderDisplay(string gender)
+        {
+            var key = string.Equals(gender, "female", StringComparison.OrdinalIgnoreCase)
+                ? "GenderFemale"
+                : "GenderMale";
+            return DocString(key);
+        }
+
+        private static string FormatAddress(EmployeeAddress? address)
+        {
+            if (address == null)
+                return string.Empty;
+
+            return string.Join(", ",
+                new[]
+                {
+                    $"{address.Street} {address.Number}".Trim(),
+                    address.City?.Trim(),
+                    address.Zip?.Trim()
+                }.Where(s => !string.IsNullOrWhiteSpace(s)));
         }
 
         private string GetDocTypeDisplay(string type)
@@ -788,32 +852,17 @@ namespace Win11DesktopApp.ViewModels
 
                     int firmPassportOnly = filtered.Count(x => string.Equals(x.Summary.EmployeeType, "passport_only", StringComparison.OrdinalIgnoreCase));
 
+                    var company = companies.FirstOrDefault(c => string.Equals(c.Name, firmName, StringComparison.OrdinalIgnoreCase));
+                    var agencyName = company?.Agency?.Name?.Trim() ?? string.Empty;
                     foreach (var (employee, endDate) in filtered)
-                    {
-                        allEmployees.Add(new EmployeeReportRow
-                        {
-                            FullName = employee.FullName,
-                            FirmName = firmName,
-                            EmployeeFolder = employee.EmployeeFolder,
-                            EmployeeType = !string.IsNullOrEmpty(employee.WorkPermitName)
-                                ? employee.WorkPermitName
-                                : GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
-                            PassportExpiry = employee.PassportExpiry,
-                            VisaExpiry = employee.VisaExpiry,
-                            InsuranceExpiry = employee.InsuranceExpiry,
-                            StartDate = employee.StartDate,
-                            EndDate = endDate,
-                            Phone = employee.Phone,
-                            BankAccountNumber = employee.BankAccountNumber,
-                            BankName = employee.BankName,
-                            Position = employee.PositionTitle,
-                            IsArchived = false
-                        });
-                    }
+                        allEmployees.Add(BuildEmployeeReportRow(employee, firmName, endDate, agencyName, typeDisplayMap));
 
                     var archivedForFirm = archivedByFirm.TryGetValue(firmName, out var archivedRows)
                         ? archivedRows
                         : new List<EmployeeReportRow>();
+
+                    foreach (var archived in archivedForFirm)
+                        archived.Agency = agencyName;
 
                     allEmployees.AddRange(archivedForFirm);
 
@@ -852,10 +901,8 @@ namespace Win11DesktopApp.ViewModels
                     newInPeriod += firmNew;
                     endedInPeriod += firmEnded;
 
-                    var company = companies.FirstOrDefault(c => string.Equals(c.Name, firmName, StringComparison.OrdinalIgnoreCase));
                     if (company?.Agency != null && !string.IsNullOrWhiteSpace(company.Agency.Name))
                     {
-                        var agencyName = company.Agency.Name.Trim();
                         if (agencyData.TryGetValue(agencyName, out var existing))
                             agencyData[agencyName] = (existing.firms + 1, existing.total + firmTotal, existing.active + firmActive);
                         else
@@ -917,6 +964,7 @@ namespace Win11DesktopApp.ViewModels
             ArchiveHistory = new ObservableCollection<ArchiveLogEntry>(result.ArchiveHistory);
 
             _allEmployees = result.AllEmployees;
+            _dateFilteredCache = null;
             EmployeeGroups = new ObservableCollection<FirmEmployeeGroup>();
 
             TotalEmployees = result.TotalEmployees;
@@ -1242,6 +1290,7 @@ namespace Win11DesktopApp.ViewModels
                     FirmName = evt.FirmName,
                     EmployeeFolder = resolvedFolder,
                     EmployeeType = "—",
+                    DocumentType = "—",
                     EndDate = evt.Date,
                     IsArchived = true
                 };
@@ -1290,6 +1339,7 @@ namespace Win11DesktopApp.ViewModels
                 FirmName = firmName,
                 EmployeeFolder = employeeFolder,
                 EmployeeType = "—",
+                DocumentType = "—",
                 StartDate = startDate,
                 EndDate = endDate,
                 Position = positionTitle,
@@ -1297,7 +1347,7 @@ namespace Win11DesktopApp.ViewModels
             };
         }
 
-        private static EmployeeReportRow BuildArchivedRowFromData(
+        private EmployeeReportRow BuildArchivedRowFromData(
             string fullName,
             string firmName,
             string employeeFolder,
@@ -1313,6 +1363,8 @@ namespace Win11DesktopApp.ViewModels
                 EmployeeType = !string.IsNullOrEmpty(data.WorkPermitName)
                     ? data.WorkPermitName
                     : GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
+                DocumentType = GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
+                PassportNumber = data.PassportNumber ?? string.Empty,
                 PassportExpiry = data.PassportExpiry,
                 VisaExpiry = data.VisaExpiry,
                 InsuranceExpiry = data.InsuranceExpiry,
@@ -1322,30 +1374,112 @@ namespace Win11DesktopApp.ViewModels
                 BankAccountNumber = data.HasBankAccountData ? data.BankAccountNumber : string.Empty,
                 BankName = data.HasBankAccountData ? data.BankName : string.Empty,
                 Position = data.PositionTag,
+                PositionCode = data.PositionNumber,
+                WorkAddress = data.WorkAddressTag,
+                HighestEducation = EducationCatalog.GetFullDisplay(data.HighestEducationCode),
+                AddressCz = FormatAddress(data.AddressLocal),
+                AddressAbroad = FormatAddress(data.AddressAbroad),
+                BirthDate = data.BirthDate,
+                Gender = GetGenderDisplay(data.Gender ?? string.Empty),
+                PassportIssuedBy = data.PassportAuthority,
                 IsArchived = true
             };
         }
 
-        private void FilterEmployees()
+        private EmployeeReportRow BuildEmployeeReportRow(
+            EmployeeSummary employee,
+            string firmName,
+            string endDate,
+            string agencyName,
+            IReadOnlyDictionary<string, string> typeDisplayMap)
         {
-            var search = EmployeeSearchText?.Trim() ?? "";
+            var row = new EmployeeReportRow
+            {
+                FullName = employee.FullName,
+                FirmName = firmName,
+                EmployeeFolder = employee.EmployeeFolder,
+                EmployeeType = !string.IsNullOrEmpty(employee.WorkPermitName)
+                    ? employee.WorkPermitName
+                    : GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
+                DocumentType = GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
+                PassportNumber = employee.PassportNumber,
+                PassportExpiry = employee.PassportExpiry,
+                VisaExpiry = employee.VisaExpiry,
+                InsuranceExpiry = employee.InsuranceExpiry,
+                StartDate = employee.StartDate,
+                EndDate = endDate,
+                Phone = employee.Phone,
+                BankAccountNumber = employee.BankAccountNumber,
+                BankName = employee.BankName,
+                Position = employee.PositionTitle,
+                Agency = agencyName,
+                IsArchived = false
+            };
 
-            var dateFiltered = _allEmployees.Where(e =>
+            try
+            {
+                var jsonPath = !string.IsNullOrWhiteSpace(employee.EmployeeFolder)
+                    ? Path.Combine(employee.EmployeeFolder, "employee.json")
+                    : string.Empty;
+                if (!string.IsNullOrWhiteSpace(jsonPath) && File.Exists(jsonPath))
+                {
+                    var data = SafeFileService.ReadJson<EmployeeData>(jsonPath);
+                    if (data != null)
+                    {
+                        row.DocumentType = GetDocTypeDisplay(data.EmployeeType ?? employee.EmployeeType ?? "visa", typeDisplayMap);
+                        row.PassportNumber = data.PassportNumber ?? employee.PassportNumber ?? string.Empty;
+                        row.Position = string.IsNullOrWhiteSpace(data.PositionTag) ? row.Position : data.PositionTag;
+                        row.PositionCode = data.PositionNumber ?? string.Empty;
+                        row.WorkAddress = data.WorkAddressTag ?? string.Empty;
+                        row.HighestEducation = EducationCatalog.GetFullDisplay(data.HighestEducationCode);
+                        row.AddressCz = FormatAddress(data.AddressLocal);
+                        row.AddressAbroad = FormatAddress(data.AddressAbroad);
+                        row.BirthDate = data.BirthDate ?? string.Empty;
+                        row.Gender = GetGenderDisplay(data.Gender ?? string.Empty);
+                        row.PassportIssuedBy = data.PassportAuthority ?? string.Empty;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ReportViewModel.BuildEmployeeReportRow", ex.Message);
+            }
+
+            return row;
+        }
+
+        private List<EmployeeReportRow> GetDateFilteredEmployees()
+        {
+            if (_dateFilteredCache != null)
+                return _dateFilteredCache;
+
+            var dateFrom = DateFrom.Date;
+            var dateTo = DateTo.Date;
+
+            _dateFilteredCache = _allEmployees.Where(e =>
             {
                 if (!string.IsNullOrEmpty(e.EndDate))
                 {
                     var ed = DateParsingHelper.TryParseDate(e.EndDate);
-                    if (ed != null && ed.Value.Date < DateFrom.Date)
+                    if (ed != null && ed.Value.Date < dateFrom)
                         return false;
                 }
                 if (!string.IsNullOrEmpty(e.StartDate))
                 {
                     var sd = DateParsingHelper.TryParseDate(e.StartDate);
-                    if (sd != null && sd.Value.Date > DateTo.Date)
+                    if (sd != null && sd.Value.Date > dateTo)
                         return false;
                 }
                 return true;
             }).ToList();
+
+            return _dateFilteredCache;
+        }
+
+        private void FilterEmployees()
+        {
+            var search = EmployeeSearchText?.Trim() ?? "";
+            var dateFiltered = GetDateFilteredEmployees();
 
             var filtered = string.IsNullOrEmpty(search)
                 ? dateFiltered
@@ -1365,6 +1499,24 @@ namespace Win11DesktopApp.ViewModels
                     EmployeeCount = g.Count(),
                     Employees = new ObservableCollection<EmployeeReportRow>(g)
                 }));
+        }
+
+        private async void FilterEmployeesDebounced()
+        {
+            var cts = new CancellationTokenSource();
+            var previous = Interlocked.Exchange(ref _searchCts, cts);
+            previous?.Cancel();
+            previous?.Dispose();
+
+            try
+            {
+                await Task.Delay(300, cts.Token);
+                if (!cts.Token.IsCancellationRequested)
+                    FilterEmployees();
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         private void OpenEmployee(EmployeeReportRow? row)
@@ -1823,263 +1975,237 @@ namespace Win11DesktopApp.ViewModels
                 if (dialog.ShowDialog() != true) return;
                 if (!EnsureExportPathReady(dialog.FileName)) return;
 
-                var doc = new PdfDocument();
-                doc.Info.Title = "Report";
+                var accentColor = QuestPDF.Helpers.Colors.Blue.Medium;
+                var headerColor = "#6495ED";
+                var subHeaderColor = "#C6DBEF";
+                var agencyHeaderColor = "#7B1FA2";
 
-                const double marginLeft = 20;
-                const double marginTop = 40;
-                const double marginBottom = 40;
-                const double rowHeight = 18;
-
-                var fontTitle = new XFont("Segoe UI", 16, XFontStyleEx.Bold);
-                var fontSubtitle = new XFont("Segoe UI", 10);
-                var fontHeader = new XFont("Segoe UI", 8, XFontStyleEx.Bold);
-                var fontCell = new XFont("Segoe UI", 8);
-                var fontCellItalic = new XFont("Segoe UI", 8, XFontStyleEx.Italic);
-                var fontFirmTitle = new XFont("Segoe UI", 10, XFontStyleEx.Bold);
-
-                var accentBrush = new XSolidBrush(XColor.FromArgb(100, 149, 237));
-                var headerBg = new XSolidBrush(XColor.FromArgb(100, 149, 237));
-                var subHeaderBg = new XSolidBrush(XColor.FromArgb(198, 219, 239));
-                var grayBrush = new XSolidBrush(XColor.FromArgb(150, 150, 150));
-                var redBrush = new XSolidBrush(XColor.FromArgb(211, 47, 47));
-                var orangeBrush = new XSolidBrush(XColor.FromArgb(245, 127, 23));
-                var greenBrush = new XSolidBrush(XColor.FromArgb(46, 125, 50));
-
-                PdfPage? page = null;
-                XGraphics? gfx = null;
-                double y = 0;
-                double pageW = 0;
-
-                PdfPage AddPage(bool landscape = true)
+                var visibleColumns = GetVisibleEmployeeColumnsForExport();
+                if (visibleColumns.Count == 0)
                 {
-                    var p = doc.AddPage();
-                    p.Size = PdfSharp.PageSize.A4;
-                    if (landscape) p.Orientation = PdfSharp.PageOrientation.Landscape;
-                    gfx?.Dispose();
-                    gfx = XGraphics.FromPdfPage(p);
-                    y = marginTop;
-                    pageW = p.Width.Point;
-                    return p;
+                    visibleColumns = NormalizeEmployeeColumnLayout(DefaultEmployeeColumns.Select(CopyColumnSetting))
+                        .Where(c => c.IsVisible)
+                        .ToList();
                 }
 
-                bool EnsureSpace(double needed)
+                QuestPDF.Fluent.Document.Create(container =>
                 {
-                    if (page == null || y + needed > (page.Height.Point - marginBottom))
+                    container.Page(page =>
                     {
-                        page = AddPage();
-                        return true;
-                    }
-                    return false;
-                }
+                        page.Size(PageSizes.A4.Landscape());
+                        page.MarginHorizontal(20);
+                        page.MarginVertical(30);
+                        page.DefaultTextStyle(x => x.FontFamily("Segoe UI").FontSize(8));
 
-                void DrawRow(double x, double[] colWidths, string[] texts, XFont font, XBrush? bg, XBrush? fg = null, XStringFormat[]? fmts = null)
-                {
-                    var useFg = fg ?? XBrushes.Black;
-                    if (bg != null)
-                        gfx!.DrawRectangle(bg, x, y, colWidths.Sum(), rowHeight);
-
-                    double cx = x;
-                    for (int i = 0; i < texts.Length && i < colWidths.Length; i++)
-                    {
-                        var fmt = (fmts != null && i < fmts.Length) ? fmts[i] : XStringFormats.CenterLeft;
-                        gfx!.DrawString(texts[i] ?? "", font, useFg,
-                            new XRect(cx + 4, y, colWidths[i] - 8, rowHeight), fmt);
-                        cx += colWidths[i];
-                    }
-                    y += rowHeight;
-                }
-
-                XBrush GetExpiryBrush(string status) => status switch
-                {
-                    "expired" => redBrush,
-                    "warning" => orangeBrush,
-                    "ok" => greenBrush,
-                    _ => XBrushes.Black
-                };
-
-                page = AddPage();
-
-                gfx!.DrawString(DocString("ReportPdfTitle"), fontTitle, XBrushes.Black, new XRect(marginLeft, y, 300, 24), XStringFormats.CenterLeft);
-                y += 28;
-                gfx.DrawString(string.Format(DocString("ReportPdfPeriod"), DateFrom.ToString("dd.MM.yyyy"), DateTo.ToString("dd.MM.yyyy")), fontSubtitle, grayBrush,
-                    new XRect(marginLeft, y, 400, 16), XStringFormats.CenterLeft);
-                y += 14;
-                gfx.DrawString(string.Format(DocString("ReportPdfStatsFmt"), TotalEmployees, ActiveEmployees, NewInPeriod, EndedInPeriod),
-                    fontSubtitle, XBrushes.Black, new XRect(marginLeft, y, 600, 16), XStringFormats.CenterLeft);
-                y += 24;
-
-                if (IsSheetSelected("firms") && FirmDetails.Count > 0)
-                {
-                    double contentW = pageW - marginLeft * 2;
-                    double[] firmCols = { contentW * 0.4, contentW * 0.15, contentW * 0.15, contentW * 0.15, contentW * 0.15 };
-                    XStringFormat[] firmFmts = {
-                        XStringFormats.CenterLeft, XStringFormats.Center,
-                        XStringFormats.Center, XStringFormats.Center, XStringFormats.Center
-                    };
-
-                    string[] firmHeaders = { DocString("ReportColFirm"), DocString("ReportColTotal"), DocString("ReportColActive"), DocString("ReportColNoPermit"), DocString("ReportColArchived") };
-
-                    EnsureSpace(rowHeight * 2);
-                    DrawRow(marginLeft, firmCols, firmHeaders, fontHeader, headerBg, XBrushes.White, firmFmts);
-
-                    foreach (var f in FirmDetails)
-                    {
-                        if (EnsureSpace(rowHeight))
-                            DrawRow(marginLeft, firmCols, firmHeaders, fontHeader, headerBg, XBrushes.White, firmFmts);
-                        DrawRow(marginLeft, firmCols, new[] { f.FirmName, f.TotalEmployees.ToString(), f.ActiveEmployees.ToString(),
-                            f.PassportOnlyCount.ToString(), f.ArchivedEmployees.ToString() }, fontCell, null, fmts: firmFmts);
-                    }
-
-                    if (EnsureSpace(rowHeight))
-                        DrawRow(marginLeft, firmCols, firmHeaders, fontHeader, headerBg, XBrushes.White, firmFmts);
-                    DrawRow(marginLeft, firmCols, new[] { DocString("ReportTotal"), SummaryTotal.ToString(), SummaryActive.ToString(),
-                        SummaryPassportOnly.ToString(), SummaryArchived.ToString() }, fontHeader, subHeaderBg, fmts: firmFmts);
-                    y += 12;
-                }
-
-                if (IsSheetSelected("agencies") && AgencyDetails.Count > 0)
-                {
-                    double contentW = pageW - marginLeft * 2;
-                    double[] agCols = { contentW * 0.4, contentW * 0.2, contentW * 0.2, contentW * 0.2 };
-
-                    string[] agHeaders = { DocString("ReportColAgencyName"), DocString("ReportColFirmCount"), DocString("ReportColTotal"), DocString("ReportColActive") };
-                    var agHeaderBg = new XSolidBrush(XColor.FromArgb(123, 31, 162));
-
-                    EnsureSpace(rowHeight * 2);
-                    gfx!.DrawString(DocString("ReportPdfAgencySection"), fontFirmTitle, XBrushes.Black,
-                        new XRect(marginLeft, y, 400, 18), XStringFormats.CenterLeft);
-                    y += 22;
-
-                    DrawRow(marginLeft, agCols, agHeaders, fontHeader, agHeaderBg, XBrushes.White);
-
-                    foreach (var a in AgencyDetails)
-                    {
-                        if (EnsureSpace(rowHeight))
-                            DrawRow(marginLeft, agCols, agHeaders, fontHeader, agHeaderBg, XBrushes.White);
-                        DrawRow(marginLeft, agCols, new[] { a.AgencyName, a.FirmCount.ToString(),
-                            a.TotalEmployees.ToString(), a.ActiveEmployees.ToString() }, fontCell, null);
-                    }
-                    y += 12;
-                }
-
-                if (IsSheetSelected("employees") && _allEmployees.Count > 0)
-                {
-                    var groups = _allEmployees
-                        .OrderBy(e => e.FirmName).ThenBy(e => e.IsArchived).ThenBy(e => e.FullName)
-                        .GroupBy(e => e.FirmName);
-
-                    double contentW = pageW - marginLeft * 2;
-                    var visibleColumns = GetVisibleEmployeeColumnsForExport();
-                    if (visibleColumns.Count == 0)
-                    {
-                        visibleColumns = NormalizeEmployeeColumnLayout(DefaultEmployeeColumns.Select(CopyColumnSetting))
-                            .Where(c => c.IsVisible)
-                            .ToList();
-                    }
-
-                    double totalWidthWeight = visibleColumns.Sum(c => c.Width);
-                    if (totalWidthWeight <= 0)
-                        totalWidthWeight = visibleColumns.Count;
-
-                    double[] empCols = visibleColumns
-                        .Select(c => contentW * (c.Width / totalWidthWeight))
-                        .ToArray();
-                    string[] empHeaders = visibleColumns
-                        .Select(c => DocString(_reportColumnLayoutService.GetEmployeeColumnHeaderResourceKey(c.Key)))
-                        .ToArray();
-                    XStringFormat[] empFmts = visibleColumns
-                        .Select(c => GetEmployeePdfFormat(c.Key))
-                        .ToArray();
-
-                    foreach (var group in groups)
-                    {
-                        var groupTitle = string.Format(DocString("ReportEmpCountFmt"), group.Key, group.Count());
-
-                        void DrawGroupHeader()
+                        page.Header().Column(col =>
                         {
-                            gfx!.DrawRectangle(accentBrush, marginLeft, y, contentW, rowHeight + 2);
-                            gfx.DrawString(groupTitle, fontFirmTitle, XBrushes.White,
-                                new XRect(marginLeft + 6, y, contentW - 12, rowHeight + 2), XStringFormats.Center);
-                            y += rowHeight + 2;
-                            DrawRow(marginLeft, empCols, empHeaders, fontHeader, subHeaderBg, fmts: empFmts);
-                        }
+                            col.Item().Text(DocString("ReportPdfTitle")).FontSize(16).Bold();
+                            col.Item().Text(string.Format(DocString("ReportPdfPeriod"),
+                                DateFrom.ToString("dd.MM.yyyy"), DateTo.ToString("dd.MM.yyyy")))
+                                .FontSize(10).FontColor(QuestPDF.Helpers.Colors.Grey.Medium);
+                            col.Item().Text(string.Format(DocString("ReportPdfStatsFmt"),
+                                TotalEmployees, ActiveEmployees, NewInPeriod, EndedInPeriod))
+                                .FontSize(10);
+                            col.Item().PaddingBottom(8);
+                        });
 
-                        EnsureSpace(rowHeight * 3);
-                        DrawGroupHeader();
-
-                        foreach (var emp in group)
+                        page.Content().Column(content =>
                         {
-                            if (EnsureSpace(rowHeight))
-                                DrawGroupHeader();
-
-                            var usedFont = emp.IsArchived ? fontCellItalic : fontCell;
-                            XBrush baseFg;
-
-                            if (emp.IsArchived)
+                            if (IsSheetSelected("firms") && FirmDetails.Count > 0)
                             {
-                                gfx!.DrawRectangle(new XSolidBrush(XColor.FromArgb(255, 205, 210)), marginLeft, y, contentW, rowHeight);
-                                baseFg = new XSolidBrush(XColor.FromArgb(183, 28, 28));
-                            }
-                            else
-                            {
-                                baseFg = XBrushes.Black;
-                            }
-
-                            double cx = marginLeft;
-                            string[] vals = visibleColumns
-                                .Select(c => GetEmployeeColumnValue(emp, c.Key))
-                                .ToArray();
-
-                            for (int i = 0; i < vals.Length && i < empCols.Length; i++)
-                            {
-                                XBrush cellFg = baseFg;
-                                if (!emp.IsArchived)
+                                content.Item().Table(table =>
                                 {
-                                    var status = GetEmployeeColumnStatus(emp, visibleColumns[i].Key);
-                                    if (!string.IsNullOrEmpty(status))
-                                        cellFg = GetExpiryBrush(status);
-                                }
-                                gfx!.DrawString(vals[i] ?? "", usedFont, cellFg,
-                                    new XRect(cx + 4, y, empCols[i] - 8, rowHeight), empFmts[i]);
-                                cx += empCols[i];
+                                    table.ColumnsDefinition(c =>
+                                    {
+                                        c.RelativeColumn(4);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        void HeaderCell(string text) => header.Cell()
+                                            .Background(headerColor).Padding(4)
+                                            .Text(text).FontColor(QuestPDF.Helpers.Colors.White).Bold().FontSize(8);
+
+                                        HeaderCell(DocString("ReportColFirm"));
+                                        HeaderCell(DocString("ReportColTotal"));
+                                        HeaderCell(DocString("ReportColActive"));
+                                        HeaderCell(DocString("ReportColNoPermit"));
+                                        HeaderCell(DocString("ReportColArchived"));
+                                    });
+
+                                    foreach (var f in FirmDetails)
+                                    {
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(f.FirmName);
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(f.TotalEmployees.ToString());
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(f.ActiveEmployees.ToString());
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(f.PassportOnlyCount.ToString());
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(f.ArchivedEmployees.ToString());
+                                    }
+
+                                    table.Cell().Background(subHeaderColor).Padding(4).Text(DocString("ReportTotal")).Bold();
+                                    table.Cell().Background(subHeaderColor).Padding(4).AlignCenter().Text(SummaryTotal.ToString()).Bold();
+                                    table.Cell().Background(subHeaderColor).Padding(4).AlignCenter().Text(SummaryActive.ToString()).Bold();
+                                    table.Cell().Background(subHeaderColor).Padding(4).AlignCenter().Text(SummaryPassportOnly.ToString()).Bold();
+                                    table.Cell().Background(subHeaderColor).Padding(4).AlignCenter().Text(SummaryArchived.ToString()).Bold();
+                                });
+                                content.Item().PaddingBottom(12);
                             }
-                            y += rowHeight;
-                        }
-                        y += 8;
-                    }
-                }
 
-                if (IsSheetSelected("archive") && ArchiveHistory.Count > 0)
-                {
-                    double contentW = pageW - marginLeft * 2;
-                    double[] archCols = { contentW * 0.3, contentW * 0.25, contentW * 0.15, contentW * 0.15, contentW * 0.15 };
+                            if (IsSheetSelected("agencies") && AgencyDetails.Count > 0)
+                            {
+                                content.Item().Text(DocString("ReportPdfAgencySection")).FontSize(10).Bold();
+                                content.Item().PaddingTop(4).Table(table =>
+                                {
+                                    table.ColumnsDefinition(c =>
+                                    {
+                                        c.RelativeColumn(4);
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(2);
+                                    });
 
-                    string[] archHeaders = { DocString("ReportColEmployee"), DocString("ReportColFirm"), DocString("ReportColAction"), DocString("ReportColDate"), DocString("ReportColTimestamp") };
-                    var archHeaderBg = new XSolidBrush(XColor.FromArgb(123, 31, 162));
+                                    table.Header(header =>
+                                    {
+                                        void HeaderCell(string text) => header.Cell()
+                                            .Background(agencyHeaderColor).Padding(4)
+                                            .Text(text).FontColor(QuestPDF.Helpers.Colors.White).Bold().FontSize(8);
 
-                    EnsureSpace(rowHeight * 3);
-                    gfx!.DrawString(DocString("ReportSheetArchive"), fontFirmTitle, XBrushes.Black,
-                        new XRect(marginLeft, y, 400, 18), XStringFormats.CenterLeft);
-                    y += 22;
+                                        HeaderCell(DocString("ReportColAgencyName"));
+                                        HeaderCell(DocString("ReportColFirmCount"));
+                                        HeaderCell(DocString("ReportColTotal"));
+                                        HeaderCell(DocString("ReportColActive"));
+                                    });
 
-                    DrawRow(marginLeft, archCols, archHeaders, fontHeader, archHeaderBg, XBrushes.White);
+                                    foreach (var a in AgencyDetails)
+                                    {
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(a.AgencyName);
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(a.FirmCount.ToString());
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(a.TotalEmployees.ToString());
+                                        table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).AlignCenter().Text(a.ActiveEmployees.ToString());
+                                    }
+                                });
+                                content.Item().PaddingBottom(12);
+                            }
 
-                    foreach (var entry in ArchiveHistory)
-                    {
-                        if (EnsureSpace(rowHeight))
-                            DrawRow(marginLeft, archCols, archHeaders, fontHeader, archHeaderBg, XBrushes.White);
-                        var action = entry.Action == "Archived" ? DocString("ReportActionArchived") : DocString("ReportActionRestored");
-                        var bg = entry.Action == "Archived"
-                            ? new XSolidBrush(XColor.FromArgb(255, 228, 225))
-                            : new XSolidBrush(XColor.FromArgb(240, 255, 240));
-                        DrawRow(marginLeft, archCols, new[] { entry.EmployeeName, entry.FirmName, action, entry.Date, entry.Timestamp },
-                            fontCell, bg);
-                    }
-                }
+                            if (IsSheetSelected("employees") && _allEmployees.Count > 0)
+                            {
+                                var groups = _allEmployees
+                                    .OrderBy(e => e.FirmName).ThenBy(e => e.IsArchived).ThenBy(e => e.FullName)
+                                    .GroupBy(e => e.FirmName);
 
-                gfx?.Dispose();
-                doc.Save(dialog.FileName);
+                                foreach (var group in groups)
+                                {
+                                    var groupTitle = string.Format(DocString("ReportEmpCountFmt"), group.Key, group.Count());
+
+                                    content.Item().Background(headerColor).Padding(5)
+                                        .Text(groupTitle).FontColor(QuestPDF.Helpers.Colors.White).Bold().FontSize(10).AlignCenter();
+
+                                    content.Item().Table(table =>
+                                    {
+                                        table.ColumnsDefinition(c =>
+                                        {
+                                            double totalWeight = visibleColumns.Sum(vc => vc.Width);
+                                            if (totalWeight <= 0) totalWeight = visibleColumns.Count;
+                                            foreach (var vc in visibleColumns)
+                                                c.RelativeColumn((float)(vc.Width / totalWeight * 10));
+                                        });
+
+                                        table.Header(header =>
+                                        {
+                                            foreach (var vc in visibleColumns)
+                                            {
+                                                header.Cell().Background(subHeaderColor).Padding(3)
+                                                    .Text(DocString(_reportColumnLayoutService.GetEmployeeColumnHeaderResourceKey(vc.Key)))
+                                                    .Bold().FontSize(7);
+                                            }
+                                        });
+
+                                        foreach (var emp in group)
+                                        {
+                                            foreach (var vc in visibleColumns)
+                                            {
+                                                var val = GetEmployeeColumnValue(emp, vc.Key);
+                                                var cell = table.Cell().BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(3);
+
+                                                if (emp.IsArchived)
+                                                {
+                                                    cell = cell.Background("#FFCDCD");
+                                                    cell.Text(val ?? "").FontSize(7).Italic().FontColor("#B71C1C");
+                                                }
+                                                else
+                                                {
+                                                    var status = GetEmployeeColumnStatus(emp, vc.Key);
+                                                    var fontColor = status switch
+                                                    {
+                                                        "expired" => "#D32F2F",
+                                                        "warning" => "#F57F17",
+                                                        "ok" => "#2E7D32",
+                                                        _ => "#000000"
+                                                    };
+                                                    cell.Text(val ?? "").FontSize(7).FontColor(fontColor);
+                                                }
+                                            }
+                                        }
+                                    });
+                                    content.Item().PaddingBottom(8);
+                                }
+                            }
+
+                            if (IsSheetSelected("archive") && ArchiveHistory.Count > 0)
+                            {
+                                content.Item().Text(DocString("ReportSheetArchive")).FontSize(10).Bold();
+                                content.Item().PaddingTop(4).Table(table =>
+                                {
+                                    table.ColumnsDefinition(c =>
+                                    {
+                                        c.RelativeColumn(3);
+                                        c.RelativeColumn(2.5f);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                        c.RelativeColumn(1.5f);
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        void HeaderCell(string text) => header.Cell()
+                                            .Background(agencyHeaderColor).Padding(4)
+                                            .Text(text).FontColor(QuestPDF.Helpers.Colors.White).Bold().FontSize(8);
+
+                                        HeaderCell(DocString("ReportColEmployee"));
+                                        HeaderCell(DocString("ReportColFirm"));
+                                        HeaderCell(DocString("ReportColAction"));
+                                        HeaderCell(DocString("ReportColDate"));
+                                        HeaderCell(DocString("ReportColTimestamp"));
+                                    });
+
+                                    foreach (var entry in ArchiveHistory)
+                                    {
+                                        var action = entry.Action == "Archived" ? DocString("ReportActionArchived") : DocString("ReportActionRestored");
+                                        var bg = entry.Action == "Archived" ? "#FFE4E1" : "#F0FFF0";
+
+                                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(entry.EmployeeName);
+                                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(entry.FirmName);
+                                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(action);
+                                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(entry.Date);
+                                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(entry.Timestamp);
+                                    }
+                                });
+                            }
+                        });
+
+                        page.Footer().AlignCenter().Text(text =>
+                        {
+                            text.CurrentPageNumber();
+                            text.Span(" / ");
+                            text.TotalPages();
+                        });
+                    });
+                }).GeneratePdf(dialog.FileName);
+
                 StatusMessage = GetString("ReportExportedPdf");
                 _activityLogService.Log("ExportPdf", "Export", "", "",
                     $"Експортовано звіт → PDF", details: BuildReportExportDetails(dialog.FileName));

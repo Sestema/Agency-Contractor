@@ -12,6 +12,7 @@ using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
+using Win11DesktopApp.Telegram;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp
@@ -52,6 +53,7 @@ namespace Win11DesktopApp
         private static ProfileSessionService ProfileSessionService => GetRequiredService<ProfileSessionService>();
         private static AccessStatusService AccessStatusService => GetRequiredService<AccessStatusService>();
         private static CurrentProfileService CurrentProfileService => GetRequiredService<CurrentProfileService>();
+        private static TelegramBotService TelegramBotService => GetRequiredService<TelegramBotService>();
 
         private sealed class StartupFlowState
         {
@@ -69,6 +71,7 @@ namespace Win11DesktopApp
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             GlobalFontSettings.FontResolver = new PdfFontResolver();
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
             // Gentle fade-in for all windows (dialogs feel lighter, less jarring).
             EventManager.RegisterClassHandler(
@@ -666,6 +669,21 @@ namespace Win11DesktopApp
             _ = Task.Run(() => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies));
             _ = Task.Run(() => RecentlyDeletedService.PurgeExpired());
             _ = Task.Run(PrewarmSalaryPath);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (AppSettingsService.Settings.Telegram.Enabled
+                        && !string.IsNullOrWhiteSpace(AppSettingsService.Settings.Telegram.EncryptedBotToken))
+                    {
+                        await TelegramBotService.RestartAsync().ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("App.TelegramBotStartup", ex.Message);
+                }
+            });
         }
 
         private static StartupIntegrityService InitializeCoreServices()
@@ -786,6 +804,8 @@ namespace Win11DesktopApp
             services.AddSingleton<ReportColumnLayoutService>();
             services.AddSingleton<CurrentProfileService>();
             services.AddSingleton<GeminiApiKeyConfigurationService>();
+            services.AddSingleton<TelegramPairingService>();
+            services.AddSingleton<TelegramBotService>();
             services.AddTransient<MainViewModel>();
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<SettingsViewModel>();
@@ -923,6 +943,7 @@ namespace Win11DesktopApp
         {
             _heartbeatCts?.Cancel();
             _heartbeatCts?.Dispose();
+            try { TelegramBotService.Stop(); } catch { }
             base.OnExit(e);
         }
 

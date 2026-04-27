@@ -916,6 +916,8 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<WorkAddress> CompanyAddresses { get; } = new();
         public ObservableCollection<InsuranceCompanyOption> InsuranceCompanies { get; } =
             new ObservableCollection<InsuranceCompanyOption>(InsuranceCompanyCatalog.All);
+        public ObservableCollection<EducationOption> EducationOptions { get; } =
+            new ObservableCollection<EducationOption>(EducationCatalog.All);
 
         private bool _isInitializingSelectedPosition;
         private Position? _selectedPosition;
@@ -974,6 +976,27 @@ namespace Win11DesktopApp.ViewModels
 
         public string InsuranceCompanyFullDisplay => SelectedInsuranceCompany?.DisplayName
             ?? (string.IsNullOrWhiteSpace(Data.InsuranceCompanyFull) ? string.Empty : Data.InsuranceCompanyFull);
+
+        private bool _isInitializingSelectedEducationOption;
+        private EducationOption? _selectedEducationOption;
+        public EducationOption? SelectedEducationOption
+        {
+            get => _selectedEducationOption;
+            set
+            {
+                if (SetProperty(ref _selectedEducationOption, value) && value != null)
+                {
+                    if (_isInitializingSelectedEducationOption)
+                        return;
+
+                    Data.HighestEducationCode = value.Code;
+                    OnPropertyChanged(nameof(HighestEducationDisplay));
+                    OnPropertyChanged(nameof(Data));
+                }
+            }
+        }
+
+        public string HighestEducationDisplay => EducationCatalog.GetFullDisplay(Data?.HighestEducationCode);
 
         // Profile completion
         public int ProfileCompletionPercent => CalcProfileCompletion();
@@ -1059,6 +1082,7 @@ namespace Win11DesktopApp.ViewModels
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
             NormalizeInsuranceCompanyFields();
+            NormalizeEducationFields();
             NotifyBankAccountStateChanged();
             TryAutofillBankName(Data.BankAccountNumber);
             RefreshDocuments();
@@ -2136,6 +2160,7 @@ namespace Win11DesktopApp.ViewModels
             if (data != null)
             {
                 NormalizeInsuranceCompanyFields(data);
+                NormalizeEducationFields(data);
                 return data;
             }
 
@@ -2174,6 +2199,28 @@ namespace Win11DesktopApp.ViewModels
             }
 
             OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
+        }
+
+        private void NormalizeEducationFields()
+        {
+            NormalizeEducationFields(Data);
+        }
+
+        private void NormalizeEducationFields(EmployeeData data)
+        {
+            data.HighestEducationCode = EducationCatalog.NormalizeCode(data.HighestEducationCode);
+
+            _isInitializingSelectedEducationOption = true;
+            try
+            {
+                SelectedEducationOption = EducationCatalog.FindByCode(data.HighestEducationCode);
+            }
+            finally
+            {
+                _isInitializingSelectedEducationOption = false;
+            }
+
+            OnPropertyChanged(nameof(HighestEducationDisplay));
         }
 
         private bool EnsureEmployeeFolderAvailable(string source, bool notifyUser = false)

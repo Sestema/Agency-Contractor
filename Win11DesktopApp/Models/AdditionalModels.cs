@@ -20,6 +20,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string EmployeeFolder { get; set; } = string.Empty;
         public string PhotoPath { get; set; } = string.Empty;
         public bool HasPhoto { get; set; }
+        public DateTime? ParsedStartDate { get; set; }
+        public DateTime? ParsedEndDate { get; set; }
     }
 
     /// <summary>
@@ -223,6 +225,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string FirmName { get; set; } = string.Empty;
         public string EmployeeFolder { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = string.Empty;
+        public string DocumentType { get; set; } = string.Empty;
+        public string PassportNumber { get; set; } = string.Empty;
         public string PassportExpiry { get; set; } = string.Empty;
         public string VisaExpiry { get; set; } = string.Empty;
         public string InsuranceExpiry { get; set; } = string.Empty;
@@ -232,6 +236,15 @@ namespace Win11DesktopApp.EmployeeModels
         public string BankAccountNumber { get; set; } = string.Empty;
         public string BankName { get; set; } = string.Empty;
         public string Position { get; set; } = string.Empty;
+        public string PositionCode { get; set; } = string.Empty;
+        public string WorkAddress { get; set; } = string.Empty;
+        public string AddressCz { get; set; } = string.Empty;
+        public string AddressAbroad { get; set; } = string.Empty;
+        public string BirthDate { get; set; } = string.Empty;
+        public string HighestEducation { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public string PassportIssuedBy { get; set; } = string.Empty;
+        public string Agency { get; set; } = string.Empty;
         public bool IsArchived { get; set; }
 
         public string PassportExpiryStatus => ComputeExpiryStatus(PassportExpiry);

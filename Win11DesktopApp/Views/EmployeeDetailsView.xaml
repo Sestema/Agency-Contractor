@@ -1221,6 +1221,17 @@
                                                     <TextBox Text="{Binding Data.LastName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldBirthDate}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.BirthDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <TextBlock Text="{DynamicResource DetFieldHighestEducation}" Style="{StaticResource FieldLabel}"/>
+                                                    <TextBlock Text="{Binding HighestEducationDisplay}"
+                                                               FontSize="{DynamicResource FS13}"
+                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                               Margin="0,2,0,6"
+                                                               Visibility="{Binding IsEditMode, Converter={StaticResource InverseBoolToVis}}"/>
+                                                    <ComboBox ItemsSource="{Binding EducationOptions}"
+                                                              SelectedItem="{Binding SelectedEducationOption}"
+                                                              DisplayMemberPath="FullDisplay"
+                                                              Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"
+                                                              Padding="8,6" Margin="0,0,0,8" FontSize="13" IsEditable="False"/>
                                                     <TextBlock Text="{DynamicResource DetFieldGender}" Style="{StaticResource FieldLabel}"/>
                                                     <!-- View mode: text only -->
                                                     <TextBlock FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,6"
