@@ -47,24 +47,25 @@ namespace Win11DesktopApp.ViewModels
             new() { Key = "type", IsVisible = true, DisplayIndex = 1, Width = 180 },
             new() { Key = "documentType", IsVisible = false, DisplayIndex = 2, Width = 130 },
             new() { Key = "passportNumber", IsVisible = false, DisplayIndex = 3, Width = 170 },
-            new() { Key = "workAddress", IsVisible = false, DisplayIndex = 4, Width = 220 },
-            new() { Key = "highestEducation", IsVisible = false, DisplayIndex = 5, Width = 220 },
-            new() { Key = "birthDate", IsVisible = false, DisplayIndex = 6, Width = 100 },
-            new() { Key = "gender", IsVisible = false, DisplayIndex = 7, Width = 90 },
-            new() { Key = "addressCz", IsVisible = false, DisplayIndex = 8, Width = 220 },
-            new() { Key = "addressAbroad", IsVisible = false, DisplayIndex = 9, Width = 220 },
-            new() { Key = "passportIssuedBy", IsVisible = false, DisplayIndex = 10, Width = 180 },
-            new() { Key = "positionCode", IsVisible = false, DisplayIndex = 11, Width = 110 },
-            new() { Key = "agency", IsVisible = false, DisplayIndex = 12, Width = 150 },
-            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 13, Width = 100 },
-            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 14, Width = 100 },
-            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 15, Width = 100 },
-            new() { Key = "startDate", IsVisible = true, DisplayIndex = 16, Width = 90 },
-            new() { Key = "endDate", IsVisible = true, DisplayIndex = 17, Width = 90 },
-            new() { Key = "phone", IsVisible = true, DisplayIndex = 18, Width = 110 },
-            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 19, Width = 150 },
-            new() { Key = "bankName", IsVisible = false, DisplayIndex = 20, Width = 150 },
-            new() { Key = "position", IsVisible = true, DisplayIndex = 21, Width = 110 },
+            new() { Key = "visaNumber", IsVisible = false, DisplayIndex = 4, Width = 170 },
+            new() { Key = "workAddress", IsVisible = false, DisplayIndex = 5, Width = 220 },
+            new() { Key = "highestEducation", IsVisible = false, DisplayIndex = 6, Width = 220 },
+            new() { Key = "birthDate", IsVisible = false, DisplayIndex = 7, Width = 100 },
+            new() { Key = "gender", IsVisible = false, DisplayIndex = 8, Width = 90 },
+            new() { Key = "addressCz", IsVisible = false, DisplayIndex = 9, Width = 220 },
+            new() { Key = "addressAbroad", IsVisible = false, DisplayIndex = 10, Width = 220 },
+            new() { Key = "passportIssuedBy", IsVisible = false, DisplayIndex = 11, Width = 180 },
+            new() { Key = "positionCode", IsVisible = false, DisplayIndex = 12, Width = 110 },
+            new() { Key = "agency", IsVisible = false, DisplayIndex = 13, Width = 150 },
+            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 14, Width = 100 },
+            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 15, Width = 100 },
+            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 16, Width = 100 },
+            new() { Key = "startDate", IsVisible = true, DisplayIndex = 17, Width = 90 },
+            new() { Key = "endDate", IsVisible = true, DisplayIndex = 18, Width = 90 },
+            new() { Key = "phone", IsVisible = true, DisplayIndex = 19, Width = 110 },
+            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 20, Width = 150 },
+            new() { Key = "bankName", IsVisible = false, DisplayIndex = 21, Width = 150 },
+            new() { Key = "position", IsVisible = true, DisplayIndex = 22, Width = 110 },
         };
 
         public ICommand GoBackCommand { get; }
@@ -438,6 +439,7 @@ namespace Win11DesktopApp.ViewModels
             "type" => "ReportColType",
             "documentType" => "ReportColDocumentType",
             "passportNumber" => "ReportColPassportNumber",
+            "visaNumber" => "ReportColVisaNumber",
             "workAddress" => "ReportColWorkAddress",
             "highestEducation" => "ReportColHighestEducation",
             "addressCz" => "ReportColAddressCz",
@@ -473,6 +475,7 @@ namespace Win11DesktopApp.ViewModels
             "type" => employee.EmployeeType,
             "documentType" => employee.DocumentType,
             "passportNumber" => employee.PassportNumber,
+            "visaNumber" => employee.VisaNumber,
             "workAddress" => employee.WorkAddress,
             "highestEducation" => employee.HighestEducation,
             "addressCz" => employee.AddressCz,
@@ -1365,6 +1368,7 @@ namespace Win11DesktopApp.ViewModels
                     : GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
                 DocumentType = GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
                 PassportNumber = data.PassportNumber ?? string.Empty,
+                VisaNumber = data.VisaNumber ?? string.Empty,
                 PassportExpiry = data.PassportExpiry,
                 VisaExpiry = data.VisaExpiry,
                 InsuranceExpiry = data.InsuranceExpiry,
@@ -1403,6 +1407,7 @@ namespace Win11DesktopApp.ViewModels
                     : GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
                 DocumentType = GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
                 PassportNumber = employee.PassportNumber,
+                VisaNumber = employee.VisaNumber,
                 PassportExpiry = employee.PassportExpiry,
                 VisaExpiry = employee.VisaExpiry,
                 InsuranceExpiry = employee.InsuranceExpiry,
@@ -1428,6 +1433,7 @@ namespace Win11DesktopApp.ViewModels
                     {
                         row.DocumentType = GetDocTypeDisplay(data.EmployeeType ?? employee.EmployeeType ?? "visa", typeDisplayMap);
                         row.PassportNumber = data.PassportNumber ?? employee.PassportNumber ?? string.Empty;
+                        row.VisaNumber = data.VisaNumber ?? employee.VisaNumber ?? string.Empty;
                         row.Position = string.IsNullOrWhiteSpace(data.PositionTag) ? row.Position : data.PositionTag;
                         row.PositionCode = data.PositionNumber ?? string.Empty;
                         row.WorkAddress = data.WorkAddressTag ?? string.Empty;

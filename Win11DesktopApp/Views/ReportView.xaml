@@ -788,6 +788,7 @@
                                                 <DataGridTextColumn Header="{DynamicResource ReportColType}" Binding="{Binding EmployeeType}" Width="180" SortMemberPath="EmployeeType"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColDocumentType}" Binding="{Binding DocumentType}" Width="130" SortMemberPath="DocumentType"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColPassportNumber}" Binding="{Binding PassportNumber}" Width="170" SortMemberPath="PassportNumber"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColVisaNumber}" Binding="{Binding VisaNumber}" Width="170" SortMemberPath="VisaNumber"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColWorkAddress}" Binding="{Binding WorkAddress}" Width="220" SortMemberPath="WorkAddress"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColHighestEducation}" Binding="{Binding HighestEducation}" Width="220" SortMemberPath="HighestEducation"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColBirthDate}" Binding="{Binding BirthDate}" Width="100" SortMemberPath="BirthDate"/>

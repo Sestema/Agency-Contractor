@@ -85,6 +85,8 @@ namespace Win11DesktopApp.Telegram
             public SalaryHistoryRecord Record { get; init; } = null!;
             public List<AdvancePayment> Advances { get; init; } = new();
             public string MonthKey { get; init; } = string.Empty;
+            public bool IsPaid { get; init; }
+            public DateTime? PaidAt { get; init; }
             public decimal TotalAdvances => Advances.Sum(a => a.Amount);
         }
 
@@ -102,6 +104,23 @@ namespace Win11DesktopApp.Telegram
             public decimal TotalExpenses => Expenses.Sum(e => e.Amount);
             public int PaidCount => Entries.Count(e => string.Equals(e.Status, "paid", StringComparison.OrdinalIgnoreCase));
             public int PendingCount => Math.Max(0, Entries.Count - PaidCount);
+        }
+
+        private sealed class EmployeeFlowPeriodMonthInfo
+        {
+            public string MonthKey { get; init; } = string.Empty;
+            public string MonthDisplay { get; init; } = string.Empty;
+            public int StartedCount { get; init; }
+            public int EndedCount { get; init; }
+            public int NetChange => StartedCount - EndedCount;
+        }
+
+        private sealed class EmployeeFlowPeriodFirmInfo
+        {
+            public string FirmName { get; init; } = string.Empty;
+            public int StartedCount { get; init; }
+            public int EndedCount { get; init; }
+            public int NetChange => StartedCount - EndedCount;
         }
 
         private sealed class AiToolExecutionResult
@@ -1597,6 +1616,22 @@ namespace Win11DesktopApp.Telegram
                 },
                 new()
                 {
+                    Name = "get_employee_flow_period",
+                    Description = "Summarize employee flow across a month range: starts, terminations, net change, monthly breakdown and per-firm totals. Use this for quarter, year or custom period questions.",
+                    Parameters = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            start_month = new { type = "string", description = "Range start month in yyyy-MM, MM.yyyy, MM-yyyy or month name format." },
+                            end_month = new { type = "string", description = "Range end month in yyyy-MM, MM.yyyy, MM-yyyy or month name format." },
+                            firm = new { type = "string", description = "Optional firm name." }
+                        },
+                        required = new[] { "start_month", "end_month" }
+                    }
+                },
+                new()
+                {
                     Name = "get_program_help",
                     Description = "Get step-by-step help about what this desktop program can do, which module to open and how to perform a task.",
                     Parameters = new
@@ -1683,6 +1718,7 @@ namespace Win11DesktopApp.Telegram
                 "get_hiring_summary" => ExecuteGetHiringSummaryTool(args, conversationUserId),
                 "get_termination_summary" => ExecuteGetTerminationSummaryTool(args, conversationUserId),
                 "get_employee_flow_summary" => ExecuteGetEmployeeFlowSummaryTool(args, conversationUserId),
+                "get_employee_flow_period" => ExecuteGetEmployeeFlowPeriodTool(args, conversationUserId),
                 "get_program_help" => ExecuteGetProgramHelpTool(args),
                 "list_program_capabilities" => ExecuteListProgramCapabilitiesTool(),
                 "get_external_updates" => await ExecuteGetExternalUpdatesToolAsync(args, cancellationToken).ConfigureAwait(false),
@@ -2110,6 +2146,7 @@ namespace Win11DesktopApp.Telegram
                 .ToList();
 
             var salaryInfo = ResolveSalaryInfo(selectedEmployee, null);
+            var latestPaidSalary = ResolveLatestPaidSalaryInfo(selectedEmployee, salaryInfo);
             var employmentEvents = BuildEmploymentTimelineItems(selectedEmployee, data);
 
             return new AiToolExecutionResult
@@ -2144,12 +2181,25 @@ namespace Win11DesktopApp.Telegram
                             net_salary = salaryInfo.Record.NetSalary,
                             advance = salaryInfo.Record.Advance,
                             extra_advances = salaryInfo.TotalAdvances,
+                            payment_status = salaryInfo.IsPaid ? "paid" : "pending",
+                            paid_at = salaryInfo.PaidAt?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? string.Empty,
                             note = salaryInfo.Record.Note,
                             formatted_salary = BuildSalaryBreakdownText(salaryInfo)
                         },
+                    latest_paid_salary = latestPaidSalary == null
+                        ? null
+                        : new
+                        {
+                            month = latestPaidSalary.MonthKey,
+                            month_display = latestPaidSalary.Record.MonthDisplay,
+                            firm = latestPaidSalary.Record.FirmName,
+                            gross_salary = latestPaidSalary.Record.GrossSalary,
+                            net_salary = latestPaidSalary.Record.NetSalary,
+                            paid_at = latestPaidSalary.PaidAt?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? string.Empty
+                        },
                     employment_timeline = employmentEvents,
                     recent_history = historyEvents,
-                    formatted_full_summary = BuildEmployeeFullSummaryText(selectedEmployee, data, salaryInfo, historyEvents.Count, employmentEvents.Count)
+                    formatted_full_summary = BuildEmployeeFullSummaryText(selectedEmployee, data, salaryInfo, latestPaidSalary, historyEvents.Count, employmentEvents.Count)
                 }
             };
         }
@@ -2383,7 +2433,7 @@ namespace Win11DesktopApp.Telegram
                     Payload = new
                     {
                         ok = false,
-                        message = "Salary history not found for this employee and month."
+                        message = "Salary data not found for this employee and month."
                     }
                 };
             }
@@ -2425,7 +2475,8 @@ namespace Win11DesktopApp.Telegram
                             value = field.Value
                         }).ToList(),
                         net_salary = salaryInfo.Record.NetSalary,
-                        paid_at = salaryInfo.Record.PaidAt.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
+                        payment_status = salaryInfo.IsPaid ? "paid" : "pending",
+                        paid_at = salaryInfo.PaidAt?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? string.Empty,
                         note = salaryInfo.Record.Note,
                         advances = salaryInfo.Advances.Select(a => new
                         {
@@ -3406,6 +3457,147 @@ namespace Win11DesktopApp.Telegram
             };
         }
 
+        private AiToolExecutionResult ExecuteGetEmployeeFlowPeriodTool(JsonElement args, long? conversationUserId)
+        {
+            var firm = ResolveFirmNameForAi(GetStringArg(args, "firm"), conversationUserId);
+            var startMonthKey = ResolveMonthKeyForAi(GetStringArg(args, "start_month"), conversationUserId);
+            var endMonthKey = ResolveMonthKeyForAi(GetStringArg(args, "end_month"), conversationUserId);
+            if (string.IsNullOrWhiteSpace(startMonthKey) || string.IsNullOrWhiteSpace(endMonthKey))
+            {
+                return new AiToolExecutionResult
+                {
+                    FirmName = firm,
+                    MonthKey = startMonthKey,
+                    Payload = new
+                    {
+                        ok = false,
+                        needs_clarification = true,
+                        message = "Employee flow period summary requires start month and end month."
+                    }
+                };
+            }
+
+            if (!TryParseMonthKey(startMonthKey, out var startMonth) || !TryParseMonthKey(endMonthKey, out var endMonth))
+            {
+                return new AiToolExecutionResult
+                {
+                    FirmName = firm,
+                    Payload = new
+                    {
+                        ok = false,
+                        message = "Could not parse one of the requested months."
+                    }
+                };
+            }
+
+            if (startMonth > endMonth)
+                (startMonth, endMonth) = (endMonth, startMonth);
+
+            var resolvedStartMonthKey = $"{startMonth:yyyy-MM}";
+            var resolvedEndMonthKey = $"{endMonth:yyyy-MM}";
+
+            var startedEmployees = GetAllEmployeeRecords(includeArchived: true, includeRecentlyDeleted: false)
+                .Where(record => !string.IsNullOrWhiteSpace(record.StartDate))
+                .Where(record => string.IsNullOrWhiteSpace(firm) || string.Equals(NormalizeForSearch(record.FirmName), NormalizeForSearch(firm), StringComparison.Ordinal))
+                .Where(record => MatchesMonthRange(record.StartDate, resolvedStartMonthKey, resolvedEndMonthKey))
+                .GroupBy(record => $"{record.UniqueId}|{record.StartDate}|{record.FirmName}", StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderByDescending(record => ParseFlexibleDateOrMin(record.StartDate))
+                .ThenBy(record => record.FullName)
+                .ToList();
+
+            var endedEmployees = GetAllArchivedEmployees()
+                .Where(employee => !string.IsNullOrWhiteSpace(employee.EndDate))
+                .Where(employee => string.IsNullOrWhiteSpace(firm) || string.Equals(NormalizeForSearch(employee.FirmName), NormalizeForSearch(firm), StringComparison.Ordinal))
+                .Where(employee => MatchesMonthRange(employee.EndDate, resolvedStartMonthKey, resolvedEndMonthKey))
+                .OrderByDescending(employee => employee.ParsedEndDate ?? ParseFlexibleDateOrMin(employee.EndDate))
+                .ThenBy(employee => employee.FullName)
+                .ToList();
+
+            var monthBreakdown = EnumerateMonths(startMonth, endMonth)
+                .Select(month =>
+                {
+                    var monthKey = $"{month:yyyy-MM}";
+                    return new EmployeeFlowPeriodMonthInfo
+                    {
+                        MonthKey = monthKey,
+                        MonthDisplay = $"{month:MM.yyyy}",
+                        StartedCount = startedEmployees.Count(employee => MatchesMonthRange(employee.StartDate, monthKey, monthKey)),
+                        EndedCount = endedEmployees.Count(employee => MatchesMonthRange(employee.EndDate, monthKey, monthKey))
+                    };
+                })
+                .ToList();
+
+            var byFirm = startedEmployees
+                .Select(employee => employee.FirmName)
+                .Concat(endedEmployees.Select(employee => employee.FirmName))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+                .Select(name => new EmployeeFlowPeriodFirmInfo
+                {
+                    FirmName = name,
+                    StartedCount = startedEmployees.Count(employee => string.Equals(employee.FirmName, name, StringComparison.OrdinalIgnoreCase)),
+                    EndedCount = endedEmployees.Count(employee => string.Equals(employee.FirmName, name, StringComparison.OrdinalIgnoreCase))
+                })
+                .ToList();
+
+            var latestStarted = startedEmployees.FirstOrDefault();
+            var latestEnded = endedEmployees.FirstOrDefault();
+
+            return new AiToolExecutionResult
+            {
+                Employee = BuildConversationEmployeeShadow(latestStarted),
+                FirmName = firm,
+                MonthKey = $"{resolvedStartMonthKey}..{resolvedEndMonthKey}",
+                Payload = new
+                {
+                    ok = true,
+                    start_month = resolvedStartMonthKey,
+                    end_month = resolvedEndMonthKey,
+                    firm,
+                    started_total = startedEmployees.Count,
+                    ended_total = endedEmployees.Count,
+                    net_change = startedEmployees.Count - endedEmployees.Count,
+                    months = monthBreakdown.Select(item => new
+                    {
+                        month = item.MonthKey,
+                        month_display = item.MonthDisplay,
+                        started_count = item.StartedCount,
+                        ended_count = item.EndedCount,
+                        net_change = item.NetChange
+                    }).ToList(),
+                    by_firm = byFirm.Select(item => new
+                    {
+                        firm = item.FirmName,
+                        started_count = item.StartedCount,
+                        ended_count = item.EndedCount,
+                        net_change = item.NetChange
+                    }).ToList(),
+                    latest_started = latestStarted == null
+                        ? null
+                        : new
+                        {
+                            unique_id = latestStarted.UniqueId,
+                            full_name = latestStarted.FullName,
+                            firm = latestStarted.FirmName,
+                            start_date = latestStarted.StartDate
+                        },
+                    latest_ended = latestEnded == null
+                        ? null
+                        : new
+                        {
+                            unique_id = latestEnded.UniqueId,
+                            full_name = latestEnded.FullName,
+                            firm = latestEnded.FirmName,
+                            end_date = latestEnded.EndDate
+                        },
+                    formatted_summary = BuildEmployeeFlowPeriodText(firm, startMonth, endMonth, monthBreakdown, byFirm, latestStarted, latestEnded),
+                    message = startedEmployees.Count == 0 && endedEmployees.Count == 0 ? "No employee flow found for the selected period." : string.Empty
+                }
+            };
+        }
+
         private AiToolExecutionResult ExecuteGetProgramHelpTool(JsonElement args)
         {
             var topicQuery = GetStringArg(args, "topic");
@@ -4065,7 +4257,7 @@ namespace Win11DesktopApp.Telegram
             return builder.ToString().TrimEnd();
         }
 
-        private static string BuildEmployeeFullSummaryText(EmployeeLookupResult employee, EmployeeData data, SalaryInfo? latestSalary, int historyCount, int employmentEventCount)
+        private static string BuildEmployeeFullSummaryText(EmployeeLookupResult employee, EmployeeData data, SalaryInfo? latestSalary, SalaryInfo? latestPaidSalary, int historyCount, int employmentEventCount)
         {
             var builder = new StringBuilder()
                 .AppendLine($"Повна зведена картка {employee.FullName}:")
@@ -4087,12 +4279,17 @@ namespace Win11DesktopApp.Telegram
 
             if (latestSalary != null)
             {
-                builder.AppendLine($"• Остання зарплата: {latestSalary.Record.MonthDisplay}, нетто {latestSalary.Record.NetSalary:N2} CZK, брутто {latestSalary.Record.GrossSalary:N2} CZK");
+                builder.AppendLine($"• Поточна зарплата: {latestSalary.Record.MonthDisplay}, нетто {latestSalary.Record.NetSalary:N2} CZK, брутто {latestSalary.Record.GrossSalary:N2} CZK, статус: {FormatPaymentStatus(latestSalary)}");
             }
             else
             {
-                builder.AppendLine("• Остання зарплата: даних немає");
+                builder.AppendLine("• Поточна зарплата: даних немає");
             }
+
+            if (latestPaidSalary != null)
+                builder.AppendLine($"• Остання виплачена зарплата: {latestPaidSalary.Record.MonthDisplay}, нетто {latestPaidSalary.Record.NetSalary:N2} CZK, брутто {latestPaidSalary.Record.GrossSalary:N2} CZK, {FormatPaymentStatus(latestPaidSalary)}");
+            else
+                builder.AppendLine("• Остання виплачена зарплата: даних немає");
 
             if (data.FirmHistory.Count > 0)
                 builder.AppendLine($"• Записів історії фірм: {data.FirmHistory.Count}");
@@ -4172,6 +4369,48 @@ namespace Win11DesktopApp.Telegram
 
             if (latestEnded != null)
                 builder.AppendLine($"• Останнє завершення: {latestEnded.FullName} ({latestEnded.FirmName}) - {latestEnded.EndDate}");
+
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string BuildEmployeeFlowPeriodText(
+            string firm,
+            DateTime startMonth,
+            DateTime endMonth,
+            IReadOnlyList<EmployeeFlowPeriodMonthInfo> monthBreakdown,
+            IReadOnlyList<EmployeeFlowPeriodFirmInfo> byFirm,
+            EmployeeLookupResult? latestStarted,
+            ArchivedEmployeeSummary? latestEnded)
+        {
+            var startedTotal = monthBreakdown.Sum(item => item.StartedCount);
+            var endedTotal = monthBreakdown.Sum(item => item.EndedCount);
+            var builder = new StringBuilder()
+                .AppendLine(string.IsNullOrWhiteSpace(firm)
+                    ? $"Рух працівників за період {startMonth:MM.yyyy} - {endMonth:MM.yyyy} по всіх фірмах:"
+                    : $"Рух працівників за період {startMonth:MM.yyyy} - {endMonth:MM.yyyy} по фірмі {firm}:")
+                .AppendLine($"• Нових: {startedTotal}")
+                .AppendLine($"• Завершили: {endedTotal}")
+                .AppendLine($"• Чиста зміна: {(startedTotal - endedTotal):+0;-0;0}");
+
+            if (latestStarted != null)
+                builder.AppendLine($"• Останній початок: {latestStarted.FullName} ({latestStarted.FirmName}) - {latestStarted.StartDate}");
+
+            if (latestEnded != null)
+                builder.AppendLine($"• Останнє завершення: {latestEnded.FullName} ({latestEnded.FirmName}) - {latestEnded.EndDate}");
+
+            if (monthBreakdown.Count > 0)
+            {
+                builder.AppendLine("По місяцях:");
+                foreach (var item in monthBreakdown.Take(12))
+                    builder.AppendLine($"• {item.MonthDisplay}: +{item.StartedCount} / -{item.EndedCount} = {item.NetChange:+0;-0;0}");
+            }
+
+            if (string.IsNullOrWhiteSpace(firm) && byFirm.Count > 0)
+            {
+                builder.AppendLine("По фірмах:");
+                foreach (var item in byFirm.Take(8))
+                    builder.AppendLine($"• {item.FirmName}: +{item.StartedCount} / -{item.EndedCount} = {item.NetChange:+0;-0;0}");
+            }
 
             return builder.ToString().TrimEnd();
         }
@@ -5208,34 +5447,29 @@ namespace Win11DesktopApp.Telegram
 
         private SalaryInfo? ResolveSalaryInfo(EmployeeSummary employee, string? monthKey)
         {
-            var history = _financeService.LoadSalaryHistory(employee.EmployeeFolder);
-            SalaryHistoryRecord? record;
-            if (!string.IsNullOrWhiteSpace(monthKey))
+            var history = _financeService.LoadSalaryHistory(employee.EmployeeFolder)
+                .OrderByDescending(r => r.Year)
+                .ThenByDescending(r => r.Month)
+                .ToList();
+
+            if (!string.IsNullOrWhiteSpace(monthKey) && TryParseMonthKey(monthKey, out var requestedMonth))
             {
-                record = history
-                    .OrderByDescending(r => r.Year)
-                    .ThenByDescending(r => r.Month)
-                    .FirstOrDefault(r => string.Equals($"{r.Year:D4}-{r.Month:D2}", monthKey, StringComparison.OrdinalIgnoreCase));
-            }
-            else
-            {
-                record = history
-                    .OrderByDescending(r => r.Year)
-                    .ThenByDescending(r => r.Month)
-                    .FirstOrDefault();
+                var liveInfo = TryResolveLiveSalaryInfo(employee, requestedMonth.Year, requestedMonth.Month, history);
+                if (liveInfo != null)
+                    return liveInfo;
+
+                var historyRecord = FindSalaryHistoryRecord(history, requestedMonth.Year, requestedMonth.Month, employee.FirmName);
+                return BuildHistorySalaryInfo(employee, historyRecord);
             }
 
-            if (record == null)
-                return null;
-
-            var resolvedMonthKey = $"{record.Year:D4}-{record.Month:D2}";
-            return new SalaryInfo
+            foreach (var availableMonth in _financeService.GetAvailableSalaryMonths())
             {
-                Employee = employee,
-                Record = record,
-                Advances = _financeService.GetAdvancesForEmployeeMonth(employee.EmployeeFolder, resolvedMonthKey),
-                MonthKey = resolvedMonthKey
-            };
+                var liveInfo = TryResolveLiveSalaryInfo(employee, availableMonth.year, availableMonth.month, history);
+                if (liveInfo != null)
+                    return liveInfo;
+            }
+
+            return BuildHistorySalaryInfo(employee, history.FirstOrDefault());
         }
 
         private SalaryInfo? ResolveSalaryInfo(EmployeeLookupResult employee, string? monthKey)
@@ -5246,6 +5480,123 @@ namespace Win11DesktopApp.Telegram
 
             return ResolveSalaryInfo(shadow, monthKey);
         }
+
+        private SalaryInfo? ResolveLatestPaidSalaryInfo(EmployeeLookupResult employee, SalaryInfo? currentSalary)
+        {
+            var shadow = employee.ActiveEmployee ?? BuildConversationEmployeeShadow(employee);
+            if (shadow == null)
+                return null;
+
+            return ResolveLatestPaidSalaryInfo(shadow, currentSalary);
+        }
+
+        private SalaryInfo? ResolveLatestPaidSalaryInfo(EmployeeSummary employee, SalaryInfo? currentSalary)
+        {
+            if (currentSalary?.IsPaid == true)
+                return currentSalary;
+
+            var historyRecord = _financeService.LoadSalaryHistory(employee.EmployeeFolder)
+                .OrderByDescending(r => r.Year)
+                .ThenByDescending(r => r.Month)
+                .FirstOrDefault();
+
+            return BuildHistorySalaryInfo(employee, historyRecord);
+        }
+
+        private SalaryInfo? TryResolveLiveSalaryInfo(
+            EmployeeSummary employee,
+            int year,
+            int month,
+            IReadOnlyList<SalaryHistoryRecord> history)
+        {
+            var payments = _financeService.TryLoadAllFirmPayments(year, month, forceReload: true);
+            if (!payments.success)
+                return null;
+
+            var normalizedFirm = NormalizeForSearch(employee.FirmName);
+            var entry = payments.entries
+                .Where(candidate => IsSalaryEntryForEmployee(employee, candidate))
+                .OrderByDescending(candidate =>
+                    string.Equals(NormalizeForSearch(candidate.FirmName), normalizedFirm, StringComparison.Ordinal))
+                .ThenByDescending(candidate =>
+                    !string.IsNullOrWhiteSpace(candidate.EmployeeId)
+                    && string.Equals(candidate.EmployeeId, employee.UniqueId, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
+
+            if (entry == null)
+                return null;
+
+            var resolvedMonthKey = $"{year:D4}-{month:D2}";
+            var record = _financeService.BuildHistoryRecord(entry, year, month, _financeService.GetFieldsForFirm(entry.FirmName));
+            var historyRecord = FindSalaryHistoryRecord(history, year, month, entry.FirmName);
+            var isPaid = string.Equals(entry.Status, "paid", StringComparison.OrdinalIgnoreCase);
+            var paidAt = isPaid ? historyRecord?.PaidAt : null;
+
+            return new SalaryInfo
+            {
+                Employee = employee,
+                Record = record,
+                Advances = _financeService.GetAdvancesForEmployeeMonth(employee.EmployeeFolder, resolvedMonthKey),
+                MonthKey = resolvedMonthKey,
+                IsPaid = isPaid,
+                PaidAt = paidAt
+            };
+        }
+
+        private SalaryInfo? BuildHistorySalaryInfo(EmployeeSummary employee, SalaryHistoryRecord? record)
+        {
+            if (record == null)
+                return null;
+
+            var resolvedMonthKey = $"{record.Year:D4}-{record.Month:D2}";
+            return new SalaryInfo
+            {
+                Employee = employee,
+                Record = record,
+                Advances = _financeService.GetAdvancesForEmployeeMonth(employee.EmployeeFolder, resolvedMonthKey),
+                MonthKey = resolvedMonthKey,
+                IsPaid = true,
+                PaidAt = record.PaidAt
+            };
+        }
+
+        private static SalaryHistoryRecord? FindSalaryHistoryRecord(
+            IEnumerable<SalaryHistoryRecord> history,
+            int year,
+            int month,
+            string? firmName)
+        {
+            var normalizedFirm = NormalizeForSearch(firmName ?? string.Empty);
+            return history
+                .Where(record => record.Year == year && record.Month == month)
+                .OrderByDescending(record =>
+                    string.Equals(NormalizeForSearch(record.FirmName), normalizedFirm, StringComparison.Ordinal))
+                .FirstOrDefault();
+        }
+
+        private static bool IsSalaryEntryForEmployee(EmployeeSummary employee, SalaryEntry entry)
+        {
+            if (!string.IsNullOrWhiteSpace(employee.UniqueId)
+                && !string.IsNullOrWhiteSpace(entry.EmployeeId)
+                && string.Equals(employee.UniqueId, entry.EmployeeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(
+                NormalizeEmployeePath(employee.EmployeeFolder),
+                NormalizeEmployeePath(entry.EmployeeFolder),
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return string.Equals(NormalizeForSearch(employee.FullName), NormalizeForSearch(entry.FullName), StringComparison.Ordinal)
+                && string.Equals(NormalizeForSearch(employee.FirmName), NormalizeForSearch(entry.FirmName), StringComparison.Ordinal);
+        }
+
+        private static string NormalizeEmployeePath(string path)
+            => (path ?? string.Empty).Replace('/', '\\').Trim().TrimEnd('\\');
 
         private AllFirmsSalaryInfo? ResolveAllFirmsSalaryInfo(string monthKey)
         {
@@ -5518,7 +5869,7 @@ namespace Win11DesktopApp.Telegram
             AppendCustomFieldLines(text, record.CustomFields);
 
             text.AppendLine($"Нетто: {record.NetSalary:N2} CZK")
-                .AppendLine($"Виплачено: {record.PaidAt:dd.MM.yyyy}");
+                .AppendLine($"Статус виплати: {FormatPaymentStatus(salaryInfo)}");
 
             if (!string.IsNullOrWhiteSpace(record.Note))
                 text.AppendLine($"Примітка: {record.Note}");
@@ -5563,7 +5914,7 @@ namespace Win11DesktopApp.Telegram
             AppendCustomFieldLines(text, record.CustomFields, bulleted: true);
 
             text.AppendLine($"• Нетто: {record.NetSalary:N2} CZK")
-                .AppendLine($"• Виплачено: {record.PaidAt:dd.MM.yyyy}");
+                .AppendLine($"• Статус виплати: {FormatPaymentStatus(salaryInfo)}");
 
             if (!string.IsNullOrWhiteSpace(record.Note))
                 text.AppendLine($"• Примітка: {record.Note}");
@@ -5604,6 +5955,16 @@ namespace Win11DesktopApp.Telegram
             return operation is "+" or "add" or "plus" or "додати" or "доплата";
         }
 
+        private static string FormatPaymentStatus(SalaryInfo salaryInfo)
+        {
+            if (!salaryInfo.IsPaid)
+                return "не виплачено";
+
+            return salaryInfo.PaidAt.HasValue
+                ? $"виплачено {salaryInfo.PaidAt.Value:dd.MM.yyyy}"
+                : "виплачено";
+        }
+
         private static string BuildSalaryAiContext(SalaryInfo salaryInfo)
         {
             var record = salaryInfo.Record;
@@ -5617,7 +5978,8 @@ namespace Win11DesktopApp.Telegram
                 .AppendLine($"salary_advance={record.Advance:N2} CZK")
                 .AppendLine($"extra_advances_total={salaryInfo.TotalAdvances:N2} CZK")
                 .AppendLine($"net_salary={record.NetSalary:N2} CZK")
-                .AppendLine($"paid_at={record.PaidAt:dd.MM.yyyy}");
+                .AppendLine($"payment_status={(salaryInfo.IsPaid ? "paid" : "pending")}")
+                .AppendLine($"paid_at={(salaryInfo.PaidAt.HasValue ? salaryInfo.PaidAt.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) : string.Empty)}");
 
             if (!string.IsNullOrWhiteSpace(record.Note))
                 builder.AppendLine($"note={record.Note}");
@@ -6442,7 +6804,7 @@ namespace Win11DesktopApp.Telegram
                 "get_salary" or "get_firm_salary" or "get_all_firms_salary" or "get_firm_period_summary" or "compare_salary_months" => "salary",
                 "export_firm_salary_excel" => "salary",
                 "get_top_payouts_for_month" => "salary",
-                "get_hiring_summary" or "get_termination_summary" or "get_employee_flow_summary" => "employee_flow",
+                "get_hiring_summary" or "get_termination_summary" or "get_employee_flow_summary" or "get_employee_flow_period" => "employee_flow",
                 "get_employee" or "resolve_employee" or "get_employee_employment" or "get_employee_full_summary" or "get_employee_history" or "get_employee_status_overview" or "get_employee_timeline" or "list_archived_employees" => "employee",
                 "send_employee_document" => "documents",
                 "get_company_profile" or "resolve_firm" or "list_firms" => "firm",

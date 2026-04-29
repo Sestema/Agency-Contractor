@@ -909,6 +909,19 @@ WHERE stage = 'salary_entries'
             return _salaryDbService?.MonthDbExists(year, month) == true;
         }
 
+        public IReadOnlyList<(int year, int month)> GetAvailableSalaryMonths()
+        {
+            if (_salaryDbService == null)
+                return Array.Empty<(int year, int month)>();
+
+            return _salaryDbService.EnumerateMonthDatabases()
+                .Select(db => (db.year, db.month))
+                .Distinct()
+                .OrderByDescending(item => item.year)
+                .ThenByDescending(item => item.month)
+                .ToList();
+        }
+
         public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
             => SalaryHistoryService.SaveSalaryHistoryRecord(employeeFolder, record);
 

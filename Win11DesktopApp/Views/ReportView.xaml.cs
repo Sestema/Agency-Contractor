@@ -103,6 +103,7 @@ namespace Win11DesktopApp.Views
                     "EmployeeType" => "type",
                     "DocumentType" => "documentType",
                     "PassportNumber" => "passportNumber",
+                    "VisaNumber" => "visaNumber",
                     "WorkAddress" => "workAddress",
                     "HighestEducation" => "highestEducation",
                     "BirthDate" => "birthDate",

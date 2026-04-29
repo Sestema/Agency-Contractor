@@ -970,6 +970,7 @@
     <sys:String x:Key="ReportColType">Work permit name</sys:String>
     <sys:String x:Key="ReportColDocumentType">Card/visa/passport type</sys:String>
     <sys:String x:Key="ReportColPassportNumber">Passport or ID card number</sys:String>
+    <sys:String x:Key="ReportColVisaNumber">Visa number</sys:String>
     <sys:String x:Key="ReportColWorkAddress">Work address</sys:String>
     <sys:String x:Key="ReportColHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="ReportColAddressCz">Full country address</sys:String>

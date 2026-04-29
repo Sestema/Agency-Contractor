@@ -984,6 +984,7 @@
     <sys:String x:Key="ReportColType">Název pracovního povolení</sys:String>
     <sys:String x:Key="ReportColDocumentType">Typ karty/víza/pasu</sys:String>
     <sys:String x:Key="ReportColPassportNumber">Číslo pasu nebo ID karty</sys:String>
+    <sys:String x:Key="ReportColVisaNumber">Číslo víza</sys:String>
     <sys:String x:Key="ReportColWorkAddress">Adresa výkonu práce</sys:String>
     <sys:String x:Key="ReportColHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="ReportColAddressCz">Celá adresa bydliště</sys:String>

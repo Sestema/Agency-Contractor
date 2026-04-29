@@ -989,6 +989,7 @@
     <sys:String x:Key="ReportColType">Назва дозволу на роботу</sys:String>
     <sys:String x:Key="ReportColDocumentType">Тип документа</sys:String>
     <sys:String x:Key="ReportColPassportNumber">Номер паспорта або ID-карти</sys:String>
+    <sys:String x:Key="ReportColVisaNumber">Номер візи</sys:String>
     <sys:String x:Key="ReportColWorkAddress">Адреса виконання роботи</sys:String>
     <sys:String x:Key="ReportColHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="ReportColAddressCz">Повна адреса проживання</sys:String>

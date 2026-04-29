@@ -227,6 +227,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string EmployeeType { get; set; } = string.Empty;
         public string DocumentType { get; set; } = string.Empty;
         public string PassportNumber { get; set; } = string.Empty;
+        public string VisaNumber { get; set; } = string.Empty;
         public string PassportExpiry { get; set; } = string.Empty;
         public string VisaExpiry { get; set; } = string.Empty;
         public string InsuranceExpiry { get; set; } = string.Empty;
