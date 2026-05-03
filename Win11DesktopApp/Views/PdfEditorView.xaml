@@ -6,7 +6,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="650" d:DesignWidth="1100">
 
-    <Grid>
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -46,14 +46,8 @@
                         VerticalAlignment="Center" ToolTip="{DynamicResource AIOverlayBtn}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" 
-                                   VerticalAlignment="Center" Margin="0,0,4,0">
-                            <TextBlock.Foreground>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#7C4DFF" Offset="0"/>
-                                    <GradientStop Color="#448AFF" Offset="1"/>
-                                </LinearGradientBrush>
-                            </TextBlock.Foreground>
-                        </TextBlock>
+                                   VerticalAlignment="Center" Margin="0,0,4,0"
+                                   Foreground="{DynamicResource BrandAiGradientBrush}"/>
                         <TextBlock Text="AI" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                     </StackPanel>

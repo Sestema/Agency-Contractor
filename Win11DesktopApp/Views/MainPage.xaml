@@ -18,7 +18,7 @@
         <conv:ResourceKeyConverter x:Key="ResKey"/>
     </UserControl.Resources>
     
-    <Grid>
+    <Grid Background="{DynamicResource PageBackgroundBrush}" ClipToBounds="True">
         <!-- Main Content -->
         <Grid>
             <!-- Top Bar -->
@@ -40,7 +40,7 @@
                 <!-- Center: Search Box -->
                 <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="420">
                     <Border Style="{StaticResource ToolbarSearchContainer}" CornerRadius="20" Padding="6,0"
-                            Height="38">
+                            Height="38" Effect="{DynamicResource CardShadow}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -158,61 +158,367 @@
                     </Popup>
                 </Grid>
                 
-                <!-- Right: Company name + Edit + Settings -->
+                <!-- Right: Settings -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SelectedCompany.Name, FallbackValue=''}"
-                               FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="180" Opacity="0.7"
-                               Margin="0,0,8,0"/>
-                    <Button Command="{Binding EditCompanyCommand}"
-                            Style="{StaticResource ToolbarInlineIconButton}"
-                            ToolTip="{DynamicResource MainTooltipEdit}"
-                            Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.65"/>
-                    </Button>
+                    <Grid Margin="0,0,8,0">
+                        <Button x:Name="NotificationBellButton"
+                                Command="{Binding ToggleNotificationsCommand}"
+                                Style="{StaticResource ToolbarIconButton}"
+                                ToolTip="Сповіщення">
+                            <Grid Width="24" Height="24">
+                                <TextBlock Text="&#xEA8F;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="19"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                                <Ellipse Width="9" Height="9"
+                                         Fill="{DynamicResource ErrorBrush}"
+                                         Stroke="{DynamicResource ContentBackgroundBrush}"
+                                         StrokeThickness="1.2"
+                                         HorizontalAlignment="Right"
+                                         VerticalAlignment="Top"
+                                         Visibility="{Binding HasUnreadNotifications, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Button>
+
+                        <Popup IsOpen="{Binding IsNotificationCenterOpen}"
+                               PlacementTarget="{Binding ElementName=NotificationBellButton}"
+                               Placement="Bottom"
+                               StaysOpen="False"
+                               AllowsTransparency="True"
+                               PopupAnimation="Fade"
+                               HorizontalOffset="-300"
+                               VerticalOffset="8">
+                            <Border Width="340"
+                                    MaxHeight="420"
+                                    Padding="12"
+                                    CornerRadius="18"
+                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="1"
+                                    Effect="{DynamicResource DialogShadow}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Сповіщення"
+                                                   FontSize="{DynamicResource FS16}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Command="{Binding MarkNotificationsReadCommand}"
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                Margin="0,0,6,0"
+                                                Padding="10,5"
+                                                Background="{DynamicResource AccentLightBrush}"
+                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                BorderThickness="1"
+                                                Cursor="Hand">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="12"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <TextBlock Text="Прочитано"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                        </Button>
+                                        <Button Command="{Binding ClearNotificationsCommand}"
+                                                Grid.Column="2"
+                                                HorizontalAlignment="Right"
+                                                Padding="10,5"
+                                                Background="{DynamicResource ErrorLightBrush}"
+                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                BorderThickness="1"
+                                                Cursor="Hand">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="12"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <TextBlock Text="Очистити"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource ErrorBrush}"/>
+                                        </Button>
+                                    </Grid>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="Тут будуть переміщення, оновлення та важливі системні дії."
+                                               Margin="0,4,0,10"
+                                               TextWrapping="Wrap"
+                                               FontSize="{DynamicResource FS12}"
+                                               Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+
+                                    <Grid Grid.Row="2">
+                                        <TextBlock Text="Нових подій поки немає"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,22"
+                                                   FontSize="{DynamicResource FS13}"
+                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                   Visibility="{Binding HasNotifications, Converter={StaticResource InverseBoolToVis}}"/>
+
+                                        <ScrollViewer MaxHeight="315"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      Style="{StaticResource ThinScroll}"
+                                                      Visibility="{Binding HasNotifications, Converter={StaticResource BoolToVis}}">
+                                            <ItemsControl ItemsSource="{Binding Notifications}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,0,0,8"
+                                                                Padding="10"
+                                                                CornerRadius="14"
+                                                                Background="{DynamicResource CardBackgroundBrush}"
+                                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                BorderThickness="1">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Border Width="32" Height="32"
+                                                                        CornerRadius="16"
+                                                                        Background="{DynamicResource SuccessLightBrush}"
+                                                                        VerticalAlignment="Top"
+                                                                        Margin="0,0,10,0">
+                                                                    <TextBlock Text="{Binding Icon}"
+                                                                               FontFamily="Segoe MDL2 Assets"
+                                                                               FontSize="14"
+                                                                               Foreground="{DynamicResource SuccessBrush}"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <StackPanel Grid.Column="1">
+                                                                    <TextBlock Text="{Binding Title}"
+                                                                               FontSize="{DynamicResource FS13}"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Text="{Binding Message}"
+                                                                               Margin="0,2,0,0"
+                                                                               FontSize="{DynamicResource FS12}"
+                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding CreatedAtText}"
+                                                                           FontSize="{DynamicResource FS10}"
+                                                                           Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                                           Margin="8,2,0,0"
+                                                                           VerticalAlignment="Top"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
+
                     <Button Command="{Binding GoToSettingsCommand}"
-                            Style="{StaticResource ToolbarIconButton}" Margin="8,0,0,0">
+                            Style="{StaticResource ToolbarIconButton}">
                         <Path Data="{StaticResource IconSettings}"
                               Fill="{DynamicResource ForegroundBrush}"
                               Stretch="Uniform" Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
             </Grid>
-            
-            <!-- Cards Grid (drag to reorder) -->
-            <ItemsControl x:Name="CardsGrid" ItemsSource="{Binding MenuCards}"
-                          HorizontalAlignment="Center" VerticalAlignment="Center"
-                          AllowDrop="True" Background="Transparent"
-                          DragOver="Grid_DragOver" Drop="Grid_Drop">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Rows="3" HorizontalAlignment="Center"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border x:Name="DragBorder" Background="Transparent" Margin="0" Padding="0"
-                                PreviewMouseLeftButtonDown="Card_PreviewMouseLeftButtonDown"
-                                PreviewMouseMove="Card_PreviewMouseMove"
-                                PreviewMouseLeftButtonUp="Card_PreviewMouseLeftButtonUp"
-                                GiveFeedback="Card_GiveFeedback">
-                            <views:CardControl Title="{Binding TitleKey, Converter={StaticResource ResKey}}" 
-                                               Icon="{Binding IconKey, Converter={StaticResource IconKeyToGeometry}}"
-                                               Command="{Binding Command}" 
-                                               BadgeCount="{Binding BadgeCount}"
-                                               Margin="10">
-                                <views:CardControl.IconGradient>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="{Binding GradientStart}" Offset="0"/>
-                                        <GradientStop Color="{Binding GradientEnd}" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </views:CardControl.IconGradient>
-                            </views:CardControl>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+
+            <ScrollViewer Margin="24,92,24,20"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Style="{StaticResource ThinScroll}">
+                <StackPanel HorizontalAlignment="Center" MaxWidth="1080">
+                    <!-- Compact header: single row -->
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="18"
+                            Margin="0,0,0,10"
+                            Effect="{DynamicResource CardShadow}">
+                        <Grid Margin="12,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0"
+                                    Width="34"
+                                    Height="34"
+                                    CornerRadius="11"
+                                    Background="{Binding SelectedCompanyDisplayName, Converter={StaticResource NameToColor}}"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedCompanyDisplayName, Converter={StaticResource FirstCharConverter}}"
+                                           FontSize="{DynamicResource FS14}"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="White"/>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedCompanyDisplayName}"
+                                           FontSize="{DynamicResource FS14}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding SelectedCompanyAgencyText}"
+                                           Margin="0,1,0,0"
+                                           FontSize="{DynamicResource FS11}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+
+                            <Border Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Padding="10,4"
+                                    CornerRadius="10"
+                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="1"
+                                    Margin="12,0,0,0"
+                                    Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Padding="0,0,10,0"
+                                            Margin="0,0,10,0"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="0,0,1,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="&#xE7BA;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="11"
+                                                       Margin="0,0,6,0"
+                                                       Foreground="{DynamicResource WarningBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource MainStatProblems}"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SelectedCompanyProblemsCount}"
+                                                       Margin="6,0,0,0"
+                                                       FontSize="{DynamicResource FS13}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="&#xE716;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="11"
+                                               Margin="0,0,6,0"
+                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource MainStatEmployees}"
+                                               FontSize="{DynamicResource FS11}"
+                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding SelectedCompanyEmployeesCount}"
+                                               Margin="6,0,0,0"
+                                               FontSize="{DynamicResource FS13}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel Grid.Column="3"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        Margin="12,0,12,0">
+                                <Button Command="{Binding EditCompanyCommand}"
+                                        Style="{StaticResource HeaderGhostButton}"
+                                        Padding="6,4"
+                                        ToolTip="{DynamicResource MainTooltipEdit}"
+                                        Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="&#xE70F;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CurrentTimeText}"
+                                           HorizontalAlignment="Right"
+                                           FontSize="{DynamicResource FS18}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock Text="{Binding CurrentDateText}"
+                                           HorizontalAlignment="Right"
+                                           Margin="0,1,0,0"
+                                           FontSize="{DynamicResource FS11}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Cards Grid (drag to reorder) -->
+                    <ItemsControl x:Name="CardsGrid" ItemsSource="{Binding MenuCards}"
+                                  HorizontalAlignment="Center"
+                                  Margin="0,18,0,0"
+                                  AllowDrop="True" Background="Transparent"
+                                  DragOver="Grid_DragOver" Drop="Grid_Drop">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="3" HorizontalAlignment="Center"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="DragBorder" Background="Transparent" Margin="0" Padding="0"
+                                        PreviewMouseLeftButtonDown="Card_PreviewMouseLeftButtonDown"
+                                        PreviewMouseMove="Card_PreviewMouseMove"
+                                        PreviewMouseLeftButtonUp="Card_PreviewMouseLeftButtonUp"
+                                        GiveFeedback="Card_GiveFeedback">
+                                    <views:CardControl Title="{Binding TitleKey, Converter={StaticResource ResKey}}" 
+                                                       Icon="{Binding IconKey, Converter={StaticResource IconKeyToGeometry}}"
+                                                       Command="{Binding Command}" 
+                                                       BadgeCount="{Binding BadgeCount}"
+                                                       Margin="10">
+                                        <views:CardControl.IconGradient>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="{Binding GradientStart}" Offset="0"/>
+                                                <GradientStop Color="{Binding GradientEnd}" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </views:CardControl.IconGradient>
+                                    </views:CardControl>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
         
         <!-- Drawer Overlay (Click to close) -->
@@ -243,12 +549,10 @@
         </Border>
         
         <!-- Drawer Panel -->
-        <Border x:Name="DrawerPanel" Width="370" HorizontalAlignment="Left" 
-                Background="{DynamicResource ContentBackgroundBrush}" 
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="30" ShadowDepth="8" Direction="0" Color="#000000" Opacity="0.25"/>
-            </Border.Effect>
+        <Border x:Name="DrawerPanel" Width="370" HorizontalAlignment="Left"
+                Background="{DynamicResource ContentBackgroundBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0"
+                Effect="{DynamicResource DialogShadow}">
             <Border.RenderTransform>
                 <TranslateTransform X="-370"/>
             </Border.RenderTransform>
@@ -288,17 +592,26 @@
                 </Grid.RowDefinitions>
 
                 <!-- ===== HEADER ===== -->
-                <Border Grid.Row="0" Padding="20,20,20,16"
-                        Background="{DynamicResource AccentBrush}">
+                <Border Grid.Row="0" Padding="20,20,20,16" Background="{DynamicResource AccentBrush}">
                     <Grid>
+                        <Ellipse Width="170" Height="170" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                 Margin="0,-105,-55,0" Opacity="0.26" IsHitTestVisible="False">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="#22FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Width="42" Height="42" CornerRadius="10" Background="#20FFFFFF" Margin="0,0,14,0">
+                            <Border Width="42" Height="42" CornerRadius="12" Background="{DynamicResource AccentLightBrush}"
+                                    BorderBrush="{DynamicResource GlassInnerHighlightBrush}" BorderThickness="1" Margin="0,0,14,0">
                                 <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{DynamicResource DrawerTitle}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="White"/>
-                                <TextBlock Text="{DynamicResource MainSelectCompany}" FontSize="{DynamicResource FS11}" Foreground="#CCFFFFFF" Margin="0,2,0,0"/>
+                                <TextBlock Text="{DynamicResource MainSelectCompany}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -312,7 +625,7 @@
                 </Border>
 
                 <!-- ===== SELECTED INDICATOR ===== -->
-                <Border Grid.Row="1" Padding="16,10" 
+                <Border Grid.Row="1" Padding="16,10"
                         Background="{DynamicResource CardBackgroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
                     <StackPanel Orientation="Horizontal">
@@ -366,21 +679,19 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="CardBorder" 
-                                                    Background="{DynamicResource ContentBackgroundBrush}" 
+                                            <Border x:Name="CardBorder"
+                                                    Background="{DynamicResource CardBackgroundBrush}"
                                                     CornerRadius="12" 
                                                     Padding="12"
                                                     BorderBrush="{DynamicResource CardBorderBrush}"
-                                                    BorderThickness="1.5">
-                                                <Border.Effect>
-                                                    <DropShadowEffect BlurRadius="6" ShadowDepth="2" Direction="270" Opacity="0.08" Color="#000000"/>
-                                                </Border.Effect>
+                                                    BorderThickness="1.5"
+                                                    Effect="{DynamicResource CardShadow}">
                                                 <ContentPresenter/>
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsSelected" Value="True">
                                                     <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                                    <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                    <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                     <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
                                                 </Trigger>
                                                 <Trigger Property="IsMouseOver" Value="True">

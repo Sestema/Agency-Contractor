@@ -164,6 +164,37 @@ namespace Win11DesktopApp.Services
             return !Directory.Exists(candidateFolder);
         }
 
+        public async Task<bool> DeleteCandidateAsync(string candidateFolder)
+        {
+            if (string.IsNullOrEmpty(candidateFolder) || !Directory.Exists(candidateFolder))
+                return true;
+
+            try
+            {
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    try
+                    {
+                        foreach (var file in Directory.GetFiles(candidateFolder, "*", SearchOption.AllDirectories))
+                            File.SetAttributes(file, FileAttributes.Normal);
+                        Directory.Delete(candidateFolder, true);
+                        return true;
+                    }
+                    catch
+                    {
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        await Task.Delay(200);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("CandidateService.DeleteCandidateAsync", ex);
+            }
+            return !Directory.Exists(candidateFolder);
+        }
+
         private static string ResolvePhoto(string folder, CandidateData data)
         {
             if (!string.IsNullOrEmpty(data.Files.Photo))

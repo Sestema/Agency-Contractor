@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Text.Json;
+using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
@@ -34,6 +35,7 @@ namespace Win11DesktopApp.Tests
         private readonly CompanyService _companyService;
         private readonly FinanceService _financeService;
         private readonly AiWindowFactory _aiWindowFactory;
+        private readonly AppStatisticsService _appStatisticsService;
 
         public EmployeeServiceTests()
         {
@@ -58,7 +60,8 @@ namespace Win11DesktopApp.Tests
             _recentlyDeletedService = new RecentlyDeletedService(_folderService, _employeeService, _currentProfileService);
             _geminiApiService = new GeminiApiService();
             _activityLogService = new ActivityLogService(_folderService, currentProfileService: _currentProfileService);
-            _addEmployeeWizardViewModelFactory = new AddEmployeeWizardViewModelFactory(_employeeService, _geminiApiService, _activityLogService);
+            _appStatisticsService = new AppStatisticsService(_folderService);
+            _addEmployeeWizardViewModelFactory = new AddEmployeeWizardViewModelFactory(_employeeService, _geminiApiService, _activityLogService, _appStatisticsService);
             _templateService = new TemplateService(_appSettingsService, _folderService, _tagCatalogService);
             _documentGenerationService = new DocumentGenerationService();
             _persistenceService = new PersistenceService(_appSettingsService, _folderService);
@@ -79,7 +82,8 @@ namespace Win11DesktopApp.Tests
                 _templateService,
                 _documentGenerationService,
                 _tagCatalogService,
-                _aiWindowFactory);
+                _aiWindowFactory,
+                _appStatisticsService);
         }
 
         [Fact]
@@ -102,6 +106,7 @@ namespace Win11DesktopApp.Tests
 
             var jsonPath = Path.Combine(employeeFolder, "employee.json");
             File.WriteAllText(jsonPath, JsonSerializer.Serialize(data));
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
 
             var list = _employeeService.GetEmployeesForFirm(firmName);
 
@@ -145,9 +150,10 @@ namespace Win11DesktopApp.Tests
                 _activityLogService,
                 _templateService,
                 _documentGenerationService,
-                _tagCatalogService);
+                _tagCatalogService,
+                _geminiApiService);
 
-            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count >= 1);
+            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count >= 1, timeoutMs: 10000);
             Assert.True(vm.Employees.Count >= 1);
         }
 
@@ -162,11 +168,13 @@ namespace Win11DesktopApp.Tests
             Directory.CreateDirectory(folder1);
             var data1 = new EmployeeData { FirstName = "Ann", LastName = "Smith", PassportNumber = "AA111" };
             File.WriteAllText(Path.Combine(folder1, "employee.json"), JsonSerializer.Serialize(data1));
+            _employeeService.SyncEmployeeIndexForFolder(folder1, firmName);
 
             var folder2 = Path.Combine(employeesFolder, "Bob_Jones - 2026-03-01");
             Directory.CreateDirectory(folder2);
             var data2 = new EmployeeData { FirstName = "Bob", LastName = "Jones", PassportNumber = "BB222" };
             File.WriteAllText(Path.Combine(folder2, "employee.json"), JsonSerializer.Serialize(data2));
+            _employeeService.SyncEmployeeIndexForFolder(folder2, firmName);
 
             var company = new EmployerCompany { Name = firmName };
             var vm = new EmployeesViewModel(
@@ -183,8 +191,9 @@ namespace Win11DesktopApp.Tests
                 _activityLogService,
                 _templateService,
                 _documentGenerationService,
-                _tagCatalogService);
-            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count == 2);
+                _tagCatalogService,
+                _geminiApiService);
+            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count == 2, timeoutMs: 10000);
 
             vm.SearchQuery = "AA111";
 
@@ -305,7 +314,8 @@ namespace Win11DesktopApp.Tests
                 templateService: _templateService,
                 documentGenerationService: _documentGenerationService,
                 tagCatalogService: _tagCatalogService,
-                aiWindowFactory: _aiWindowFactory);
+                aiWindowFactory: _aiWindowFactory,
+                appStatisticsService: _appStatisticsService);
 
             Assert.True(employee.HasPhoto);
             Assert.False(string.IsNullOrWhiteSpace(detailsViewModel.PhotoFilePath));
@@ -478,8 +488,20 @@ namespace Win11DesktopApp.Tests
                 if (DateTime.UtcNow >= deadline)
                     throw new TimeoutException("Timed out waiting for background employee load.");
 
+                PumpDispatcherOnce();
                 await Task.Delay(25);
             }
+        }
+
+        private static void PumpDispatcherOnce()
+        {
+            var dispatcher = Dispatcher.CurrentDispatcher;
+            if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                return;
+
+            var frame = new DispatcherFrame();
+            dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
+            Dispatcher.PushFrame(frame);
         }
 
         public void Dispose()

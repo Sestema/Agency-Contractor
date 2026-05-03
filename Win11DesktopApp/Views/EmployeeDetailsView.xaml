@@ -1215,6 +1215,148 @@
                                             </StackPanel>
                                             <Border Style="{StaticResource DetailsSectionCard}">
                                                 <StackPanel>
+                                                    <Border Margin="0,0,0,12"
+                                                            Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}">
+                                                        <StackPanel>
+                                                            <Button Command="{Binding ToggleDocumentProfileEditorCommand}"
+                                                                    Padding="10,8"
+                                                                    Background="{DynamicResource WindowBackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    Cursor="Hand"
+                                                                    HorizontalContentAlignment="Stretch">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border Background="{TemplateBinding Background}"
+                                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                                                CornerRadius="10"
+                                                                                Padding="{TemplateBinding Padding}">
+                                                                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{DynamicResource DetFieldDocumentProfileType}"
+                                                                                   Style="{StaticResource FieldLabel}"
+                                                                                   Margin="0,0,0,2"/>
+                                                                        <TextBlock Text="{Binding SelectedDocumentProfileOption.DisplayName}"
+                                                                                   FontSize="{DynamicResource FS12}"
+                                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </StackPanel>
+                                                                    <TextBlock Grid.Column="1"
+                                                                               FontFamily="Segoe MDL2 Assets"
+                                                                               FontSize="{DynamicResource FS12}"
+                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                               Margin="10,0,0,0"
+                                                                               VerticalAlignment="Center">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Text" Value="&#xE70D;"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsDocumentProfileEditorOpen}" Value="True">
+                                                                                        <Setter Property="Text" Value="&#xE70E;"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <StackPanel Margin="0,10,0,0"
+                                                                        Visibility="{Binding IsDocumentProfileEditorOpen, Converter={StaticResource BoolToVis}}">
+                                                                <TextBlock Text="{DynamicResource EuDocTypeLabel}"
+                                                                           Style="{StaticResource FieldLabel}"/>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                                    <RadioButton Content="{DynamicResource EuDocTypePassport}"
+                                                                                 GroupName="DetPrimaryDocType"
+                                                                                 IsChecked="{Binding ProfileIsPassportDocument, Mode=TwoWay}"
+                                                                                 Foreground="{DynamicResource ForegroundBrush}"
+                                                                                 FontSize="{DynamicResource FS12}"
+                                                                                 Margin="0,0,16,0"
+                                                                                 VerticalContentAlignment="Center"/>
+                                                                    <RadioButton Content="{DynamicResource EuDocTypeIdCard}"
+                                                                                 GroupName="DetPrimaryDocType"
+                                                                                 IsChecked="{Binding ProfileIsIdCardDocument, Mode=TwoWay}"
+                                                                                 Foreground="{DynamicResource ForegroundBrush}"
+                                                                                 FontSize="{DynamicResource FS12}"
+                                                                                 VerticalContentAlignment="Center"/>
+                                                                </StackPanel>
+
+                                                                <UniformGrid Columns="2" Margin="0,0,0,10">
+                                                                    <CheckBox Content="{Binding ProfileSecondDocumentLabel}"
+                                                                              IsChecked="{Binding ProfileHasPassportPage2, Mode=TwoWay}"
+                                                                              Foreground="{DynamicResource ForegroundBrush}"
+                                                                              FontSize="{DynamicResource FS12}"
+                                                                              Margin="0,0,10,8"
+                                                                              VerticalContentAlignment="Center"/>
+                                                                    <CheckBox Content="{DynamicResource ChkInsurance}"
+                                                                              IsChecked="{Binding ProfileHasInsurance, Mode=TwoWay}"
+                                                                              Foreground="{DynamicResource ForegroundBrush}"
+                                                                              FontSize="{DynamicResource FS12}"
+                                                                              Margin="0,0,0,8"
+                                                                              VerticalContentAlignment="Center"/>
+                                                                    <CheckBox Content="{DynamicResource ChkVisa}"
+                                                                              IsChecked="{Binding ProfileHasVisa, Mode=TwoWay}"
+                                                                              Foreground="{DynamicResource ForegroundBrush}"
+                                                                              FontSize="{DynamicResource FS12}"
+                                                                              Margin="0,0,10,0"
+                                                                              VerticalContentAlignment="Center"/>
+                                                                    <CheckBox Content="{DynamicResource ChkWorkPermit}"
+                                                                              IsChecked="{Binding ProfileHasWorkPermit, Mode=TwoWay}"
+                                                                              Foreground="{DynamicResource ForegroundBrush}"
+                                                                              FontSize="{DynamicResource FS12}"
+                                                                              VerticalContentAlignment="Center"/>
+                                                                </UniformGrid>
+
+                                                                <Border Background="{DynamicResource WindowBackgroundBrush}"
+                                                                        CornerRadius="10"
+                                                                        Padding="10,8"
+                                                                        Margin="0,0,0,10"
+                                                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                        BorderThickness="1"
+                                                                        Visibility="{Binding ProfileHasVisa, Converter={StaticResource BoolToVis}}">
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{DynamicResource VisaDocTypeLabel}"
+                                                                                   Style="{StaticResource FieldLabel}"/>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <RadioButton Content="{DynamicResource VisaDocTypeSticker}"
+                                                                                         GroupName="DetVisaDocType"
+                                                                                         IsChecked="{Binding ProfileVisaIsSticker, Mode=TwoWay}"
+                                                                                         Foreground="{DynamicResource ForegroundBrush}"
+                                                                                         FontSize="{DynamicResource FS12}"
+                                                                                         Margin="0,0,16,0"
+                                                                                         VerticalContentAlignment="Center"/>
+                                                                            <RadioButton Content="{DynamicResource VisaDocTypeIdCard}"
+                                                                                         GroupName="DetVisaDocType"
+                                                                                         IsChecked="{Binding ProfileVisaIsIdCard, Mode=TwoWay}"
+                                                                                         Foreground="{DynamicResource ForegroundBrush}"
+                                                                                         FontSize="{DynamicResource FS12}"
+                                                                                         VerticalContentAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </Border>
+
+                                                                <Border Padding="10,8"
+                                                                        CornerRadius="10"
+                                                                        Background="{DynamicResource AccentLightBrush}"
+                                                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                        BorderThickness="1">
+                                                                    <TextBlock Text="{DynamicResource DetDocumentProfileHint}"
+                                                                               FontSize="{DynamicResource FS11}"
+                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                               TextWrapping="Wrap"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
                                                     <TextBlock Text="{DynamicResource DetFieldFirstName}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.FirstName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldLastName}" Style="{StaticResource FieldLabel}"/>
@@ -1325,6 +1467,10 @@
                                                                 <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                             </StackPanel>
                                                         </StackPanel>
+                                                        <TextBlock Text="{DynamicResource DetFieldVisaStartDate}" Style="{StaticResource FieldLabel}"
+                                                                   Visibility="{Binding ShowVisaDocumentCard, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBox Text="{Binding Data.VisaStartDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"
+                                                                 Visibility="{Binding ShowVisaDocumentCard, Converter={StaticResource BoolToVis}}"/>
                                                         <TextBlock Text="{Binding SecondaryDocumentExpiryLabel}" Style="{StaticResource FieldLabel}"/>
                                                         <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                         <TextBlock Text="{Binding SecondaryDocumentAuthorityLabel}" Style="{StaticResource FieldLabel}"/>
@@ -2163,10 +2309,42 @@
                             <TextBlock Text="{DynamicResource DetGenTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                         </StackPanel>
-                        <Button HorizontalAlignment="Right" Command="{Binding CloseGenerateDialogCommand}"
-                                Width="30" Height="30" Background="Transparent" BorderThickness="0" 
-                                Foreground="{DynamicResource SecondaryForegroundBrush}" Cursor="Hand">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                        <Button HorizontalAlignment="Right"
+                                Command="{Binding CloseGenerateDialogCommand}"
+                                Width="34"
+                                Height="34"
+                                Background="{DynamicResource AccentLightBrush}"
+                                BorderBrush="{DynamicResource AccentBrush}"
+                                BorderThickness="1"
+                                Foreground="{DynamicResource AccentBrush}"
+                                Cursor="Hand"
+                                ToolTip="{DynamicResource DetTooltipClose}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="CloseBorder"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="17">
+                                        <TextBlock Text="&#xE711;"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="{DynamicResource FS13}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{TemplateBinding Foreground}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="CloseBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="CloseBorder" Property="Opacity" Value="0.85"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
                         </Button>
                     </Grid>
 

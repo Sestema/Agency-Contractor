@@ -200,6 +200,15 @@
                                 <TextBlock Text="Excel" FontSize="{DynamicResource FS12}"/>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding OpenBatchAIValidationCommand}"
+                                Style="{StaticResource HeaderGhostButton}"
+                                Margin="0,0,8,0"
+                                ToolTip="AI перевірка працівників">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0"/>
+                                <TextBlock Text="AI перевірка" FontSize="{DynamicResource FS12}"/>
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding ToggleSelectionModeCommand}"
                                 Style="{StaticResource HeaderGhostButton}"
                                 Margin="0,0,8,0"
@@ -332,10 +341,11 @@
                 </StackPanel>
 
                 <!-- ===== SORT BAR ===== -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10"
-                            Visibility="{Binding HasEmployees, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="{DynamicResource EmpSortLabel}" FontSize="{DynamicResource FS12}" Foreground="#888" 
-                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Border Grid.Row="2" Style="{StaticResource TableToolbarCard}" Margin="0,0,0,10"
+                        Visibility="{Binding HasEmployees, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{DynamicResource EmpSortLabel}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                     <Button Command="{Binding SortByCommand}" CommandParameter="Name"
                             Padding="10,5" Margin="0,0,4,0" Cursor="Hand"
@@ -420,7 +430,8 @@
                             <TextBlock Text="{DynamicResource EmpSortProblems}" FontSize="{DynamicResource FS12}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                    </StackPanel>
+                </Border>
 
                 <!-- ===== SELECTION BAR ===== -->
                 <Border Grid.Row="3" CornerRadius="8" Padding="12,8" Margin="0,0,0,10"
@@ -555,6 +566,13 @@
                                       BorderThickness="0" Background="Transparent" RowBackground="{DynamicResource CardBackgroundBrush}"
                                       AlternatingRowBackground="{DynamicResource ContentBackgroundBrush}"
                                       Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS12}"
+                                      EnableRowVirtualization="True"
+                                      EnableColumnVirtualization="True"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                      VirtualizingPanel.ScrollUnit="Pixel"
+                                      ScrollViewer.CanContentScroll="True"
+                                      ScrollViewer.IsDeferredScrollingEnabled="True"
                                       Visibility="{Binding IsTableView, Converter={StaticResource BoolToVis}}"
                                       MouseDoubleClick="DataGrid_MouseDoubleClick">
                                 <DataGrid.RowStyle>
@@ -574,9 +592,19 @@
                                     <DataGridTextColumn Binding="{Binding PositionTitle}" Width="Auto">
                                         <DataGridTextColumn.Header><TextBlock Text="{DynamicResource LabelPosTitle}"/></DataGridTextColumn.Header>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding Status}" Width="80">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpSortStatus}"/></DataGridTextColumn.Header>
-                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Width="92">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpSortStatus}"/></DataGridTemplateColumn.Header>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource TableStatusBadge}"
+                                                        Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                                    <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}"
+                                                               Style="{StaticResource TableStatusText}"
+                                                               Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                     <DataGridTextColumn Binding="{Binding StartDate}" Width="90">
                                         <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizStartDate}"/></DataGridTextColumn.Header>
                                     </DataGridTextColumn>
@@ -586,15 +614,105 @@
                                     <DataGridTextColumn Binding="{Binding Email}" Width="Auto">
                                         <DataGridTextColumn.Header><TextBlock Text="Email"/></DataGridTextColumn.Header>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding HasPassport}" Width="50">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpBadgePassport}"/></DataGridTextColumn.Header>
-                                    </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding HasVisa}" Width="50">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpBadgeVisa}"/></DataGridTextColumn.Header>
-                                    </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding HasInsurance}" Width="50">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpBadgeInsurance}"/></DataGridTextColumn.Header>
-                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Width="56">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgePassport}"/></DataGridTemplateColumn.Header>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableBooleanBadge}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasPassport}" Value="False">
+                                                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
+                                                                <Setter Property="Text" Value="Так"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasPassport}" Value="False">
+                                                                        <Setter Property="Text" Value="-"/>
+                                                                        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Width="56">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeVisa}"/></DataGridTemplateColumn.Header>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableBooleanBadge}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasVisa}" Value="False">
+                                                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
+                                                                <Setter Property="Text" Value="Так"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasVisa}" Value="False">
+                                                                        <Setter Property="Text" Value="-"/>
+                                                                        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Width="56">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeInsurance}"/></DataGridTemplateColumn.Header>
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableBooleanBadge}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasInsurance}" Value="False">
+                                                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
+                                                                <Setter Property="Text" Value="Так"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasInsurance}" Value="False">
+                                                                        <Setter Property="Text" Value="-"/>
+                                                                        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                     <DataGridTemplateColumn Header="" Width="Auto">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
@@ -676,7 +794,7 @@
                                                 <Border Grid.Column="1" Width="44" Height="44" CornerRadius="22" Background="{DynamicResource InfoChipBackgroundBrush}" VerticalAlignment="Top" Margin="0,0,10,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                     <Border.Clip><EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22"/></Border.Clip>
                                                     <Grid>
-                                                        <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                        <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=96}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                                         <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS18}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
                                                     </Grid>
                                                 </Border>
@@ -876,7 +994,7 @@
                                                     <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource InfoChipBackgroundBrush}" Margin="0,0,8,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                         <Border.Clip><EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/></Border.Clip>
                                                         <Grid>
-                                                            <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                            <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=128}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                                             <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS15}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
                                                         </Grid>
                                                     </Border>
@@ -998,7 +1116,7 @@
                                                 <Border Width="48" Height="48" CornerRadius="24" Background="{DynamicResource InfoChipBackgroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                     <Border.Clip><EllipseGeometry Center="24,24" RadiusX="24" RadiusY="24"/></Border.Clip>
                                                     <Grid>
-                                                        <Image Source="{Binding PhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
+                                                        <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=160}" Stretch="UniformToFill" Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
                                                         <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource InfoChipForegroundBrush}" Visibility="{Binding HasPhoto, Converter={StaticResource InverseBoolToVis}}"/>
                                                     </Grid>
                                                 </Border>
@@ -1081,7 +1199,7 @@
                     <!-- Empty state -->
                     <Border Style="{StaticResource CompactEmptyStateCard}"
                             Padding="28,24"
-                            Visibility="{Binding HasEmployees, Converter={StaticResource InverseBoolToVis}}">
+                            Visibility="{Binding HasVisibleEmployees, Converter={StaticResource InverseBoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock Text="&#xE77B;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}"/>
                             <TextBlock Text="{Binding StatusMessage, FallbackValue=У цієї фірми ще немає працівників.}"
@@ -1095,6 +1213,46 @@
                     </Border>
                 </Grid>
             </Grid>
+        </Grid>
+
+        <!-- Loading overlay (visible while a large employee list is being prepared) -->
+        <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}" Opacity="0.58"/>
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="24,20"
+                    CornerRadius="16"
+                    Background="{DynamicResource ContentBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1"
+                    Effect="{DynamicResource DialogShadow}">
+                <StackPanel MinWidth="250">
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="6"
+                                 Margin="0,0,0,14"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Background="{DynamicResource DividerBrush}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE7B8;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS16}"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   Margin="0,0,8,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource MsgEmployeesLoading}"
+                                   FontSize="{DynamicResource FS13}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Зачекайте, список працівників готується..."
+                               Margin="0,8,0,0"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               FontSize="{DynamicResource FS11}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Add Employee Dialog -->
@@ -1210,6 +1368,295 @@
                         </Button>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Batch AI Validation Dialog -->
+        <Grid Visibility="{Binding IsBatchAIValidationOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseBatchAIValidationCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}"
+                    CornerRadius="16"
+                    Width="640"
+                    MaxHeight="620"
+                    Padding="24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1"
+                    Effect="{DynamicResource DialogShadow}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,14">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource PageHeaderIconBadge}" Width="38" Height="38" Margin="0,0,10,0">
+                                <TextBlock Text="&#xE945;" Style="{StaticResource PageHeaderIconText}" FontSize="{DynamicResource FS16}"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="AI перевірка працівників"
+                                           FontSize="{DynamicResource FS18}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock Text="Виберіть документи, які треба перевірити у працівників."
+                                           FontSize="{DynamicResource FS12}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <Button HorizontalAlignment="Right"
+                                Command="{Binding CloseBatchAIValidationCommand}"
+                                Width="38"
+                                Height="38"
+                                Foreground="{DynamicResource ForegroundBrush}"
+                                Cursor="Hand"
+                                ToolTip="{DynamicResource DetBtnClose}">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="CloseBd"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        CornerRadius="19">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="CloseBd" Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="X" FontSize="{DynamicResource FS16}" FontWeight="Bold"/>
+                        </Button>
+                    </Grid>
+
+                    <Border Grid.Row="1"
+                            CornerRadius="12"
+                            Padding="14"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            Margin="0,0,0,12"
+                            Visibility="{Binding ShowBatchAIOptions, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="Що перевіряти"
+                                       FontWeight="SemiBold"
+                                       FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Margin="0,0,0,8"/>
+                            <UniformGrid Columns="2">
+                                <CheckBox Content="Паспорт / ID-карта" IsChecked="{Binding BatchAICheckPassport}" Margin="0,0,12,8"/>
+                                <CheckBox Content="Віза / карта побиту" IsChecked="{Binding BatchAICheckVisa}" Margin="0,0,0,8"/>
+                                <CheckBox Content="Страховка" IsChecked="{Binding BatchAICheckInsurance}" Margin="0,0,12,0"/>
+                                <CheckBox Content="Дозвіл на роботу" IsChecked="{Binding BatchAICheckPermit}"/>
+                            </UniformGrid>
+                            <CheckBox Content="Перевірити тільки позначених працівників"
+                                      IsChecked="{Binding BatchAICheckOnlySelected}"
+                                      Margin="0,12,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                        <Button Command="{Binding ShowBatchAIOptionsCommand}"
+                                Style="{StaticResource HeaderGhostButton}"
+                                HorizontalAlignment="Left"
+                                Padding="10,5"
+                                Margin="0,0,0,8"
+                                Visibility="{Binding ShowBatchAIOptions, Converter={StaticResource InverseBoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Змінити що перевіряти" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                        <ProgressBar Minimum="0"
+                                     Maximum="{Binding BatchAIProgressTotal}"
+                                     Value="{Binding BatchAIProgressCurrent}"
+                                     Height="6"
+                                     Background="{DynamicResource DividerBrush}"
+                                     Foreground="{DynamicResource AccentBrush}"/>
+                        <TextBlock Text="{Binding BatchAIStatusMessage}"
+                                   Margin="0,8,0,0"
+                                   FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   TextWrapping="Wrap"/>
+                        <Border CornerRadius="10"
+                                Padding="10,8"
+                                Margin="0,10,0,0"
+                                Background="{DynamicResource InfoChipBackgroundBrush}"
+                                BorderBrush="{DynamicResource InfoChipBorderBrush}"
+                                BorderThickness="1"
+                                Visibility="{Binding IsBatchAIValidationRunning, Converter={StaticResource BoolToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="1.4*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Працівник" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{Binding BatchAICurrentEmployee}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                    <TextBlock Text="Документ" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{Binding BatchAICurrentDocument}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Поточна дія" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{Binding BatchAICurrentField}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="3"
+                               Text="Результати"
+                               FontWeight="SemiBold"
+                               FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               Margin="0,0,0,8"/>
+
+                    <Border Grid.Row="4"
+                            CornerRadius="12"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <ScrollViewer Style="{StaticResource ThinScroll}" MaxHeight="260">
+                            <ItemsControl ItemsSource="{Binding BatchAIResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="10"
+                                                Padding="12"
+                                                Margin="8,8,8,0"
+                                                BorderThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Severity}" Value="error">
+                                                            <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Severity}" Value="warning">
+                                                            <Setter Property="Background" Value="{DynamicResource WarningLightBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Severity}" Value="missing">
+                                                            <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding EmployeeName}"
+                                                                   FontWeight="SemiBold"
+                                                                   FontSize="{DynamicResource FS13}"
+                                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                                        <TextBlock Text=" · "
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                        <TextBlock Text="{Binding DocumentName}"
+                                                                   FontSize="{DynamicResource FS12}"
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Message}"
+                                                               Margin="0,4,0,0"
+                                                               FontSize="{DynamicResource FS12}"
+                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                    <Grid Margin="0,8,0,0" Visibility="{Binding CanApply, Converter={StaticResource BoolToVis}}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                            <TextBlock Text="У профілі" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{Binding CurrentValue}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="У документі" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{Binding SuggestedValue}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                                    <Button Command="{Binding DataContext.OpenBatchAIDocumentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource HeaderGhostButton}"
+                                                            Padding="12,7"
+                                                            Margin="0,0,0,7"
+                                                            Visibility="{Binding CanOpenDocument, Converter={StaticResource BoolToVis}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Відкрити документ" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Command="{Binding DataContext.ApplyBatchAISuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource FilledActionButton}"
+                                                            Padding="12,7"
+                                                            Visibility="{Binding CanApply, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="Заповнити" Foreground="White" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Command="{Binding CancelBatchAIValidationCommand}"
+                                Style="{StaticResource HeaderGhostButton}"
+                                Margin="0,0,8,0"
+                                Visibility="{Binding IsBatchAIValidationRunning, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Скасувати"/>
+                        </Button>
+                        <Button Command="{Binding CloseBatchAIValidationCommand}"
+                                Style="{StaticResource DialogAccentSoftButton}"
+                                Margin="0,0,8,0"
+                                Visibility="{Binding IsBatchAIValidationRunning, Converter={StaticResource InverseBoolToVis}}">
+                            <TextBlock Text="{DynamicResource DetBtnClose}"/>
+                        </Button>
+                        <Button Command="{Binding StartBatchAIValidationCommand}"
+                                Style="{StaticResource FilledActionButton}"
+                                Visibility="{Binding IsBatchAIValidationRunning, Converter={StaticResource InverseBoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="White" Margin="0,0,6,0"/>
+                                <TextBlock Text="Почати перевірку" Foreground="White" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 

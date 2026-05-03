@@ -42,6 +42,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 IsGenerating = true;
                 GenerateStatusMessage = Res("MsgGenerating");
+                var wasGenerated = false;
 
                 var templateFullPath = _templateService.GetTemplateFullPath(_firmName, template.FilePath) ?? string.Empty;
                 var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
@@ -68,9 +69,11 @@ namespace Win11DesktopApp.ViewModels
 
                     await Task.Run(() => _documentGenerationService.GeneratePdf(templateFullPath, outputPath, tagValues));
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
+                    wasGenerated = true;
                     _activityLogService.Log("DocGenerated", "Document", _firmName, FullName,
                         $"Згенеровано документ «{template.Name}» для {FullName}",
                         employeeFolder: _employeeFolder);
+                    _appStatisticsService.RecordDocumentGenerated();
                     DocumentGenerationService.OpenFile(outputPath);
                     IsGenerating = false;
                     return;
@@ -88,6 +91,7 @@ namespace Win11DesktopApp.ViewModels
 
                         await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(rtfPath, outputPath, tagValues));
                         GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
+                        wasGenerated = true;
                         DocumentGenerationService.OpenFile(outputPath);
                     }
                     else if (hasTemplateFile)
@@ -98,6 +102,7 @@ namespace Win11DesktopApp.ViewModels
 
                         await Task.Run(() => _documentGenerationService.GenerateDocx(templateFullPath, outputPath, tagValues));
                         GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
+                        wasGenerated = true;
                         DocumentGenerationService.OpenFile(outputPath);
                     }
                 }
@@ -110,12 +115,16 @@ namespace Win11DesktopApp.ViewModels
 
                     await Task.Run(() => _documentGenerationService.GenerateXlsx(templateFullPath, outputPath, tagValues));
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
+                    wasGenerated = true;
                     DocumentGenerationService.OpenFile(outputPath);
                 }
                 else
                 {
                     GenerateStatusMessage = string.Format(Res("MsgUnsupportedFmt"), format);
                 }
+
+                if (wasGenerated)
+                    _appStatisticsService.RecordDocumentGenerated();
             }
             catch (Exception ex)
             {

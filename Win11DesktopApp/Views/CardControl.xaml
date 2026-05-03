@@ -20,7 +20,7 @@
                             Background="{DynamicResource CardBackgroundBrush}" 
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="16"
+                            CornerRadius="15"
                             Width="160" Height="170"
                             RenderTransformOrigin="0.5,0.5"
                             SnapsToDevicePixels="True">
@@ -31,7 +31,7 @@
                             </TransformGroup>
                         </Border.RenderTransform>
                         <Border.Effect>
-                            <DropShadowEffect x:Name="CardShadow" BlurRadius="12" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.08"/>
+                            <DropShadowEffect x:Name="CardShadow" BlurRadius="18" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.22"/>
                         </Border.Effect>
                         <Grid>
                             <Grid Margin="16">
@@ -43,17 +43,20 @@
 
                                 <!-- Gradient icon circle -->
                                 <Border x:Name="IconCircle" Grid.Row="0"
-                                        Width="64" Height="64" CornerRadius="18"
-                                        HorizontalAlignment="Center" Margin="0,4,0,0"
+                                        Width="58" Height="58" CornerRadius="16"
+                                        HorizontalAlignment="Center" Margin="0,6,0,0"
                                         RenderTransformOrigin="0.5,0.5"
                                         Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="22" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.26"/>
+                                    </Border.Effect>
                                     <Border.RenderTransform>
                                         <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
                                     </Border.RenderTransform>
                                     <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           Fill="White"
                                           Stretch="Uniform"
-                                          Width="30" Height="30"
+                                          Width="27" Height="27"
                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
 
@@ -61,7 +64,7 @@
                                 <TextBlock x:Name="TitleText" Grid.Row="2"
                                            Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                            Foreground="{DynamicResource ForegroundBrush}"
-                                           FontSize="{DynamicResource FS14}"
+                                           FontSize="{DynamicResource FS13}"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Bottom"
@@ -72,7 +75,7 @@
 
                             <!-- Win11 Reveal highlight layer (follows cursor) -->
                             <Border x:Name="RevealLayer"
-                                    CornerRadius="16"
+                                    CornerRadius="15"
                                     IsHitTestVisible="False"
                                     Opacity="0"
                                     SnapsToDevicePixels="True">
@@ -81,7 +84,7 @@
                                                          Center="0.5,0.5"
                                                          GradientOrigin="0.5,0.5"
                                                          RadiusX="0.55" RadiusY="0.55">
-                                        <GradientStop Color="#66FFFFFF" Offset="0.0"/>
+                                        <GradientStop Color="#26FFFFFF" Offset="0.0"/>
                                         <GradientStop Color="#00FFFFFF" Offset="1.0"/>
                                     </RadialGradientBrush>
                                 </Border.Background>
@@ -89,7 +92,7 @@
 
                             <!-- Reveal border highlight (edge glow that also follows cursor) -->
                             <Border x:Name="RevealBorder"
-                                    CornerRadius="16"
+                                    CornerRadius="15"
                                     BorderThickness="1"
                                     IsHitTestVisible="False"
                                     Opacity="0"
@@ -99,8 +102,8 @@
                                                          Center="0.5,0.5"
                                                          GradientOrigin="0.5,0.5"
                                                          RadiusX="0.5" RadiusY="0.5">
-                                        <GradientStop Color="#CCFFFFFF" Offset="0.0"/>
-                                        <GradientStop Color="#44FFFFFF" Offset="0.5"/>
+                                        <GradientStop Color="#66FFFFFF" Offset="0.0"/>
+                                        <GradientStop Color="#2290A0B5" Offset="0.5"/>
                                         <GradientStop Color="#00FFFFFF" Offset="1.0"/>
                                     </RadialGradientBrush>
                                 </Border.BorderBrush>
@@ -110,7 +113,7 @@
                                  where GlassInnerHighlightBrush is defined. In other themes
                                  the DynamicResource does not resolve, so nothing is drawn. -->
                             <Border x:Name="GlassHighlight"
-                                    CornerRadius="16"
+                                    CornerRadius="15"
                                     BorderThickness="1,1,1,0"
                                     BorderBrush="{DynamicResource GlassInnerHighlightBrush}"
                                     Margin="1"
@@ -127,39 +130,39 @@
                                     <!-- Card lifts up -->
                                     <DoubleAnimation Storyboard.TargetName="CardTranslate"
                                                      Storyboard.TargetProperty="Y"
-                                                     To="-6" Duration="0:0:0.25"
-                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                                     To="-3" Duration="0:0:0.20"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <!-- Card scales slightly -->
                                     <DoubleAnimation Storyboard.TargetName="CardScale"
                                                      Storyboard.TargetProperty="ScaleX"
-                                                     To="1.04" Duration="0:0:0.25"
+                                                     To="1.018" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardScale"
                                                      Storyboard.TargetProperty="ScaleY"
-                                                     To="1.04" Duration="0:0:0.25"
+                                                     To="1.018" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <!-- Deeper shadow -->
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="BlurRadius"
-                                                     To="28" Duration="0:0:0.25"
+                                                     To="28" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="ShadowDepth"
-                                                     To="8" Duration="0:0:0.25"
+                                                     To="6" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="Opacity"
-                                                     To="0.18" Duration="0:0:0.25"
+                                                     To="0.28" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <!-- Icon breathes -->
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleX"
-                                                     To="1.1" Duration="0:0:0.3"
-                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                                     To="1.04" Duration="0:0:0.20"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleY"
-                                                     To="1.1" Duration="0:0:0.3"
-                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                                     To="1.04" Duration="0:0:0.20"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger>
@@ -182,7 +185,7 @@
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="BlurRadius"
-                                                     To="12" Duration="0:0:0.3"
+                                                     To="18" Duration="0:0:0.3"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="ShadowDepth"
@@ -190,7 +193,7 @@
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="Opacity"
-                                                     To="0.08" Duration="0:0:0.3"
+                                                     To="0.16" Duration="0:0:0.3"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleX"
@@ -233,22 +236,22 @@
                                 <Storyboard>
                                     <DoubleAnimation Storyboard.TargetName="CardScale"
                                                      Storyboard.TargetProperty="ScaleX"
-                                                     To="1.04" Duration="0:0:0.2"
-                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                                     To="1.018" Duration="0:0:0.18"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardScale"
                                                      Storyboard.TargetProperty="ScaleY"
-                                                     To="1.04" Duration="0:0:0.2"
-                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                                     To="1.018" Duration="0:0:0.18"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardTranslate"
                                                      Storyboard.TargetProperty="Y"
-                                                     To="-6" Duration="0:0:0.2"
-                                                     EasingFunction="{StaticResource BounceBack}"/>
+                                                     To="-3" Duration="0:0:0.18"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="BlurRadius"
-                                                     To="28" Duration="0:0:0.2"/>
+                                                     To="18" Duration="0:0:0.18"/>
                                     <DoubleAnimation Storyboard.TargetName="CardShadow"
                                                      Storyboard.TargetProperty="ShadowDepth"
-                                                     To="8" Duration="0:0:0.2"/>
+                                                     To="4" Duration="0:0:0.18"/>
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger>
@@ -267,7 +270,7 @@
                 Padding="6,0" IsHitTestVisible="False"
                 Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#EF4444" Opacity="0.4"/>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#FB7185" Opacity="0.4"/>
             </Border.Effect>
             <TextBlock Text="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                        Foreground="White" FontSize="{DynamicResource FS11}" FontWeight="Bold"

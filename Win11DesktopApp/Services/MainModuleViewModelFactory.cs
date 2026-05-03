@@ -13,6 +13,7 @@ public sealed class MainModuleViewModelFactory
     private readonly RecentlyDeletedService _recentlyDeletedService;
     private readonly GeminiApiService _geminiApiService;
     private readonly ChatPersistenceService _chatPersistenceService;
+    private readonly Telegram.TelegramBotService _telegramBotService;
     private readonly CurrentProfileService _currentProfileService;
     private readonly ProfileAuthService _profileAuthService;
     private readonly ActivityLogService _activityLogService;
@@ -22,6 +23,7 @@ public sealed class MainModuleViewModelFactory
     private readonly DocumentGenerationService _documentGenerationService;
     private readonly TagCatalogService _tagCatalogService;
     private readonly CompanyService _companyService;
+    private readonly AppNotificationService _notificationService;
 
     public MainModuleViewModelFactory(
         EmployeeService employeeService,
@@ -32,6 +34,7 @@ public sealed class MainModuleViewModelFactory
         RecentlyDeletedService recentlyDeletedService,
         GeminiApiService geminiApiService,
         ChatPersistenceService chatPersistenceService,
+        Telegram.TelegramBotService telegramBotService,
         CurrentProfileService currentProfileService,
         ProfileAuthService profileAuthService,
         ActivityLogService activityLogService,
@@ -40,7 +43,8 @@ public sealed class MainModuleViewModelFactory
         DocumentLocalizationService documentLocalizationService,
         DocumentGenerationService documentGenerationService,
         TagCatalogService tagCatalogService,
-        CompanyService companyService)
+        CompanyService companyService,
+        AppNotificationService notificationService)
     {
         _employeeService = employeeService;
         _addEmployeeWizardViewModelFactory = addEmployeeWizardViewModelFactory;
@@ -50,6 +54,7 @@ public sealed class MainModuleViewModelFactory
         _recentlyDeletedService = recentlyDeletedService;
         _geminiApiService = geminiApiService;
         _chatPersistenceService = chatPersistenceService;
+        _telegramBotService = telegramBotService;
         _currentProfileService = currentProfileService;
         _profileAuthService = profileAuthService;
         _activityLogService = activityLogService;
@@ -59,6 +64,7 @@ public sealed class MainModuleViewModelFactory
         _documentGenerationService = documentGenerationService;
         _tagCatalogService = tagCatalogService;
         _companyService = companyService;
+        _notificationService = notificationService;
     }
 
     public EmployeesViewModel CreateEmployees(EmployerCompany? company)
@@ -77,7 +83,8 @@ public sealed class MainModuleViewModelFactory
             _activityLogService,
             _templateService,
             _documentGenerationService,
-            _tagCatalogService);
+            _tagCatalogService,
+            _geminiApiService);
     }
 
     public TemplatesViewModel CreateTemplates(EmployerCompany? company)
@@ -105,7 +112,8 @@ public sealed class MainModuleViewModelFactory
             _appSettingsService,
             _companyService,
             _employeeDetailsViewModelFactory,
-            _activityLogService);
+            _activityLogService,
+            _notificationService);
     }
 
     public RecentlyDeletedViewModel CreateRecentlyDeleted()
@@ -121,6 +129,6 @@ public sealed class MainModuleViewModelFactory
 
     public AIChatViewModel CreateAiChat()
     {
-        return new AIChatViewModel(_navigationService, _geminiApiService, _chatPersistenceService);
+        return new AIChatViewModel(_navigationService, _geminiApiService, _chatPersistenceService, _telegramBotService);
     }
 }

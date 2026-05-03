@@ -60,6 +60,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateService _templateService;
         private readonly FolderService _folderService;
         private readonly FinanceService _financeService;
+        private readonly AppStatisticsService _appStatisticsService;
         private readonly GeminiApiService _geminiApiService;
         private readonly AppSettingsService _appSettingsService;
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
@@ -160,6 +161,75 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _totalCompanies, value);
         }
 
+        private int _monthlyEmployeesAddedCount;
+        public int MonthlyEmployeesAddedCount
+        {
+            get => _monthlyEmployeesAddedCount;
+            set
+            {
+                if (SetProperty(ref _monthlyEmployeesAddedCount, value))
+                {
+                    OnPropertyChanged(nameof(MonthlyMovementSummaryText));
+                    OnPropertyChanged(nameof(MonthlyMovementMax));
+                }
+            }
+        }
+
+        private int _monthlyEmployeesArchivedCount;
+        public int MonthlyEmployeesArchivedCount
+        {
+            get => _monthlyEmployeesArchivedCount;
+            set
+            {
+                if (SetProperty(ref _monthlyEmployeesArchivedCount, value))
+                {
+                    OnPropertyChanged(nameof(MonthlyMovementSummaryText));
+                    OnPropertyChanged(nameof(MonthlyMovementMax));
+                }
+            }
+        }
+
+        public string MonthlyMovementSummaryText => $"+{MonthlyEmployeesAddedCount} / -{MonthlyEmployeesArchivedCount}";
+        public int MonthlyMovementMax => Math.Max(1, Math.Max(MonthlyEmployeesAddedCount, MonthlyEmployeesArchivedCount));
+
+        private int _totalEmployeesAllTime;
+        public int TotalEmployeesAllTime { get => _totalEmployeesAllTime; set => SetProperty(ref _totalEmployeesAllTime, value); }
+
+        private int _generatedDocumentsCount;
+        public int GeneratedDocumentsCount { get => _generatedDocumentsCount; set => SetProperty(ref _generatedDocumentsCount, value); }
+
+        private int _programMinutes;
+        public int ProgramMinutes
+        {
+            get => _programMinutes;
+            set
+            {
+                if (SetProperty(ref _programMinutes, value))
+                {
+                    OnPropertyChanged(nameof(ProgramTimeText));
+                    OnPropertyChanged(nameof(EfficiencyChartMaxMinutes));
+                }
+            }
+        }
+
+        private int _savedMinutes;
+        public int SavedMinutes
+        {
+            get => _savedMinutes;
+            set
+            {
+                if (SetProperty(ref _savedMinutes, value))
+                {
+                    OnPropertyChanged(nameof(SavedTimeText));
+                    OnPropertyChanged(nameof(EfficiencyChartMaxMinutes));
+                }
+            }
+        }
+
+        public int EfficiencyChartMaxMinutes => Math.Max(1, Math.Max(ProgramMinutes, SavedMinutes));
+        public string ProgramTimeText => FormatDuration(ProgramMinutes);
+        public string SavedTimeText => FormatDuration(SavedMinutes);
+
         private string _employeeTrend = "";
         public string EmployeeTrend { get => _employeeTrend; set => SetProperty(ref _employeeTrend, value); }
 
@@ -204,6 +274,7 @@ namespace Win11DesktopApp.ViewModels
             TemplateService templateService,
             FolderService folderService,
             FinanceService financeService,
+            AppStatisticsService appStatisticsService,
             GeminiApiService geminiApiService,
             AppSettingsService appSettingsService,
             EmployeeDetailsViewModelFactory employeeDetailsViewModelFactory,
@@ -215,6 +286,7 @@ namespace Win11DesktopApp.ViewModels
             _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
             _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
             _financeService = financeService ?? throw new ArgumentNullException(nameof(financeService));
+            _appStatisticsService = appStatisticsService ?? throw new ArgumentNullException(nameof(appStatisticsService));
             _geminiApiService = geminiApiService ?? throw new ArgumentNullException(nameof(geminiApiService));
             _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
             _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new ArgumentNullException(nameof(employeeDetailsViewModelFactory));
@@ -401,6 +473,12 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     TotalProblems = data.TotalProblems;
                     TotalTemplates = data.TotalTemplates;
                     TotalCompanies = data.TotalCompanies;
+                    TotalEmployeesAllTime = data.TotalEmployeesAllTime;
+                    GeneratedDocumentsCount = data.GeneratedDocumentsCount;
+                    ProgramMinutes = data.ProgramMinutes;
+                    SavedMinutes = data.SavedMinutes;
+                    MonthlyEmployeesAddedCount = data.MonthlyEmployeesAddedCount;
+                    MonthlyEmployeesArchivedCount = data.MonthlyEmployeesArchivedCount;
                     EmployeeTrend = data.EmployeeTrend;
                     ProblemTrend = data.ProblemTrend;
                     TemplateTrend = data.TemplateTrend;
@@ -436,9 +514,15 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             var companies = _companyService.VisibleCompanies.ToList();
 
             result.TotalCompanies = companies.Count;
-            int thisMonthAdded = 0;
+            var now = DateTime.Today;
+            var visibleFirmNames = new HashSet<string>(companies.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+            var addedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var addedFallbacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var allTimeEmployeeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var allTimeEmployeeFallbacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int expiredCount = 0;
             int criticalCount = 0;
+            var archivedEmployees = new List<ArchivedEmployeeSummary>();
 
             foreach (var company in companies)
             {
@@ -451,13 +535,13 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     result.TotalTemplates += templates.Count;
 
                     int companyProblems = 0;
-                    var now = DateTime.Today;
 
                     foreach (var emp in employees)
                     {
-                        if (DateTime.TryParse(emp.StartDate, out var start) &&
-                            start.Year == now.Year && start.Month == now.Month)
-                            thisMonthAdded++;
+                        AddEmployeeIdentity(allTimeEmployeeIds, allTimeEmployeeFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate);
+
+                        if (IsDateInCurrentMonth(emp.StartDate, now))
+                            AddEmployeeIdentity(addedIds, addedFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate);
 
                         CheckExpiry(emp.PassportExpiry, emp.FullName,
                             Res("DetDocPassport"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
@@ -487,10 +571,36 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 }
             }
 
+            var archivedThisMonth = 0;
+            try
+            {
+                archivedEmployees = _employeeService.GetArchivedEmployees();
+                foreach (var archived in archivedEmployees)
+                {
+                    if (!string.IsNullOrWhiteSpace(archived.FirmName) && visibleFirmNames.Count > 0 && !visibleFirmNames.Contains(archived.FirmName))
+                        continue;
+
+                    AddEmployeeIdentity(allTimeEmployeeIds, allTimeEmployeeFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate);
+
+                    if (IsDateInCurrentMonth(archived.StartDate, now))
+                        AddEmployeeIdentity(addedIds, addedFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate);
+
+                    if (IsDateInCurrentMonth(archived.EndDate, now))
+                        archivedThisMonth++;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Dashboard.GatherMonthlyMovement", ex.Message);
+            }
+
             foreach (var cs in result.CompanyStats)
                 cs.TotalEmployees = result.TotalEmployees;
 
-            result.EmployeeTrend = thisMonthAdded > 0 ? $"+{thisMonthAdded} {Res("DashThisMonth")}" : Res("DashNoChange");
+            result.MonthlyEmployeesAddedCount = addedIds.Count + addedFallbacks.Count;
+            result.MonthlyEmployeesArchivedCount = archivedThisMonth;
+            result.TotalEmployeesAllTime = allTimeEmployeeIds.Count + allTimeEmployeeFallbacks.Count;
+            result.EmployeeTrend = result.MonthlyEmployeesAddedCount > 0 ? $"+{result.MonthlyEmployeesAddedCount} {Res("DashThisMonth")}" : Res("DashNoChange");
             result.ProblemTrend = expiredCount > 0 ? $"{expiredCount} {Res("DashExpired")}" : Res("DashAllGood");
             result.TemplateTrend = $"{result.TotalTemplates} {Res("DashAvailable")}";
 
@@ -574,7 +684,44 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 LoggingService.LogError("Dashboard.GatherSalary", ex);
             }
 
+            try
+            {
+                var statistics = _appStatisticsService.GetSnapshot();
+                result.TotalEmployeesAllTime = Math.Max(result.TotalEmployeesAllTime, statistics.TotalEmployeesCreated);
+                result.GeneratedDocumentsCount = statistics.GeneratedDocumentsCount;
+                result.ProgramMinutes = statistics.TotalProgramRunMinutes;
+                result.SavedMinutes = CalculateSavedMinutes(result.TotalEmployeesAllTime, result.GeneratedDocumentsCount);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Dashboard.GatherEfficiency", ex.Message);
+                result.SavedMinutes = CalculateSavedMinutes(result.TotalEmployeesAllTime, result.GeneratedDocumentsCount);
+            }
+
             return result;
+        }
+
+        private static int CalculateSavedMinutes(int employeesAllTime, int generatedDocuments)
+        {
+            const int savedPerEmployeeMinutes = 15; // 20 min manually vs 5 min in the app.
+            const int savedPerDocumentMinutes = 8;
+            return employeesAllTime * savedPerEmployeeMinutes + generatedDocuments * savedPerDocumentMinutes;
+        }
+
+        private static string FormatDuration(int totalMinutes)
+        {
+            if (totalMinutes <= 0)
+                return $"0 {Res("DashMinutesShort")}";
+
+            var hours = totalMinutes / 60;
+            var minutes = totalMinutes % 60;
+
+            if (hours <= 0)
+                return $"{minutes} {Res("DashMinutesShort")}";
+
+            return minutes > 0
+                ? $"{hours} {Res("DashHoursShort")} {minutes} {Res("DashMinutesShort")}"
+                : $"{hours} {Res("DashHoursShort")}";
         }
 
         private static string FormatMonthLabel(int year, int month)
@@ -591,6 +738,23 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 LoggingService.LogError("Dashboard.FormatMonthLabel", ex);
                 return $"{month:D2}.{year}";
             }
+        }
+
+        private static bool IsDateInCurrentMonth(string dateText, DateTime now)
+        {
+            var date = DateParsingHelper.TryParseDate(dateText);
+            return date != null && date.Value.Year == now.Year && date.Value.Month == now.Month;
+        }
+
+        private static void AddEmployeeIdentity(HashSet<string> ids, HashSet<string> fallbacks, string uniqueId, string firmName, string fullName, string startDate)
+        {
+            if (!string.IsNullOrWhiteSpace(uniqueId))
+            {
+                ids.Add(uniqueId);
+                return;
+            }
+
+            fallbacks.Add($"{firmName}|{fullName}|{startDate}");
         }
 
         private static void CheckExpiry(string dateStr, string empName, string docType,
@@ -647,6 +811,12 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             public int TotalProblems;
             public int TotalTemplates;
             public int TotalCompanies;
+            public int TotalEmployeesAllTime;
+            public int GeneratedDocumentsCount;
+            public int ProgramMinutes;
+            public int SavedMinutes;
+            public int MonthlyEmployeesAddedCount;
+            public int MonthlyEmployeesArchivedCount;
             public string EmployeeTrend = "";
             public string ProblemTrend = "";
             public string TemplateTrend = "";

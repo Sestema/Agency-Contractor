@@ -422,7 +422,6 @@ namespace Win11DesktopApp.ViewModels
                         catch (Exception ex)
                         {
                             LoggingService.LogError("ProblemsViewModel.LoadProblems", ex);
-                            Debug.WriteLine($"ProblemsViewModel: error loading {company.Name}: {ex.Message}");
                         }
                     }
 
@@ -484,7 +483,6 @@ namespace Win11DesktopApp.ViewModels
             catch (Exception ex)
             {
                 LoggingService.LogError("ProblemsViewModel.LoadProblems", ex);
-                Debug.WriteLine($"ProblemsViewModel.LoadProblems error: {ex.Message}");
             }
             finally
             {
@@ -627,6 +625,40 @@ namespace Win11DesktopApp.ViewModels
                 return count;
             }
             catch (Exception ex) { LoggingService.LogError("ProblemsViewModel.CountAllProblems", ex); return 0; }
+        }
+
+        public static int CountProblemsForCompany(EmployerCompany? company, EmployeeService employeeService)
+        {
+            if (company == null) return 0;
+
+            try
+            {
+                var employees = employeeService.GetEmployeesForFirm(company.Name);
+                var count = 0;
+
+                foreach (var emp in employees)
+                {
+                    var needsPassport = IsProblematic(emp.PassportExpiry);
+                    var needsVisa = emp.EmployeeType != "eu_citizen" && IsProblematic(emp.VisaExpiry);
+                    var needsInsurance = IsProblematic(emp.InsuranceExpiry);
+                    var needsWorkPermit = emp.EmployeeType == "work_permit" && IsProblematic(emp.WorkPermitExpiry);
+                    if (!needsPassport && !needsVisa && !needsInsurance && !needsWorkPermit)
+                        continue;
+
+                    var ignoredDocuments = employeeService.LoadEmployeeData(emp.EmployeeFolder)?.IgnoredDocuments;
+                    if (needsPassport && !TryGetIgnoredUntil(ignoredDocuments, DocKeyPassport, out _)) count++;
+                    if (needsVisa && !TryGetIgnoredUntil(ignoredDocuments, DocKeyVisa, out _)) count++;
+                    if (needsInsurance && !TryGetIgnoredUntil(ignoredDocuments, DocKeyInsurance, out _)) count++;
+                    if (needsWorkPermit && !TryGetIgnoredUntil(ignoredDocuments, DocKeyWorkPermit, out _)) count++;
+                }
+
+                return count;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ProblemsViewModel.CountProblemsForCompany", ex);
+                return 0;
+            }
         }
 
         private static bool IsProblematic(string dateStr)

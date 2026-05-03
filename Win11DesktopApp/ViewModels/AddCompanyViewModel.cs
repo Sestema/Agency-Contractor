@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 
@@ -16,6 +18,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeService _employeeService;
         private readonly FolderService _folderService;
         private readonly ActivityLogService _activityLogService;
+        private readonly AresLookupService _aresLookupService;
         private EmployerCompany _employer = new();
         public EmployerCompany Employer
         {
@@ -53,6 +56,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand DeleteCompanyCommand { get; }
+        public ICommand LookupEmployerAresCommand { get; }
+        public ICommand LookupAgencyAresCommand { get; }
 
         public event Action? RequestClose;
 
@@ -63,12 +68,14 @@ namespace Win11DesktopApp.ViewModels
             CompanyService? companyService = null,
             EmployeeService? employeeService = null,
             FolderService? folderService = null,
-            ActivityLogService? activityLogService = null)
+            ActivityLogService? activityLogService = null,
+            AresLookupService? aresLookupService = null)
         {
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
             _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _aresLookupService = aresLookupService ?? throw new InvalidOperationException("AresLookupService is not initialized.");
 
             Employer.Addresses.Add(new WorkAddress());
             Employer.Positions.Add(new Position());
@@ -96,6 +103,8 @@ namespace Win11DesktopApp.ViewModels
             SaveCommand = new AsyncRelayCommand(_ => SaveAsync());
             CancelCommand = new RelayCommand(o => RequestClose?.Invoke());
             DeleteCompanyCommand = new AsyncRelayCommand(_ => DeleteCompanyAsync(), _ => IsEditMode);
+            LookupEmployerAresCommand = new AsyncRelayCommand(_ => LookupEmployerAresAsync());
+            LookupAgencyAresCommand = new AsyncRelayCommand(_ => LookupAgencyAresAsync());
         }
 
         /// <summary>
@@ -107,8 +116,9 @@ namespace Win11DesktopApp.ViewModels
             CompanyService? companyService = null,
             EmployeeService? employeeService = null,
             FolderService? folderService = null,
-            ActivityLogService? activityLogService = null)
-            : this(companyService, employeeService, folderService, activityLogService)
+            ActivityLogService? activityLogService = null,
+            AresLookupService? aresLookupService = null)
+            : this(companyService, employeeService, folderService, activityLogService, aresLookupService)
         {
             IsEditMode = true;
             _originalCompany = existingCompany;
@@ -118,6 +128,87 @@ namespace Win11DesktopApp.ViewModels
             Employer = CloneEmployer(existingCompany);
             Agency = CloneAgency(existingCompany.Agency);
         }
+
+        private async Task LookupEmployerAresAsync()
+        {
+            var normalizedIco = NormalizeIco(Employer.ICO);
+            if (string.IsNullOrWhiteSpace(normalizedIco))
+            {
+                ToastService.Instance.Warning(Res("InvoicesAresLookupInvalidIco"));
+                return;
+            }
+
+            var result = await LookupAresAsync(normalizedIco);
+            if (result == null)
+                return;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                Employer.Name = result.Name;
+                Employer.ICO = result.Ico;
+                Employer.LegalAddress = FormatAresAddress(result);
+                ToastService.Instance.Success(string.Format(Res("InvoicesAresLookupSuccess"), normalizedIco));
+            });
+        }
+
+        private async Task LookupAgencyAresAsync()
+        {
+            var normalizedIco = NormalizeIco(Agency.ICO);
+            if (string.IsNullOrWhiteSpace(normalizedIco))
+            {
+                ToastService.Instance.Warning(Res("InvoicesAresLookupInvalidIco"));
+                return;
+            }
+
+            var result = await LookupAresAsync(normalizedIco);
+            if (result == null)
+                return;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                Agency.Name = result.Name;
+                Agency.ICO = result.Ico;
+                Agency.FullAddress = FormatAresAddress(result);
+                ToastService.Instance.Success(string.Format(Res("InvoicesAresLookupSuccess"), normalizedIco));
+            });
+        }
+
+        private async Task<AresCompanyData?> LookupAresAsync(string normalizedIco)
+        {
+            try
+            {
+                var result = await _aresLookupService.LookupByIcoAsync(normalizedIco);
+                if (result == null)
+                    ToastService.Instance.Warning(string.Format(Res("InvoicesAresLookupNotFound"), normalizedIco));
+
+                return result;
+            }
+            catch (HttpRequestException)
+            {
+                ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
+                return null;
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler.Report("AddCompanyViewModel.LookupAresAsync", ex, ErrorSeverity.Error, showUser: false);
+                ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
+                return null;
+            }
+        }
+
+        private static string FormatAresAddress(AresCompanyData source)
+        {
+            return string.Join(", ", new[] { source.Street, source.PostalCode, source.City, source.Country }
+                .Where(part => !string.IsNullOrWhiteSpace(part)));
+        }
+
+        private static string NormalizeIco(string? ico)
+            => new string((ico ?? string.Empty).Where(char.IsDigit).ToArray());
 
         private async Task SaveAsync()
         {

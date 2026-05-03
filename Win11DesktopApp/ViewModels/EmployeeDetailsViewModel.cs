@@ -19,6 +19,19 @@ using PdfSharp.Drawing;
 
 namespace Win11DesktopApp.ViewModels
 {
+    public sealed class DocumentProfileOption
+    {
+        public string Key { get; init; } = string.Empty;
+        public string DisplayName { get; init; } = string.Empty;
+        public string EmployeeType { get; init; } = "visa";
+        public string EuDocumentType { get; init; } = "passport";
+        public string VisaDocType { get; init; } = "visa_sticker";
+        public bool RequiresInsurance { get; init; }
+        public bool RequiresVisa { get; init; }
+        public bool RequiresPassportPage2 { get; init; }
+        public bool RequiresWorkPermit { get; init; }
+    }
+
     public partial class EmployeeDetailsViewModel : ViewModelBase
     {
         private string DocRes(string key) =>
@@ -34,6 +47,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateService _templateService;
         private readonly DocumentGenerationService _documentGenerationService;
         private readonly TagCatalogService _tagCatalogService;
+        private readonly AppStatisticsService _appStatisticsService;
         private readonly AiWindowFactory _aiWindowFactory;
         private readonly string _employeeFolder;
         private readonly string _firmName;
@@ -115,8 +129,19 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _isEditMode, value))
+                {
                     OnPropertyChanged(nameof(ShowBankAccountCard));
+                    if (!value)
+                        IsDocumentProfileEditorOpen = false;
+                }
             }
+        }
+
+        private bool _isDocumentProfileEditorOpen;
+        public bool IsDocumentProfileEditorOpen
+        {
+            get => _isDocumentProfileEditorOpen;
+            set => SetProperty(ref _isDocumentProfileEditorOpen, value);
         }
 
         private bool _isArchiveMode;
@@ -466,26 +491,32 @@ namespace Win11DesktopApp.ViewModels
         private string? _pdfPreviewTempFolder;
         private CancellationTokenSource? _previewLoadCts;
 
+        public bool RequiresSecondaryDocument =>
+            SelectedDocumentProfileOption?.RequiresVisa == true || SelectedDocumentProfileOption?.RequiresPassportPage2 == true;
+        public bool UsesPassportPage2SecondaryDocument =>
+            SelectedDocumentProfileOption?.RequiresPassportPage2 == true
+            || (HasPassportPage2SecondaryDocument && SelectedDocumentProfileOption?.RequiresVisa != true);
         public bool IsWorkPermitType => Data.EmployeeType == "work_permit";
         public bool IsEuIdCardEmployee =>
             string.Equals(Data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase)
             && string.Equals(Data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase);
         public bool HasPassportPage2SecondaryDocument => !string.IsNullOrWhiteSpace(PassportPage2FilePath);
-        public bool ShowVisaDocumentCard => !HasPassportPage2SecondaryDocument;
+        public bool ShowVisaDocumentCard => !UsesPassportPage2SecondaryDocument;
         public bool ShowIdCardSecondSideCard => IsEuIdCardEmployee && HasPassportPage2SecondaryDocument;
         public string SecondaryDocumentDisplayName =>
-            HasPassportPage2SecondaryDocument
+            UsesPassportPage2SecondaryDocument
                 ? (IsEuIdCardEmployee
                     ? (Res("StepIdCardPage2Data") ?? "Дані ID-карти (2 сторони)")
                     : (Res("StepPassportPage2Data") ?? "Дані з паспорту (стор. 2)"))
                 : (Res("DetDocVisa") ?? "Віза");
-        public bool HasSecondaryDocument => HasPassportPage2 || HasVisa;
+        public bool HasSecondaryDocument => RequiresSecondaryDocument || HasPassportPage2 || HasVisa;
+        public bool HasSecondaryDocumentFile => HasPassportPage2 || HasVisa;
         public string SecondaryDocumentFilePath =>
-            !string.IsNullOrWhiteSpace(PassportPage2FilePath) ? PassportPage2FilePath : VisaFilePath;
+            UsesPassportPage2SecondaryDocument ? PassportPage2FilePath : VisaFilePath;
         public string SecondaryDocumentPreviewPath =>
-            !string.IsNullOrWhiteSpace(PassportPage2PreviewPath) ? PassportPage2PreviewPath : VisaPreviewPath;
+            UsesPassportPage2SecondaryDocument ? PassportPage2PreviewPath : VisaPreviewPath;
         public DocPreviewState SecondaryDocumentPreviewState =>
-            !string.IsNullOrWhiteSpace(PassportPage2FilePath) ? PassportPage2PreviewState : VisaPreviewState;
+            UsesPassportPage2SecondaryDocument ? PassportPage2PreviewState : VisaPreviewState;
         public string SecondaryDocumentNumberLabel => IsEuIdCardEmployee
             ? $"{Res("DetFieldVisaNum")} ({Res("WizIdCardNumberHint")})"
             : (Res("DetFieldVisaNum") ?? "Номер візи");
@@ -495,13 +526,13 @@ namespace Win11DesktopApp.ViewModels
         public string SecondaryDocumentExpiryLabel => IsEuIdCardEmployee
             ? $"{Res("DetFieldExpiry")} ({Res("WizIdCardExpiryHint")})"
             : (Res("DetFieldExpiry") ?? "Термін дії");
-        public string SecondaryDocumentRetryPreviewKey => !string.IsNullOrWhiteSpace(PassportPage2FilePath)
+        public string SecondaryDocumentRetryPreviewKey => UsesPassportPage2SecondaryDocument
             ? "passport_page2"
             : "visa";
-        public string SecondaryDocumentAIValidationKey => HasPassportPage2SecondaryDocument
+        public string SecondaryDocumentAIValidationKey => UsesPassportPage2SecondaryDocument
             ? (IsEuIdCardEmployee ? "id_card_back" : "passport2")
             : "visa";
-        public string SecondaryDocumentSourceDocumentKey => HasPassportPage2SecondaryDocument
+        public string SecondaryDocumentSourceDocumentKey => UsesPassportPage2SecondaryDocument
             ? (IsEuIdCardEmployee ? "id_card_back" : "passport2")
             : "visa";
 
@@ -751,6 +782,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand EditProfileCommand { get; }
         public ICommand SaveProfileCommand { get; }
         public ICommand CancelEditCommand { get; }
+        public ICommand ToggleDocumentProfileEditorCommand { get; }
         public ICommand ReplacePassportCommand { get; }
         public ICommand ReplaceVisaCommand { get; }
         public ICommand ReplaceInsuranceCommand { get; }
@@ -918,6 +950,160 @@ namespace Win11DesktopApp.ViewModels
             new ObservableCollection<InsuranceCompanyOption>(InsuranceCompanyCatalog.All);
         public ObservableCollection<EducationOption> EducationOptions { get; } =
             new ObservableCollection<EducationOption>(EducationCatalog.All);
+        public ObservableCollection<DocumentProfileOption> DocumentProfileOptions { get; } =
+            new ObservableCollection<DocumentProfileOption>
+            {
+                new() { Key = "passport_only", DisplayName = "Паспорт", EmployeeType = "passport_only" },
+                new() { Key = "passport_page2", DisplayName = "Паспорт + паспорт 2", EmployeeType = "passport_only", RequiresPassportPage2 = true },
+                new() { Key = "passport_insurance", DisplayName = "Паспорт + страховка", EmployeeType = "eu_citizen", RequiresInsurance = true },
+                new() { Key = "passport_page2_insurance", DisplayName = "Паспорт + паспорт 2 + страховка", EmployeeType = "eu_citizen", RequiresInsurance = true, RequiresPassportPage2 = true },
+                new() { Key = "eu_id_card_insurance", DisplayName = "ID-карта ЄС + страховка", EmployeeType = "eu_citizen", EuDocumentType = "id_card", RequiresInsurance = true },
+                new() { Key = "eu_id_card_page2_insurance", DisplayName = "ID-карта ЄС + стор. 2 + страховка", EmployeeType = "eu_citizen", EuDocumentType = "id_card", RequiresInsurance = true, RequiresPassportPage2 = true },
+                new() { Key = "passport_visa_insurance", DisplayName = "Паспорт + віза + страховка", EmployeeType = "visa", RequiresInsurance = true, RequiresVisa = true },
+                new() { Key = "passport_visa_id_card_insurance", DisplayName = "Паспорт + ID-карта + страховка", EmployeeType = "visa", VisaDocType = "id_card", RequiresInsurance = true, RequiresVisa = true },
+                new() { Key = "passport_visa_work_permit_insurance", DisplayName = "Паспорт + віза + дозвіл + страховка", EmployeeType = "work_permit", RequiresInsurance = true, RequiresVisa = true, RequiresWorkPermit = true }
+            };
+
+        private bool _isUpdatingDocumentProfileFlags;
+        private bool _profileHasInsurance;
+        public bool ProfileHasInsurance
+        {
+            get => _profileHasInsurance;
+            set
+            {
+                if (SetProperty(ref _profileHasInsurance, value))
+                {
+                    if (!value)
+                    {
+                        ProfileHasVisa = false;
+                        ProfileHasWorkPermit = false;
+                    }
+
+                    ApplyDocumentProfileFlags();
+                }
+            }
+        }
+
+        private bool _profileHasVisa;
+        public bool ProfileHasVisa
+        {
+            get => _profileHasVisa;
+            set
+            {
+                if (SetProperty(ref _profileHasVisa, value))
+                {
+                    if (value)
+                        ProfileHasInsurance = true;
+                    else
+                        ProfileHasWorkPermit = false;
+
+                    ApplyDocumentProfileFlags();
+                }
+            }
+        }
+
+        private bool _profileHasWorkPermit;
+        public bool ProfileHasWorkPermit
+        {
+            get => _profileHasWorkPermit;
+            set
+            {
+                if (SetProperty(ref _profileHasWorkPermit, value))
+                {
+                    if (value)
+                    {
+                        ProfileHasVisa = true;
+                        ProfileHasInsurance = true;
+                    }
+
+                    ApplyDocumentProfileFlags();
+                }
+            }
+        }
+
+        private bool _profileHasPassportPage2;
+        public bool ProfileHasPassportPage2
+        {
+            get => _profileHasPassportPage2;
+            set
+            {
+                if (SetProperty(ref _profileHasPassportPage2, value))
+                    ApplyDocumentProfileFlags();
+            }
+        }
+
+        public bool ProfileIsPassportDocument
+        {
+            get => !ProfileIsIdCardDocument;
+            set
+            {
+                if (value)
+                    ProfileIsIdCardDocument = false;
+            }
+        }
+
+        private bool _profileIsIdCardDocument;
+        public bool ProfileIsIdCardDocument
+        {
+            get => _profileIsIdCardDocument;
+            set
+            {
+                if (SetProperty(ref _profileIsIdCardDocument, value))
+                {
+                    OnPropertyChanged(nameof(ProfileIsPassportDocument));
+                    if (value)
+                        ProfileHasInsurance = true;
+
+                    ApplyDocumentProfileFlags();
+                }
+            }
+        }
+
+        public bool ProfileVisaIsSticker
+        {
+            get => !ProfileVisaIsIdCard;
+            set
+            {
+                if (value)
+                    ProfileVisaIsIdCard = false;
+            }
+        }
+
+        private bool _profileVisaIsIdCard;
+        public bool ProfileVisaIsIdCard
+        {
+            get => _profileVisaIsIdCard;
+            set
+            {
+                if (SetProperty(ref _profileVisaIsIdCard, value))
+                {
+                    OnPropertyChanged(nameof(ProfileVisaIsSticker));
+                    ApplyDocumentProfileFlags();
+                }
+            }
+        }
+
+        public string ProfileSecondDocumentLabel => ProfileIsIdCardDocument
+            ? (Res("ChkVisaPage2") ?? "ID-карта (стор. 2)")
+            : (Res("ChkPassportPage2") ?? "Паспорт (стор. 2)");
+
+        private bool _isInitializingSelectedDocumentProfileOption;
+        private DocumentProfileOption? _selectedDocumentProfileOption;
+        public DocumentProfileOption? SelectedDocumentProfileOption
+        {
+            get => _selectedDocumentProfileOption;
+            set
+            {
+                if (SetProperty(ref _selectedDocumentProfileOption, value) && value != null)
+                {
+                    if (_isInitializingSelectedDocumentProfileOption)
+                        return;
+
+                    ApplyDocumentProfileOption(value);
+                    OnPropertyChanged(nameof(Data));
+                }
+            }
+        }
 
         private bool _isInitializingSelectedPosition;
         private Position? _selectedPosition;
@@ -1013,7 +1199,7 @@ namespace Win11DesktopApp.ViewModels
 
             if (Data.EmployeeType != "passport_only")
             {
-                fields.AddRange(new[] { Data.VisaNumber, Data.VisaExpiry, Data.InsuranceNumber, Data.InsuranceExpiry });
+                fields.AddRange(new[] { Data.VisaNumber, Data.VisaStartDate, Data.VisaExpiry, Data.InsuranceNumber, Data.InsuranceExpiry });
             }
 
             int filled = fields.Count(f => !string.IsNullOrWhiteSpace(f));
@@ -1057,7 +1243,8 @@ namespace Win11DesktopApp.ViewModels
             TemplateService? templateService = null,
             DocumentGenerationService? documentGenerationService = null,
             TagCatalogService? tagCatalogService = null,
-            AiWindowFactory? aiWindowFactory = null)
+            AiWindowFactory? aiWindowFactory = null,
+            AppStatisticsService? appStatisticsService = null)
         {
             _firmName = firmName;
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
@@ -1071,6 +1258,7 @@ namespace Win11DesktopApp.ViewModels
             _documentGenerationService = documentGenerationService ?? throw new InvalidOperationException("DocumentGenerationService is not initialized.");
             _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
             _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
+            _appStatisticsService = appStatisticsService ?? throw new InvalidOperationException("AppStatisticsService is not initialized.");
             _isReadOnlyMode = isReadOnlyMode;
             _employeeFolder = Directory.Exists(employeeFolder)
                 ? employeeFolder
@@ -1083,6 +1271,7 @@ namespace Win11DesktopApp.ViewModels
             Data.Status = StatusHelper.Normalize(Data.Status);
             NormalizeInsuranceCompanyFields();
             NormalizeEducationFields();
+            NormalizeDocumentProfileFields();
             NotifyBankAccountStateChanged();
             TryAutofillBankName(Data.BankAccountNumber);
             RefreshDocuments();
@@ -1117,14 +1306,15 @@ namespace Win11DesktopApp.ViewModels
             }, _ => !IsReadOnlyMode && !IsArchiveMode);
             SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync(), _ => !IsReadOnlyMode);
             CancelEditCommand = new RelayCommand(o => CancelEdit(), _ => !IsReadOnlyMode);
+            ToggleDocumentProfileEditorCommand = new RelayCommand(o => IsDocumentProfileEditorOpen = !IsDocumentProfileEditorOpen, _ => IsEditMode && !IsReadOnlyMode);
 
             ReplacePassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport"), _ => !IsReadOnlyMode);
-            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync(HasPassportPage2SecondaryDocument ? "passport_page2" : "visa"), _ => !IsReadOnlyMode);
+            ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync(UsesPassportPage2SecondaryDocument ? "passport_page2" : "visa"), _ => !IsReadOnlyMode);
             ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"), _ => !IsReadOnlyMode);
             ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"), _ => !IsReadOnlyMode);
 
             OpenPassportCommand = new RelayCommand(o => OpenFile(PassportFilePath), o => HasPassport);
-            OpenVisaCommand = new RelayCommand(o => OpenFile(SecondaryDocumentFilePath), o => HasSecondaryDocument);
+            OpenVisaCommand = new RelayCommand(o => OpenFile(SecondaryDocumentFilePath), o => HasSecondaryDocumentFile);
             OpenInsuranceCommand = new RelayCommand(o => OpenFile(InsuranceFilePath), o => HasInsurance);
             OpenPhotoCommand = new RelayCommand(o => OpenFile(PhotoFilePath), o => HasPhoto);
             RetryPreviewCommand = new RelayCommand(o =>
@@ -1447,6 +1637,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 SetBusyState(true, Res("EditorSaving") ?? "Збереження...");
                 NormalizeInsuranceCompanyFields();
+                NormalizeDocumentProfileFields();
                 var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
 
                 if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
@@ -1485,6 +1676,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 Data = data;
                 NormalizeInsuranceCompanyFields();
+                NormalizeDocumentProfileFields();
                 OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
                 OnPropertyChanged(nameof(Data));
                 OnPropertyChanged(nameof(FullName));
@@ -1778,12 +1970,15 @@ namespace Win11DesktopApp.ViewModels
             InsurancePreviewState = !HasInsurance ? DocPreviewState.Empty : InsuranceIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
             WorkPermitPreviewState = !HasWorkPermit ? DocPreviewState.Empty : WorkPermitIsPdf ? DocPreviewState.Loading : DocPreviewState.Ready;
 
+            OnPropertyChanged(nameof(RequiresSecondaryDocument));
+            OnPropertyChanged(nameof(UsesPassportPage2SecondaryDocument));
             OnPropertyChanged(nameof(IsEuIdCardEmployee));
             OnPropertyChanged(nameof(HasPassportPage2SecondaryDocument));
             OnPropertyChanged(nameof(ShowVisaDocumentCard));
             OnPropertyChanged(nameof(ShowIdCardSecondSideCard));
             OnPropertyChanged(nameof(SecondaryDocumentDisplayName));
             OnPropertyChanged(nameof(HasSecondaryDocument));
+            OnPropertyChanged(nameof(HasSecondaryDocumentFile));
             OnPropertyChanged(nameof(SecondaryDocumentFilePath));
             OnPropertyChanged(nameof(SecondaryDocumentPreviewPath));
             OnPropertyChanged(nameof(SecondaryDocumentPreviewState));
@@ -2223,6 +2418,195 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(HighestEducationDisplay));
         }
 
+        private void NormalizeDocumentProfileFields()
+        {
+            NormalizeDocumentProfileFields(Data);
+        }
+
+        private void NormalizeDocumentProfileFields(EmployeeData data)
+        {
+            var option = DocumentProfileOptions.FirstOrDefault(o =>
+                string.Equals(o.Key, data.DocumentProfileType, StringComparison.OrdinalIgnoreCase))
+                ?? DocumentProfileOptions.FirstOrDefault(o =>
+                    string.Equals(o.Key, DeriveDocumentProfileKey(data), StringComparison.OrdinalIgnoreCase))
+                ?? DocumentProfileOptions.First();
+
+            data.DocumentProfileType = option.Key;
+            data.EmployeeType = option.EmployeeType;
+            data.EuDocumentType = option.EuDocumentType;
+            data.VisaDocType = option.VisaDocType;
+
+            _isUpdatingDocumentProfileFlags = true;
+            try
+            {
+                ProfileHasInsurance = option.RequiresInsurance;
+                ProfileHasVisa = option.RequiresVisa;
+                ProfileHasWorkPermit = option.RequiresWorkPermit;
+                ProfileHasPassportPage2 = option.RequiresPassportPage2;
+                ProfileIsIdCardDocument = string.Equals(option.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase);
+                ProfileVisaIsIdCard = string.Equals(option.VisaDocType, "id_card", StringComparison.OrdinalIgnoreCase);
+
+                _isInitializingSelectedDocumentProfileOption = true;
+                SelectedDocumentProfileOption = option;
+            }
+            finally
+            {
+                _isInitializingSelectedDocumentProfileOption = false;
+                _isUpdatingDocumentProfileFlags = false;
+            }
+
+            NotifyDocumentProfileStateChanged();
+            NotifyDocumentProfileFlagStateChanged();
+        }
+
+        private string DeriveDocumentProfileKey(EmployeeData data)
+        {
+            if (string.Equals(data.EmployeeType, "work_permit", StringComparison.OrdinalIgnoreCase))
+                return "passport_visa_work_permit_insurance";
+            if (string.Equals(data.EmployeeType, "passport_only", StringComparison.OrdinalIgnoreCase))
+                return !string.IsNullOrWhiteSpace(data.Files?.PassportPage2) ? "passport_page2" : "passport_only";
+            if (string.Equals(data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase))
+                    return !string.IsNullOrWhiteSpace(data.Files?.PassportPage2)
+                        ? "eu_id_card_page2_insurance"
+                        : "eu_id_card_insurance";
+                if (!string.IsNullOrWhiteSpace(data.Files?.PassportPage2))
+                    return "passport_page2_insurance";
+                return "passport_insurance";
+            }
+
+            return string.Equals(data.VisaDocType, "id_card", StringComparison.OrdinalIgnoreCase)
+                ? "passport_visa_id_card_insurance"
+                : "passport_visa_insurance";
+        }
+
+        private void ApplyDocumentProfileOption(DocumentProfileOption option)
+        {
+            Data.DocumentProfileType = option.Key;
+            Data.EmployeeType = option.EmployeeType;
+            Data.EuDocumentType = option.EuDocumentType;
+            Data.VisaDocType = option.VisaDocType;
+            SetDocumentProfileFlagsFromOption(option);
+            NotifyDocumentProfileStateChanged();
+        }
+
+        private void ApplyDocumentProfileFlags()
+        {
+            if (_isUpdatingDocumentProfileFlags)
+                return;
+
+            _isUpdatingDocumentProfileFlags = true;
+            try
+            {
+                if (ProfileHasWorkPermit)
+                {
+                    _profileHasVisa = true;
+                    _profileHasInsurance = true;
+                }
+
+                if (ProfileHasVisa)
+                    _profileHasInsurance = true;
+
+                if (ProfileIsIdCardDocument)
+                    _profileHasInsurance = true;
+
+                var option = ResolveDocumentProfileOptionFromFlags();
+                Data.DocumentProfileType = option.Key;
+                Data.EmployeeType = option.EmployeeType;
+                Data.EuDocumentType = option.EuDocumentType;
+                Data.VisaDocType = option.VisaDocType;
+
+                _isInitializingSelectedDocumentProfileOption = true;
+                SelectedDocumentProfileOption = option;
+            }
+            finally
+            {
+                _isInitializingSelectedDocumentProfileOption = false;
+                _isUpdatingDocumentProfileFlags = false;
+            }
+
+            NotifyDocumentProfileFlagStateChanged();
+            NotifyDocumentProfileStateChanged();
+            OnPropertyChanged(nameof(Data));
+        }
+
+        private DocumentProfileOption ResolveDocumentProfileOptionFromFlags()
+        {
+            var key = BuildDocumentProfileKeyFromFlags();
+            return DocumentProfileOptions.FirstOrDefault(o => string.Equals(o.Key, key, StringComparison.OrdinalIgnoreCase))
+                ?? DocumentProfileOptions.First();
+        }
+
+        private string BuildDocumentProfileKeyFromFlags()
+        {
+            if (ProfileHasWorkPermit)
+                return "passport_visa_work_permit_insurance";
+            if (ProfileHasVisa)
+                return ProfileVisaIsIdCard ? "passport_visa_id_card_insurance" : "passport_visa_insurance";
+            if (ProfileIsIdCardDocument)
+                return ProfileHasPassportPage2 ? "eu_id_card_page2_insurance" : "eu_id_card_insurance";
+            if (ProfileHasInsurance)
+                return ProfileHasPassportPage2 ? "passport_page2_insurance" : "passport_insurance";
+            return ProfileHasPassportPage2 ? "passport_page2" : "passport_only";
+        }
+
+        private void SetDocumentProfileFlagsFromOption(DocumentProfileOption option)
+        {
+            _isUpdatingDocumentProfileFlags = true;
+            try
+            {
+                ProfileHasInsurance = option.RequiresInsurance;
+                ProfileHasVisa = option.RequiresVisa;
+                ProfileHasWorkPermit = option.RequiresWorkPermit;
+                ProfileHasPassportPage2 = option.RequiresPassportPage2;
+                ProfileIsIdCardDocument = string.Equals(option.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase);
+                ProfileVisaIsIdCard = string.Equals(option.VisaDocType, "id_card", StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                _isUpdatingDocumentProfileFlags = false;
+            }
+
+            NotifyDocumentProfileFlagStateChanged();
+        }
+
+        private void NotifyDocumentProfileStateChanged()
+        {
+            OnPropertyChanged(nameof(RequiresSecondaryDocument));
+            OnPropertyChanged(nameof(UsesPassportPage2SecondaryDocument));
+            OnPropertyChanged(nameof(IsWorkPermitType));
+            OnPropertyChanged(nameof(IsEuIdCardEmployee));
+            OnPropertyChanged(nameof(HasPassportPage2SecondaryDocument));
+            OnPropertyChanged(nameof(ShowVisaDocumentCard));
+            OnPropertyChanged(nameof(ShowIdCardSecondSideCard));
+            OnPropertyChanged(nameof(SecondaryDocumentDisplayName));
+            OnPropertyChanged(nameof(HasSecondaryDocument));
+            OnPropertyChanged(nameof(HasSecondaryDocumentFile));
+            OnPropertyChanged(nameof(SecondaryDocumentFilePath));
+            OnPropertyChanged(nameof(SecondaryDocumentPreviewPath));
+            OnPropertyChanged(nameof(SecondaryDocumentPreviewState));
+            OnPropertyChanged(nameof(SecondaryDocumentNumberLabel));
+            OnPropertyChanged(nameof(SecondaryDocumentAuthorityLabel));
+            OnPropertyChanged(nameof(SecondaryDocumentExpiryLabel));
+            OnPropertyChanged(nameof(SecondaryDocumentRetryPreviewKey));
+            OnPropertyChanged(nameof(SecondaryDocumentAIValidationKey));
+            OnPropertyChanged(nameof(SecondaryDocumentSourceDocumentKey));
+        }
+
+        private void NotifyDocumentProfileFlagStateChanged()
+        {
+            OnPropertyChanged(nameof(ProfileHasInsurance));
+            OnPropertyChanged(nameof(ProfileHasVisa));
+            OnPropertyChanged(nameof(ProfileHasWorkPermit));
+            OnPropertyChanged(nameof(ProfileHasPassportPage2));
+            OnPropertyChanged(nameof(ProfileIsPassportDocument));
+            OnPropertyChanged(nameof(ProfileIsIdCardDocument));
+            OnPropertyChanged(nameof(ProfileSecondDocumentLabel));
+            OnPropertyChanged(nameof(ProfileVisaIsSticker));
+            OnPropertyChanged(nameof(ProfileVisaIsIdCard));
+        }
+
         private bool EnsureEmployeeFolderAvailable(string source, bool notifyUser = false)
         {
             if (!string.IsNullOrWhiteSpace(_employeeFolder) && Directory.Exists(_employeeFolder))
@@ -2431,7 +2815,7 @@ namespace Win11DesktopApp.ViewModels
 - Birth Date: {d.BirthDate}
 - Employee Type: {d.EmployeeType} (visa = needs visa, eu_citizen = EU citizen, work_permit = needs work permit)
 - Passport Number: {d.PassportNumber}, Authority: {d.PassportAuthority}, City: {d.PassportCity}, Country: {d.PassportCountry}, Citizenship: {d.Citizenship}, Issuing Country: {d.IssuingCountry}, Expiry: {d.PassportExpiry}
-- Visa Number: {d.VisaNumber}, Authority: {d.VisaAuthority}, Type: {d.VisaType}, Expiry: {d.VisaExpiry}
+- Visa Number: {d.VisaNumber}, Authority: {d.VisaAuthority}, Type: {d.VisaType}, Start/Valid From: {d.VisaStartDate}, Expiry: {d.VisaExpiry}
 - Insurance: {d.InsuranceCompanyShort}, Number: {d.InsuranceNumber}, Expiry: {d.InsuranceExpiry}
 - Work Permit: Name={d.WorkPermitName}, Number={d.WorkPermitNumber}, Type={d.WorkPermitType}, Authority={d.WorkPermitAuthority}, Expiry={d.WorkPermitExpiry}
 - Position (CZ-ISCO tag): {d.PositionTag}, Position Number: {d.PositionNumber}
@@ -2550,12 +2934,41 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             Dictionary<string, string> permitData)
         {
             var items = new List<AIFieldCheckItem>();
+            BuildDocumentKindItems(items, IsEuIdCardEmployee ? "id_card" : "passport", passportData);
+            BuildDocumentKindItems(items, SecondaryDocumentSourceDocumentKey, visaData);
+            BuildDocumentKindItems(items, "insurance", insuranceData);
+            BuildDocumentKindItems(items, "permit", permitData);
             BuildFieldComparisonItems(items, passportData, visaData, insuranceData, permitData);
             BuildOwnershipItems(items, visaData, insuranceData, permitData);
             BuildCrossDocumentItems(items, passportData, visaData, insuranceData, permitData);
 
             AIValidationItems = new ObservableCollection<AIFieldCheckItem>(items);
             RaiseAIValidationCollectionsChanged();
+        }
+
+        private void BuildDocumentKindItems(
+            List<AIFieldCheckItem> items,
+            string expectedDocKey,
+            Dictionary<string, string> docData)
+        {
+            var kind = AIScanPrompts.GetDocumentKind(docData);
+            if (string.IsNullOrWhiteSpace(kind) || AIScanPrompts.IsDocumentKindCompatible(expectedDocKey, docData))
+                return;
+
+            items.Add(new AIFieldCheckItem
+            {
+                FieldKey = $"_document_kind_{expectedDocKey}",
+                FieldDisplayName = Res("AIValidationDocumentKindTitle") ?? "Document type",
+                SourceDocument = expectedDocKey,
+                SourceDocumentDisplay = GetSourceDocumentDisplayName(expectedDocKey),
+                CurrentValue = GetSourceDocumentDisplayName(expectedDocKey),
+                SuggestedValue = kind,
+                Severity = "warning",
+                Message = string.Format(
+                    Res("AIValidationDocumentKindMismatchMessage") ?? "AI recognized a different document type: {0}",
+                    kind),
+                CanAutofill = false
+            });
         }
 
         private void BuildFieldComparisonItems(
@@ -2596,6 +3009,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             CompareAIField(items, passportData, "IssuingCountry", Data.IssuingCountry, Res("HistFieldIssuingCountry") ?? "Issuing Country", "passport");
 
             CompareAIField(items, visaData, "VisaNumber", Data.VisaNumber, Res("HistFieldVisaNum") ?? "Visa Number", SecondaryDocumentSourceDocumentKey);
+            if (ShowVisaDocumentCard)
+                CompareAIField(items, visaData, "VisaStartDate", Data.VisaStartDate, Res("HistFieldVisaStartDate") ?? "Visa Start Date", SecondaryDocumentSourceDocumentKey);
             CompareAIField(items, visaData, "VisaExpiry", Data.VisaExpiry, Res("HistFieldVisaExp") ?? "Visa Expiry", SecondaryDocumentSourceDocumentKey);
             CompareAIField(items, visaData, "VisaAuthority", Data.VisaAuthority, Res("HistFieldVisaAuthority") ?? "Visa Authority", SecondaryDocumentSourceDocumentKey);
             if (!IsEuIdCardEmployee)
@@ -2749,6 +3164,9 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             if (!TryGetNonEmpty(leftDoc, fieldKey, out var leftValue) || !TryGetNonEmpty(rightDoc, fieldKey, out var rightValue))
                 return;
 
+            if (LooksLikeVisaNumberUsedAsPassportNumber(fieldKey, rightDoc, rightValue))
+                return;
+
             if (ValuesMatch(fieldKey, leftValue, rightValue))
                 return;
 
@@ -2780,18 +3198,30 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
             var details = new List<string>();
             var mismatchCount = 0;
+            var hasLeftFirstName = TryGetNonEmpty(leftDoc, "FirstName", out var leftFirstName);
+            var hasRightFirstName = TryGetNonEmpty(rightDoc, "FirstName", out var rightFirstName);
+            var hasLeftLastName = TryGetNonEmpty(leftDoc, "LastName", out var leftLastName);
+            var hasRightLastName = TryGetNonEmpty(rightDoc, "LastName", out var rightLastName);
+            var isSwappedNameMatch = hasLeftFirstName
+                && hasRightFirstName
+                && hasLeftLastName
+                && hasRightLastName
+                && NamesMatch(leftFirstName, rightLastName)
+                && NamesMatch(leftLastName, rightFirstName);
 
-            if (TryGetNonEmpty(leftDoc, "FirstName", out var leftFirstName)
-                && TryGetNonEmpty(rightDoc, "FirstName", out var rightFirstName)
-                && !NamesMatch(leftFirstName, rightFirstName))
+            if (hasLeftFirstName
+                && hasRightFirstName
+                && !NamesMatch(leftFirstName, rightFirstName)
+                && !isSwappedNameMatch)
             {
                 mismatchCount++;
                 details.Add($"FirstName: {leftFirstName} vs {rightFirstName}");
             }
 
-            if (TryGetNonEmpty(leftDoc, "LastName", out var leftLastName)
-                && TryGetNonEmpty(rightDoc, "LastName", out var rightLastName)
-                && !NamesMatch(leftLastName, rightLastName))
+            if (hasLeftLastName
+                && hasRightLastName
+                && !NamesMatch(leftLastName, rightLastName)
+                && !isSwappedNameMatch)
             {
                 mismatchCount++;
                 details.Add($"LastName: {leftLastName} vs {rightLastName}");
@@ -2840,6 +3270,40 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             var suggested = suggestedValue?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(suggested))
                 return;
+
+            if (IsUnreliableAiSuggestion(fieldKey, suggested, current, sourceDocument, extracted))
+            {
+                items.Add(new AIFieldCheckItem
+                {
+                    FieldKey = $"_suspicious_{fieldKey}",
+                    FieldDisplayName = displayName,
+                    SourceDocument = sourceDocument,
+                    SourceDocumentDisplay = GetSourceDocumentDisplayName(sourceDocument),
+                    CurrentValue = current,
+                    SuggestedValue = suggested,
+                    Severity = "warning",
+                    Message = string.Format(Res("AIValidationSuspiciousReadMessage") ?? "AI may have read this value unreliably: {0}", suggested),
+                    CanAutofill = false
+                });
+                return;
+            }
+
+            if (AIScanPrompts.IsLowConfidenceField(extracted, fieldKey))
+            {
+                items.Add(new AIFieldCheckItem
+                {
+                    FieldKey = $"_low_confidence_{fieldKey}",
+                    FieldDisplayName = displayName,
+                    SourceDocument = sourceDocument,
+                    SourceDocumentDisplay = GetSourceDocumentDisplayName(sourceDocument),
+                    CurrentValue = current,
+                    SuggestedValue = suggested,
+                    Severity = "warning",
+                    Message = string.Format(Res("AIValidationLowConfidenceMessage") ?? "AI is not confident enough to autofill this value: {0}", suggested),
+                    CanAutofill = false
+                });
+                return;
+            }
 
             if (IsSuspiciousDocumentValue(fieldKey, suggested))
             {
@@ -3074,6 +3538,74 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             return false;
         }
 
+        private static bool IsUnreliableAiSuggestion(
+            string fieldKey,
+            string suggested,
+            string current,
+            string sourceDocument,
+            Dictionary<string, string> extracted)
+        {
+            if (AIScanPrompts.IsSuspiciousFieldValue(extracted, fieldKey, suggested, current))
+                return true;
+
+            if (LooksLikeVisaNumberUsedAsPassportNumber(fieldKey, extracted, suggested))
+                return true;
+
+            return false;
+        }
+
+        private static bool IsInvalidAiDateValue(string fieldKey, string suggested, string current)
+        {
+            if (!IsDateField(fieldKey) || string.IsNullOrWhiteSpace(suggested))
+                return false;
+
+            var suggestedDate = DateParsingHelper.TryParseDate(suggested);
+            if (suggestedDate == null)
+                return true;
+
+            if (string.Equals(fieldKey, "BirthDate", StringComparison.OrdinalIgnoreCase))
+                return suggestedDate.Value.Date > DateTime.Today || suggestedDate.Value.Year < 1900;
+
+            if (fieldKey.EndsWith("Expiry", StringComparison.OrdinalIgnoreCase))
+            {
+                if (suggestedDate.Value.Year < 2000)
+                    return true;
+
+                var currentDate = DateParsingHelper.TryParseDate(current);
+                if (currentDate != null && currentDate.Value.Date > DateTime.Today && suggestedDate.Value.Date < DateTime.Today)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsDateField(string fieldKey)
+        {
+            return fieldKey.EndsWith("Expiry", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("IssueDate", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("StartDate", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "BirthDate", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LooksLikeVisaNumberUsedAsPassportNumber(
+            string fieldKey,
+            Dictionary<string, string> extracted,
+            string suggested)
+        {
+            if (!string.Equals(fieldKey, "PassportNumber", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var normalizedSuggested = NormalizeDocumentNumber(suggested);
+            if (string.IsNullOrWhiteSpace(normalizedSuggested))
+                return false;
+
+            if (extracted.TryGetValue("VisaNumber", out var visaNumber)
+                && string.Equals(normalizedSuggested, NormalizeDocumentNumber(visaNumber), StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return Regex.IsMatch(normalizedSuggested, @"^\d{9}$");
+        }
+
         private string GetSourceDocumentDisplayName(string sourceDocument)
         {
             return sourceDocument switch
@@ -3108,6 +3640,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 case "Citizenship": Data.Citizenship = item.SuggestedValue; break;
                 case "IssuingCountry": Data.IssuingCountry = item.SuggestedValue; break;
                 case "VisaNumber": Data.VisaNumber = item.SuggestedValue; break;
+                case "VisaStartDate": Data.VisaStartDate = item.SuggestedValue; break;
                 case "VisaExpiry": Data.VisaExpiry = item.SuggestedValue; break;
                 case "VisaAuthority": Data.VisaAuthority = item.SuggestedValue; break;
                 case "VisaType": Data.VisaType = item.SuggestedValue; break;

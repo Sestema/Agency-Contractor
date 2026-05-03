@@ -485,7 +485,7 @@ namespace Win11DesktopApp.Services
 
             if (!string.IsNullOrEmpty(templateDirectory) && Directory.Exists(templateDirectory))
             {
-                var deleted = TryDeleteTemplateDirectory(templateDirectory);
+                var deleted = await TryDeleteTemplateDirectoryAsync(templateDirectory);
                 if (!deleted && Directory.Exists(templateDirectory))
                 {
                     var message = $"Folder still exists after delete, scheduling deferred cleanup: {templateDirectory}";
@@ -496,7 +496,7 @@ namespace Win11DesktopApp.Services
                         try
                         {
                             await System.Threading.Tasks.Task.Delay(15000);
-                            if (TryDeleteTemplateDirectory(templateDirectory))
+                            if (await TryDeleteTemplateDirectoryAsync(templateDirectory))
                                 await PendingCleanupService.RemoveAsync(templateDirectory);
                         }
                         catch (Exception ex)
@@ -529,26 +529,37 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private static bool TryDeleteTemplateDirectory(string templateDirectory)
+        private static async Task<bool> TryDeleteTemplateDirectoryAsync(string templateDirectory)
         {
+            if (!Directory.Exists(templateDirectory))
+                return true;
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            Thread.Sleep(300);
+            await Task.Delay(300);
 
-            if (TryBulkDeleteTemplateDirectory(templateDirectory))
+            NormalizeAttributesRecursive(templateDirectory);
+
+            if (await TryBulkDeleteTemplateDirectoryAsync(templateDirectory))
                 return true;
 
-            TryDeleteTemplateFilesIndividually(templateDirectory);
-            TryRemoveEmptyTemplateDirectories(templateDirectory);
+            TryDeleteTemplateFilesIndividually(templateDirectory, logWarnings: false);
+            TryRemoveEmptyTemplateDirectories(templateDirectory, logWarnings: false);
 
             if (Directory.Exists(templateDirectory))
-                TryForceDeleteTemplateDirectory(templateDirectory);
+            {
+                if (TryForceDeleteTemplateDirectory(templateDirectory))
+                    return true;
+
+                LoggingService.LogWarning("TemplateService.TryDeleteTemplateDirectory",
+                    $"Template folder cleanup deferred because Windows still denies access: {templateDirectory}");
+            }
 
             return !Directory.Exists(templateDirectory);
         }
 
-        private static bool TryBulkDeleteTemplateDirectory(string templateDirectory)
+        private static async Task<bool> TryBulkDeleteTemplateDirectoryAsync(string templateDirectory)
         {
             Exception? lastError = null;
             for (int attempt = 0; attempt < 5; attempt++)
@@ -558,8 +569,7 @@ namespace Win11DesktopApp.Services
                     if (!Directory.Exists(templateDirectory))
                         return true;
 
-                    foreach (var file in Directory.GetFiles(templateDirectory, "*", SearchOption.AllDirectories))
-                        File.SetAttributes(file, FileAttributes.Normal);
+                    NormalizeAttributesRecursive(templateDirectory);
 
                     Directory.Delete(templateDirectory, true);
                     return true;
@@ -567,17 +577,17 @@ namespace Win11DesktopApp.Services
                 catch (Exception ex)
                 {
                     lastError = ex;
-                    Thread.Sleep(400 * (attempt + 1));
+                    await Task.Delay(400 * (attempt + 1));
                 }
             }
 
             if (Directory.Exists(templateDirectory) && lastError != null)
-                LoggingService.LogWarning("TemplateService.TryBulkDeleteTemplateDirectory", $"Bulk delete deferred for '{templateDirectory}': {lastError.Message}");
+                LoggingService.LogInfo("TemplateService.TryBulkDeleteTemplateDirectory", $"Bulk delete fallback needed for '{templateDirectory}': {lastError.Message}");
 
             return false;
         }
 
-        private static void TryDeleteTemplateFilesIndividually(string templateDirectory)
+        private static void TryDeleteTemplateFilesIndividually(string templateDirectory, bool logWarnings = true)
         {
             try
             {
@@ -589,23 +599,25 @@ namespace Win11DesktopApp.Services
                     }
                     catch (Exception ex)
                     {
-                        LoggingService.LogWarning("TemplateService.TryDeleteTemplateFilesIndividually", $"Cannot delete {file}: {ex.Message}");
+                        if (logWarnings)
+                            LoggingService.LogWarning("TemplateService.TryDeleteTemplateFilesIndividually", $"Cannot delete {file}: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("TemplateService.TryDeleteTemplateFilesIndividually", ex.Message);
+                if (logWarnings)
+                    LoggingService.LogWarning("TemplateService.TryDeleteTemplateFilesIndividually", ex.Message);
             }
         }
 
-        private static void TryRemoveEmptyTemplateDirectories(string templateDirectory)
+        private static void TryRemoveEmptyTemplateDirectories(string templateDirectory, bool logWarnings = true)
         {
             if (!Directory.Exists(templateDirectory))
                 return;
 
             foreach (var subDirectory in Directory.GetDirectories(templateDirectory))
-                TryRemoveEmptyTemplateDirectories(subDirectory);
+                TryRemoveEmptyTemplateDirectories(subDirectory, logWarnings);
 
             try
             {
@@ -618,11 +630,12 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("TemplateService.TryRemoveEmptyTemplateDirectories", $"Cannot delete {templateDirectory}: {ex.Message}");
+                if (logWarnings)
+                    LoggingService.LogWarning("TemplateService.TryRemoveEmptyTemplateDirectories", $"Cannot delete {templateDirectory}: {ex.Message}");
             }
         }
 
-        private static void TryForceDeleteTemplateDirectory(string templateDirectory)
+        private static bool TryForceDeleteTemplateDirectory(string templateDirectory)
         {
             try
             {
@@ -631,14 +644,69 @@ namespace Win11DesktopApp.Services
                     FileName = "cmd.exe",
                     Arguments = $"/c rd /s /q \"{templateDirectory}\"",
                     CreateNoWindow = true,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    RedirectStandardError = true
                 };
 
-                System.Diagnostics.Process.Start(psi)?.WaitForExit(10000);
+                var process = System.Diagnostics.Process.Start(psi);
+                if (process != null)
+                {
+                    process.WaitForExit(10000);
+                    if (!Directory.Exists(templateDirectory))
+                    {
+                        LoggingService.LogInfo("TemplateService", $"Force-deleted via cmd: {templateDirectory}");
+                        return true;
+                    }
+
+                    var error = process.StandardError.ReadToEnd();
+                    if (!string.IsNullOrWhiteSpace(error))
+                        LoggingService.LogWarning("TemplateService.TryForceDeleteTemplateDirectory", error.Trim());
+                }
             }
             catch (Exception ex)
             {
                 LoggingService.LogWarning("TemplateService.TryForceDeleteTemplateDirectory", $"Force delete failed: {ex.Message}");
+            }
+
+            return !Directory.Exists(templateDirectory);
+        }
+
+        private static void NormalizeAttributesRecursive(string directory)
+        {
+            if (!Directory.Exists(directory))
+                return;
+
+            try
+            {
+                foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
+                    catch
+                    {
+                        // OneDrive may temporarily deny attribute changes; deletion fallbacks handle that.
+                    }
+                }
+
+                foreach (var subDirectory in Directory.GetDirectories(directory, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        File.SetAttributes(subDirectory, FileAttributes.Normal);
+                    }
+                    catch
+                    {
+                        // Keep deletion moving even when a synced folder is temporarily locked.
+                    }
+                }
+
+                File.SetAttributes(directory, FileAttributes.Normal);
+            }
+            catch
+            {
+                // Best-effort cleanup only; the next delete path will decide the final result.
             }
         }
 

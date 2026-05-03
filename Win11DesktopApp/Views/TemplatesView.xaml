@@ -69,6 +69,39 @@
                 </Button>
             </Grid>
 
+            <!-- ===== LOADING SKELETON ===== -->
+            <StackPanel Grid.Row="1"
+                        Margin="12,4,12,8"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                <Border Style="{StaticResource SkeletonCard}" Height="78" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal">
+                        <Rectangle Width="52" Height="52" RadiusX="14" RadiusY="14" Style="{StaticResource SkeletonBlock}"/>
+                        <StackPanel Margin="16,6,0,0">
+                            <Rectangle Width="220" Height="16" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,10"/>
+                            <Rectangle Width="150" Height="11" Style="{StaticResource SkeletonBlock}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource SkeletonCard}" Height="78" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal">
+                        <Rectangle Width="52" Height="52" RadiusX="14" RadiusY="14" Style="{StaticResource SkeletonBlock}"/>
+                        <StackPanel Margin="16,6,0,0">
+                            <Rectangle Width="180" Height="16" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,10"/>
+                            <Rectangle Width="130" Height="11" Style="{StaticResource SkeletonBlock}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource SkeletonCard}" Height="78" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal">
+                        <Rectangle Width="52" Height="52" RadiusX="14" RadiusY="14" Style="{StaticResource SkeletonBlock}"/>
+                        <StackPanel Margin="16,6,0,0">
+                            <Rectangle Width="200" Height="16" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,10"/>
+                            <Rectangle Width="110" Height="11" Style="{StaticResource SkeletonBlock}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
             <!-- ===== TEMPLATE LIST ===== -->
             <ItemsControl Grid.Row="1" ItemsSource="{Binding Templates}" Margin="0,4,0,8"
                           VirtualizingPanel.IsVirtualizing="True"
@@ -88,7 +121,8 @@
                 </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border x:Name="TemplateCard" 
+                            <Border x:Name="TemplateCard"
+                                    Style="{StaticResource ModernCard}"
                                     Background="{DynamicResource CardBackgroundBrush}" 
                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                     CornerRadius="14" Padding="15,12" Margin="12,4,12,14"
@@ -271,9 +305,19 @@
                 </ItemsControl>
 
             <!-- Empty state -->
-            <Border Grid.Row="1" Style="{StaticResource AnimatedEmptyStateCard}"
+            <Border Grid.Row="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding HasTemplates, Converter={StaticResource InverseBoolToVis}}">
+                    >
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource AnimatedEmptyStateCard}">
+                        <Setter Property="Visibility" Value="{Binding HasTemplates, Converter={StaticResource InverseBoolToVis}}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="&#xE8A5;" Style="{StaticResource EmptyStateIconText}" Foreground="{DynamicResource AccentBrush}"/>
                     <TextBlock Text="{DynamicResource TplEmptyState}" Style="{StaticResource EmptyStateTitleText}" Margin="0,12,0,0"/>

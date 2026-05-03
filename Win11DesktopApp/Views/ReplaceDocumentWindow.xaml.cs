@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -128,6 +129,7 @@ namespace Win11DesktopApp.Views
                     ("VisaNumber", Res("DetFieldVisaNum"), _data.VisaNumber),
                     ("VisaAuthority", Res("DetFieldVisaAuthority"), _data.VisaAuthority),
                     ("VisaType", Res("DetFieldVisaType"), _data.VisaType),
+                    ("VisaStartDate", Res("DetFieldVisaStartDate"), _data.VisaStartDate),
                     ("VisaExpiry", Res("DetFieldExpiry"), _data.VisaExpiry),
                     ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),
                 },
@@ -138,6 +140,7 @@ namespace Win11DesktopApp.Views
                         ("PassportAuthority", $"{Res("DetFieldVisaAuthority")} ({Res("WizIdCardAuthorityHint")})", _data.PassportAuthority),
                         ("PassportCity", Res("CandPassportCity"), _data.PassportCity),
                         ("PassportCountry", Res("CandPassportCountry"), _data.PassportCountry),
+                        ("VisaStartDate", Res("DetFieldVisaStartDate"), _data.VisaStartDate),
                         ("VisaExpiry", $"{Res("DetFieldExpiry")} ({Res("WizIdCardExpiryHint")})", _data.VisaExpiry),
                         ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),
                     }
@@ -145,6 +148,7 @@ namespace Win11DesktopApp.Views
                     {
                         ("VisaNumber", Res("DetFieldVisaNum"), _data.VisaNumber),
                         ("VisaAuthority", Res("DetFieldVisaAuthority"), _data.VisaAuthority),
+                        ("VisaStartDate", Res("DetFieldVisaStartDate"), _data.VisaStartDate),
                         ("VisaExpiry", Res("DetFieldExpiry"), _data.VisaExpiry),
                         ("WorkPermitName", Res("DetFieldWorkPermitName"), _data.WorkPermitName),
                     },
@@ -338,7 +342,13 @@ namespace Win11DesktopApp.Views
                 }
 
                 var parsed = AIScanPrompts.ParseResponse(result);
-                if (parsed.Count == 0)
+                if (!AIScanPrompts.IsDocumentKindCompatible(docKey, parsed))
+                {
+                    AIScanStatus.Text = Res("AIScanDocumentTypeMismatch") ?? "AI recognized a different document type. Please check the selected document slot.";
+                    return;
+                }
+
+                if (!parsed.Any(kv => !kv.Key.StartsWith("__", StringComparison.OrdinalIgnoreCase)))
                 {
                     AIScanStatus.Text = Res("AIScanNoData");
                     return;
@@ -347,6 +357,11 @@ namespace Win11DesktopApp.Views
                 int filled = 0;
                 foreach (var (key, value) in parsed)
                 {
+                    if (key.StartsWith("__", StringComparison.OrdinalIgnoreCase)
+                        || AIScanPrompts.IsLowConfidenceField(parsed, key)
+                        || AIScanPrompts.IsSuspiciousFieldValue(parsed, key, value))
+                        continue;
+
                     if (_docType == "insurance" && (key == "InsuranceCompanyCode" || key == "InsuranceCompanyShort" || key == "InsuranceCompanyFull" || key == "InsuranceCompanyRaw"))
                     {
                         var option = InsuranceCompanyNormalizer.Normalize(

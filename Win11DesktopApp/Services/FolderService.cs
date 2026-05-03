@@ -130,6 +130,30 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
+        /// Full path to the core SQLite database file: {Root}/SQLite/core.db
+        /// </summary>
+        public string CoreDbPath
+        {
+            get
+            {
+                var sqliteFolder = GetSqliteFolder();
+                return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "core.db");
+            }
+        }
+
+        /// <summary>
+        /// Full path to the core sync state file: {Root}/SQLite/core.sync.json
+        /// </summary>
+        public string CoreSyncStatePath
+        {
+            get
+            {
+                var sqliteFolder = GetSqliteFolder();
+                return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "core.sync.json");
+            }
+        }
+
+        /// <summary>
         /// Get the salary SQLite folder path: {Root}/SQLite/Vyplaty
         /// </summary>
         public string GetSalaryDbFolder()

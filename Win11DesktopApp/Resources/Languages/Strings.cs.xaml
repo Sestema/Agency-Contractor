@@ -426,6 +426,7 @@
     <sys:String x:Key="ThemeCustom">Teplý</sys:String>
     <sys:String x:Key="ThemeGlass">Sklo</sys:String>
     <sys:String x:Key="ThemeGlassDark">Tmavé sklo</sys:String>
+    <sys:String x:Key="ThemeVantaDark">Vanta</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Firmy</sys:String>
@@ -632,6 +633,8 @@
     <sys:String x:Key="DetFieldBirthDate">Datum narození</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="DetFieldGender">Pohlaví</sys:String>
+    <sys:String x:Key="DetFieldDocumentProfileType">Typ pracovníka / sada dokumentů</sys:String>
+    <sys:String x:Key="DetDocumentProfileHint">Změna typu pouze zobrazí potřebné bloky a umožní přidat chybějící dokumenty. Stávající soubory se nemažou.</sys:String>
     <sys:String x:Key="DetSecPassport">Pasové údaje</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Číslo pasu</sys:String>
     <sys:String x:Key="DetFieldPassportAuthority">Orgán vydávající doklad</sys:String>
@@ -644,6 +647,7 @@
     <sys:String x:Key="DetFieldVisaNum">Číslo víza</sys:String>
     <sys:String x:Key="DetFieldVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="DetFieldVisaType">Typ víza</sys:String>
+    <sys:String x:Key="DetFieldVisaStartDate">Datum začátku víza</sys:String>
     <sys:String x:Key="DetFieldWorkPermitName">Název pracovního povolení</sys:String>
     <sys:String x:Key="DetSecInsurance">Pojištění</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Pojišťovna</sys:String>
@@ -702,6 +706,29 @@
     <sys:String x:Key="MainTooltipDblClick">Dvojklik — upravit</sys:String>
     <sys:String x:Key="CompanyMoveUp">Přesunout nahoru</sys:String>
     <sys:String x:Key="CompanyMoveDown">Přesunout dolů</sys:String>
+    <sys:String x:Key="MainGreetingMorning">Dobré ráno</sys:String>
+    <sys:String x:Key="MainGreetingAfternoon">Dobré odpoledne</sys:String>
+    <sys:String x:Key="MainGreetingEvening">Dobrý večer</sys:String>
+    <sys:String x:Key="MainActiveCompanyTitle">Aktivní firma</sys:String>
+    <sys:String x:Key="MainChangeCompany">Změnit firmu</sys:String>
+    <sys:String x:Key="MainEditCompanyShort">Upravit</sys:String>
+    <sys:String x:Key="MainCurrentTimeLabel">Teď</sys:String>
+    <sys:String x:Key="MainModulesTitle">Hlavní moduly</sys:String>
+    <sys:String x:Key="MainNoCompanySelected">Firma ještě není vybrána</sys:String>
+    <sys:String x:Key="MainNoCompanyMeta">Vyberte firmu ze seznamu vlevo</sys:String>
+    <sys:String x:Key="MainCompanySummaryFormat">{0} zaměstnanců • {1} šablon</sys:String>
+    <sys:String x:Key="MainStatEmployees">Zaměstnanci</sys:String>
+    <sys:String x:Key="MainStatEmployeesHint">ve vybrané firmě</sys:String>
+    <sys:String x:Key="MainStatTemplates">Šablony</sys:String>
+    <sys:String x:Key="MainStatTemplatesHint">připravené k použití</sys:String>
+    <sys:String x:Key="MainStatProblems">Problémy</sys:String>
+    <sys:String x:Key="MainStatProblemsHint">napříč firmami</sys:String>
+    <sys:String x:Key="MainStatMonthlyMovement">Pohyb za měsíc</sys:String>
+    <sys:String x:Key="MainStatMonthlyMovementHint">přidáno / archiv</sys:String>
+    <sys:String x:Key="MainStatAddedShort">Přidáno</sys:String>
+    <sys:String x:Key="MainStatArchivedShort">Archiv</sys:String>
+    <sys:String x:Key="MainStatCompanies">Firmy</sys:String>
+    <sys:String x:Key="MainStatCompaniesHint">aktuálně dostupné</sys:String>
 
     <!-- ProblemsView -->
     <sys:String x:Key="ProbStatExpired">Lidé / Dokumenty — Prošlé</sys:String>
@@ -815,6 +842,7 @@
     <sys:String x:Key="WizVisaNum">Číslo víza</sys:String>
     <sys:String x:Key="WizVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="WizVisaType">Typ víza</sys:String>
+    <sys:String x:Key="WizVisaStartDate">Datum začátku víza</sys:String>
     <sys:String x:Key="WizVisaExpiry">Datum expirace víza</sys:String>
     <sys:String x:Key="WizIdCardNumberHint">číslo karty / dokladu</sys:String>
     <sys:String x:Key="WizIdCardAuthorityHint">orgán vydání dokladu</sys:String>
@@ -985,6 +1013,7 @@
     <sys:String x:Key="ReportColDocumentType">Typ karty/víza/pasu</sys:String>
     <sys:String x:Key="ReportColPassportNumber">Číslo pasu nebo ID karty</sys:String>
     <sys:String x:Key="ReportColVisaNumber">Číslo víza</sys:String>
+    <sys:String x:Key="ReportColVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="ReportColWorkAddress">Adresa výkonu práce</sys:String>
     <sys:String x:Key="ReportColHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="ReportColAddressCz">Celá adresa bydliště</sys:String>
@@ -1111,6 +1140,7 @@
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
     <sys:String x:Key="AIScanWorking">AI analyzuje dokument...</sys:String>
     <sys:String x:Key="AIScanNoData">AI nemohl rozpoznat data</sys:String>
+    <sys:String x:Key="AIScanDocumentTypeMismatch">AI rozpoznala jiný typ dokumentu. Zkontrolujte, zda je soubor ve správném bloku dokumentu.</sys:String>
     <sys:String x:Key="AIScanDone">Vyplněno {0} polí</sys:String>
     <sys:String x:Key="AIStatusReady">AI je připraven</sys:String>
 
@@ -1142,10 +1172,22 @@
     <sys:String x:Key="SearchCatCompanies">Firmy</sys:String>
     <sys:String x:Key="DashboardTitle">Hlavní panel</sys:String>
     <sys:String x:Key="DashWidgetEmployees">Zaměstnanci</sys:String>
+    <sys:String x:Key="DashWidgetDocuments">Dokumenty</sys:String>
     <sys:String x:Key="DashWidgetProblems">Problémy s dokumenty</sys:String>
     <sys:String x:Key="DashWidgetActivity">Poslední aktivita</sys:String>
     <sys:String x:Key="DashWidgetFinance">Měsíční finance</sys:String>
     <sys:String x:Key="DashWidgetQuickActions">Rychlé akce</sys:String>
+    <sys:String x:Key="DashWidgetActiveEmployees">Aktivní zaměstnanci</sys:String>
+    <sys:String x:Key="DashAllCompanies">ve všech firmách</sys:String>
+    <sys:String x:Key="DashVisibleCompanies">aktivních firem</sys:String>
+    <sys:String x:Key="DashWidgetEfficiency">Efektivita</sys:String>
+    <sys:String x:Key="DashEfficiencyEmployeesAllTime">zaměstnanců přidáno celkem</sys:String>
+    <sys:String x:Key="DashEfficiencyGeneratedDocs">vygenerovaných dokumentů</sys:String>
+    <sys:String x:Key="DashEfficiencyProgramTime">čas v aplikaci</sys:String>
+    <sys:String x:Key="DashEfficiencySavedTime">ušetřený čas</sys:String>
+    <sys:String x:Key="DashEfficiencyFormula">Odhad: 15 min úspory na zaměstnance a 8 min na dokument.</sys:String>
+    <sys:String x:Key="DashHoursShort">h</sys:String>
+    <sys:String x:Key="DashMinutesShort">min</sys:String>
     <sys:String x:Key="DashNoCompany">Vyberte firmu pro zobrazení</sys:String>
     <sys:String x:Key="DashActionAddEmployee">Přidat zaměstnance</sys:String>
     <sys:String x:Key="DashActionGenerate">Generovat dokument</sys:String>
@@ -1279,6 +1321,7 @@
     <sys:String x:Key="TagDescEmpVisaNumber">Číslo víza</sys:String>
     <sys:String x:Key="TagDescEmpVisaAuthority">Orgán vydávající vízum</sys:String>
     <sys:String x:Key="TagDescEmpVisaType">Typ víza</sys:String>
+    <sys:String x:Key="TagDescEmpVisaStartDate">Datum začátku víza</sys:String>
     <sys:String x:Key="TagDescEmpVisaExpiry">Datum expirace víza</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Insurance -->
@@ -1745,10 +1788,12 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistFieldHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="HistFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Číslo pasu</sys:String>
+    <sys:String x:Key="HistFieldDocumentProfileType">Typ pracovníka / sada dokumentů</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Orgán vydávající doklad</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Platnost pasu</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Číslo víza</sys:String>
     <sys:String x:Key="HistFieldVisaAuthority">Orgán vydávající vízum</sys:String>
+    <sys:String x:Key="HistFieldVisaStartDate">Začátek víza</sys:String>
     <sys:String x:Key="HistFieldVisaExp">Platnost víza</sys:String>
     <sys:String x:Key="HistFieldInsNum">Číslo pojištění</sys:String>
     <sys:String x:Key="HistFieldInsExp">Platnost pojištění</sys:String>
@@ -1868,6 +1913,9 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="AIValidationMatchMessage">Souhlasí s dokumentem</sys:String>
     <sys:String x:Key="AIValidationAppliedMessage">Hodnota byla použita</sys:String>
     <sys:String x:Key="AIValidationSuspiciousReadMessage">AI mohla tuto hodnotu přečíst nespolehlivě: {0}</sys:String>
+    <sys:String x:Key="AIValidationLowConfidenceMessage">AI si není dostatečně jistá pro automatické vyplnění: {0}</sys:String>
+    <sys:String x:Key="AIValidationDocumentKindTitle">Typ dokumentu</sys:String>
+    <sys:String x:Key="AIValidationDocumentKindMismatchMessage">AI rozpoznala jiný typ dokumentu: {0}</sys:String>
     <sys:String x:Key="AIValidationSourcePassport">Pas</sys:String>
     <sys:String x:Key="AIValidationSourceVisa">Vízum</sys:String>
     <sys:String x:Key="AIValidationSourceInsurance">Pojištění</sys:String>

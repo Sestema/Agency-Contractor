@@ -80,7 +80,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SaveSalaryHistoryRecord error: {ex.Message}");
                 LoggingService.LogError("FinanceSalaryHistoryService.SaveSalaryHistoryRecord", ex);
             }
         }
@@ -111,7 +110,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RemoveSalaryHistoryRecord error: {ex.Message}");
                 LoggingService.LogError("FinanceSalaryHistoryService.RemoveSalaryHistoryRecord", ex);
             }
         }

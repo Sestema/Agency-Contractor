@@ -29,13 +29,8 @@
 
             <!-- Title bar (draggable) -->
             <Border Grid.Row="0" CornerRadius="12,12,0,0" Padding="12,10" 
+                    Background="{DynamicResource BrandAiGradientBrush}"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" Cursor="SizeAll">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="#7C4DFF" Offset="0"/>
-                        <GradientStop Color="#448AFF" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -46,7 +41,7 @@
                             Width="28"
                             Height="28"
                             CornerRadius="8"
-                            Background="#26FFFFFF"
+                            Background="{DynamicResource AccentLightBrush}"
                             Margin="0,0,10,0"
                             VerticalAlignment="Center">
                         <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" 
@@ -57,14 +52,14 @@
                                    Foreground="White" VerticalAlignment="Center"/>
                         <TextBlock Text="AI helper for current template"
                                    FontSize="11"
-                                   Foreground="#DDE8FF"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
                                    Margin="0,2,0,0"/>
                     </StackPanel>
                     <Button Grid.Column="2"
                             Click="CloseButton_Click"
                             Style="{StaticResource ToolbarInlineIconButton}"
-                            Background="#20FFFFFF"
-                            BorderBrush="#20FFFFFF"
+                            Background="{DynamicResource AccentLightBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
                             Foreground="White">
                         <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="White"/>
                     </Button>
@@ -119,7 +114,7 @@
                                             <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsUser}" Value="True">
-                                                    <Setter Property="Background" Value="#7C4DFF"/>
+                                                    <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -163,13 +158,8 @@
                                 Width="36"
                                 Height="36"
                                 Style="{StaticResource FilledActionButton}"
+                                Background="{DynamicResource BrandAiGradientBrush}"
                                 Padding="0">
-                            <Button.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#7C4DFF" Offset="0"/>
-                                    <GradientStop Color="#448AFF" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Button.Background>
                             <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>

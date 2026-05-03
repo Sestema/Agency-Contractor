@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,6 +48,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly NavigationService _navigationService;
         private readonly GeminiApiService _geminiApiService;
         private readonly ChatPersistenceService _chatService;
+        private readonly Telegram.TelegramBotService _telegramBotService;
         private ChatSession? _currentSession;
 
         private const string SystemPrompt =
@@ -185,11 +187,13 @@ CRITICAL RULES:
         public AIChatViewModel(
             NavigationService navigationService,
             GeminiApiService geminiApiService,
-            ChatPersistenceService chatPersistenceService)
+            ChatPersistenceService chatPersistenceService,
+            Telegram.TelegramBotService telegramBotService)
         {
             _navigationService = navigationService;
             _geminiApiService = geminiApiService;
             _chatService = chatPersistenceService;
+            _telegramBotService = telegramBotService;
 
             GoBackCommand = new RelayCommand(o =>
             {
@@ -481,7 +485,11 @@ CRITICAL RULES:
             List<(string role, string text)>? history, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-                return await _geminiApiService.ChatWithHistoryAsync(history, text, systemPrompt, ct);
+                return await _telegramBotService.AskProgramAssistantAsync(
+                    text,
+                    history,
+                    GetAssistantConversationId(),
+                    ct);
 
             var ext = Path.GetExtension(filePath).ToLowerInvariant();
 
@@ -503,10 +511,26 @@ CRITICAL RULES:
                 var combined = $"The user attached a document ({Path.GetFileName(filePath)}). Here is the document content:\n\n" +
                                $"---DOCUMENT START---\n{docText}\n---DOCUMENT END---\n\n" +
                                $"User message: {text}";
-                return await _geminiApiService.ChatWithHistoryAsync(history, combined, systemPrompt, ct);
+                return await _telegramBotService.AskProgramAssistantAsync(
+                    combined,
+                    history,
+                    GetAssistantConversationId(),
+                    ct);
             }
 
-            return await _geminiApiService.ChatWithHistoryAsync(history, text, systemPrompt, ct);
+            return await _telegramBotService.AskProgramAssistantAsync(
+                text,
+                history,
+                GetAssistantConversationId(),
+                ct);
+        }
+
+        private long GetAssistantConversationId()
+        {
+            var sessionId = _currentSession?.Id ?? "default";
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes("desktop-ai:" + sessionId));
+            var value = BitConverter.ToInt64(bytes, 0);
+            return value == 0 ? 1 : value;
         }
 
         private static string ExtractXlsxText(string path)

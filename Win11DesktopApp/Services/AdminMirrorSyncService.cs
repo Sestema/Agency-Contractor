@@ -43,6 +43,8 @@ namespace Win11DesktopApp.Services
         };
 
         private bool _workerStarted;
+        private readonly object _lifecycleLock = new();
+        private CancellationTokenSource? _workerCts;
 
         public AdminMirrorSyncService(CompanyService companyService)
         {
@@ -62,29 +64,67 @@ namespace Win11DesktopApp.Services
 
         public void Start(string? startupClientId = null)
         {
-            if (_workerStarted)
+            CancellationToken token;
+            lock (_lifecycleLock)
+            {
+                if (_workerStarted)
+                    return;
+
+                Directory.CreateDirectory(_storageFolder);
+                _workerCts = new CancellationTokenSource();
+                token = _workerCts.Token;
+                _workerStarted = true;
+            }
+
+            RunBackgroundTask("AdminMirrorSyncService.BackgroundLoop", ct => BackgroundLoopAsync(ct), token);
+            RunBackgroundTask("AdminMirrorSyncService.Start", async ct =>
+            {
+                var state = await LoadStateAsync().ConfigureAwait(false);
+                if (!state.HasCompletedInitialFullSync)
+                    await EnqueueFullResyncAsync().ConfigureAwait(false);
+
+                if (!string.IsNullOrWhiteSpace(startupClientId))
+                    await ProcessOutboxOnceAsync(startupClientId, ct).ConfigureAwait(false);
+            }, token);
+        }
+
+        public void Stop()
+        {
+            lock (_lifecycleLock)
+            {
+                _workerCts?.Cancel();
+                _workerCts?.Dispose();
+                _workerCts = null;
+                _workerStarted = false;
+            }
+        }
+
+        private CancellationToken GetWorkerToken()
+        {
+            lock (_lifecycleLock)
+                return _workerCts?.Token ?? CancellationToken.None;
+        }
+
+        private static void RunBackgroundTask(string module, Func<CancellationToken, Task> action, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
                 return;
 
-            Directory.CreateDirectory(_storageFolder);
-            _workerStarted = true;
-
-            _ = Task.Run(() => BackgroundLoopAsync());
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    var state = await LoadStateAsync().ConfigureAwait(false);
-                    if (!state.HasCompletedInitialFullSync)
-                        await EnqueueFullResyncAsync().ConfigureAwait(false);
-
-                    if (!string.IsNullOrWhiteSpace(startupClientId))
-                        await ProcessOutboxOnceAsync(startupClientId).ConfigureAwait(false);
+                    await action(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    LoggingService.LogInfo(module, "Cancelled.");
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogWarning("AdminMirrorSyncService.Start", ex.Message);
+                    LoggingService.LogWarning(module, ex.Message);
                 }
-            });
+            }, CancellationToken.None);
         }
 
         public void EnqueueEmployerUpsert(EmployerCompany? company)
@@ -226,42 +266,51 @@ namespace Win11DesktopApp.Services
                 _outboxLock.Release();
             }
 
-            _ = Task.Run(() => ProcessOutboxOnceAsync());
+            RunBackgroundTask("AdminMirrorSyncService.ProcessOutbox", ct => ProcessOutboxOnceAsync(cancellationToken: ct), GetWorkerToken());
         }
 
-        private async Task BackgroundLoopAsync()
+        private async Task BackgroundLoopAsync(CancellationToken cancellationToken)
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await ProcessOutboxOnceAsync().ConfigureAwait(false);
+                    await ProcessOutboxOnceAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
                     LoggingService.LogWarning("AdminMirrorSyncService.BackgroundLoop", ex.Message);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken).ConfigureAwait(false);
             }
         }
 
-        private async Task ProcessOutboxOnceAsync(string? preferredClientId = null)
+        private async Task ProcessOutboxOnceAsync(string? preferredClientId = null, CancellationToken cancellationToken = default)
         {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             if (!await _processLock.WaitAsync(0).ConfigureAwait(false))
                 return;
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var clientId = await EnsureClientIdAsync(preferredClientId).ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(clientId))
                     return;
 
                 while (true)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     AdminMirrorOutboxEntry? nextEntry;
 
-                    await _outboxLock.WaitAsync().ConfigureAwait(false);
+                    await _outboxLock.WaitAsync(cancellationToken).ConfigureAwait(false);
                     try
                     {
                         nextEntry = LoadOutboxUnsafe().OrderBy(item => item.UpdatedAtUtc).FirstOrDefault();
@@ -276,9 +325,13 @@ namespace Win11DesktopApp.Services
 
                     try
                     {
-                        await ExecuteEntryAsync(clientId, nextEntry).ConfigureAwait(false);
+                        await ExecuteEntryAsync(clientId, nextEntry, cancellationToken).ConfigureAwait(false);
                         await RemoveProcessedEntryAsync(nextEntry.Id).ConfigureAwait(false);
                         await UpdateStateAfterSuccessAsync(nextEntry.Operation).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
                     }
                     catch (Exception ex)
                     {
@@ -294,12 +347,12 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private async Task ExecuteEntryAsync(string clientId, AdminMirrorOutboxEntry entry)
+        private async Task ExecuteEntryAsync(string clientId, AdminMirrorOutboxEntry entry, CancellationToken cancellationToken)
         {
             switch (entry.Operation)
             {
                 case OperationFullResync:
-                    await PerformFullResyncAsync(clientId).ConfigureAwait(false);
+                    await PerformFullResyncAsync(clientId, cancellationToken).ConfigureAwait(false);
                     return;
 
                 case OperationEmployerUpsert:
@@ -308,7 +361,7 @@ namespace Win11DesktopApp.Services
                         if (payload == null)
                             throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
-                        await SyncEmployerUpsertAsync(clientId, payload).ConfigureAwait(false);
+                        await SyncEmployerUpsertAsync(clientId, payload, cancellationToken).ConfigureAwait(false);
                         return;
                     }
 
@@ -318,7 +371,7 @@ namespace Win11DesktopApp.Services
                         if (payload == null)
                             throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
-                        await SyncEmployerDeleteAsync(clientId, payload).ConfigureAwait(false);
+                        await SyncEmployerDeleteAsync(clientId, payload, cancellationToken).ConfigureAwait(false);
                         return;
                     }
 
@@ -328,7 +381,7 @@ namespace Win11DesktopApp.Services
                         if (payload == null)
                             throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
-                        await SyncEmployeeUpsertAsync(clientId, payload).ConfigureAwait(false);
+                        await SyncEmployeeUpsertAsync(clientId, payload, cancellationToken).ConfigureAwait(false);
                         return;
                     }
 
@@ -338,23 +391,25 @@ namespace Win11DesktopApp.Services
                         if (payload == null)
                             throw new InvalidOperationException($"Mirror outbox payload is invalid for operation '{entry.Operation}' (entry {entry.Id}).");
 
-                        await SyncEmployeeDeleteAsync(clientId, payload).ConfigureAwait(false);
+                        await SyncEmployeeDeleteAsync(clientId, payload, cancellationToken).ConfigureAwait(false);
                         return;
                     }
             }
         }
 
-        private async Task PerformFullResyncAsync(string clientId)
+        private async Task PerformFullResyncAsync(string clientId, CancellationToken cancellationToken)
         {
             var employeeService = _employeeService;
             if (employeeService == null)
                 throw new InvalidOperationException("EmployeeService is not initialized.");
 
+            cancellationToken.ThrowIfCancellationRequested();
             var employerPayloads = new List<AdminMirrorEmployerPayload>();
             var employeePayloads = new List<AdminMirrorEmployeePayload>();
             var companies = _companyService.Companies.ToList();
             foreach (var company in companies)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var employerPayload = BuildEmployerPayload(company);
                 if (employerPayload != null)
                     employerPayloads.Add(employerPayload);
@@ -372,6 +427,7 @@ namespace Win11DesktopApp.Services
             var archivedEmployees = employeeService.GetArchivedEmployees();
             foreach (var archived in archivedEmployees)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var data = employeeService.LoadEmployeeData(archived.EmployeeFolder);
                 var employeePayload = BuildEmployeePayload(archived.FirmName, archived.EmployeeFolder, data);
                 if (employeePayload != null)
@@ -385,7 +441,8 @@ namespace Win11DesktopApp.Services
                     employers_total = employerPayloads.Count,
                     employees_total = employeePayloads.Count
                 },
-                $"full_resync_start (employers={employerPayloads.Count}, employees={employeePayloads.Count})").ConfigureAwait(false);
+                $"full_resync_start (employers={employerPayloads.Count}, employees={employeePayloads.Count})",
+                cancellationToken).ConfigureAwait(false);
 
             var employerBatches = employerPayloads
                 .Select(ToEmployerSyncPayload)
@@ -393,11 +450,13 @@ namespace Win11DesktopApp.Services
                 .ToList();
             for (var i = 0; i < employerBatches.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var batch = employerBatches[i];
                 await CallMirrorSyncAsync(
                     OperationFullResyncEmployersBatch,
                     new { employers = batch },
-                    $"full_resync_employers_batch {i + 1}/{employerBatches.Count} (count={batch.Length})").ConfigureAwait(false);
+                    $"full_resync_employers_batch {i + 1}/{employerBatches.Count} (count={batch.Length})",
+                    cancellationToken).ConfigureAwait(false);
             }
 
             var employeeBatches = employeePayloads
@@ -406,11 +465,13 @@ namespace Win11DesktopApp.Services
                 .ToList();
             for (var i = 0; i < employeeBatches.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var batch = employeeBatches[i];
                 await CallMirrorSyncAsync(
                     OperationFullResyncEmployeesBatch,
                     new { employees = batch },
-                    $"full_resync_employees_batch {i + 1}/{employeeBatches.Count} (count={batch.Length})").ConfigureAwait(false);
+                    $"full_resync_employees_batch {i + 1}/{employeeBatches.Count} (count={batch.Length})",
+                    cancellationToken).ConfigureAwait(false);
             }
 
             await CallMirrorSyncAsync(
@@ -420,39 +481,40 @@ namespace Win11DesktopApp.Services
                     employers_total = employerPayloads.Count,
                     employees_total = employeePayloads.Count
                 },
-                $"full_resync_finish (employers={employerPayloads.Count}, employees={employeePayloads.Count})").ConfigureAwait(false);
+                $"full_resync_finish (employers={employerPayloads.Count}, employees={employeePayloads.Count})",
+                cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task SyncEmployerUpsertAsync(string clientId, AdminMirrorEmployerPayload payload)
+        private async Task SyncEmployerUpsertAsync(string clientId, AdminMirrorEmployerPayload payload, CancellationToken cancellationToken)
         {
-            await CallMirrorSyncAsync(OperationEmployerUpsert, ToEmployerSyncPayload(payload)).ConfigureAwait(false);
+            await CallMirrorSyncAsync(OperationEmployerUpsert, ToEmployerSyncPayload(payload), cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task SyncEmployerDeleteAsync(string clientId, AdminMirrorEmployerDeletePayload payload)
+        private async Task SyncEmployerDeleteAsync(string clientId, AdminMirrorEmployerDeletePayload payload, CancellationToken cancellationToken)
         {
             await CallMirrorSyncAsync(OperationEmployerDelete, new
             {
                 employer_id = payload.EmployerId,
                 agency_id = payload.AgencyId,
                 agency_still_referenced = AgencyStillReferenced(payload.AgencyId)
-            }).ConfigureAwait(false);
+            }, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task SyncEmployeeUpsertAsync(string clientId, AdminMirrorEmployeePayload payload)
+        private async Task SyncEmployeeUpsertAsync(string clientId, AdminMirrorEmployeePayload payload, CancellationToken cancellationToken)
         {
-            await CallMirrorSyncAsync(OperationEmployeeUpsert, ToEmployeeSyncPayload(payload)).ConfigureAwait(false);
+            await CallMirrorSyncAsync(OperationEmployeeUpsert, ToEmployeeSyncPayload(payload), cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task SyncEmployeeDeleteAsync(string clientId, AdminMirrorEmployeeDeletePayload payload)
+        private async Task SyncEmployeeDeleteAsync(string clientId, AdminMirrorEmployeeDeletePayload payload, CancellationToken cancellationToken)
         {
             await CallMirrorSyncAsync(OperationEmployeeDelete, new
             {
                 employee_id = payload.EmployeeId,
                 employer_id = payload.EmployerId
-            }).ConfigureAwait(false);
+            }, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task CallMirrorSyncAsync(string operation, object payload, string? operationLabel = null)
+        private async Task CallMirrorSyncAsync(string operation, object payload, string? operationLabel = null, CancellationToken cancellationToken = default)
         {
             var label = string.IsNullOrWhiteSpace(operationLabel) ? operation : operationLabel;
             var request = new HttpRequestMessage(HttpMethod.Post, $"{TelemetryService.BaseUrl}/functions/v1/mirror-sync")
@@ -470,12 +532,12 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                using var response = await _mirrorHttpClient.SendAsync(request).ConfigureAwait(false);
-                var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                using var response = await _mirrorHttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                     throw new InvalidOperationException($"Mirror sync failed for {label}: {(int)response.StatusCode} {body}");
             }
-            catch (TaskCanceledException ex) when (!ex.CancellationToken.IsCancellationRequested)
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
             {
                 throw new TimeoutException(
                     $"Mirror sync timed out for {label} after {_mirrorHttpClient.Timeout.TotalSeconds:0} seconds.",
@@ -547,6 +609,7 @@ namespace Win11DesktopApp.Services
                 passport_expiry = payload.Employee.PassportExpiry,
                 visa_number = payload.Employee.VisaNumber,
                 visa_type = payload.Employee.VisaType,
+                visa_start_date = payload.Employee.VisaStartDate,
                 visa_expiry = payload.Employee.VisaExpiry,
                 insurance_company_short = payload.Employee.InsuranceCompanyShort,
                 insurance_company_full = payload.Employee.InsuranceCompanyFull,
@@ -690,6 +753,7 @@ namespace Win11DesktopApp.Services
                     PassportExpiry = data.PassportExpiry ?? string.Empty,
                     VisaNumber = data.VisaNumber ?? string.Empty,
                     VisaType = data.VisaType ?? string.Empty,
+                    VisaStartDate = data.VisaStartDate ?? string.Empty,
                     VisaExpiry = data.VisaExpiry ?? string.Empty,
                     InsuranceCompanyShort = data.InsuranceCompanyShort ?? string.Empty,
                     InsuranceCompanyFull = data.InsuranceCompanyFull ?? string.Empty,

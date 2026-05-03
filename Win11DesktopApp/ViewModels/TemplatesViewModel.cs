@@ -29,6 +29,13 @@ namespace Win11DesktopApp.ViewModels
         }
         public bool HasTemplates => Templates.Count > 0;
 
+        private bool _isLoading;
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+
         private string _firmName;
         public string Title => string.Format(GetString("TitleTemplates") ?? "Шаблони: {0}", _firmName);
 
@@ -434,10 +441,11 @@ namespace Win11DesktopApp.ViewModels
             if (string.IsNullOrWhiteSpace(_firmName) || string.Equals(_firmName, "Unknown", System.StringComparison.OrdinalIgnoreCase))
                 return;
 
+            var generation = ++_loadGeneration;
             try
             {
-                var generation = ++_loadGeneration;
                 var firmName = _firmName;
+                IsLoading = true;
                 var list = await Task.Run(() => _templateService.GetTemplates(firmName));
                 if (generation != _loadGeneration || !string.Equals(_firmName, firmName, System.StringComparison.OrdinalIgnoreCase))
                     return;
@@ -447,6 +455,11 @@ namespace Win11DesktopApp.ViewModels
             catch (System.Exception ex)
             {
                 LoggingService.LogError("TemplatesViewModel.LoadTemplatesAsync", ex);
+            }
+            finally
+            {
+                if (generation == _loadGeneration)
+                    IsLoading = false;
             }
         }
 

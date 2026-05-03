@@ -57,29 +57,14 @@
             </Setter>
         </Style>
 
-        <Style x:Key="InvoicesGridHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F3F8F7"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+        <Style x:Key="InvoicesGridHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeader}">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Padding" Value="14,0"/>
         </Style>
 
-        <Style x:Key="InvoicesGridCellStyle" TargetType="DataGridCell">
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="DataGridCell">
-                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+        <Style x:Key="InvoicesGridCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCell}">
+            <Setter Property="Padding" Value="14,7"/>
         </Style>
 
         <Style x:Key="InvoicesActionMiniButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
@@ -88,19 +73,7 @@
             <Setter Property="MinWidth" Value="0"/>
         </Style>
 
-        <Style x:Key="InvoicesGridRowStyle" TargetType="DataGridRow">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="MinHeight" Value="42"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#0D26A69A"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#1426A69A"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <Style x:Key="InvoicesGridRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRow}"/>
 
         <Style x:Key="InvoicesHeaderStatCard" TargetType="Border">
             <Setter Property="Background" Value="#80FFFFFF"/>
@@ -347,7 +320,49 @@
                         <DataGridTextColumn Header="{DynamicResource InvoicesColumnAmount}" Binding="{Binding TotalLabel}" Width="130"/>
                         <DataGridTextColumn Header="{DynamicResource InvoicesColumnIssueDate}" Binding="{Binding IssueDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
                         <DataGridTextColumn Header="{DynamicResource InvoicesColumnDueDate}" Binding="{Binding DueDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
-                        <DataGridTextColumn Header="{DynamicResource InvoicesColumnStatus}" Binding="{Binding StatusLabel}" Width="120"/>
+                        <DataGridTemplateColumn Header="{DynamicResource InvoicesColumnStatus}" Width="128">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border>
+                                        <Border.Style>
+                                            <Style TargetType="Border" BasedOn="{StaticResource TableStatusBadge}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static invModels:InvoiceDocumentStatus.Paid}">
+                                                        <Setter Property="Background" Value="{DynamicResource SuccessChipBackgroundBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource SuccessChipBorderBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static invModels:InvoiceDocumentStatus.Overdue}">
+                                                        <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static invModels:InvoiceDocumentStatus.Draft}">
+                                                        <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding StatusLabel}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="{x:Static invModels:InvoiceDocumentStatus.Paid}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="{x:Static invModels:InvoiceDocumentStatus.Overdue}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="{x:Static invModels:InvoiceDocumentStatus.Draft}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTemplateColumn Header="{DynamicResource InvoicesColumnActions}" Width="340">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

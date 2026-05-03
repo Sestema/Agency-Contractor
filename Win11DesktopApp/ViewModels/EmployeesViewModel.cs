@@ -1,11 +1,14 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 using ClosedXML.Excel;
@@ -16,6 +19,52 @@ using Win11DesktopApp.Views;
 
 namespace Win11DesktopApp.ViewModels
 {
+    public class BatchAIValidationResultItem : ViewModelBase
+    {
+        public string EmployeeName { get; set; } = string.Empty;
+        public string EmployeeFolder { get; set; } = string.Empty;
+        public string DocumentName { get; set; } = string.Empty;
+        public string DocumentPath { get; set; } = string.Empty;
+        public bool CanOpenDocument => !string.IsNullOrWhiteSpace(DocumentPath) && File.Exists(DocumentPath);
+        public string FieldKey { get; set; } = string.Empty;
+        public string FieldDisplayName { get; set; } = string.Empty;
+        private string _currentValue = string.Empty;
+        public string CurrentValue
+        {
+            get => _currentValue;
+            set => SetProperty(ref _currentValue, value);
+        }
+
+        public string SuggestedValue { get; set; } = string.Empty;
+        private string _severity = "ok";
+        public string Severity
+        {
+            get => _severity;
+            set => SetProperty(ref _severity, value);
+        }
+
+        private string _message = string.Empty;
+        public string Message
+        {
+            get => _message;
+            set => SetProperty(ref _message, value);
+        }
+
+        private bool _canApply;
+        public bool CanApply
+        {
+            get => _canApply;
+            set => SetProperty(ref _canApply, value);
+        }
+
+        private bool _isApplied;
+        public bool IsApplied
+        {
+            get => _isApplied;
+            set => SetProperty(ref _isApplied, value);
+        }
+    }
+
     public class EmployeesViewModel : ViewModelBase
     {
         private readonly NavigationService _navigationService;
@@ -31,10 +80,12 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateService _templateService;
         private readonly DocumentGenerationService _documentGenerationService;
         private readonly TagCatalogService _tagCatalogService;
+        private readonly GeminiApiService _geminiApiService;
         private readonly EmployerCompany? _company;
         private List<EmployeeModels.EmployeeSummary> _allEmployees = new List<EmployeeModels.EmployeeSummary>();
         private string _lastStatus = string.Empty;
         private int _loadGeneration;
+        private CancellationTokenSource? _batchAICts;
 
         private ObservableCollection<EmployeeModels.EmployeeSummary> _employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
         public ObservableCollection<EmployeeModels.EmployeeSummary> Employees
@@ -48,6 +99,13 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _hasEmployees;
             set => SetProperty(ref _hasEmployees, value);
+        }
+
+        private bool _hasVisibleEmployees;
+        public bool HasVisibleEmployees
+        {
+            get => _hasVisibleEmployees;
+            set => SetProperty(ref _hasVisibleEmployees, value);
         }
 
         private bool _isCompanySelected;
@@ -153,6 +211,114 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _batchStatusMessage, value);
         }
 
+        // Batch AI validation dialog
+        private bool _isBatchAIValidationOpen;
+        public bool IsBatchAIValidationOpen
+        {
+            get => _isBatchAIValidationOpen;
+            set => SetProperty(ref _isBatchAIValidationOpen, value);
+        }
+
+        private bool _isBatchAIValidationRunning;
+        public bool IsBatchAIValidationRunning
+        {
+            get => _isBatchAIValidationRunning;
+            set => SetProperty(ref _isBatchAIValidationRunning, value);
+        }
+
+        private bool _batchAICheckPassport = true;
+        public bool BatchAICheckPassport
+        {
+            get => _batchAICheckPassport;
+            set => SetProperty(ref _batchAICheckPassport, value);
+        }
+
+        private bool _batchAICheckVisa = true;
+        public bool BatchAICheckVisa
+        {
+            get => _batchAICheckVisa;
+            set => SetProperty(ref _batchAICheckVisa, value);
+        }
+
+        private bool _batchAICheckInsurance = true;
+        public bool BatchAICheckInsurance
+        {
+            get => _batchAICheckInsurance;
+            set => SetProperty(ref _batchAICheckInsurance, value);
+        }
+
+        private bool _batchAICheckPermit = true;
+        public bool BatchAICheckPermit
+        {
+            get => _batchAICheckPermit;
+            set => SetProperty(ref _batchAICheckPermit, value);
+        }
+
+        private bool _batchAICheckOnlySelected;
+        public bool BatchAICheckOnlySelected
+        {
+            get => _batchAICheckOnlySelected;
+            set => SetProperty(ref _batchAICheckOnlySelected, value);
+        }
+
+        private bool _showBatchAIOptions = true;
+        public bool ShowBatchAIOptions
+        {
+            get => _showBatchAIOptions;
+            set => SetProperty(ref _showBatchAIOptions, value);
+        }
+
+        private int _batchAIProgressCurrent;
+        public int BatchAIProgressCurrent
+        {
+            get => _batchAIProgressCurrent;
+            set => SetProperty(ref _batchAIProgressCurrent, value);
+        }
+
+        private int _batchAIProgressTotal;
+        public int BatchAIProgressTotal
+        {
+            get => _batchAIProgressTotal;
+            set => SetProperty(ref _batchAIProgressTotal, value);
+        }
+
+        private string _batchAIStatusMessage = string.Empty;
+        public string BatchAIStatusMessage
+        {
+            get => _batchAIStatusMessage;
+            set => SetProperty(ref _batchAIStatusMessage, value);
+        }
+
+        private string _batchAICurrentEmployee = string.Empty;
+        public string BatchAICurrentEmployee
+        {
+            get => _batchAICurrentEmployee;
+            set => SetProperty(ref _batchAICurrentEmployee, value);
+        }
+
+        private string _batchAICurrentDocument = string.Empty;
+        public string BatchAICurrentDocument
+        {
+            get => _batchAICurrentDocument;
+            set => SetProperty(ref _batchAICurrentDocument, value);
+        }
+
+        private string _batchAICurrentField = string.Empty;
+        public string BatchAICurrentField
+        {
+            get => _batchAICurrentField;
+            set => SetProperty(ref _batchAICurrentField, value);
+        }
+
+        private ObservableCollection<BatchAIValidationResultItem> _batchAIResults = new();
+        public ObservableCollection<BatchAIValidationResultItem> BatchAIResults
+        {
+            get => _batchAIResults;
+            set => SetProperty(ref _batchAIResults, value);
+        }
+
+        public bool HasBatchAIResults => BatchAIResults.Count > 0;
+
         // Sorting
         private string _sortField;
         public string SortField
@@ -185,6 +351,13 @@ namespace Win11DesktopApp.ViewModels
         public ICommand BatchGenerateCommand { get; }
         public ICommand CloseBatchGenerateCommand { get; }
         public ICommand BatchGenerateFromTemplateCommand { get; }
+        public ICommand OpenBatchAIValidationCommand { get; }
+        public ICommand CloseBatchAIValidationCommand { get; }
+        public ICommand StartBatchAIValidationCommand { get; }
+        public ICommand CancelBatchAIValidationCommand { get; }
+        public ICommand ApplyBatchAISuggestionCommand { get; }
+        public ICommand OpenBatchAIDocumentCommand { get; }
+        public ICommand ShowBatchAIOptionsCommand { get; }
         public ICommand SortByCommand { get; }
         public ICommand SetViewModeCommand { get; }
         public ICommand FilterByStatCommand { get; }
@@ -282,7 +455,8 @@ namespace Win11DesktopApp.ViewModels
             ActivityLogService? activityLogService = null,
             TemplateService? templateService = null,
             DocumentGenerationService? documentGenerationService = null,
-            TagCatalogService? tagCatalogService = null)
+            TagCatalogService? tagCatalogService = null,
+            GeminiApiService? geminiApiService = null)
         {
             _company = company;
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
@@ -298,6 +472,7 @@ namespace Win11DesktopApp.ViewModels
             _templateService = templateService ?? throw new InvalidOperationException("TemplateService is not initialized.");
             _documentGenerationService = documentGenerationService ?? throw new InvalidOperationException("DocumentGenerationService is not initialized.");
             _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
+            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _sortField = _appSettingsService.Settings.EmployeeSortField ?? "Name";
             _sortAscending = _appSettingsService.Settings.EmployeeSortAscending;
             _viewMode = _appSettingsService.Settings.EmployeeViewMode ?? "List";
@@ -375,6 +550,29 @@ namespace Win11DesktopApp.ViewModels
             BatchGenerateCommand = new RelayCommand(o => OpenBatchGenerate(), o => Employees.Any(e => e.IsSelected));
             CloseBatchGenerateCommand = new RelayCommand(o => IsBatchGenerateOpen = false);
             BatchGenerateFromTemplateCommand = new RelayCommand(o => BatchGenerate(o as TemplateEntry));
+            OpenBatchAIValidationCommand = new RelayCommand(o => OpenBatchAIValidation(), o => Employees.Count > 0);
+            CloseBatchAIValidationCommand = new RelayCommand(o =>
+            {
+                if (!IsBatchAIValidationRunning)
+                    IsBatchAIValidationOpen = false;
+            });
+            StartBatchAIValidationCommand = new AsyncRelayCommand(_ => RunBatchAIValidationAsync(), _ => !IsBatchAIValidationRunning);
+            CancelBatchAIValidationCommand = new RelayCommand(o => _batchAICts?.Cancel(), _ => IsBatchAIValidationRunning);
+            ApplyBatchAISuggestionCommand = new AsyncRelayCommand(
+                async o =>
+                {
+                    if (o is BatchAIValidationResultItem item)
+                        await ApplyBatchAISuggestionAsync(item);
+                },
+                o => o is BatchAIValidationResultItem item && item.CanApply && !item.IsApplied && !IsBatchAIValidationRunning);
+            OpenBatchAIDocumentCommand = new RelayCommand(
+                o =>
+                {
+                    if (o is BatchAIValidationResultItem item)
+                        OpenBatchAIDocument(item);
+                },
+                o => o is BatchAIValidationResultItem item && item.CanOpenDocument);
+            ShowBatchAIOptionsCommand = new RelayCommand(o => ShowBatchAIOptions = true, _ => !IsBatchAIValidationRunning);
 
             SortByCommand = new RelayCommand(o =>
             {
@@ -402,6 +600,8 @@ namespace Win11DesktopApp.ViewModels
         {
             var generation = ++_loadGeneration;
             IsLoading = true;
+            StatusMessage = GetString("MsgEmployeesLoading") ?? "Loading employees...";
+            await Task.Yield();
 
             try
             {
@@ -410,6 +610,7 @@ namespace Win11DesktopApp.ViewModels
                     _allEmployees = new List<EmployeeModels.EmployeeSummary>();
                     Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
                     HasEmployees = false;
+                    HasVisibleEmployees = false;
                     IsError = false;
                     StatusMessage = GetString("MsgEmployeesSelectCompany") ?? "Please select a company.";
                     return;
@@ -423,9 +624,14 @@ namespace Win11DesktopApp.ViewModels
                 _allEmployees = result.Employees;
                 _lastStatus = result.Status;
                 ApplyFilter();
-                HasEmployees = Employees.Count > 0;
-                StatusMessage = GetStatusMessage(result.Status);
+                if (HasVisibleEmployees)
+                    StatusMessage = GetStatusMessage(result.Status);
                 IsError = result.Status == "LoadError";
+                IsLoading = false;
+                await Task.Yield();
+                if (generation != _loadGeneration || !string.Equals(_company?.Name, companyName, StringComparison.OrdinalIgnoreCase))
+                    return;
+
                 RefreshStats();
                 Debug.WriteLine($"EmployeesViewModel.LoadEmployees: {Employees.Count} items");
             }
@@ -438,6 +644,7 @@ namespace Win11DesktopApp.ViewModels
                 _allEmployees = new List<EmployeeModels.EmployeeSummary>();
                 Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
                 HasEmployees = false;
+                HasVisibleEmployees = false;
                 IsError = true;
                 StatusMessage = GetString("MsgEmployeesLoadError") ?? "Failed to load employees.";
             }
@@ -471,9 +678,12 @@ namespace Win11DesktopApp.ViewModels
 
         private void ApplyFilter()
         {
+            HasEmployees = _allEmployees.Count > 0;
+
             if (_allEmployees.Count == 0)
             {
                 Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
+                HasVisibleEmployees = false;
                 return;
             }
 
@@ -518,11 +728,11 @@ namespace Win11DesktopApp.ViewModels
             };
 
             Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>(list);
-            HasEmployees = Employees.Count > 0;
+            HasVisibleEmployees = Employees.Count > 0;
 
-            if (!HasEmployees)
+            if (!HasVisibleEmployees)
             {
-                StatusMessage = string.IsNullOrEmpty(query)
+                StatusMessage = string.IsNullOrEmpty(query) && StatFilter == "all"
                     ? GetStatusMessage(_lastStatus)
                     : (GetString("MsgEmployeesSearchEmpty") ?? "No employees found.");
             }
@@ -790,6 +1000,748 @@ namespace Win11DesktopApp.ViewModels
             var templates = _templateService.GetTemplates(_company.Name);
             BatchTemplates = new ObservableCollection<TemplateEntry>(templates);
             IsBatchGenerateOpen = true;
+        }
+
+        private void OpenBatchAIValidation()
+        {
+            if (!_geminiApiService.IsConfigured)
+            {
+                BatchAIStatusMessage = Res("AIChatNoModel");
+                IsBatchAIValidationOpen = true;
+                return;
+            }
+
+            BatchAICheckOnlySelected = IsSelectionMode && Employees.Any(e => e.IsSelected);
+            BatchAIProgressCurrent = 0;
+            BatchAIProgressTotal = 0;
+            ClearBatchAIAction();
+            BatchAIResults.Clear();
+            OnPropertyChanged(nameof(HasBatchAIResults));
+            ShowBatchAIOptions = true;
+            BatchAIStatusMessage = "Виберіть, які документи перевірити. Якщо увімкнений режим вибору, можна перевірити тільки позначених працівників.";
+            IsBatchAIValidationOpen = true;
+        }
+
+        private async Task RunBatchAIValidationAsync()
+        {
+            if (!_geminiApiService.IsConfigured)
+            {
+                BatchAIStatusMessage = Res("AIChatNoModel");
+                return;
+            }
+
+            if (!BatchAICheckPassport && !BatchAICheckVisa && !BatchAICheckInsurance && !BatchAICheckPermit)
+            {
+                BatchAIStatusMessage = "Виберіть хоча б один тип документа.";
+                return;
+            }
+
+            var employeesToCheck = BatchAICheckOnlySelected
+                ? Employees.Where(e => e.IsSelected).ToList()
+                : Employees.ToList();
+
+            if (employeesToCheck.Count == 0)
+            {
+                BatchAIStatusMessage = "Немає працівників для перевірки.";
+                return;
+            }
+
+            _batchAICts?.Cancel();
+            _batchAICts = new CancellationTokenSource();
+            IsBatchAIValidationRunning = true;
+            ShowBatchAIOptions = false;
+            BatchAIProgressCurrent = 0;
+            BatchAIProgressTotal = employeesToCheck.Count;
+            ClearBatchAIAction();
+            BatchAIResults.Clear();
+            OnPropertyChanged(nameof(HasBatchAIResults));
+
+            var checkedDocuments = 0;
+            var skippedDocuments = 0;
+
+            try
+            {
+                foreach (var employee in employeesToCheck)
+                {
+                    _batchAICts.Token.ThrowIfCancellationRequested();
+                    BatchAIProgressCurrent++;
+                    BatchAIStatusMessage = $"Перевірка {BatchAIProgressCurrent}/{BatchAIProgressTotal}: {employee.FullName}";
+                    SetBatchAIAction(employee.FullName, "Профіль", "Завантажую дані працівника");
+                    await Dispatcher.Yield(DispatcherPriority.Background);
+
+                    var data = _employeeService.LoadEmployeeData(employee.EmployeeFolder);
+                    if (data == null)
+                    {
+                        AddBatchAIResult(employee.FullName, employee.EmployeeFolder, "Профіль", string.Empty, "error", "Не вдалося прочитати employee.json.");
+                        continue;
+                    }
+
+                    if (BatchAICheckPassport)
+                        await ValidateBatchDocumentAsync(employee, data, "passport", _batchAICts.Token, counters => { checkedDocuments += counters.Checked; skippedDocuments += counters.Skipped; });
+
+                    if (BatchAICheckVisa)
+                        await ValidateBatchDocumentAsync(employee, data, "visa", _batchAICts.Token, counters => { checkedDocuments += counters.Checked; skippedDocuments += counters.Skipped; });
+
+                    if (BatchAICheckInsurance)
+                        await ValidateBatchDocumentAsync(employee, data, "insurance", _batchAICts.Token, counters => { checkedDocuments += counters.Checked; skippedDocuments += counters.Skipped; });
+
+                    if (BatchAICheckPermit)
+                        await ValidateBatchDocumentAsync(employee, data, "permit", _batchAICts.Token, counters => { checkedDocuments += counters.Checked; skippedDocuments += counters.Skipped; });
+                }
+
+                if (BatchAIResults.Count == 0)
+                    AddBatchAIResult("Усі працівники", string.Empty, "AI перевірка", string.Empty, "ok", "Критичних розбіжностей не знайдено.");
+
+                ClearBatchAIAction();
+                BatchAIStatusMessage = $"Готово. Працівників: {employeesToCheck.Count}, документів перевірено: {checkedDocuments}, пропущено без файла: {skippedDocuments}, результатів: {BatchAIResults.Count}.";
+            }
+            catch (OperationCanceledException)
+            {
+                ClearBatchAIAction();
+                BatchAIStatusMessage = $"Скасовано. Перевірено працівників: {Math.Max(0, BatchAIProgressCurrent - 1)}/{BatchAIProgressTotal}.";
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeesViewModel.RunBatchAIValidation", ex);
+                BatchAIStatusMessage = string.Format(Res("MsgErrorFmt"), ex.Message);
+            }
+            finally
+            {
+                IsBatchAIValidationRunning = false;
+                _batchAICts?.Dispose();
+                _batchAICts = null;
+            }
+        }
+
+        private async Task ValidateBatchDocumentAsync(
+            EmployeeModels.EmployeeSummary employee,
+            EmployeeModels.EmployeeData data,
+            string documentType,
+            CancellationToken token,
+            Action<(int Checked, int Skipped)> updateCounters)
+        {
+            var (docName, docKey, filePath) = GetBatchDocumentInfo(employee.EmployeeFolder, data, documentType);
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                SetBatchAIAction(employee.FullName, docName, "Пропущено: файл не знайдено");
+                updateCounters((0, 1));
+                return;
+            }
+
+            SetBatchAIAction(employee.FullName, docName, "AI читає документ");
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            using var documentCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            documentCts.CancelAfter(TimeSpan.FromSeconds(90));
+            using var stageCts = CancellationTokenSource.CreateLinkedTokenSource(documentCts.Token);
+            var stageTask = RunBatchReadingStagesAsync(employee.FullName, docName, documentType, stageCts.Token);
+            Dictionary<string, string> extracted;
+            try
+            {
+                extracted = await ScanBatchDocumentAsync(filePath, docKey, documentCts.Token);
+            }
+            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+            {
+                SetBatchAIAction(employee.FullName, docName, "AI не відповів за відведений час");
+                AddBatchAIResult(employee.FullName, employee.EmployeeFolder, docName, filePath, "warning", "Пропущено: AI не відповів за 90 секунд. Перевірка продовжилась далі.");
+                updateCounters((0, 1));
+                return;
+            }
+            finally
+            {
+                stageCts.Cancel();
+                try { await stageTask; } catch (OperationCanceledException) { }
+            }
+            updateCounters((1, 0));
+
+            if (extracted.Count == 0)
+            {
+                SetBatchAIAction(employee.FullName, docName, "AI не зміг прочитати документ");
+                AddBatchAIResult(employee.FullName, employee.EmployeeFolder, docName, filePath, "warning", "AI не зміг прочитати документ або відповідь була порожня.");
+                return;
+            }
+
+            SetBatchAIAction(employee.FullName, docName, $"Знайдено: {FormatFoundBatchFields(extracted)}");
+            await Dispatcher.Yield(DispatcherPriority.Background);
+
+            if (!AIScanPrompts.IsDocumentKindCompatible(docKey, extracted))
+            {
+                var kind = AIScanPrompts.GetDocumentKind(extracted);
+                AddBatchAIResult(employee.FullName, employee.EmployeeFolder, docName, filePath, "warning", $"AI розпізнав інший тип документа: {kind}.");
+            }
+
+            CheckBatchDocumentOwnership(employee.FullName, employee.EmployeeFolder, docName, filePath, data, extracted);
+
+            switch (documentType)
+            {
+                case "passport":
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportNumber", data.PassportNumber, "Номер паспорта/ID");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportExpiry", data.PassportExpiry, "Дійсний до");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportAuthority", data.PassportAuthority, "Ким виданий паспорт");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportCity", data.PassportCity, "Місто народження");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportCountry", data.PassportCountry, "Країна народження");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "Citizenship", data.Citizenship, "Громадянство");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "IssuingCountry", data.IssuingCountry, "Країна видачі");
+                    break;
+                case "visa":
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaNumber", data.VisaNumber, "Номер візи/карти");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaStartDate", data.VisaStartDate, "Початок візи");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaExpiry", data.VisaExpiry, "Кінець візи");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaAuthority", data.VisaAuthority, "Орган візи");
+                    break;
+                case "insurance":
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "InsuranceCompanyShort", data.InsuranceCompanyShort, "Страхова");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "InsuranceNumber", data.InsuranceNumber, "Номер страховки");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "InsuranceExpiry", data.InsuranceExpiry, "Кінець страховки");
+                    break;
+                case "permit":
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "WorkPermitNumber", data.WorkPermitNumber, "Номер дозволу");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "WorkPermitIssueDate", data.WorkPermitIssueDate, "Початок дозволу");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "WorkPermitExpiry", data.WorkPermitExpiry, "Кінець дозволу");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "WorkPermitAuthority", data.WorkPermitAuthority, "Орган дозволу");
+                    break;
+            }
+        }
+
+        private void SetBatchAIAction(string employeeName, string documentName, string fieldName)
+        {
+            BatchAICurrentEmployee = employeeName;
+            BatchAICurrentDocument = documentName;
+            BatchAICurrentField = fieldName;
+        }
+
+        private void ClearBatchAIAction()
+        {
+            BatchAICurrentEmployee = string.Empty;
+            BatchAICurrentDocument = string.Empty;
+            BatchAICurrentField = string.Empty;
+        }
+
+        private async Task RunBatchReadingStagesAsync(
+            string employeeName,
+            string docName,
+            string documentType,
+            CancellationToken token)
+        {
+            var stages = GetBatchReadingStages(documentType);
+            var index = 0;
+
+            while (!token.IsCancellationRequested)
+            {
+                SetBatchAIAction(employeeName, docName, stages[index % stages.Length]);
+                index++;
+                await Task.Delay(1200, token);
+            }
+        }
+
+        private static string[] GetBatchReadingStages(string documentType)
+        {
+            return documentType switch
+            {
+                "passport" => new[]
+                {
+                    "AI шукає ім'я та прізвище",
+                    "AI шукає дату народження",
+                    "AI шукає номер паспорта / ID",
+                    "AI шукає термін дії",
+                    "AI перевіряє країну і громадянство"
+                },
+                "visa" => new[]
+                {
+                    "AI шукає номер візи / карти",
+                    "AI шукає початок візи",
+                    "AI шукає кінець візи",
+                    "AI шукає орган видачі",
+                    "AI перевіряє ім'я на документі"
+                },
+                "insurance" => new[]
+                {
+                    "AI шукає страхову компанію",
+                    "AI шукає номер страховки",
+                    "AI шукає термін дії страховки",
+                    "AI перевіряє власника страховки"
+                },
+                "permit" => new[]
+                {
+                    "AI шукає номер дозволу",
+                    "AI шукає дату видачі дозволу",
+                    "AI шукає кінець дозволу",
+                    "AI шукає орган видачі",
+                    "AI перевіряє ім'я на дозволі"
+                },
+                _ => new[] { "AI читає документ" }
+            };
+        }
+
+        private static string FormatFoundBatchFields(Dictionary<string, string> extracted)
+        {
+            var visible = extracted
+                .Where(kv => !kv.Key.StartsWith("__", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(kv.Value))
+                .Take(4)
+                .Select(kv => $"{kv.Key}={kv.Value}");
+
+            var text = string.Join("; ", visible);
+            return string.IsNullOrWhiteSpace(text) ? "дані не знайдено" : text;
+        }
+
+        private async Task<Dictionary<string, string>> ScanBatchDocumentAsync(string filePath, string docKey, CancellationToken token)
+        {
+            var prompt = AIScanPrompts.GetPrompt(docKey);
+            var result = string.Equals(Path.GetExtension(filePath), ".pdf", StringComparison.OrdinalIgnoreCase)
+                ? await _geminiApiService.ChatWithFileAsync(filePath, prompt, ct: token)
+                : await _geminiApiService.ChatWithImageAsync(filePath, prompt, ct: token);
+
+            if (GeminiApiService.IsFailureResponse(result))
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            return AIScanPrompts.ParseResponse(result);
+        }
+
+        private (string Name, string DocKey, string FilePath) GetBatchDocumentInfo(
+            string employeeFolder,
+            EmployeeModels.EmployeeData data,
+            string documentType)
+        {
+            return documentType switch
+            {
+                "passport" => (
+                    "Паспорт / ID-карта",
+                    string.Equals(data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase)
+                            ? "id_card"
+                            : "passport",
+                    ResolveBatchDocumentPath(employeeFolder, data.Files?.Passport)),
+                "visa" => (
+                    "Віза / карта побиту",
+                    GetBatchVisaDocKey(data),
+                    ResolveBatchDocumentPath(employeeFolder, FirstNonEmpty(data.Files?.Visa, data.Files?.VisaPage2, data.Files?.PassportPage2))),
+                "insurance" => (
+                    "Страховка",
+                    "insurance",
+                    ResolveBatchDocumentPath(employeeFolder, data.Files?.Insurance)),
+                "permit" => (
+                    "Дозвіл на роботу",
+                    "permit",
+                    ResolveBatchDocumentPath(employeeFolder, data.Files?.WorkPermit)),
+                _ => (documentType, documentType, string.Empty)
+            };
+        }
+
+        private static string GetBatchVisaDocKey(EmployeeModels.EmployeeData data)
+        {
+            if (string.Equals(data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase))
+                return "id_card_back";
+
+            return string.Equals(data.VisaDocType, "id_card", StringComparison.OrdinalIgnoreCase)
+                ? "visa2"
+                : "visa";
+        }
+
+        private static string ResolveBatchDocumentPath(string employeeFolder, string? storedPath)
+        {
+            if (string.IsNullOrWhiteSpace(storedPath))
+                return string.Empty;
+
+            if (Path.IsPathRooted(storedPath) && File.Exists(storedPath))
+                return storedPath;
+
+            var combined = Path.Combine(employeeFolder, storedPath);
+            return File.Exists(combined) ? combined : storedPath;
+        }
+
+        private static string FirstNonEmpty(params string?[] values)
+        {
+            return values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+        }
+
+        private void CheckBatchDocumentOwnership(
+            string employeeName,
+            string employeeFolder,
+            string docName,
+            string documentPath,
+            EmployeeModels.EmployeeData data,
+            Dictionary<string, string> extracted)
+        {
+            SetBatchAIAction(employeeName, docName, "Звіряю ім'я, прізвище і дату народження");
+            var hasFirst = TryGetBatchValue(extracted, "FirstName", out var firstName);
+            var hasLast = TryGetBatchValue(extracted, "LastName", out var lastName);
+            var swapped = hasFirst
+                && hasLast
+                && BatchNamesMatch(firstName, data.LastName)
+                && BatchNamesMatch(lastName, data.FirstName);
+
+            if (hasFirst && !BatchNamesMatch(firstName, data.FirstName) && !swapped)
+            {
+                var isLikelyOcr = IsLikelyNameOcrSlip(data.FirstName, firstName);
+                AddBatchAIResult(
+                    employeeName,
+                    employeeFolder,
+                    docName,
+                    documentPath,
+                    "warning",
+                    isLikelyOcr
+                        ? $"Ім'я схоже на OCR-помилку, перевірте вручну: профіль '{data.FirstName}', документ '{firstName}'."
+                        : $"Ім'я не збігається: профіль '{data.FirstName}', документ '{firstName}'.",
+                    "FirstName",
+                    "Ім'я",
+                    data.FirstName,
+                    firstName,
+                    canApply: !isLikelyOcr);
+            }
+
+            if (hasLast && !BatchNamesMatch(lastName, data.LastName) && !swapped)
+            {
+                var isLikelyOcr = IsLikelyNameOcrSlip(data.LastName, lastName);
+                AddBatchAIResult(
+                    employeeName,
+                    employeeFolder,
+                    docName,
+                    documentPath,
+                    "warning",
+                    isLikelyOcr
+                        ? $"Прізвище схоже на OCR-помилку, перевірте вручну: профіль '{data.LastName}', документ '{lastName}'."
+                        : $"Прізвище не збігається: профіль '{data.LastName}', документ '{lastName}'.",
+                    "LastName",
+                    "Прізвище",
+                    data.LastName,
+                    lastName,
+                    canApply: !isLikelyOcr);
+            }
+
+            if (TryGetBatchValue(extracted, "BirthDate", out var birthDate) && !BatchValuesMatch("BirthDate", data.BirthDate, birthDate))
+                AddBatchAIResult(
+                    employeeName,
+                    employeeFolder,
+                    docName,
+                    documentPath,
+                    "warning",
+                    $"Дата народження не збігається: профіль '{data.BirthDate}', документ '{birthDate}'.",
+                    "BirthDate",
+                    "Дата народження",
+                    data.BirthDate,
+                    birthDate,
+                    canApply: true);
+        }
+
+        private void AddBatchCompare(
+            string employeeName,
+            string employeeFolder,
+            string docName,
+            string documentPath,
+            Dictionary<string, string> extracted,
+            string fieldKey,
+            string currentValue,
+            string displayName)
+        {
+            SetBatchAIAction(employeeName, docName, $"Звіряю: {displayName}");
+
+            if (!TryGetBatchValue(extracted, fieldKey, out var suggested))
+                return;
+
+            if (AIScanPrompts.IsLowConfidenceField(extracted, fieldKey)
+                || AIScanPrompts.IsSuspiciousFieldValue(extracted, fieldKey, suggested, currentValue))
+            {
+                AddBatchAIResult(employeeName, employeeFolder, docName, documentPath, "warning", $"{displayName}: AI не впевнений у значенні '{suggested}', пропущено.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentValue))
+            {
+                AddBatchAIResult(
+                    employeeName,
+                    employeeFolder,
+                    docName,
+                    documentPath,
+                    "missing",
+                    $"{displayName}: поле порожнє у профілі, у документі знайдено '{suggested}'.",
+                    fieldKey,
+                    displayName,
+                    currentValue,
+                    suggested,
+                    canApply: true);
+                return;
+            }
+
+            if (!BatchValuesMatch(fieldKey, currentValue, suggested))
+                AddBatchAIResult(
+                    employeeName,
+                    employeeFolder,
+                    docName,
+                    documentPath,
+                    "warning",
+                    $"{displayName}: профіль '{currentValue}', документ '{suggested}'.",
+                    fieldKey,
+                    displayName,
+                    currentValue,
+                    suggested,
+                    canApply: true);
+        }
+
+        private async Task ApplyBatchAISuggestionAsync(BatchAIValidationResultItem item)
+        {
+            if (item == null || !item.CanApply || item.IsApplied || string.IsNullOrWhiteSpace(item.EmployeeFolder))
+                return;
+
+            try
+            {
+                var data = _employeeService.LoadEmployeeData(item.EmployeeFolder);
+                if (data == null)
+                {
+                    item.Message = $"{item.Message} Не вдалося прочитати профіль для заповнення.";
+                    return;
+                }
+
+                var valueToApply = NormalizeBatchApplyValue(item.FieldKey, item.SuggestedValue);
+                if (!SetBatchEmployeeField(data, item.FieldKey, valueToApply))
+                {
+                    item.Message = $"{item.Message} Це поле поки не підтримує автоматичне заповнення.";
+                    return;
+                }
+
+                if (!_employeeService.SaveEmployeeData(item.EmployeeFolder, data))
+                {
+                    item.Message = $"{item.Message} Не вдалося зберегти зміну.";
+                    return;
+                }
+
+                await _employeeService.AddHistoryEntry(item.EmployeeFolder, data.UniqueId, new EmployeeModels.EmployeeHistoryEntry
+                {
+                    EventType = "ProfileChanged",
+                    Action = "AI масове заповнення",
+                    Field = item.FieldDisplayName,
+                    OldValue = item.CurrentValue,
+                    NewValue = valueToApply,
+                    Description = $"AI масово заповнив {item.FieldDisplayName}: {item.CurrentValue} → {valueToApply}"
+                });
+
+                item.IsApplied = true;
+                item.CanApply = false;
+                item.CurrentValue = valueToApply;
+                item.Severity = "ok";
+                item.Message = $"{item.FieldDisplayName}: заповнено значенням '{valueToApply}'.";
+                SetBatchAIAction(item.EmployeeName, item.DocumentName, $"Заповнено: {item.FieldDisplayName}");
+
+                await LoadEmployeesAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeesViewModel.ApplyBatchAISuggestion", ex);
+                item.Message = $"{item.Message} Помилка: {ex.Message}";
+            }
+        }
+
+        private void OpenBatchAIDocument(BatchAIValidationResultItem item)
+        {
+            if (item == null || string.IsNullOrWhiteSpace(item.DocumentPath) || !File.Exists(item.DocumentPath))
+                return;
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = item.DocumentPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeesViewModel.OpenBatchAIDocument", ex.Message);
+                item.Message = $"{item.Message} Не вдалося відкрити документ: {ex.Message}";
+            }
+        }
+
+        private static string NormalizeBatchApplyValue(string fieldKey, string value)
+        {
+            if (string.Equals(fieldKey, "FirstName", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "LastName", StringComparison.OrdinalIgnoreCase))
+                return FormatPersonName(value);
+
+            return value?.Trim() ?? string.Empty;
+        }
+
+        private static string FormatPersonName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var textInfo = CultureInfo.InvariantCulture.TextInfo;
+            var normalized = value.Trim().ToLowerInvariant();
+            normalized = string.Join(" ", normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+            return string.Join(" ", normalized
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => string.Join("-", part
+                    .Split('-', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(piece => textInfo.ToTitleCase(piece)))));
+        }
+
+        private static bool SetBatchEmployeeField(EmployeeModels.EmployeeData data, string fieldKey, string value)
+        {
+            switch (fieldKey)
+            {
+                case "FirstName": data.FirstName = value; return true;
+                case "LastName": data.LastName = value; return true;
+                case "BirthDate": data.BirthDate = value; return true;
+                case "PassportNumber": data.PassportNumber = value; return true;
+                case "PassportExpiry": data.PassportExpiry = value; return true;
+                case "PassportAuthority": data.PassportAuthority = value; return true;
+                case "PassportCity": data.PassportCity = value; return true;
+                case "PassportCountry": data.PassportCountry = value; return true;
+                case "Citizenship": data.Citizenship = value; return true;
+                case "IssuingCountry": data.IssuingCountry = value; return true;
+                case "VisaNumber": data.VisaNumber = value; return true;
+                case "VisaStartDate": data.VisaStartDate = value; return true;
+                case "VisaExpiry": data.VisaExpiry = value; return true;
+                case "VisaAuthority": data.VisaAuthority = value; return true;
+                case "InsuranceCompanyShort": data.InsuranceCompanyShort = value; return true;
+                case "InsuranceNumber": data.InsuranceNumber = value; return true;
+                case "InsuranceExpiry": data.InsuranceExpiry = value; return true;
+                case "WorkPermitNumber": data.WorkPermitNumber = value; return true;
+                case "WorkPermitIssueDate": data.WorkPermitIssueDate = value; return true;
+                case "WorkPermitExpiry": data.WorkPermitExpiry = value; return true;
+                case "WorkPermitAuthority": data.WorkPermitAuthority = value; return true;
+                default: return false;
+            }
+        }
+
+        private void AddBatchAIResult(
+            string employeeName,
+            string employeeFolder,
+            string docName,
+            string documentPath,
+            string severity,
+            string message,
+            string fieldKey = "",
+            string fieldDisplayName = "",
+            string currentValue = "",
+            string suggestedValue = "",
+            bool canApply = false)
+        {
+            BatchAIResults.Add(new BatchAIValidationResultItem
+            {
+                EmployeeName = employeeName,
+                EmployeeFolder = employeeFolder,
+                DocumentName = docName,
+                DocumentPath = documentPath,
+                FieldKey = fieldKey,
+                FieldDisplayName = fieldDisplayName,
+                CurrentValue = currentValue,
+                SuggestedValue = suggestedValue,
+                Severity = severity,
+                Message = message,
+                CanApply = canApply
+            });
+            OnPropertyChanged(nameof(HasBatchAIResults));
+        }
+
+        private static bool TryGetBatchValue(Dictionary<string, string> source, string key, out string value)
+        {
+            if (source.TryGetValue(key, out var raw) && !string.IsNullOrWhiteSpace(raw))
+            {
+                value = raw.Trim();
+                return true;
+            }
+
+            value = string.Empty;
+            return false;
+        }
+
+        private static bool BatchValuesMatch(string fieldKey, string current, string suggested)
+        {
+            if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(suggested))
+                return false;
+
+            if (fieldKey.EndsWith("Expiry", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("IssueDate", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("StartDate", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "BirthDate", StringComparison.OrdinalIgnoreCase))
+            {
+                var currentDate = DateParsingHelper.TryParseDate(current);
+                var suggestedDate = DateParsingHelper.TryParseDate(suggested);
+                if (currentDate != null && suggestedDate != null)
+                    return currentDate.Value.Date == suggestedDate.Value.Date;
+            }
+
+            if (fieldKey.Contains("Number", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Equals(NormalizeBatchDocumentNumber(current), NormalizeBatchDocumentNumber(suggested), StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (string.Equals(fieldKey, "FirstName", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "LastName", StringComparison.OrdinalIgnoreCase))
+                return BatchNamesMatch(current, suggested);
+
+            return string.Equals(current.Trim(), suggested.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool BatchNamesMatch(string left, string right)
+        {
+            if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+                return true;
+
+            return string.Equals(NormalizeBatchName(left), NormalizeBatchName(right), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeBatchName(string value)
+        {
+            var normalized = value.Trim().ToUpperInvariant()
+                .Replace('-', ' ')
+                .Replace('’', '\'')
+                .Replace('`', '\'')
+                .Replace('´', '\'')
+                .Replace('\u00A0', ' ');
+
+            return string.Join(" ", normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static string NormalizeBatchDocumentNumber(string value)
+        {
+            return new string(value.Trim().ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+        }
+
+        private static bool IsLikelyNameOcrSlip(string profileValue, string documentValue)
+        {
+            var left = NormalizeBatchName(profileValue).Replace(" ", string.Empty, StringComparison.Ordinal);
+            var right = NormalizeBatchName(documentValue).Replace(" ", string.Empty, StringComparison.Ordinal);
+            if (left.Length < 4 || right.Length < 4)
+                return false;
+
+            if (Math.Abs(left.Length - right.Length) > 1)
+                return false;
+
+            return DamerauLevenshteinDistance(left, right) <= 2;
+        }
+
+        private static int DamerauLevenshteinDistance(string source, string target)
+        {
+            var distances = new int[source.Length + 1, target.Length + 1];
+
+            for (var i = 0; i <= source.Length; i++)
+                distances[i, 0] = i;
+
+            for (var j = 0; j <= target.Length; j++)
+                distances[0, j] = j;
+
+            for (var i = 1; i <= source.Length; i++)
+            {
+                for (var j = 1; j <= target.Length; j++)
+                {
+                    var cost = source[i - 1] == target[j - 1] ? 0 : 1;
+                    distances[i, j] = Math.Min(
+                        Math.Min(distances[i - 1, j] + 1, distances[i, j - 1] + 1),
+                        distances[i - 1, j - 1] + cost);
+
+                    if (i > 1
+                        && j > 1
+                        && source[i - 1] == target[j - 2]
+                        && source[i - 2] == target[j - 1])
+                    {
+                        distances[i, j] = Math.Min(distances[i, j], distances[i - 2, j - 2] + 1);
+                    }
+                }
+            }
+
+            return distances[source.Length, target.Length];
         }
 
         private void BatchGenerate(TemplateEntry? template)

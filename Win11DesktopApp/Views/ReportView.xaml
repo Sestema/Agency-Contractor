@@ -77,16 +77,10 @@
             <Setter Property="MinWidth" Value="170"/>
         </Style>
 
-        <Style x:Key="ReportDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="BorderThickness" Value="0,0,1,2"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style x:Key="ReportDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeader}">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Padding" Value="14,0"/>
             <Style.Triggers>
                 <Trigger Property="SortDirection" Value="Ascending">
                     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
@@ -99,23 +93,10 @@
 
         <Style x:Key="ReportDataGridRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRow}"/>
 
-        <Style x:Key="ReportDataGridCellStyle" TargetType="DataGridCell">
-            <Setter Property="Padding" Value="12,8"/>
+        <Style x:Key="ReportDataGridCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCell}">
+            <Setter Property="Padding" Value="14,7"/>
             <Setter Property="BorderThickness" Value="0,0,1,0"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="DataGridCell">
-                        <Border Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <Style x:Key="ExpiryText" TargetType="TextBlock">
@@ -789,6 +770,7 @@
                                                 <DataGridTextColumn Header="{DynamicResource ReportColDocumentType}" Binding="{Binding DocumentType}" Width="130" SortMemberPath="DocumentType"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColPassportNumber}" Binding="{Binding PassportNumber}" Width="170" SortMemberPath="PassportNumber"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColVisaNumber}" Binding="{Binding VisaNumber}" Width="170" SortMemberPath="VisaNumber"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColVisaAuthority}" Binding="{Binding VisaAuthority}" Width="220" SortMemberPath="VisaAuthority"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColWorkAddress}" Binding="{Binding WorkAddress}" Width="220" SortMemberPath="WorkAddress"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColHighestEducation}" Binding="{Binding HighestEducation}" Width="220" SortMemberPath="HighestEducation"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColBirthDate}" Binding="{Binding BirthDate}" Width="100" SortMemberPath="BirthDate"/>

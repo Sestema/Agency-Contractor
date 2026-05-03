@@ -426,6 +426,7 @@
     <sys:String x:Key="ThemeCustom">Тепла</sys:String>
     <sys:String x:Key="ThemeGlass">Скло</sys:String>
     <sys:String x:Key="ThemeGlassDark">Скло темне</sys:String>
+    <sys:String x:Key="ThemeVantaDark">Vanta</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Фірми</sys:String>
@@ -635,6 +636,8 @@
     <sys:String x:Key="DetFieldBirthDate">Дата народження</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="DetFieldGender">Стать</sys:String>
+    <sys:String x:Key="DetFieldDocumentProfileType">Тип працівника / комплект документів</sys:String>
+    <sys:String x:Key="DetDocumentProfileHint">Зміна типу тільки показує потрібні блоки й дозволяє додати відсутні документи. Старі файли не видаляються.</sys:String>
     <sys:String x:Key="DetSecPassport">Паспортні дані</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="DetFieldPassportAuthority">Орган, що видав документ</sys:String>
@@ -647,6 +650,7 @@
     <sys:String x:Key="DetFieldVisaNum">Номер візи</sys:String>
     <sys:String x:Key="DetFieldVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="DetFieldVisaType">Тип візи</sys:String>
+    <sys:String x:Key="DetFieldVisaStartDate">Дата початку візи</sys:String>
     <sys:String x:Key="DetFieldWorkPermitName">Назва дозволу на роботу</sys:String>
     <sys:String x:Key="DetSecInsurance">Страховка</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Страхова компанія</sys:String>
@@ -705,6 +709,29 @@
     <sys:String x:Key="MainTooltipDblClick">Подвійний клік — редагувати</sys:String>
     <sys:String x:Key="CompanyMoveUp">Перемістити вгору</sys:String>
     <sys:String x:Key="CompanyMoveDown">Перемістити вниз</sys:String>
+    <sys:String x:Key="MainGreetingMorning">Доброго ранку</sys:String>
+    <sys:String x:Key="MainGreetingAfternoon">Добрий день</sys:String>
+    <sys:String x:Key="MainGreetingEvening">Добрий вечір</sys:String>
+    <sys:String x:Key="MainActiveCompanyTitle">Активна фірма</sys:String>
+    <sys:String x:Key="MainChangeCompany">Змінити фірму</sys:String>
+    <sys:String x:Key="MainEditCompanyShort">Редагувати</sys:String>
+    <sys:String x:Key="MainCurrentTimeLabel">Зараз</sys:String>
+    <sys:String x:Key="MainModulesTitle">Основні модулі</sys:String>
+    <sys:String x:Key="MainNoCompanySelected">Фірму ще не вибрано</sys:String>
+    <sys:String x:Key="MainNoCompanyMeta">Оберіть компанію у списку зліва</sys:String>
+    <sys:String x:Key="MainCompanySummaryFormat">{0} працівників • {1} шаблонів</sys:String>
+    <sys:String x:Key="MainStatEmployees">Працівники</sys:String>
+    <sys:String x:Key="MainStatEmployeesHint">у вибраній фірмі</sys:String>
+    <sys:String x:Key="MainStatTemplates">Шаблони</sys:String>
+    <sys:String x:Key="MainStatTemplatesHint">готові для роботи</sys:String>
+    <sys:String x:Key="MainStatProblems">Проблеми</sys:String>
+    <sys:String x:Key="MainStatProblemsHint">по всіх фірмах</sys:String>
+    <sys:String x:Key="MainStatMonthlyMovement">Рух за місяць</sys:String>
+    <sys:String x:Key="MainStatMonthlyMovementHint">додано / в архів</sys:String>
+    <sys:String x:Key="MainStatAddedShort">Додано</sys:String>
+    <sys:String x:Key="MainStatArchivedShort">Архів</sys:String>
+    <sys:String x:Key="MainStatCompanies">Фірми</sys:String>
+    <sys:String x:Key="MainStatCompaniesHint">доступні зараз</sys:String>
 
     <!-- ProblemsView -->
     <sys:String x:Key="ProbStatExpired">Прострочено / Критично</sys:String>
@@ -820,6 +847,7 @@
     <sys:String x:Key="WizVisaNum">Номер візи</sys:String>
     <sys:String x:Key="WizVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="WizVisaType">Тип візи</sys:String>
+    <sys:String x:Key="WizVisaStartDate">Дата початку візи</sys:String>
     <sys:String x:Key="WizVisaExpiry">Дата закінчення візи</sys:String>
     <sys:String x:Key="WizIdCardNumberHint">номер карти / документа</sys:String>
     <sys:String x:Key="WizIdCardAuthorityHint">орган видачі документа</sys:String>
@@ -990,6 +1018,7 @@
     <sys:String x:Key="ReportColDocumentType">Тип документа</sys:String>
     <sys:String x:Key="ReportColPassportNumber">Номер паспорта або ID-карти</sys:String>
     <sys:String x:Key="ReportColVisaNumber">Номер візи</sys:String>
+    <sys:String x:Key="ReportColVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="ReportColWorkAddress">Адреса виконання роботи</sys:String>
     <sys:String x:Key="ReportColHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="ReportColAddressCz">Повна адреса проживання</sys:String>
@@ -1116,6 +1145,7 @@
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
     <sys:String x:Key="AIScanWorking">AI аналізує документ...</sys:String>
     <sys:String x:Key="AIScanNoData">AI не зміг розпізнати дані</sys:String>
+    <sys:String x:Key="AIScanDocumentTypeMismatch">AI розпізнав інший тип документа. Перевірте, чи файл додано у правильний блок.</sys:String>
     <sys:String x:Key="AIScanDone">Заповнено {0} полів</sys:String>
     <sys:String x:Key="AIStatusReady">AI готовий до роботи</sys:String>
 
@@ -1147,10 +1177,22 @@
     <sys:String x:Key="SearchCatCompanies">Фірми</sys:String>
     <sys:String x:Key="DashboardTitle">Панель керування</sys:String>
     <sys:String x:Key="DashWidgetEmployees">Працівники</sys:String>
+    <sys:String x:Key="DashWidgetDocuments">Документи</sys:String>
     <sys:String x:Key="DashWidgetProblems">Проблеми з документами</sys:String>
     <sys:String x:Key="DashWidgetActivity">Остання активність</sys:String>
     <sys:String x:Key="DashWidgetFinance">Фінанси за місяць</sys:String>
     <sys:String x:Key="DashWidgetQuickActions">Швидкі дії</sys:String>
+    <sys:String x:Key="DashWidgetActiveEmployees">Активні працівники</sys:String>
+    <sys:String x:Key="DashAllCompanies">у всіх фірмах</sys:String>
+    <sys:String x:Key="DashVisibleCompanies">активних фірм</sys:String>
+    <sys:String x:Key="DashWidgetEfficiency">Ефективність</sys:String>
+    <sys:String x:Key="DashEfficiencyEmployeesAllTime">працівників додано за весь час</sys:String>
+    <sys:String x:Key="DashEfficiencyGeneratedDocs">згенерованих документів</sys:String>
+    <sys:String x:Key="DashEfficiencyProgramTime">час у програмі</sys:String>
+    <sys:String x:Key="DashEfficiencySavedTime">зекономлено часу</sys:String>
+    <sys:String x:Key="DashEfficiencyFormula">Розрахунок: 15 хв економії на працівнику і 8 хв на документі.</sys:String>
+    <sys:String x:Key="DashHoursShort">год</sys:String>
+    <sys:String x:Key="DashMinutesShort">хв</sys:String>
     <sys:String x:Key="DashNoCompany">Оберіть фірму для перегляду</sys:String>
     <sys:String x:Key="DashActionAddEmployee">Додати працівника</sys:String>
     <sys:String x:Key="DashActionGenerate">Генерувати документ</sys:String>
@@ -1284,6 +1326,7 @@
     <sys:String x:Key="TagDescEmpVisaNumber">Номер візи</sys:String>
     <sys:String x:Key="TagDescEmpVisaAuthority">Орган, що видав візу</sys:String>
     <sys:String x:Key="TagDescEmpVisaType">Тип візи</sys:String>
+    <sys:String x:Key="TagDescEmpVisaStartDate">Дата початку візи</sys:String>
     <sys:String x:Key="TagDescEmpVisaExpiry">Дата закінчення візи</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Insurance -->
@@ -1747,10 +1790,12 @@
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
     <sys:String x:Key="HistFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
+    <sys:String x:Key="HistFieldDocumentProfileType">Тип працівника / комплект документів</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Орган, що видав документ</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Термін паспорту</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Номер візи</sys:String>
     <sys:String x:Key="HistFieldVisaAuthority">Орган, що видав візу</sys:String>
+    <sys:String x:Key="HistFieldVisaStartDate">Початок візи</sys:String>
     <sys:String x:Key="HistFieldVisaExp">Термін візи</sys:String>
     <sys:String x:Key="HistFieldInsNum">Номер страховки</sys:String>
     <sys:String x:Key="HistFieldInsExp">Термін страховки</sys:String>
@@ -1870,6 +1915,9 @@
     <sys:String x:Key="AIValidationMatchMessage">Збігається з документом</sys:String>
     <sys:String x:Key="AIValidationAppliedMessage">Значення застосовано</sys:String>
     <sys:String x:Key="AIValidationSuspiciousReadMessage">AI може ненадійно зчитати це значення: {0}</sys:String>
+    <sys:String x:Key="AIValidationLowConfidenceMessage">AI не достатньо впевнений для автозаповнення: {0}</sys:String>
+    <sys:String x:Key="AIValidationDocumentKindTitle">Тип документа</sys:String>
+    <sys:String x:Key="AIValidationDocumentKindMismatchMessage">AI розпізнав інший тип документа: {0}</sys:String>
     <sys:String x:Key="AIValidationSourcePassport">Паспорт</sys:String>
     <sys:String x:Key="AIValidationSourceVisa">Віза</sys:String>
     <sys:String x:Key="AIValidationSourceInsurance">Страховка</sys:String>

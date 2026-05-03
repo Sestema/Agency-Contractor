@@ -245,6 +245,7 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldVisaNum"), oldData.VisaNumber, newData.VisaNumber);
             Check(Res("HistFieldVisaAuthority"), oldData.VisaAuthority, newData.VisaAuthority);
             Check(Res("HistFieldVisaType"), oldData.VisaType, newData.VisaType);
+            Check(Res("HistFieldVisaStartDate"), oldData.VisaStartDate, newData.VisaStartDate);
             Check(Res("HistFieldVisaExp"), oldData.VisaExpiry, newData.VisaExpiry);
             Check(Res("HistFieldInsNum"), oldData.InsuranceNumber, newData.InsuranceNumber);
             Check(Res("HistFieldInsCompany"), oldData.InsuranceCompanyShort, newData.InsuranceCompanyShort);

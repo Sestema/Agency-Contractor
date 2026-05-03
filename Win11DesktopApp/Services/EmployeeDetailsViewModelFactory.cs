@@ -15,6 +15,7 @@ namespace Win11DesktopApp.Services
         private readonly DocumentGenerationService _documentGenerationService;
         private readonly TagCatalogService _tagCatalogService;
         private readonly AiWindowFactory _aiWindowFactory;
+        private readonly AppStatisticsService _appStatisticsService;
 
         public EmployeeDetailsViewModelFactory(
             EmployeeService employeeService,
@@ -27,7 +28,8 @@ namespace Win11DesktopApp.Services
             TemplateService templateService,
             DocumentGenerationService documentGenerationService,
             TagCatalogService tagCatalogService,
-            AiWindowFactory aiWindowFactory)
+            AiWindowFactory aiWindowFactory,
+            AppStatisticsService appStatisticsService)
         {
             _employeeService = employeeService;
             _geminiApiService = geminiApiService;
@@ -40,6 +42,7 @@ namespace Win11DesktopApp.Services
             _documentGenerationService = documentGenerationService;
             _tagCatalogService = tagCatalogService;
             _aiWindowFactory = aiWindowFactory;
+            _appStatisticsService = appStatisticsService;
         }
 
         public EmployeeDetailsViewModel Create(
@@ -64,7 +67,8 @@ namespace Win11DesktopApp.Services
                 _templateService,
                 _documentGenerationService,
                 _tagCatalogService,
-                _aiWindowFactory);
+                _aiWindowFactory,
+                _appStatisticsService);
         }
     }
 }

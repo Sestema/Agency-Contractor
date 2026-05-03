@@ -355,6 +355,7 @@
     <sys:String x:Key="ThemeCustom">Warm</sys:String>
     <sys:String x:Key="ThemeGlass">Glass</sys:String>
     <sys:String x:Key="ThemeGlassDark">Dark Glass</sys:String>
+    <sys:String x:Key="ThemeVantaDark">Vanta</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Companies</sys:String>
@@ -618,6 +619,8 @@
     <sys:String x:Key="DetFieldBirthDate">Date of birth</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="DetFieldGender">Gender</sys:String>
+    <sys:String x:Key="DetFieldDocumentProfileType">Employee type / document set</sys:String>
+    <sys:String x:Key="DetDocumentProfileHint">Changing the type only shows the required blocks and lets you add missing documents. Existing files are not deleted.</sys:String>
     <sys:String x:Key="DetSecPassport">Passport data</sys:String>
     <sys:String x:Key="DetFieldPassportNum">Passport number</sys:String>
     <sys:String x:Key="DetFieldPassportAuthority">Document issuing authority</sys:String>
@@ -630,6 +633,7 @@
     <sys:String x:Key="DetFieldVisaNum">Visa number</sys:String>
     <sys:String x:Key="DetFieldVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="DetFieldVisaType">Visa type</sys:String>
+    <sys:String x:Key="DetFieldVisaStartDate">Visa start date</sys:String>
     <sys:String x:Key="DetFieldWorkPermitName">Work permit name</sys:String>
     <sys:String x:Key="DetSecInsurance">Insurance</sys:String>
     <sys:String x:Key="DetFieldInsCompany">Insurance company</sys:String>
@@ -688,6 +692,29 @@
     <sys:String x:Key="MainTooltipDblClick">Double click to edit</sys:String>
     <sys:String x:Key="CompanyMoveUp">Move up</sys:String>
     <sys:String x:Key="CompanyMoveDown">Move down</sys:String>
+    <sys:String x:Key="MainGreetingMorning">Good morning</sys:String>
+    <sys:String x:Key="MainGreetingAfternoon">Good afternoon</sys:String>
+    <sys:String x:Key="MainGreetingEvening">Good evening</sys:String>
+    <sys:String x:Key="MainActiveCompanyTitle">Active company</sys:String>
+    <sys:String x:Key="MainChangeCompany">Change company</sys:String>
+    <sys:String x:Key="MainEditCompanyShort">Edit</sys:String>
+    <sys:String x:Key="MainCurrentTimeLabel">Now</sys:String>
+    <sys:String x:Key="MainModulesTitle">Main modules</sys:String>
+    <sys:String x:Key="MainNoCompanySelected">No company selected yet</sys:String>
+    <sys:String x:Key="MainNoCompanyMeta">Choose a company from the left list</sys:String>
+    <sys:String x:Key="MainCompanySummaryFormat">{0} employees • {1} templates</sys:String>
+    <sys:String x:Key="MainStatEmployees">Employees</sys:String>
+    <sys:String x:Key="MainStatEmployeesHint">in selected company</sys:String>
+    <sys:String x:Key="MainStatTemplates">Templates</sys:String>
+    <sys:String x:Key="MainStatTemplatesHint">ready to use</sys:String>
+    <sys:String x:Key="MainStatProblems">Problems</sys:String>
+    <sys:String x:Key="MainStatProblemsHint">across all companies</sys:String>
+    <sys:String x:Key="MainStatMonthlyMovement">This month</sys:String>
+    <sys:String x:Key="MainStatMonthlyMovementHint">added / archived</sys:String>
+    <sys:String x:Key="MainStatAddedShort">Added</sys:String>
+    <sys:String x:Key="MainStatArchivedShort">Archive</sys:String>
+    <sys:String x:Key="MainStatCompanies">Companies</sys:String>
+    <sys:String x:Key="MainStatCompaniesHint">available now</sys:String>
 
     <!-- ProblemsView -->
     <sys:String x:Key="ProbStatExpired">People / Docs — Expired</sys:String>
@@ -801,6 +828,7 @@
     <sys:String x:Key="WizVisaNum">Visa number</sys:String>
     <sys:String x:Key="WizVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="WizVisaType">Visa type</sys:String>
+    <sys:String x:Key="WizVisaStartDate">Visa start date</sys:String>
     <sys:String x:Key="WizVisaExpiry">Visa expiry date</sys:String>
     <sys:String x:Key="WizIdCardNumberHint">card / document number</sys:String>
     <sys:String x:Key="WizIdCardAuthorityHint">document issuing authority</sys:String>
@@ -971,6 +999,7 @@
     <sys:String x:Key="ReportColDocumentType">Card/visa/passport type</sys:String>
     <sys:String x:Key="ReportColPassportNumber">Passport or ID card number</sys:String>
     <sys:String x:Key="ReportColVisaNumber">Visa number</sys:String>
+    <sys:String x:Key="ReportColVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="ReportColWorkAddress">Work address</sys:String>
     <sys:String x:Key="ReportColHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="ReportColAddressCz">Full country address</sys:String>
@@ -1097,6 +1126,7 @@
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
     <sys:String x:Key="AIScanWorking">AI is analyzing the document...</sys:String>
     <sys:String x:Key="AIScanNoData">AI could not recognize data</sys:String>
+    <sys:String x:Key="AIScanDocumentTypeMismatch">AI recognized a different document type. Check that the file is in the correct document block.</sys:String>
     <sys:String x:Key="AIScanDone">Filled {0} fields</sys:String>
     <sys:String x:Key="AIStatusReady">AI is ready</sys:String>
 
@@ -1128,10 +1158,22 @@
     <sys:String x:Key="SearchCatCompanies">Companies</sys:String>
     <sys:String x:Key="DashboardTitle">Dashboard</sys:String>
     <sys:String x:Key="DashWidgetEmployees">Employees</sys:String>
+    <sys:String x:Key="DashWidgetDocuments">Documents</sys:String>
     <sys:String x:Key="DashWidgetProblems">Document Issues</sys:String>
     <sys:String x:Key="DashWidgetActivity">Recent Activity</sys:String>
     <sys:String x:Key="DashWidgetFinance">Monthly Finance</sys:String>
     <sys:String x:Key="DashWidgetQuickActions">Quick Actions</sys:String>
+    <sys:String x:Key="DashWidgetActiveEmployees">Active Employees</sys:String>
+    <sys:String x:Key="DashAllCompanies">across all companies</sys:String>
+    <sys:String x:Key="DashVisibleCompanies">active companies</sys:String>
+    <sys:String x:Key="DashWidgetEfficiency">Efficiency</sys:String>
+    <sys:String x:Key="DashEfficiencyEmployeesAllTime">employees added all time</sys:String>
+    <sys:String x:Key="DashEfficiencyGeneratedDocs">generated documents</sys:String>
+    <sys:String x:Key="DashEfficiencyProgramTime">time in app</sys:String>
+    <sys:String x:Key="DashEfficiencySavedTime">time saved</sys:String>
+    <sys:String x:Key="DashEfficiencyFormula">Estimate: 15 min saved per employee and 8 min per document.</sys:String>
+    <sys:String x:Key="DashHoursShort">h</sys:String>
+    <sys:String x:Key="DashMinutesShort">min</sys:String>
     <sys:String x:Key="DashNoCompany">Select a company to view</sys:String>
     <sys:String x:Key="DashActionAddEmployee">Add Employee</sys:String>
     <sys:String x:Key="DashActionGenerate">Generate Document</sys:String>
@@ -1265,6 +1307,7 @@
     <sys:String x:Key="TagDescEmpVisaNumber">Visa number</sys:String>
     <sys:String x:Key="TagDescEmpVisaAuthority">Visa issuing authority</sys:String>
     <sys:String x:Key="TagDescEmpVisaType">Visa type</sys:String>
+    <sys:String x:Key="TagDescEmpVisaStartDate">Visa start date</sys:String>
     <sys:String x:Key="TagDescEmpVisaExpiry">Visa expiry date</sys:String>
 
     <!-- Tag Catalog Descriptions – Employee Insurance -->
@@ -1731,10 +1774,12 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistFieldHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="HistFieldGender">Gender</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Passport number</sys:String>
+    <sys:String x:Key="HistFieldDocumentProfileType">Employee type / document set</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Document issuing authority</sys:String>
     <sys:String x:Key="HistFieldPassportExp">Passport expiry</sys:String>
     <sys:String x:Key="HistFieldVisaNum">Visa number</sys:String>
     <sys:String x:Key="HistFieldVisaAuthority">Visa issuing authority</sys:String>
+    <sys:String x:Key="HistFieldVisaStartDate">Visa start date</sys:String>
     <sys:String x:Key="HistFieldVisaExp">Visa expiry</sys:String>
     <sys:String x:Key="HistFieldInsNum">Insurance number</sys:String>
     <sys:String x:Key="HistFieldInsExp">Insurance expiry</sys:String>
@@ -1854,6 +1899,9 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="AIValidationMatchMessage">Matches the document</sys:String>
     <sys:String x:Key="AIValidationAppliedMessage">Value applied</sys:String>
     <sys:String x:Key="AIValidationSuspiciousReadMessage">AI may have read this value unreliably: {0}</sys:String>
+    <sys:String x:Key="AIValidationLowConfidenceMessage">AI is not confident enough to autofill this value: {0}</sys:String>
+    <sys:String x:Key="AIValidationDocumentKindTitle">Document type</sys:String>
+    <sys:String x:Key="AIValidationDocumentKindMismatchMessage">AI recognized a different document type: {0}</sys:String>
     <sys:String x:Key="AIValidationSourcePassport">Passport</sys:String>
     <sys:String x:Key="AIValidationSourceVisa">Visa</sys:String>
     <sys:String x:Key="AIValidationSourceInsurance">Insurance</sys:String>

@@ -448,7 +448,8 @@
                                         <ScaleTransform ScaleX="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                         ScaleY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
                                     </Grid.LayoutTransform>
-                                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                                    <Border Style="{StaticResource ModernCard}"
+                                            Background="{DynamicResource CardBackgroundBrush}"
                                             CornerRadius="14"
                                             Padding="16,15"
                                             Margin="8,6,8,12"
@@ -659,6 +660,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Width="256"
+                                            Style="{StaticResource ModernCard}"
                                             Background="{DynamicResource CardBackgroundBrush}"
                                             CornerRadius="14"
                                             Padding="13"
@@ -883,6 +885,7 @@
                     <Border Background="{DynamicResource CardBackgroundBrush}" Opacity="0.4" CornerRadius="12"/>
                     <Border HorizontalAlignment="Center"
                             VerticalAlignment="Center"
+                            Style="{StaticResource ModernCard}"
                             Padding="22,18"
                             CornerRadius="14"
                             Background="{DynamicResource CardBackgroundBrush}"
@@ -916,30 +919,15 @@
         </Grid>
 
         <!-- ===== RESTORE DIALOG ===== -->
-        <Grid Visibility="{Binding IsRestoreDialogOpen, Converter={StaticResource BoolToVis}}">
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsRestoreDialogOpen}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
-                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
+        <Grid Visibility="{Binding IsRestoreDialogOpen, Converter={StaticResource BoolToVis}}"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding CancelRestoreCommand}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" 
+            <Border Style="{StaticResource ModernDialogCard}"
+                    Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="18" 
                     Width="480" Padding="24"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>

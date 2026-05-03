@@ -43,6 +43,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeService _employeeService;
         private readonly GeminiApiService _geminiApiService;
         private readonly ActivityLogService _activityLogService;
+        private readonly AppStatisticsService _appStatisticsService;
         private readonly EmployerCompany _company;
         private readonly string _tempFolder;
         private CancellationTokenSource _cts = new();
@@ -736,12 +737,14 @@ namespace Win11DesktopApp.ViewModels
             EmployerCompany company,
             EmployeeService? employeeService = null,
             GeminiApiService? geminiApiService = null,
-            ActivityLogService? activityLogService = null)
+            ActivityLogService? activityLogService = null,
+            AppStatisticsService? appStatisticsService = null)
         {
             _company = company;
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not available");
             _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _appStatisticsService = appStatisticsService ?? throw new InvalidOperationException("AppStatisticsService is not initialized.");
             _tempFolder = _employeeService.CreateTempFolder();
 
             CompanyAddresses = company.Addresses;
@@ -1252,6 +1255,7 @@ namespace Win11DesktopApp.ViewModels
                     $"{Data.FirstName} {Data.LastName}",
                     $"Додано працівника {Data.FirstName} {Data.LastName} до {_company.Name}",
                     employeeFolder: folder);
+                _appStatisticsService.RecordEmployeeCreated();
 
                 TelemetryService.TrackEvent("employee_added", new Dictionary<string, object>
                 {
@@ -1362,14 +1366,21 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 var parsed = AIScanPrompts.ParseResponse(result);
-                if (parsed.Count == 0)
+                if (!AIScanPrompts.IsDocumentKindCompatible(docKey, parsed))
+                {
+                    AIScanStatus = Res("AIScanDocumentTypeMismatch") ?? "AI recognized a different document type. Please check the selected document slot.";
+                    return;
+                }
+
+                var parsedFieldCount = CountParsedFields(parsed);
+                if (parsedFieldCount == 0)
                 {
                     AIScanStatus = Res("AIScanNoData");
                     return;
                 }
 
                 Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey(docKey, parsed, StepIndex));
-                AIScanStatus = string.Format(Res("AIScanDone"), parsed.Count);
+                AIScanStatus = string.Format(Res("AIScanDone"), parsedFieldCount);
             }
             catch (OperationCanceledException)
             {
@@ -1450,7 +1461,10 @@ namespace Win11DesktopApp.ViewModels
             if (result.StartsWith("["))
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            return AIScanPrompts.ParseResponse(result);
+            var parsed = AIScanPrompts.ParseResponse(result);
+            return AIScanPrompts.IsDocumentKindCompatible(docKey, parsed)
+                ? parsed
+                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         private static string ToTitleCase(string s)
@@ -1570,8 +1584,16 @@ namespace Win11DesktopApp.ViewModels
         {
             void Set(string key, Action<string> setter)
             {
+                if (AIScanPrompts.IsLowConfidenceField(data, key))
+                    return;
+
                 if (data.TryGetValue(key, out var val))
+                {
+                    if (AIScanPrompts.IsSuspiciousFieldValue(data, key, val))
+                        return;
+
                     setter(val);
+                }
             }
 
             switch (docKey)
@@ -1594,8 +1616,12 @@ namespace Win11DesktopApp.ViewModels
                     if (sourceStepIndex == 4 || sourceStepIndex == 8)
                     {
                         Set("PassportNumber", v => Data.VisaNumber = v.ToUpper());
+                        Set("VisaNumber", v => Data.VisaNumber = v);
                         Set("PassportAuthority", v => Data.VisaAuthority = v);
+                        Set("VisaAuthority", v => Data.VisaAuthority = v);
+                        Set("VisaStartDate", v => Data.VisaStartDate = v);
                         Set("PassportExpiry", v => Data.VisaExpiry = v);
+                        Set("VisaExpiry", v => Data.VisaExpiry = v);
                     }
                     else
                     {
@@ -1635,6 +1661,7 @@ namespace Win11DesktopApp.ViewModels
                     Set("VisaNumber", v => Data.VisaNumber = v);
                     Set("VisaAuthority", v => Data.VisaAuthority = v);
                     Set("VisaType", v => Data.VisaType = v);
+                    Set("VisaStartDate", v => Data.VisaStartDate = v);
                     Set("VisaExpiry", v => Data.VisaExpiry = v);
                     Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
                     break;
@@ -1652,6 +1679,7 @@ namespace Win11DesktopApp.ViewModels
                     if (sourceStepIndex == 4 || sourceStepIndex == 8)
                     {
                         Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("VisaStartDate", v => Data.VisaStartDate = v);
                         Set("VisaExpiry", v => Data.VisaExpiry = v);
                         Set("VisaAuthority", v => Data.VisaAuthority = v);
                         Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
@@ -1674,6 +1702,7 @@ namespace Win11DesktopApp.ViewModels
                     if (sourceStepIndex == 4 || sourceStepIndex == 8)
                     {
                         Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("VisaStartDate", v => Data.VisaStartDate = v);
                         Set("VisaExpiry", v => Data.VisaExpiry = v);
                     }
                     break;
@@ -1682,6 +1711,7 @@ namespace Win11DesktopApp.ViewModels
                     if (sourceStepIndex == 4 || sourceStepIndex == 8)
                     {
                         Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("VisaStartDate", v => Data.VisaStartDate = v);
                         Set("VisaExpiry", v => Data.VisaExpiry = v);
                         Set("VisaAuthority", v => Data.VisaAuthority = v);
                         Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
@@ -1696,6 +1726,11 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(Data));
             OnPropertyChanged(nameof(IsGenderMale));
             OnPropertyChanged(nameof(IsGenderFemale));
+        }
+
+        private static int CountParsedFields(IReadOnlyDictionary<string, string> data)
+        {
+            return data.Keys.Count(key => !key.StartsWith("__", StringComparison.OrdinalIgnoreCase));
         }
 
         private void NormalizeInsuranceCompanyFields()

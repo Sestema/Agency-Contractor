@@ -31,10 +31,20 @@ namespace Win11DesktopApp.Services
         public string AppVersion { get; set; } = "0.0.05";
     }
 
+    public sealed class CoreSyncState
+    {
+        public string StorageVersion { get; set; } = "sqlite-core-v1";
+        public string LastSyncedAtUtc { get; set; } = string.Empty;
+        public string LastDataHash { get; set; } = string.Empty;
+        public string LastCoreWriteUtc { get; set; } = string.Empty;
+        public string LastJsonWriteUtc { get; set; } = string.Empty;
+    }
+
     public class PersistenceService
     {
         private readonly AppSettingsService _appSettingsService;
         private readonly FolderService _folderService;
+        private readonly CoreDbService _coreDbService;
         private static readonly SemaphoreSlim _saveLock = new(1, 1);
 
         private static string Res(string key) =>
@@ -42,9 +52,14 @@ namespace Win11DesktopApp.Services
 
         private const string OldDataFileName = "company_data.json";
         private const string OldChecksumExtension = ".sha256";
+        private static readonly byte[] DatabaseEnvelopeMagic = Encoding.ASCII.GetBytes("ACD2");
+        private const byte DatabaseEnvelopeVersion = 2;
+        private const int AesIvSizeBytes = 16;
+        private const int HmacSizeBytes = 32;
 
         private static readonly byte[] SecureKey = new byte[32];
         private static readonly byte[] SecureIV = new byte[16];
+        private static readonly byte[] HmacKey;
 
         static PersistenceService()
         {
@@ -52,29 +67,33 @@ namespace Win11DesktopApp.Services
             Array.Copy(keyBytes, SecureKey, Math.Min(keyBytes.Length, SecureKey.Length));
             var ivBytes = Encoding.UTF8.GetBytes("AgencyContractor");
             Array.Copy(ivBytes, SecureIV, Math.Min(ivBytes.Length, SecureIV.Length));
+            HmacKey = SHA256.HashData(Encoding.UTF8.GetBytes("AgencyContractorSecretKey2024_Secure|database-json-hmac-v2"));
         }
 
         public PersistenceService(AppSettingsService appSettingsService, FolderService folderService)
+            : this(appSettingsService, folderService, new CoreDbService(folderService))
+        {
+        }
+
+        public PersistenceService(AppSettingsService appSettingsService, FolderService folderService, CoreDbService coreDbService)
         {
             _appSettingsService = appSettingsService;
             _folderService = folderService;
+            _coreDbService = coreDbService;
         }
 
-        // ============ NEW FORMAT: database.json ============
+        // ============ PRIMARY FORMAT: SQLite/core.db ============
 
         /// <summary>
-        /// Save the full database (companies + settings) as encrypted database.json.
+        /// Save the full database (companies + settings) into SQLite/core.db.
         /// </summary>
         public async Task SaveDatabaseAsync(IEnumerable<EmployerCompany> companies)
         {
-            var dbPath = _folderService.DatabaseFilePath;
-            if (string.IsNullOrEmpty(dbPath)) return;
-            var companySnapshot = companies.ToList();
-
             await _saveLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                SaveDatabaseCore(companySnapshot, dbPath);
+                var companySnapshot = companies.ToList();
+                SaveDatabaseCore(companySnapshot);
             }
             catch (Exception ex)
             {
@@ -94,8 +113,8 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
-        /// Load the full database from database.json.
-        /// Falls back to old company_data.json format with automatic migration.
+        /// Load the full database from SQLite/core.db.
+        /// Falls back to legacy database.json and company_data.json with automatic migration.
         /// </summary>
         public DatabaseRoot LoadDatabase()
         {
@@ -103,59 +122,38 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(rootPath) || !Directory.Exists(rootPath))
                 return new DatabaseRoot();
 
-            // 1. Try new format: database.json
             var dbPath = _folderService.DatabaseFilePath;
-            if (File.Exists(dbPath))
+            var hasCore = TryLoadCoreDatabase(out var coreDatabase);
+            var hasJson = File.Exists(dbPath);
+
+            // 1. Transition mode: inspect both storages when possible.
+            if (hasCore && hasJson)
             {
-                try
-                {
-                    var encryptedData = SafeFileService.ReadAllBytes(dbPath);
-                    var currentChecksum = ComputeHash(encryptedData);
+                var jsonDb = TryLoadJsonDatabase(dbPath);
+                if (jsonDb != null)
+                    return ResolveTransitionState(coreDatabase, jsonDb, dbPath);
 
-                    // Verify integrity
-                    var checksumPath = _folderService.DatabaseChecksumPath;
-                    if (File.Exists(checksumPath))
-                    {
-                        var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
-                        if (storedChecksum != currentChecksum)
-                        {
-                            Debug.WriteLine("PersistenceService: database.json checksum mismatch detected, validating current file...");
-                        }
-                    }
-                    else
-                    {
-                        SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
-                        LoggingService.LogWarning("PersistenceService.LoadDatabase",
-                            "database.json.sha256 was missing and has been recreated.");
-                    }
-
-                    var json = Decrypt(encryptedData);
-                    var db = JsonSerializer.Deserialize<DatabaseRoot>(json);
-                    if (db != null)
-                    {
-                        if (File.Exists(checksumPath))
-                        {
-                            var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
-                            if (!string.Equals(storedChecksum, currentChecksum, StringComparison.Ordinal))
-                            {
-                                SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
-                                LoggingService.LogWarning("PersistenceService.LoadDatabase",
-                                    "database.json checksum was stale and has been refreshed from the current valid file.");
-                            }
-                        }
-
-                        Debug.WriteLine($"PersistenceService.LoadDatabase: loaded {db.Companies.Count} companies (v{db.Version})");
-                        return db;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"PersistenceService.LoadDatabase (new format) failed: {ex.Message}");
-                    return TryRestoreFromBackup();
-                }
+                return coreDatabase;
             }
 
-            // 2. Fallback: try old format (company_data.json) and migrate
+            // 2. Primary SQLite storage.
+            if (hasCore)
+                return coreDatabase;
+
+            // 3. Fallback: try legacy database.json and migrate it to core.db
+            if (hasJson)
+            {
+                var jsonDb = TryLoadJsonDatabase(dbPath);
+                if (jsonDb != null)
+                {
+                    TryMigrateJsonDatabaseToCore(jsonDb, "initial_json_migration");
+                    return jsonDb;
+                }
+
+                return TryRestoreFromBackup();
+            }
+
+            // 4. Fallback: try old format (company_data.json) and migrate
             var oldPath = Path.Combine(rootPath, OldDataFileName);
             if (File.Exists(oldPath))
             {
@@ -163,8 +161,135 @@ namespace Win11DesktopApp.Services
                 return MigrateFromOldFormat(rootPath, oldPath);
             }
 
-            // 3. Clean install — no data
+            // 5. Clean install — no data
             return new DatabaseRoot();
+        }
+
+        private DatabaseRoot ResolveTransitionState(DatabaseRoot coreDatabase, DatabaseRoot jsonDatabase, string jsonPath)
+        {
+            var coreHash = ComputeDatabaseHash(coreDatabase);
+            var jsonHash = ComputeDatabaseHash(jsonDatabase);
+            if (string.Equals(coreHash, jsonHash, StringComparison.Ordinal))
+            {
+                EnsureSyncStateMatches(coreHash);
+                return coreDatabase;
+            }
+
+            var syncState = LoadSyncState();
+            var coreChangedSinceSync = syncState == null || !string.Equals(syncState.LastDataHash, coreHash, StringComparison.Ordinal);
+            var jsonChangedSinceSync = syncState == null || !string.Equals(syncState.LastDataHash, jsonHash, StringComparison.Ordinal);
+
+            var coreLastWrite = GetSafeLastWriteUtc(_coreDbService.DatabasePath);
+            var jsonLastWrite = GetSafeLastWriteUtc(jsonPath);
+
+            if (!coreChangedSinceSync && jsonChangedSinceSync)
+            {
+                LoggingService.LogWarning("PersistenceService.Sync", "database.json changed after the last SQLite sync. Importing JSON changes into core.db.");
+                TryMigrateJsonDatabaseToCore(jsonDatabase, "json_changed_after_sync");
+                return jsonDatabase;
+            }
+
+            if (coreChangedSinceSync && !jsonChangedSinceSync)
+            {
+                LoggingService.LogWarning("PersistenceService.Sync", "core.db changed after the last sync while database.json stayed on the previous snapshot. Refreshing JSON snapshot from SQLite.");
+                SaveLegacyJsonSnapshot(coreDatabase);
+                WriteSyncState(coreHash);
+                return coreDatabase;
+            }
+
+            if (jsonLastWrite > coreLastWrite)
+            {
+                LoggingService.LogWarning("PersistenceService.Sync", "Mixed-version data divergence detected. database.json is newer than core.db, so JSON changes are being imported into SQLite.");
+                TryMigrateJsonDatabaseToCore(jsonDatabase, "json_newer_than_core");
+                return jsonDatabase;
+            }
+
+            LoggingService.LogWarning("PersistenceService.Sync", "Mixed-version data divergence detected. core.db is treated as newer than database.json, and JSON snapshot is being refreshed.");
+            SaveLegacyJsonSnapshot(coreDatabase);
+            WriteSyncState(coreHash);
+            return coreDatabase;
+        }
+
+        private bool TryLoadCoreDatabase(out DatabaseRoot database)
+        {
+            database = new DatabaseRoot();
+
+            try
+            {
+                var db = _coreDbService.LoadDatabase();
+                if (db == null)
+                    return false;
+
+                database = db;
+                Debug.WriteLine($"PersistenceService.LoadDatabase: loaded {db.Companies.Count} companies from core.db (v{db.Version})");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PersistenceService.LoadCoreDatabase", ex.Message);
+                Debug.WriteLine($"PersistenceService.LoadCoreDatabase failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        private DatabaseRoot? TryLoadJsonDatabase(string dbPath)
+        {
+            try
+            {
+                var encryptedData = SafeFileService.ReadAllBytes(dbPath);
+                var currentChecksum = ComputeHash(encryptedData);
+
+                var checksumPath = _folderService.DatabaseChecksumPath;
+                if (File.Exists(checksumPath))
+                {
+                    var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
+                    if (storedChecksum != currentChecksum)
+                        Debug.WriteLine("PersistenceService: database.json checksum mismatch detected, validating current file...");
+                }
+                else
+                {
+                    SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
+                    LoggingService.LogWarning("PersistenceService.LoadDatabase",
+                        "database.json.sha256 was missing and has been recreated.");
+                }
+
+                var json = Decrypt(encryptedData);
+                var db = JsonSerializer.Deserialize<DatabaseRoot>(json);
+                if (db == null)
+                    return null;
+
+                if (File.Exists(checksumPath))
+                {
+                    var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
+                    if (!string.Equals(storedChecksum, currentChecksum, StringComparison.Ordinal))
+                    {
+                        SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
+                        LoggingService.LogWarning("PersistenceService.LoadDatabase",
+                            "database.json checksum was stale and has been refreshed from the current valid file.");
+                    }
+                }
+
+                Debug.WriteLine($"PersistenceService.LoadDatabase: loaded {db.Companies.Count} companies from database.json (v{db.Version})");
+                return db;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"PersistenceService.LoadDatabase (database.json) failed: {ex.Message}");
+                return null;
+            }
+        }
+
+        private void TryMigrateJsonDatabaseToCore(DatabaseRoot database, string reason)
+        {
+            try
+            {
+                SaveDatabaseRootCore(database);
+                LoggingService.LogInfo("PersistenceService.Migration", $"database.json was synchronized into SQLite/core.db ({reason}).");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PersistenceService.Migration", $"Could not synchronize database.json into core.db ({reason}): {ex.Message}");
+            }
         }
 
         // ============ MIGRATION ============
@@ -223,13 +348,8 @@ namespace Win11DesktopApp.Services
                     }
                 };
 
-                // 6. Save new database.json
-                var newJson = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
-                var newEncrypted = Encrypt(newJson);
-                var newDbPath = _folderService.DatabaseFilePath;
-                var newChecksumPath = _folderService.DatabaseChecksumPath;
-                SafeFileService.WriteBytesAtomic(newDbPath, newEncrypted);
-                SafeFileService.WriteTextAtomic(newChecksumPath, ComputeHash(newEncrypted), Encoding.UTF8);
+                // 6. Save new core.db database
+                SaveDatabaseRootCore(db);
 
                 // 7. Rename old files (keep as backup, don't delete)
                 try
@@ -426,7 +546,11 @@ namespace Win11DesktopApp.Services
                 Directory.CreateDirectory(backupsFolder);
 
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                var backupPath = Path.Combine(backupsFolder, $"database_{timestamp}.json.bak");
+                var sourceExtension = Path.GetExtension(sourceFilePath);
+                var backupExtension = string.Equals(sourceExtension, ".db", StringComparison.OrdinalIgnoreCase)
+                    ? ".db.bak"
+                    : ".json.bak";
+                var backupPath = Path.Combine(backupsFolder, $"database_{timestamp}{backupExtension}");
                 SafeFileService.CopyFile(sourceFilePath, backupPath);
 
                 CleanupOldBackups(backupsFolder);
@@ -496,14 +620,11 @@ namespace Win11DesktopApp.Services
 
         public void SaveDatabase(IEnumerable<EmployerCompany> companies)
         {
-            var dbPath = _folderService.DatabaseFilePath;
-            if (string.IsNullOrEmpty(dbPath)) return;
-
-            var companySnapshot = companies.ToList();
             _saveLock.Wait();
             try
             {
-                SaveDatabaseCore(companySnapshot, dbPath);
+                var companySnapshot = companies.ToList();
+                SaveDatabaseCore(companySnapshot);
             }
             catch (Exception ex)
             {
@@ -525,7 +646,7 @@ namespace Win11DesktopApp.Services
             SaveDatabase(companies);
         }
 
-        private void SaveDatabaseCore(List<EmployerCompany> companySnapshot, string dbPath)
+        private void SaveDatabaseCore(List<EmployerCompany> companySnapshot)
         {
             var db = new DatabaseRoot
             {
@@ -539,11 +660,28 @@ namespace Win11DesktopApp.Services
                 }
             };
 
-            var json = JsonSerializer.Serialize(db, new JsonSerializerOptions { WriteIndented = true });
+            SaveDatabaseRootCore(db);
+        }
 
-            if (File.Exists(dbPath))
-                CreateBackup(dbPath);
+        private void SaveDatabaseRootCore(DatabaseRoot database)
+        {
+            if (_coreDbService.Exists)
+                CreateBackup(_coreDbService.DatabasePath);
 
+            _coreDbService.SaveDatabase(database);
+
+            // Keep an encrypted JSON snapshot during the mixed-version transition period.
+            SaveLegacyJsonSnapshot(database);
+            WriteSyncState(ComputeDatabaseHash(database));
+        }
+
+        private void SaveLegacyJsonSnapshot(DatabaseRoot database)
+        {
+            var dbPath = _folderService.DatabaseFilePath;
+            if (string.IsNullOrEmpty(dbPath))
+                return;
+
+            var json = JsonSerializer.Serialize(database, new JsonSerializerOptions { WriteIndented = true });
             var encryptedData = Encrypt(json);
             SafeFileService.WriteBytesAtomic(dbPath, encryptedData);
 
@@ -551,25 +689,162 @@ namespace Win11DesktopApp.Services
             SafeFileService.WriteTextAtomic(_folderService.DatabaseChecksumPath, checksum, Encoding.UTF8);
         }
 
+        private void EnsureSyncStateMatches(string dataHash)
+        {
+            var state = LoadSyncState();
+            if (state != null && string.Equals(state.LastDataHash, dataHash, StringComparison.Ordinal))
+                return;
+
+            WriteSyncState(dataHash);
+        }
+
+        private CoreSyncState? LoadSyncState()
+        {
+            var path = _folderService.CoreSyncStatePath;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return null;
+
+            try
+            {
+                return SafeFileService.ReadJsonOrDefault<CoreSyncState?>(path, null, encoding: Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PersistenceService.Sync", $"Could not read core sync state: {ex.Message}");
+                return null;
+            }
+        }
+
+        private void WriteSyncState(string dataHash)
+        {
+            var path = _folderService.CoreSyncStatePath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            try
+            {
+                var state = new CoreSyncState
+                {
+                    LastDataHash = dataHash,
+                    LastSyncedAtUtc = DateTime.UtcNow.ToString("O"),
+                    LastCoreWriteUtc = GetSafeLastWriteUtc(_coreDbService.DatabasePath).ToString("O"),
+                    LastJsonWriteUtc = GetSafeLastWriteUtc(_folderService.DatabaseFilePath).ToString("O")
+                };
+                SafeFileService.WriteJsonAtomic(path, state, encoding: Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PersistenceService.Sync", $"Could not write core sync state: {ex.Message}");
+            }
+        }
+
+        private static DateTime GetSafeLastWriteUtc(string path)
+        {
+            try
+            {
+                return !string.IsNullOrWhiteSpace(path) && File.Exists(path)
+                    ? File.GetLastWriteTimeUtc(path)
+                    : DateTime.MinValue;
+            }
+            catch
+            {
+                return DateTime.MinValue;
+            }
+        }
+
         // ============ ENCRYPTION ============
 
         private byte[] Encrypt(string plainText)
         {
-            using var aes = Aes.Create();
-            aes.Key = SecureKey;
-            aes.IV = SecureIV;
-
-            using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-            using var ms = new MemoryStream();
-            using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
-            using (var sw = new StreamWriter(cs))
-            {
-                sw.Write(plainText);
-            }
-            return ms.ToArray();
+            return EncryptDatabasePayload(plainText);
         }
 
         private string Decrypt(byte[] cipherText)
+        {
+            if (TryDecryptDatabasePayload(cipherText, out var plainText))
+                return plainText;
+
+            // Keep old fixed-IV payloads readable during the SQLite/core.db transition.
+            return DecryptLegacyPayload(cipherText);
+        }
+
+        internal static byte[] EncryptDatabasePayload(string plainText)
+        {
+            var iv = new byte[AesIvSizeBytes];
+            RandomNumberGenerator.Fill(iv);
+
+            using var aes = Aes.Create();
+            aes.Key = SecureKey;
+            aes.IV = iv;
+
+            byte[] cipherText;
+            using (var encryptor = aes.CreateEncryptor(aes.Key, aes.IV))
+            using (var ms = new MemoryStream())
+            {
+                using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                using (var sw = new StreamWriter(cs, Encoding.UTF8))
+                {
+                    sw.Write(plainText);
+                }
+
+                cipherText = ms.ToArray();
+            }
+
+            using var payload = new MemoryStream();
+            payload.Write(DatabaseEnvelopeMagic, 0, DatabaseEnvelopeMagic.Length);
+            payload.WriteByte(DatabaseEnvelopeVersion);
+            payload.Write(iv, 0, iv.Length);
+            payload.Write(cipherText, 0, cipherText.Length);
+
+            var payloadWithoutMac = payload.ToArray();
+            using var hmac = new HMACSHA256(HmacKey);
+            var mac = hmac.ComputeHash(payloadWithoutMac);
+            payload.Write(mac, 0, mac.Length);
+            return payload.ToArray();
+        }
+
+        internal static bool TryDecryptDatabasePayload(byte[] encryptedData, out string plainText)
+        {
+            plainText = string.Empty;
+            if (!IsV2Envelope(encryptedData))
+                return false;
+
+            var macOffset = encryptedData.Length - HmacSizeBytes;
+            using var hmac = new HMACSHA256(HmacKey);
+            var expectedMac = hmac.ComputeHash(encryptedData, 0, macOffset);
+            var actualMac = encryptedData.AsSpan(macOffset, HmacSizeBytes);
+            if (!CryptographicOperations.FixedTimeEquals(expectedMac, actualMac))
+                throw new CryptographicException("database.json HMAC validation failed.");
+
+            var ivOffset = DatabaseEnvelopeMagic.Length + 1;
+            var cipherOffset = ivOffset + AesIvSizeBytes;
+            var cipherLength = macOffset - cipherOffset;
+
+            using var aes = Aes.Create();
+            aes.Key = SecureKey;
+            aes.IV = encryptedData.AsSpan(ivOffset, AesIvSizeBytes).ToArray();
+
+            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+            using var ms = new MemoryStream(encryptedData, cipherOffset, cipherLength);
+            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+            using var sr = new StreamReader(cs, Encoding.UTF8);
+            plainText = sr.ReadToEnd();
+            return true;
+        }
+
+        private static bool IsV2Envelope(byte[] encryptedData)
+        {
+            if (encryptedData.Length < DatabaseEnvelopeMagic.Length + 1 + AesIvSizeBytes + HmacSizeBytes)
+                return false;
+
+            if (encryptedData[DatabaseEnvelopeMagic.Length] != DatabaseEnvelopeVersion)
+                return false;
+
+            return encryptedData.AsSpan(0, DatabaseEnvelopeMagic.Length)
+                .SequenceEqual(DatabaseEnvelopeMagic);
+        }
+
+        private static string DecryptLegacyPayload(byte[] cipherText)
         {
             using var aes = Aes.Create();
             aes.Key = SecureKey;
@@ -578,7 +853,7 @@ namespace Win11DesktopApp.Services
             using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
             using var ms = new MemoryStream(cipherText);
             using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var sr = new StreamReader(cs);
+            using var sr = new StreamReader(cs, Encoding.UTF8);
             return sr.ReadToEnd();
         }
 
@@ -587,6 +862,12 @@ namespace Win11DesktopApp.Services
             using var sha = SHA256.Create();
             var hash = sha.ComputeHash(data);
             return Convert.ToBase64String(hash);
+        }
+
+        private string ComputeDatabaseHash(DatabaseRoot database)
+        {
+            var json = JsonSerializer.Serialize(database, new JsonSerializerOptions { WriteIndented = false });
+            return ComputeHash(Encoding.UTF8.GetBytes(json));
         }
 
         // ============ UTILITY ============

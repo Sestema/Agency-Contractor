@@ -20,7 +20,7 @@ namespace Win11DesktopApp
     public partial class App : Application
     {
         private static ServiceProvider? _serviceProvider;
-        private static CancellationTokenSource? _heartbeatCts;
+        private static CancellationTokenSource? _backgroundTasksCts;
         private static bool _heartbeatFailureActive;
         private static ClientAccessState _currentGeminiAccessState = new();
         private static string? _recommendedVersionPromptedFor;
@@ -30,6 +30,8 @@ namespace Win11DesktopApp
         private const string AccessPlanPro = "pro";
         private static IServiceProvider Services =>
             _serviceProvider ?? throw new InvalidOperationException("Service provider is not initialized.");
+
+        private static CancellationToken BackgroundTaskToken => _backgroundTasksCts?.Token ?? CancellationToken.None;
 
         private static T GetRequiredService<T>() where T : notnull => Services.GetRequiredService<T>();
 
@@ -47,6 +49,7 @@ namespace Win11DesktopApp
         private static LocalDbService LocalDbService => GetRequiredService<LocalDbService>();
         private static SalaryDbService SalaryDbService => GetRequiredService<SalaryDbService>();
         private static ActivityLogService ActivityLogService => GetRequiredService<ActivityLogService>();
+        private static AppStatisticsService AppStatisticsService => GetRequiredService<AppStatisticsService>();
         private static GeminiApiService GeminiApiService => GetRequiredService<GeminiApiService>();
         private static ProfileDialogFactory ProfileDialogFactory => GetRequiredService<ProfileDialogFactory>();
         private static ProfileAuthService ProfileAuthService => GetRequiredService<ProfileAuthService>();
@@ -54,6 +57,7 @@ namespace Win11DesktopApp
         private static AccessStatusService AccessStatusService => GetRequiredService<AccessStatusService>();
         private static CurrentProfileService CurrentProfileService => GetRequiredService<CurrentProfileService>();
         private static TelegramBotService TelegramBotService => GetRequiredService<TelegramBotService>();
+        private static AppUpdateNotificationService AppUpdateNotificationService => GetRequiredService<AppUpdateNotificationService>();
 
         private sealed class StartupFlowState
         {
@@ -69,6 +73,7 @@ namespace Win11DesktopApp
         {
             base.OnStartup(e);
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            _backgroundTasksCts = new CancellationTokenSource();
 
             GlobalFontSettings.FontResolver = new PdfFontResolver();
             QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
@@ -130,6 +135,7 @@ namespace Win11DesktopApp
 
             ApplySavedLanguageAndTheme();
             RunStartupMigrations();
+            AppStatisticsService.StartSession();
             LoggingService.LogInfo("App", "All services initialized");
             LogStartupPhase("services_initialized");
 
@@ -648,15 +654,16 @@ namespace Win11DesktopApp
             if (state.StartupAccess.PendingCommands.Count > 0)
                 await CommandService.ExecutePendingCommandsAsync(state.StartupAccess.PendingCommands, state.StartupClientId);
 
-            _heartbeatCts = new CancellationTokenSource();
-            _ = StartHeartbeatLoopAsync(_heartbeatCts.Token);
+            RunBackgroundTask("App.HeartbeatLoop", StartHeartbeatLoopAsync, BackgroundTaskToken);
             if (!string.IsNullOrEmpty(AppSettingsService.PendingUpdateFrom))
             {
+                var previousVersion = AppSettingsService.PendingUpdateFrom;
                 TelemetryService.TrackEvent("app_updated", new Dictionary<string, object>
                 {
-                    ["from_version"] = AppSettingsService.PendingUpdateFrom,
+                    ["from_version"] = previousVersion,
                     ["to_version"] = AppSettingsService.CurrentAppVersion
                 });
+                AppUpdateNotificationService.NotifyInstalledUpdate(previousVersion);
                 AppSettingsService.PendingUpdateFrom = null;
             }
 
@@ -666,24 +673,18 @@ namespace Win11DesktopApp
                     "Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel.");
             }
 
-            _ = Task.Run(() => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies));
-            _ = Task.Run(() => RecentlyDeletedService.PurgeExpired());
-            _ = Task.Run(PrewarmSalaryPath);
-            _ = Task.Run(async () =>
+            RunBackgroundTask("StartupIntegrityService.BackgroundCheck", () => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies), BackgroundTaskToken);
+            RunBackgroundTask("App.UpdateNotificationCheck", AppUpdateNotificationService.CheckForAvailableUpdateAsync, BackgroundTaskToken);
+            RunBackgroundTask("RecentlyDeletedService.PurgeExpired", () => RecentlyDeletedService.PurgeExpired(), BackgroundTaskToken);
+            RunBackgroundTask("App.SalaryPrewarm", PrewarmSalaryPath, BackgroundTaskToken);
+            RunBackgroundTask("App.TelegramBotStartup", async _ =>
             {
-                try
+                if (AppSettingsService.Settings.Telegram.Enabled
+                    && !string.IsNullOrWhiteSpace(AppSettingsService.Settings.Telegram.EncryptedBotToken))
                 {
-                    if (AppSettingsService.Settings.Telegram.Enabled
-                        && !string.IsNullOrWhiteSpace(AppSettingsService.Settings.Telegram.EncryptedBotToken))
-                    {
-                        await TelegramBotService.RestartAsync().ConfigureAwait(false);
-                    }
+                    await TelegramBotService.RestartAsync().ConfigureAwait(false);
                 }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("App.TelegramBotStartup", ex.Message);
-                }
-            });
+            }, BackgroundTaskToken);
         }
 
         private static StartupIntegrityService InitializeCoreServices()
@@ -723,9 +724,11 @@ namespace Win11DesktopApp
             services.AddSingleton(_ => new AppSettingsService(suppressStartupNotifications: true));
             services.AddSingleton<AccessStatusService>();
             services.AddSingleton(sp => new FolderService(sp.GetRequiredService<AppSettingsService>()));
+            services.AddSingleton(sp => new CoreDbService(sp.GetRequiredService<FolderService>()));
             services.AddSingleton(sp => new PersistenceService(
                 sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<FolderService>()));
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<CoreDbService>()));
             services.AddSingleton(sp => new StartupIntegrityService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<PersistenceService>()));
@@ -783,6 +786,9 @@ namespace Win11DesktopApp
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<LocalDbService>(),
                 sp.GetRequiredService<CurrentProfileService>()));
+            services.AddSingleton<AppNotificationService>();
+            services.AddSingleton<AppUpdateNotificationService>();
+            services.AddSingleton(sp => new AppStatisticsService(sp.GetRequiredService<FolderService>()));
             services.AddSingleton(sp => new CandidateService(sp.GetRequiredService<FolderService>()));
             services.AddSingleton<ChatPersistenceService>();
             services.AddSingleton<GeminiApiService>();
@@ -830,27 +836,44 @@ namespace Win11DesktopApp
 
         private static void RunBackgroundWarmupTasks()
         {
+            RunBackgroundTask("App.PendingCleanupStartup", async _ =>
+            {
+                await PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory);
+            }, BackgroundTaskToken);
+
+            RunBackgroundTask("App.NetPdfWarmUp", () =>
+            {
+                NetPdfFormHelper.WarmUp();
+            }, BackgroundTaskToken);
+        }
+
+        private static void RunBackgroundTask(string module, Action action, CancellationToken cancellationToken)
+        {
+            RunBackgroundTask(module, _ =>
+            {
+                action();
+                return Task.CompletedTask;
+            }, cancellationToken);
+        }
+
+        private static void RunBackgroundTask(string module, Func<CancellationToken, Task> action, CancellationToken cancellationToken)
+        {
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory);
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("App.PendingCleanupStartup", ex.Message);
-                }
-            });
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
 
-            _ = Task.Run(() =>
-            {
-                try
+                    await action(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    NetPdfFormHelper.WarmUp();
+                    LoggingService.LogInfo(module, "Cancelled.");
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogWarning("App.NetPdfWarmUp", ex.Message);
+                    LoggingService.LogError(module, ex);
                 }
             });
         }
@@ -941,8 +964,11 @@ namespace Win11DesktopApp
 
         protected override void OnExit(ExitEventArgs e)
         {
-            _heartbeatCts?.Cancel();
-            _heartbeatCts?.Dispose();
+            _backgroundTasksCts?.Cancel();
+            _backgroundTasksCts?.Dispose();
+            _backgroundTasksCts = null;
+            try { AppStatisticsService.StopSession(); } catch { }
+            try { AdminMirrorSyncService.Stop(); } catch { }
             try { TelegramBotService.Stop(); } catch { }
             base.OnExit(e);
         }

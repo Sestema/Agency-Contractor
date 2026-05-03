@@ -24,6 +24,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly CompanyService _companyService;
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private readonly ActivityLogService _activityLogService;
+        private readonly AppNotificationService _notificationService;
         private readonly ObservableCollection<ArchivedEmployeeSummary> _archivedEmployeesSource = new();
         private readonly ICollectionView _archivedEmployeesView;
         private readonly DispatcherTimer _searchDebounce;
@@ -270,7 +271,8 @@ namespace Win11DesktopApp.ViewModels
             AppSettingsService? appSettingsService = null,
             CompanyService? companyService = null,
             EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
-            ActivityLogService? activityLogService = null)
+            ActivityLogService? activityLogService = null,
+            AppNotificationService? notificationService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
@@ -278,6 +280,7 @@ namespace Win11DesktopApp.ViewModels
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
             _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
+            _notificationService = notificationService ?? throw new InvalidOperationException("AppNotificationService is not initialized.");
             _pendingEmployeeFolder = employeeToOpenFolder;
             _sortField = _appSettingsService.Settings.ArchiveSortField ?? "EndDate";
             _sortAscending = _appSettingsService.Settings.ArchiveSortAscending;
@@ -615,6 +618,10 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeToRestore.FirmName, SelectedCompany.Name,
                         employeeFolder: result.RestoredFolder,
                         relatedOperationId: result.OperationId);
+
+                    _notificationService.Success(
+                        Res("ArchiveRestoreTitle"),
+                        string.Format(Res("HistoryDescRestored"), EmployeeToRestore.FullName, SelectedCompany.Name));
 
                     IsRestoreDialogOpen = false;
                     await LoadArchiveAsync();

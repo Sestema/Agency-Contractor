@@ -1297,8 +1297,10 @@ WHERE stage = 'salary_entries'
 
         #region Employee Resolution
 
-        private readonly Dictionary<string, string> _idToFolderCache = new();
-        private readonly HashSet<string> _ghostFolders = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object _employeeIndexLock = new();
+        private readonly object _employeeIndexBuildLock = new();
+        private Dictionary<string, string> _idToFolderCache = new();
+        private HashSet<string> _ghostFolders = new(StringComparer.OrdinalIgnoreCase);
 
         private LocalDbService RequireLocalDb()
         {
@@ -1310,65 +1312,121 @@ WHERE stage = 'salary_entries'
 
         public void BuildEmployeeIdIndex()
         {
-            _idToFolderCache.Clear();
-            _ghostFolders.Clear();
-            if (string.IsNullOrEmpty(_folderService.RootPath)) return;
-
-            var archiveFolder = _folderService.GetArchiveFolder();
-
-            var companies = _companyService.Companies;
-            foreach (var company in companies)
+            lock (_employeeIndexBuildLock)
             {
-                var empFolder = _folderService.GetEmployeesFolder(company.Name);
-                if (string.IsNullOrEmpty(empFolder) || !Directory.Exists(empFolder)) continue;
-                try
+                var idToFolderCache = new Dictionary<string, string>();
+                var ghostFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (string.IsNullOrEmpty(_folderService.RootPath))
                 {
-                    foreach (var dir in Directory.GetDirectories(empFolder))
+                    SwapEmployeeIndex(idToFolderCache, ghostFolders);
+                    return;
+                }
+
+                var archiveFolder = _folderService.GetArchiveFolder();
+
+                var companies = _companyService.Companies;
+                foreach (var company in companies)
+                {
+                    var empFolder = _folderService.GetEmployeesFolder(company.Name);
+                    if (string.IsNullOrEmpty(empFolder) || !Directory.Exists(empFolder)) continue;
+                    try
                     {
-                        var jsonPath = Path.Combine(dir, "employee.json");
-                        if (!File.Exists(jsonPath)) continue;
-                        try
+                        foreach (var dir in Directory.GetDirectories(empFolder))
                         {
-                            var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
-                            if (data == null) continue;
-                            if (data.IsArchived)
+                            var jsonPath = Path.Combine(dir, "employee.json");
+                            if (!File.Exists(jsonPath)) continue;
+                            try
                             {
-                                _ghostFolders.Add(dir);
-                                continue;
+                                var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
+                                if (data == null) continue;
+                                if (data.IsArchived)
+                                {
+                                    ghostFolders.Add(dir);
+                                    continue;
+                                }
+                                if (!string.IsNullOrEmpty(data.UniqueId))
+                                    idToFolderCache[data.UniqueId] = dir;
                             }
-                            if (!string.IsNullOrEmpty(data.UniqueId))
-                                _idToFolderCache[data.UniqueId] = dir;
+                            catch (Exception innerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", innerEx); }
                         }
-                        catch (Exception innerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", innerEx); }
                     }
+                    catch (Exception outerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", outerEx); }
                 }
-                catch (Exception outerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", outerEx); }
-            }
 
-            if (!string.IsNullOrEmpty(archiveFolder) && Directory.Exists(archiveFolder))
-            {
-                try
+                if (!string.IsNullOrEmpty(archiveFolder) && Directory.Exists(archiveFolder))
                 {
-                    foreach (var dir in Directory.GetDirectories(archiveFolder))
+                    try
                     {
-                        var jsonPath = Path.Combine(dir, "employee.json");
-                        if (!File.Exists(jsonPath)) continue;
-                        try
+                        foreach (var dir in Directory.GetDirectories(archiveFolder))
                         {
-                            var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
-                            if (data != null && !string.IsNullOrEmpty(data.UniqueId) && !_idToFolderCache.ContainsKey(data.UniqueId))
-                                _idToFolderCache[data.UniqueId] = dir;
+                            var jsonPath = Path.Combine(dir, "employee.json");
+                            if (!File.Exists(jsonPath)) continue;
+                            try
+                            {
+                                var data = SafeFileService.ReadJson<EmployeeModels.EmployeeData>(jsonPath);
+                                if (data != null && !string.IsNullOrEmpty(data.UniqueId) && !idToFolderCache.ContainsKey(data.UniqueId))
+                                    idToFolderCache[data.UniqueId] = dir;
+                            }
+                            catch (Exception innerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", innerEx); }
                         }
-                        catch (Exception innerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", innerEx); }
                     }
+                    catch (Exception outerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", outerEx); }
                 }
-                catch (Exception outerEx) { LoggingService.LogError("FinanceService.BuildEmployeeIdIndex", outerEx); }
+
+                SwapEmployeeIndex(idToFolderCache, ghostFolders);
+            }
+        }
+
+        private void SwapEmployeeIndex(Dictionary<string, string> idToFolderCache, HashSet<string> ghostFolders)
+        {
+            lock (_employeeIndexLock)
+            {
+                _idToFolderCache = idToFolderCache;
+                _ghostFolders = ghostFolders;
+            }
+        }
+
+        private List<string> SnapshotGhostFolders()
+        {
+            lock (_employeeIndexLock)
+                return _ghostFolders.ToList();
+        }
+
+        private bool IsGhostFolder(string folder)
+        {
+            lock (_employeeIndexLock)
+                return _ghostFolders.Contains(folder);
+        }
+
+        private bool TryGetCachedEmployeeFolder(string employeeId, out string cachedFolder)
+        {
+            lock (_employeeIndexLock)
+            {
+                if (_idToFolderCache.TryGetValue(employeeId, out var folder))
+                {
+                    cachedFolder = folder;
+                    return true;
+                }
+
+                cachedFolder = string.Empty;
+                return false;
+            }
+        }
+
+        private void RemoveGhostFoldersFromIndex(IEnumerable<string> ghostFolders)
+        {
+            lock (_employeeIndexLock)
+            {
+                foreach (var ghost in ghostFolders)
+                    _ghostFolders.Remove(ghost);
             }
         }
 
         public void CleanupGhostFolders()
         {
-            foreach (var ghost in _ghostFolders.ToList())
+            var ghostSnapshot = SnapshotGhostFolders();
+            foreach (var ghost in ghostSnapshot)
             {
                 try
                 {
@@ -1418,21 +1476,20 @@ WHERE stage = 'salary_entries'
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"CleanupGhostFolders error: {ex.Message}");
                     LoggingService.LogError("FinanceService.CleanupGhostFolders", ex);
                 }
             }
-            _ghostFolders.Clear();
+            RemoveGhostFoldersFromIndex(ghostSnapshot);
         }
 
         public string? ResolveByEmployeeId(string employeeId)
         {
             if (string.IsNullOrEmpty(employeeId)) return null;
-            if (_idToFolderCache.TryGetValue(employeeId, out var cached) && Directory.Exists(cached))
+            if (TryGetCachedEmployeeFolder(employeeId, out var cached) && Directory.Exists(cached))
                 return cached;
 
             BuildEmployeeIdIndex();
-            if (_idToFolderCache.TryGetValue(employeeId, out cached) && Directory.Exists(cached))
+            if (TryGetCachedEmployeeFolder(employeeId, out cached) && Directory.Exists(cached))
                 return cached;
 
             return null;
@@ -1448,7 +1505,7 @@ WHERE stage = 'salary_entries'
 
             if (!string.IsNullOrEmpty(originalFolder) && Directory.Exists(originalFolder))
             {
-                if (!_ghostFolders.Contains(originalFolder))
+                if (!IsGhostFolder(originalFolder))
                     return originalFolder;
             }
 
@@ -1462,7 +1519,7 @@ WHERE stage = 'salary_entries'
                 var empFolder = _folderService.GetEmployeesFolder(company.Name);
                 if (string.IsNullOrEmpty(empFolder) || !Directory.Exists(empFolder)) continue;
                 var candidate = Path.Combine(empFolder, folderName);
-                if (Directory.Exists(candidate) && !_ghostFolders.Contains(candidate))
+                if (Directory.Exists(candidate) && !IsGhostFolder(candidate))
                     return candidate;
             }
 

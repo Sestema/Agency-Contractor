@@ -396,6 +396,96 @@ namespace Win11DesktopApp.Telegram
             }
         }
 
+        public async Task<string> AskProgramAssistantAsync(
+            string question,
+            List<(string role, string text)>? history,
+            long conversationUserId,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_appSettingsService.Settings.Telegram.AllowAiQuestions)
+                return "AI-запитання вимкнені в налаштуваннях.";
+
+            if (!_geminiApiService.IsConfigured)
+                return "Gemini API не налаштований у програмі.";
+
+            if (string.IsNullOrWhiteSpace(question))
+                return "Напишіть питання для AI-помічника.";
+
+            EmployeeSummary? resolvedEmployee = null;
+            string resolvedFirm = string.Empty;
+            string resolvedMonthKey = string.Empty;
+            string lastAiTool = string.Empty;
+            var pendingFiles = new List<PendingFile>();
+            string clarificationMessage = string.Empty;
+
+            async Task<GeminiToolChatResult> RunAiAttemptAsync(List<(string role, string text)>? attemptHistory, string prompt)
+            {
+                resolvedEmployee = null;
+                resolvedFirm = string.Empty;
+                resolvedMonthKey = string.Empty;
+                lastAiTool = string.Empty;
+                pendingFiles.Clear();
+                clarificationMessage = string.Empty;
+
+                return await _geminiApiService.ChatWithToolsAsync(
+                    attemptHistory,
+                    prompt,
+                    GetAiTools(),
+                    async (toolCall, ct) =>
+                    {
+                        lastAiTool = toolCall.Name;
+                        var execution = await ExecuteAiToolAsync(toolCall, conversationUserId, ct).ConfigureAwait(false);
+                        if (execution.Employee != null)
+                            resolvedEmployee = execution.Employee;
+                        if (!string.IsNullOrWhiteSpace(execution.FirmName))
+                            resolvedFirm = execution.FirmName;
+                        if (!string.IsNullOrWhiteSpace(execution.MonthKey))
+                            resolvedMonthKey = execution.MonthKey;
+                        if (execution.FilesToSend.Count > 0)
+                            pendingFiles.AddRange(execution.FilesToSend);
+                        if (execution.CandidateEmployees.Count > 0)
+                            clarificationMessage = BuildEmployeeSelectionText(ExtractClarificationMessage(execution.Payload), execution.CandidateEmployees);
+                        return execution.Payload;
+                    },
+                    systemPrompt: BuildAiSystemPrompt(),
+                    modelOverride: TelegramAiModel,
+                    ct: cancellationToken).ConfigureAwait(false);
+            }
+
+            var prompt = BuildAiQuestionPrompt(question, conversationUserId);
+            var result = await RunAiAttemptAsync(history, prompt).ConfigureAwait(false);
+            if (ShouldRetryAiAnswer(result.Text))
+            {
+                result = await RunAiAttemptAsync(
+                    null,
+                    prompt + "\nRetry mode: answer briefly using only exact tool facts. If data is still ambiguous, ask one short clarification question.")
+                    .ConfigureAwait(false);
+            }
+
+            var answer = string.IsNullOrWhiteSpace(result.Text)
+                ? "Не вдалося сформувати відповідь. Спробуйте уточнити запит."
+                : result.Text;
+
+            if (!string.IsNullOrWhiteSpace(clarificationMessage))
+                answer = clarificationMessage;
+            else if (pendingFiles.Count > 0)
+                answer += "\n\nЗнайдено пов'язані файли працівника, але AI чат у програмі поки що не відправляє вкладення автоматично.";
+
+            TouchConversationContext(
+                conversationUserId,
+                resolvedEmployee,
+                resolvedFirm,
+                resolvedMonthKey,
+                topic: InferTopicFromTool(lastAiTool, question),
+                action: lastAiTool,
+                aiTool: lastAiTool);
+
+            AppendConversationTurn(conversationUserId, "user", question);
+            AppendConversationTurn(conversationUserId, "model", BuildConversationModelHistoryEntry(answer, lastAiTool, resolvedEmployee, resolvedFirm, resolvedMonthKey));
+
+            return answer;
+        }
+
         public void Stop()
         {
             try

@@ -10,7 +10,7 @@
              d:DesignHeight="720" d:DesignWidth="920">
 
     <Viewbox StretchDirection="DownOnly" Stretch="Uniform">
-    <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16" Width="920" Height="720"
+    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="16" Width="920" Height="720"
             Effect="{DynamicResource CardShadow}">
         <Grid Margin="28,24">
             <Grid.RowDefinitions>
@@ -22,13 +22,8 @@
             <!-- ===== HEADER ===== -->
             <StackPanel Grid.Row="0" Margin="0,0,0,20">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Border Style="{StaticResource PageHeaderIconBadge}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#667EEA" Offset="0"/>
-                                <GradientStop Color="#764BA2" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
+                    <Border Style="{StaticResource PageHeaderIconBadge}"
+                            Background="{DynamicResource BrandPrimaryGradientBrush}">
                         <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
                     </Border>
                     <TextBlock Text="{DynamicResource HeaderAddEmployee}"
@@ -39,7 +34,7 @@
                 </StackPanel>
 
                 <!-- Step indicator (dynamic) -->
-                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="10" Padding="14,10"
+                <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="10" Padding="14,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                     <StackPanel>
                         <ProgressBar Minimum="1"

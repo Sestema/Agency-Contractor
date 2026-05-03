@@ -496,7 +496,9 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                var json = Decrypt(encryptedData);
+                var json = PersistenceService.TryDecryptDatabasePayload(encryptedData, out var v2Json)
+                    ? v2Json
+                    : Decrypt(encryptedData);
                 return JsonSerializer.Deserialize<DatabaseRoot>(json) != null;
             }
             catch

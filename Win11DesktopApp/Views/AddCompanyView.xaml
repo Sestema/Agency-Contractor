@@ -110,13 +110,8 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Orientation="Horizontal">
-                            <Border Style="{StaticResource PageHeaderIconBadge}">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#C77C36" Offset="0"/>
-                                        <GradientStop Color="#E0A157" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
+                            <Border Style="{StaticResource PageHeaderIconBadge}"
+                                    Background="{DynamicResource BrandPrimaryGradientBrush}">
                                 <TextBlock Text="&#xE8D2;" Style="{StaticResource PageHeaderIconText}"/>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
@@ -208,7 +203,27 @@
                                             <TextBox Text="{Binding Employer.Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompanyInputTextBox}"/>
                                             
                                             <TextBlock Text="{DynamicResource LabelICO}" Style="{StaticResource CompanyFieldLabel}"/>
-                                            <TextBox Text="{Binding Employer.ICO, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompanyInputTextBox}"/>
+                                            <Grid Margin="0,0,0,14">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="8"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding Employer.ICO, UpdateSourceTrigger=PropertyChanged}"
+                                                         Style="{StaticResource CompanyInputTextBox}"
+                                                         Margin="0"/>
+                                                <Button Grid.Column="2"
+                                                        Command="{Binding LookupEmployerAresCommand}"
+                                                        Style="{StaticResource DialogSecondaryButton}"
+                                                        Padding="14,9"
+                                                        ToolTip="{DynamicResource InvoicesAresLookupTooltip}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="ARES" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
 
                                             <TextBlock Text="{DynamicResource LabelLegalAddress}" Style="{StaticResource CompanyFieldLabel}"/>
                                             <TextBox Text="{Binding Employer.LegalAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompanyInputTextBox}" Margin="0"/>
@@ -451,7 +466,27 @@
                                         <TextBox Text="{Binding Agency.Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompanyInputTextBox}"/>
                                         
                                         <TextBlock Text="{DynamicResource LabelICO}" Style="{StaticResource CompanyFieldLabel}"/>
-                                        <TextBox Text="{Binding Agency.ICO, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CompanyInputTextBox}"/>
+                                        <Grid Margin="0,0,0,14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding Agency.ICO, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource CompanyInputTextBox}"
+                                                     Margin="0"/>
+                                            <Button Grid.Column="2"
+                                                    Command="{Binding LookupAgencyAresCommand}"
+                                                    Style="{StaticResource DialogSecondaryButton}"
+                                                    Padding="14,9"
+                                                    ToolTip="{DynamicResource InvoicesAresLookupTooltip}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="ARES" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
                                         
                                         <TextBlock Text="{DynamicResource LabelFullAddress}" Style="{StaticResource CompanyFieldLabel}"/>
                                         <TextBox Text="{Binding Agency.FullAddress, UpdateSourceTrigger=PropertyChanged}"

@@ -43,6 +43,7 @@ namespace Win11DesktopApp.EmployeeModels
     {
         public string UniqueId { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = "visa";
+        public string DocumentProfileType { get; set; } = string.Empty;
         public string EuDocumentType { get; set; } = "passport";
         public string VisaDocType { get; set; } = "visa_sticker";
         public string FirstName { get; set; } = string.Empty;
@@ -60,6 +61,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string VisaNumber { get; set; } = string.Empty;
         public string VisaAuthority { get; set; } = string.Empty;
         public string VisaType { get; set; } = string.Empty;
+        public string VisaStartDate { get; set; } = string.Empty;
         public string VisaExpiry { get; set; } = string.Empty;
         public string InsuranceCompanyShort { get; set; } = string.Empty;
         public string InsuranceCompanyFull { get; set; } = string.Empty;

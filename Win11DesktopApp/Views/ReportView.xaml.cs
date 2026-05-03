@@ -104,6 +104,7 @@ namespace Win11DesktopApp.Views
                     "DocumentType" => "documentType",
                     "PassportNumber" => "passportNumber",
                     "VisaNumber" => "visaNumber",
+                    "VisaAuthority" => "visaAuthority",
                     "WorkAddress" => "workAddress",
                     "HighestEducation" => "highestEducation",
                     "BirthDate" => "birthDate",

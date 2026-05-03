@@ -234,7 +234,8 @@
                 </ItemsControl.LayoutTransform>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border CornerRadius="12" Padding="12,11" Margin="0,0,0,8" BorderThickness="1" Cursor="Hand"
+                            <Border Style="{StaticResource ModernInteractiveCard}"
+                                    CornerRadius="14" Padding="12,11" Margin="0,0,0,8" BorderThickness="1" Cursor="Hand"
                                     Background="{DynamicResource CardBackgroundBrush}"
                                     BorderBrush="{DynamicResource CardBorderBrush}">
                                 <Border.Effect>
@@ -353,7 +354,8 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border CornerRadius="12" Padding="10" Margin="6,14,8,8" Width="258" BorderThickness="1"
+                            <Border Style="{StaticResource ModernCard}"
+                                    CornerRadius="14" Padding="10" Margin="6,14,8,8" Width="258" BorderThickness="1"
                                     RenderTransformOrigin="0.5,0.5" Cursor="Hand"
                                     Background="{DynamicResource CardBackgroundBrush}"
                                     BorderBrush="{DynamicResource CardBorderBrush}">
@@ -528,13 +530,15 @@
         </Grid>
 
         <!-- ADD CANDIDATE OVERLAY -->
-        <Grid Visibility="{Binding IsAddDialogOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100">
+        <Grid Visibility="{Binding IsAddDialogOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{x:Null}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12"
+            <Border Style="{StaticResource ModernDialogCard}"
+                    Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="18"
                     MaxWidth="900" MaxHeight="700" Margin="20"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
@@ -550,13 +554,15 @@
         </Grid>
 
         <!-- DETAILS OVERLAY -->
-        <Grid Visibility="{Binding IsDetailsOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100">
+        <Grid Visibility="{Binding IsDetailsOpen, Converter={StaticResource BoolToVis}}" Panel.ZIndex="100"
+              Style="{StaticResource OverlayFadeInGrid}">
             <Border Background="{DynamicResource OverlayBrush}">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{x:Null}"/>
                 </Border.InputBindings>
             </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12"
+            <Border Style="{StaticResource ModernDialogCard}"
+                    Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="18"
                     MaxWidth="880" MaxHeight="850" Margin="30"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">

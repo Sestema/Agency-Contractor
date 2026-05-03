@@ -10,7 +10,7 @@ namespace Win11DesktopApp.Services
     public class ThemeService
     {
         private static readonly string[] GlassThemes = { "Glass", "GlassDark" };
-        private static readonly string[] DarkThemes = { "Dark2", "DarkWord", "GlassDark" };
+        private static readonly string[] DarkThemes = { "Dark2", "DarkWord", "GlassDark", "VantaDark" };
         private readonly AppSettingsService _appSettingsService;
 
         /// <summary>
@@ -145,7 +145,9 @@ namespace Win11DesktopApp.Services
 
             // "Custom" (sepia) relies on its warm solid tones. Mica would tint them
             // with the desktop wallpaper and kill the sepia character, so we opt out.
-            bool isSolidCharacterTheme = string.Equals(themeName, "Custom", StringComparison.OrdinalIgnoreCase);
+            bool isSolidCharacterTheme =
+                string.Equals(themeName, "Custom", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(themeName, "VantaDark", StringComparison.OrdinalIgnoreCase);
 
             if (isGlass)
             {

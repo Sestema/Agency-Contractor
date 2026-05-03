@@ -137,6 +137,7 @@ namespace Win11DesktopApp.Services
             AddTag("EMPLOYEE_VisaNumber", "Employee", companyName, Res("TagDescEmpVisaNumber"), data.VisaNumber);
             AddTag("EMPLOYEE_VisaAuthority", "Employee", companyName, Res("TagDescEmpVisaAuthority"), data.VisaAuthority);
             AddTag("EMPLOYEE_VisaType", "Employee", companyName, Res("TagDescEmpVisaType"), data.VisaType);
+            AddTag("EMPLOYEE_VisaStartDate", "Employee", companyName, Res("TagDescEmpVisaStartDate"), data.VisaStartDate);
             AddTag("EMPLOYEE_VisaExpiry", "Employee", companyName, Res("TagDescEmpVisaExpiry"), data.VisaExpiry);
 
             AddTag("EMPLOYEE_InsuranceCompany", "Employee", companyName, Res("TagDescEmpInsCompany"), data.InsuranceCompanyShort);
@@ -222,6 +223,7 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_VisaNumber"] = employeeData.VisaNumber;
             map["EMPLOYEE_VisaAuthority"] = employeeData.VisaAuthority;
             map["EMPLOYEE_VisaType"] = employeeData.VisaType;
+            map["EMPLOYEE_VisaStartDate"] = employeeData.VisaStartDate;
             map["EMPLOYEE_VisaExpiry"] = employeeData.VisaExpiry;
             map["EMPLOYEE_InsuranceCompany"] = employeeData.InsuranceCompanyShort;
             map["EMPLOYEE_InsuranceCompanyFull"] = GetInsuranceCompanyFullDisplay(employeeData);
@@ -401,6 +403,7 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_VisaNumber", Category = "Employee.Visa", Description = Res("TagDescEmpVisaNumber") },
                 new() { Tag = "EMPLOYEE_VisaAuthority", Category = "Employee.Visa", Description = Res("TagDescEmpVisaAuthority") },
                 new() { Tag = "EMPLOYEE_VisaType", Category = "Employee.Visa", Description = Res("TagDescEmpVisaType") },
+                new() { Tag = "EMPLOYEE_VisaStartDate", Category = "Employee.Visa", Description = Res("TagDescEmpVisaStartDate") },
                 new() { Tag = "EMPLOYEE_VisaExpiry", Category = "Employee.Visa", Description = Res("TagDescEmpVisaExpiry") },
 
                 new() { Tag = "EMPLOYEE_InsuranceCompany", Category = "Employee.Insurance", Description = Res("TagDescEmpInsCompany") },

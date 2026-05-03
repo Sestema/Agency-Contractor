@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,6 +35,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly CurrentProfileService _currentProfileService;
         private List<ActivityLogEntry> _allEntries = new();
         private HashSet<string> _undoableArchiveOperationIds = new(StringComparer.OrdinalIgnoreCase);
+        private int _loadVersion;
 
         private static readonly Dictionary<string, (string colorHex, string icon, string resKey)> CategoryMeta = new()
         {
@@ -57,7 +59,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ExportCommand { get; }
         public ICommand ClearAllCommand { get; }
 
-        public ObservableCollection<ActivityLogEntry> Entries { get; } = new();
+        private readonly BulkObservableCollection<ActivityLogEntry> _entries = new();
+        public ObservableCollection<ActivityLogEntry> Entries => _entries;
         public ICollectionView GroupedEntries { get; }
 
         private string _searchText = string.Empty;
@@ -106,6 +109,9 @@ namespace Win11DesktopApp.ViewModels
 
         private bool _hasEntries;
         public bool HasEntries { get => _hasEntries; set => SetProperty(ref _hasEntries, value); }
+
+        private bool _isLoading;
+        public bool IsLoading { get => _isLoading; set => SetProperty(ref _isLoading, value); }
 
         private bool _isEmployeeDetailsOpen;
         public bool IsEmployeeDetailsOpen
@@ -161,7 +167,7 @@ namespace Win11DesktopApp.ViewModels
             ExportCommand = new RelayCommand(o => ExportToExcel());
             ClearAllCommand = new RelayCommand(o => ClearAllHistory());
 
-            LoadEntries();
+            _ = LoadEntriesAsync();
         }
 
         public static string GetCategoryColor(string category)
@@ -234,7 +240,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged() => LoadEntries();
+        private void OnDetailsDataChanged() => _ = LoadEntriesAsync();
 
         private (string folder, string firm)? ResolveEmployeeFolder(string firmName, string employeeName)
         {
@@ -264,47 +270,74 @@ namespace Win11DesktopApp.ViewModels
             return null;
         }
 
-        private void LoadEntries()
+        private async Task LoadEntriesAsync()
         {
-            _allEntries = _logService.GetAll();
-            _undoableArchiveOperationIds = _employeeService.LoadArchiveLog()
-                .Where(entry =>
-                    string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
-                    && !entry.IsReverted
-                    && !string.IsNullOrWhiteSpace(entry.OperationId))
-                .Select(entry => entry.OperationId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            TotalCount = _allEntries.Count;
+            var version = ++_loadVersion;
+            IsLoading = true;
 
-            var cats = _allEntries.Select(e => e.Category)
-                .Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
-            Categories.Clear();
-            foreach (var c in cats)
+            try
             {
-                var hasMeta = CategoryMeta.TryGetValue(c, out var m);
-                Categories.Add(new CategoryItem
+                var snapshot = await Task.Run(() =>
                 {
-                    Key = c,
-                    DisplayName = hasMeta ? Res(m.resKey) : c,
-                    Color = hasMeta ? m.colorHex : "#757575",
-                    Icon = hasMeta ? m.icon : "\uE7C3"
+                    var entries = _logService.GetAll();
+                    var undoableArchiveOperationIds = _employeeService.LoadArchiveLog()
+                        .Where(entry =>
+                            string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                            && !entry.IsReverted
+                            && !string.IsNullOrWhiteSpace(entry.OperationId))
+                        .Select(entry => entry.OperationId)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    var categories = entries.Select(e => e.Category)
+                        .Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
+                    var firms = entries.Select(e => e.FirmName)
+                        .Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f).ToList();
+
+                    return new ActivityLogSnapshot(entries, undoableArchiveOperationIds, categories, firms);
                 });
+
+                if (version != _loadVersion)
+                    return;
+
+                _allEntries = snapshot.Entries;
+                _undoableArchiveOperationIds = snapshot.UndoableArchiveOperationIds;
+                TotalCount = _allEntries.Count;
+
+                Categories.Clear();
+                foreach (var c in snapshot.Categories)
+                {
+                    var hasMeta = CategoryMeta.TryGetValue(c, out var m);
+                    Categories.Add(new CategoryItem
+                    {
+                        Key = c,
+                        DisplayName = hasMeta ? Res(m.resKey) : c,
+                        Color = hasMeta ? m.colorHex : "#757575",
+                        Icon = hasMeta ? m.icon : "\uE7C3"
+                    });
+                }
+
+                FirmNames.Clear();
+                FirmNames.Add("");
+                foreach (var f in snapshot.Firms) FirmNames.Add(f);
+
+                ApplyFilter();
+                CommandManager.InvalidateRequerySuggested();
             }
-
-            var firms = _allEntries.Select(e => e.FirmName)
-                .Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f).ToList();
-            FirmNames.Clear();
-            FirmNames.Add("");
-            foreach (var f in firms) FirmNames.Add(f);
-
-            ApplyFilter();
-            CommandManager.InvalidateRequerySuggested();
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ActivityLogViewModel.LoadEntriesAsync", ex);
+            }
+            finally
+            {
+                if (version == _loadVersion)
+                    IsLoading = false;
+            }
         }
 
         private void ApplyFilter()
         {
-            Entries.Clear();
             var query = _searchText?.Trim() ?? string.Empty;
+            var filtered = new List<ActivityLogEntry>();
 
             foreach (var entry in _allEntries)
             {
@@ -336,11 +369,12 @@ namespace Win11DesktopApp.ViewModels
                         continue;
                 }
 
-                Entries.Add(entry);
+                filtered.Add(entry);
             }
 
-            FilteredCount = Entries.Count;
-            HasEntries = Entries.Count > 0;
+            _entries.ReplaceAll(filtered);
+            FilteredCount = filtered.Count;
+            HasEntries = filtered.Count > 0;
         }
 
         private bool CanUndoArchive(object? parameter)
@@ -442,7 +476,7 @@ namespace Win11DesktopApp.ViewModels
                 employeeFolder: result.RestoredFolder,
                 relatedOperationId: result.UndoOperationId);
 
-            LoadEntries();
+            await LoadEntriesAsync();
             MessageBox.Show(
                 Res("ActLogUndoSuccess"),
                 Res("TitleSuccess"),
@@ -540,7 +574,63 @@ namespace Win11DesktopApp.ViewModels
             if (result != MessageBoxResult.Yes) return;
 
             _logService.ClearAll();
-            LoadEntries();
+            _ = LoadEntriesAsync();
+        }
+    }
+
+    internal sealed class ActivityLogSnapshot
+    {
+        public ActivityLogSnapshot(
+            List<ActivityLogEntry> entries,
+            HashSet<string> undoableArchiveOperationIds,
+            List<string> categories,
+            List<string> firms)
+        {
+            Entries = entries;
+            UndoableArchiveOperationIds = undoableArchiveOperationIds;
+            Categories = categories;
+            Firms = firms;
+        }
+
+        public List<ActivityLogEntry> Entries { get; }
+        public HashSet<string> UndoableArchiveOperationIds { get; }
+        public List<string> Categories { get; }
+        public List<string> Firms { get; }
+    }
+
+    internal sealed class BulkObservableCollection<T> : ObservableCollection<T>
+    {
+        private bool _suppressNotifications;
+
+        public void ReplaceAll(IEnumerable<T> items)
+        {
+            _suppressNotifications = true;
+            try
+            {
+                Items.Clear();
+                foreach (var item in items)
+                    Items.Add(item);
+            }
+            finally
+            {
+                _suppressNotifications = false;
+            }
+
+            OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+            OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
+        protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            if (!_suppressNotifications)
+                base.OnCollectionChanged(e);
+        }
+
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            if (!_suppressNotifications)
+                base.OnPropertyChanged(e);
         }
     }
 

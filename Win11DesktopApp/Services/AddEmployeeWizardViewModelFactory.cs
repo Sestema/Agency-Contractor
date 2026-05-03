@@ -8,15 +8,18 @@ namespace Win11DesktopApp.Services
         private readonly EmployeeService _employeeService;
         private readonly GeminiApiService _geminiApiService;
         private readonly ActivityLogService _activityLogService;
+        private readonly AppStatisticsService _appStatisticsService;
 
         public AddEmployeeWizardViewModelFactory(
             EmployeeService employeeService,
             GeminiApiService geminiApiService,
-            ActivityLogService activityLogService)
+            ActivityLogService activityLogService,
+            AppStatisticsService appStatisticsService)
         {
             _employeeService = employeeService;
             _geminiApiService = geminiApiService;
             _activityLogService = activityLogService;
+            _appStatisticsService = appStatisticsService;
         }
 
         public AddEmployeeWizardViewModel Create(
@@ -28,7 +31,8 @@ namespace Win11DesktopApp.Services
                 company,
                 employeeService ?? _employeeService,
                 geminiApiService ?? _geminiApiService,
-                _activityLogService);
+                _activityLogService,
+                _appStatisticsService);
         }
     }
 }

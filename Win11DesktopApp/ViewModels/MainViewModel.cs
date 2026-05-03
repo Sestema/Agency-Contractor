@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Win11DesktopApp.Invoices.Services;
 using System.Collections.ObjectModel;
 using Win11DesktopApp.Invoices.ViewModels;
@@ -12,6 +13,7 @@ using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using System.Linq;
+using System.Globalization;
 
 namespace Win11DesktopApp.ViewModels
 {
@@ -56,8 +58,13 @@ namespace Win11DesktopApp.ViewModels
         private readonly InvoiceViewModelFactory _invoiceViewModelFactory;
         private readonly MainModuleViewModelFactory _mainModuleViewModelFactory;
         private readonly AddCompanyViewModelFactory _addCompanyViewModelFactory;
+        private readonly AppNotificationService _notificationService;
+        private readonly DispatcherTimer _clockTimer;
 
         public ICommand GoToSettingsCommand { get; }
+        public ICommand ToggleNotificationsCommand { get; }
+        public ICommand MarkNotificationsReadCommand { get; }
+        public ICommand ClearNotificationsCommand { get; }
         public ICommand ToggleDrawerCommand { get; }
         public ICommand OpenAddCompanyDialogCommand { get; }
         public ICommand CloseAddCompanyDialogCommand { get; }
@@ -89,6 +96,70 @@ namespace Win11DesktopApp.ViewModels
                 }
             }
         }
+
+        private string _greetingText = string.Empty;
+        public string GreetingText
+        {
+            get => _greetingText;
+            set => SetProperty(ref _greetingText, value);
+        }
+
+        private string _currentDateText = string.Empty;
+        public string CurrentDateText
+        {
+            get => _currentDateText;
+            set => SetProperty(ref _currentDateText, value);
+        }
+
+        private string _currentTimeText = string.Empty;
+        public string CurrentTimeText
+        {
+            get => _currentTimeText;
+            set => SetProperty(ref _currentTimeText, value);
+        }
+
+        private int _visibleCompaniesCount;
+        public int VisibleCompaniesCount
+        {
+            get => _visibleCompaniesCount;
+            set => SetProperty(ref _visibleCompaniesCount, value);
+        }
+
+        private int _selectedCompanyEmployeesCount;
+        public int SelectedCompanyEmployeesCount
+        {
+            get => _selectedCompanyEmployeesCount;
+            set => SetProperty(ref _selectedCompanyEmployeesCount, value);
+        }
+
+        private int _selectedCompanyTemplatesCount;
+        public int SelectedCompanyTemplatesCount
+        {
+            get => _selectedCompanyTemplatesCount;
+            set => SetProperty(ref _selectedCompanyTemplatesCount, value);
+        }
+
+        private int _selectedCompanyProblemsCount;
+        public int SelectedCompanyProblemsCount
+        {
+            get => _selectedCompanyProblemsCount;
+            set => SetProperty(ref _selectedCompanyProblemsCount, value);
+        }
+
+        public string SelectedCompanyDisplayName => SelectedCompany?.Name ?? Res("MainNoCompanySelected");
+        public string SelectedCompanyIcoText => string.IsNullOrWhiteSpace(SelectedCompany?.ICO)
+            ? Res("MainNoCompanyMeta")
+            : $"ICO {SelectedCompany!.ICO}";
+        public string SelectedCompanyAgencyText =>
+            string.IsNullOrWhiteSpace(SelectedCompany?.Agency?.Name)
+                ? Res("MainNoCompanyMeta")
+                : SelectedCompany!.Agency.Name;
+        public string SelectedCompanySummaryText => HasSelectedCompany
+            ? string.Format(
+                Res("MainCompanySummaryFormat"),
+                SelectedCompanyEmployeesCount,
+                SelectedCompanyTemplatesCount)
+            : Res("MainSelectCompany");
 
         private string _searchQuery = "";
         public string SearchQuery
@@ -128,6 +199,18 @@ namespace Win11DesktopApp.ViewModels
             get => _isAISearching;
             set => SetProperty(ref _isAISearching, value);
         }
+
+        private bool _isNotificationCenterOpen;
+        public bool IsNotificationCenterOpen
+        {
+            get => _isNotificationCenterOpen;
+            set => SetProperty(ref _isNotificationCenterOpen, value);
+        }
+
+        public ObservableCollection<AppNotificationItem> Notifications => _notificationService.Notifications;
+        public int UnreadNotificationsCount => _notificationService.UnreadCount;
+        public bool HasUnreadNotifications => _notificationService.HasUnread;
+        public bool HasNotifications => Notifications.Count > 0;
 
         private CancellationTokenSource? _searchCts;
         private Timer? _searchDebounce;
@@ -192,7 +275,8 @@ namespace Win11DesktopApp.ViewModels
             AppSettingsService appSettingsService,
             InvoiceViewModelFactory invoiceViewModelFactory,
             MainModuleViewModelFactory mainModuleViewModelFactory,
-            AddCompanyViewModelFactory addCompanyViewModelFactory)
+            AddCompanyViewModelFactory addCompanyViewModelFactory,
+            AppNotificationService notificationService)
         {
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
@@ -204,8 +288,12 @@ namespace Win11DesktopApp.ViewModels
             _invoiceViewModelFactory = invoiceViewModelFactory ?? throw new ArgumentNullException(nameof(invoiceViewModelFactory));
             _mainModuleViewModelFactory = mainModuleViewModelFactory ?? throw new ArgumentNullException(nameof(mainModuleViewModelFactory));
             _addCompanyViewModelFactory = addCompanyViewModelFactory ?? throw new ArgumentNullException(nameof(addCompanyViewModelFactory));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
 
             GoToSettingsCommand = new RelayCommand(o => _navigationService.NavigateTo<SettingsViewModel>());
+            ToggleNotificationsCommand = new RelayCommand(o => ToggleNotifications());
+            MarkNotificationsReadCommand = new RelayCommand(o => _notificationService.MarkAllRead());
+            ClearNotificationsCommand = new RelayCommand(o => _notificationService.ClearAll());
             ButtonCommand = new RelayCommand(o => { });
             ToggleDrawerCommand = new RelayCommand(o => IsDrawerOpen = !IsDrawerOpen);
 
@@ -213,6 +301,14 @@ namespace Win11DesktopApp.ViewModels
             _companyService.VisibilityChanged += OnVisibilityChanged;
 
             BuildMenuCards();
+
+            _clockTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(30)
+            };
+            _clockTimer.Tick += (_, _) => RefreshClock();
+            RefreshClock();
+            _clockTimer.Start();
 
             OpenAddCompanyDialogCommand = new RelayCommand(o =>
             {
@@ -281,27 +377,56 @@ namespace Win11DesktopApp.ViewModels
             _companyService.SelectedCompanyChanged += OnSelectedCompanyChanged;
 
             RefreshProblemsCount();
+            RefreshOverviewStats();
+            _notificationService.PropertyChanged += OnNotificationServicePropertyChanged;
+            Notifications.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNotifications));
+        }
+
+        private void ToggleNotifications()
+        {
+            IsNotificationCenterOpen = !IsNotificationCenterOpen;
+            if (IsNotificationCenterOpen)
+                _notificationService.MarkAllRead();
+        }
+
+        private void OnNotificationServicePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(AppNotificationService.UnreadCount))
+                OnPropertyChanged(nameof(UnreadNotificationsCount));
+            if (e.PropertyName == nameof(AppNotificationService.HasUnread))
+                OnPropertyChanged(nameof(HasUnreadNotifications));
         }
 
         private void OnSelectedCompanyChanged(EmployerCompany? _)
         {
             OnPropertyChanged(nameof(SelectedCompany));
             OnPropertyChanged(nameof(HasSelectedCompany));
+            OnPropertyChanged(nameof(SelectedCompanyDisplayName));
+            OnPropertyChanged(nameof(SelectedCompanyIcoText));
+            OnPropertyChanged(nameof(SelectedCompanyAgencyText));
+            OnPropertyChanged(nameof(SelectedCompanySummaryText));
             RefreshProblemsCount();
+            RefreshOverviewStats();
         }
 
         private void OnVisibilityChanged()
         {
-            _ = App.Current?.Dispatcher?.BeginInvoke((Action)RefreshVisibleCompanies);
+            _ = App.Current?.Dispatcher?.BeginInvoke((Action)(() =>
+            {
+                RefreshVisibleCompanies();
+                RefreshOverviewStats();
+            }));
         }
 
         public void Cleanup()
         {
             _companyService.SelectedCompanyChanged -= OnSelectedCompanyChanged;
             _companyService.VisibilityChanged -= OnVisibilityChanged;
+            _notificationService.PropertyChanged -= OnNotificationServicePropertyChanged;
             _searchDebounce?.Dispose();
             _searchCts?.Cancel();
             _searchCts?.Dispose();
+            _clockTimer.Stop();
         }
 
         private void BuildMenuCards()
@@ -402,6 +527,11 @@ namespace Win11DesktopApp.ViewModels
                 SelectedCompany = Companies.Last();
             OnPropertyChanged(nameof(SelectedCompany));
             OnPropertyChanged(nameof(HasSelectedCompany));
+            OnPropertyChanged(nameof(SelectedCompanyDisplayName));
+            OnPropertyChanged(nameof(SelectedCompanyIcoText));
+            OnPropertyChanged(nameof(SelectedCompanyAgencyText));
+            OnPropertyChanged(nameof(SelectedCompanySummaryText));
+            RefreshOverviewStats();
         }
 
         private void OnEditCompanyClose()
@@ -409,6 +539,11 @@ namespace Win11DesktopApp.ViewModels
             IsAddCompanyDialogOpen = false;
             OnPropertyChanged(nameof(SelectedCompany));
             OnPropertyChanged(nameof(HasSelectedCompany));
+            OnPropertyChanged(nameof(SelectedCompanyDisplayName));
+            OnPropertyChanged(nameof(SelectedCompanyIcoText));
+            OnPropertyChanged(nameof(SelectedCompanyAgencyText));
+            OnPropertyChanged(nameof(SelectedCompanySummaryText));
+            RefreshOverviewStats();
         }
 
         private async void RefreshProblemsCount()
@@ -423,6 +558,64 @@ namespace Win11DesktopApp.ViewModels
                 LoggingService.LogError("MainViewModel.RefreshProblemsCount", ex);
                 _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() => ProblemsCount = 0));
             }
+        }
+
+        private void RefreshClock()
+        {
+            var now = DateTime.Now;
+            GreetingText = GetGreeting(now);
+            CurrentTimeText = now.ToString("HH:mm", CultureInfo.InvariantCulture);
+            CurrentDateText = now.ToString("dddd, dd.MM.yyyy", GetAppCulture());
+        }
+
+        private void RefreshOverviewStats()
+        {
+            try
+            {
+                VisibleCompaniesCount = _visibleCompanies.Count;
+
+                if (SelectedCompany == null)
+                {
+                    SelectedCompanyEmployeesCount = 0;
+                    SelectedCompanyTemplatesCount = 0;
+                    SelectedCompanyProblemsCount = 0;
+                }
+                else
+                {
+                    SelectedCompanyEmployeesCount = _employeeService.GetEmployeesForFirm(SelectedCompany.Name).Count;
+                    SelectedCompanyTemplatesCount = _templateService.GetTemplates(SelectedCompany.Name).Count;
+                    SelectedCompanyProblemsCount = ProblemsViewModel.CountProblemsForCompany(SelectedCompany, _employeeService);
+                }
+
+                OnPropertyChanged(nameof(SelectedCompanyDisplayName));
+                OnPropertyChanged(nameof(SelectedCompanyIcoText));
+                OnPropertyChanged(nameof(SelectedCompanyAgencyText));
+                OnPropertyChanged(nameof(SelectedCompanySummaryText));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("MainViewModel.RefreshOverviewStats", ex);
+            }
+        }
+
+        private string GetGreeting(DateTime now)
+        {
+            if (now.Hour < 12)
+                return Res("MainGreetingMorning");
+            if (now.Hour < 18)
+                return Res("MainGreetingAfternoon");
+            return Res("MainGreetingEvening");
+        }
+
+        private CultureInfo GetAppCulture()
+        {
+            return (_appSettingsService.Settings.LanguageCode ?? "uk") switch
+            {
+                "en" => new CultureInfo("en-US"),
+                "cs" => new CultureInfo("cs-CZ"),
+                "ru" => new CultureInfo("ru-RU"),
+                _ => new CultureInfo("uk-UA")
+            };
         }
 
         private void DebounceSearch()

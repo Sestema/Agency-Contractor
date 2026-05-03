@@ -86,6 +86,7 @@ public sealed class AdminMirrorEmployeeDto
     public string PassportExpiry { get; set; } = string.Empty;
     public string VisaNumber { get; set; } = string.Empty;
     public string VisaType { get; set; } = string.Empty;
+    public string VisaStartDate { get; set; } = string.Empty;
     public string VisaExpiry { get; set; } = string.Empty;
     public string InsuranceCompanyShort { get; set; } = string.Empty;
     public string InsuranceCompanyFull { get; set; } = string.Empty;

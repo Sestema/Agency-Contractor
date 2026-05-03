@@ -92,13 +92,13 @@ namespace Win11DesktopApp.ViewModels
             LoadImages();
 
             SaveCommand = new RelayCommand(o => Save());
-            DeleteCommand = new RelayCommand(o =>
+            DeleteCommand = new RelayCommand(async o =>
             {
                 var result = MessageBox.Show(
                     string.Format(Res("CandDeleteConfirm"), FullName),
                     Res("TitleWarning"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
                 if (result == MessageBoxResult.Yes)
-                    PerformDelete();
+                    await PerformDeleteAsync();
             });
             CloseCommand = new RelayCommand(o => RequestClose?.Invoke());
             BrowsePhotoCommand = new RelayCommand(o => BrowseAndReplacePhoto());
@@ -147,7 +147,7 @@ namespace Win11DesktopApp.ViewModels
             RequestClose?.Invoke();
         }
 
-        private void PerformDelete()
+        private async Task PerformDeleteAsync()
         {
             PhotoImage = null;
             PassportPreviewPath = "";
@@ -156,7 +156,7 @@ namespace Win11DesktopApp.ViewModels
             GC.WaitForPendingFinalizers();
 
             var name = FullName;
-            _service.DeleteCandidate(_folder);
+            await _service.DeleteCandidateAsync(_folder);
 
             _activityLogService.Log("CandidateDeleted", "Candidate", "",
                 name, $"Видалено кандидата: {name}");

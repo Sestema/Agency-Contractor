@@ -69,6 +69,8 @@
                         <TextBlock Text="{DynamicResource WizVisaType}" Style="{StaticResource WizLabel}"/>
                         <TextBox Text="{Binding Data.VisaType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     </StackPanel>
+                    <TextBlock Text="{DynamicResource WizVisaStartDate}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding Data.VisaStartDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{Binding SecondaryStepVisaExpiryLabel}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <StackPanel Visibility="{Binding IsEuIdCard, Converter={StaticResource InverseBoolToVis}}">

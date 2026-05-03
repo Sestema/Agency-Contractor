@@ -55,6 +55,17 @@ namespace Win11DesktopApp.Services
         private bool _useLocalDbHistory;
         private static readonly SemaphoreSlim _historyLock = new(1, 1);
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+        private static readonly TimeSpan EmployeeListCacheTtl = TimeSpan.FromSeconds(10);
+        private const long SlowEmployeeIndexLoadMs = 500;
+        private readonly object _employeeListCacheLock = new();
+        private readonly Dictionary<string, EmployeeListCacheEntry> _employeeListCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, object> _employeeListLoadLocks = new(StringComparer.OrdinalIgnoreCase);
+
+        private sealed class EmployeeListCacheEntry
+        {
+            public DateTime CreatedAtUtc { get; init; }
+            public List<EmployeeSummary> Employees { get; init; } = new();
+        }
 
         public EmployeeService(
             AppSettingsService appSettingsService,
@@ -187,7 +198,6 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogError("EmployeeService.PrepareTempDocument", ex);
-                Debug.WriteLine($"PrepareTempDocument error for {sourcePath}: {ex.Message}");
             }
             return temp;
         }
@@ -227,7 +237,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"RenderPdfPages error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.RenderPdfPages", ex);
             }
             return result;
@@ -300,7 +309,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SaveEmployee error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.SaveEmployee", ex);
                 if (!employeeFolderExisted && !string.IsNullOrWhiteSpace(employeeFolder))
                     TryDeleteIncompleteEmployeeFolder(employeeFolder);
@@ -310,6 +318,7 @@ namespace Win11DesktopApp.Services
 
         public List<EmployeeSummary> GetEmployeesForFirm(string firmName)
         {
+            var stopwatch = Stopwatch.StartNew();
             var employeesFolder = _folderService.GetEmployeesFolder(firmName);
             if (string.IsNullOrEmpty(employeesFolder))
             {
@@ -323,36 +332,54 @@ namespace Win11DesktopApp.Services
                 return new List<EmployeeSummary>();
             }
 
-            if (_employeeIndexDbService != null)
+            if (TryGetCachedEmployeesForFirm(firmName, out var cachedEmployees))
+                return cachedEmployees;
+
+            var firmLoadLock = GetEmployeeListLoadLock(firmName);
+            lock (firmLoadLock)
             {
-                try
+                if (TryGetCachedEmployeesForFirm(firmName, out cachedEmployees))
+                    return cachedEmployees;
+
+                if (_employeeIndexDbService != null)
                 {
-                    var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
-                    if (rows.Count > 0)
+                    try
                     {
-                        return rows
-                            .Select(BuildSummaryFromIndexRow)
-                            .ToList();
+                        var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+                        if (rows.Count > 0)
+                        {
+                            var employees = rows
+                                .Select(BuildSummaryFromIndexRow)
+                                .ToList();
+                            LogSlowEmployeeIndexLoad("EmployeeService.GetEmployeesForFirm", firmName, employees.Count, stopwatch.ElapsedMilliseconds);
+                            StoreEmployeesForFirmCache(firmName, employees);
+                            return employees;
+                        }
+
+                        if (!HasAnyEmployeeFolders(employeesFolder))
+                            return new List<EmployeeSummary>();
+
+                        LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
+                            $"Employee index returned no rows for '{firmName}' while employee folders exist. Falling back to file scan.");
                     }
-
-                    if (!HasAnyEmployeeFolders(employeesFolder))
-                        return new List<EmployeeSummary>();
-
-                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
-                        $"Employee index returned no rows for '{firmName}' while employee folders exist. Falling back to file scan.");
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
+                            $"Employee index read failed for '{firmName}', falling back to file scan. {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
-                        $"Employee index read failed for '{firmName}', falling back to file scan. {ex.Message}");
-                }
+
+                var fileScanEmployees = GetEmployeesForFirmFromFiles(firmName, employeesFolder);
+                LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
+                    $"Loaded {fileScanEmployees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. SQLite index was not used.");
+                StoreEmployeesForFirmCache(firmName, fileScanEmployees);
+                return fileScanEmployees;
             }
-
-            return GetEmployeesForFirmFromFiles(firmName, employeesFolder);
         }
 
         public (List<EmployeeSummary> Employees, string Status) GetEmployeesForFirmWithStatus(string firmName)
         {
+            var stopwatch = Stopwatch.StartNew();
             var employeesFolder = _folderService.GetEmployeesFolder(firmName);
             if (string.IsNullOrEmpty(employeesFolder))
             {
@@ -371,7 +398,9 @@ namespace Win11DesktopApp.Services
                     var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                     if (rows.Count > 0)
                     {
-                        return (rows.Select(BuildSummaryFromIndexRow).ToList(), "Ok");
+                        var employees = rows.Select(BuildSummaryFromIndexRow).ToList();
+                        LogSlowEmployeeIndexLoad("EmployeeService.GetEmployeesForFirmWithStatus", firmName, employees.Count, stopwatch.ElapsedMilliseconds);
+                        return (employees, "Ok");
                     }
 
                     if (!HasAnyEmployeeFolders(employeesFolder))
@@ -387,7 +416,138 @@ namespace Win11DesktopApp.Services
                 }
             }
 
-            return GetEmployeesForFirmWithStatusFromFiles(firmName, employeesFolder);
+            var fileScanResult = GetEmployeesForFirmWithStatusFromFiles(firmName, employeesFolder);
+            LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
+                $"Loaded {fileScanResult.Employees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. SQLite index was not used. Status: {fileScanResult.Status}.");
+            return fileScanResult;
+        }
+
+        private static void LogSlowEmployeeIndexLoad(string module, string firmName, int count, long elapsedMs)
+        {
+            if (elapsedMs < SlowEmployeeIndexLoadMs)
+                return;
+
+            LoggingService.LogWarning(module,
+                $"Slow SQLite index load: {count} employees for '{firmName}' in {elapsedMs} ms.");
+        }
+
+        private bool TryGetCachedEmployeesForFirm(string firmName, out List<EmployeeSummary> employees)
+        {
+            employees = new List<EmployeeSummary>();
+            var cacheKey = NormalizeFirmCacheKey(firmName);
+            if (string.IsNullOrWhiteSpace(cacheKey))
+                return false;
+
+            lock (_employeeListCacheLock)
+            {
+                if (!_employeeListCache.TryGetValue(cacheKey, out var entry))
+                    return false;
+
+                if (DateTime.UtcNow - entry.CreatedAtUtc > EmployeeListCacheTtl)
+                {
+                    _employeeListCache.Remove(cacheKey);
+                    return false;
+                }
+
+                employees = CloneEmployeeSummaries(entry.Employees);
+                return true;
+            }
+        }
+
+        private object GetEmployeeListLoadLock(string firmName)
+        {
+            var cacheKey = NormalizeFirmCacheKey(firmName);
+            if (string.IsNullOrWhiteSpace(cacheKey))
+                return _employeeListCacheLock;
+
+            lock (_employeeListCacheLock)
+            {
+                if (!_employeeListLoadLocks.TryGetValue(cacheKey, out var loadLock))
+                {
+                    loadLock = new object();
+                    _employeeListLoadLocks[cacheKey] = loadLock;
+                }
+
+                return loadLock;
+            }
+        }
+
+        private void StoreEmployeesForFirmCache(string firmName, List<EmployeeSummary> employees)
+        {
+            var cacheKey = NormalizeFirmCacheKey(firmName);
+            if (string.IsNullOrWhiteSpace(cacheKey))
+                return;
+
+            lock (_employeeListCacheLock)
+            {
+                _employeeListCache[cacheKey] = new EmployeeListCacheEntry
+                {
+                    CreatedAtUtc = DateTime.UtcNow,
+                    Employees = CloneEmployeeSummaries(employees)
+                };
+            }
+        }
+
+        private void InvalidateEmployeeListCache(string? firmName = null)
+        {
+            lock (_employeeListCacheLock)
+            {
+                if (string.IsNullOrWhiteSpace(firmName))
+                {
+                    _employeeListCache.Clear();
+                    return;
+                }
+
+                _employeeListCache.Remove(NormalizeFirmCacheKey(firmName));
+            }
+        }
+
+        private static string NormalizeFirmCacheKey(string? firmName)
+        {
+            return (firmName ?? string.Empty).Trim();
+        }
+
+        private static List<EmployeeSummary> CloneEmployeeSummaries(IEnumerable<EmployeeSummary> employees)
+        {
+            return employees.Select(CloneEmployeeSummary).ToList();
+        }
+
+        private static EmployeeSummary CloneEmployeeSummary(EmployeeSummary source)
+        {
+            return new EmployeeSummary
+            {
+                UniqueId = source.UniqueId,
+                FullName = source.FullName,
+                PositionTitle = source.PositionTitle,
+                StartDate = source.StartDate,
+                EndDate = source.EndDate,
+                ContractType = source.ContractType,
+                PhotoPath = source.PhotoPath,
+                HasPhoto = source.HasPhoto,
+                HasPassport = source.HasPassport,
+                HasVisa = source.HasVisa,
+                HasInsurance = source.HasInsurance,
+                PassportNumber = source.PassportNumber,
+                VisaNumber = source.VisaNumber,
+                InsuranceNumber = source.InsuranceNumber,
+                EmployeeFolder = source.EmployeeFolder,
+                FirmName = source.FirmName,
+                PassportExpiry = source.PassportExpiry,
+                VisaExpiry = source.VisaExpiry,
+                InsuranceExpiry = source.InsuranceExpiry,
+                PassportSeverity = source.PassportSeverity,
+                VisaSeverity = source.VisaSeverity,
+                InsuranceSeverity = source.InsuranceSeverity,
+                WorkPermitSeverity = source.WorkPermitSeverity,
+                Status = source.Status,
+                Phone = source.Phone,
+                Email = source.Email,
+                BankAccountNumber = source.BankAccountNumber,
+                BankName = source.BankName,
+                EmployeeType = source.EmployeeType,
+                WorkPermitName = source.WorkPermitName,
+                WorkPermitExpiry = source.WorkPermitExpiry
+            };
         }
 
         public EmployeeData? LoadEmployeeData(string employeeFolder)
@@ -568,7 +728,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SaveEmployeeData error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.SaveEmployeeData", ex);
                 if (notifyUser)
                     NotifySaveFailure(Res("MsgProfileSaveFail"), ex.Message);
@@ -1129,7 +1288,7 @@ namespace Win11DesktopApp.Services
 
         private void UpsertEmployeeIndex(string employeeFolder, EmployeeData data, string? firmNameOverride = null)
         {
-            if (_employeeIndexDbService == null || data == null)
+            if (data == null)
                 return;
 
             if (string.IsNullOrWhiteSpace(data.UniqueId))
@@ -1144,11 +1303,16 @@ namespace Win11DesktopApp.Services
                     firmName = _adminMirrorSyncService?.InferFirmNameFromEmployeeFolder(employeeFolder) ?? ResolveFirmNameForHistory(employeeFolder);
             }
 
+            InvalidateEmployeeListCache(firmName);
+            if (_employeeIndexDbService == null)
+                return;
+
             _employeeIndexDbService.UpsertEmployeeIndex(BuildEmployeeIndexRow(data, firmName ?? string.Empty, employeeFolder));
         }
 
         private void DeleteEmployeeIndex(string? uniqueId)
         {
+            InvalidateEmployeeListCache();
             if (_employeeIndexDbService == null || string.IsNullOrWhiteSpace(uniqueId))
                 return;
 
@@ -1356,7 +1520,9 @@ namespace Win11DesktopApp.Services
                 rows.Add(BuildEmployeeIndexRow(data, source.FirmName, source.EmployeeFolder));
             }
 
-            return _employeeIndexDbService.RebuildEmployeeIndex(rows, _localDbService, foldersScanned, foldersSkipped);
+            var result = _employeeIndexDbService.RebuildEmployeeIndex(rows, _localDbService, foldersScanned, foldersSkipped);
+            InvalidateEmployeeListCache();
+            return result;
         }
 
         public List<ArchiveLogEntry> LoadArchiveLog()
@@ -1426,7 +1592,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"AppendArchiveLog error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.AppendArchiveLog", ex);
             }
             finally
@@ -1569,7 +1734,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"RestoreFromArchive error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.RestoreFromArchive", ex);
                 return new RestoreEmployeeResult();
             }
@@ -1752,12 +1916,12 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogError("EmployeeService.RestoreArchivedEmployeeCore", new InvalidOperationException(
                     $"Restored employee.json validation failed for {restoredJsonPath}"));
-                TryDeleteDirectory(destFolder);
+                await TryDeleteDirectoryAsync(destFolder);
                 NotifyOperationFailure(Res("MsgRestoreError"));
                 return string.Empty;
             }
 
-            TryCleanupDeferredDirectory(archiveEmployeeFolder);
+            await TryCleanupDeferredDirectoryAsync(archiveEmployeeFolder);
             if (Directory.Exists(archiveEmployeeFolder))
             {
                 LoggingService.LogWarning("EmployeeService.RestoreArchivedEmployeeCore",
@@ -1909,7 +2073,7 @@ namespace Win11DesktopApp.Services
                     {
                         SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
                     }
-                    TryDeleteDirectory(destFolder);
+                    await TryDeleteDirectoryAsync(destFolder);
                     return new ArchiveEmployeeResult();
                 }
 
@@ -1920,12 +2084,12 @@ namespace Win11DesktopApp.Services
                         new InvalidOperationException($"Archive UniqueId mismatch for {destFolder}"));
                     if (originalJson != null)
                         SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
-                    TryDeleteDirectory(destFolder);
+                    await TryDeleteDirectoryAsync(destFolder);
                     NotifyOperationFailure(Res("MsgArchiveError"));
                     return new ArchiveEmployeeResult();
                 }
 
-                var sourceCleanupDeferred = !CleanupArchivedSourceFolder(employeeFolder);
+                var sourceCleanupDeferred = !await CleanupArchivedSourceFolderAsync(employeeFolder);
                 if (sourceCleanupDeferred)
                 {
                     LoggingService.LogWarning("ArchiveEmployee",
@@ -1960,7 +2124,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"ArchiveEmployee error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.ArchiveEmployee", ex);
                 return new ArchiveEmployeeResult();
             }
@@ -2068,7 +2231,7 @@ namespace Win11DesktopApp.Services
                         new InvalidOperationException($"Archive verification failed for {destFolder}"));
                     if (originalJson != null)
                         SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
-                    TryDeleteDirectory(destFolder);
+                    await TryDeleteDirectoryAsync(destFolder);
                     return new ArchiveEmployeeResult();
                 }
 
@@ -2079,12 +2242,12 @@ namespace Win11DesktopApp.Services
                         new InvalidOperationException($"Archive UniqueId mismatch for {destFolder}"));
                     if (originalJson != null)
                         SafeFileService.WriteTextAtomic(jsonPath, originalJson, System.Text.Encoding.UTF8);
-                    TryDeleteDirectory(destFolder);
+                    await TryDeleteDirectoryAsync(destFolder);
                     NotifyOperationFailure(Res("MsgArchiveError"));
                     return new ArchiveEmployeeResult();
                 }
 
-                var sourceCleanupDeferred = !CleanupArchivedSourceFolder(sourceEmployeeFolder);
+                var sourceCleanupDeferred = !await CleanupArchivedSourceFolderAsync(sourceEmployeeFolder);
                 if (sourceCleanupDeferred)
                 {
                     LoggingService.LogWarning("ArchiveEmployeeFromPathAsync",
@@ -2118,7 +2281,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"ArchiveEmployeeFromPathAsync error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.ArchiveEmployeeFromPathAsync", ex);
                 return new ArchiveEmployeeResult();
             }
@@ -2172,7 +2334,6 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"AddHistoryEntry error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.AddHistoryEntry", ex);
             }
             finally
@@ -2271,6 +2432,7 @@ namespace Win11DesktopApp.Services
                 Check(Res("HistFieldGender"),
                     oldData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"),
                     newData.Gender == "female" ? Res("GenderFemale") : Res("GenderMale"));
+                Check(Res("HistFieldDocumentProfileType"), FormatDocumentProfile(oldData), FormatDocumentProfile(newData));
                 Check(Res("HistFieldPassportNum"), oldData.PassportNumber, newData.PassportNumber);
                 Check(Res("HistFieldPassportAuthority"), oldData.PassportAuthority, newData.PassportAuthority);
                 Check(Res("HistFieldPassportExp"), oldData.PassportExpiry, newData.PassportExpiry);
@@ -2281,6 +2443,7 @@ namespace Win11DesktopApp.Services
                 Check(Res("HistFieldVisaNum"), oldData.VisaNumber, newData.VisaNumber);
                 Check(Res("HistFieldVisaAuthority"), oldData.VisaAuthority, newData.VisaAuthority);
                 Check(Res("HistFieldVisaType"), oldData.VisaType, newData.VisaType);
+                Check(Res("HistFieldVisaStartDate"), oldData.VisaStartDate, newData.VisaStartDate);
                 Check(Res("HistFieldVisaExp"), oldData.VisaExpiry, newData.VisaExpiry);
                 Check(Res("HistFieldInsNum"), oldData.InsuranceNumber, newData.InsuranceNumber);
                 Check(Res("HistFieldInsCompany"), oldData.InsuranceCompanyShort, newData.InsuranceCompanyShort);
@@ -2317,9 +2480,51 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"RecordChanges error: {ex.Message}");
                 LoggingService.LogError("EmployeeService.RecordChanges", ex);
             }
+        }
+
+        private static string FormatDocumentProfile(EmployeeData data)
+        {
+            var key = string.IsNullOrWhiteSpace(data.DocumentProfileType)
+                ? DeriveDocumentProfileKey(data)
+                : data.DocumentProfileType;
+
+            return key switch
+            {
+                "passport_only" => "Паспорт",
+                "passport_page2" => "Паспорт + паспорт 2",
+                "passport_insurance" => "Паспорт + страховка",
+                "passport_page2_insurance" => "Паспорт + паспорт 2 + страховка",
+                "eu_id_card_insurance" => "ID-карта ЄС + страховка",
+                "eu_id_card_page2_insurance" => "ID-карта ЄС + стор. 2 + страховка",
+                "passport_visa_insurance" => "Паспорт + віза + страховка",
+                "passport_visa_id_card_insurance" => "Паспорт + ID-карта + страховка",
+                "passport_visa_work_permit_insurance" => "Паспорт + віза + дозвіл + страховка",
+                _ => key
+            };
+        }
+
+        private static string DeriveDocumentProfileKey(EmployeeData data)
+        {
+            if (string.Equals(data.EmployeeType, "work_permit", StringComparison.OrdinalIgnoreCase))
+                return "passport_visa_work_permit_insurance";
+            if (string.Equals(data.EmployeeType, "passport_only", StringComparison.OrdinalIgnoreCase))
+                return !string.IsNullOrWhiteSpace(data.Files?.PassportPage2) ? "passport_page2" : "passport_only";
+            if (string.Equals(data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase))
+                    return !string.IsNullOrWhiteSpace(data.Files?.PassportPage2)
+                        ? "eu_id_card_page2_insurance"
+                        : "eu_id_card_insurance";
+                if (!string.IsNullOrWhiteSpace(data.Files?.PassportPage2))
+                    return "passport_page2_insurance";
+                return "passport_insurance";
+            }
+
+            return string.Equals(data.VisaDocType, "id_card", StringComparison.OrdinalIgnoreCase)
+                ? "passport_visa_id_card_insurance"
+                : "passport_visa_insurance";
         }
 
         private async Task AddHistoryEntryToJsonAsync(string employeeFolder, EmployeeHistoryEntry entry)
@@ -2537,6 +2742,29 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        private static async Task TryDeleteDirectoryAsync(string dir)
+        {
+            if (!Directory.Exists(dir)) return;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            await Task.Delay(300);
+
+            if (await TryBulkDeleteAsync(dir)) return;
+
+            await TryDeleteFilesIndividuallyAsync(dir, logWarnings: false);
+            await TryRemoveEmptyRootAsync(dir, logWarnings: false);
+
+            if (Directory.Exists(dir))
+            {
+                var message = IsDirectoryEmpty(dir)
+                    ? $"Empty folder cleanup deferred: {dir}"
+                    : $"Directory cleanup incomplete: {dir}";
+                LoggingService.LogWarning("TryDeleteDirectory", message);
+            }
+        }
+
         private static bool TryBulkDelete(string dir)
         {
             Exception? lastError = null;
@@ -2556,6 +2784,34 @@ namespace Win11DesktopApp.Services
                 {
                     lastError = ex;
                     Thread.Sleep(500 * (attempt + 1));
+                }
+            }
+
+            if (Directory.Exists(dir) && lastError != null)
+                LoggingService.LogInfo("EmployeeService.TryBulkDelete", $"Bulk delete fallback needed for '{dir}': {lastError.Message}");
+
+            return false;
+        }
+
+        private static async Task<bool> TryBulkDeleteAsync(string dir)
+        {
+            Exception? lastError = null;
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    if (!Directory.Exists(dir)) return true;
+                    foreach (var file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
+                    Directory.Delete(dir, true);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    await Task.Delay(500 * (attempt + 1));
                 }
             }
 
@@ -2590,6 +2846,32 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        private static async Task TryDeleteFilesIndividuallyAsync(string dir, bool logWarnings = true)
+        {
+            try
+            {
+                foreach (var file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        SafeFileService.DeleteFile(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (logWarnings)
+                            LoggingService.LogWarning("TryDeleteDirectory.File", $"Cannot delete {file}: {ex.Message}");
+                    }
+                }
+
+                await Task.Delay(200);
+                DeleteEmptyDirectories(dir, logWarnings);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.TryDeleteDirectory", ex);
+            }
+        }
+
         private static bool TryRemoveEmptyRoot(string dir)
         {
             for (int i = 0; i < 3; i++)
@@ -2614,12 +2896,36 @@ namespace Win11DesktopApp.Services
             return !Directory.Exists(dir);
         }
 
-        private static void DeleteEmptyDirectories(string dir)
+        private static async Task<bool> TryRemoveEmptyRootAsync(string dir, bool logWarnings = true)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (!Directory.Exists(dir)) return true;
+                try
+                {
+                    if (IsDirectoryEmpty(dir))
+                    {
+                        Directory.Delete(dir, false);
+                        return !Directory.Exists(dir);
+                    }
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    if (logWarnings && i == 2)
+                        LoggingService.LogWarning("EmployeeService.TryRemoveEmptyRoot", $"Cannot remove empty root '{dir}': {ex.Message}");
+                }
+                await Task.Delay(400);
+            }
+            return !Directory.Exists(dir);
+        }
+
+        private static void DeleteEmptyDirectories(string dir, bool logWarnings = true)
         {
             if (!Directory.Exists(dir)) return;
 
             foreach (var subDir in Directory.GetDirectories(dir))
-                DeleteEmptyDirectories(subDir);
+                DeleteEmptyDirectories(subDir, logWarnings);
 
             try
             {
@@ -2632,7 +2938,8 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("TryDeleteDirectory.EmptyDir", $"Cannot delete {dir}: {ex.Message}");
+                if (logWarnings)
+                    LoggingService.LogWarning("TryDeleteDirectory.EmptyDir", $"Cannot delete {dir}: {ex.Message}");
             }
         }
 
@@ -2667,6 +2974,25 @@ namespace Win11DesktopApp.Services
             return TryForceDeleteViaCmd(dir);
         }
 
+        public static async Task<bool> TryCleanupDeferredDirectoryAsync(string dir)
+        {
+            if (!Directory.Exists(dir)) return true;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            await Task.Delay(300);
+
+            await TryDeleteFilesIndividuallyAsync(dir, logWarnings: false);
+            DeleteEmptyDirectories(dir, logWarnings: false);
+
+            if (await TryRemoveEmptyRootAsync(dir, logWarnings: false)) return true;
+
+            if (await TryBulkDeleteAsync(dir)) return true;
+
+            return TryForceDeleteViaCmd(dir);
+        }
+
         private static void ScheduleDeferredCleanupRetry(string directory, string context)
         {
             _ = Task.Run(async () =>
@@ -2674,7 +3000,7 @@ namespace Win11DesktopApp.Services
                 try
                 {
                     await Task.Delay(15000);
-                    if (TryCleanupDeferredDirectory(directory))
+                    if (await TryCleanupDeferredDirectoryAsync(directory))
                         await PendingCleanupService.RemoveAsync(directory);
                 }
                 catch (Exception ex)
@@ -2722,6 +3048,11 @@ namespace Win11DesktopApp.Services
         private static bool CleanupArchivedSourceFolder(string dir)
         {
             return TryCleanupDeferredDirectory(dir);
+        }
+
+        private static Task<bool> CleanupArchivedSourceFolderAsync(string dir)
+        {
+            return TryCleanupDeferredDirectoryAsync(dir);
         }
 
         private static string? FindEmployeeFolderByUniqueId(string employeesFolder, string? uniqueId)

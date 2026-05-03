@@ -260,7 +260,10 @@
                 <ListView ItemsSource="{Binding GroupedEntries}"
                           Background="Transparent" BorderThickness="0"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.CanContentScroll="True"
                           VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
                           Visibility="{Binding HasEntries, Converter={StaticResource BoolToVis}}">
                     <ListView.Resources>
                         <Style TargetType="ListViewItem">
