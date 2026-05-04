@@ -500,6 +500,50 @@ namespace Win11DesktopApp.ViewModels
             _ => string.Empty
         };
 
+        internal static string ResolveHistoricalReportStartDate(
+            string currentStartDate,
+            string historicalStartDate,
+            DateTime? createdAt = null,
+            string historicalEndDate = "")
+        {
+            if (createdAt != null)
+            {
+                var createdDate = createdAt.Value.Date;
+                var endDate = DateParsingHelper.TryParseDate(historicalEndDate);
+                var historicalDate = DateParsingHelper.TryParseDate(historicalStartDate);
+
+                if ((endDate == null || createdDate <= endDate.Value.Date)
+                    && (historicalDate == null || historicalDate.Value.Date < createdDate))
+                {
+                    return createdDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(historicalStartDate)
+                ? currentStartDate
+                : historicalStartDate;
+        }
+
+        private DateTime? TryGetEmployeeCreatedAt(string employeeFolder)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
+            try
+            {
+                return _employeeService.LoadHistory(employeeFolder)
+                    .Where(entry => string.Equals(entry.EventType, "Created", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(entry => entry.Timestamp)
+                    .Select(entry => (DateTime?)entry.Timestamp)
+                    .FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ReportViewModel.TryGetEmployeeCreatedAt", ex.Message);
+                return null;
+            }
+        }
+
         private static string? GetEmployeeColumnStatus(EmployeeReportRow employee, string key) => key switch
         {
             "passportExpiry" => employee.PassportExpiryStatus,
@@ -1110,10 +1154,12 @@ namespace Win11DesktopApp.ViewModels
                         ? string.Join("|",
                             NormalizeDedupPart(arch.UniqueId),
                             NormalizeDedupPart(arch.FirmName),
+                            NormalizeDedupPart(arch.StartDate),
                             NormalizeDedupPart(arch.EndDate))
                         : string.Join("|",
                             NormalizeDedupPart(arch.FullName),
                             NormalizeDedupPart(arch.FirmName),
+                            NormalizeDedupPart(arch.StartDate),
                             NormalizeDedupPart(arch.EndDate),
                             NormalizeDedupPath(resolvedFolder));
 
@@ -1150,10 +1196,12 @@ namespace Win11DesktopApp.ViewModels
                         ? string.Join("|",
                             NormalizeDedupPart(history.UniqueId),
                             NormalizeDedupPart(history.FirmName),
+                            NormalizeDedupPart(history.StartDate),
                             NormalizeDedupPart(history.EndDate))
                         : string.Join("|",
                             NormalizeDedupPart(history.FullName),
                             NormalizeDedupPart(history.FirmName),
+                            NormalizeDedupPart(history.StartDate),
                             NormalizeDedupPart(history.EndDate),
                             NormalizeDedupPath(resolvedFolder));
 
@@ -1285,6 +1333,7 @@ namespace Win11DesktopApp.ViewModels
                             evt.EmployeeName,
                             evt.FirmName,
                             resolvedFolder,
+                            string.Empty,
                             evt.Date,
                             data,
                             typeDisplayMap);
@@ -1331,7 +1380,7 @@ namespace Win11DesktopApp.ViewModels
                 {
                     var data = SafeFileService.ReadJson<EmployeeData>(jsonPath);
                     if (data != null)
-                        return BuildArchivedRowFromData(fullName, firmName, resolvedFolder, endDate, data, typeDisplayMap);
+                        return BuildArchivedRowFromData(fullName, firmName, resolvedFolder, startDate, endDate, data, typeDisplayMap);
                 }
             }
             catch (Exception ex)
@@ -1357,6 +1406,7 @@ namespace Win11DesktopApp.ViewModels
             string fullName,
             string firmName,
             string employeeFolder,
+            string startDate,
             string endDate,
             EmployeeData data,
             IReadOnlyDictionary<string, string> typeDisplayMap)
@@ -1375,7 +1425,7 @@ namespace Win11DesktopApp.ViewModels
                 PassportExpiry = data.PassportExpiry,
                 VisaExpiry = data.VisaExpiry,
                 InsuranceExpiry = data.InsuranceExpiry,
-                StartDate = data.StartDate,
+                StartDate = ResolveHistoricalReportStartDate(data.StartDate, startDate, TryGetEmployeeCreatedAt(employeeFolder), endDate),
                 EndDate = endDate,
                 Phone = data.Phone,
                 BankAccountNumber = data.HasBankAccountData ? data.BankAccountNumber : string.Empty,

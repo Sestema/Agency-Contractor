@@ -106,6 +106,53 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void WorkedInAnyEmploymentPeriod_ShouldKeepOldMonthsAfterSameFirmRestore()
+        {
+            var periods = new Dictionary<string, List<(string StartDate, string EndDate)>>(StringComparer.OrdinalIgnoreCase);
+            const string key = "emp-1|Firm A";
+
+            SalaryViewModel.AddEmploymentPeriod(periods, key, "01.02.2026", "30.03.2026");
+            SalaryViewModel.AddEmploymentPeriod(periods, key, "05.05.2026", "");
+
+            Assert.True(SalaryViewModel.WorkedInAnyEmploymentPeriod(periods[key], 2026, 2));
+            Assert.True(SalaryViewModel.WorkedInAnyEmploymentPeriod(periods[key], 2026, 3));
+            Assert.False(SalaryViewModel.WorkedInAnyEmploymentPeriod(periods[key], 2026, 4));
+            Assert.True(SalaryViewModel.WorkedInAnyEmploymentPeriod(periods[key], 2026, 5));
+        }
+
+        [Fact]
+        public void ResolveHistoricalReportStartDate_ShouldPreferHistoricalPeriodStart()
+        {
+            var result = ReportViewModel.ResolveHistoricalReportStartDate("05.05.2026", "04.03.2026");
+
+            Assert.Equal("04.03.2026", result);
+        }
+
+        [Fact]
+        public void ResolveHistoricalReportStartDate_ShouldUseCreatedDate_WhenHistoricalStartIsBeforeEmployeeCreation()
+        {
+            var result = ReportViewModel.ResolveHistoricalReportStartDate(
+                "04.05.2026",
+                "11.08.2025",
+                new DateTime(2026, 3, 4, 14, 40, 0),
+                "13.04.2026");
+
+            Assert.Equal("04.03.2026", result);
+        }
+
+        [Fact]
+        public void ResolveHistoricalReportStartDate_ShouldKeepHistoricalDate_WhenCreationIsAfterHistoricalPeriod()
+        {
+            var result = ReportViewModel.ResolveHistoricalReportStartDate(
+                "04.05.2026",
+                "04.03.2026",
+                new DateTime(2026, 5, 4, 10, 0, 0),
+                "13.04.2026");
+
+            Assert.Equal("04.03.2026", result);
+        }
+
+        [Fact]
         public void ShouldReplaceFirmExpenseForSelectedFirm_ShouldIgnoreCase()
         {
             var result = SalaryViewModel.ShouldReplaceFirmExpenseForSelectedFirm("firma a", "FirmA");

@@ -495,6 +495,37 @@ namespace Win11DesktopApp.ViewModels
         private static bool ArchivedWorkedInMonth(ArchivedEmployeeSummary arc, int year, int month) =>
             WorkedInMonth(arc.StartDate, arc.EndDate, year, month);
 
+        internal static void AddEmploymentPeriod(
+            Dictionary<string, List<(string StartDate, string EndDate)>> employmentByKey,
+            string key,
+            string? startDate,
+            string? endDate)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(startDate))
+                return;
+
+            if (!employmentByKey.TryGetValue(key, out var periods))
+            {
+                periods = new List<(string StartDate, string EndDate)>();
+                employmentByKey[key] = periods;
+            }
+
+            if (!periods.Any(period =>
+                    string.Equals(period.StartDate, startDate, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(period.EndDate, endDate ?? string.Empty, StringComparison.OrdinalIgnoreCase)))
+            {
+                periods.Add((startDate, endDate ?? string.Empty));
+            }
+        }
+
+        internal static bool WorkedInAnyEmploymentPeriod(
+            IReadOnlyList<(string StartDate, string EndDate)> periods,
+            int year,
+            int month)
+        {
+            return periods.Any(period => WorkedInMonth(period.StartDate, period.EndDate, year, month));
+        }
+
         private sealed class SalaryEmployeesSnapshot
         {
             public Dictionary<string, List<EmployeeSummary>> EmployeesByFirm { get; } =
@@ -693,12 +724,12 @@ namespace Win11DesktopApp.ViewModels
 
             // Build employment period map for both active and archived/history employees.
             var periodMapSw = Stopwatch.StartNew();
-            var employmentByKey = new Dictionary<string, (string StartDate, string EndDate)>(StringComparer.OrdinalIgnoreCase);
+            var employmentByKey = new Dictionary<string, List<(string StartDate, string EndDate)>>(StringComparer.OrdinalIgnoreCase);
             foreach (var company in companies)
                 foreach (var emp in GetEmployeesForFirmSnapshot(company.Name, employeesSnapshot))
                 {
                     var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
-                    employmentByKey.TryAdd(key, (emp.StartDate, emp.EndDate));
+                    AddEmploymentPeriod(employmentByKey, key, emp.StartDate, emp.EndDate);
                 }
 
             foreach (var arc in allHistory)
@@ -707,7 +738,7 @@ namespace Win11DesktopApp.ViewModels
                     continue;
 
                 var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, arc.FirmName);
-                employmentByKey.TryAdd(key, (arc.StartDate, arc.EndDate));
+                AddEmploymentPeriod(employmentByKey, key, arc.StartDate, arc.EndDate);
             }
             timing.PeriodMapMs = periodMapSw.ElapsedMilliseconds;
 
@@ -751,8 +782,8 @@ namespace Win11DesktopApp.ViewModels
                 if (resolved != entry.EmployeeFolder) { entry.EmployeeFolder = resolved; needResave = true; }
 
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
-                if (!employmentByKey.TryGetValue(key, out var employment)
-                    || !WorkedInMonth(employment.StartDate, employment.EndDate, year, month))
+                if (!employmentByKey.TryGetValue(key, out var employmentPeriods)
+                    || !WorkedInAnyEmploymentPeriod(employmentPeriods, year, month))
                 {
                     needResave = true;
                     continue;
@@ -819,20 +850,24 @@ namespace Win11DesktopApp.ViewModels
                 if (existingKeys.Contains(key)) continue;
 
                 prevNotes.TryGetValue(key, out var inheritedNote);
-                var entry = new SalaryEntry
-                {
-                    EmployeeId     = arc.UniqueId,
-                    EmployeeFolder = arc.EmployeeFolder,
-                    FullName       = arc.FullName,
-                    FirmName       = firmName,
-                    HourlyRate     = TryGetHourlyRateFromEntries(prevEntries, arc.UniqueId, arc.EmployeeFolder, firmName, out var previousRate)
-                        ? previousRate
-                        : GetDefaultRate(arc.EmployeeFolder),
-                    HoursWorked    = 0,
-                    Note           = inheritedNote ?? string.Empty,
-                    FieldDefinitions = fieldList
-                };
-                entry.RecalcNet();
+                var historyRecord = TryGetSalaryHistoryRecord(arc.EmployeeFolder, arc.UniqueId, firmName, year, month);
+                var entry = historyRecord != null
+                    ? CreateSalaryEntryFromHistory(historyRecord, arc.UniqueId, arc.EmployeeFolder, arc.FullName, firmName, fieldList)
+                    : new SalaryEntry
+                    {
+                        EmployeeId     = arc.UniqueId,
+                        EmployeeFolder = arc.EmployeeFolder,
+                        FullName       = arc.FullName,
+                        FirmName       = firmName,
+                        HourlyRate     = TryGetHourlyRateFromEntries(prevEntries, arc.UniqueId, arc.EmployeeFolder, firmName, out var previousRate)
+                            ? previousRate
+                            : GetDefaultRate(arc.EmployeeFolder),
+                        HoursWorked    = 0,
+                        Note           = inheritedNote ?? string.Empty,
+                        FieldDefinitions = fieldList
+                    };
+                if (historyRecord == null)
+                    entry.RecalcNet();
                 entries.Add(entry);
                 existingKeys.Add(key);
             }
@@ -889,6 +924,51 @@ namespace Win11DesktopApp.ViewModels
             }
 
             return null;
+        }
+
+        private SalaryHistoryRecord? TryGetSalaryHistoryRecord(string employeeFolder, string? employeeId, string firmName, int year, int month)
+        {
+            try
+            {
+                var resolvedFolder = _financeService.ResolveEmployeeFolder(employeeFolder, employeeId);
+                var history = _financeService.SalaryHistoryService.LoadSalaryHistoryFromResolvedFolder(resolvedFolder, employeeId);
+                return history.FirstOrDefault(record =>
+                    record.Year == year
+                    && record.Month == month
+                    && string.Equals(record.FirmName, firmName, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.TryGetSalaryHistoryRecord", ex);
+                return null;
+            }
+        }
+
+        private static SalaryEntry CreateSalaryEntryFromHistory(
+            SalaryHistoryRecord record,
+            string employeeId,
+            string employeeFolder,
+            string fullName,
+            string firmName,
+            List<CustomSalaryField> fieldList)
+        {
+            var entry = new SalaryEntry
+            {
+                EmployeeId = employeeId,
+                EmployeeFolder = employeeFolder,
+                FullName = string.IsNullOrWhiteSpace(record.FullName) ? fullName : record.FullName,
+                FirmName = firmName,
+                HoursWorked = record.HoursWorked,
+                HourlyRate = record.HourlyRate,
+                Advance = record.Advance,
+                SavedNetSalary = record.NetSalary,
+                Status = "paid",
+                Note = record.Note ?? string.Empty,
+                CustomValues = new Dictionary<string, decimal>(record.CustomValues, StringComparer.OrdinalIgnoreCase),
+                FieldDefinitions = fieldList
+            };
+            entry.RecalcNet();
+            return entry;
         }
 
         private async Task CheckNextMonthExistsAsync()

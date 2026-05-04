@@ -1661,7 +1661,8 @@ namespace Win11DesktopApp.Services
                         var photo = ResolvePhotoPath(folder, data);
                         var hasPhoto = !string.IsNullOrEmpty(photo);
                         var deduplicated = data.FirmHistory
-                            .Where(fh => fh.FirmName != company.Name)
+                            .Where(fh => !string.Equals(fh.FirmName, company.Name, StringComparison.OrdinalIgnoreCase)
+                                || !string.IsNullOrWhiteSpace(fh.EndDate))
                             .GroupBy(fh => $"{fh.FirmName}|{fh.StartDate}")
                             .Select(g => g.Last())
                             .ToList();
