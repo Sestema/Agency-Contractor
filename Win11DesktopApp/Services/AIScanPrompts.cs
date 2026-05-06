@@ -279,6 +279,32 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
             return parsed.TryGetValue(DocumentKindKey, out var kind) ? kind.Trim() : string.Empty;
         }
 
+        public static Dictionary<string, string> ValidateAndCleanParsedFields(
+            string docKey,
+            IReadOnlyDictionary<string, string> parsed,
+            IReadOnlyDictionary<string, string>? currentValues = null)
+        {
+            var cleaned = new Dictionary<string, string>(parsed, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var key in parsed.Keys.Where(key => !key.StartsWith("__", StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                if (!cleaned.TryGetValue(key, out var value))
+                    continue;
+
+                var currentValue = currentValues != null && currentValues.TryGetValue(key, out var foundCurrentValue)
+                    ? foundCurrentValue
+                    : null;
+                if (IsLowConfidenceField(parsed, key) || IsSuspiciousFieldValue(parsed, key, value, currentValue))
+                    RemoveField(cleaned, key);
+            }
+
+            CleanVisaDates(cleaned);
+            CleanAuthorityFields(cleaned);
+            NormalizeCountryFields(cleaned);
+
+            return cleaned;
+        }
+
         public static bool IsDocumentKindCompatible(string expectedDocKey, IReadOnlyDictionary<string, string> parsed)
         {
             var kind = GetDocumentKind(parsed);
@@ -436,6 +462,165 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
                 return true;
 
             return Regex.IsMatch(normalizedValue, @"^\d{9}$");
+        }
+
+        private static void CleanVisaDates(Dictionary<string, string> parsed)
+        {
+            var birthDate = TryGetDate(parsed, "BirthDate");
+            var passportExpiry = TryGetDate(parsed, "PassportExpiry");
+            var visaStart = TryGetDate(parsed, "VisaStartDate");
+            var visaExpiry = TryGetDate(parsed, "VisaExpiry");
+
+            if (visaStart != null)
+            {
+                if ((birthDate != null && visaStart.Value.Date == birthDate.Value.Date)
+                    || (passportExpiry != null && visaStart.Value.Date == passportExpiry.Value.Date)
+                    || (visaExpiry != null && visaStart.Value.Date > visaExpiry.Value.Date))
+                {
+                    RemoveField(parsed, "VisaStartDate");
+                    visaStart = null;
+                }
+            }
+
+            if (visaExpiry != null)
+            {
+                if ((birthDate != null && visaExpiry.Value.Date == birthDate.Value.Date)
+                    || (visaStart != null && visaExpiry.Value.Date < visaStart.Value.Date))
+                {
+                    RemoveField(parsed, "VisaExpiry");
+                }
+            }
+        }
+
+        private static void CleanAuthorityFields(Dictionary<string, string> parsed)
+        {
+            if (parsed.TryGetValue("PassportAuthority", out var passportAuthority)
+                && IsSuspiciousAuthorityValue(passportAuthority, parsed))
+            {
+                RemoveField(parsed, "PassportAuthority");
+            }
+        }
+
+        private static bool IsSuspiciousAuthorityValue(string value, IReadOnlyDictionary<string, string> parsed)
+        {
+            var normalized = value.Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                return false;
+
+            if (Regex.IsMatch(normalized, @"^\d{4}$"))
+                return false;
+
+            var compact = NormalizeDocumentNumber(normalized);
+            if (string.IsNullOrWhiteSpace(compact))
+                return true;
+
+            if (parsed.TryGetValue("PassportNumber", out var passportNumber)
+                && string.Equals(compact, NormalizeDocumentNumber(passportNumber), StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (parsed.TryGetValue("PassportCity", out var passportCity)
+                && string.Equals(NormalizeComparableText(normalized), NormalizeComparableText(passportCity), StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (IsKnownCountryValue(normalized))
+                return true;
+
+            if (normalized.Contains("<<", StringComparison.Ordinal)
+                || normalized.Contains("MRZ", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return Regex.IsMatch(compact, @"^[A-Z]{1,3}\d{5,}$")
+                || Regex.IsMatch(compact, @"^\d{8,}$");
+        }
+
+        private static void NormalizeCountryFields(Dictionary<string, string> parsed)
+        {
+            foreach (var fieldKey in new[] { "PassportCountry", "Citizenship", "IssuingCountry" })
+            {
+                if (!parsed.TryGetValue(fieldKey, out var value))
+                    continue;
+
+                if (!TryNormalizeCountry(value, out var normalized))
+                {
+                    RemoveField(parsed, fieldKey);
+                    continue;
+                }
+
+                if ((string.Equals(fieldKey, "PassportCountry", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(fieldKey, "IssuingCountry", StringComparison.OrdinalIgnoreCase))
+                    && parsed.TryGetValue("PassportCity", out var city)
+                    && string.Equals(NormalizeComparableText(normalized), NormalizeComparableText(city), StringComparison.OrdinalIgnoreCase))
+                {
+                    RemoveField(parsed, fieldKey);
+                    continue;
+                }
+
+                parsed[fieldKey] = normalized;
+            }
+        }
+
+        private static DateTime? TryGetDate(IReadOnlyDictionary<string, string> parsed, string key)
+        {
+            return parsed.TryGetValue(key, out var value)
+                ? DateParsingHelper.TryParseDate(value)
+                : null;
+        }
+
+        private static void RemoveField(Dictionary<string, string> parsed, string key)
+        {
+            parsed.Remove(key);
+            parsed.Remove(ConfidencePrefix + key);
+            parsed.Remove(SourcePrefix + key);
+        }
+
+        private static bool TryNormalizeCountry(string value, out string normalized)
+        {
+            normalized = string.Empty;
+            var comparable = NormalizeComparableText(value);
+            if (string.IsNullOrWhiteSpace(comparable))
+                return false;
+
+            if (TryNormalizeKnownCountry(comparable, out normalized))
+                return true;
+
+            if (Regex.IsMatch(value.Trim(), @"^[A-Z]{2,3}$", RegexOptions.IgnoreCase))
+                return false;
+
+            if (Regex.IsMatch(value, @"\d"))
+                return false;
+
+            normalized = string.Join(" ", value.Trim()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..].ToLowerInvariant()));
+            return !string.IsNullOrWhiteSpace(normalized);
+        }
+
+        private static bool IsKnownCountryValue(string value)
+        {
+            return TryNormalizeKnownCountry(NormalizeComparableText(value), out _);
+        }
+
+        private static bool TryNormalizeKnownCountry(string comparable, out string normalized)
+        {
+            normalized = comparable switch
+            {
+                "UKR" or "UA" or "UKRAINE" or "UKRAINA" or "UKRAINIAN" or "UKRAINEUKR" => "Ukraine",
+                "CZE" or "CZ" or "CZECH" or "CZECHIA" or "CZECHREPUBLIC" or "CESKAREPUBLIKA" => "Czech Republic",
+                "ROU" or "RO" or "ROMANIA" or "ROMANIAN" or "ROMANA" or "ROUMANIE" => "Romania",
+                "SVK" or "SK" or "SLOVAKIA" or "SLOVAKREPUBLIC" => "Slovakia",
+                "POL" or "PL" or "POLAND" or "POLSKA" => "Poland",
+                "DEU" or "DE" or "GERMANY" or "DEUTSCHLAND" => "Germany",
+                "HUN" or "HU" or "HUNGARY" => "Hungary",
+                "MDA" or "MD" or "MOLDOVA" => "Moldova",
+                _ => string.Empty
+            };
+
+            return !string.IsNullOrWhiteSpace(normalized);
+        }
+
+        private static string NormalizeComparableText(string value)
+        {
+            return Regex.Replace(value.Trim().ToUpperInvariant(), @"[^A-Z0-9]+", string.Empty);
         }
 
         private static string NormalizeDocumentNumber(string value)

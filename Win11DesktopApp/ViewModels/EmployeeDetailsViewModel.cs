@@ -2921,7 +2921,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             if (GeminiApiService.IsFailureResponse(result))
                 return extracted;
 
-            foreach (var kv in AIScanPrompts.ParseResponse(result))
+            var parsed = AIScanPrompts.ValidateAndCleanParsedFields(docKey, AIScanPrompts.ParseResponse(result));
+            foreach (var kv in parsed)
                 extracted[kv.Key] = kv.Value;
 
             return extracted;

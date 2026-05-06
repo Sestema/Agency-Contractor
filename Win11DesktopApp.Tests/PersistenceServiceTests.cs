@@ -46,8 +46,8 @@ namespace Win11DesktopApp.Tests
             var jsonSnapshotPath = Path.Combine(_testRootPath, "database.json");
             var syncStatePath = Path.Combine(_testRootPath, "SQLite", "core.sync.json");
             Assert.True(File.Exists(coreDbPath));
-            Assert.True(File.Exists(jsonSnapshotPath));
-            Assert.True(File.Exists(syncStatePath));
+            Assert.False(File.Exists(jsonSnapshotPath));
+            Assert.False(File.Exists(syncStatePath));
         }
 
         [Fact]
@@ -67,34 +67,126 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public void SaveCompanies_ShouldWriteAuthenticatedJsonSnapshot()
+        public void SaveCompanies_ShouldNotWriteLegacyJsonSnapshot()
         {
             var companies = new List<EmployerCompany> { new EmployerCompany { Name = "Authenticated Snapshot" } };
 
             _persistenceService.SaveCompanies(companies);
 
             var jsonSnapshotPath = Path.Combine(_testRootPath, "database.json");
-            var payload = File.ReadAllBytes(jsonSnapshotPath);
+            var pendingFolder = Path.Combine(_testRootPath, "SQLite", "PendingChanges");
+            var writeLockPath = Path.Combine(_testRootPath, "SQLite", "write.lock");
 
-            Assert.True(payload.Length > 4 + 1 + 16 + 32);
-            Assert.Equal((byte)'A', payload[0]);
-            Assert.Equal((byte)'C', payload[1]);
-            Assert.Equal((byte)'D', payload[2]);
-            Assert.Equal((byte)'2', payload[3]);
-            Assert.Equal((byte)2, payload[4]);
+            Assert.False(File.Exists(jsonSnapshotPath));
+            Assert.False(File.Exists(writeLockPath));
+            Assert.True(!Directory.Exists(pendingFolder) || Directory.GetFiles(pendingFolder, "*.*").Length == 0);
+        }
+
+        [Fact]
+        public void SaveCompanies_ShouldDeleteObsoleteCoreSyncState()
+        {
+            var sqliteFolder = Path.Combine(_testRootPath, "SQLite");
+            Directory.CreateDirectory(sqliteFolder);
+            var syncStatePath = Path.Combine(sqliteFolder, "core.sync.json");
+            File.WriteAllText(syncStatePath, "{}", Encoding.UTF8);
+
+            _persistenceService.SaveCompanies(new List<EmployerCompany>
+            {
+                new() { Name = "Sync Cleanup" }
+            });
+
+            Assert.False(File.Exists(syncStatePath));
+        }
+
+        [Fact]
+        public void SaveCompanies_ShouldDeleteStaleWriteLockAndNotLeavePendingFiles()
+        {
+            var sqliteFolder = Path.Combine(_testRootPath, "SQLite");
+            Directory.CreateDirectory(sqliteFolder);
+            var writeLockPath = Path.Combine(sqliteFolder, "write.lock");
+            File.WriteAllText(writeLockPath, "stale", Encoding.UTF8);
+            File.SetLastWriteTimeUtc(writeLockPath, DateTime.UtcNow.AddMinutes(-10));
+
+            _persistenceService.SaveCompanies(new List<EmployerCompany>
+            {
+                new() { Name = "Stale Lock Cleanup" }
+            });
+
+            var pendingFolder = Path.Combine(sqliteFolder, "PendingChanges");
+            Assert.False(File.Exists(writeLockPath));
+            Assert.True(!Directory.Exists(pendingFolder) || Directory.GetFiles(pendingFolder, "*.*").Length == 0);
+        }
+
+        [Fact]
+        public void LoadCompanies_ShouldApplyPendingCoreChangesFromAnotherComputer()
+        {
+            var companyA = new EmployerCompany { Name = "Core Company" };
+            _persistenceService.SaveCompanies(new List<EmployerCompany> { companyA });
+            _persistenceService.LoadCompanies();
+
+            var companyB = new EmployerCompany { Name = "Pending Company" };
+            WritePendingCoreChange(new PendingCoreDatabaseChange
+            {
+                OperationId = Guid.NewGuid().ToString("N"),
+                MachineName = "OTHER-PC",
+                UserName = "OtherUser",
+                UpsertCompanies = new List<EmployerCompany> { companyB },
+                Settings = new DatabaseSettings { LanguageCode = "en" }
+            });
+
+            var loaded = _persistenceService.LoadCompanies();
+
+            Assert.Contains(loaded, company => company.Id == companyA.Id && company.Name == "Core Company");
+            Assert.Contains(loaded, company => company.Id == companyB.Id && company.Name == "Pending Company");
+            Assert.Empty(Directory.GetFiles(Path.Combine(_testRootPath, "SQLite", "PendingChanges"), "*.json"));
+        }
+
+        [Fact]
+        public void LoadCompanies_ShouldKeepPendingCoreChange_WhenCoreDbSaveFails()
+        {
+            var companyA = new EmployerCompany { Name = "Core Company" };
+            _persistenceService.SaveCompanies(new List<EmployerCompany> { companyA });
+            _persistenceService.LoadCompanies();
+
+            var companyB = new EmployerCompany { Name = "Pending Company" };
+            var pendingPath = WritePendingCoreChange(new PendingCoreDatabaseChange
+            {
+                OperationId = Guid.NewGuid().ToString("N"),
+                MachineName = "OTHER-PC",
+                UserName = "OtherUser",
+                UpsertCompanies = new List<EmployerCompany> { companyB },
+                Settings = new DatabaseSettings { LanguageCode = "en" }
+            });
+
+            var coreDbPath = Path.Combine(_testRootPath, "SQLite", "core.db");
+            using (var connection = new SqliteConnection($"Data Source={coreDbPath}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+CREATE TRIGGER force_app_database_update_failure
+BEFORE UPDATE ON app_database
+BEGIN
+    SELECT RAISE(ABORT, 'forced save failure');
+END;";
+                command.ExecuteNonQuery();
+            }
+
+            _ = Record.Exception(() => _persistenceService.LoadCompanies());
+
+            Assert.True(File.Exists(pendingPath));
         }
 
         [Fact]
         public void LoadCompanies_ShouldRejectTamperedAuthenticatedJson_WhenCoreDbMissing()
         {
-            var companies = new List<EmployerCompany> { new EmployerCompany { Name = "Tamper Test" } };
-            _persistenceService.SaveCompanies(companies);
-
-            SqliteConnection.ClearAllPools();
-            DeleteCoreDbFiles();
-
             var jsonSnapshotPath = Path.Combine(_testRootPath, "database.json");
             var checksumPath = Path.Combine(_testRootPath, "database.json.sha256");
+            WriteLegacyDatabaseJson(jsonSnapshotPath, checksumPath, new DatabaseRoot
+            {
+                Companies = new List<EmployerCompany> { new EmployerCompany { Name = "Tamper Test" } }
+            });
+
             var payload = File.ReadAllBytes(jsonSnapshotPath);
             payload[25] = (byte)(payload[25] ^ 0xFF);
             File.WriteAllBytes(jsonSnapshotPath, payload);
@@ -127,37 +219,41 @@ namespace Win11DesktopApp.Tests
             _persistenceService.SaveCompanies(companies);
 
             var filePath = Path.Combine(_testRootPath, "database.json");
-            var content = File.ReadAllBytes(filePath);
-            
-            // Corrupt the data (flip last byte)
-            content[content.Length - 1] = (byte)(content[content.Length - 1] ^ 0xFF);
-            File.WriteAllBytes(filePath, content);
+            File.WriteAllBytes(filePath, new byte[] { 1, 2, 3, 4, 5 });
 
             var loaded = _persistenceService.LoadCompanies();
             Assert.Single(loaded);
             Assert.Equal("Integrity Test", loaded[0].Name);
+            Assert.False(File.Exists(filePath));
+            Assert.True(File.Exists(filePath + ".migrated"));
         }
 
         [Fact]
         public void LoadCompanies_ShouldMigrateLegacyDatabaseJsonToCoreDb()
         {
-            var companies = new List<EmployerCompany> { new EmployerCompany { Name = "Migration Test" } };
-            _persistenceService.SaveCompanies(companies);
-
+            var legacyJsonPath = Path.Combine(_testRootPath, "database.json");
+            var legacyChecksumPath = Path.Combine(_testRootPath, "database.json.sha256");
             var coreDbPath = Path.Combine(_testRootPath, "SQLite", "core.db");
-            Assert.True(File.Exists(coreDbPath));
-            SqliteConnection.ClearAllPools();
-            File.Delete(coreDbPath);
+            WriteLegacyDatabaseJson(legacyJsonPath, legacyChecksumPath, new DatabaseRoot
+            {
+                Version = "2.0",
+                Companies = new List<EmployerCompany> { new EmployerCompany { Name = "Migration Test" } },
+                Settings = new DatabaseSettings { LanguageCode = "en" }
+            });
 
             var loaded = _persistenceService.LoadCompanies();
 
             Assert.Single(loaded);
             Assert.Equal("Migration Test", loaded[0].Name);
             Assert.True(File.Exists(coreDbPath));
+            Assert.False(File.Exists(legacyJsonPath));
+            Assert.False(File.Exists(legacyChecksumPath));
+            Assert.True(File.Exists(legacyJsonPath + ".migrated"));
+            Assert.True(File.Exists(legacyChecksumPath + ".migrated"));
         }
 
         [Fact]
-        public void LoadCompanies_ShouldImportNewerLegacyJsonIntoCoreDb()
+        public void LoadCompanies_ShouldIgnoreLegacyJson_WhenCoreDbExists()
         {
             var initialCompanies = new List<EmployerCompany> { new EmployerCompany { Name = "Core Value" } };
             _persistenceService.SaveCompanies(initialCompanies);
@@ -180,11 +276,15 @@ namespace Win11DesktopApp.Tests
 
             var loaded = _persistenceService.LoadCompanies();
             Assert.Single(loaded);
-            Assert.Equal("Json Override", loaded[0].Name);
+            Assert.Equal("Core Value", loaded[0].Name);
 
             var loadedAgain = _persistenceService.LoadCompanies();
             Assert.Single(loadedAgain);
-            Assert.Equal("Json Override", loadedAgain[0].Name);
+            Assert.Equal("Core Value", loadedAgain[0].Name);
+            Assert.False(File.Exists(legacyJsonPath));
+            Assert.False(File.Exists(legacyChecksumPath));
+            Assert.True(File.Exists(legacyJsonPath + ".migrated"));
+            Assert.True(File.Exists(legacyChecksumPath + ".migrated"));
         }
 
         private static void WriteLegacyDatabaseJson(string jsonPath, string checksumPath, DatabaseRoot database)
@@ -193,6 +293,23 @@ namespace Win11DesktopApp.Tests
             var encrypted = EncryptLegacyJson(json);
             File.WriteAllBytes(jsonPath, encrypted);
             File.WriteAllText(checksumPath, Convert.ToBase64String(SHA256.HashData(encrypted)), Encoding.UTF8);
+        }
+
+        private string WritePendingCoreChange(PendingCoreDatabaseChange change)
+        {
+            var pendingFolder = Path.Combine(_testRootPath, "SQLite", "PendingChanges");
+            Directory.CreateDirectory(pendingFolder);
+
+            var operationId = string.IsNullOrWhiteSpace(change.OperationId)
+                ? Guid.NewGuid().ToString("N")
+                : change.OperationId;
+            var tmpPath = Path.Combine(pendingFolder, $"test_{operationId}.tmp");
+            var finalPath = Path.Combine(pendingFolder, $"test_{operationId}.json");
+            var json = JsonSerializer.Serialize(change, new JsonSerializerOptions { WriteIndented = true });
+
+            File.WriteAllText(tmpPath, json, Encoding.UTF8);
+            File.Move(tmpPath, finalPath);
+            return finalPath;
         }
 
         private static byte[] EncryptLegacyJson(string plainText)

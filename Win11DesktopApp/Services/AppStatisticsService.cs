@@ -1,5 +1,8 @@
 using System;
+using System.Globalization;
 using System.IO;
+using System.Linq;
+using Microsoft.Data.Sqlite;
 
 namespace Win11DesktopApp.Services
 {
@@ -13,13 +16,26 @@ namespace Win11DesktopApp.Services
     public sealed class AppStatisticsService
     {
         private const string StatisticsFileName = "app_statistics.json";
+        private const int CurrentSchemaVersion = 1;
         private readonly FolderService _folderService;
+        private readonly string _machineName;
+        private readonly string _userName;
+        private readonly string _machineKey;
         private readonly object _lock = new();
+        private bool _isInitialized;
         private DateTime? _sessionStartedUtc;
 
         public AppStatisticsService(FolderService folderService)
+            : this(folderService, Environment.MachineName, Environment.UserName)
+        {
+        }
+
+        internal AppStatisticsService(FolderService folderService, string machineName, string userName)
         {
             _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+            _machineName = string.IsNullOrWhiteSpace(machineName) ? "unknown-machine" : machineName;
+            _userName = string.IsNullOrWhiteSpace(userName) ? "unknown-user" : userName;
+            _machineKey = $"{_machineName}|{_userName}";
         }
 
         public void StartSession()
@@ -88,13 +104,31 @@ namespace Win11DesktopApp.Services
 
         private AppStatisticsSnapshot LoadUnlocked()
         {
-            var path = StatisticsPath;
+            EnsureInitializedUnlocked();
+            var path = StatisticsDbPath;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return new AppStatisticsSnapshot();
 
             try
             {
-                return SafeFileService.ReadJsonOrDefault(path, new AppStatisticsSnapshot());
+                using var connection = OpenConnection(path);
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT total_employees_created, generated_documents_count, total_program_run_minutes
+FROM app_statistics
+WHERE machine_key = $machine_key;";
+                command.Parameters.AddWithValue("$machine_key", _machineKey);
+
+                using var reader = command.ExecuteReader();
+                if (!reader.Read())
+                    return new AppStatisticsSnapshot();
+
+                return new AppStatisticsSnapshot
+                {
+                    TotalEmployeesCreated = reader.GetInt32(0),
+                    GeneratedDocumentsCount = reader.GetInt32(1),
+                    TotalProgramRunMinutes = reader.GetInt32(2)
+                };
             }
             catch (Exception ex)
             {
@@ -105,13 +139,15 @@ namespace Win11DesktopApp.Services
 
         private void SaveUnlocked(AppStatisticsSnapshot stats)
         {
-            var path = StatisticsPath;
+            EnsureInitializedUnlocked();
+            var path = StatisticsDbPath;
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
             try
             {
-                SafeFileService.WriteJsonAtomic(path, stats);
+                using var connection = OpenConnection(path);
+                UpsertSnapshot(connection, stats);
             }
             catch (Exception ex)
             {
@@ -119,13 +155,166 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private string StatisticsPath
+        private void EnsureInitializedUnlocked()
+        {
+            if (_isInitialized)
+                return;
+
+            var path = StatisticsDbPath;
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
+
+            using var connection = OpenConnection(path);
+            CreateSchema(connection);
+            MigrateLegacyJsonIfNeeded(connection);
+            _isInitialized = true;
+        }
+
+        private SqliteConnection OpenConnection(string path)
+        {
+            var connection = new SqliteConnection($"Data Source={path};Cache=Shared");
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
+            command.ExecuteNonQuery();
+            return connection;
+        }
+
+        private static void CreateSchema(SqliteConnection connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+CREATE TABLE IF NOT EXISTS schema_version (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    version INTEGER NOT NULL,
+    updated_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app_statistics (
+    machine_key TEXT PRIMARY KEY,
+    machine_name TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    total_employees_created INTEGER NOT NULL DEFAULT 0,
+    generated_documents_count INTEGER NOT NULL DEFAULT 0,
+    total_program_run_minutes INTEGER NOT NULL DEFAULT 0,
+    updated_at_utc TEXT NOT NULL
+);
+
+INSERT INTO schema_version (id, version, updated_at_utc)
+VALUES (1, $schema_version, $updated_at_utc)
+ON CONFLICT(id) DO UPDATE SET
+    version = CASE
+        WHEN schema_version.version < excluded.version THEN excluded.version
+        ELSE schema_version.version
+    END,
+    updated_at_utc = excluded.updated_at_utc;";
+            command.Parameters.AddWithValue("$schema_version", CurrentSchemaVersion);
+            command.Parameters.AddWithValue("$updated_at_utc", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            command.ExecuteNonQuery();
+        }
+
+        private void UpsertSnapshot(SqliteConnection connection, AppStatisticsSnapshot stats)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+INSERT INTO app_statistics (
+    machine_key, machine_name, user_name,
+    total_employees_created, generated_documents_count, total_program_run_minutes, updated_at_utc
+) VALUES (
+    $machine_key, $machine_name, $user_name,
+    $total_employees_created, $generated_documents_count, $total_program_run_minutes, $updated_at_utc
+)
+ON CONFLICT(machine_key) DO UPDATE SET
+    machine_name = excluded.machine_name,
+    user_name = excluded.user_name,
+    total_employees_created = excluded.total_employees_created,
+    generated_documents_count = excluded.generated_documents_count,
+    total_program_run_minutes = excluded.total_program_run_minutes,
+    updated_at_utc = excluded.updated_at_utc;";
+            command.Parameters.AddWithValue("$machine_key", _machineKey);
+            command.Parameters.AddWithValue("$machine_name", _machineName);
+            command.Parameters.AddWithValue("$user_name", _userName);
+            command.Parameters.AddWithValue("$total_employees_created", stats.TotalEmployeesCreated);
+            command.Parameters.AddWithValue("$generated_documents_count", stats.GeneratedDocumentsCount);
+            command.Parameters.AddWithValue("$total_program_run_minutes", stats.TotalProgramRunMinutes);
+            command.Parameters.AddWithValue("$updated_at_utc", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            command.ExecuteNonQuery();
+        }
+
+        private void MigrateLegacyJsonIfNeeded(SqliteConnection connection)
+        {
+            var legacyPath = LegacyStatisticsPath;
+            if (string.IsNullOrWhiteSpace(legacyPath) || !File.Exists(legacyPath))
+                return;
+
+            try
+            {
+                var legacy = SafeFileService.ReadJsonOrDefault(legacyPath, new AppStatisticsSnapshot());
+                UpsertSnapshot(connection, legacy);
+
+                if (TryVerifySnapshot(connection, legacy))
+                {
+                    SafeFileService.DeleteFile(legacyPath);
+                    LoggingService.LogInfo("AppStatisticsService.Migration", $"Migrated and deleted legacy app statistics JSON: {legacyPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppStatisticsService.Migration", ex.Message);
+            }
+        }
+
+        private bool TryVerifySnapshot(SqliteConnection connection, AppStatisticsSnapshot expected)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT total_employees_created, generated_documents_count, total_program_run_minutes
+FROM app_statistics
+WHERE machine_key = $machine_key;";
+            command.Parameters.AddWithValue("$machine_key", _machineKey);
+
+            using var reader = command.ExecuteReader();
+            return reader.Read()
+                && reader.GetInt32(0) == expected.TotalEmployeesCreated
+                && reader.GetInt32(1) == expected.GeneratedDocumentsCount
+                && reader.GetInt32(2) == expected.TotalProgramRunMinutes;
+        }
+
+        internal string StatisticsDbPath
+        {
+            get
+            {
+                var sqliteFolder = _folderService.GetSqliteFolder();
+                if (string.IsNullOrWhiteSpace(sqliteFolder))
+                    return string.Empty;
+
+                return Path.Combine(
+                    sqliteFolder,
+                    "Statistics",
+                    $"app_statistics_{SanitizeFileNamePart(_machineName)}_{SanitizeFileNamePart(_userName)}.db");
+            }
+        }
+
+        private string LegacyStatisticsPath
         {
             get
             {
                 var root = _folderService.RootPath;
                 return string.IsNullOrWhiteSpace(root) ? string.Empty : Path.Combine(root, StatisticsFileName);
             }
+        }
+
+        private static string SanitizeFileNamePart(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "unknown";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
+            var sanitized = new string(chars).Trim();
+            return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
         }
     }
 }

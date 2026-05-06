@@ -1365,7 +1365,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                var parsed = AIScanPrompts.ParseResponse(result);
+                var parsed = AIScanPrompts.ValidateAndCleanParsedFields(docKey, AIScanPrompts.ParseResponse(result));
                 if (!AIScanPrompts.IsDocumentKindCompatible(docKey, parsed))
                 {
                     AIScanStatus = Res("AIScanDocumentTypeMismatch") ?? "AI recognized a different document type. Please check the selected document slot.";
@@ -1461,7 +1461,7 @@ namespace Win11DesktopApp.ViewModels
             if (result.StartsWith("["))
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            var parsed = AIScanPrompts.ParseResponse(result);
+            var parsed = AIScanPrompts.ValidateAndCleanParsedFields(docKey, AIScanPrompts.ParseResponse(result));
             return AIScanPrompts.IsDocumentKindCompatible(docKey, parsed)
                 ? parsed
                 : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

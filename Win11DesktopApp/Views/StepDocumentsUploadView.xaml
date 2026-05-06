@@ -89,7 +89,7 @@
                 </Border>
 
                 <!-- 3. Visa (checkbox row) -->
-                <Border CornerRadius="12" Padding="16" Margin="0,0,0,0"
+                <Border CornerRadius="12" Padding="16" Margin="0,0,0,10"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                         AllowDrop="True" Drop="VisaDrop" DragEnter="OnDocDragEnter" DragLeave="OnDocDragLeave">
                     <Border.Style>
@@ -128,47 +128,6 @@
                             </StackPanel>
                         </Button>
                     </Grid>
-                </Border>
-
-                <!-- Visa doc type selector (Visa sticker / ID-card) -->
-                <Border Background="{DynamicResource WindowBackgroundBrush}" CornerRadius="0,0,12,12" Padding="12,10" Margin="0,0,0,10"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,1,1"
-                        Visibility="{Binding ShowVisaDocTypeSelector, Converter={StaticResource BoolToVis}}">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource VisaDocTypeLabel}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                        <StackPanel Orientation="Horizontal">
-                            <Button Command="{Binding SetVisaDocTypeCommand}" CommandParameter="visa_sticker" Cursor="Hand" Margin="0,0,8,0">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource SelectorButton}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsVisaIdCard}" Value="False">
-                                                <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                                <TextBlock Text="{DynamicResource VisaDocTypeSticker}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" HorizontalAlignment="Center"/>
-                            </Button>
-                            <Button Command="{Binding SetVisaDocTypeCommand}" CommandParameter="id_card" Cursor="Hand">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource SelectorButton}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsVisaIdCard}" Value="True">
-                                                <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
-                                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                                <TextBlock Text="{DynamicResource VisaDocTypeIdCard}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" HorizontalAlignment="Center"/>
-                            </Button>
-                        </StackPanel>
-                    </StackPanel>
                 </Border>
 
                 <!-- 3b. Visa Page 2 / ID-card back side (only when ID-card selected) -->

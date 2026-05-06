@@ -1293,7 +1293,7 @@ namespace Win11DesktopApp.ViewModels
             if (GeminiApiService.IsFailureResponse(result))
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            return AIScanPrompts.ParseResponse(result);
+            return AIScanPrompts.ValidateAndCleanParsedFields(docKey, AIScanPrompts.ParseResponse(result));
         }
 
         private (string Name, string DocKey, string FilePath) GetBatchDocumentInfo(

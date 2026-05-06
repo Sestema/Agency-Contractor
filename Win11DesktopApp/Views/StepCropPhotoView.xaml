@@ -69,7 +69,7 @@
                                     Width="44"
                                     Height="38"
                                     Padding="0">
-                                <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                <TextBlock Text="&#xE80C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                            Foreground="{DynamicResource ForegroundBrush}" 
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
@@ -81,7 +81,7 @@
                                     Width="44"
                                     Height="38"
                                     Padding="0">
-                                <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                <TextBlock Text="&#xE80D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                            Foreground="{DynamicResource ForegroundBrush}" 
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>

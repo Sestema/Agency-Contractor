@@ -341,7 +341,7 @@ namespace Win11DesktopApp.Views
                     return;
                 }
 
-                var parsed = AIScanPrompts.ParseResponse(result);
+                var parsed = AIScanPrompts.ValidateAndCleanParsedFields(docKey, AIScanPrompts.ParseResponse(result));
                 if (!AIScanPrompts.IsDocumentKindCompatible(docKey, parsed))
                 {
                     AIScanStatus.Text = Res("AIScanDocumentTypeMismatch") ?? "AI recognized a different document type. Please check the selected document slot.";

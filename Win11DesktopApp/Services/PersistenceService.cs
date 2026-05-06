@@ -31,13 +31,16 @@ namespace Win11DesktopApp.Services
         public string AppVersion { get; set; } = "0.0.05";
     }
 
-    public sealed class CoreSyncState
+    internal sealed class PendingCoreDatabaseChange
     {
-        public string StorageVersion { get; set; } = "sqlite-core-v1";
-        public string LastSyncedAtUtc { get; set; } = string.Empty;
-        public string LastDataHash { get; set; } = string.Empty;
-        public string LastCoreWriteUtc { get; set; } = string.Empty;
-        public string LastJsonWriteUtc { get; set; } = string.Empty;
+        public string OperationId { get; set; } = Guid.NewGuid().ToString("N");
+        public string CreatedAtUtc { get; set; } = DateTime.UtcNow.ToString("O");
+        public string MachineName { get; set; } = Environment.MachineName;
+        public string UserName { get; set; } = Environment.UserName;
+        public bool ReplaceAll { get; set; }
+        public List<EmployerCompany> UpsertCompanies { get; set; } = new();
+        public List<Guid> DeletedCompanyIds { get; set; } = new();
+        public DatabaseSettings Settings { get; set; } = new();
     }
 
     public class PersistenceService
@@ -46,6 +49,12 @@ namespace Win11DesktopApp.Services
         private readonly FolderService _folderService;
         private readonly CoreDbService _coreDbService;
         private static readonly SemaphoreSlim _saveLock = new(1, 1);
+        private DatabaseRoot? _lastLoadedDatabase;
+
+        private static readonly JsonSerializerOptions PendingChangeJsonOptions = new()
+        {
+            WriteIndented = true
+        };
 
         private static string Res(string key) =>
             System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
@@ -56,6 +65,9 @@ namespace Win11DesktopApp.Services
         private const byte DatabaseEnvelopeVersion = 2;
         private const int AesIvSizeBytes = 16;
         private const int HmacSizeBytes = 32;
+        private const int CoreWriteLockTimeoutMs = 30000;
+        private const int CoreWriteLockRetryDelayMs = 250;
+        private static readonly TimeSpan CoreWriteLockStaleAfter = TimeSpan.FromMinutes(3);
 
         private static readonly byte[] SecureKey = new byte[32];
         private static readonly byte[] SecureIV = new byte[16];
@@ -114,7 +126,7 @@ namespace Win11DesktopApp.Services
 
         /// <summary>
         /// Load the full database from SQLite/core.db.
-        /// Falls back to legacy database.json and company_data.json with automatic migration.
+        /// Falls back to legacy database.json only when core.db does not exist yet.
         /// </summary>
         public DatabaseRoot LoadDatabase()
         {
@@ -126,88 +138,49 @@ namespace Win11DesktopApp.Services
             var hasCore = TryLoadCoreDatabase(out var coreDatabase);
             var hasJson = File.Exists(dbPath);
 
-            // 1. Transition mode: inspect both storages when possible.
-            if (hasCore && hasJson)
+            // 1. Final SQLite mode: core.db is authoritative. Retire any leftover JSON snapshot.
+            if (hasCore)
             {
-                var jsonDb = TryLoadJsonDatabase(dbPath);
-                if (jsonDb != null)
-                    return ResolveTransitionState(coreDatabase, jsonDb, dbPath);
+                ApplyPendingCoreChanges();
+                if (TryLoadCoreDatabase(out var refreshedDatabase))
+                    coreDatabase = refreshedDatabase;
 
+                MarkLegacyDatabaseJsonMigrated();
+                RememberLoadedDatabase(coreDatabase);
                 return coreDatabase;
             }
 
-            // 2. Primary SQLite storage.
-            if (hasCore)
-                return coreDatabase;
-
-            // 3. Fallback: try legacy database.json and migrate it to core.db
+            // 2. Fallback: try legacy database.json once and migrate it to core.db.
             if (hasJson)
             {
                 var jsonDb = TryLoadJsonDatabase(dbPath);
                 if (jsonDb != null)
                 {
                     TryMigrateJsonDatabaseToCore(jsonDb, "initial_json_migration");
+                    MarkLegacyDatabaseJsonMigrated();
+                    RememberLoadedDatabase(jsonDb);
                     return jsonDb;
                 }
 
-                return TryRestoreFromBackup();
+                var restored = TryRestoreFromBackup();
+                RememberLoadedDatabase(restored);
+                return restored;
             }
 
-            // 4. Fallback: try old format (company_data.json) and migrate
+            // 3. Fallback: try old format (company_data.json) and migrate.
             var oldPath = Path.Combine(rootPath, OldDataFileName);
             if (File.Exists(oldPath))
             {
                 Debug.WriteLine("PersistenceService: found old company_data.json, migrating...");
-                return MigrateFromOldFormat(rootPath, oldPath);
+                var migrated = MigrateFromOldFormat(rootPath, oldPath);
+                RememberLoadedDatabase(migrated);
+                return migrated;
             }
 
-            // 5. Clean install — no data
-            return new DatabaseRoot();
-        }
-
-        private DatabaseRoot ResolveTransitionState(DatabaseRoot coreDatabase, DatabaseRoot jsonDatabase, string jsonPath)
-        {
-            var coreHash = ComputeDatabaseHash(coreDatabase);
-            var jsonHash = ComputeDatabaseHash(jsonDatabase);
-            if (string.Equals(coreHash, jsonHash, StringComparison.Ordinal))
-            {
-                EnsureSyncStateMatches(coreHash);
-                return coreDatabase;
-            }
-
-            var syncState = LoadSyncState();
-            var coreChangedSinceSync = syncState == null || !string.Equals(syncState.LastDataHash, coreHash, StringComparison.Ordinal);
-            var jsonChangedSinceSync = syncState == null || !string.Equals(syncState.LastDataHash, jsonHash, StringComparison.Ordinal);
-
-            var coreLastWrite = GetSafeLastWriteUtc(_coreDbService.DatabasePath);
-            var jsonLastWrite = GetSafeLastWriteUtc(jsonPath);
-
-            if (!coreChangedSinceSync && jsonChangedSinceSync)
-            {
-                LoggingService.LogWarning("PersistenceService.Sync", "database.json changed after the last SQLite sync. Importing JSON changes into core.db.");
-                TryMigrateJsonDatabaseToCore(jsonDatabase, "json_changed_after_sync");
-                return jsonDatabase;
-            }
-
-            if (coreChangedSinceSync && !jsonChangedSinceSync)
-            {
-                LoggingService.LogWarning("PersistenceService.Sync", "core.db changed after the last sync while database.json stayed on the previous snapshot. Refreshing JSON snapshot from SQLite.");
-                SaveLegacyJsonSnapshot(coreDatabase);
-                WriteSyncState(coreHash);
-                return coreDatabase;
-            }
-
-            if (jsonLastWrite > coreLastWrite)
-            {
-                LoggingService.LogWarning("PersistenceService.Sync", "Mixed-version data divergence detected. database.json is newer than core.db, so JSON changes are being imported into SQLite.");
-                TryMigrateJsonDatabaseToCore(jsonDatabase, "json_newer_than_core");
-                return jsonDatabase;
-            }
-
-            LoggingService.LogWarning("PersistenceService.Sync", "Mixed-version data divergence detected. core.db is treated as newer than database.json, and JSON snapshot is being refreshed.");
-            SaveLegacyJsonSnapshot(coreDatabase);
-            WriteSyncState(coreHash);
-            return coreDatabase;
+            // 4. Clean install — no data.
+            var empty = new DatabaseRoot();
+            RememberLoadedDatabase(empty);
+            return empty;
         }
 
         private bool TryLoadCoreDatabase(out DatabaseRoot database)
@@ -284,7 +257,7 @@ namespace Win11DesktopApp.Services
             try
             {
                 SaveDatabaseRootCore(database);
-                LoggingService.LogInfo("PersistenceService.Migration", $"database.json was synchronized into SQLite/core.db ({reason}).");
+                LoggingService.LogInfo("PersistenceService.Migration", $"database.json was migrated into SQLite/core.db ({reason}).");
             }
             catch (Exception ex)
             {
@@ -665,90 +638,331 @@ namespace Win11DesktopApp.Services
 
         private void SaveDatabaseRootCore(DatabaseRoot database)
         {
-            if (_coreDbService.Exists)
-                CreateBackup(_coreDbService.DatabasePath);
+            var change = BuildPendingCoreChange(database);
+            var pendingPath = WritePendingCoreChange(change);
+            ApplyPendingCoreChanges();
 
-            _coreDbService.SaveDatabase(database);
+            if (File.Exists(pendingPath))
+            {
+                LoggingService.LogWarning("PersistenceService.SaveDatabase",
+                    $"Core database write was queued because core.db is busy. Pending file: {pendingPath}");
+                return;
+            }
 
-            // Keep an encrypted JSON snapshot during the mixed-version transition period.
-            SaveLegacyJsonSnapshot(database);
-            WriteSyncState(ComputeDatabaseHash(database));
+            RememberLoadedDatabase(database);
+            MarkLegacyDatabaseJsonMigrated();
+            DeleteCoreSyncState();
         }
 
-        private void SaveLegacyJsonSnapshot(DatabaseRoot database)
+        private PendingCoreDatabaseChange BuildPendingCoreChange(DatabaseRoot database)
+        {
+            var currentCompanies = database.Companies ?? new List<EmployerCompany>();
+            var previousCompanies = _lastLoadedDatabase?.Companies;
+            var change = new PendingCoreDatabaseChange
+            {
+                OperationId = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = DateTime.UtcNow.ToString("O"),
+                MachineName = Environment.MachineName,
+                UserName = Environment.UserName,
+                Settings = database.Settings ?? new DatabaseSettings()
+            };
+
+            if (previousCompanies == null)
+            {
+                change.ReplaceAll = true;
+                change.UpsertCompanies = currentCompanies.ToList();
+                return change;
+            }
+
+            var previousById = previousCompanies.ToDictionary(company => company.Id);
+            var currentById = currentCompanies.ToDictionary(company => company.Id);
+
+            foreach (var company in currentCompanies)
+            {
+                if (!previousById.TryGetValue(company.Id, out var previous)
+                    || !AreCompaniesEquivalent(previous, company))
+                {
+                    change.UpsertCompanies.Add(company);
+                }
+            }
+
+            foreach (var previous in previousCompanies)
+            {
+                if (!currentById.ContainsKey(previous.Id))
+                    change.DeletedCompanyIds.Add(previous.Id);
+            }
+
+            return change;
+        }
+
+        private string WritePendingCoreChange(PendingCoreDatabaseChange change)
+        {
+            var pendingFolder = GetPendingCoreChangesFolder();
+            Directory.CreateDirectory(pendingFolder);
+
+            var fileBase = $"{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}_{SanitizeFileNamePart(Environment.MachineName)}_{change.OperationId}";
+            var tmpPath = Path.Combine(pendingFolder, fileBase + ".tmp");
+            var finalPath = Path.Combine(pendingFolder, fileBase + ".json");
+            var json = JsonSerializer.Serialize(change, PendingChangeJsonOptions);
+
+            SafeFileService.WriteTextAtomic(tmpPath, json, Encoding.UTF8);
+            if (File.Exists(finalPath))
+                SafeFileService.DeleteFile(finalPath);
+            SafeFileService.MoveFile(tmpPath, finalPath);
+            return finalPath;
+        }
+
+        private void ApplyPendingCoreChanges()
+        {
+            var pendingFolder = GetPendingCoreChangesFolder();
+            if (!Directory.Exists(pendingFolder))
+                return;
+
+            var pendingFiles = Directory.GetFiles(pendingFolder, "*.json")
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (pendingFiles.Count == 0)
+                return;
+
+            if (!TryAcquireCoreWriteLock(out var lockPath))
+                return;
+
+            try
+            {
+                var database = _coreDbService.LoadDatabase() ?? new DatabaseRoot();
+                var changed = false;
+                var appliedPendingFiles = new List<string>();
+
+                foreach (var pendingFile in pendingFiles)
+                {
+                    PendingCoreDatabaseChange? change;
+                    try
+                    {
+                        change = SafeFileService.ReadJson<PendingCoreDatabaseChange>(pendingFile, PendingChangeJsonOptions, Encoding.UTF8);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("PersistenceService.PendingCoreChanges",
+                            $"Could not read pending core database change '{pendingFile}': {ex.Message}");
+                        continue;
+                    }
+
+                    if (change == null)
+                        continue;
+
+                    ApplyPendingCoreChange(database, change);
+                    changed = true;
+                    appliedPendingFiles.Add(pendingFile);
+                }
+
+                if (changed)
+                {
+                    if (_coreDbService.Exists)
+                        CreateBackup(_coreDbService.DatabasePath);
+
+                    _coreDbService.SaveDatabase(database);
+                    RememberLoadedDatabase(database);
+
+                    foreach (var appliedPendingFile in appliedPendingFiles)
+                        SafeFileService.DeleteFile(appliedPendingFile);
+                }
+            }
+            finally
+            {
+                ReleaseCoreWriteLock(lockPath);
+            }
+        }
+
+        private static void ApplyPendingCoreChange(DatabaseRoot database, PendingCoreDatabaseChange change)
+        {
+            if (change.ReplaceAll)
+            {
+                database.Version = "2.0";
+                database.Companies = change.UpsertCompanies.ToList();
+                database.Settings = change.Settings ?? new DatabaseSettings();
+                return;
+            }
+
+            var companiesById = (database.Companies ?? new List<EmployerCompany>())
+                .ToDictionary(company => company.Id);
+
+            foreach (var deletedId in change.DeletedCompanyIds)
+                companiesById.Remove(deletedId);
+
+            foreach (var company in change.UpsertCompanies)
+                companiesById[company.Id] = company;
+
+            database.Version = "2.0";
+            database.Companies = companiesById.Values
+                .OrderBy(company => company.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            database.Settings = change.Settings ?? database.Settings ?? new DatabaseSettings();
+        }
+
+        private bool TryAcquireCoreWriteLock(out string lockPath)
+        {
+            lockPath = GetCoreWriteLockPath();
+            if (string.IsNullOrWhiteSpace(lockPath))
+                return false;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(lockPath) ?? _folderService.GetSqliteFolder());
+            var deadline = DateTime.UtcNow.AddMilliseconds(CoreWriteLockTimeoutMs);
+            var lockPayload = JsonSerializer.Serialize(new
+            {
+                machineName = Environment.MachineName,
+                userName = Environment.UserName,
+                processId = Environment.ProcessId,
+                createdAtUtc = DateTime.UtcNow.ToString("O")
+            }, PendingChangeJsonOptions);
+
+            while (DateTime.UtcNow < deadline)
+            {
+                try
+                {
+                    using var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    using var writer = new StreamWriter(stream, Encoding.UTF8);
+                    writer.Write(lockPayload);
+                    return true;
+                }
+                catch (IOException)
+                {
+                    TryDeleteStaleCoreWriteLock(lockPath);
+                    Thread.Sleep(CoreWriteLockRetryDelayMs);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Thread.Sleep(CoreWriteLockRetryDelayMs);
+                }
+            }
+
+            LoggingService.LogWarning("PersistenceService.CoreWriteLock",
+                $"core.db write lock is busy. Pending changes will be retried later: {lockPath}");
+            return false;
+        }
+
+        private static void ReleaseCoreWriteLock(string lockPath)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(lockPath) && File.Exists(lockPath))
+                    SafeFileService.DeleteFile(lockPath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PersistenceService.CoreWriteLock",
+                    $"Could not release core database write lock '{lockPath}': {ex.Message}");
+            }
+        }
+
+        private static void TryDeleteStaleCoreWriteLock(string lockPath)
+        {
+            try
+            {
+                if (!File.Exists(lockPath))
+                    return;
+
+                var age = DateTime.UtcNow - File.GetLastWriteTimeUtc(lockPath);
+                if (age < CoreWriteLockStaleAfter)
+                    return;
+
+                SafeFileService.DeleteFile(lockPath);
+                LoggingService.LogWarning("PersistenceService.CoreWriteLock",
+                    $"Deleted stale core database write lock: {lockPath}");
+            }
+            catch
+            {
+                // The active writer may still hold the lock. Keep waiting.
+            }
+        }
+
+        private string GetPendingCoreChangesFolder()
+        {
+            var sqliteFolder = _folderService.GetSqliteFolder();
+            return string.IsNullOrWhiteSpace(sqliteFolder)
+                ? string.Empty
+                : Path.Combine(sqliteFolder, "PendingChanges");
+        }
+
+        private string GetCoreWriteLockPath()
+        {
+            var sqliteFolder = _folderService.GetSqliteFolder();
+            return string.IsNullOrWhiteSpace(sqliteFolder)
+                ? string.Empty
+                : Path.Combine(sqliteFolder, "write.lock");
+        }
+
+        private void RememberLoadedDatabase(DatabaseRoot database)
+        {
+            _lastLoadedDatabase = CloneDatabase(database);
+        }
+
+        private static DatabaseRoot CloneDatabase(DatabaseRoot database)
+        {
+            var json = JsonSerializer.Serialize(database, PendingChangeJsonOptions);
+            return JsonSerializer.Deserialize<DatabaseRoot>(json) ?? new DatabaseRoot();
+        }
+
+        private static bool AreCompaniesEquivalent(EmployerCompany left, EmployerCompany right)
+        {
+            var leftJson = JsonSerializer.Serialize(left, PendingChangeJsonOptions);
+            var rightJson = JsonSerializer.Serialize(right, PendingChangeJsonOptions);
+            return string.Equals(leftJson, rightJson, StringComparison.Ordinal);
+        }
+
+        private static string SanitizeFileNamePart(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "unknown";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var sanitized = new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
+            return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
+        }
+
+        private void MarkLegacyDatabaseJsonMigrated()
         {
             var dbPath = _folderService.DatabaseFilePath;
             if (string.IsNullOrEmpty(dbPath))
                 return;
 
-            var json = JsonSerializer.Serialize(database, new JsonSerializerOptions { WriteIndented = true });
-            var encryptedData = Encrypt(json);
-            SafeFileService.WriteBytesAtomic(dbPath, encryptedData);
-
-            var checksum = ComputeHash(encryptedData);
-            SafeFileService.WriteTextAtomic(_folderService.DatabaseChecksumPath, checksum, Encoding.UTF8);
+            TryMoveToMigrated(dbPath);
+            TryMoveToMigrated(_folderService.DatabaseChecksumPath);
         }
 
-        private void EnsureSyncStateMatches(string dataHash)
+        private static void TryMoveToMigrated(string path)
         {
-            var state = LoadSyncState();
-            if (state != null && string.Equals(state.LastDataHash, dataHash, StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return;
 
-            WriteSyncState(dataHash);
+            var migratedPath = path + ".migrated";
+            try
+            {
+                if (File.Exists(migratedPath))
+                    SafeFileService.DeleteFile(migratedPath);
+
+                SafeFileService.MoveFile(path, migratedPath);
+                LoggingService.LogInfo("PersistenceService.Migration", $"Marked legacy database file as migrated: {migratedPath}");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("PersistenceService.Migration", $"Could not mark legacy database file as migrated '{path}': {ex.Message}");
+            }
         }
 
-        private CoreSyncState? LoadSyncState()
+        private void DeleteCoreSyncState()
         {
             var path = _folderService.CoreSyncStatePath;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-                return null;
-
-            try
-            {
-                return SafeFileService.ReadJsonOrDefault<CoreSyncState?>(path, null, encoding: Encoding.UTF8);
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("PersistenceService.Sync", $"Could not read core sync state: {ex.Message}");
-                return null;
-            }
-        }
-
-        private void WriteSyncState(string dataHash)
-        {
-            var path = _folderService.CoreSyncStatePath;
-            if (string.IsNullOrWhiteSpace(path))
                 return;
 
             try
             {
-                var state = new CoreSyncState
-                {
-                    LastDataHash = dataHash,
-                    LastSyncedAtUtc = DateTime.UtcNow.ToString("O"),
-                    LastCoreWriteUtc = GetSafeLastWriteUtc(_coreDbService.DatabasePath).ToString("O"),
-                    LastJsonWriteUtc = GetSafeLastWriteUtc(_folderService.DatabaseFilePath).ToString("O")
-                };
-                SafeFileService.WriteJsonAtomic(path, state, encoding: Encoding.UTF8);
+                SafeFileService.DeleteFile(path);
+                LoggingService.LogInfo("PersistenceService.Migration", $"Deleted obsolete core sync state: {path}");
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("PersistenceService.Sync", $"Could not write core sync state: {ex.Message}");
-            }
-        }
-
-        private static DateTime GetSafeLastWriteUtc(string path)
-        {
-            try
-            {
-                return !string.IsNullOrWhiteSpace(path) && File.Exists(path)
-                    ? File.GetLastWriteTimeUtc(path)
-                    : DateTime.MinValue;
-            }
-            catch
-            {
-                return DateTime.MinValue;
+                LoggingService.LogWarning("PersistenceService.Migration", $"Could not delete obsolete core sync state '{path}': {ex.Message}");
             }
         }
 
@@ -862,12 +1076,6 @@ namespace Win11DesktopApp.Services
             using var sha = SHA256.Create();
             var hash = sha.ComputeHash(data);
             return Convert.ToBase64String(hash);
-        }
-
-        private string ComputeDatabaseHash(DatabaseRoot database)
-        {
-            var json = JsonSerializer.Serialize(database, new JsonSerializerOptions { WriteIndented = false });
-            return ComputeHash(Encoding.UTF8.GetBytes(json));
         }
 
         // ============ UTILITY ============

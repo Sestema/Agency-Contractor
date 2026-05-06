@@ -86,20 +86,44 @@
 
                 <!-- Row 0: Pages + Zoom + Grid -->
                 <WrapPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                    <Button Command="{Binding PrevPageCommand}" 
-                            Content="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                            Width="28" Height="26" Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
+                    <Button Command="{Binding PrevPageCommand}"
+                            Width="30" Height="26"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            BorderThickness="1"
+                            Foreground="{DynamicResource AccentBrush}"
+                            Cursor="Hand">
+                        <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS12}"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Button>
                     <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource FS12}" Margin="6,0"
                                Foreground="{DynamicResource ForegroundBrush}">
                         <Run Text="{Binding CurrentPageDisplay, Mode=OneWay}"/>
                         <Run Text=" / "/>
                         <Run Text="{Binding PageCount, Mode=OneWay}"/>
                     </TextBlock>
-                    <Button Command="{Binding NextPageCommand}" 
-                            Content="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                            Width="28" Height="26" Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand"/>
+                    <Button Command="{Binding NextPageCommand}"
+                            Width="30" Height="26"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            BorderThickness="1"
+                            Foreground="{DynamicResource AccentBrush}"
+                            Cursor="Hand">
+                        <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="{DynamicResource FS12}"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Button>
 
                     <Border Width="1" Background="{DynamicResource CardBorderBrush}" Margin="10,4"/>
 
