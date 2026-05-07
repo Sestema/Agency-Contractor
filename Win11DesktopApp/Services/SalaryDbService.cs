@@ -196,7 +196,7 @@ GROUP BY status;";
 SELECT employee_id, employee_folder, full_name, firm_name, hours_worked, hourly_rate, advance,
        saved_net_salary, status, note, color_tag, custom_values
 FROM salary_entries
-ORDER BY firm_name, full_name;";
+ORDER BY lower(firm_name), ifnull(updated_at, '') DESC, id DESC, lower(full_name);";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                     entries.Add(ReadSalaryEntry(reader));
@@ -241,6 +241,7 @@ WHERE (@firmName = '' OR lower(firm_name) = lower(@firmName))
         (@employeeId <> '' AND ifnull(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
         OR ((@employeeId = '' OR ifnull(employee_id, '') = '') AND lower(employee_folder) = lower(@employeeFolder))
       )
+ORDER BY ifnull(updated_at, '') DESC, id DESC
 LIMIT 1;";
                 command.Parameters.AddWithValue("@firmName", firmName ?? string.Empty);
                 command.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
@@ -308,7 +309,8 @@ LIMIT 1;";
                 command.CommandText = @"
 SELECT employee_id, employee_folder, saved_net_salary, status
 FROM salary_entries
-WHERE lower(firm_name) = lower(@firmName);";
+WHERE lower(firm_name) = lower(@firmName)
+ORDER BY ifnull(updated_at, '') DESC, id DESC;";
                 command.Parameters.AddWithValue("@firmName", firmName);
 
                 using var reader = command.ExecuteReader();
@@ -399,7 +401,8 @@ WHERE lower(firm_name) = lower(@firmName);";
                 using var command = connection.CreateCommand();
                 command.CommandText = @"
 SELECT firm_name, employee_id, employee_folder, saved_net_salary, status
-FROM salary_entries;";
+FROM salary_entries
+ORDER BY ifnull(updated_at, '') DESC, id DESC;";
 
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
@@ -744,6 +747,8 @@ CREATE INDEX IF NOT EXISTS idx_sexp_firm ON salary_expenses(firm_name);";
 
         private static void InsertSalaryEntry(SqliteConnection connection, SqliteTransaction transaction, int year, int month, SalaryEntry entry)
         {
+            DeleteDuplicateEmployeeRows(connection, transaction, entry);
+
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = @"
@@ -782,6 +787,25 @@ ON CONFLICT(firm_name, employee_folder) DO UPDATE SET
             command.Parameters.AddWithValue("@colorTag", entry.ColorTag ?? string.Empty);
             command.Parameters.AddWithValue("@customValues", JsonSerializer.Serialize(entry.CustomValues ?? new Dictionary<string, decimal>()));
             command.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            command.ExecuteNonQuery();
+        }
+
+        private static void DeleteDuplicateEmployeeRows(SqliteConnection connection, SqliteTransaction transaction, SalaryEntry entry)
+        {
+            if (string.IsNullOrWhiteSpace(entry.EmployeeId))
+                return;
+
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+DELETE FROM salary_entries
+WHERE lower(firm_name) = lower(@firmName)
+  AND ifnull(employee_id, '') <> ''
+  AND lower(employee_id) = lower(@employeeId)
+  AND lower(ifnull(employee_folder, '')) <> lower(@employeeFolder);";
+            command.Parameters.AddWithValue("@firmName", entry.FirmName ?? string.Empty);
+            command.Parameters.AddWithValue("@employeeId", entry.EmployeeId ?? string.Empty);
+            command.Parameters.AddWithValue("@employeeFolder", entry.EmployeeFolder ?? string.Empty);
             command.ExecuteNonQuery();
         }
 

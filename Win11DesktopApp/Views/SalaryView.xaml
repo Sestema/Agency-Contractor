@@ -545,7 +545,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- Hours (FIXED) -->
-                            <DataGridTextColumn Binding="{Binding HoursWorked, StringFormat={}{0:N1}}" Width="70">
+                            <DataGridTextColumn Binding="{Binding HoursWorked, StringFormat={}{0:N1}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="70">
                                 <DataGridTextColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColHours}"/>
@@ -569,7 +569,7 @@
                             </DataGridTextColumn>
 
                             <!-- Rate (FIXED) -->
-                            <DataGridTextColumn Binding="{Binding HourlyRate, StringFormat={}{0:N0}}" Width="60">
+                            <DataGridTextColumn Binding="{Binding HourlyRate, StringFormat={}{0:N0}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="60">
                                 <DataGridTextColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColRate}"/>

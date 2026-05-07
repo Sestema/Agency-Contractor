@@ -1381,6 +1381,13 @@ namespace Win11DesktopApp.ViewModels
                     entry.SavedNetSalary = entry.NetSalary;
 
                 var entriesForSave = BuildChangedEntriesForSave();
+
+                LoggingService.LogInfo(
+                    "Salary.Save",
+                    $"month={saveYear:D4}-{saveMonth:D2} totalEntries={Entries.Count} " +
+                    $"snapshots={_originalEntrySnapshots.Count} dirty={_dirtySalaryEntryKeys.Count} " +
+                    $"toSave={entriesForSave.Count} expensesToSave={expensesForSave.Count}");
+
                 if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, entriesForSave, expensesForSave))
                 {
                     StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
@@ -1429,13 +1436,36 @@ namespace Win11DesktopApp.ViewModels
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
                 if (!_originalEntrySnapshots.TryGetValue(key, out var snapshot)
                     || _dirtySalaryEntryKeys.Contains(key)
-                    || !snapshot.Matches(entry))
+                    || !snapshot.Matches(entry)
+                    || HasMeaningfulSalaryData(entry))
                 {
                     changed.Add(entry);
                 }
             }
 
             return changed;
+        }
+
+        // Safety net: even if dirty-tracking missed a property change (e.g. WPF
+        // commit edge cases), still persist any row that carries user-entered
+        // payroll data. UPSERT is keyed on (firm_name, employee_folder), so this
+        // never trespasses on other employees and is safe in multi-PC mode.
+        private static bool HasMeaningfulSalaryData(SalaryEntry entry)
+        {
+            if (entry.HoursWorked != 0m) return true;
+            if (entry.Advance != 0m) return true;
+            if (entry.NetSalary != 0m) return true;
+            if (entry.SavedNetSalary != 0m) return true;
+            if (!string.IsNullOrWhiteSpace(entry.Note)) return true;
+            if (!string.IsNullOrWhiteSpace(entry.ColorTag)) return true;
+            if (entry.CustomValues != null)
+            {
+                foreach (var pair in entry.CustomValues)
+                {
+                    if (pair.Value != 0m) return true;
+                }
+            }
+            return false;
         }
 
         private List<NotePropagationChange> CaptureNotePropagationChanges()

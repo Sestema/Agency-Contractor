@@ -610,26 +610,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
             try
             {
-                var availableMonths = new HashSet<(int year, int month)>();
-                if (!string.IsNullOrEmpty(_folderService.RootPath))
-                {
-                    foreach (var company in companies)
-                    {
-                        try
-                        {
-                            var paymentFolder = _folderService.GetPaymentFolder(company.Name);
-                            if (string.IsNullOrEmpty(paymentFolder) || !System.IO.Directory.Exists(paymentFolder)) continue;
-                            foreach (var file in System.IO.Directory.GetFiles(paymentFolder, "salary_*.json"))
-                            {
-                                var fn = System.IO.Path.GetFileNameWithoutExtension(file);
-                                var parts = fn.Split('_');
-                                if (parts.Length == 3 && int.TryParse(parts[1], out var y) && int.TryParse(parts[2], out var m))
-                                    availableMonths.Add((y, m));
-                            }
-                        }
-                        catch (Exception ex) { LoggingService.LogError("Dashboard.ScanSalaryFiles", ex); }
-                    }
-                }
+                var availableMonths = _financeService.GetAvailableSalaryMonths();
 
                 var monthMap = new Dictionary<string, SalaryMonthSummary>();
                 decimal grandGross = 0, grandNet = 0, grandPaid = 0;

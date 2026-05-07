@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Data.Sqlite;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Xunit;
@@ -221,6 +222,103 @@ namespace Win11DesktopApp.Tests
             Assert.Equal(2, entries.Count);
             Assert.Contains(entries, entry => entry.EmployeeId == "emp-a" && entry.HoursWorked == 10m && entry.SavedNetSalary == 1000m);
             Assert.Contains(entries, entry => entry.EmployeeId == "emp-b" && entry.HoursWorked == 8m && entry.SavedNetSalary == 1200m);
+        }
+
+        [Fact]
+        public void SaveMonthPayments_ShouldRemoveOldFolderDuplicate_ForSameEmployeeIdAndFirm()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 5,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-a",
+                        EmployeeFolder = @"C:\Employees\OldA",
+                        FirmName = "Firm A",
+                        FullName = "Employee A",
+                        HoursWorked = 0m,
+                        HourlyRate = 100m,
+                        SavedNetSalary = 0m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            _salaryDbService.SaveMonthPayments(2026, 5,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-a",
+                        EmployeeFolder = @"C:\Employees\NewA",
+                        FirmName = "Firm A",
+                        FullName = "Employee A",
+                        HoursWorked = 233m,
+                        HourlyRate = 100m,
+                        SavedNetSalary = 23300m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 5);
+
+            var employeeEntries = entries.Where(entry => entry.EmployeeId == "emp-a" && entry.FirmName == "Firm A").ToList();
+            var entry = Assert.Single(employeeEntries);
+            Assert.Equal(@"C:\Employees\NewA", entry.EmployeeFolder);
+            Assert.Equal(233m, entry.HoursWorked);
+            Assert.Equal(23300m, entry.SavedNetSalary);
+        }
+
+        [Fact]
+        public void LoadMonthPayments_ShouldReturnNewestDuplicateFirst_ForLegacyDuplicateRows()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 5,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-a",
+                        EmployeeFolder = @"C:\Employees\OldA",
+                        FirmName = "Firm A",
+                        FullName = "Employee A",
+                        HoursWorked = 0m,
+                        HourlyRate = 100m,
+                        SavedNetSalary = 0m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            using (var connection = new SqliteConnection($"Data Source={_salaryDbService.GetMonthDbPath(2026, 5)};Pooling=False"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+INSERT INTO salary_entries (
+    firm_name, year, month, employee_id, employee_folder, full_name,
+    hours_worked, hourly_rate, advance, saved_net_salary, status, note, color_tag, custom_values, updated_at
+) VALUES (
+    @firmName, 2026, 5, @employeeId, @employeeFolder, @fullName,
+    @hoursWorked, @hourlyRate, '0', @savedNetSalary, 'pending', '', '', '{}', @updatedAt
+);";
+                command.Parameters.AddWithValue("@firmName", "Firm A");
+                command.Parameters.AddWithValue("@employeeId", "emp-a");
+                command.Parameters.AddWithValue("@employeeFolder", @"C:\Employees\NewA");
+                command.Parameters.AddWithValue("@fullName", "Employee A");
+                command.Parameters.AddWithValue("@hoursWorked", "233");
+                command.Parameters.AddWithValue("@hourlyRate", "100");
+                command.Parameters.AddWithValue("@savedNetSalary", "23300");
+                command.Parameters.AddWithValue("@updatedAt", "2099-05-07T18:25:38.0000000Z");
+                command.ExecuteNonQuery();
+            }
+
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 5);
+
+            var employeeEntries = entries.Where(entry => entry.EmployeeId == "emp-a" && entry.FirmName == "Firm A").ToList();
+            Assert.Equal(2, employeeEntries.Count);
+            Assert.Equal(@"C:\Employees\NewA", employeeEntries[0].EmployeeFolder);
+            Assert.Equal(233m, employeeEntries[0].HoursWorked);
         }
 
         [Fact]
