@@ -36,6 +36,8 @@ namespace Win11DesktopApp.ViewModels
         private int _advanceRefreshVersion;
         // key: folderKey|firmName → note value at load time (for forward propagation)
         private Dictionary<string, string> _originalNotes = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, SalaryEntrySnapshot> _originalEntrySnapshots = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _dirtySalaryEntryKeys = new(StringComparer.OrdinalIgnoreCase);
 
         internal AppSettingsService AppSettingsService => _appSettingsService;
 
@@ -636,11 +638,15 @@ namespace Win11DesktopApp.ViewModels
 
             Entries.Clear();
             _originalNotes.Clear();
+            _originalEntrySnapshots.Clear();
+            _dirtySalaryEntryKeys.Clear();
             foreach (var entry in newEntries)
             {
                 entry.PropertyChanged += OnEntryChanged;
                 Entries.Add(entry);
-                _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
+                var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                _originalNotes[key] = entry.Note;
+                _originalEntrySnapshots[key] = SalaryEntrySnapshot.From(entry);
             }
 
             var uiRecalcSw = Stopwatch.StartNew();
@@ -1004,6 +1010,8 @@ namespace Win11DesktopApp.ViewModels
                 RecalcTotals();
 
             IsDirty = true;
+            if (sender is SalaryEntry changedEntry)
+                _dirtySalaryEntryKeys.Add(BuildEmployeeFirmKey(changedEntry.EmployeeId, changedEntry.EmployeeFolder, changedEntry.FirmName));
 
             if (e.PropertyName == nameof(SalaryEntry.HourlyRate) && sender is SalaryEntry entry)
                 ScheduleRatePropagation(entry);
@@ -1369,7 +1377,11 @@ namespace Win11DesktopApp.ViewModels
                 var saveMonth = _selectedMonth;
                 var expensesForSave = BuildExpensesForSave(saveYear, saveMonth);
 
-                if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, Entries.ToList(), expensesForSave))
+                foreach (var entry in Entries)
+                    entry.SavedNetSalary = entry.NetSalary;
+
+                var entriesForSave = BuildChangedEntriesForSave();
+                if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, entriesForSave, expensesForSave))
                 {
                     StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
                         ? _financeService.LastSalaryConflictMessage
@@ -1379,15 +1391,18 @@ namespace Win11DesktopApp.ViewModels
                     return false;
                 }
 
-                foreach (var entry in Entries)
-                    entry.SavedNetSalary = entry.NetSalary;
-
                 var changedNotes = CaptureNotePropagationChanges();
 
                 // Update snapshot after save
                 _originalNotes.Clear();
+                _originalEntrySnapshots.Clear();
+                _dirtySalaryEntryKeys.Clear();
                 foreach (var entry in Entries)
-                    _originalNotes[BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName)] = entry.Note;
+                {
+                    var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                    _originalNotes[key] = entry.Note;
+                    _originalEntrySnapshots[key] = SalaryEntrySnapshot.From(entry);
+                }
 
                 IsDirty = false;
                 StatusMessage = L("FinSalarySaved") is string s && s.Length > 0 ? s : "Saved!";
@@ -1401,6 +1416,26 @@ namespace Win11DesktopApp.ViewModels
             {
                 _saveReportGate.Release();
             }
+        }
+
+        private List<SalaryEntry> BuildChangedEntriesForSave()
+        {
+            if (_originalEntrySnapshots.Count == 0)
+                return Entries.ToList();
+
+            var changed = new List<SalaryEntry>();
+            foreach (var entry in Entries)
+            {
+                var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                if (!_originalEntrySnapshots.TryGetValue(key, out var snapshot)
+                    || _dirtySalaryEntryKeys.Contains(key)
+                    || !snapshot.Matches(entry))
+                {
+                    changed.Add(entry);
+                }
+            }
+
+            return changed;
         }
 
         private List<NotePropagationChange> CaptureNotePropagationChanges()
@@ -2535,6 +2570,71 @@ namespace Win11DesktopApp.ViewModels
             EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(entry.FirmName, resolvedFolder, _employeeService);
             EmployeeDetailsVm.RequestClose += OnSalaryDetailsClose;
             IsEmployeeDetailsOpen = true;
+        }
+
+        private sealed class SalaryEntrySnapshot
+        {
+            private readonly string _employeeId;
+            private readonly string _employeeFolder;
+            private readonly string _fullName;
+            private readonly string _firmName;
+            private readonly decimal _hoursWorked;
+            private readonly decimal _hourlyRate;
+            private readonly decimal _advance;
+            private readonly decimal _savedNetSalary;
+            private readonly string _status;
+            private readonly string _note;
+            private readonly string _colorTag;
+            private readonly Dictionary<string, decimal> _customValues;
+
+            private SalaryEntrySnapshot(SalaryEntry entry)
+            {
+                _employeeId = entry.EmployeeId ?? string.Empty;
+                _employeeFolder = entry.EmployeeFolder ?? string.Empty;
+                _fullName = entry.FullName ?? string.Empty;
+                _firmName = entry.FirmName ?? string.Empty;
+                _hoursWorked = entry.HoursWorked;
+                _hourlyRate = entry.HourlyRate;
+                _advance = entry.Advance;
+                _savedNetSalary = entry.SavedNetSalary;
+                _status = entry.Status ?? string.Empty;
+                _note = entry.Note ?? string.Empty;
+                _colorTag = entry.ColorTag ?? string.Empty;
+                _customValues = new Dictionary<string, decimal>(entry.CustomValues ?? new Dictionary<string, decimal>(), StringComparer.OrdinalIgnoreCase);
+            }
+
+            public static SalaryEntrySnapshot From(SalaryEntry entry) => new(entry);
+
+            public bool Matches(SalaryEntry entry)
+            {
+                return string.Equals(_employeeId, entry.EmployeeId ?? string.Empty, StringComparison.Ordinal)
+                    && string.Equals(_employeeFolder, entry.EmployeeFolder ?? string.Empty, StringComparison.Ordinal)
+                    && string.Equals(_fullName, entry.FullName ?? string.Empty, StringComparison.Ordinal)
+                    && string.Equals(_firmName, entry.FirmName ?? string.Empty, StringComparison.Ordinal)
+                    && _hoursWorked == entry.HoursWorked
+                    && _hourlyRate == entry.HourlyRate
+                    && _advance == entry.Advance
+                    && _savedNetSalary == entry.SavedNetSalary
+                    && string.Equals(_status, entry.Status ?? string.Empty, StringComparison.Ordinal)
+                    && string.Equals(_note, entry.Note ?? string.Empty, StringComparison.Ordinal)
+                    && string.Equals(_colorTag, entry.ColorTag ?? string.Empty, StringComparison.Ordinal)
+                    && CustomValuesMatch(entry.CustomValues);
+            }
+
+            private bool CustomValuesMatch(Dictionary<string, decimal>? current)
+            {
+                current ??= new Dictionary<string, decimal>();
+                if (_customValues.Count != current.Count)
+                    return false;
+
+                foreach (var pair in _customValues)
+                {
+                    if (!current.TryGetValue(pair.Key, out var currentValue) || currentValue != pair.Value)
+                        return false;
+                }
+
+                return true;
+            }
         }
 
         private static string? L(string key)

@@ -488,7 +488,17 @@ WHERE lower(firm_name) = lower(@firmName)
 
         public void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
         {
-            ReplaceMonthData(year, month, entries, expenses);
+            using var connection = OpenMonthConnection(year, month);
+            using var transaction = connection.BeginTransaction();
+
+            foreach (var entry in entries)
+                InsertSalaryEntry(connection, transaction, year, month, entry);
+
+            foreach (var expense in expenses)
+                InsertSalaryExpense(connection, transaction, year, month, expense);
+
+            transaction.Commit();
+            MarkMonthDbIndexDirty();
         }
 
         public void UpsertFirmExpense(int year, int month, FirmExpense expense)

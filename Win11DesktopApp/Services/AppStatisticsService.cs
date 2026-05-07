@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using Microsoft.Data.Sqlite;
 
 namespace Win11DesktopApp.Services
@@ -168,6 +168,7 @@ WHERE machine_key = $machine_key;";
 
             using var connection = OpenConnection(path);
             CreateSchema(connection);
+            MigrateMachineSpecificSqliteFiles(connection, path);
             MigrateLegacyJsonIfNeeded(connection);
             _isInitialized = true;
         }
@@ -266,6 +267,122 @@ ON CONFLICT(machine_key) DO UPDATE SET
             }
         }
 
+        private void MigrateMachineSpecificSqliteFiles(SqliteConnection targetConnection, string targetPath)
+        {
+            var statisticsFolder = Path.GetDirectoryName(targetPath);
+            if (string.IsNullOrWhiteSpace(statisticsFolder) || !Directory.Exists(statisticsFolder))
+                return;
+
+            foreach (var sourcePath in Directory.EnumerateFiles(statisticsFolder, "app_statistics_*.db"))
+            {
+                if (PathsEqual(sourcePath, targetPath))
+                    continue;
+
+                try
+                {
+                    var rows = ReadStatisticsRows(sourcePath);
+                    if (rows.Count == 0)
+                    {
+                        SafeFileService.DeleteFile(sourcePath);
+                        continue;
+                    }
+
+                    foreach (var row in rows)
+                        UpsertStatisticsRow(targetConnection, row);
+
+                    if (RowsExist(targetConnection, rows))
+                    {
+                        SafeFileService.DeleteFile(sourcePath);
+                        LoggingService.LogInfo("AppStatisticsService.Migration", $"Migrated and deleted machine-specific app statistics DB: {sourcePath}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("AppStatisticsService.Migration", $"Failed to migrate {sourcePath}: {ex.Message}");
+                }
+            }
+        }
+
+        private static List<StatisticsRow> ReadStatisticsRows(string sourcePath)
+        {
+            var rows = new List<StatisticsRow>();
+            using var sourceConnection = new SqliteConnection($"Data Source={sourcePath};Cache=Shared;Pooling=False");
+            sourceConnection.Open();
+
+            using var command = sourceConnection.CreateCommand();
+            command.CommandText = @"
+SELECT machine_key, machine_name, user_name,
+       total_employees_created, generated_documents_count, total_program_run_minutes, updated_at_utc
+FROM app_statistics;";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                rows.Add(new StatisticsRow(
+                    reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                    reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
+                    reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                    reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                    reader.IsDBNull(6) ? DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture) : reader.GetString(6)));
+            }
+
+            return rows;
+        }
+
+        private static void UpsertStatisticsRow(SqliteConnection connection, StatisticsRow row)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+INSERT INTO app_statistics (
+    machine_key, machine_name, user_name,
+    total_employees_created, generated_documents_count, total_program_run_minutes, updated_at_utc
+) VALUES (
+    $machine_key, $machine_name, $user_name,
+    $total_employees_created, $generated_documents_count, $total_program_run_minutes, $updated_at_utc
+)
+ON CONFLICT(machine_key) DO UPDATE SET
+    machine_name = excluded.machine_name,
+    user_name = excluded.user_name,
+    total_employees_created = excluded.total_employees_created,
+    generated_documents_count = excluded.generated_documents_count,
+    total_program_run_minutes = excluded.total_program_run_minutes,
+    updated_at_utc = excluded.updated_at_utc;";
+            command.Parameters.AddWithValue("$machine_key", row.MachineKey);
+            command.Parameters.AddWithValue("$machine_name", row.MachineName);
+            command.Parameters.AddWithValue("$user_name", row.UserName);
+            command.Parameters.AddWithValue("$total_employees_created", row.TotalEmployeesCreated);
+            command.Parameters.AddWithValue("$generated_documents_count", row.GeneratedDocumentsCount);
+            command.Parameters.AddWithValue("$total_program_run_minutes", row.TotalProgramRunMinutes);
+            command.Parameters.AddWithValue("$updated_at_utc", row.UpdatedAtUtc);
+            command.ExecuteNonQuery();
+        }
+
+        private static bool RowsExist(SqliteConnection connection, IReadOnlyList<StatisticsRow> rows)
+        {
+            foreach (var row in rows)
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT total_employees_created, generated_documents_count, total_program_run_minutes
+FROM app_statistics
+WHERE machine_key = $machine_key;";
+                command.Parameters.AddWithValue("$machine_key", row.MachineKey);
+
+                using var reader = command.ExecuteReader();
+                if (!reader.Read()
+                    || reader.GetInt32(0) != row.TotalEmployeesCreated
+                    || reader.GetInt32(1) != row.GeneratedDocumentsCount
+                    || reader.GetInt32(2) != row.TotalProgramRunMinutes)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private bool TryVerifySnapshot(SqliteConnection connection, AppStatisticsSnapshot expected)
         {
             using var command = connection.CreateCommand();
@@ -293,7 +410,7 @@ WHERE machine_key = $machine_key;";
                 return Path.Combine(
                     sqliteFolder,
                     "Statistics",
-                    $"app_statistics_{SanitizeFileNamePart(_machineName)}_{SanitizeFileNamePart(_userName)}.db");
+                    "app_statistics.db");
             }
         }
 
@@ -306,15 +423,16 @@ WHERE machine_key = $machine_key;";
             }
         }
 
-        private static string SanitizeFileNamePart(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return "unknown";
+        private static bool PathsEqual(string left, string right)
+            => string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 
-            var invalid = Path.GetInvalidFileNameChars();
-            var chars = value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
-            var sanitized = new string(chars).Trim();
-            return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
-        }
+        private sealed record StatisticsRow(
+            string MachineKey,
+            string MachineName,
+            string UserName,
+            int TotalEmployeesCreated,
+            int GeneratedDocumentsCount,
+            int TotalProgramRunMinutes,
+            string UpdatedAtUtc);
     }
 }

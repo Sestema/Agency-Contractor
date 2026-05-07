@@ -169,6 +169,61 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void SaveMonthPayments_ShouldMergeChangedRows_WithoutDeletingOtherEmployees()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 12,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-a",
+                        EmployeeFolder = @"C:\Employees\A",
+                        FirmName = "Firm A",
+                        FullName = "Employee A",
+                        HoursWorked = 0m,
+                        HourlyRate = 100m,
+                        SavedNetSalary = 0m,
+                        Status = "pending"
+                    },
+                    new()
+                    {
+                        EmployeeId = "emp-b",
+                        EmployeeFolder = @"C:\Employees\B",
+                        FirmName = "Firm A",
+                        FullName = "Employee B",
+                        HoursWorked = 8m,
+                        HourlyRate = 150m,
+                        SavedNetSalary = 1200m,
+                        Status = "paid"
+                    }
+                },
+                new List<FirmExpense>());
+
+            _salaryDbService.SaveMonthPayments(2026, 12,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-a",
+                        EmployeeFolder = @"C:\Employees\A",
+                        FirmName = "Firm A",
+                        FullName = "Employee A",
+                        HoursWorked = 10m,
+                        HourlyRate = 100m,
+                        SavedNetSalary = 1000m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 12);
+
+            Assert.Equal(2, entries.Count);
+            Assert.Contains(entries, entry => entry.EmployeeId == "emp-a" && entry.HoursWorked == 10m && entry.SavedNetSalary == 1000m);
+            Assert.Contains(entries, entry => entry.EmployeeId == "emp-b" && entry.HoursWorked == 8m && entry.SavedNetSalary == 1200m);
+        }
+
+        [Fact]
         public void GetSavedPaymentsForEmployee_ShouldFallbackToFolder_WhenDbRowEmployeeIdIsEmpty()
         {
             _salaryDbService.ReplaceMonthData(2026, 6,
