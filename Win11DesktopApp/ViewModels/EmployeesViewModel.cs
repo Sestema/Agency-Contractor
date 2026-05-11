@@ -82,6 +82,8 @@ namespace Win11DesktopApp.ViewModels
         private readonly TagCatalogService _tagCatalogService;
         private readonly GeminiApiService _geminiApiService;
         private readonly EmployerCompany? _company;
+        private readonly CompanyService? _companyService;
+        private readonly bool _showAllCompanies;
         private List<EmployeeModels.EmployeeSummary> _allEmployees = new List<EmployeeModels.EmployeeSummary>();
         private string _lastStatus = string.Empty;
         private int _loadGeneration;
@@ -149,9 +151,15 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isLoading, value);
         }
 
-        public string Title => _company == null
+        public string Title => _showAllCompanies
+            ? "Активні працівники"
+            : _company == null
             ? GetString("TitleEmployeesGeneric") ?? "Employees"
             : string.Format(GetString("TitleEmployees") ?? "{0}", _company.Name);
+
+        public string LoadingMessage => _showAllCompanies
+            ? "Завантажуємо активних працівників з усіх фірм..."
+            : GetString("MsgEmployeesLoading") ?? "Loading employees...";
 
         // Statistics
         private int _totalCount;
@@ -456,9 +464,13 @@ namespace Win11DesktopApp.ViewModels
             TemplateService? templateService = null,
             DocumentGenerationService? documentGenerationService = null,
             TagCatalogService? tagCatalogService = null,
-            GeminiApiService? geminiApiService = null)
+            GeminiApiService? geminiApiService = null,
+            CompanyService? companyService = null,
+            bool showAllCompanies = false)
         {
             _company = company;
+            _companyService = companyService;
+            _showAllCompanies = showAllCompanies;
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
             _addEmployeeWizardViewModelFactory = addEmployeeWizardViewModelFactory ?? throw new InvalidOperationException("AddEmployeeWizardViewModelFactory is not initialized.");
@@ -475,7 +487,7 @@ namespace Win11DesktopApp.ViewModels
             _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _sortField = _appSettingsService.Settings.EmployeeSortField ?? "Name";
             _sortAscending = _appSettingsService.Settings.EmployeeSortAscending;
-            _viewMode = _appSettingsService.Settings.EmployeeViewMode ?? "List";
+            _viewMode = _showAllCompanies ? "Tiles" : _appSettingsService.Settings.EmployeeViewMode ?? "List";
             _zoomLevel = _appSettingsService.Settings.EmployeeZoomLevel;
             IsCompanySelected = _company != null;
 
@@ -600,11 +612,37 @@ namespace Win11DesktopApp.ViewModels
         {
             var generation = ++_loadGeneration;
             IsLoading = true;
-            StatusMessage = GetString("MsgEmployeesLoading") ?? "Loading employees...";
-            await Task.Yield();
+            StatusMessage = LoadingMessage;
+            await Dispatcher.Yield(DispatcherPriority.Render);
 
             try
             {
+                if (_showAllCompanies)
+                {
+                    var companyNames = _companyService?.VisibleCompanies
+                        .Select(company => company.Name)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .ToList() ?? new List<string>();
+                    var allResult = await Task.Run(() => LoadAllVisibleCompanyEmployees(companyNames));
+                    if (generation != _loadGeneration)
+                        return;
+
+                    _allEmployees = allResult.Employees;
+                    _lastStatus = allResult.Status;
+                    IsError = allResult.Status == "LoadError";
+                    if (generation != _loadGeneration)
+                        return;
+
+                    IsLoading = false;
+                    await ApplyFilterInBatchesAsync(generation);
+                    if (HasVisibleEmployees)
+                        StatusMessage = string.Empty;
+
+                    RefreshStats();
+                    Debug.WriteLine($"EmployeesViewModel.LoadAllEmployees: {Employees.Count} items");
+                    return;
+                }
+
                 if (_company == null)
                 {
                     _allEmployees = new List<EmployeeModels.EmployeeSummary>();
@@ -627,8 +665,7 @@ namespace Win11DesktopApp.ViewModels
                 if (HasVisibleEmployees)
                     StatusMessage = GetStatusMessage(result.Status);
                 IsError = result.Status == "LoadError";
-                IsLoading = false;
-                await Task.Yield();
+                await Dispatcher.Yield(DispatcherPriority.Render);
                 if (generation != _loadGeneration || !string.Equals(_company?.Name, companyName, StringComparison.OrdinalIgnoreCase))
                     return;
 
@@ -653,6 +690,45 @@ namespace Win11DesktopApp.ViewModels
                 if (generation == _loadGeneration)
                     IsLoading = false;
             }
+        }
+
+        private (List<EmployeeModels.EmployeeSummary> Employees, string Status) LoadAllVisibleCompanyEmployees(IReadOnlyList<string> companyNames)
+        {
+            if (companyNames.Count == 0)
+                return (new List<EmployeeModels.EmployeeSummary>(), "NoEmployees");
+
+            var allEmployees = new List<EmployeeModels.EmployeeSummary>();
+            var statuses = new List<string>();
+
+            foreach (var companyName in companyNames)
+            {
+                try
+                {
+                    var result = _employeeService.GetEmployeesForFirmWithStatus(companyName);
+                    statuses.Add(result.Status);
+
+                    foreach (var employee in result.Employees)
+                    {
+                        if (string.IsNullOrWhiteSpace(employee.FirmName))
+                            employee.FirmName = companyName;
+                        allEmployees.Add(employee);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    statuses.Add("LoadError");
+                    LoggingService.LogWarning("EmployeesViewModel.LoadAllVisibleCompanyEmployees",
+                        $"Failed to load employees for '{companyName}': {ex.Message}");
+                }
+            }
+
+            var status = allEmployees.Count > 0
+                ? "Ok"
+                : statuses.Any(status => status == "LoadError")
+                    ? "LoadError"
+                    : "NoEmployees";
+
+            return (allEmployees, status);
         }
 
         private string DocRes(string key) =>
@@ -687,6 +763,43 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            var list = BuildFilteredEmployees();
+
+            Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>(list);
+            UpdateFilteredState(list.Count, SearchQuery?.Trim() ?? string.Empty);
+        }
+
+        private async Task ApplyFilterInBatchesAsync(int generation)
+        {
+            HasEmployees = _allEmployees.Count > 0;
+
+            if (_allEmployees.Count == 0)
+            {
+                Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
+                HasVisibleEmployees = false;
+                return;
+            }
+
+            var query = SearchQuery?.Trim() ?? string.Empty;
+            var list = BuildFilteredEmployees();
+            Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
+            UpdateFilteredState(list.Count, query);
+
+            const int batchSize = 32;
+            for (var index = 0; index < list.Count; index += batchSize)
+            {
+                if (generation != _loadGeneration)
+                    return;
+
+                foreach (var employee in list.Skip(index).Take(batchSize))
+                    Employees.Add(employee);
+
+                await Dispatcher.Yield(DispatcherPriority.Background);
+            }
+        }
+
+        private List<EmployeeModels.EmployeeSummary> BuildFilteredEmployees()
+        {
             var query = SearchQuery?.Trim() ?? string.Empty;
             List<EmployeeModels.EmployeeSummary> list;
 
@@ -705,6 +818,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 list = source.Where(e =>
                     (!string.IsNullOrEmpty(e.FullName) && e.FullName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(e.FirmName) && e.FirmName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(e.PassportNumber) && e.PassportNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(e.VisaNumber) && e.VisaNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(e.InsuranceNumber) && e.InsuranceNumber.Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -727,8 +841,12 @@ namespace Win11DesktopApp.ViewModels
                 _ => list
             };
 
-            Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>(list);
-            HasVisibleEmployees = Employees.Count > 0;
+            return list;
+        }
+
+        private void UpdateFilteredState(int visibleCount, string query)
+        {
+            HasVisibleEmployees = visibleCount > 0;
 
             if (!HasVisibleEmployees)
             {
@@ -769,9 +887,10 @@ namespace Win11DesktopApp.ViewModels
 
         private void OpenEmployee(EmployeeModels.EmployeeSummary? employee)
         {
-            if (employee == null || _company == null) return;
+            var firmName = ResolveEmployeeFirmName(employee);
+            if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
             CleanupDetailsVm();
-            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(_company.Name, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(firmName, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
@@ -781,14 +900,23 @@ namespace Win11DesktopApp.ViewModels
         {
             if (!PolicyService.EnsureWriteAllowed("Редагувати працівника"))
                 return;
-            if (employee == null || _company == null) return;
+            var firmName = ResolveEmployeeFirmName(employee);
+            if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
             CleanupDetailsVm();
-            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(_company.Name, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(firmName, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             EmployeeDetailsVm.IsEditMode = true;
             EmployeeDetailsVm.TabIndex = 1;
             IsEmployeeDetailsOpen = true;
+        }
+
+        private string ResolveEmployeeFirmName(EmployeeModels.EmployeeSummary? employee)
+        {
+            if (_company != null)
+                return _company.Name;
+
+            return employee?.FirmName ?? string.Empty;
         }
 
         private void AskDeleteEmployee(EmployeeModels.EmployeeSummary? employee)

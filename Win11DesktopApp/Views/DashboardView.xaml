@@ -37,7 +37,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Cursor" Value="SizeAll"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="ToolTip" Value="Drag to swap"/>
+            <Setter Property="ToolTip" Value="{DynamicResource DashDragToSwap}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
@@ -449,7 +449,7 @@
         <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,18">
             <Border Style="{StaticResource StatCard}" Margin="0,0,10,0">
                 <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding OpenEmployeesCommand}"/>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding OpenMonthlyMovementDetailsCommand}"/>
                 </Border.InputBindings>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -526,7 +526,7 @@
 
             <Border Style="{StaticResource StatCard}" Margin="0,0,10,0">
                 <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding OpenTemplatesCommand}"/>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding OpenAllEmployeesCommand}"/>
                 </Border.InputBindings>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -549,6 +549,9 @@
             </Border>
 
             <Border Style="{StaticResource StatCard}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding OpenCompanyDetailsCommand}"/>
+                </Border.InputBindings>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -698,6 +701,318 @@
                     </DataTemplate>
                 </ContentControl.Resources>
             </ContentControl>
+        </Grid>
+
+        <!-- Monthly Movement Details Overlay -->
+        <Grid Grid.RowSpan="3" Visibility="{Binding IsMonthlyMovementDetailsOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}" Margin="-24,-16">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseMonthlyMovementDetailsCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                    Width="720" MaxWidth="820" MaxHeight="560" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.2"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="42" Height="42" CornerRadius="12"
+                                    Background="{DynamicResource BrandWarmGradientBrush}" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="19"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource MainStatMonthlyMovement}" FontSize="{DynamicResource FS20}"
+                                           FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock Text="{Binding MonthlyMovementSummaryText}" FontSize="{DynamicResource FS12}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding CloseMonthlyMovementDetailsCommand}"
+                                Style="{StaticResource HeaderGhostButton}" Width="34" Height="34">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                        </Button>
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Style="{StaticResource DashboardWidgetCard}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="{DynamicResource DashMovementAddedTitle}" FontSize="{DynamicResource FS15}"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                    <Border DockPanel.Dock="Right" CornerRadius="8" Padding="8,3"
+                                            Background="{DynamicResource SuccessLightBrush}">
+                                        <TextBlock Text="{Binding MonthlyEmployeesAddedCount}" FontSize="{DynamicResource FS11}"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}"/>
+                                    </Border>
+                                </DockPanel>
+                                <TextBlock Grid.Row="1" Text="{DynamicResource DashMovementAddedEmpty}"
+                                           FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           VerticalAlignment="Center" TextAlignment="Center"
+                                           Visibility="{Binding MonthlyAddedEmployees.Count, Converter={StaticResource IntToVis}, ConverterParameter=invert}"/>
+                                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
+                                              Visibility="{Binding MonthlyAddedEmployees.Count, Converter={StaticResource IntToVis}}">
+                                    <ItemsControl ItemsSource="{Binding MonthlyAddedEmployees}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,0,8" Cursor="Hand">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick"
+                                                                      Command="{Binding DataContext.OpenMovementEmployeeDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                      CommandParameter="{Binding}"/>
+                                                    </Border.InputBindings>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                                Background="{Binding StatusColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.12}"
+                                                                Margin="0,0,10,0">
+                                                            <TextBlock Text="+" FontSize="{DynamicResource FS18}" FontWeight="Bold"
+                                                                       Foreground="{Binding StatusColor, Converter={StaticResource HexToBrush}}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="{Binding FullName}" FontSize="{DynamicResource FS13}"
+                                                                       FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                                            <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0">
+                                                                <Run Text="{Binding FirmName}"/>
+                                                                <Run Text=" · "/>
+                                                                <Run Text="{Binding DateText}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource DashboardWidgetCard}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="{DynamicResource DashMovementArchivedTitle}" FontSize="{DynamicResource FS15}"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                    <Border DockPanel.Dock="Right" CornerRadius="8" Padding="8,3"
+                                            Background="{DynamicResource ErrorLightBrush}">
+                                        <TextBlock Text="{Binding MonthlyEmployeesArchivedCount}" FontSize="{DynamicResource FS11}"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}"/>
+                                    </Border>
+                                </DockPanel>
+                                <TextBlock Grid.Row="1" Text="{DynamicResource DashMovementArchivedEmpty}"
+                                           FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           VerticalAlignment="Center" TextAlignment="Center"
+                                           Visibility="{Binding MonthlyArchivedEmployees.Count, Converter={StaticResource IntToVis}, ConverterParameter=invert}"/>
+                                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
+                                              Visibility="{Binding MonthlyArchivedEmployees.Count, Converter={StaticResource IntToVis}}">
+                                    <ItemsControl ItemsSource="{Binding MonthlyArchivedEmployees}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,0,8" Cursor="Hand">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick"
+                                                                      Command="{Binding DataContext.OpenMovementEmployeeDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                      CommandParameter="{Binding}"/>
+                                                    </Border.InputBindings>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                                Background="{Binding StatusColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.12}"
+                                                                Margin="0,0,10,0">
+                                                            <TextBlock Text="-" FontSize="{DynamicResource FS18}" FontWeight="Bold"
+                                                                       Foreground="{Binding StatusColor, Converter={StaticResource HexToBrush}}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Text="{Binding FullName}" FontSize="{DynamicResource FS13}"
+                                                                       FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                                            <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0">
+                                                                <Run Text="{Binding FirmName}"/>
+                                                                <Run Text=" · "/>
+                                                                <Run Text="{Binding DateText}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock Grid.Row="2" Text="{DynamicResource DashMovementOpenEmployeeHint}"
+                               FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                               HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Company Details Overlay -->
+        <Grid Grid.RowSpan="3" Visibility="{Binding IsCompanyDetailsOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}" Margin="-24,-16">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseCompanyDetailsCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                    Width="660" MaxWidth="780" MaxHeight="560" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.2"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="42" Height="42" CornerRadius="12"
+                                    Background="{DynamicResource BrandAiGradientBrush}" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="19"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource SearchCatCompanies}" FontSize="{DynamicResource FS20}"
+                                           FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock FontSize="{DynamicResource FS12}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0">
+                                    <Run Text="{Binding TotalCompanies}"/>
+                                    <Run Text="{DynamicResource DashActiveCompaniesInline}"/>
+                                    <Run Text="{Binding TotalEmployees}"/>
+                                    <Run Text="{DynamicResource DashEmployeesInline}"/>
+                                    <Run Text="{Binding TotalProblems}"/>
+                                    <Run Text="{DynamicResource DashProblemsInline}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding CloseCompanyDetailsCommand}"
+                                Style="{StaticResource HeaderGhostButton}" Width="34" Height="34">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                        </Button>
+                    </Grid>
+
+                    <Border Grid.Row="1" Style="{StaticResource DashboardWidgetCard}" Padding="16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="95"/>
+                                    <ColumnDefinition Width="95"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{DynamicResource DashCompanyColumn}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource DashEmployeesColumn}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Column="2" Text="{DynamicResource DashProblemsColumn}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Column="3" Text="{DynamicResource DashTemplatesColumn}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <TextBlock Grid.Row="1" Text="{DynamicResource DashCompaniesEmpty}"
+                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                       VerticalAlignment="Center" TextAlignment="Center"
+                                       Visibility="{Binding CompanyStats.Count, Converter={StaticResource IntToVis}, ConverterParameter=invert}"/>
+                            <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
+                                          Visibility="{Binding CompanyStats.Count, Converter={StaticResource IntToVis}}">
+                                <ItemsControl ItemsSource="{Binding CompanyStats}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,0,8" Cursor="Hand">
+                                                <Border.InputBindings>
+                                                    <MouseBinding MouseAction="LeftClick"
+                                                                  Command="{Binding DataContext.OpenCompanyEmployeesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                  CommandParameter="{Binding}"/>
+                                                </Border.InputBindings>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="95"/>
+                                                        <ColumnDefinition Width="95"/>
+                                                        <ColumnDefinition Width="80"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding CompanyName}" FontSize="{DynamicResource FS13}"
+                                                                   FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                                        <ProgressBar Minimum="0" Maximum="1" Value="{Binding EmployeeRatio, Mode=OneWay}"
+                                                                     Height="4" Margin="0,6,18,0"
+                                                                     Foreground="{DynamicResource AccentBrush}"
+                                                                     Background="{DynamicResource DividerBrush}" BorderThickness="0"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding EmployeeCount}" FontSize="{DynamicResource FS15}"
+                                                               FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
+                                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="2" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center" Background="{DynamicResource ErrorLightBrush}">
+                                                        <TextBlock Text="{Binding ProblemCount}" FontSize="{DynamicResource FS12}"
+                                                                   FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="3" Text="{Binding TemplateCount}" FontSize="{DynamicResource FS13}"
+                                                               FontWeight="SemiBold" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Grid.Row="2" Text="{DynamicResource DashCompanyOpenEmployeesHint}"
+                               FontSize="{DynamicResource FS11}" Foreground="{DynamicResource TertiaryForegroundBrush}"
+                               HorizontalAlignment="Center" Margin="0,14,0,0"/>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- AI Report Overlay -->

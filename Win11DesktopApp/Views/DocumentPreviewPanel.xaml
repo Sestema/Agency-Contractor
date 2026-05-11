@@ -58,9 +58,9 @@
                         </Border.Style>
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="&#xE8A7;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS24}"/>
-                            <TextBlock Text="Попередній перегляд з'явиться тут"
+                            <TextBlock Text="{DynamicResource DocPreviewEmptyTitle}"
                                        Style="{StaticResource CompactEmptyStateTitleText}"/>
-                            <TextBlock Text="Завантаж документ або перейди до кроку з прикріпленим файлом."
+                            <TextBlock Text="{DynamicResource DocPreviewEmptyDescription}"
                                        Style="{StaticResource CompactEmptyStateDescriptionText}"/>
                         </StackPanel>
                     </Border>

@@ -1460,9 +1460,9 @@
                                            Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="Telegram-бот" FontSize="{DynamicResource FS17}"
+                                <TextBlock Text="{DynamicResource SettingsTelegramTitle}" FontSize="{DynamicResource FS17}"
                                            FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="Кожен клієнт підключає свого Telegram-бота до цієї програми."
+                                <TextBlock Text="{DynamicResource SettingsTelegramSubtitle}"
                                            FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" Opacity="0.55"/>
                             </StackPanel>
                         </StackPanel>
@@ -1470,7 +1470,7 @@
                         <CheckBox Grid.Column="1"
                                   IsChecked="{Binding TelegramEnabled}"
                                   VerticalAlignment="Center"
-                                  Content="Увімкнути"/>
+                                  Content="{DynamicResource SettingsTelegramEnable}"/>
                     </Grid>
 
                     <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14" Margin="0,0,0,14">
@@ -1489,7 +1489,7 @@
 
                             <StackPanel Margin="0,14,0,0"
                                         Visibility="{Binding TelegramNeedsToken, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="1. Створіть бота в BotFather і вставте токен:"
+                                <TextBlock Text="{DynamicResource SettingsTelegramStepToken}"
                                            FontSize="{DynamicResource FS12}"
                                            Foreground="{DynamicResource ForegroundBrush}"
                                            Margin="0,0,0,6"/>
@@ -1500,7 +1500,7 @@
                                     <Button Command="{Binding ConnectTelegramBotCommand}"
                                             Padding="14,8"
                                             Style="{StaticResource FilledActionButton}">
-                                        <TextBlock Text="Підключити"
+                                        <TextBlock Text="{DynamicResource SettingsTelegramConnect}"
                                                    FontSize="{DynamicResource FS12}"
                                                    FontWeight="SemiBold"
                                                    Foreground="White"/>
@@ -1509,7 +1509,7 @@
                                             Padding="14,8"
                                             Margin="8,0,0,0"
                                             Style="{StaticResource HeaderGhostButton}">
-                                        <TextBlock Text="Відкрити BotFather"
+                                        <TextBlock Text="{DynamicResource SettingsTelegramOpenBotFather}"
                                                    FontSize="{DynamicResource FS12}"
                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                     </Button>
@@ -1531,7 +1531,7 @@
                                         CornerRadius="10"
                                         Padding="12">
                                     <StackPanel>
-                                        <TextBlock Text="2. Відскануйте QR телефоном"
+                                            <TextBlock Text="{DynamicResource SettingsTelegramStepQr}"
                                                    FontSize="{DynamicResource FS13}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource ForegroundBrush}"/>
@@ -1559,7 +1559,7 @@
                                                 Margin="0,12,0,0"
                                                 HorizontalAlignment="Left"
                                                 Style="{StaticResource HeaderGhostButton}">
-                                            <TextBlock Text="Оновити QR"
+                                            <TextBlock Text="{DynamicResource SettingsTelegramRefreshQr}"
                                                        FontSize="{DynamicResource FS12}"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
                                         </Button>
@@ -1569,18 +1569,18 @@
                                 <StackPanel Grid.Column="2">
                                     <Border Style="{StaticResource DialogPreviewSurface}" Padding="14,12" Margin="0,0,0,12">
                                         <StackPanel>
-                                            <TextBlock Text="Налаштування бота"
+                                            <TextBlock Text="{DynamicResource SettingsTelegramBotSettings}"
                                                        FontSize="{DynamicResource FS13}"
                                                        FontWeight="SemiBold"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
-                                            <CheckBox Content="Дозволити AI-запитання"
+                                            <CheckBox Content="{DynamicResource SettingsTelegramAllowAi}"
                                                       Margin="0,10,0,0"
                                                       IsChecked="{Binding TelegramAllowAiQuestions}"/>
-                                            <CheckBox Content="Щоденний дайджест"
+                                            <CheckBox Content="{DynamicResource SettingsTelegramDailyDigest}"
                                                       Margin="0,8,0,0"
                                                       IsChecked="{Binding TelegramDailyDigestEnabled}"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                                <TextBlock Text="Час дайджесту:"
+                                                <TextBlock Text="{DynamicResource SettingsTelegramDigestTime}"
                                                            VerticalAlignment="Center"
                                                            FontSize="{DynamicResource FS12}"
                                                            Foreground="{DynamicResource ForegroundBrush}"/>
@@ -1600,7 +1600,7 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Прив'язані користувачі"
+                                                <TextBlock Text="{DynamicResource SettingsTelegramLinkedUsers}"
                                                            FontSize="{DynamicResource FS13}"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource ForegroundBrush}"/>
@@ -1608,12 +1608,12 @@
                                                         Command="{Binding DisconnectTelegramBotCommand}"
                                                         Padding="10,5"
                                                         Style="{StaticResource SelectorButton}">
-                                                    <TextBlock Text="Відключити"
+                                                    <TextBlock Text="{DynamicResource SettingsTelegramDisconnect}"
                                                                FontSize="{DynamicResource FS11}"/>
                                                 </Button>
                                             </Grid>
 
-                                            <TextBlock Text="Ще немає прив'язаних Telegram-акаунтів."
+                                            <TextBlock Text="{DynamicResource SettingsTelegramNoLinkedAccounts}"
                                                        FontSize="{DynamicResource FS11}"
                                                        Foreground="{DynamicResource MutedForegroundBrush}"
                                                        Visibility="{Binding HasTelegramAuthorizedUsers, Converter={StaticResource InverseBoolToVis}}"/>
@@ -1649,7 +1649,7 @@
                                                                         CommandParameter="{Binding TelegramUserId}"
                                                                         Padding="10,5"
                                                                         Style="{StaticResource HeaderGhostButton}">
-                                                                    <TextBlock Text="Відв'язати"
+                                                                    <TextBlock Text="{DynamicResource SettingsTelegramUnlink}"
                                                                                FontSize="{DynamicResource FS11}"
                                                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                                                 </Button>
@@ -1684,7 +1684,7 @@
                                 <Run Text=" + "/>
                                 <Run Text="{DynamicResource SettingsUpdateTitle}"/>
                             </TextBlock>
-                            <TextBlock Text="Основний профіль, план доступу та оновлення програми."
+                            <TextBlock Text="{DynamicResource SettingsAccessMainSubtitle}"
                                        FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"
                                        Opacity="0.55" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -1712,7 +1712,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Row="0" Grid.Column="0">
-                                    <TextBlock Text="Ім'я та прізвище"
+                                    <TextBlock Text="{DynamicResource SettingsProfileFullNameLabel}"
                                                FontSize="{DynamicResource FS10}"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource MutedForegroundBrush}"/>
@@ -1880,7 +1880,7 @@
                                             <TextBlock Text="{DynamicResource SettingsAccessTitle}"
                                                        FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource ForegroundBrush}"/>
-                                            <TextBlock Text="Поточний статус доступу та службова інформація."
+                                            <TextBlock Text="{DynamicResource SettingsAccessStatusHint}"
                                                        FontSize="{DynamicResource FS11}"
                                                        Foreground="{DynamicResource MutedForegroundBrush}"
                                                        Margin="0,2,0,0"
@@ -2085,7 +2085,7 @@
                                 <Run Text=" + "/>
                                 <Run Text="{DynamicResource SettingsUpdateTitle}"/>
                             </TextBlock>
-                            <TextBlock Text="Стан доступу до програми та поточної версії."
+                            <TextBlock Text="{DynamicResource SettingsAccessVersionSubtitle}"
                                        FontSize="{DynamicResource FS12}"
                                        Foreground="{DynamicResource ForegroundBrush}"
                                        Opacity="0.55"

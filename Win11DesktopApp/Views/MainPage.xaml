@@ -164,7 +164,7 @@
                         <Button x:Name="NotificationBellButton"
                                 Command="{Binding ToggleNotificationsCommand}"
                                 Style="{StaticResource ToolbarIconButton}"
-                                ToolTip="Сповіщення">
+                                ToolTip="{DynamicResource NotificationsTitle}">
                             <Grid Width="24" Height="24">
                                 <TextBlock Text="&#xEA8F;"
                                            FontFamily="Segoe MDL2 Assets"
@@ -211,7 +211,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Сповіщення"
+                                        <TextBlock Text="{DynamicResource NotificationsTitle}"
                                                    FontSize="{DynamicResource FS16}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource ForegroundBrush}"
@@ -236,7 +236,7 @@
                                                     </Border>
                                                 </ControlTemplate>
                                             </Button.Template>
-                                            <TextBlock Text="Прочитано"
+                                            <TextBlock Text="{DynamicResource NotificationsMarkRead}"
                                                        FontSize="{DynamicResource FS11}"
                                                        Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                         </Button>
@@ -259,21 +259,21 @@
                                                     </Border>
                                                 </ControlTemplate>
                                             </Button.Template>
-                                            <TextBlock Text="Очистити"
+                                            <TextBlock Text="{DynamicResource NotificationsClear}"
                                                        FontSize="{DynamicResource FS11}"
                                                        Foreground="{DynamicResource ErrorBrush}"/>
                                         </Button>
                                     </Grid>
 
                                     <TextBlock Grid.Row="1"
-                                               Text="Тут будуть переміщення, оновлення та важливі системні дії."
+                                               Text="{DynamicResource NotificationsHint}"
                                                Margin="0,4,0,10"
                                                TextWrapping="Wrap"
                                                FontSize="{DynamicResource FS12}"
                                                Foreground="{DynamicResource SecondaryForegroundBrush}"/>
 
                                     <Grid Grid.Row="2">
-                                        <TextBlock Text="Нових подій поки немає"
+                                        <TextBlock Text="{DynamicResource NotificationsEmpty}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    Margin="0,22"

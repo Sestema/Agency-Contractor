@@ -87,6 +87,28 @@ public sealed class MainModuleViewModelFactory
             _geminiApiService);
     }
 
+    public EmployeesViewModel CreateAllEmployees()
+    {
+        return new EmployeesViewModel(
+            null,
+            _employeeService,
+            _addEmployeeWizardViewModelFactory,
+            _navigationService,
+            _currentProfileService,
+            _profileAuthService,
+            _recentlyDeletedService,
+            _appSettingsService,
+            _documentLocalizationService,
+            _employeeDetailsViewModelFactory,
+            _activityLogService,
+            _templateService,
+            _documentGenerationService,
+            _tagCatalogService,
+            _geminiApiService,
+            _companyService,
+            showAllCompanies: true);
+    }
+
     public TemplatesViewModel CreateTemplates(EmployerCompany? company)
     {
         return _templateViewModelFactory.CreateTemplates(company);

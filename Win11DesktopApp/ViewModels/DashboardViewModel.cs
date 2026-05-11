@@ -52,6 +52,17 @@ namespace Win11DesktopApp.ViewModels
         public bool HasExpenses => TotalExpenses != 0;
     }
 
+    public class MonthlyMovementItem
+    {
+        public string FullName { get; set; } = "";
+        public string FirmName { get; set; } = "";
+        public string DateText { get; set; } = "";
+        public string UniqueId { get; set; } = "";
+        public string EmployeeFolder { get; set; } = "";
+        public string StatusText { get; set; } = "";
+        public string StatusColor { get; set; } = "#4CAF50";
+    }
+
     public class DashboardViewModel : ViewModelBase
     {
         private readonly NavigationService _navigationService;
@@ -68,9 +79,16 @@ namespace Win11DesktopApp.ViewModels
         private CancellationTokenSource? _loadCts;
         public ICommand GoBackCommand { get; }
         public ICommand OpenEmployeesCommand { get; }
+        public ICommand OpenAllEmployeesCommand { get; }
         public ICommand OpenProblemsCommand { get; }
         public ICommand OpenTemplatesCommand { get; }
         public ICommand OpenEmployeeDetailCommand { get; }
+        public ICommand OpenMonthlyMovementDetailsCommand { get; }
+        public ICommand CloseMonthlyMovementDetailsCommand { get; }
+        public ICommand OpenMovementEmployeeDetailCommand { get; }
+        public ICommand OpenCompanyDetailsCommand { get; }
+        public ICommand CloseCompanyDetailsCommand { get; }
+        public ICommand OpenCompanyEmployeesCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand AIReportCommand { get; }
         public ICommand CloseAIReportCommand { get; }
@@ -124,6 +142,20 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _isEmployeeDetailsOpen;
             set => SetProperty(ref _isEmployeeDetailsOpen, value);
+        }
+
+        private bool _isMonthlyMovementDetailsOpen;
+        public bool IsMonthlyMovementDetailsOpen
+        {
+            get => _isMonthlyMovementDetailsOpen;
+            set => SetProperty(ref _isMonthlyMovementDetailsOpen, value);
+        }
+
+        private bool _isCompanyDetailsOpen;
+        public bool IsCompanyDetailsOpen
+        {
+            get => _isCompanyDetailsOpen;
+            set => SetProperty(ref _isCompanyDetailsOpen, value);
         }
 
         private EmployeeDetailsViewModel? _employeeDetailsVm;
@@ -191,6 +223,20 @@ namespace Win11DesktopApp.ViewModels
 
         public string MonthlyMovementSummaryText => $"+{MonthlyEmployeesAddedCount} / -{MonthlyEmployeesArchivedCount}";
         public int MonthlyMovementMax => Math.Max(1, Math.Max(MonthlyEmployeesAddedCount, MonthlyEmployeesArchivedCount));
+
+        private ObservableCollection<MonthlyMovementItem> _monthlyAddedEmployees = new();
+        public ObservableCollection<MonthlyMovementItem> MonthlyAddedEmployees
+        {
+            get => _monthlyAddedEmployees;
+            set => SetProperty(ref _monthlyAddedEmployees, value);
+        }
+
+        private ObservableCollection<MonthlyMovementItem> _monthlyArchivedEmployees = new();
+        public ObservableCollection<MonthlyMovementItem> MonthlyArchivedEmployees
+        {
+            get => _monthlyArchivedEmployees;
+            set => SetProperty(ref _monthlyArchivedEmployees, value);
+        }
 
         private int _totalEmployeesAllTime;
         public int TotalEmployeesAllTime { get => _totalEmployeesAllTime; set => SetProperty(ref _totalEmployeesAllTime, value); }
@@ -299,6 +345,7 @@ namespace Win11DesktopApp.ViewModels
                 if (company != null)
                     _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(company));
             });
+            OpenAllEmployeesCommand = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateAllEmployees()));
             OpenProblemsCommand = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateProblems()));
             OpenTemplatesCommand = new RelayCommand(_ =>
             {
@@ -320,6 +367,40 @@ namespace Win11DesktopApp.ViewModels
                     EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
                     IsEmployeeDetailsOpen = true;
                 }
+            });
+            OpenMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = true);
+            CloseMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = false);
+            OpenMovementEmployeeDetailCommand = new RelayCommand(o =>
+            {
+                if (o is MonthlyMovementItem item && !string.IsNullOrEmpty(item.EmployeeFolder))
+                {
+                    if (EmployeeDetailsVm != null)
+                    {
+                        EmployeeDetailsVm.RequestClose -= OnDetailsClose;
+                        EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                    }
+                    EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(item.FirmName, item.EmployeeFolder, employeeId: item.UniqueId);
+                    EmployeeDetailsVm.RequestClose += OnDetailsClose;
+                    EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
+                    IsMonthlyMovementDetailsOpen = false;
+                    IsEmployeeDetailsOpen = true;
+                }
+            });
+            OpenCompanyDetailsCommand = new RelayCommand(_ => IsCompanyDetailsOpen = true);
+            CloseCompanyDetailsCommand = new RelayCommand(_ => IsCompanyDetailsOpen = false);
+            OpenCompanyEmployeesCommand = new RelayCommand(o =>
+            {
+                if (o is not CompanyStatItem item || string.IsNullOrWhiteSpace(item.CompanyName))
+                    return;
+
+                var company = _companyService.VisibleCompanies
+                    .FirstOrDefault(c => string.Equals(c.Name, item.CompanyName, StringComparison.OrdinalIgnoreCase));
+                if (company == null)
+                    return;
+
+                _companyService.SelectedCompany = company;
+                IsCompanyDetailsOpen = false;
+                _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(company));
             });
 
             RefreshCommand = new RelayCommand(_ => LoadDataAsync());
@@ -479,6 +560,8 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     SavedMinutes = data.SavedMinutes;
                     MonthlyEmployeesAddedCount = data.MonthlyEmployeesAddedCount;
                     MonthlyEmployeesArchivedCount = data.MonthlyEmployeesArchivedCount;
+                    MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyAddedEmployees);
+                    MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyArchivedEmployees);
                     EmployeeTrend = data.EmployeeTrend;
                     ProblemTrend = data.ProblemTrend;
                     TemplateTrend = data.TemplateTrend;
@@ -540,8 +623,18 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     {
                         AddEmployeeIdentity(allTimeEmployeeIds, allTimeEmployeeFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate);
 
-                        if (IsDateInCurrentMonth(emp.StartDate, now))
-                            AddEmployeeIdentity(addedIds, addedFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate);
+                        if (IsDateInCurrentMonth(emp.StartDate, now)
+                            && AddEmployeeIdentity(addedIds, addedFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate))
+                        {
+                            result.MonthlyAddedEmployees.Add(CreateMovementItem(
+                                emp.FullName,
+                                company.Name,
+                                emp.StartDate,
+                                emp.UniqueId,
+                                emp.EmployeeFolder,
+                                Res("DashMovementStatusAdded"),
+                                "#4CAF50"));
+                        }
 
                         CheckExpiry(emp.PassportExpiry, emp.FullName,
                             Res("DetDocPassport"), company.Name, emp.EmployeeFolder, emp.UniqueId, result.ExpiringDocs, ref companyProblems, ref expiredCount, ref criticalCount);
@@ -582,11 +675,31 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                     AddEmployeeIdentity(allTimeEmployeeIds, allTimeEmployeeFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate);
 
-                    if (IsDateInCurrentMonth(archived.StartDate, now))
-                        AddEmployeeIdentity(addedIds, addedFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate);
+                    if (IsDateInCurrentMonth(archived.StartDate, now)
+                        && AddEmployeeIdentity(addedIds, addedFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate))
+                    {
+                        result.MonthlyAddedEmployees.Add(CreateMovementItem(
+                            archived.FullName,
+                            archived.FirmName,
+                            archived.StartDate,
+                            archived.UniqueId,
+                            archived.EmployeeFolder,
+                            Res("DashMovementStatusAdded"),
+                            "#4CAF50"));
+                    }
 
                     if (IsDateInCurrentMonth(archived.EndDate, now))
+                    {
                         archivedThisMonth++;
+                        result.MonthlyArchivedEmployees.Add(CreateMovementItem(
+                            archived.FullName,
+                            archived.FirmName,
+                            archived.EndDate,
+                            archived.UniqueId,
+                            archived.EmployeeFolder,
+                            Res("DashMovementStatusArchived"),
+                            "#E53935"));
+                    }
                 }
             }
             catch (Exception ex)
@@ -727,15 +840,41 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             return date != null && date.Value.Year == now.Year && date.Value.Month == now.Month;
         }
 
-        private static void AddEmployeeIdentity(HashSet<string> ids, HashSet<string> fallbacks, string uniqueId, string firmName, string fullName, string startDate)
+        private static bool AddEmployeeIdentity(HashSet<string> ids, HashSet<string> fallbacks, string uniqueId, string firmName, string fullName, string startDate)
         {
             if (!string.IsNullOrWhiteSpace(uniqueId))
             {
-                ids.Add(uniqueId);
-                return;
+                return ids.Add(uniqueId);
             }
 
-            fallbacks.Add($"{firmName}|{fullName}|{startDate}");
+            return fallbacks.Add($"{firmName}|{fullName}|{startDate}");
+        }
+
+        private static MonthlyMovementItem CreateMovementItem(
+            string fullName,
+            string firmName,
+            string dateText,
+            string uniqueId,
+            string employeeFolder,
+            string statusText,
+            string statusColor)
+        {
+            return new MonthlyMovementItem
+            {
+                FullName = fullName ?? string.Empty,
+                FirmName = firmName ?? string.Empty,
+                DateText = FormatMovementDate(dateText),
+                UniqueId = uniqueId ?? string.Empty,
+                EmployeeFolder = employeeFolder ?? string.Empty,
+                StatusText = statusText,
+                StatusColor = statusColor
+            };
+        }
+
+        private static string FormatMovementDate(string dateText)
+        {
+            var parsed = DateParsingHelper.TryParseDate(dateText);
+            return parsed?.ToString("dd.MM.yyyy") ?? (dateText ?? string.Empty);
         }
 
         private static void CheckExpiry(string dateStr, string empName, string docType,
@@ -802,6 +941,8 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             public string ProblemTrend = "";
             public string TemplateTrend = "";
             public string SalaryTotalText = "";
+            public List<MonthlyMovementItem> MonthlyAddedEmployees = new();
+            public List<MonthlyMovementItem> MonthlyArchivedEmployees = new();
             public List<DashboardItem> ExpiringDocs = new();
             public List<SalaryMonthSummary> SalaryMonths = new();
             public List<CompanyStatItem> CompanyStats = new();

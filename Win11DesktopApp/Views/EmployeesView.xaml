@@ -203,10 +203,10 @@
                         <Button Command="{Binding OpenBatchAIValidationCommand}"
                                 Style="{StaticResource HeaderGhostButton}"
                                 Margin="0,0,8,0"
-                                ToolTip="AI перевірка працівників">
+                                ToolTip="{DynamicResource EmpAiCheckTooltip}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0"/>
-                                <TextBlock Text="AI перевірка" FontSize="{DynamicResource FS12}"/>
+                                <TextBlock Text="{DynamicResource EmpAiCheck}" FontSize="{DynamicResource FS12}"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding ToggleSelectionModeCommand}"
@@ -439,9 +439,11 @@
                         Visibility="{Binding IsSelectionMode, Converter={StaticResource BoolToVis}}">
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding SelectedCount, StringFormat='Обрано: {0}'}" 
-                                       Foreground="White" FontWeight="SemiBold" FontSize="{DynamicResource FS13}" 
-                                       VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <TextBlock Foreground="White" FontWeight="SemiBold" FontSize="{DynamicResource FS13}" 
+                                       VerticalAlignment="Center" Margin="0,0,16,0">
+                                <Run Text="{DynamicResource EmpSelectedPrefix}"/>
+                                <Run Text="{Binding SelectedCount}"/>
+                            </TextBlock>
                             <Button Command="{Binding SelectAllCommand}" Padding="10,4" Margin="0,0,6,0"
                                     Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource AccentBrush}" 
                                     BorderThickness="0" Cursor="Hand" FontSize="{DynamicResource FS12}">
@@ -554,7 +556,9 @@
 
                 <!-- ===== EMPLOYEE LIST ===== -->
                 <Grid Grid.Row="5" ClipToBounds="False">
-                    <ScrollViewer Style="{StaticResource ThinScroll}" ClipToBounds="False">
+                    <ScrollViewer Style="{StaticResource ThinScroll}"
+                                  ClipToBounds="False"
+                                  PreviewMouseWheel="EmployeesScrollViewer_PreviewMouseWheel">
                         <Grid Margin="4,10,4,4" ClipToBounds="False">
                             <Grid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
@@ -806,6 +810,10 @@
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS11}" Foreground="#888" Margin="0,0,0,4"/>
+                                                    <TextBlock FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4" TextTrimming="CharacterEllipsis">
+                                                        <Run Text="&#xE80F; " FontFamily="Segoe MDL2 Assets"/>
+                                                        <Run Text="{Binding FirmName, Mode=OneWay}"/>
+                                                    </TextBlock>
                                                     <WrapPanel>
                                                         <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE787;" Style="{StaticResource EmployeeMetaIcon}"/><TextBlock Text="{Binding StartDate}" Style="{StaticResource EmployeeMetaText}"/></StackPanel>
                                                         <StackPanel Orientation="Horizontal" Margin="0,0,12,0"><TextBlock Text="&#xE717;" Style="{StaticResource EmployeeMetaIcon}"/><TextBlock Text="{Binding Phone}" Style="{StaticResource EmployeeMetaText}"/></StackPanel>
@@ -1001,6 +1009,7 @@
                                                     <StackPanel VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding FullName}" FontWeight="Bold" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ForegroundBrush}"/>
                                                         <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,0"/>
+                                                        <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS9}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
                                                 </StackPanel>
                                                 <Border CornerRadius="8" Padding="6,2" Margin="0,0,0,4" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
@@ -1122,6 +1131,7 @@
                                                 </Border>
                                                 <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS9}" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS8}" Foreground="{DynamicResource SecondaryForegroundBrush}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                 <Border CornerRadius="6" Padding="4,1" HorizontalAlignment="Center" Margin="0,2,0,2" Background="{Binding Status, Converter={StaticResource StatusBg}}">
                                                     <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS9}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
                                                 </Border>
@@ -1197,12 +1207,20 @@
                     </ScrollViewer>
 
                     <!-- Empty state -->
-                    <Border Style="{StaticResource CompactEmptyStateCard}"
-                            Padding="28,24"
-                            Visibility="{Binding HasVisibleEmployees, Converter={StaticResource InverseBoolToVis}}">
+                    <Border Padding="28,24">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource CompactEmptyStateCard}">
+                                <Setter Property="Visibility" Value="{Binding HasVisibleEmployees, Converter={StaticResource InverseBoolToVis}}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock Text="&#xE77B;" Style="{StaticResource CompactEmptyStateIconText}" FontSize="{DynamicResource FS28}"/>
-                            <TextBlock Text="{Binding StatusMessage, FallbackValue=У цієї фірми ще немає працівників.}"
+                            <TextBlock Text="{Binding StatusMessage}"
                                        Style="{StaticResource CompactEmptyStateTitleText}"
                                        Margin="0,0,0,10"/>
                             <Button Content="{DynamicResource BtnSelectCompany}"
@@ -1239,13 +1257,13 @@
                                    Foreground="{DynamicResource AccentBrush}"
                                    Margin="0,0,8,0"
                                    VerticalAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource MsgEmployeesLoading}"
+                        <TextBlock Text="{Binding LoadingMessage}"
                                    FontSize="{DynamicResource FS13}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock Text="Зачекайте, список працівників готується..."
+                    <TextBlock Text="{DynamicResource EmpLoadingDetails}"
                                Margin="0,8,0,0"
                                TextAlignment="Center"
                                TextWrapping="Wrap"
@@ -1404,11 +1422,11 @@
                                 <TextBlock Text="&#xE945;" Style="{StaticResource PageHeaderIconText}" FontSize="{DynamicResource FS16}"/>
                             </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="AI перевірка працівників"
+                                <TextBlock Text="{DynamicResource EmpAiCheckTooltip}"
                                            FontSize="{DynamicResource FS18}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="Виберіть документи, які треба перевірити у працівників."
+                                <TextBlock Text="{DynamicResource EmpAiCheckDescription}"
                                            FontSize="{DynamicResource FS12}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                             </StackPanel>
@@ -1459,18 +1477,18 @@
                             Margin="0,0,0,12"
                             Visibility="{Binding ShowBatchAIOptions, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Що перевіряти"
+                            <TextBlock Text="{DynamicResource EmpAiCheckOptionsTitle}"
                                        FontWeight="SemiBold"
                                        FontSize="{DynamicResource FS13}"
                                        Foreground="{DynamicResource ForegroundBrush}"
                                        Margin="0,0,0,8"/>
                             <UniformGrid Columns="2">
-                                <CheckBox Content="Паспорт / ID-карта" IsChecked="{Binding BatchAICheckPassport}" Margin="0,0,12,8"/>
-                                <CheckBox Content="Віза / карта побиту" IsChecked="{Binding BatchAICheckVisa}" Margin="0,0,0,8"/>
-                                <CheckBox Content="Страховка" IsChecked="{Binding BatchAICheckInsurance}" Margin="0,0,12,0"/>
-                                <CheckBox Content="Дозвіл на роботу" IsChecked="{Binding BatchAICheckPermit}"/>
+                                <CheckBox Content="{DynamicResource EmpAiCheckPassport}" IsChecked="{Binding BatchAICheckPassport}" Margin="0,0,12,8"/>
+                                <CheckBox Content="{DynamicResource EmpAiCheckVisa}" IsChecked="{Binding BatchAICheckVisa}" Margin="0,0,0,8"/>
+                                <CheckBox Content="{DynamicResource DetDocInsurance}" IsChecked="{Binding BatchAICheckInsurance}" Margin="0,0,12,0"/>
+                                <CheckBox Content="{DynamicResource ChkWorkPermit}" IsChecked="{Binding BatchAICheckPermit}"/>
                             </UniformGrid>
-                            <CheckBox Content="Перевірити тільки позначених працівників"
+                            <CheckBox Content="{DynamicResource EmpAiCheckOnlySelected}"
                                       IsChecked="{Binding BatchAICheckOnlySelected}"
                                       Margin="0,12,0,0"/>
                         </StackPanel>
@@ -1485,7 +1503,7 @@
                                 Visibility="{Binding ShowBatchAIOptions, Converter={StaticResource InverseBoolToVis}}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Змінити що перевіряти" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{DynamicResource EmpAiChangeOptions}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Button>
                         <ProgressBar Minimum="0"
@@ -1513,15 +1531,15 @@
                                     <ColumnDefinition Width="1.4*"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                    <TextBlock Text="Працівник" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource TagGrpEmployee}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                     <TextBlock Text="{Binding BatchAICurrentEmployee}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                    <TextBlock Text="Документ" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource ActLogCatDocument}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                     <TextBlock Text="{Binding BatchAICurrentDocument}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Поточна дія" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource EmpAiCurrentAction}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                     <TextBlock Text="{Binding BatchAICurrentField}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Grid>
@@ -1529,7 +1547,7 @@
                     </StackPanel>
 
                     <TextBlock Grid.Row="3"
-                               Text="Результати"
+                               Text="{DynamicResource EmpAiResults}"
                                FontWeight="SemiBold"
                                FontSize="{DynamicResource FS13}"
                                Foreground="{DynamicResource ForegroundBrush}"
@@ -1596,11 +1614,11 @@
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                                            <TextBlock Text="У профілі" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource EmpAiProfileValue}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                             <TextBlock Text="{Binding CurrentValue}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="1">
-                                                            <TextBlock Text="У документі" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <TextBlock Text="{DynamicResource EmpAiDocumentValue}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                             <TextBlock Text="{Binding SuggestedValue}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap"/>
                                                         </StackPanel>
                                                     </Grid>
@@ -1615,7 +1633,7 @@
                                                             Visibility="{Binding CanOpenDocument, Converter={StaticResource BoolToVis}}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="Відкрити документ" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                            <TextBlock Text="{DynamicResource AIValidationOpenSourceButton}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
                                                         </StackPanel>
                                                     </Button>
                                                     <Button Command="{Binding DataContext.ApplyBatchAISuggestionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -1623,7 +1641,7 @@
                                                             Style="{StaticResource FilledActionButton}"
                                                             Padding="12,7"
                                                             Visibility="{Binding CanApply, Converter={StaticResource BoolToVis}}">
-                                                        <TextBlock Text="Заповнити" Foreground="White" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{DynamicResource AIValidationApplyButton}" Foreground="White" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
                                                     </Button>
                                                 </StackPanel>
                                             </Grid>
@@ -1639,7 +1657,7 @@
                                 Style="{StaticResource HeaderGhostButton}"
                                 Margin="0,0,8,0"
                                 Visibility="{Binding IsBatchAIValidationRunning, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Скасувати"/>
+                            <TextBlock Text="{DynamicResource BtnCancel}"/>
                         </Button>
                         <Button Command="{Binding CloseBatchAIValidationCommand}"
                                 Style="{StaticResource DialogAccentSoftButton}"
@@ -1652,7 +1670,7 @@
                                 Visibility="{Binding IsBatchAIValidationRunning, Converter={StaticResource InverseBoolToVis}}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Foreground="White" Margin="0,0,6,0"/>
-                                <TextBlock Text="Почати перевірку" Foreground="White" FontWeight="SemiBold"/>
+                                <TextBlock Text="{DynamicResource EmpAiStartCheck}" Foreground="White" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
