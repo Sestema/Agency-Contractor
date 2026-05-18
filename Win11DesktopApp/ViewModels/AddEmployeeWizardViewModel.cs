@@ -44,6 +44,8 @@ namespace Win11DesktopApp.ViewModels
         private readonly GeminiApiService _geminiApiService;
         private readonly ActivityLogService _activityLogService;
         private readonly AppStatisticsService _appStatisticsService;
+        private readonly SyncEventService _syncEventService;
+        private readonly SharedOperationLockService? _sharedOperationLockService;
         private readonly EmployerCompany _company;
         private readonly string _tempFolder;
         private CancellationTokenSource _cts = new();
@@ -738,13 +740,17 @@ namespace Win11DesktopApp.ViewModels
             EmployeeService? employeeService = null,
             GeminiApiService? geminiApiService = null,
             ActivityLogService? activityLogService = null,
-            AppStatisticsService? appStatisticsService = null)
+            AppStatisticsService? appStatisticsService = null,
+            SyncEventService? syncEventService = null,
+            SharedOperationLockService? sharedOperationLockService = null)
         {
             _company = company;
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not available");
             _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _appStatisticsService = appStatisticsService ?? throw new InvalidOperationException("AppStatisticsService is not initialized.");
+            _syncEventService = syncEventService ?? throw new InvalidOperationException("SyncEventService is not initialized.");
+            _sharedOperationLockService = sharedOperationLockService;
             _tempFolder = _employeeService.CreateTempFolder();
 
             CompanyAddresses = company.Addresses;
@@ -1223,6 +1229,13 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            using var addEmployeeLock = _sharedOperationLockService?.TryAcquire("add-employee", TimeSpan.FromSeconds(15));
+            if (_sharedOperationLockService != null && addEmployeeLock == null)
+            {
+                ToastService.Instance.Warning("Інший ПК зараз додає працівника. Спробуйте ще раз через кілька секунд.");
+                return;
+            }
+
             try
             {
                 NormalizeInsuranceCompanyFields();
@@ -1256,6 +1269,7 @@ namespace Win11DesktopApp.ViewModels
                     $"Додано працівника {Data.FirstName} {Data.LastName} до {_company.Name}",
                     employeeFolder: folder);
                 _appStatisticsService.RecordEmployeeCreated();
+                _syncEventService.PublishEmployeeCreated(_company.Name, Data.UniqueId, $"{Data.FirstName} {Data.LastName}");
 
                 TelemetryService.TrackEvent("employee_added", new Dictionary<string, object>
                 {

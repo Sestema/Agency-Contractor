@@ -348,7 +348,6 @@ namespace Win11DesktopApp.Services
                 if (changed)
                 {
                     SafeFileService.WriteJsonAtomic(indexPath, indexEntries, encoding: Encoding.UTF8);
-                    RegisterRecovery();
                     LoggingService.LogInfo("StartupIntegrityService.TemplateIndex",
                         $"Normalized {repairedEntries} template path(s) for company '{companyName}'.");
                 }

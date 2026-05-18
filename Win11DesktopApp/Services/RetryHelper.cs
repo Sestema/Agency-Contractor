@@ -1,13 +1,76 @@
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Npgsql;
 
 namespace Win11DesktopApp.Services
 {
     public static class RetryHelper
     {
+        /// <summary>Returns true for common transient PostgreSQL / network failures (VPN blips, timeouts, restarts).</summary>
+        public static bool IsTransientPostgres(Exception ex)
+        {
+            if (ex is OperationCanceledException)
+                return false;
+            if (ex is NpgsqlException npg)
+                return npg.IsTransient;
+            if (ex is TimeoutException)
+                return true;
+            if (ex is SocketException)
+                return true;
+            if (ex.InnerException != null)
+            {
+                if (ex.InnerException is SocketException)
+                    return true;
+                if (ex.InnerException is NpgsqlException innerNpg)
+                    return innerNpg.IsTransient;
+            }
+
+            return false;
+        }
+
+        /// <summary>Retries synchronous PostgreSQL operations on transient failures.</summary>
+        public static void ExecutePostgres(Action action, int maxRetries = 4, int initialDelayMs = 250)
+        {
+            for (int i = 0; i <= maxRetries; i++)
+            {
+                try
+                {
+                    action();
+                    return;
+                }
+                catch (Exception ex) when (i < maxRetries && IsTransientPostgres(ex))
+                {
+                    Thread.Sleep(GetDelayMs(initialDelayMs, i));
+                }
+            }
+        }
+
+        /// <summary>Retries asynchronous PostgreSQL operations on transient failures.</summary>
+        public static async Task ExecutePostgresAsync(
+            Func<Task> action,
+            CancellationToken cancellationToken,
+            int maxRetries = 4,
+            int initialDelayMs = 250)
+        {
+            for (int i = 0; i <= maxRetries; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    await action().ConfigureAwait(false);
+                    return;
+                }
+                catch (Exception ex) when (i < maxRetries && IsTransientPostgres(ex))
+                {
+                    await Task.Delay(GetDelayMs(initialDelayMs, i), cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
         private static bool IsTransientSqliteLock(SqliteException ex)
         {
             return ex.SqliteErrorCode is 5 or 6;

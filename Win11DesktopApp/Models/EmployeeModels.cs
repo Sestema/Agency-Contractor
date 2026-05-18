@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace Win11DesktopApp.EmployeeModels
 {
@@ -99,8 +101,12 @@ namespace Win11DesktopApp.EmployeeModels
         public List<CustomSignedDocument> CustomDocuments { get; set; } = new List<CustomSignedDocument>();
     }
 
-    public class EmployeeSummary
+    public class EmployeeSummary : INotifyPropertyChanged
     {
+        private bool _isSelected;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public string UniqueId { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string PositionTitle { get; set; } = string.Empty;
@@ -132,7 +138,23 @@ namespace Win11DesktopApp.EmployeeModels
         public string EmployeeType { get; set; } = "visa";
         public string WorkPermitName { get; set; } = string.Empty;
         public string WorkPermitExpiry { get; set; } = string.Empty;
-        public bool IsSelected { get; set; }
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected == value)
+                    return;
+
+                _isSelected = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     public class EmployeeDocumentTemp

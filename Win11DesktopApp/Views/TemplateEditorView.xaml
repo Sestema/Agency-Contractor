@@ -14,6 +14,14 @@
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                    <Setter Property="Opacity" Value="0.42"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="ToolbarGroupBorder" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
@@ -117,6 +125,39 @@
                     <Border Style="{StaticResource ToolbarGroupBorder}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
+                                <Button x:Name="UndoButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="UndoButton_Click"
+                                        ToolTip="Назад (Ctrl+Z)">
+                                    <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="RedoButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="RedoButton_Click"
+                                        ToolTip="Вперед (Ctrl+Y)">
+                                    <TextBlock Text="&#xE7A6;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="Дії" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ToolbarGroupBorder}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ComboBox x:Name="FontFamilyCombo" Width="136" Height="26" Margin="0,0,4,0"
+                                          VerticalContentAlignment="Center" FontSize="{DynamicResource FS11}"
+                                          SelectionChanged="FontFamilyCombo_SelectionChanged"
+                                          ToolTip="{DynamicResource EditorFontFamily}">
+                                    <ComboBoxItem Content="Segoe UI" IsSelected="True"/>
+                                    <ComboBoxItem Content="Arial"/>
+                                    <ComboBoxItem Content="Calibri"/>
+                                    <ComboBoxItem Content="Times New Roman"/>
+                                    <ComboBoxItem Content="Tahoma"/>
+                                    <ComboBoxItem Content="Verdana"/>
+                                </ComboBox>
                                 <ComboBox x:Name="FontSizeCombo" Width="68" Height="26" Margin="0,0,4,0"
                                           VerticalContentAlignment="Center" FontSize="{DynamicResource FS11}"
                                           SelectionChanged="FontSizeCombo_SelectionChanged"
@@ -159,6 +200,47 @@
                         <Underline>U</Underline>
                     </TextBlock>
                 </Button>
+                                <Button x:Name="TextColorButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TextColorButton_Click"
+                                        ToolTip="Колір тексту">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="TextColorContextMenu" Placement="Bottom">
+                                            <MenuItem Header="Чорний" Tag="#111827" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="Сірий" Tag="#6B7280" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="Синій" Tag="#2563EB" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="Зелений" Tag="#059669" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="Червоний" Tag="#DC2626" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="Білий" Tag="#FFFFFF" Click="TextColorMenuItem_Click"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <TextBlock Text="A" FontWeight="Bold" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="HighlightColorButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="HighlightColorButton_Click"
+                                        ToolTip="Колір фону тексту">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="HighlightColorContextMenu" Placement="Bottom">
+                                            <MenuItem Header="Жовтий" Tag="#FEF08A" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="Зелений" Tag="#BBF7D0" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="Синій" Tag="#BFDBFE" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="Рожевий" Tag="#FBCFE8" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="Сірий" Tag="#E5E7EB" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="Без фону" Tag="Transparent" Click="HighlightColorMenuItem_Click"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <TextBlock Text="▰" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+                                </Button>
+                                <Button x:Name="ClearFormattingButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="ClearFormattingButton_Click"
+                                        ToolTip="Очистити форматування">
+                                    <TextBlock Text="Tx" FontSize="{DynamicResource FS11}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
                             </StackPanel>
                             <TextBlock Text="{DynamicResource EditorFont}" Style="{StaticResource ToolbarGroupTitle}"/>
                         </StackPanel>
@@ -407,7 +489,7 @@
                                         <ContextMenu x:Name="PageSizeContextMenu" Placement="Bottom">
                                             <MenuItem x:Name="A4PageSizeMenuItem"
                                                       Header="A4"
-                                                      InputGestureText="210 × 297 mm"
+                                                      InputGestureText="21 × 29,7 см"
                                                       Tag="a4"
                                                       IsCheckable="True"
                                                       Click="PageSizeMenuItem_Click">
@@ -420,7 +502,7 @@
                                             </MenuItem>
                                             <MenuItem x:Name="LetterPageSizeMenuItem"
                                                       Header="Letter"
-                                                      InputGestureText="8.5 × 11 in"
+                                                      InputGestureText="21,59 × 27,94 см"
                                                       Tag="letter"
                                                       IsCheckable="True"
                                                       Click="PageSizeMenuItem_Click">

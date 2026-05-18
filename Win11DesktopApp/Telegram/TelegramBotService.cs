@@ -534,8 +534,19 @@ namespace Win11DesktopApp.Telegram
 
         private void StopInternal()
         {
-            _cts?.Cancel();
-            _cts?.Dispose();
+            var cts = _cts;
+            var dailyDigestTask = _dailyDigestTask;
+
+            try { cts?.Cancel(); } catch { }
+            if (dailyDigestTask != null)
+            {
+                try { dailyDigestTask.Wait(TimeSpan.FromSeconds(2)); }
+                catch (AggregateException ex) when (ex.InnerExceptions.All(inner => inner is OperationCanceledException)) { }
+                catch (OperationCanceledException) { }
+                catch (Exception ex) { LoggingService.LogWarning("TelegramBot.Stop", ex.Message); }
+            }
+
+            cts?.Dispose();
             _cts = null;
             _dailyDigestTask = null;
             _lastDailyDigestLocalDate = string.Empty;

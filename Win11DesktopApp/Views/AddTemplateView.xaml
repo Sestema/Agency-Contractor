@@ -14,6 +14,10 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
             <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="SelectionOpacity" Value="0.35"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -34,7 +38,7 @@
         </Style>
     </UserControl.Resources>
     
-    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Width="500" Height="550">
+    <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Width="500" Height="590">
         <Border.Effect>
             <DropShadowEffect BlurRadius="30" ShadowDepth="0" Color="#000000" Opacity="0.3"/>
         </Border.Effect>
@@ -63,24 +67,69 @@
                     <sys:String>PDF</sys:String>
                 </ComboBox>
 
+                <!-- DOCX creation mode -->
+                <Border Background="{DynamicResource ContentBackgroundBrush}"
+                        BorderBrush="{DynamicResource DividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12"
+                        Margin="0,0,0,15"
+                        Visibility="{Binding ShowDocxCreationOptions, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource TplDocxCreationMode}"
+                                   FontSize="{DynamicResource FS13}"
+                                   Foreground="{DynamicResource ForegroundBrush}"
+                                   Margin="0,0,0,8"/>
+                        <RadioButton Content="{DynamicResource TplDocxEmpty}"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     IsChecked="{Binding IsEmptyDocx, Mode=TwoWay}"
+                                     Margin="0,0,0,6"/>
+                        <RadioButton Content="{DynamicResource TplDocxImport}"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     IsChecked="{Binding IsImportDocx, Mode=TwoWay}"/>
+                        <TextBlock Text="{Binding DocxCreationHint}"
+                                   FontSize="{DynamicResource FS12}"
+                                   FontWeight="Normal"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   Margin="0,10,0,0"/>
+                        <Button Command="{Binding UploadFileCommand}"
+                                Content="{Binding UploadButtonText}"
+                                HorizontalAlignment="Left"
+                                Padding="15,8"
+                                Margin="0,10,0,0"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Visibility="{Binding IsImportDocx, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Text="{Binding UploadedFileName, StringFormat={}{0}}"
+                                   Visibility="{Binding IsFileUploaded, Converter={StaticResource BoolToVis}}"
+                                   FontSize="{DynamicResource FS12}"
+                                   FontWeight="Normal"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Description -->
                 <TextBlock Text="{DynamicResource LabelDescription}"/>
                 <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Height="80" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
 
                 <!-- File Upload -->
-                <Button Command="{Binding UploadFileCommand}" Content="{DynamicResource BtnUploadFile}" 
+                <Button Command="{Binding UploadFileCommand}" Content="{Binding UploadButtonText}" 
                         HorizontalAlignment="Left" Padding="15,8" Margin="0,10,0,5"
-                        IsEnabled="{Binding IsFileRequired}"/>
+                        IsEnabled="{Binding IsFileRequired}"
+                        Visibility="{Binding ShowStandardFileUpload, Converter={StaticResource BoolToVis}}"/>
                 
                 <!-- DOCX info: file not needed -->
                 <TextBlock Text="{DynamicResource TplFileNotNeeded}" 
                            FontSize="{DynamicResource FS12}" FontWeight="Normal" Foreground="{DynamicResource AccentBrush}" 
                            Margin="0,0,0,15"
-                           Visibility="{Binding IsDocxFormat, Converter={StaticResource BoolToVis}}"/>
+                           Visibility="{Binding IsEmptyDocx, Converter={StaticResource BoolToVis}}"/>
 
                 <!-- Uploaded file name for XLSX/PDF -->
                 <TextBlock Text="{Binding UploadedFileName, StringFormat={}{0}}" 
-                           Visibility="{Binding IsFileUploaded, Converter={StaticResource BoolToVis}}"
+                           Visibility="{Binding ShowStandardUploadedFile, Converter={StaticResource BoolToVis}}"
                            Foreground="Green" Margin="0,0,0,15"/>
             </StackPanel>
             

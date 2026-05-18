@@ -24,6 +24,7 @@ public sealed class MainModuleViewModelFactory
     private readonly TagCatalogService _tagCatalogService;
     private readonly CompanyService _companyService;
     private readonly AppNotificationService _notificationService;
+    private readonly SyncEventService _syncEventService;
 
     public MainModuleViewModelFactory(
         EmployeeService employeeService,
@@ -44,7 +45,8 @@ public sealed class MainModuleViewModelFactory
         DocumentGenerationService documentGenerationService,
         TagCatalogService tagCatalogService,
         CompanyService companyService,
-        AppNotificationService notificationService)
+        AppNotificationService notificationService,
+        SyncEventService syncEventService)
     {
         _employeeService = employeeService;
         _addEmployeeWizardViewModelFactory = addEmployeeWizardViewModelFactory;
@@ -65,6 +67,7 @@ public sealed class MainModuleViewModelFactory
         _tagCatalogService = tagCatalogService;
         _companyService = companyService;
         _notificationService = notificationService;
+        _syncEventService = syncEventService;
     }
 
     public EmployeesViewModel CreateEmployees(EmployerCompany? company)
@@ -84,7 +87,9 @@ public sealed class MainModuleViewModelFactory
             _templateService,
             _documentGenerationService,
             _tagCatalogService,
-            _geminiApiService);
+            _geminiApiService,
+            _companyService,
+            _syncEventService);
     }
 
     public EmployeesViewModel CreateAllEmployees()
@@ -106,6 +111,7 @@ public sealed class MainModuleViewModelFactory
             _tagCatalogService,
             _geminiApiService,
             _companyService,
+            _syncEventService,
             showAllCompanies: true);
     }
 

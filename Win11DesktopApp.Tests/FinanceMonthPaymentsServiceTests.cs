@@ -13,6 +13,7 @@ namespace Win11DesktopApp.Tests
         private readonly AppSettingsService _appSettingsService;
         private readonly FolderService _folderService;
         private readonly SalaryDbService _salaryDbService;
+        private readonly SqliteFinanceMonthPaymentsStorage _monthPaymentsStorage;
         private readonly FinanceMonthPaymentsService _service;
 
         public FinanceMonthPaymentsServiceTests()
@@ -24,7 +25,8 @@ namespace Win11DesktopApp.Tests
             _appSettingsService.Settings.RootFolderPath = _testRootPath;
             _folderService = new FolderService(_appSettingsService);
             _salaryDbService = new SalaryDbService(_folderService);
-            _service = new FinanceMonthPaymentsService(_folderService, _salaryDbService, () => { }, () => { }, _ => { });
+            _monthPaymentsStorage = new SqliteFinanceMonthPaymentsStorage(_salaryDbService);
+            _service = new FinanceMonthPaymentsService(_folderService, _monthPaymentsStorage, () => { }, () => { }, _ => { });
         }
 
         [Fact]

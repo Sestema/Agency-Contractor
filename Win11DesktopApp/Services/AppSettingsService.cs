@@ -115,6 +115,20 @@ namespace Win11DesktopApp.Services
             public string CachedAccessSource { get; set; } = string.Empty;
             public string CachedAccessPlan { get; set; } = string.Empty;
             public string LegacyLicenseMigratedAtUtc { get; set; } = string.Empty;
+            public bool WebPanelEnabled { get; set; } = false;
+            public int WebPanelPort { get; set; } = 47831;
+            public string WebPanelBindAddress { get; set; } = "127.0.0.1";
+            public bool WebPanelPreventSleep { get; set; } = true;
+            public string DatabaseStorageMode { get; set; } = "Sqlite";
+            public string PostgresConnectionString { get; set; } = string.Empty;
+            public string PostgresHost { get; set; } = "localhost";
+            public int PostgresPort { get; set; } = 5432;
+            public string PostgresDatabase { get; set; } = "agency_db";
+            public string PostgresUsername { get; set; } = "postgres";
+            public string EncryptedPostgresPassword { get; set; } = string.Empty;
+            public string PostgresMigrationCompletedAtUtc { get; set; } = string.Empty;
+            public string PostgresEnabledAtUtc { get; set; } = string.Empty;
+            public string LastSqliteBackupFromPostgresAtUtc { get; set; } = string.Empty;
             public TelegramBotSettings Telegram { get; set; } = new TelegramBotSettings();
         }
 
@@ -187,6 +201,7 @@ namespace Win11DesktopApp.Services
                     return;
 
                 Settings = new AppSettings();
+                shouldPersistDefaults = true;
             }
 
             if (Settings.AppVersion != CurrentAppVersion)
@@ -288,6 +303,21 @@ namespace Win11DesktopApp.Services
             Settings.Telegram.DailyDigestTime = string.IsNullOrWhiteSpace(Settings.Telegram.DailyDigestTime)
                 ? "08:00"
                 : Settings.Telegram.DailyDigestTime.Trim();
+
+            Settings.DatabaseStorageMode = string.Equals(Settings.DatabaseStorageMode, "Postgres", StringComparison.OrdinalIgnoreCase)
+                ? "Postgres"
+                : "Sqlite";
+            Settings.PostgresHost = string.IsNullOrWhiteSpace(Settings.PostgresHost)
+                ? "localhost"
+                : Settings.PostgresHost.Trim();
+            Settings.PostgresPort = Math.Clamp(Settings.PostgresPort <= 0 ? 5432 : Settings.PostgresPort, 1, 65535);
+            Settings.PostgresDatabase = string.IsNullOrWhiteSpace(Settings.PostgresDatabase)
+                ? "agency_db"
+                : Settings.PostgresDatabase.Trim();
+            Settings.PostgresUsername = string.IsNullOrWhiteSpace(Settings.PostgresUsername)
+                ? "postgres"
+                : Settings.PostgresUsername.Trim();
+            Settings.EncryptedPostgresPassword ??= string.Empty;
 
             Settings.WindowLeft = SafeDouble(Settings.WindowLeft);
             Settings.WindowTop = SafeDouble(Settings.WindowTop);

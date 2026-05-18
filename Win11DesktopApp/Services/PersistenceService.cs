@@ -47,13 +47,19 @@ namespace Win11DesktopApp.Services
     {
         private readonly AppSettingsService _appSettingsService;
         private readonly FolderService _folderService;
-        private readonly CoreDbService _coreDbService;
+        private readonly ICoreDatabaseStorage _coreDatabaseStorage;
         private static readonly SemaphoreSlim _saveLock = new(1, 1);
         private DatabaseRoot? _lastLoadedDatabase;
 
         private static readonly JsonSerializerOptions PendingChangeJsonOptions = new()
         {
             WriteIndented = true
+        };
+
+        private static readonly JsonSerializerOptions CoreWriteLockJsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNameCaseInsensitive = true
         };
 
         private static string Res(string key) =>
@@ -83,15 +89,20 @@ namespace Win11DesktopApp.Services
         }
 
         public PersistenceService(AppSettingsService appSettingsService, FolderService folderService)
-            : this(appSettingsService, folderService, new CoreDbService(folderService))
+            : this(appSettingsService, folderService, new SqliteCoreDatabaseStorage(new CoreDbService(folderService)))
         {
         }
 
         public PersistenceService(AppSettingsService appSettingsService, FolderService folderService, CoreDbService coreDbService)
+            : this(appSettingsService, folderService, new SqliteCoreDatabaseStorage(coreDbService))
+        {
+        }
+
+        public PersistenceService(AppSettingsService appSettingsService, FolderService folderService, ICoreDatabaseStorage coreDatabaseStorage)
         {
             _appSettingsService = appSettingsService;
             _folderService = folderService;
-            _coreDbService = coreDbService;
+            _coreDatabaseStorage = coreDatabaseStorage;
         }
 
         // ============ PRIMARY FORMAT: SQLite/core.db ============
@@ -189,7 +200,7 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                var db = _coreDbService.LoadDatabase();
+                var db = _coreDatabaseStorage.LoadDatabase();
                 if (db == null)
                     return false;
 
@@ -724,52 +735,56 @@ namespace Win11DesktopApp.Services
             if (pendingFiles.Count == 0)
                 return;
 
-            if (!TryAcquireCoreWriteLock(out var lockPath))
+            if (!TryAcquireCoreWriteLock("apply-pending", out var writeLock))
                 return;
 
-            try
+            using (writeLock)
             {
-                var database = _coreDbService.LoadDatabase() ?? new DatabaseRoot();
-                var changed = false;
-                var appliedPendingFiles = new List<string>();
-
-                foreach (var pendingFile in pendingFiles)
+                try
                 {
-                    PendingCoreDatabaseChange? change;
-                    try
+                    var database = _coreDatabaseStorage.LoadDatabase() ?? new DatabaseRoot();
+                    var changed = false;
+                    var appliedPendingFiles = new List<string>();
+
+                    foreach (var pendingFile in pendingFiles)
                     {
-                        change = SafeFileService.ReadJson<PendingCoreDatabaseChange>(pendingFile, PendingChangeJsonOptions, Encoding.UTF8);
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggingService.LogWarning("PersistenceService.PendingCoreChanges",
-                            $"Could not read pending core database change '{pendingFile}': {ex.Message}");
-                        continue;
+                        PendingCoreDatabaseChange? change;
+                        try
+                        {
+                            change = SafeFileService.ReadJson<PendingCoreDatabaseChange>(pendingFile, PendingChangeJsonOptions, Encoding.UTF8);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogWarning("PersistenceService.PendingCoreChanges",
+                                $"Could not read pending core database change '{pendingFile}': {ex.Message}");
+                            continue;
+                        }
+
+                        if (change == null)
+                            continue;
+
+                        ApplyPendingCoreChange(database, change);
+                        changed = true;
+                        appliedPendingFiles.Add(pendingFile);
                     }
 
-                    if (change == null)
-                        continue;
+                    if (changed)
+                    {
+                        if (_coreDatabaseStorage.Exists)
+                            CreateBackup(_coreDatabaseStorage.DatabasePath);
 
-                    ApplyPendingCoreChange(database, change);
-                    changed = true;
-                    appliedPendingFiles.Add(pendingFile);
+                        _coreDatabaseStorage.SaveDatabase(database);
+                        RememberLoadedDatabase(database);
+
+                        foreach (var appliedPendingFile in appliedPendingFiles)
+                            SafeFileService.DeleteFile(appliedPendingFile);
+                    }
                 }
-
-                if (changed)
+                catch (Exception ex)
                 {
-                    if (_coreDbService.Exists)
-                        CreateBackup(_coreDbService.DatabasePath);
-
-                    _coreDbService.SaveDatabase(database);
-                    RememberLoadedDatabase(database);
-
-                    foreach (var appliedPendingFile in appliedPendingFiles)
-                        SafeFileService.DeleteFile(appliedPendingFile);
+                    LoggingService.LogError("PersistenceService.ApplyPendingCoreChanges", ex);
+                    throw;
                 }
-            }
-            finally
-            {
-                ReleaseCoreWriteLock(lockPath);
             }
         }
 
@@ -799,34 +814,61 @@ namespace Win11DesktopApp.Services
             database.Settings = change.Settings ?? database.Settings ?? new DatabaseSettings();
         }
 
-        private bool TryAcquireCoreWriteLock(out string lockPath)
+        private bool TryAcquireCoreWriteLock(string operation, out CoreWriteLock? writeLock)
         {
-            lockPath = GetCoreWriteLockPath();
+            writeLock = null;
+            var lockPath = GetCoreWriteLockPath();
             if (string.IsNullOrWhiteSpace(lockPath))
                 return false;
 
             Directory.CreateDirectory(Path.GetDirectoryName(lockPath) ?? _folderService.GetSqliteFolder());
             var deadline = DateTime.UtcNow.AddMilliseconds(CoreWriteLockTimeoutMs);
-            var lockPayload = JsonSerializer.Serialize(new
+            var ownerId = Guid.NewGuid().ToString("N");
+            var lockInfo = new CoreWriteLockInfo
             {
-                machineName = Environment.MachineName,
-                userName = Environment.UserName,
-                processId = Environment.ProcessId,
-                createdAtUtc = DateTime.UtcNow.ToString("O")
-            }, PendingChangeJsonOptions);
+                OwnerId = ownerId,
+                MachineName = Environment.MachineName,
+                UserName = Environment.UserName,
+                ProcessId = Environment.ProcessId,
+                Operation = operation,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
             while (DateTime.UtcNow < deadline)
             {
+                var existingLock = TryReadCoreWriteLock(lockPath);
+                if (existingLock != null && !IsCoreWriteLockStale(existingLock))
+                {
+                    Thread.Sleep(CoreWriteLockRetryDelayMs);
+                    continue;
+                }
+
+                if (existingLock != null)
+                    TryDeleteStaleCoreWriteLock(lockPath, existingLock);
+
                 try
                 {
-                    using var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-                    using var writer = new StreamWriter(stream, Encoding.UTF8);
-                    writer.Write(lockPayload);
+                    var stream = new FileStream(
+                        lockPath,
+                        FileMode.CreateNew,
+                        FileAccess.ReadWrite,
+                        FileShare.None,
+                        bufferSize: 4096,
+                        FileOptions.WriteThrough);
+
+                    using (var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true))
+                    {
+                        writer.Write(JsonSerializer.Serialize(lockInfo, CoreWriteLockJsonOptions));
+                        writer.Flush();
+                    }
+
+                    stream.Flush(true);
+                    stream.Position = 0;
+                    writeLock = new CoreWriteLock(stream, lockPath, ownerId);
                     return true;
                 }
                 catch (IOException)
                 {
-                    TryDeleteStaleCoreWriteLock(lockPath);
                     Thread.Sleep(CoreWriteLockRetryDelayMs);
                 }
                 catch (UnauthorizedAccessException)
@@ -835,43 +877,68 @@ namespace Win11DesktopApp.Services
                 }
             }
 
+            var currentLock = TryReadCoreWriteLock(lockPath);
+            var ownerDetails = currentLock == null
+                ? lockPath
+                : $"{lockPath} owner={currentLock.MachineName}\\{currentLock.UserName} pid={currentLock.ProcessId} operation={currentLock.Operation} since={currentLock.CreatedAtUtc:o}";
             LoggingService.LogWarning("PersistenceService.CoreWriteLock",
-                $"core.db write lock is busy. Pending changes will be retried later: {lockPath}");
+                $"core.db write lock is busy. Pending changes will be retried later: {ownerDetails}");
             return false;
         }
 
-        private static void ReleaseCoreWriteLock(string lockPath)
+        private static bool IsCoreWriteLockStale(CoreWriteLockInfo lockInfo)
+        {
+            if (lockInfo.CreatedAtUtc == default)
+                return true;
+
+            return DateTime.UtcNow - lockInfo.CreatedAtUtc > CoreWriteLockStaleAfter;
+        }
+
+        private static CoreWriteLockInfo? TryReadCoreWriteLock(string lockPath)
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(lockPath) && File.Exists(lockPath))
-                    SafeFileService.DeleteFile(lockPath);
+                if (string.IsNullOrWhiteSpace(lockPath) || !File.Exists(lockPath))
+                    return null;
+
+                var text = File.ReadAllText(lockPath);
+                if (string.IsNullOrWhiteSpace(text))
+                    return new CoreWriteLockInfo { CreatedAtUtc = File.GetLastWriteTimeUtc(lockPath) };
+
+                return JsonSerializer.Deserialize<CoreWriteLockInfo>(text, CoreWriteLockJsonOptions)
+                    ?? new CoreWriteLockInfo { CreatedAtUtc = File.GetLastWriteTimeUtc(lockPath) };
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is JsonException)
             {
-                LoggingService.LogWarning("PersistenceService.CoreWriteLock",
-                    $"Could not release core database write lock '{lockPath}': {ex.Message}");
+                return null;
             }
         }
 
-        private static void TryDeleteStaleCoreWriteLock(string lockPath)
+        private static void TryDeleteStaleCoreWriteLock(string lockPath, CoreWriteLockInfo? lockInfo)
         {
             try
             {
-                if (!File.Exists(lockPath))
+                if (string.IsNullOrWhiteSpace(lockPath) || !File.Exists(lockPath))
                     return;
 
-                var age = DateTime.UtcNow - File.GetLastWriteTimeUtc(lockPath);
-                if (age < CoreWriteLockStaleAfter)
+                if (lockInfo != null && !IsCoreWriteLockStale(lockInfo))
                     return;
 
                 SafeFileService.DeleteFile(lockPath);
-                LoggingService.LogWarning("PersistenceService.CoreWriteLock",
-                    $"Deleted stale core database write lock: {lockPath}");
+                if (lockInfo != null)
+                {
+                    LoggingService.LogWarning("PersistenceService.CoreWriteLock",
+                        $"Deleted stale core database write lock from {lockInfo.MachineName}\\{lockInfo.UserName} pid={lockInfo.ProcessId} operation={lockInfo.Operation} created={lockInfo.CreatedAtUtc:o}.");
+                }
+                else
+                {
+                    LoggingService.LogWarning("PersistenceService.CoreWriteLock",
+                        $"Deleted stale core database write lock: {lockPath}");
+                }
             }
-            catch
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                // The active writer may still hold the lock. Keep waiting.
+                // Another running process may still own the lock.
             }
         }
 
@@ -885,10 +952,60 @@ namespace Win11DesktopApp.Services
 
         private string GetCoreWriteLockPath()
         {
+            var databasePath = _coreDatabaseStorage.DatabasePath;
+            if (!string.IsNullOrWhiteSpace(databasePath))
+                return databasePath + ".lock";
+
             var sqliteFolder = _folderService.GetSqliteFolder();
             return string.IsNullOrWhiteSpace(sqliteFolder)
                 ? string.Empty
-                : Path.Combine(sqliteFolder, "write.lock");
+                : Path.Combine(sqliteFolder, "core.db.lock");
+        }
+
+        private sealed class CoreWriteLockInfo
+        {
+            public string OwnerId { get; set; } = string.Empty;
+            public string MachineName { get; set; } = string.Empty;
+            public string UserName { get; set; } = string.Empty;
+            public int ProcessId { get; set; }
+            public string Operation { get; set; } = string.Empty;
+            public DateTime CreatedAtUtc { get; set; }
+        }
+
+        private sealed class CoreWriteLock : IDisposable
+        {
+            private readonly FileStream _stream;
+            private readonly string _lockPath;
+            private readonly string _ownerId;
+            private bool _disposed;
+
+            public CoreWriteLock(FileStream stream, string lockPath, string ownerId)
+            {
+                _stream = stream;
+                _lockPath = lockPath;
+                _ownerId = ownerId;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+                _stream.Dispose();
+
+                try
+                {
+                    var info = TryReadCoreWriteLock(_lockPath);
+                    if (info == null || string.Equals(info.OwnerId, _ownerId, StringComparison.OrdinalIgnoreCase))
+                        SafeFileService.DeleteFile(_lockPath);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    LoggingService.LogWarning("PersistenceService.CoreWriteLock",
+                        $"Could not remove core database write lock '{_lockPath}': {ex.Message}");
+                }
+            }
         }
 
         private void RememberLoadedDatabase(DatabaseRoot database)

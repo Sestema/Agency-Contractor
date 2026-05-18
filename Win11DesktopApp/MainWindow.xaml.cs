@@ -68,7 +68,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             UpdateMaximizedVisuals();
         };
 
-        Closing += (_, _) => SaveWindowBoundsAndFlushSettings();
+        Closing += (_, args) =>
+        {
+            LoggingService.LogInfo("MainWindow.Closing",
+                $"Main window closing. Cancel={args.Cancel}; State={WindowState}; DataContext={DataContext?.GetType().Name ?? "null"}.");
+            SaveWindowBoundsAndFlushSettings();
+        };
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)

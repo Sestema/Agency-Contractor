@@ -28,5 +28,13 @@ namespace Win11DesktopApp.Views
             scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta / 3.0);
             e.Handled = true;
         }
+
+        private void EmployeeSelectionCheckBox_Changed(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is EmployeesViewModel vm)
+                vm.UpdateSelectedCount();
+
+            e.Handled = true;
+        }
     }
 }

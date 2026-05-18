@@ -58,6 +58,10 @@ namespace Win11DesktopApp
         private static CurrentProfileService CurrentProfileService => GetRequiredService<CurrentProfileService>();
         private static TelegramBotService TelegramBotService => GetRequiredService<TelegramBotService>();
         private static AppUpdateNotificationService AppUpdateNotificationService => GetRequiredService<AppUpdateNotificationService>();
+        private static WebPanelHostService WebPanelHostService => GetRequiredService<WebPanelHostService>();
+        private static SyncEventService SyncEventService => GetRequiredService<SyncEventService>();
+        private static ConnectedClientsService ConnectedClientsService => GetRequiredService<ConnectedClientsService>();
+        private static DailySqliteBackupService DailySqliteBackupService => GetRequiredService<DailySqliteBackupService>();
 
         private sealed class StartupFlowState
         {
@@ -175,6 +179,42 @@ namespace Win11DesktopApp
 
         private static void RunStartupMigrations()
         {
+            if (GetRequiredService<AppDataStorageFactory>().IsPostgresRuntimeActiveAtStartup)
+            {
+                LoggingService.LogInfo("App.StartupMigrations", "SQLite startup migrations skipped because PostgreSQL runtime is active.");
+
+                var postgresEmployeeIndexRebuild = EmployeeService.EnsureEmployeeIndexBuilt();
+                if (postgresEmployeeIndexRebuild.WasRebuildAttempted)
+                {
+                    if (postgresEmployeeIndexRebuild.IsSuccessful)
+                    {
+                        var successMessage = string.Format(
+                            Res("MsgEmployeeIndexBuildSuccess", "Employee index was built in {3}. Imported records: {0}. Folders scanned: {1}. Skipped: {2}"),
+                            postgresEmployeeIndexRebuild.RecordsImported,
+                            postgresEmployeeIndexRebuild.FoldersScanned,
+                            postgresEmployeeIndexRebuild.FoldersSkipped,
+                            "PostgreSQL");
+                        ToastService.Instance.Warning(successMessage);
+                        LoggingService.LogInfo("App.EmployeeIndexBuild", successMessage);
+                    }
+                    else
+                    {
+                        var failedMessage = string.Format(
+                            Res("MsgEmployeeIndexBuildFailed", "Employee index build in {1} failed. The program will keep using the current source. Details: {0}"),
+                            postgresEmployeeIndexRebuild.Message,
+                            "PostgreSQL");
+                        MessageBox.Show(
+                            failedMessage,
+                            Res("TitleWarning", "Warning"),
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        LoggingService.LogWarning("App.EmployeeIndexBuild", failedMessage);
+                    }
+                }
+
+                return;
+            }
+
             var activityLogMigration = ActivityLogService.EnsureMigratedToLocalDb();
             if (activityLogMigration.WasMigrationAttempted)
             {
@@ -263,19 +303,27 @@ namespace Win11DesktopApp
             {
                 if (employeeIndexRebuild.IsSuccessful)
                 {
+                    var indexStorageName = AppSettingsService.Settings.DatabaseStorageMode == DatabaseStorageModes.Postgres
+                        ? "PostgreSQL"
+                        : "SQLite";
                     var successMessage = string.Format(
-                        Res("MsgEmployeeIndexBuildSuccess", "Employee index was built in SQLite. Imported records: {0}. Folders scanned: {1}. Skipped: {2}"),
+                        Res("MsgEmployeeIndexBuildSuccess", "Employee index was built in {3}. Imported records: {0}. Folders scanned: {1}. Skipped: {2}"),
                         employeeIndexRebuild.RecordsImported,
                         employeeIndexRebuild.FoldersScanned,
-                        employeeIndexRebuild.FoldersSkipped);
+                        employeeIndexRebuild.FoldersSkipped,
+                        indexStorageName);
                     ToastService.Instance.Warning(successMessage);
                     LoggingService.LogInfo("App.EmployeeIndexBuild", successMessage);
                 }
                 else
                 {
+                    var indexStorageName = AppSettingsService.Settings.DatabaseStorageMode == DatabaseStorageModes.Postgres
+                        ? "PostgreSQL"
+                        : "SQLite";
                     var failedMessage = string.Format(
-                        Res("MsgEmployeeIndexBuildFailed", "Employee index build in SQLite failed. The program will keep using the current source. Details: {0}"),
-                        employeeIndexRebuild.Message);
+                        Res("MsgEmployeeIndexBuildFailed", "Employee index build in {1} failed. The program will keep using the current source. Details: {0}"),
+                        employeeIndexRebuild.Message,
+                        indexStorageName);
                     MessageBox.Show(
                         failedMessage,
                         Res("TitleWarning", "Warning"),
@@ -676,6 +724,11 @@ namespace Win11DesktopApp
             RunBackgroundTask("StartupIntegrityService.BackgroundCheck", () => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies), BackgroundTaskToken);
             RunBackgroundTask("App.UpdateNotificationCheck", AppUpdateNotificationService.CheckForAvailableUpdateAsync, BackgroundTaskToken);
             RunBackgroundTask("RecentlyDeletedService.PurgeExpired", () => RecentlyDeletedService.PurgeExpired(), BackgroundTaskToken);
+            RunBackgroundTask("DailySqliteBackupService", async token =>
+            {
+                var result = await DailySqliteBackupService.CreateTodayBackupIfNeededAsync(token).ConfigureAwait(false);
+                LoggingService.LogInfo("DailySqliteBackupService", result.Message);
+            }, BackgroundTaskToken);
             RunBackgroundTask("App.SalaryPrewarm", PrewarmSalaryPath, BackgroundTaskToken);
             RunBackgroundTask("App.TelegramBotStartup", async _ =>
             {
@@ -685,6 +738,13 @@ namespace Win11DesktopApp
                     await TelegramBotService.RestartAsync().ConfigureAwait(false);
                 }
             }, BackgroundTaskToken);
+
+            RunBackgroundTask("App.WebPanelStartup", async token =>
+            {
+                await WebPanelHostService.StartAsync(token).ConfigureAwait(false);
+            }, BackgroundTaskToken);
+
+            ConnectedClientsService.Start();
         }
 
         private static StartupIntegrityService InitializeCoreServices()
@@ -725,29 +785,68 @@ namespace Win11DesktopApp
             services.AddSingleton<AccessStatusService>();
             services.AddSingleton(sp => new FolderService(sp.GetRequiredService<AppSettingsService>()));
             services.AddSingleton(sp => new CoreDbService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new SalaryDbService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new LocalDbService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<SalaryDbService>()));
+            services.AddSingleton(sp => new EmployeeIndexDbService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<AppSettingsService>()));
+            services.AddSingleton(sp => new AppDataStorageFactory(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<CoreDbService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<SalaryDbService>()));
             services.AddSingleton(sp => new PersistenceService(
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<CoreDbService>()));
+                sp.GetRequiredService<AppDataStorageFactory>().CreateCoreDatabaseStorage()));
             services.AddSingleton(sp => new StartupIntegrityService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<PersistenceService>()));
             services.AddSingleton<TagCatalogService>();
+            services.AddSingleton<AppNotificationService>();
+            services.AddSingleton(sp => new SyncEventService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<CurrentProfileService>(),
+                sp.GetRequiredService<AppNotificationService>(),
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<AppDataStorageFactory>()));
+            services.AddSingleton<PostgresConnectionTestService>();
+            services.AddSingleton(sp => new PostgresMigrationService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<CoreDbService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<SalaryDbService>(),
+                sp.GetRequiredService<EmployeeIndexDbService>(),
+                sp.GetRequiredService<AppStatisticsService>()));
+            services.AddSingleton<PostgresResetService>();
+            services.AddSingleton<PostgresNetworkAccessService>();
+            services.AddSingleton(sp => new PostgresToSqliteBackupService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<CoreDbService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<SalaryDbService>(),
+                sp.GetRequiredService<EmployeeIndexDbService>(),
+                sp.GetRequiredService<AppStatisticsService>(),
+                sp.GetRequiredService<AppDataStorageFactory>()));
+            services.AddSingleton(sp => new DailySqliteBackupService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<AppDataStorageFactory>(),
+                sp.GetRequiredService<PostgresToSqliteBackupService>()));
             services.AddSingleton(sp => new CompanyService(
                 sp.GetRequiredService<TagCatalogService>(),
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<PersistenceService>(),
-                sp.GetRequiredService<FolderService>()));
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<EmployeeIndexDbService>(),
+                sp.GetRequiredService<SyncEventService>()));
             services.AddSingleton(sp => new TemplateService(
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<TagCatalogService>()));
             services.AddSingleton<StarterTemplateCatalogService>();
-            services.AddSingleton(sp => new LocalDbService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<SalaryDbService>()));
-            services.AddSingleton(sp => new EmployeeIndexDbService(sp.GetRequiredService<FolderService>()));
-            services.AddSingleton(sp => new SalaryDbService(sp.GetRequiredService<FolderService>()));
             services.AddSingleton(sp => new AdminMirrorSyncService(
                 sp.GetRequiredService<CompanyService>()));
             services.AddSingleton(sp => new EmployeeService(
@@ -758,7 +857,8 @@ namespace Win11DesktopApp
                 sp.GetRequiredService<EmployeeIndexDbService>(),
                 sp.GetRequiredService<CurrentProfileService>(),
                 sp.GetRequiredService<AdminMirrorSyncService>(),
-                companyService: sp.GetRequiredService<CompanyService>()));
+                companyService: sp.GetRequiredService<CompanyService>(),
+                storageFactory: sp.GetRequiredService<AppDataStorageFactory>()));
             services.AddSingleton(sp => new RecentlyDeletedService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<EmployeeService>(),
@@ -766,14 +866,17 @@ namespace Win11DesktopApp
                 sp.GetRequiredService<FinanceService>(),
                 sp.GetRequiredService<ActivityLogService>(),
                 sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>()));
+                sp.GetRequiredService<EmployeeIndexDbService>(),
+                sp.GetRequiredService<AppDataStorageFactory>()));
             services.AddSingleton(sp => new FinanceService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<SalaryDbService>(),
                 sp.GetRequiredService<LocalDbService>(),
                 sp.GetRequiredService<CompanyService>(),
                 sp.GetRequiredService<EmployeeIndexDbService>(),
-                suppressStartupNotifications: true));
+                sp.GetRequiredService<SharedOperationLockService>(),
+                suppressStartupNotifications: true,
+                storageFactory: sp.GetRequiredService<AppDataStorageFactory>()));
             services.AddSingleton(sp => new InvoiceStorageService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<AppSettingsService>()));
@@ -784,11 +887,13 @@ namespace Win11DesktopApp
                 sp.GetRequiredService<InvoiceQrPaymentService>()));
             services.AddSingleton(sp => new ActivityLogService(
                 sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<AppDataStorageFactory>().CreateActivityLogStorage(),
                 sp.GetRequiredService<CurrentProfileService>()));
-            services.AddSingleton<AppNotificationService>();
             services.AddSingleton<AppUpdateNotificationService>();
-            services.AddSingleton(sp => new AppStatisticsService(sp.GetRequiredService<FolderService>()));
+            services.AddSingleton(sp => new AppStatisticsService(
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<AppDataStorageFactory>()));
             services.AddSingleton(sp => new CandidateService(sp.GetRequiredService<FolderService>()));
             services.AddSingleton<ChatPersistenceService>();
             services.AddSingleton<GeminiApiService>();
@@ -812,6 +917,13 @@ namespace Win11DesktopApp
             services.AddSingleton<GeminiApiKeyConfigurationService>();
             services.AddSingleton<TelegramPairingService>();
             services.AddSingleton<TelegramBotService>();
+            services.AddSingleton<KeepAwakeService>();
+            services.AddSingleton<WebPanelHostService>();
+            services.AddSingleton<SharedOperationLockService>();
+            services.AddSingleton(sp => new ConnectedClientsService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<AppDataStorageFactory>(),
+                sp.GetRequiredService<CurrentProfileService>()));
             services.AddTransient<MainViewModel>();
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<SettingsViewModel>();
@@ -832,6 +944,7 @@ namespace Win11DesktopApp
             AdminMirrorSyncService.InitializeEmployeeService(EmployeeService);
             EmployeeService.InitializeFinanceService(FinanceService);
             CommandService.Initialize(AccessStatusService);
+            SyncEventService.Start();
         }
 
         private static void RunBackgroundWarmupTasks()
@@ -883,6 +996,12 @@ namespace Win11DesktopApp
             try
             {
                 var sw = Stopwatch.StartNew();
+
+                if (GetRequiredService<AppDataStorageFactory>().IsPostgresRuntimeActiveAtStartup)
+                {
+                    LoggingService.LogInfo("App.SalaryPrewarm", "Skipped because PostgreSQL runtime is active.");
+                    return;
+                }
 
                 LocalDbService.IsSalaryHistoryMigrationCompleted();
 
@@ -964,13 +1083,46 @@ namespace Win11DesktopApp
 
         protected override void OnExit(ExitEventArgs e)
         {
-            _backgroundTasksCts?.Cancel();
-            _backgroundTasksCts?.Dispose();
-            _backgroundTasksCts = null;
-            try { AppStatisticsService.StopSession(); } catch { }
-            try { AdminMirrorSyncService.Stop(); } catch { }
-            try { TelegramBotService.Stop(); } catch { }
-            base.OnExit(e);
+            try
+            {
+                LoggingService.LogInfo("App.OnExit", $"Application exit started. ExitCode={e.ApplicationExitCode}.");
+                _backgroundTasksCts?.Cancel();
+                try { AppStatisticsService.StopSession(); }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.AppStatisticsService", ex.Message); }
+
+                try { AdminMirrorSyncService.Stop(); }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.AdminMirrorSyncService", ex.Message); }
+
+                try { TelegramBotService.Stop(); }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.TelegramBotService", ex.Message); }
+
+                try { SyncEventService.Stop(); }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.SyncEventService", ex.Message); }
+
+                try { ConnectedClientsService.Stop(); }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.ConnectedClientsService", ex.Message); }
+
+                try
+                {
+                    using var shutdownCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    WebPanelHostService.StopAsync(shutdownCts.Token).GetAwaiter().GetResult();
+                }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.WebPanelHostService", ex.Message); }
+
+                try { _serviceProvider?.Dispose(); }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.ServiceProvider", ex.Message); }
+            }
+            finally
+            {
+                _backgroundTasksCts?.Dispose();
+                _backgroundTasksCts = null;
+                _serviceProvider = null;
+                base.OnExit(e);
+
+                // Some hosted/web/polling libraries can keep background threads alive after WPF closes.
+                // The user-visible app is already shut down here, so force the process to end.
+                Environment.Exit(e.ApplicationExitCode);
+            }
         }
 
         private static void OnAnyWindowLoaded_FadeIn(object sender, RoutedEventArgs e)

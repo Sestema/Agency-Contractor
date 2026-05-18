@@ -7,11 +7,11 @@ namespace Win11DesktopApp.Services
 {
     public class FinanceReportsService
     {
-        private readonly LocalDbService? _localDbService;
+        private readonly IFinanceReportsStorage? _reportsStorage;
 
-        public FinanceReportsService(LocalDbService? localDbService)
+        public FinanceReportsService(IFinanceReportsStorage? reportsStorage)
         {
-            _localDbService = localDbService;
+            _reportsStorage = reportsStorage;
         }
 
         public MonthlySalaryReport? GetReport(string companyId, int year, int month)
@@ -94,12 +94,12 @@ namespace Win11DesktopApp.Services
             return false;
         }
 
-        private LocalDbService RequireLocalDb()
+        private IFinanceReportsStorage RequireLocalDb()
         {
-            if (_localDbService == null)
-                throw new InvalidOperationException("LocalDbService is required for reports storage.");
+            if (_reportsStorage == null)
+                throw new InvalidOperationException("Reports storage is required.");
 
-            return _localDbService;
+            return _reportsStorage;
         }
     }
 }

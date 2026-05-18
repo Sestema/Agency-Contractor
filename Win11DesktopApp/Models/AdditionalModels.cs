@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Windows;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.EmployeeModels
@@ -228,7 +230,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string DocumentType { get; set; } = string.Empty;
         public string PassportNumber { get; set; } = string.Empty;
         public string VisaNumber { get; set; } = string.Empty;
-    public string VisaAuthority { get; set; } = string.Empty;
+        public string VisaAuthority { get; set; } = string.Empty;
+        public string VisaStartDate { get; set; } = string.Empty;
         public string PassportExpiry { get; set; } = string.Empty;
         public string VisaExpiry { get; set; } = string.Empty;
         public string InsuranceExpiry { get; set; } = string.Empty;
@@ -243,6 +246,9 @@ namespace Win11DesktopApp.EmployeeModels
         public string AddressCz { get; set; } = string.Empty;
         public string AddressAbroad { get; set; } = string.Empty;
         public string BirthDate { get; set; } = string.Empty;
+        public string Citizenship { get; set; } = string.Empty;
+        public string BirthCity { get; set; } = string.Empty;
+        public string BirthCountry { get; set; } = string.Empty;
         public string HighestEducation { get; set; } = string.Empty;
         public string Gender { get; set; } = string.Empty;
         public string PassportIssuedBy { get; set; } = string.Empty;
@@ -291,6 +297,212 @@ namespace Win11DesktopApp.EmployeeModels
         public string RelatedOperationId { get; set; } = string.Empty;
         public string ActorName { get; set; } = string.Empty;
         public string TimeDisplay => DateTime.TryParse(Timestamp, out var dt) ? dt.ToString("HH:mm") : Timestamp;
+        public string DisplayDescription => ActivityLogTextLocalizer.LocalizeDescription(this);
+        public string DisplayDetails => ActivityLogTextLocalizer.LocalizeDetails(Details);
+    }
+
+    internal static class ActivityLogTextLocalizer
+    {
+        private static readonly Dictionary<string, string> UkrainianFieldResourceKeys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Ім'я"] = "HistFieldFirstName",
+            ["Прізвище"] = "HistFieldLastName",
+            ["Дата народження"] = "HistFieldBirthDate",
+            ["Найвищий досягнутий рівень освіти"] = "HistFieldHighestEducation",
+            ["Номер паспорту"] = "HistFieldPassportNum",
+            ["Тип працівника / комплект документів"] = "HistFieldDocumentProfileType",
+            ["Орган, що видав документ"] = "HistFieldPassportAuthority",
+            ["Термін паспорту"] = "HistFieldPassportExp",
+            ["Номер візи"] = "HistFieldVisaNum",
+            ["Орган, що видав візу"] = "HistFieldVisaAuthority",
+            ["Тип візи"] = "HistFieldVisaType",
+            ["Початок візи"] = "HistFieldVisaStartDate",
+            ["Термін візи"] = "HistFieldVisaExp",
+            ["Номер страховки"] = "HistFieldInsNum",
+            ["Термін страховки"] = "HistFieldInsExp",
+            ["Страхова компанія"] = "HistFieldInsCompany",
+            ["Страхова компанія - повна назва"] = "HistFieldInsCompanyFull",
+            ["Телефон"] = "HistFieldPhone",
+            ["Email"] = "HistFieldEmail",
+            ["Статус"] = "HistFieldStatus",
+            ["Позиція"] = "HistFieldPosition",
+            ["Адреса виконання роботи"] = "HistFieldWorkAddr",
+            ["Дата підписання"] = "HistFieldSignDate",
+            ["Тип договору"] = "HistFieldContractType",
+            ["Зарплата (брутто)"] = "HistFieldSalary",
+            ["Годинна зарплата"] = "HistFieldHourly",
+            ["Відділ"] = "HistFieldDepartment",
+            ["Дата наступу"] = "HistFieldStartDate",
+            ["Місто народження"] = "HistFieldPassportCity",
+            ["Країна народження"] = "HistFieldPassportCountry",
+            ["Громадянство"] = "HistFieldCitizenship",
+            ["Країна видачі"] = "HistFieldIssuingCountry",
+            ["Назва дозволу"] = "HistFieldWorkPermitName",
+            ["Номер позиції"] = "HistFieldPosNumber",
+            ["зарплата"] = "HistFieldSalary",
+            ["ставка"] = "HistFieldHourly"
+        };
+
+        public static string LocalizeDescription(ActivityLogEntry entry)
+        {
+            var description = entry.Description ?? string.Empty;
+            var employeeName = string.IsNullOrWhiteSpace(entry.EmployeeName) ? ExtractEmployeeName(description) : entry.EmployeeName;
+
+            return entry.ActionType switch
+            {
+                "EmployeeAdded" => string.Format(Res("ActLogMsgEmployeeAddedFmt"), employeeName, entry.FirmName),
+                "ProfileChanged" => string.Format(Res("ActLogMsgProfileChangedFmt"), employeeName, LocalizeFieldName(ExtractProfileField(description))),
+                "SalaryChanged" => string.Format(Res("ActLogMsgSalaryChangedFmt"), employeeName),
+                "RateChanged" => string.Format(Res("ActLogMsgRateChangedFmt"), employeeName),
+                "VisaExtended" => string.Format(Res("ActLogMsgFieldChangedFmt"), LocalizeFieldName(ExtractLeadingField(description))),
+                "InsuranceExtended" => string.Format(Res("ActLogMsgFieldChangedFmt"), LocalizeFieldName(ExtractLeadingField(description))),
+                "DocGenerated" => string.Format(Res("ActLogMsgDocGeneratedFmt"), ExtractQuoted(description), employeeName),
+                "BatchDocGenerated" => string.Format(Res("ActLogMsgBatchDocGeneratedFmt"), ExtractQuoted(description), ExtractBetween(description, "успішно ", ","), ExtractAfter(description, "помилки ")),
+                "TemplateAdded" => string.Format(Res("ActLogMsgTemplateAddedFmt"), ExtractQuoted(description), entry.FirmName),
+                "TemplateDeleted" => string.Format(Res("ActLogMsgTemplateDeletedFmt"), ExtractQuoted(description), entry.FirmName),
+                "TemplateRenamed" => string.Format(Res("ActLogMsgTemplateRenamedFmt"), entry.OldValue, entry.NewValue, entry.FirmName),
+                "CompanyAdded" => string.Format(Res("ActLogMsgCompanyAddedFmt"), entry.FirmName),
+                "CompanyDeleted" => string.Format(Res("ActLogMsgCompanyDeletedFmt"), entry.FirmName),
+                "EmployeeArchived" => string.Format(Res("ActLogMsgEmployeeArchivedFmt"), employeeName, entry.FirmName, entry.NewValue),
+                "EmployeeRestored" => string.Format(Res("ActLogMsgEmployeeRestoredFmt"), employeeName, entry.FirmName, entry.NewValue),
+                "AdvanceAdded" => string.Format(Res("ActLogMsgAdvanceAddedFmt"), entry.NewValue, employeeName, entry.FirmName),
+                "AdvanceDeleted" => string.Format(Res("ActLogMsgAdvanceDeletedFmt"), ExtractAmount(description), employeeName, entry.FirmName),
+                "MonthPaid" => LocalizeMonthPaid(description),
+                "RootFolderChanged" => Res("ActLogMsgRootFolderChanged"),
+                "ExportExcel" => LocalizeExport(description, "Excel"),
+                "ExportPdf" => LocalizeExport(description, "PDF"),
+                "CandidateUpdated" => string.Format(Res("ActLogMsgCandidateUpdatedFmt"), employeeName),
+                "CandidateDeleted" => string.Format(Res("ActLogMsgCandidateDeletedFmt"), employeeName),
+                "CandidateAdded" => string.IsNullOrWhiteSpace(employeeName) ? description : string.Format(Res("ActLogMsgCandidateAddedFmt"), employeeName),
+                _ => LocalizeLegacyPhrases(description, employeeName, entry.FirmName)
+            };
+        }
+
+        public static string LocalizeDetails(string details)
+        {
+            if (string.IsNullOrWhiteSpace(details))
+                return string.Empty;
+
+            return details
+                .Replace("Фірма:", Res("ActLogDetailsFirm") + ":", StringComparison.Ordinal)
+                .Replace("Документ:", Res("ActLogDetailsDocument") + ":", StringComparison.Ordinal)
+                .Replace("Файл:", Res("ActLogDetailsFile") + ":", StringComparison.Ordinal)
+                .Replace("Місяць:", Res("ActLogDetailsMonth") + ":", StringComparison.Ordinal)
+                .Replace("Працівників:", Res("ActLogDetailsEmployees") + ":", StringComparison.Ordinal)
+                .Replace("Оплачено:", Res("ActLogDetailsPaid") + ":", StringComparison.Ordinal)
+                .Replace("Кастомні колонки:", Res("ActLogDetailsCustomColumns") + ":", StringComparison.Ordinal);
+        }
+
+        private static string LocalizeLegacyPhrases(string description, string employeeName, string firmName)
+        {
+            if (description.StartsWith("Видано шаблон", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgTemplateIssuedFmt"), ExtractQuoted(description), string.IsNullOrWhiteSpace(firmName) ? ExtractAfter(description, " з ") : firmName);
+
+            if (description.StartsWith("Оновлено кандидата:", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgCandidateUpdatedFmt"), ExtractAfter(description, ": "));
+
+            if (description.StartsWith("Видалено кандидата:", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgCandidateDeletedFmt"), ExtractAfter(description, ": "));
+
+            return description;
+        }
+
+        private static string LocalizeExport(string description, string format)
+        {
+            if (description.Contains("анкету", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgProfileExportFmt"), ExtractBetween(description, "анкету ", " →"), format);
+
+            if (description.Contains("виплату на підписи", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgPaymentSignExportFmt"), format);
+
+            if (description.Contains("виплату", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgSalaryExportFmt"), ExtractBetween(description, "виплату ", " →"), format);
+
+            if (description.Contains("звіт проблем", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgProblemsExportFmt"), format);
+
+            if (description.Contains("звіт", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgReportExportFmt"), format);
+
+            if (description.Contains("авансову відомість", StringComparison.OrdinalIgnoreCase))
+                return string.Format(Res("ActLogMsgAdvanceTableExportFmt"), format);
+
+            return description;
+        }
+
+        private static string LocalizeMonthPaid(string description)
+        {
+            var value = ExtractAfter(description, "Позначено оплачено: ");
+            return string.IsNullOrWhiteSpace(value)
+                ? description
+                : string.Format(Res("ActLogMsgMonthPaidFmt"), value);
+        }
+
+        private static string LocalizeFieldName(string field)
+        {
+            field = field.Trim().Trim(':');
+            return UkrainianFieldResourceKeys.TryGetValue(field, out var key) ? Res(key) : field;
+        }
+
+        private static string ExtractProfileField(string description)
+        {
+            var arrowIndex = description.IndexOf("→", StringComparison.Ordinal);
+            var left = arrowIndex >= 0 ? description[..arrowIndex] : description;
+            left = left.Trim().TrimEnd(':').Trim();
+            var firstColon = left.IndexOf(':');
+            return firstColon >= 0 ? left[(firstColon + 1)..].Trim() : left;
+        }
+
+        private static string ExtractLeadingField(string description)
+        {
+            var colon = description.IndexOf(':');
+            return colon >= 0 ? description[..colon].Trim() : description;
+        }
+
+        private static string ExtractEmployeeName(string description)
+        {
+            var colon = description.IndexOf(':');
+            return colon > 0 ? description[..colon].Trim() : string.Empty;
+        }
+
+        private static string ExtractQuoted(string text)
+        {
+            var start = text.IndexOf('«');
+            var end = text.IndexOf('»', start + 1);
+            return start >= 0 && end > start ? text.Substring(start + 1, end - start - 1) : string.Empty;
+        }
+
+        private static string ExtractAmount(string text)
+        {
+            var prefix = "аванс ";
+            var start = text.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+                return string.Empty;
+
+            start += prefix.Length;
+            var end = text.IndexOf(" Kč", start, StringComparison.OrdinalIgnoreCase);
+            return end > start ? text[start..end].Trim() : string.Empty;
+        }
+
+        private static string ExtractAfter(string text, string marker)
+        {
+            var start = text.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            return start < 0 ? string.Empty : text[(start + marker.Length)..].Trim();
+        }
+
+        private static string ExtractBetween(string text, string startMarker, string endMarker)
+        {
+            var start = text.IndexOf(startMarker, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+                return string.Empty;
+
+            start += startMarker.Length;
+            var end = text.IndexOf(endMarker, start, StringComparison.OrdinalIgnoreCase);
+            return end > start ? text[start..end].Trim() : text[start..].Trim();
+        }
+
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
     }
 
     public class ExportSheetOption : System.ComponentModel.INotifyPropertyChanged

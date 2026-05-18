@@ -32,6 +32,13 @@ namespace Win11DesktopApp.ViewModels
         public bool RequiresWorkPermit { get; init; }
     }
 
+    public sealed class EmployeeBulkUpdateTarget
+    {
+        public string EmployeeFolder { get; init; } = string.Empty;
+        public string UniqueId { get; init; } = string.Empty;
+        public string FullName { get; init; } = string.Empty;
+    }
+
     public partial class EmployeeDetailsViewModel : ViewModelBase
     {
         private string DocRes(string key) =>
@@ -50,7 +57,9 @@ namespace Win11DesktopApp.ViewModels
         private readonly AppStatisticsService _appStatisticsService;
         private readonly AiWindowFactory _aiWindowFactory;
         private readonly string _employeeFolder;
+        private readonly string _expectedEmployeeId;
         private readonly string _firmName;
+        private readonly IReadOnlyList<EmployeeBulkUpdateTarget> _bulkUpdateTargets;
         private bool _profileUnavailable;
         private bool _profileUnavailableNotified;
         private bool _profileCloseScheduled;
@@ -1244,7 +1253,8 @@ namespace Win11DesktopApp.ViewModels
             DocumentGenerationService? documentGenerationService = null,
             TagCatalogService? tagCatalogService = null,
             AiWindowFactory? aiWindowFactory = null,
-            AppStatisticsService? appStatisticsService = null)
+            AppStatisticsService? appStatisticsService = null,
+            IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null)
         {
             _firmName = firmName;
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
@@ -1263,6 +1273,8 @@ namespace Win11DesktopApp.ViewModels
             _employeeFolder = Directory.Exists(employeeFolder)
                 ? employeeFolder
                 : (_financeService.ResolveEmployeeFolder(employeeFolder, employeeId) ?? employeeFolder);
+            _expectedEmployeeId = employeeId ?? string.Empty;
+            _bulkUpdateTargets = bulkUpdateTargets ?? Array.Empty<EmployeeBulkUpdateTarget>();
 
             var settings = _appSettingsService.Settings;
             _tabIndex = Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 3);
@@ -1646,6 +1658,7 @@ namespace Win11DesktopApp.ViewModels
                     {
                         await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
                         LogProfileChanges(oldData, Data);
+                        await ApplyBulkProfileChangesAsync(oldData, Data);
                     }
 
                     IsEditMode = false;
@@ -1667,6 +1680,141 @@ namespace Win11DesktopApp.ViewModels
             {
                 SetBusyState(false);
             }
+        }
+
+        private sealed class BulkProfileFieldChange
+        {
+            public string Label { get; init; } = string.Empty;
+            public string OldValue { get; init; } = string.Empty;
+            public string NewValue { get; init; } = string.Empty;
+            public Action<EmployeeData> Apply { get; init; } = _ => { };
+        }
+
+        private async Task ApplyBulkProfileChangesAsync(EmployeeData oldData, EmployeeData newData)
+        {
+            var targets = _bulkUpdateTargets
+                .Where(target => !string.IsNullOrWhiteSpace(target.EmployeeFolder)
+                    && !string.Equals(target.EmployeeFolder, _employeeFolder, StringComparison.OrdinalIgnoreCase))
+                .GroupBy(target => target.EmployeeFolder, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
+
+            if (targets.Count == 0)
+                return;
+
+            var changes = BuildSafeBulkProfileChanges(oldData, newData);
+            if (changes.Count == 0)
+                return;
+
+            var fields = string.Join(Environment.NewLine, changes.Select(change => $"• {change.Label}: {change.OldValue} → {change.NewValue}"));
+            var message = $"Застосувати ці зміни до позначених працівників ({targets.Count})?{Environment.NewLine}{Environment.NewLine}{fields}";
+            var confirm = MessageBox.Show(
+                message,
+                "Масове оновлення працівників",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            var updated = 0;
+            var skipped = 0;
+            foreach (var target in targets)
+            {
+                var targetData = _employeeService.LoadEmployeeData(target.EmployeeFolder);
+                if (targetData == null)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(target.UniqueId)
+                    && !string.IsNullOrWhiteSpace(targetData.UniqueId)
+                    && !string.Equals(target.UniqueId.Trim(), targetData.UniqueId.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    LoggingService.LogWarning("EmployeeDetailsViewModel.BulkProfileUpdate",
+                        $"Skipped '{target.FullName}' because selected id '{target.UniqueId}' does not match employee.json id '{targetData.UniqueId}'.");
+                    skipped++;
+                    continue;
+                }
+
+                var before = CloneEmployeeData(targetData);
+                foreach (var change in changes)
+                    change.Apply(targetData);
+
+                if (_employeeService.SaveEmployeeData(target.EmployeeFolder, targetData, notifyUser: false))
+                {
+                    await _employeeService.RecordChanges(target.EmployeeFolder, before, targetData);
+                    updated++;
+                }
+                else
+                {
+                    skipped++;
+                }
+            }
+
+            StatusMessage = skipped == 0
+                ? $"Масово оновлено працівників: {updated}."
+                : $"Масово оновлено працівників: {updated}. Пропущено: {skipped}.";
+        }
+
+        private List<BulkProfileFieldChange> BuildSafeBulkProfileChanges(EmployeeData oldData, EmployeeData newData)
+        {
+            var changes = new List<BulkProfileFieldChange>();
+
+            void AddStringChange(string label, string oldValue, string newValue, Action<EmployeeData, string> apply)
+            {
+                oldValue ??= string.Empty;
+                newValue ??= string.Empty;
+                if (string.Equals(oldValue, newValue, StringComparison.Ordinal))
+                    return;
+
+                changes.Add(new BulkProfileFieldChange
+                {
+                    Label = label,
+                    OldValue = oldValue,
+                    NewValue = newValue,
+                    Apply = target => apply(target, newValue)
+                });
+            }
+
+            AddStringChange(Res("DetFieldSignDate"), oldData.ContractSignDate, newData.ContractSignDate, (target, value) => target.ContractSignDate = value);
+            AddStringChange(Res("DetFieldStartDate"), oldData.StartDate, newData.StartDate, (target, value) => target.StartDate = value);
+            AddStringChange(Res("DetFieldContractType"), oldData.ContractType, newData.ContractType, (target, value) => target.ContractType = value);
+            AddStringChange(Res("DetFieldWorkAddr"), oldData.WorkAddressTag, newData.WorkAddressTag, (target, value) => target.WorkAddressTag = value);
+
+            if (!string.Equals(oldData.PositionTag ?? string.Empty, newData.PositionTag ?? string.Empty, StringComparison.Ordinal)
+                || !string.Equals(oldData.PositionNumber ?? string.Empty, newData.PositionNumber ?? string.Empty, StringComparison.Ordinal))
+            {
+                var newPositionTag = newData.PositionTag ?? string.Empty;
+                var newPositionNumber = newData.PositionNumber ?? string.Empty;
+                changes.Add(new BulkProfileFieldChange
+                {
+                    Label = Res("DetFieldPosition"),
+                    OldValue = FormatPositionForBulk(oldData),
+                    NewValue = FormatPositionForBulk(newData),
+                    Apply = target =>
+                    {
+                        target.PositionTag = newPositionTag;
+                        target.PositionNumber = newPositionNumber;
+                    }
+                });
+            }
+
+            return changes;
+        }
+
+        private static string FormatPositionForBulk(EmployeeData data)
+        {
+            var title = data.PositionTag ?? string.Empty;
+            var number = data.PositionNumber ?? string.Empty;
+            return string.IsNullOrWhiteSpace(number) ? title : $"{title} ({number})";
+        }
+
+        private static EmployeeData CloneEmployeeData(EmployeeData source)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(source);
+            return System.Text.Json.JsonSerializer.Deserialize<EmployeeData>(json) ?? source;
         }
 
         private void CancelEdit()

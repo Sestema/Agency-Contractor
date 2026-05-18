@@ -1,0 +1,215 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Npgsql;
+using Win11DesktopApp.EmployeeModels;
+
+namespace Win11DesktopApp.Services
+{
+    public sealed class PostgresEmployeeHistoryStorage : IEmployeeHistoryStorage
+    {
+        private readonly AppSettingsService _settingsService;
+        private readonly object _initLock = new();
+        private bool _isInitialized;
+
+        public PostgresEmployeeHistoryStorage(AppSettingsService settingsService)
+        {
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        }
+
+        public LocalDbMigrationResult MigrateEmployeeHistoryIfNeeded(IEnumerable<EmployeeHistoryMigrationSource> sources)
+        {
+            return new LocalDbMigrationResult
+            {
+                WasMigrationAttempted = false,
+                IsSuccessful = true,
+                Message = "PostgreSQL employee history is populated by the SQLite to PostgreSQL migration wizard."
+            };
+        }
+
+        public void InsertEmployeeHistory(string employeeId, string employeeFolder, string firmName, EmployeeHistoryEntry entry)
+        {
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+            InsertEmployeeHistory(connection, transaction, employeeId, employeeFolder, firmName, entry);
+            TrimEmployeeHistory(connection, transaction, employeeId, 3000);
+            transaction.Commit();
+        }
+
+        public List<EmployeeHistoryEntry> GetEmployeeHistory(string employeeId)
+        {
+            EnsureInitialized();
+            if (string.IsNullOrWhiteSpace(employeeId))
+                return new List<EmployeeHistoryEntry>();
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT id, timestamp, event_type, action, field, old_value, new_value, description, actor_name
+FROM app.employee_history
+WHERE employee_id = @employeeId
+ORDER BY timestamp DESC, id DESC;";
+            command.Parameters.AddWithValue("employeeId", employeeId);
+
+            using var reader = command.ExecuteReader();
+            var result = new List<EmployeeHistoryEntry>();
+            while (reader.Read())
+            {
+                result.Add(new EmployeeHistoryEntry
+                {
+                    Id = reader.GetInt64(0),
+                    Timestamp = DateTime.TryParse(reader.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+                        ? parsed
+                        : DateTime.Now,
+                    EventType = reader.GetString(2),
+                    Action = reader.GetString(3),
+                    Field = reader.GetString(4),
+                    OldValue = reader.GetString(5),
+                    NewValue = reader.GetString(6),
+                    Description = reader.GetString(7),
+                    ActorName = reader.GetString(8)
+                });
+            }
+
+            return result;
+        }
+
+        public void DeleteEmployeeHistoryEntry(string employeeId, long historyEntryId)
+        {
+            EnsureInitialized();
+            if (string.IsNullOrWhiteSpace(employeeId) || historyEntryId <= 0)
+                return;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+DELETE FROM app.employee_history
+WHERE id = @id
+  AND employee_id = @employeeId;";
+            command.Parameters.AddWithValue("id", historyEntryId);
+            command.Parameters.AddWithValue("employeeId", employeeId);
+            command.ExecuteNonQuery();
+        }
+
+        public void DeleteEmployeeHistory(string employeeId)
+        {
+            EnsureInitialized();
+            if (string.IsNullOrWhiteSpace(employeeId))
+                return;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM app.employee_history WHERE employee_id = @employeeId;";
+            command.Parameters.AddWithValue("employeeId", employeeId);
+            command.ExecuteNonQuery();
+        }
+
+        public int CleanupMigratedEmployeeHistoryBackups(IEnumerable<EmployeeHistoryMigrationSource> sources) => 0;
+
+        private void EnsureInitialized()
+        {
+            if (_isInitialized)
+                return;
+
+            lock (_initLock)
+            {
+                if (_isInitialized)
+                    return;
+
+                using var connection = OpenConnection();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+CREATE SCHEMA IF NOT EXISTS app;
+
+CREATE TABLE IF NOT EXISTS app.employee_history (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    employee_id TEXT NOT NULL,
+    employee_folder TEXT NOT NULL,
+    firm_name TEXT,
+    timestamp TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    action TEXT NOT NULL,
+    field TEXT NOT NULL,
+    old_value TEXT NOT NULL,
+    new_value TEXT NOT NULL,
+    description TEXT NOT NULL,
+    actor_name TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_employee_history_employee ON app.employee_history(employee_id);
+CREATE INDEX IF NOT EXISTS idx_pg_employee_history_type ON app.employee_history(employee_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_pg_employee_history_timestamp ON app.employee_history(employee_id, timestamp DESC);";
+                command.ExecuteNonQuery();
+                _isInitialized = true;
+            }
+        }
+
+        private static void InsertEmployeeHistory(NpgsqlConnection connection, NpgsqlTransaction transaction, string employeeId, string employeeFolder, string firmName, EmployeeHistoryEntry entry)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+LOCK TABLE app.employee_history IN EXCLUSIVE MODE;
+
+INSERT INTO app.employee_history (
+    id, employee_id, employee_folder, firm_name, timestamp, event_type, action, field, old_value, new_value, description, actor_name
+) VALUES (
+    (SELECT COALESCE(MAX(id), 0) + 1 FROM app.employee_history),
+    @employeeId, @employeeFolder, @firmName, @timestamp, @eventType, @action, @field, @oldValue, @newValue, @description, @actorName
+)
+RETURNING id;";
+            command.Parameters.AddWithValue("employeeId", employeeId);
+            command.Parameters.AddWithValue("employeeFolder", employeeFolder ?? string.Empty);
+            command.Parameters.AddWithValue("firmName", (object?)firmName ?? DBNull.Value);
+            command.Parameters.AddWithValue("timestamp", entry.Timestamp.ToString("O", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("eventType", entry.EventType ?? string.Empty);
+            command.Parameters.AddWithValue("action", entry.Action ?? string.Empty);
+            command.Parameters.AddWithValue("field", entry.Field ?? string.Empty);
+            command.Parameters.AddWithValue("oldValue", entry.OldValue ?? string.Empty);
+            command.Parameters.AddWithValue("newValue", entry.NewValue ?? string.Empty);
+            command.Parameters.AddWithValue("description", entry.Description ?? string.Empty);
+            command.Parameters.AddWithValue("actorName", entry.ActorName ?? string.Empty);
+            var result = command.ExecuteScalar();
+            entry.Id = Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }
+
+        private static void TrimEmployeeHistory(NpgsqlConnection connection, NpgsqlTransaction transaction, string employeeId, int maxEntriesPerEmployee)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+DELETE FROM app.employee_history
+WHERE id IN (
+    SELECT id
+    FROM app.employee_history
+    WHERE employee_id = @employeeId
+    ORDER BY timestamp DESC, id DESC
+    OFFSET @maxEntries
+);";
+            command.Parameters.AddWithValue("employeeId", employeeId);
+            command.Parameters.AddWithValue("maxEntries", maxEntriesPerEmployee);
+            command.ExecuteNonQuery();
+        }
+
+        private NpgsqlConnection OpenConnection()
+        {
+            var settings = _settingsService.Settings;
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
+                Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
+                Database = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase.Trim(),
+                Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
+                Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
+                Timeout = 10,
+                CommandTimeout = 30,
+                Pooling = true
+            };
+
+            var connection = new NpgsqlConnection(builder.ConnectionString);
+            connection.Open();
+            return connection;
+        }
+    }
+}

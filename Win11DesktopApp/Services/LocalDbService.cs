@@ -82,7 +82,7 @@ namespace Win11DesktopApp.Services
             if (!IsAvailable)
                 throw new InvalidOperationException("Local SQLite path is not available.");
 
-            var connection = new SqliteConnection($"Data Source={DatabasePath};Cache=Shared");
+            var connection = new SqliteConnection($"Data Source={DatabasePath};Cache=Shared;Pooling=False");
             connection.Open();
 
             using (var command = connection.CreateCommand())
@@ -2619,11 +2619,11 @@ INSERT INTO employee_history (
                 deleteCommand.Transaction = transaction;
                 deleteCommand.CommandText = @"
 DELETE FROM salary_history
-WHERE COALESCE(employee_id, '') = COALESCE(@employeeId, '')
-  AND employee_folder = @employeeFolder
-  AND year = @year
+WHERE year = @year
   AND month = @month
-  AND lower(firm_name) = lower(@firmName)
+  AND lower(trim(firm_name)) = lower(trim(@firmName))
+  AND ((@employeeId <> '' AND lower(COALESCE(employee_id, '')) = lower(@employeeId))
+    OR lower(employee_folder) = lower(@employeeFolder))
   AND id <> @id;";
                 deleteCommand.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
                 deleteCommand.Parameters.AddWithValue("@employeeFolder", ToPortablePath(employeeFolder));

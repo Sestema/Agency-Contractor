@@ -34,6 +34,10 @@ namespace Win11DesktopApp.Services
             new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 21, Width = 150 },
             new() { Key = "bankName", IsVisible = false, DisplayIndex = 22, Width = 150 },
             new() { Key = "position", IsVisible = true, DisplayIndex = 23, Width = 110 },
+            new() { Key = "visaStartDate", IsVisible = false, DisplayIndex = 24, Width = 110 },
+            new() { Key = "citizenship", IsVisible = false, DisplayIndex = 25, Width = 140 },
+            new() { Key = "birthCity", IsVisible = false, DisplayIndex = 26, Width = 150 },
+            new() { Key = "birthCountry", IsVisible = false, DisplayIndex = 27, Width = 150 },
         };
 
         public ReportColumnLayoutService(AppSettingsService appSettingsService)
@@ -86,6 +90,10 @@ namespace Win11DesktopApp.Services
             "bankAccount" => "EmployeeBankAccountNumber",
             "bankName" => "EmployeeBankName",
             "position" => "ReportColPosition",
+            "visaStartDate" => "ReportColVisaStartDate",
+            "citizenship" => "ReportColCitizenship",
+            "birthCity" => "ReportColBirthCity",
+            "birthCountry" => "ReportColBirthCountry",
             _ => key
         };
 

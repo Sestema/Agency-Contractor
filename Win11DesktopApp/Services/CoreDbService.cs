@@ -62,7 +62,7 @@ namespace Win11DesktopApp.Services
             if (!IsAvailable)
                 throw new InvalidOperationException("Core SQLite path is not available.");
 
-            var connection = new SqliteConnection($"Data Source={DatabasePath};Cache=Shared");
+            var connection = new SqliteConnection($"Data Source={DatabasePath};Cache=Shared;Pooling=False");
             connection.Open();
 
             using (var command = connection.CreateCommand())

@@ -774,6 +774,9 @@
                                                 <DataGridTextColumn Header="{DynamicResource ReportColWorkAddress}" Binding="{Binding WorkAddress}" Width="220" SortMemberPath="WorkAddress"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColHighestEducation}" Binding="{Binding HighestEducation}" Width="220" SortMemberPath="HighestEducation"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColBirthDate}" Binding="{Binding BirthDate}" Width="100" SortMemberPath="BirthDate"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColCitizenship}" Binding="{Binding Citizenship}" Width="140" SortMemberPath="Citizenship"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColBirthCity}" Binding="{Binding BirthCity}" Width="150" SortMemberPath="BirthCity"/>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColBirthCountry}" Binding="{Binding BirthCountry}" Width="150" SortMemberPath="BirthCountry"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColGender}" Binding="{Binding Gender}" Width="90" SortMemberPath="Gender"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColAddressCz}" Binding="{Binding AddressCz}" Width="220" SortMemberPath="AddressCz"/>
                                                 <DataGridTextColumn Header="{DynamicResource ReportColAddressAbroad}" Binding="{Binding AddressAbroad}" Width="220" SortMemberPath="AddressAbroad"/>
@@ -805,6 +808,7 @@
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
+                                                <DataGridTextColumn Header="{DynamicResource ReportColVisaStartDate}" Binding="{Binding VisaStartDate}" Width="110" SortMemberPath="VisaStartDate"/>
                                                 <DataGridTemplateColumn Header="{DynamicResource ReportColVisaExp}" Width="100" SortMemberPath="VisaExpiry">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>

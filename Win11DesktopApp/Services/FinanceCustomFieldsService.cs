@@ -7,11 +7,11 @@ namespace Win11DesktopApp.Services
 {
     public class FinanceCustomFieldsService
     {
-        private readonly LocalDbService? _localDbService;
+        private readonly IFinanceCustomFieldsStorage? _customFieldsStorage;
 
-        public FinanceCustomFieldsService(LocalDbService? localDbService)
+        public FinanceCustomFieldsService(IFinanceCustomFieldsStorage? customFieldsStorage)
         {
-            _localDbService = localDbService;
+            _customFieldsStorage = customFieldsStorage;
         }
 
         public List<CustomSalaryField> GetCustomFields()
@@ -74,12 +74,12 @@ namespace Win11DesktopApp.Services
             return RequireLocalDb().GetCustomSalaryFields();
         }
 
-        private LocalDbService RequireLocalDb()
+        private IFinanceCustomFieldsStorage RequireLocalDb()
         {
-            if (_localDbService == null)
-                throw new InvalidOperationException("LocalDbService is required for custom fields storage.");
+            if (_customFieldsStorage == null)
+                throw new InvalidOperationException("Custom fields storage is required.");
 
-            return _localDbService;
+            return _customFieldsStorage;
         }
     }
 }

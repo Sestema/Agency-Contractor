@@ -163,6 +163,33 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
+        /// Folder for lightweight cross-PC sync event files: {Root}/SQLite/SyncEvents.
+        /// </summary>
+        public string GetSyncEventsFolder()
+        {
+            var sqliteFolder = GetSqliteFolder();
+            return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "SyncEvents");
+        }
+
+        public string GetSyncEventsInboxFolder()
+        {
+            var folder = GetSyncEventsFolder();
+            return string.IsNullOrEmpty(folder) ? string.Empty : Path.Combine(folder, "Inbox");
+        }
+
+        public string GetSyncEventsReadFolder()
+        {
+            var folder = GetSyncEventsFolder();
+            return string.IsNullOrEmpty(folder) ? string.Empty : Path.Combine(folder, "Read");
+        }
+
+        public string GetLocksFolder()
+        {
+            var sqliteFolder = GetSqliteFolder();
+            return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "Locks");
+        }
+
+        /// <summary>
         /// Full path to the database file: {Root}/database.json
         /// </summary>
         public string DatabaseFilePath

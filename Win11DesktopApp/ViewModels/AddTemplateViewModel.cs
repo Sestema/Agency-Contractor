@@ -27,18 +27,62 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(IsDocxFormat));
                     OnPropertyChanged(nameof(IsFileRequired));
-                    // Clear file when switching to DOCX
-                    if (value == "DOCX")
+                    OnPropertyChanged(nameof(ShowDocxCreationOptions));
+                    OnPropertyChanged(nameof(ShowStandardFileUpload));
+                    OnPropertyChanged(nameof(ShowStandardUploadedFile));
+                    OnPropertyChanged(nameof(UploadButtonText));
+                    OnPropertyChanged(nameof(DocxCreationHint));
+                    if (value == "DOCX" && !IsImportDocx)
                         UploadedFilePath = string.Empty;
                 }
             }
         }
 
-        /// <summary>True when DOCX format is selected — file is not needed.</summary>
         public bool IsDocxFormat => SelectedFormat == "DOCX";
 
-        /// <summary>True when file upload is required (XLSX, PDF).</summary>
-        public bool IsFileRequired => SelectedFormat != "DOCX";
+        private bool _isImportDocx;
+        public bool IsImportDocx
+        {
+            get => _isImportDocx;
+            set
+            {
+                if (SetProperty(ref _isImportDocx, value))
+                {
+                    OnPropertyChanged(nameof(IsEmptyDocx));
+                    OnPropertyChanged(nameof(IsFileRequired));
+                    OnPropertyChanged(nameof(ShowDocxCreationOptions));
+                    OnPropertyChanged(nameof(ShowStandardFileUpload));
+                    OnPropertyChanged(nameof(ShowStandardUploadedFile));
+                    OnPropertyChanged(nameof(UploadButtonText));
+                    OnPropertyChanged(nameof(DocxCreationHint));
+                    if (!value && SelectedFormat == "DOCX")
+                        UploadedFilePath = string.Empty;
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public bool IsEmptyDocx
+        {
+            get => !IsImportDocx;
+            set => IsImportDocx = !value;
+        }
+
+        public bool ShowDocxCreationOptions => SelectedFormat == "DOCX";
+
+        public bool ShowStandardFileUpload => SelectedFormat != "DOCX";
+
+        public bool ShowStandardUploadedFile => ShowStandardFileUpload && IsFileUploaded;
+
+        public bool IsFileRequired => SelectedFormat != "DOCX" || IsImportDocx;
+
+        public string UploadButtonText => SelectedFormat == "DOCX"
+            ? Res("TplSelectDocxImport")
+            : (Application.Current?.TryFindResource("BtnUploadFile") as string ?? "Upload file");
+
+        public string DocxCreationHint => IsImportDocx
+            ? Res("TplDocxImportHint")
+            : Res("TplDocxEmptyHint");
 
         private string _uploadedFilePath = string.Empty;
         public string UploadedFilePath 
@@ -49,6 +93,8 @@ namespace Win11DesktopApp.ViewModels
                 SetProperty(ref _uploadedFilePath, value);
                 OnPropertyChanged(nameof(IsFileUploaded));
                 OnPropertyChanged(nameof(UploadedFileName));
+                OnPropertyChanged(nameof(ShowStandardUploadedFile));
+                CommandManager.InvalidateRequerySuggested();
             } 
         }
 
@@ -60,6 +106,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CancelCommand { get; }
 
         public event Action? RequestClose;
+        public TemplateEntry? CreatedTemplate { get; private set; }
 
         private readonly string _firmName;
 
@@ -80,7 +127,9 @@ namespace Win11DesktopApp.ViewModels
         private void UploadFile()
         {
             var dialog = new OpenFileDialog();
-            dialog.Filter = "All Supported Formats|*.docx;*.xlsx;*.pdf|Word Documents|*.docx|Excel Workbooks|*.xlsx|PDF Documents|*.pdf";
+            dialog.Filter = SelectedFormat == "DOCX"
+                ? "Word Documents|*.docx"
+                : "All Supported Formats|*.docx;*.xlsx;*.pdf|Word Documents|*.docx|Excel Workbooks|*.xlsx|PDF Documents|*.pdf";
 
             if (dialog.ShowDialog() == true)
             {
@@ -97,7 +146,19 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
+                if (SelectedFormat == "DOCX" && detected != "DOCX")
+                {
+                    UploadedFilePath = string.Empty;
+                    MessageBox.Show(
+                        Res("TplDocxImportOnlyDocx"),
+                        Application.Current?.TryFindResource("TitleError") as string ?? "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 SelectedFormat = detected;
+                if (detected == "DOCX")
+                    IsImportDocx = true;
             }
         }
 
@@ -106,9 +167,8 @@ namespace Win11DesktopApp.ViewModels
             if (string.IsNullOrWhiteSpace(Name))
                 return false;
 
-            // DOCX doesn't require a file — will use built-in editor
             if (SelectedFormat == "DOCX")
-                return true;
+                return !IsImportDocx || !string.IsNullOrEmpty(UploadedFilePath);
 
             // XLSX/PDF require a file
             return !string.IsNullOrEmpty(UploadedFilePath);
@@ -116,10 +176,25 @@ namespace Win11DesktopApp.ViewModels
 
         private void Save()
         {
+            CreatedTemplate = null;
+
             if (SelectedFormat == "DOCX")
             {
-                // Create template without a source file
-                _templateService.AddTemplateWithoutFile(_firmName, Name, Description, SelectedFormat);
+                if (IsImportDocx)
+                {
+                    if (!_templateService.TryValidateTemplateFile(UploadedFilePath, out var detectedFormat, out var error) || detectedFormat != "DOCX")
+                    {
+                        _templateService.LogTemplateError($"AddTemplate DOCX import validation failed: {UploadedFilePath} | {error}");
+                        MessageBox.Show(string.IsNullOrWhiteSpace(error) ? Res("TplDocxImportInvalid") : error, Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    CreatedTemplate = _templateService.AddTemplateFromDocxImport(_firmName, Name, Description, UploadedFilePath);
+                }
+                else
+                {
+                    CreatedTemplate = _templateService.AddTemplateWithoutFile(_firmName, Name, Description, SelectedFormat);
+                }
             }
             else
             {
@@ -131,7 +206,7 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 SelectedFormat = detectedFormat;
-                _templateService.AddTemplate(_firmName, Name, Description, SelectedFormat, UploadedFilePath);
+                CreatedTemplate = _templateService.AddTemplate(_firmName, Name, Description, SelectedFormat, UploadedFilePath);
             }
             _activityLogService.Log("TemplateAdded", "Template", _firmName, "",
                 $"Додано шаблон «{Name}» ({SelectedFormat}) до {_firmName}");

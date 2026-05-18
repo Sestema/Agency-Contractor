@@ -18,6 +18,7 @@ namespace Win11DesktopApp.Services
         private readonly LocalDbService? _localDbService;
         private readonly CompanyService _companyService;
         private readonly EmployeeIndexDbService? _employeeIndexDbService;
+        private readonly bool _isPostgresRuntimeStorage;
         public const string GlobalKey = FinanceConstants.GlobalKey;
         public const string AllFirmsKey = FinanceConstants.AllFirmsKey;
         public FinanceAdvancesService AdvancesService { get; private set; } = null!;
@@ -36,7 +37,9 @@ namespace Win11DesktopApp.Services
             LocalDbService? localDbService = null,
             CompanyService? companyService = null,
             EmployeeIndexDbService? employeeIndexDbService = null,
-            bool suppressStartupNotifications = false)
+            SharedOperationLockService? sharedOperationLockService = null,
+            bool suppressStartupNotifications = false,
+            AppDataStorageFactory? storageFactory = null)
         {
             _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _suppressStartupNotifications = suppressStartupNotifications;
@@ -44,28 +47,41 @@ namespace Win11DesktopApp.Services
             _localDbService = localDbService;
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _employeeIndexDbService = employeeIndexDbService;
+            _isPostgresRuntimeStorage = storageFactory?.IsPostgresExplicitlyEnabled == true;
+            var advancesStorage = storageFactory?.CreateAdvancesStorage()
+                ?? (_localDbService == null ? null : new SqliteFinanceAdvancesStorage(_localDbService));
+            var customFieldsStorage = storageFactory?.CreateCustomFieldsStorage()
+                ?? (_localDbService == null ? null : new SqliteFinanceCustomFieldsStorage(_localDbService));
+            var reportsStorage = storageFactory?.CreateReportsStorage()
+                ?? (_localDbService == null ? null : new SqliteFinanceReportsStorage(_localDbService));
+            var salaryHistoryStorage = storageFactory?.CreateSalaryHistoryStorage()
+                ?? (_localDbService == null ? null : new SqliteFinanceSalaryHistoryStorage(_localDbService));
+            var monthPaymentsStorage = storageFactory?.CreateMonthPaymentsStorage()
+                ?? (_salaryDbService == null ? null : new SqliteFinanceMonthPaymentsStorage(_salaryDbService));
             AdvancesService = new FinanceAdvancesService(
-                _localDbService,
+                advancesStorage,
                 ResolveEmployeeId,
                 ResolveEmployeeFolder);
             SalaryHistoryService = new FinanceSalaryHistoryService(
                 _folderService,
-                _localDbService,
+                salaryHistoryStorage,
                 _companyService,
                 ResolveEmployeeId,
-                ResolveEmployeeFolder);
+                ResolveEmployeeFolder,
+                useStorageImmediately: _isPostgresRuntimeStorage);
             MonthPaymentsService = new FinanceMonthPaymentsService(
                 _folderService,
-                _salaryDbService,
+                monthPaymentsStorage,
                 () => LastSaveRecoveryPath = null,
                 () =>
                 {
                     LastSalaryConflictMessage = string.Empty;
                     LastSaveRecoveryPath = null;
                 },
-                message => LastSalaryConflictMessage = message);
-            CustomFieldsService = new FinanceCustomFieldsService(_localDbService);
-            ReportsService = new FinanceReportsService(_localDbService);
+                message => LastSalaryConflictMessage = message,
+                sharedOperationLockService);
+            CustomFieldsService = new FinanceCustomFieldsService(customFieldsStorage);
+            ReportsService = new FinanceReportsService(reportsStorage);
         }
 
         public SalaryDbMigrationResult EnsureSalaryMigratedToLocalDb()
@@ -895,6 +911,9 @@ WHERE stage = 'salary_entries'
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
             => MonthPaymentsService.SaveAllFirmPayments(year, month, allEntries, allExpenses);
 
+        public bool SaveFirmPayments(int year, int month, string firmName, List<SalaryEntry> entries, List<FirmExpense> expenses)
+            => MonthPaymentsService.SaveFirmPayments(year, month, firmName, entries, expenses);
+
         public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
             => MonthPaymentsService.LoadAllFirmPayments(year, month, forceReload);
 
@@ -906,7 +925,7 @@ WHERE stage = 'salary_entries'
 
         public bool MonthDataExists(int year, int month)
         {
-            return _salaryDbService?.MonthDbExists(year, month) == true;
+            return MonthPaymentsService.MonthDataExists(year, month);
         }
 
         public IReadOnlyList<(int year, int month)> GetAvailableSalaryMonths()
@@ -1011,7 +1030,7 @@ WHERE stage = 'salary_entries'
             var totalSw = System.Diagnostics.Stopwatch.StartNew();
             var resolveCacheMs = 0L;
             var salaryHistoryLoadMs = 0L;
-            var sqliteSavedPaymentsMs = 0L;
+            var storedPaymentsMs = 0L;
             var mergeMs = 0L;
             var salaryHistoryRecordsLoaded = 0;
             var result = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
@@ -1020,7 +1039,7 @@ WHERE stage = 'salary_entries'
 
             var targetKey = $"{targetYear:D4}-{targetMonth:D2}";
             var salaryHistoryByRequest = new Dictionary<string, List<SalaryHistoryRecord>>(StringComparer.OrdinalIgnoreCase);
-            var sqliteRequestMap = new Dictionary<string, (string employeeFolder, string? employeeId)>(StringComparer.OrdinalIgnoreCase);
+            var storageRequestMap = new Dictionary<string, (string employeeFolder, string? employeeId)>(StringComparer.OrdinalIgnoreCase);
             var originalFolderByNormalizedKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var employeeIdByNormalizedKey = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
@@ -1087,27 +1106,31 @@ WHERE stage = 'salary_entries'
                 var employeeId = employeeIdCache.TryGetValue(normalizedFolder, out var cachedEmployeeId)
                     ? cachedEmployeeId
                     : ResolveEmployeeId(resolvedEmployeeFolder);
-                sqliteRequestMap[request.requestKey] = (resolvedEmployeeFolder, employeeId);
+                storageRequestMap[request.requestKey] = (resolvedEmployeeFolder, employeeId);
             }
 
-            var sqliteSavedPaymentsByRequest = new Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>>(StringComparer.OrdinalIgnoreCase);
-            if (_salaryDbService != null)
+            var storedPaymentsByRequest = new Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>>(StringComparer.OrdinalIgnoreCase);
+            try
             {
-                var sqliteSavedPaymentsSw = System.Diagnostics.Stopwatch.StartNew();
-                var sqliteRequests = requests
+                var storedPaymentsSw = System.Diagnostics.Stopwatch.StartNew();
+                var storageRequests = requests
                     .Select(request =>
                     {
-                        var sqliteRequest = sqliteRequestMap[request.requestKey];
+                        var storageRequest = storageRequestMap[request.requestKey];
                         return (
                             request.requestKey,
                             request.firmName,
-                            sqliteRequest.employeeFolder,
-                            sqliteRequest.employeeId);
+                            storageRequest.employeeFolder,
+                            storageRequest.employeeId);
                     })
                     .ToList();
 
-                sqliteSavedPaymentsByRequest = _salaryDbService.GetSavedPaymentsForAllRequests(targetKey, sqliteRequests);
-                sqliteSavedPaymentsMs = sqliteSavedPaymentsSw.ElapsedMilliseconds;
+                storedPaymentsByRequest = MonthPaymentsService.GetSavedPaymentsForAllRequests(targetKey, storageRequests);
+                storedPaymentsMs = storedPaymentsSw.ElapsedMilliseconds;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceService.CalculateCarriedDebtForEntries.StoredPayments", ex.Message);
             }
 
             var mergeSw = System.Diagnostics.Stopwatch.StartNew();
@@ -1130,9 +1153,9 @@ WHERE stage = 'salary_entries'
                     }
                 }
 
-                if (sqliteSavedPaymentsByRequest.TryGetValue(request.requestKey, out var sqliteSavedPayments))
+                if (storedPaymentsByRequest.TryGetValue(request.requestKey, out var storedPayments))
                 {
-                    foreach (var pair in sqliteSavedPayments)
+                    foreach (var pair in storedPayments)
                         savedPayments.TryAdd(pair.Key, pair.Value);
                 }
 
@@ -1165,7 +1188,7 @@ WHERE stage = 'salary_entries'
                 "Timing.CalculateCarriedDebtForEntries",
                 $"CalculateCarriedDebtForEntries {targetYear:D4}-{targetMonth:D2} total={totalSw.ElapsedMilliseconds}ms | " +
                 $"resolveCache={resolveCacheMs}ms | salaryHistoryLoad={salaryHistoryLoadMs}ms | " +
-                $"sqliteSavedPayments={sqliteSavedPaymentsMs}ms | merge={mergeMs}ms | " +
+                $"storedPayments={storedPaymentsMs}ms | merge={mergeMs}ms | " +
                 $"requests={requests.Count} | uniqueFolders={originalFolderByNormalizedKey.Count} | " +
                 $"salaryHistoryRecords={salaryHistoryRecordsLoaded}");
 
@@ -1197,19 +1220,16 @@ WHERE stage = 'salary_entries'
 
                 try
                 {
-                    if (_salaryDbService != null)
-                    {
-                        var sqliteSavedPayments = _salaryDbService.GetSavedPaymentsForEmployee(
-                            resolvedEmployeeFolder,
-                            employeeId,
-                            firmName,
-                            beforeMonthKey);
+                    var storedPayments = MonthPaymentsService.GetSavedPaymentsForEmployee(
+                        resolvedEmployeeFolder,
+                        employeeId,
+                        firmName,
+                        beforeMonthKey);
 
-                        foreach (var pair in sqliteSavedPayments)
-                            result.TryAdd(pair.Key, pair.Value);
+                    foreach (var pair in storedPayments)
+                        result.TryAdd(pair.Key, pair.Value);
 
-                        return result;
-                    }
+                    return result;
                 }
                 catch (Exception ex) { LoggingService.LogError("FinanceService.LoadSavedPaymentsForEmployee", ex); }
             }
@@ -1224,7 +1244,7 @@ WHERE stage = 'salary_entries'
 
             try
             {
-                _salaryDbService?.UpdateHourlyRateForward(employeeId, resolvedEmployeeFolder, firmName, newRate, fromKey, cancellationToken);
+                MonthPaymentsService.UpdateHourlyRateForward(employeeId, resolvedEmployeeFolder, firmName, newRate, fromKey, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -1232,7 +1252,7 @@ WHERE stage = 'salary_entries'
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward.SQLite", ex.Message);
+                LoggingService.LogWarning("FinanceService.UpdateHourlyRateForward", ex.Message);
             }
 
             InvalidatePaymentsCache();

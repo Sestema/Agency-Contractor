@@ -416,8 +416,17 @@ namespace Win11DesktopApp.ViewModels
 
         private void OnAddTemplateClose()
         {
+            var createdTemplate = AddTemplateVm?.CreatedTemplate;
             IsAddDialogOpen = false;
             CleanupAddTemplateVm();
+
+            if (createdTemplate != null
+                && string.Equals(createdTemplate.Format, "DOCX", System.StringComparison.OrdinalIgnoreCase))
+            {
+                _navigationService.NavigateTo(_templateViewModelFactory.CreateTemplateEditor(_firmName, createdTemplate));
+                return;
+            }
+
             _ = LoadTemplatesAsync();
         }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Services
@@ -50,7 +51,8 @@ namespace Win11DesktopApp.Services
             string employeeFolder,
             EmployeeService? employeeService = null,
             bool isReadOnlyMode = false,
-            string? employeeId = null)
+            string? employeeId = null,
+            IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null)
         {
             return new EmployeeDetailsViewModel(
                 firmName,
@@ -68,7 +70,8 @@ namespace Win11DesktopApp.Services
                 _documentGenerationService,
                 _tagCatalogService,
                 _aiWindowFactory,
-                _appStatisticsService);
+                _appStatisticsService,
+                bulkUpdateTargets);
         }
     }
 }

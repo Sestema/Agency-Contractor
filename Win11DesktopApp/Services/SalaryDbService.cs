@@ -107,7 +107,7 @@ namespace Win11DesktopApp.Services
 
             EnsureMonthSchema(dbPath);
 
-            var connection = new SqliteConnection($"Data Source={dbPath};Cache=Shared");
+            var connection = new SqliteConnection($"Data Source={dbPath};Cache=Shared;Pooling=False");
             connection.Open();
 
             using (var command = connection.CreateCommand())
@@ -686,7 +686,7 @@ WHERE id = @id;";
                 if (!string.IsNullOrWhiteSpace(folder))
                     Directory.CreateDirectory(folder);
 
-                using var connection = new SqliteConnection($"Data Source={dbPath};Cache=Shared");
+                using var connection = new SqliteConnection($"Data Source={dbPath};Cache=Shared;Pooling=False");
                 connection.Open();
 
                 using var command = connection.CreateCommand();

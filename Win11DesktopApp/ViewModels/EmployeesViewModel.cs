@@ -83,6 +83,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly GeminiApiService _geminiApiService;
         private readonly EmployerCompany? _company;
         private readonly CompanyService? _companyService;
+        private readonly SyncEventService? _syncEventService;
         private readonly bool _showAllCompanies;
         private List<EmployeeModels.EmployeeSummary> _allEmployees = new List<EmployeeModels.EmployeeSummary>();
         private string _lastStatus = string.Empty;
@@ -359,6 +360,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand BatchGenerateCommand { get; }
         public ICommand CloseBatchGenerateCommand { get; }
         public ICommand BatchGenerateFromTemplateCommand { get; }
+        public ICommand BatchGenerateToFolderCommand { get; }
         public ICommand OpenBatchAIValidationCommand { get; }
         public ICommand CloseBatchAIValidationCommand { get; }
         public ICommand StartBatchAIValidationCommand { get; }
@@ -466,6 +468,7 @@ namespace Win11DesktopApp.ViewModels
             TagCatalogService? tagCatalogService = null,
             GeminiApiService? geminiApiService = null,
             CompanyService? companyService = null,
+            SyncEventService? syncEventService = null,
             bool showAllCompanies = false)
         {
             _company = company;
@@ -485,6 +488,9 @@ namespace Win11DesktopApp.ViewModels
             _documentGenerationService = documentGenerationService ?? throw new InvalidOperationException("DocumentGenerationService is not initialized.");
             _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
             _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
+            _syncEventService = syncEventService;
+            if (_syncEventService != null)
+                _syncEventService.SyncEventReceived += OnSyncEventReceived;
             _sortField = _appSettingsService.Settings.EmployeeSortField ?? "Name";
             _sortAscending = _appSettingsService.Settings.EmployeeSortAscending;
             _viewMode = _showAllCompanies ? "Tiles" : _appSettingsService.Settings.EmployeeViewMode ?? "List";
@@ -562,6 +568,7 @@ namespace Win11DesktopApp.ViewModels
             BatchGenerateCommand = new RelayCommand(o => OpenBatchGenerate(), o => Employees.Any(e => e.IsSelected));
             CloseBatchGenerateCommand = new RelayCommand(o => IsBatchGenerateOpen = false);
             BatchGenerateFromTemplateCommand = new RelayCommand(o => BatchGenerate(o as TemplateEntry));
+            BatchGenerateToFolderCommand = new RelayCommand(o => BatchGenerateToFolder(o as TemplateEntry));
             OpenBatchAIValidationCommand = new RelayCommand(o => OpenBatchAIValidation(), o => Employees.Count > 0);
             CloseBatchAIValidationCommand = new RelayCommand(o =>
             {
@@ -885,12 +892,34 @@ namespace Win11DesktopApp.ViewModels
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
         private void OnDetailsDataChanged() => _ = LoadEmployeesAsync();
 
+        private void OnSyncEventReceived(object? sender, SyncEventReceivedEventArgs e)
+        {
+            if (!string.Equals(e.Record.Type, "EmployeeCreated", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var affectsThisView = _showAllCompanies
+                || (_company != null && string.Equals(_company.Name, e.Record.FirmName, StringComparison.OrdinalIgnoreCase));
+            if (!affectsThisView)
+                return;
+
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+            {
+                StatusMessage = $"Оновлено: додано {e.Record.EmployeeName}";
+                _ = LoadEmployeesAsync();
+            }), DispatcherPriority.Background);
+        }
+
         private void OpenEmployee(EmployeeModels.EmployeeSummary? employee)
         {
             var firmName = ResolveEmployeeFirmName(employee);
             if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
             CleanupDetailsVm();
-            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(firmName, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(
+                firmName,
+                employee.EmployeeFolder,
+                _employeeService,
+                employeeId: employee.UniqueId,
+                bulkUpdateTargets: BuildBulkUpdateTargets(employee));
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
@@ -903,12 +932,35 @@ namespace Win11DesktopApp.ViewModels
             var firmName = ResolveEmployeeFirmName(employee);
             if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
             CleanupDetailsVm();
-            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(firmName, employee.EmployeeFolder, _employeeService, employeeId: employee.UniqueId);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(
+                firmName,
+                employee.EmployeeFolder,
+                _employeeService,
+                employeeId: employee.UniqueId,
+                bulkUpdateTargets: BuildBulkUpdateTargets(employee));
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             EmployeeDetailsVm.IsEditMode = true;
             EmployeeDetailsVm.TabIndex = 1;
             IsEmployeeDetailsOpen = true;
+        }
+
+        private List<EmployeeBulkUpdateTarget> BuildBulkUpdateTargets(EmployeeModels.EmployeeSummary current)
+        {
+            if (!IsSelectionMode)
+                return new List<EmployeeBulkUpdateTarget>();
+
+            return Employees
+                .Where(employee => employee.IsSelected
+                    && !string.IsNullOrWhiteSpace(employee.EmployeeFolder)
+                    && !string.Equals(employee.UniqueId, current.UniqueId, StringComparison.OrdinalIgnoreCase))
+                .Select(employee => new EmployeeBulkUpdateTarget
+                {
+                    EmployeeFolder = employee.EmployeeFolder,
+                    UniqueId = employee.UniqueId,
+                    FullName = employee.FullName
+                })
+                .ToList();
         }
 
         private string ResolveEmployeeFirmName(EmployeeModels.EmployeeSummary? employee)
@@ -1872,7 +1924,25 @@ namespace Win11DesktopApp.ViewModels
             return distances[source.Length, target.Length];
         }
 
-        private void BatchGenerate(TemplateEntry? template)
+        private void BatchGenerateToFolder(TemplateEntry? template)
+        {
+            if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
+                return;
+            if (template == null)
+                return;
+
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Виберіть папку для збереження документів"
+            };
+
+            if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
+                return;
+
+            BatchGenerate(template, dialog.FolderName);
+        }
+
+        private void BatchGenerate(TemplateEntry? template, string? outputFolder = null)
         {
             if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
                 return;
@@ -1880,16 +1950,38 @@ namespace Win11DesktopApp.ViewModels
             try
             {
                 IsLoading = true;
+                if (!string.IsNullOrWhiteSpace(outputFolder))
+                    Directory.CreateDirectory(outputFolder);
+
                 var selected = Employees.Where(e => e.IsSelected).ToList();
                 int success = 0;
                 int fail = 0;
+                var resultLines = new List<string>();
 
                 foreach (var emp in selected)
                 {
+                    var employeeName = string.IsNullOrWhiteSpace(emp.FullName)
+                        ? Path.GetFileName(emp.EmployeeFolder)
+                        : emp.FullName;
+
                     try
                     {
                         var data = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
-                        if (data == null) { fail++; continue; }
+                        if (data == null)
+                        {
+                            fail++;
+                            resultLines.Add($"[ПОМИЛКА] {employeeName}: анкета не знайдена");
+                            continue;
+                        }
+
+                        if (!IsBatchEmployeeIdentityMatch(emp, data))
+                        {
+                            fail++;
+                            resultLines.Add($"[ПОМИЛКА] {employeeName}: дані не співпадають з вибраним працівником");
+                            LoggingService.LogWarning("EmployeesViewModel.BatchGenerate",
+                                $"Skipped batch document generation because selected employee id '{emp.UniqueId}' does not match employee.json id '{data.UniqueId}' in folder '{emp.EmployeeFolder}'.");
+                            continue;
+                        }
 
                         var templateFullPath = _templateService.GetTemplateFullPath(_company.Name, template.FilePath) ?? string.Empty;
                         var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
@@ -1897,48 +1989,84 @@ namespace Win11DesktopApp.ViewModels
                         bool hasTemplateFile = File.Exists(templateFullPath);
                         bool hasRtfContent = File.Exists(rtfPath);
 
-                        if (!hasTemplateFile && !hasRtfContent) { fail++; continue; }
+                        if (!hasTemplateFile && !hasRtfContent)
+                        {
+                            fail++;
+                            resultLines.Add($"[ПОМИЛКА] {employeeName}: шаблон не знайдено");
+                            continue;
+                        }
 
                         var tagValues = _tagCatalogService.GetTagValueMapForEmployee(_company.Name, data)
                             ?? new Dictionary<string, string>();
                         var format = template.Format?.ToUpper() ?? Path.GetExtension(templateFullPath).TrimStart('.').ToUpper();
+                        var generatedFileName = string.Empty;
 
                         string SanitizeFn(string n) => string.Join("_", n.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+                        string BuildOutputPath(string fileName)
+                        {
+                            var targetFolder = string.IsNullOrWhiteSpace(outputFolder)
+                                ? emp.EmployeeFolder
+                                : outputFolder;
+                            return EnsureUniqueBatchOutputPath(Path.Combine(targetFolder, fileName));
+                        }
 
                         if (format == "DOCX" || hasRtfContent)
                         {
                             if (hasRtfContent)
                             {
                                 var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
-                                var outPath = Path.Combine(emp.EmployeeFolder, outName);
+                                var outPath = BuildOutputPath(outName);
                                 _documentGenerationService.GenerateDocxFromRtf(rtfPath, outPath, tagValues);
+                                generatedFileName = Path.GetFileName(outPath);
                             }
                             else if (hasTemplateFile)
                             {
                                 var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
-                                var outPath = Path.Combine(emp.EmployeeFolder, outName);
+                                var outPath = BuildOutputPath(outName);
                                 _documentGenerationService.GenerateDocx(templateFullPath, outPath, tagValues);
+                                generatedFileName = Path.GetFileName(outPath);
                             }
                         }
                         else if (format == "XLSX" && hasTemplateFile)
                         {
                             var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.xlsx");
-                            var outPath = Path.Combine(emp.EmployeeFolder, outName);
+                            var outPath = BuildOutputPath(outName);
                             _documentGenerationService.GenerateXlsx(templateFullPath, outPath, tagValues);
+                            generatedFileName = Path.GetFileName(outPath);
                         }
                         else if (format == "PDF" && hasTemplateFile)
                         {
                             var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.pdf");
-                            var outPath = Path.Combine(emp.EmployeeFolder, outName);
-                            SafeFileService.CopyFile(templateFullPath, outPath);
+                            var outPath = BuildOutputPath(outName);
+                            _documentGenerationService.GeneratePdf(templateFullPath, outPath, tagValues);
+                            generatedFileName = Path.GetFileName(outPath);
+                        }
+
+                        if (string.IsNullOrWhiteSpace(generatedFileName))
+                        {
+                            fail++;
+                            resultLines.Add($"[ПОМИЛКА] {employeeName}: формат не підтримується ({format})");
+                            continue;
                         }
 
                         success++;
+                        resultLines.Add($"[OK] {employeeName}: {generatedFileName}");
                     }
-                    catch (Exception ex) { LoggingService.LogError("EmployeesViewModel.BatchGenerate", ex); fail++; }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError("EmployeesViewModel.BatchGenerate", ex);
+                        fail++;
+                        resultLines.Add($"[ПОМИЛКА] {employeeName}: {ex.Message}");
+                    }
                 }
 
-                BatchStatusMessage = string.Format(Res("MsgBatchResult"), success, fail);
+                BatchStatusMessage = string.Join(Environment.NewLine,
+                    new[] { string.Format(Res("MsgBatchResult"), success, fail) }.Concat(resultLines));
+
+                LogBatchGeneration(template, selected.Count, success, fail, outputFolder, resultLines);
+
+                if (!string.IsNullOrWhiteSpace(outputFolder) && success > 0)
+                    OpenFolderAfterBatchGeneration(outputFolder);
             }
             catch (Exception ex)
             {
@@ -1948,6 +2076,79 @@ namespace Win11DesktopApp.ViewModels
             {
                 IsLoading = false;
             }
+        }
+
+        private static string EnsureUniqueBatchOutputPath(string path)
+        {
+            if (!File.Exists(path))
+                return path;
+
+            var folder = Path.GetDirectoryName(path) ?? string.Empty;
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            var extension = Path.GetExtension(path);
+
+            for (var i = 1; i < 1000; i++)
+            {
+                var candidate = Path.Combine(folder, $"{fileName} ({i}){extension}");
+                if (!File.Exists(candidate))
+                    return candidate;
+            }
+
+            return Path.Combine(folder, $"{fileName} ({DateTime.Now:yyyyMMddHHmmss}){extension}");
+        }
+
+        private static bool IsBatchEmployeeIdentityMatch(EmployeeModels.EmployeeSummary summary, EmployeeModels.EmployeeData data)
+        {
+            var expectedId = summary.UniqueId?.Trim() ?? string.Empty;
+            var actualId = data.UniqueId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(expectedId) || string.IsNullOrWhiteSpace(actualId))
+                return true;
+
+            return string.Equals(expectedId, actualId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void OpenFolderAfterBatchGeneration(string folder)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = folder, UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeesViewModel.OpenBatchOutputFolder", ex.Message);
+            }
+        }
+
+        private void LogBatchGeneration(
+            TemplateEntry template,
+            int selectedCount,
+            int success,
+            int fail,
+            string? outputFolder,
+            IReadOnlyList<string> resultLines)
+        {
+            var target = string.IsNullOrWhiteSpace(outputFolder)
+                ? "папки працівників"
+                : outputFolder;
+            var details = string.Join(Environment.NewLine,
+                new[]
+                {
+                    $"Шаблон: {template.Name}",
+                    $"Обрано: {selectedCount}",
+                    $"Успішно: {success}",
+                    $"Помилки: {fail}",
+                    $"Куди: {target}",
+                    "Результати:"
+                }.Concat(resultLines));
+
+            _activityLogService.Log(
+                "BatchDocGenerated",
+                "Document",
+                _company?.Name ?? string.Empty,
+                string.Empty,
+                $"Масова генерація «{template.Name}»: успішно {success}, помилки {fail}",
+                details: details);
         }
     }
 }

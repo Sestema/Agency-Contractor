@@ -29,6 +29,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private readonly DocumentLocalizationService _documentLocalizationService;
         private readonly CompanyService _companyService;
+        private readonly SyncEventService _syncEventService;
         private readonly object _ratePropagationGate = new();
         private readonly Dictionary<string, CancellationTokenSource> _ratePropagationCtsByKey = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? _notePropagationCts;
@@ -301,7 +302,8 @@ namespace Win11DesktopApp.ViewModels
             ActivityLogService? activityLogService = null,
             EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
             DocumentLocalizationService? documentLocalizationService = null,
-            CompanyService? companyService = null)
+            CompanyService? companyService = null,
+            SyncEventService? syncEventService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
@@ -311,6 +313,8 @@ namespace Win11DesktopApp.ViewModels
             _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
             _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
+            _syncEventService = syncEventService ?? throw new InvalidOperationException("SyncEventService is not initialized.");
+            _syncEventService.SyncEventReceived += OnSyncEventReceived;
 
             _selectedYear = DateTime.Now.Year;
             _selectedMonth = DateTime.Now.Month;
@@ -1242,7 +1246,7 @@ namespace Win11DesktopApp.ViewModels
             RefreshActiveFields();
             await RefreshAdvanceSumsAsync();
             LoadExpenses();
-            await SaveReportAsync();
+            await SaveReportAsync(forceSaveAllEntries: true);
             await CheckNextMonthExistsAsync();
         }
 
@@ -1366,6 +1370,9 @@ namespace Win11DesktopApp.ViewModels
             => _ = SaveReportAsync();
 
         private async Task<bool> SaveReportAsync()
+            => await SaveReportAsync(forceSaveAllEntries: false);
+
+        private async Task<bool> SaveReportAsync(bool forceSaveAllEntries)
         {
             await _saveReportGate.WaitAsync();
             try
@@ -1380,7 +1387,13 @@ namespace Win11DesktopApp.ViewModels
                 foreach (var entry in Entries)
                     entry.SavedNetSalary = entry.NetSalary;
 
-                var entriesForSave = BuildChangedEntriesForSave();
+                var allLabel = L("FinFilterAll") ?? "All";
+                var isFirmScopedSave = !forceSaveAllEntries
+                    && !string.IsNullOrWhiteSpace(SelectedFirmFilter)
+                    && !string.Equals(SelectedFirmFilter, allLabel, StringComparison.Ordinal);
+                var entriesForSave = forceSaveAllEntries || !isFirmScopedSave
+                    ? Entries.ToList()
+                    : BuildChangedEntriesForSave();
 
                 LoggingService.LogInfo(
                     "Salary.Save",
@@ -1388,7 +1401,11 @@ namespace Win11DesktopApp.ViewModels
                     $"snapshots={_originalEntrySnapshots.Count} dirty={_dirtySalaryEntryKeys.Count} " +
                     $"toSave={entriesForSave.Count} expensesToSave={expensesForSave.Count}");
 
-                if (!_financeService.SaveAllFirmPayments(saveYear, saveMonth, entriesForSave, expensesForSave))
+                var saveSucceeded = isFirmScopedSave
+                    ? _financeService.SaveFirmPayments(saveYear, saveMonth, SelectedFirmFilter, entriesForSave, expensesForSave)
+                    : _financeService.SaveAllFirmPayments(saveYear, saveMonth, entriesForSave, expensesForSave);
+
+                if (!saveSucceeded)
                 {
                     StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
                         ? _financeService.LastSalaryConflictMessage
@@ -1417,6 +1434,11 @@ namespace Win11DesktopApp.ViewModels
                 if (changedNotes.Count > 0)
                     await PropagateNoteChangesForwardAsync(changedNotes, saveYear, saveMonth);
 
+                var changedFirm = string.Equals(SelectedFirmFilter, allLabel, StringComparison.Ordinal)
+                    ? string.Empty
+                    : SelectedFirmFilter;
+                _syncEventService.PublishSalaryChanged(saveYear, saveMonth, changedFirm);
+
                 return true;
             }
             finally
@@ -1427,11 +1449,18 @@ namespace Win11DesktopApp.ViewModels
 
         private List<SalaryEntry> BuildChangedEntriesForSave()
         {
+            var allLabel = L("FinFilterAll") ?? "All";
+            var isFirmScopedSave = !string.IsNullOrWhiteSpace(SelectedFirmFilter)
+                && !string.Equals(SelectedFirmFilter, allLabel, StringComparison.Ordinal);
+            var sourceEntries = isFirmScopedSave
+                ? Entries.Where(entry => string.Equals(entry.FirmName, SelectedFirmFilter, StringComparison.OrdinalIgnoreCase))
+                : Entries;
+
             if (_originalEntrySnapshots.Count == 0)
-                return Entries.ToList();
+                return sourceEntries.ToList();
 
             var changed = new List<SalaryEntry>();
-            foreach (var entry in Entries)
+            foreach (var entry in sourceEntries)
             {
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
                 if (!_originalEntrySnapshots.TryGetValue(key, out var snapshot)
@@ -1444,6 +1473,29 @@ namespace Win11DesktopApp.ViewModels
             }
 
             return changed;
+        }
+
+        private void OnSyncEventReceived(object? sender, SyncEventReceivedEventArgs e)
+        {
+            if (!string.Equals(e.Record.Type, "SalaryChanged", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (e.Record.Year != _selectedYear || e.Record.Month != _selectedMonth)
+                return;
+
+            try
+            {
+                _financeService.InvalidatePaymentsCache(e.Record.Year, e.Record.Month);
+                Application.Current?.Dispatcher.InvokeAsync(async () =>
+                {
+                    StatusMessage = "Зарплати оновлено на іншому ПК. Дані перезавантажуються...";
+                    await LoadReportAsync();
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("SalaryViewModel.SyncEvent", ex.Message);
+            }
         }
 
         // Safety net: even if dirty-tracking missed a property change (e.g. WPF
@@ -2562,11 +2614,7 @@ namespace Win11DesktopApp.ViewModels
             if (isAll)
                 return FirmExpenses.ToList();
 
-            var monthExpenses = _financeService.GetFirmExpenses(year, month)
-                .Where(expense => !ShouldReplaceFirmExpenseForSelectedFirm(expense.FirmName, _selectedFirmFilter))
-                .ToList();
-            monthExpenses.AddRange(FirmExpenses.ToList());
-            return monthExpenses;
+            return FirmExpenses.ToList();
         }
 
         private void OnSalaryDetailsClose()

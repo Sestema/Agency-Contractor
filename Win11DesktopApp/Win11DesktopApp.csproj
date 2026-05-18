@@ -9,9 +9,9 @@
     <UseWPF>true</UseWPF>
     <AssemblyTitle>Agency Contractor</AssemblyTitle>
     <ProductName>Agency Contractor</ProductName>
-    <Version>0.1.67</Version>
-    <AssemblyVersion>0.1.67.0</AssemblyVersion>
-    <FileVersion>0.1.67.0</FileVersion>
+    <Version>0.1.72</Version>
+    <AssemblyVersion>0.1.72.0</AssemblyVersion>
+    <FileVersion>0.1.72.0</FileVersion>
     <ApplicationIcon>Resources\app_icon.ico</ApplicationIcon>
     <Copyright>© 2026 Oleksandr Kachalin. All rights reserved.</Copyright>
     <Authors>Oleksandr Kachalin</Authors>
@@ -21,6 +21,10 @@
 
   <ItemGroup>
     <Resource Include="Resources\app_icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <!-- Keep cs/en/ru language files as raw XAML (not compiled BAML) to avoid
@@ -57,6 +61,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3800.47" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
+    <PackageReference Include="Npgsql" Version="10.0.2" />
     <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260214" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260214" />
     <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />

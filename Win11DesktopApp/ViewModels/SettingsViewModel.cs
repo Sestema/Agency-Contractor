@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
@@ -52,6 +55,20 @@ namespace Win11DesktopApp.ViewModels
         }
     }
 
+    public sealed class ConnectedClientViewItem
+    {
+        public string MachineName { get; init; } = string.Empty;
+        public string WindowsUser { get; init; } = string.Empty;
+        public string UserDisplayName { get; init; } = string.Empty;
+        public string IpAddress { get; init; } = string.Empty;
+        public string AppVersion { get; init; } = string.Empty;
+        public string RootFolderPath { get; init; } = string.Empty;
+        public string LastSeenDisplay { get; init; } = string.Empty;
+        public string StartedDisplay { get; init; } = string.Empty;
+        public string StatusDisplay { get; init; } = string.Empty;
+        public bool IsOnline { get; init; }
+    }
+
     public class SettingsViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
@@ -70,6 +87,15 @@ namespace Win11DesktopApp.ViewModels
         private readonly GeminiApiKeyConfigurationService _geminiApiKeyConfigurationService;
         private readonly TelegramBotService _telegramBotService;
         private readonly TelegramPairingService _telegramPairingService;
+        private readonly WebPanelHostService _webPanelHostService;
+        private readonly SyncEventService _syncEventService;
+        private readonly PostgresConnectionTestService _postgresConnectionTestService;
+        private readonly PostgresMigrationService _postgresMigrationService;
+        private readonly PostgresToSqliteBackupService _postgresToSqliteBackupService;
+        private readonly PostgresResetService _postgresResetService;
+        private readonly PostgresNetworkAccessService _postgresNetworkAccessService;
+        private readonly AppDataStorageFactory _appDataStorageFactory;
+        private readonly ConnectedClientsService _connectedClientsService;
 
         public ICommand GoBackCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
@@ -94,6 +120,22 @@ namespace Win11DesktopApp.ViewModels
         public ICommand GenerateTelegramQrCommand { get; }
         public ICommand RemoveTelegramAuthorizedUserCommand { get; }
         public ICommand OpenBotFatherCommand { get; }
+        public ICommand CopyWebPanelUrlCommand { get; }
+        public ICommand CopyWebPanelLanUrlCommand { get; }
+        public ICommand OpenWebPanelUrlCommand { get; }
+        public ICommand RefreshSyncStatusCommand { get; }
+        public ICommand TestPostgresConnectionCommand { get; }
+        public ICommand RunPostgresMigrationCommand { get; }
+        public ICommand ReplacePostgresFromSqliteCommand { get; }
+        public ICommand UseSqliteStorageModeCommand { get; }
+        public ICommand EnablePostgresStorageModeCommand { get; }
+        public ICommand RestartApplicationCommand { get; }
+        public ICommand CopySecondPcDatabaseAccessCommand { get; }
+        public ICommand RefreshConnectedClientsCommand { get; }
+        public ICommand ChangeSettingsSectionCommand { get; }
+        public ICommand CreateSqliteBackupFromPostgresCommand { get; }
+        public ICommand ResetPostgresDatabaseCommand { get; }
+        public ICommand ConfigurePostgresTailscaleAccessCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -103,6 +145,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public ObservableCollection<CompanyVisibilityItem> CompanyVisibilityItems { get; } = new();
+        public ObservableCollection<ConnectedClientViewItem> ConnectedClients { get; } = new();
 
         private string _updateStatus = "";
         public string UpdateStatus
@@ -147,8 +190,50 @@ namespace Win11DesktopApp.ViewModels
         private BitmapImage? _telegramQrCodeImage;
         private string _telegramPairingCode = string.Empty;
         private string _telegramPairingExpiryText = string.Empty;
+        private string _postgresHost = "localhost";
+        private string _postgresPort = "5432";
+        private string _postgresDatabase = "agency_db";
+        private string _postgresUsername = "postgres";
+        private string _postgresPassword = string.Empty;
+        private string _postgresTestStatus = string.Empty;
+        private bool _isPostgresTesting;
+        private string _postgresMigrationStatus = Res("SettingsPostgresMigrationNotRun");
+        private string _postgresModeStatus = string.Empty;
+        private string _secondPcDatabaseAccessStatus = string.Empty;
+        private string _connectedClientsStatus = string.Empty;
+        private string _sqliteBackupFromPostgresStatus = string.Empty;
+        private string _postgresResetStatus = string.Empty;
+        private string _postgresNetworkAccessStatus = string.Empty;
+        private bool _isPostgresMigrating;
+        private bool _isCreatingSqliteBackupFromPostgres;
+        private bool _isResettingPostgresDatabase;
+        private bool _isConfiguringPostgresNetworkAccess;
+        private string _currentSettingsSection = "Program";
 
         public ObservableCollection<TelegramAuthorizedUser> TelegramAuthorizedUsers { get; } = new();
+
+        public string CurrentSettingsSection
+        {
+            get => _currentSettingsSection;
+            set
+            {
+                var normalized = string.Equals(value, "Servers", StringComparison.OrdinalIgnoreCase)
+                    ? "Servers"
+                    : "Program";
+
+                if (SetProperty(ref _currentSettingsSection, normalized))
+                {
+                    OnPropertyChanged(nameof(IsProgramSettingsSection));
+                    OnPropertyChanged(nameof(IsServerSettingsSection));
+                }
+            }
+        }
+
+        public bool IsProgramSettingsSection =>
+            string.Equals(CurrentSettingsSection, "Program", StringComparison.OrdinalIgnoreCase);
+
+        public bool IsServerSettingsSection =>
+            string.Equals(CurrentSettingsSection, "Servers", StringComparison.OrdinalIgnoreCase);
 
         public string RootFolderPath
         {
@@ -163,11 +248,355 @@ namespace Win11DesktopApp.ViewModels
                     _activityLogService.Log("RootFolderChanged", "Settings", "", "",
                         $"Змінено кореневу папку", oldPath ?? "", value);
                     OnPropertyChanged();
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
                 }
             }
         }
 
         public string AppVersion => AppSettingsService.CurrentAppVersion;
+
+        public bool WebPanelEnabled
+        {
+            get => _appSettingsService.Settings.WebPanelEnabled;
+            set
+            {
+                if (_appSettingsService.Settings.WebPanelEnabled == value)
+                    return;
+
+                _appSettingsService.Settings.WebPanelEnabled = value;
+                _appSettingsService.SaveSettings();
+                OnPropertyChanged();
+                _ = ApplyWebPanelStateAsync();
+            }
+        }
+
+        public string WebPanelPort
+        {
+            get => _appSettingsService.Settings.WebPanelPort.ToString();
+            set
+            {
+                if (!int.TryParse(value, out var port))
+                    return;
+
+                port = Math.Clamp(port, 1024, 65535);
+                if (_appSettingsService.Settings.WebPanelPort == port)
+                    return;
+
+                _appSettingsService.Settings.WebPanelPort = port;
+                _appSettingsService.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(WebPanelUrl));
+            }
+        }
+
+        public bool WebPanelPreventSleep
+        {
+            get => _appSettingsService.Settings.WebPanelPreventSleep;
+            set
+            {
+                if (_appSettingsService.Settings.WebPanelPreventSleep == value)
+                    return;
+
+                _appSettingsService.Settings.WebPanelPreventSleep = value;
+                _appSettingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public string WebPanelUrl => $"http://127.0.0.1:{_appSettingsService.Settings.WebPanelPort}";
+        public string WebPanelLanUrl => $"http://{GetLocalNetworkIpAddress()}:{_appSettingsService.Settings.WebPanelPort}";
+
+        public string WebPanelStatus =>
+            _webPanelHostService.IsRunning
+                ? string.Format(Res("SettingsWebPanelRunningFmt"), WebPanelUrl)
+                : Res("SettingsDisabled");
+
+        public string SyncEventsFolderPath => _syncEventService.SyncEventsFolderPath;
+        public string SyncStatusSummary => _syncEventService.GetStatusSummary();
+
+        public string DatabaseStorageModeDisplay =>
+            string.Equals(_appSettingsService.Settings.DatabaseStorageMode, DatabaseStorageModes.Postgres, StringComparison.OrdinalIgnoreCase)
+                ? Res("SettingsPostgresSelectedWorking")
+                : Res("SettingsSqliteCurrentOld");
+
+        public string ActiveDatabaseRuntimeDisplay =>
+            _appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+                ? Res("SettingsActiveRuntimePostgres")
+                : Res("SettingsActiveRuntimeSqlite");
+
+        public string ActiveDatabaseRuntimeDetail =>
+            _appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+                ? Res("SettingsActiveRuntimePostgresDetail")
+                : Res("SettingsActiveRuntimeSqliteDetail");
+
+        public string SecondPcDatabaseServerDisplay => $"{GetSecondPcPostgresHost()}:{NormalizePostgresPort()}";
+
+        public string SecondPcDatabaseNameDisplay =>
+            string.IsNullOrWhiteSpace(PostgresDatabase) ? "agency_db" : PostgresDatabase.Trim();
+
+        public string SecondPcDatabaseUserDisplay =>
+            string.IsNullOrWhiteSpace(PostgresUsername) ? "postgres" : PostgresUsername.Trim();
+
+        public string SecondPcSharedFolderDisplay
+        {
+            get
+            {
+                var rootFolder = RootFolderPath?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(rootFolder))
+                    return Res("SettingsRootFolderMissing");
+
+                if (rootFolder.StartsWith(@"\\", StringComparison.Ordinal))
+                    return rootFolder;
+
+                return string.Format(Res("SettingsSecondPcSharedFolderHintFmt"), rootFolder, Environment.MachineName);
+            }
+        }
+
+        public string SecondPcDatabaseAccessStatus
+        {
+            get => _secondPcDatabaseAccessStatus;
+            set => SetProperty(ref _secondPcDatabaseAccessStatus, value);
+        }
+
+        public string ConnectedClientsStatus
+        {
+            get => _connectedClientsStatus;
+            set => SetProperty(ref _connectedClientsStatus, value);
+        }
+
+        public bool HasConnectedClients => ConnectedClients.Count > 0;
+
+        public string SqliteBackupFromPostgresStatus
+        {
+            get => _sqliteBackupFromPostgresStatus;
+            set => SetProperty(ref _sqliteBackupFromPostgresStatus, value);
+        }
+
+        public bool IsCreatingSqliteBackupFromPostgres
+        {
+            get => _isCreatingSqliteBackupFromPostgres;
+            set
+            {
+                if (SetProperty(ref _isCreatingSqliteBackupFromPostgres, value))
+                {
+                    OnPropertyChanged(nameof(CanCreateSqliteBackupFromPostgres));
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public bool CanCreateSqliteBackupFromPostgres =>
+            _appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+            && !IsCreatingSqliteBackupFromPostgres
+            && !IsPostgresMigrating;
+
+        public string PostgresResetStatus
+        {
+            get => _postgresResetStatus;
+            set => SetProperty(ref _postgresResetStatus, value);
+        }
+
+        public bool IsResettingPostgresDatabase
+        {
+            get => _isResettingPostgresDatabase;
+            set
+            {
+                if (SetProperty(ref _isResettingPostgresDatabase, value))
+                {
+                    OnPropertyChanged(nameof(CanResetPostgresDatabase));
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public bool CanResetPostgresDatabase =>
+            !_appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+            && !IsResettingPostgresDatabase
+            && !IsPostgresTesting
+            && !IsPostgresMigrating
+            && !string.IsNullOrWhiteSpace(_appSettingsService.Settings.PostgresMigrationCompletedAtUtc);
+
+        public string PostgresResetHint =>
+            _appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+                ? Res("SettingsPostgresResetHintActive")
+                : Res("SettingsPostgresResetHintReady");
+
+        public string PostgresTailscaleIpDisplay =>
+            string.IsNullOrWhiteSpace(_postgresNetworkAccessService.TailscaleIpAddress)
+                ? Res("SettingsTailscaleIpMissing")
+                : _postgresNetworkAccessService.TailscaleIpAddress;
+
+        public string PostgresNetworkAccessStatus
+        {
+            get => _postgresNetworkAccessStatus;
+            set => SetProperty(ref _postgresNetworkAccessStatus, value);
+        }
+
+        public bool IsConfiguringPostgresNetworkAccess
+        {
+            get => _isConfiguringPostgresNetworkAccess;
+            set
+            {
+                if (SetProperty(ref _isConfiguringPostgresNetworkAccess, value))
+                {
+                    OnPropertyChanged(nameof(CanConfigurePostgresTailscaleAccess));
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public bool CanConfigurePostgresTailscaleAccess =>
+            !IsConfiguringPostgresNetworkAccess && !IsPostgresTesting && !IsPostgresMigrating;
+
+        public string CurrentDatabaseStorageMode => _appSettingsService.Settings.DatabaseStorageMode;
+
+        public bool IsSqliteStorageMode =>
+            !string.Equals(CurrentDatabaseStorageMode, DatabaseStorageModes.Postgres, StringComparison.OrdinalIgnoreCase);
+
+        public bool IsPostgresStorageMode =>
+            DatabaseStorageModes.PostgresRuntimeStorageEnabled
+            && string.Equals(CurrentDatabaseStorageMode, DatabaseStorageModes.Postgres, StringComparison.OrdinalIgnoreCase);
+
+        public bool HasDatabaseModeRestartPending =>
+            !string.Equals(
+                CurrentDatabaseStorageMode,
+                _appDataStorageFactory.ActiveRuntimeModeAtStartup,
+                StringComparison.OrdinalIgnoreCase);
+
+        public bool CanEnablePostgresStorageMode =>
+            DatabaseStorageModes.PostgresRuntimeStorageEnabled
+            && !string.IsNullOrWhiteSpace(_appSettingsService.Settings.PostgresMigrationCompletedAtUtc)
+            && !string.IsNullOrWhiteSpace(_appSettingsService.Settings.PostgresConnectionString);
+
+        public bool IsPostgresMigrationCompleted =>
+            !string.IsNullOrWhiteSpace(_appSettingsService.Settings.PostgresMigrationCompletedAtUtc);
+
+        public bool CanRunPostgresMigration =>
+            !IsPostgresMigrationCompleted
+            && !IsPostgresTesting
+            && !IsPostgresMigrating;
+
+        public bool CanReplacePostgresFromSqlite =>
+            IsPostgresMigrationCompleted
+            && !_appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+            && !IsPostgresTesting
+            && !IsPostgresMigrating;
+
+        public string PostgresMigrationActionText =>
+            IsPostgresMigrationCompleted
+                ? Res("SettingsMigrationCompletedAction")
+                : Res("SettingsMigrationPrepareAction");
+
+        public string ReplacePostgresFromSqliteActionText => Res("SettingsReplacePgFromSqliteAction");
+
+        public string PostgresModeStatus
+        {
+            get => string.IsNullOrWhiteSpace(_postgresModeStatus)
+                ? BuildPostgresModeStatus()
+                : _postgresModeStatus;
+            set => SetProperty(ref _postgresModeStatus, value);
+        }
+
+        public string PostgresHost
+        {
+            get => _postgresHost;
+            set
+            {
+                if (SetProperty(ref _postgresHost, value))
+                {
+                    SavePostgresLoginSettings();
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
+                }
+            }
+        }
+
+        public string PostgresPort
+        {
+            get => _postgresPort;
+            set
+            {
+                if (SetProperty(ref _postgresPort, value))
+                {
+                    SavePostgresLoginSettings();
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
+                }
+            }
+        }
+
+        public string PostgresDatabase
+        {
+            get => _postgresDatabase;
+            set
+            {
+                if (SetProperty(ref _postgresDatabase, value))
+                {
+                    SavePostgresLoginSettings();
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
+                }
+            }
+        }
+
+        public string PostgresUsername
+        {
+            get => _postgresUsername;
+            set
+            {
+                if (SetProperty(ref _postgresUsername, value))
+                {
+                    SavePostgresLoginSettings();
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
+                }
+            }
+        }
+
+        public string PostgresPassword
+        {
+            get => _postgresPassword;
+            set
+            {
+                if (SetProperty(ref _postgresPassword, value))
+                    SavePostgresLoginSettings();
+            }
+        }
+
+        public string PostgresTestStatus
+        {
+            get => _postgresTestStatus;
+            set => SetProperty(ref _postgresTestStatus, value);
+        }
+
+        public bool IsPostgresTesting
+        {
+            get => _isPostgresTesting;
+            set
+            {
+                if (SetProperty(ref _isPostgresTesting, value))
+                    RaiseMigrationActionPropertiesChanged();
+            }
+        }
+
+        public string PostgresMigrationStatus
+        {
+            get => _postgresMigrationStatus;
+            set => SetProperty(ref _postgresMigrationStatus, value);
+        }
+
+        public bool IsPostgresMigrating
+        {
+            get => _isPostgresMigrating;
+            set
+            {
+                if (SetProperty(ref _isPostgresMigrating, value))
+                    RaiseMigrationActionPropertiesChanged();
+            }
+        }
+
+        private string _webPanelActionStatus = string.Empty;
+        public string WebPanelActionStatus
+        {
+            get => _webPanelActionStatus;
+            set => SetProperty(ref _webPanelActionStatus, value);
+        }
 
         public bool TelegramEnabled
         {
@@ -183,7 +612,7 @@ namespace Win11DesktopApp.ViewModels
                 if (!value)
                 {
                     _telegramBotService.Stop();
-                    TelegramBotStatus = "Telegram-бот вимкнений.";
+                    TelegramBotStatus = Res("SettingsTelegramBotDisabled");
                 }
                 else if (HasTelegramBotToken)
                 {
@@ -191,7 +620,7 @@ namespace Win11DesktopApp.ViewModels
                 }
                 else
                 {
-                    TelegramBotStatus = "Вставте токен від BotFather, щоб активувати бота.";
+                    TelegramBotStatus = Res("SettingsTelegramTokenMissing");
                 }
 
                 OnPropertyChanged(nameof(TelegramNeedsToken));
@@ -582,7 +1011,16 @@ namespace Win11DesktopApp.ViewModels
             CurrentProfileService? currentProfileService = null,
             GeminiApiKeyConfigurationService? geminiApiKeyConfigurationService = null,
             TelegramBotService? telegramBotService = null,
-            TelegramPairingService? telegramPairingService = null)
+            TelegramPairingService? telegramPairingService = null,
+            WebPanelHostService? webPanelHostService = null,
+            SyncEventService? syncEventService = null,
+            PostgresConnectionTestService? postgresConnectionTestService = null,
+            PostgresMigrationService? postgresMigrationService = null,
+            PostgresToSqliteBackupService? postgresToSqliteBackupService = null,
+            PostgresResetService? postgresResetService = null,
+            PostgresNetworkAccessService? postgresNetworkAccessService = null,
+            AppDataStorageFactory? appDataStorageFactory = null,
+            ConnectedClientsService? connectedClientsService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
@@ -600,6 +1038,15 @@ namespace Win11DesktopApp.ViewModels
             _geminiApiKeyConfigurationService = geminiApiKeyConfigurationService ?? throw new InvalidOperationException("GeminiApiKeyConfigurationService is not initialized.");
             _telegramBotService = telegramBotService ?? throw new InvalidOperationException("TelegramBotService is not initialized.");
             _telegramPairingService = telegramPairingService ?? throw new InvalidOperationException("TelegramPairingService is not initialized.");
+            _webPanelHostService = webPanelHostService ?? throw new InvalidOperationException("WebPanelHostService is not initialized.");
+            _syncEventService = syncEventService ?? throw new InvalidOperationException("SyncEventService is not initialized.");
+            _postgresConnectionTestService = postgresConnectionTestService ?? throw new InvalidOperationException("PostgresConnectionTestService is not initialized.");
+            _postgresMigrationService = postgresMigrationService ?? throw new InvalidOperationException("PostgresMigrationService is not initialized.");
+            _postgresToSqliteBackupService = postgresToSqliteBackupService ?? throw new InvalidOperationException("PostgresToSqliteBackupService is not initialized.");
+            _postgresResetService = postgresResetService ?? throw new InvalidOperationException("PostgresResetService is not initialized.");
+            _postgresNetworkAccessService = postgresNetworkAccessService ?? throw new InvalidOperationException("PostgresNetworkAccessService is not initialized.");
+            _appDataStorageFactory = appDataStorageFactory ?? throw new InvalidOperationException("AppDataStorageFactory is not initialized.");
+            _connectedClientsService = connectedClientsService ?? throw new InvalidOperationException("ConnectedClientsService is not initialized.");
 
             _currentLanguage = _appSettingsService.Settings.LanguageCode;
             _currentTheme = DetectCurrentTheme();
@@ -608,6 +1055,7 @@ namespace Win11DesktopApp.ViewModels
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
             _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
             _telegramEnabled = _appSettingsService.Settings.Telegram.Enabled;
+            LoadPostgresLoginSettings();
             InitializeProfileFields();
             InitializeAccentPresets();
             RefreshTelegramState();
@@ -627,6 +1075,7 @@ namespace Win11DesktopApp.ViewModels
                     _accessStatusService.RefreshPresentation();
                     CurrentLanguage = code;
                     RaiseAccessStatusPropertiesChanged();
+                    RaiseLocalizedSettingsPropertiesChanged();
                 }
             });
 
@@ -812,6 +1261,101 @@ namespace Win11DesktopApp.ViewModels
                     LoggingService.LogWarning("Settings.OpenBotFather", ex.Message);
                 }
             });
+
+            CopyWebPanelUrlCommand = new RelayCommand(_ =>
+            {
+                try
+                {
+                    Clipboard.SetText(WebPanelUrl);
+                    WebPanelActionStatus = Res("SettingsAddressCopied");
+                }
+                catch (Exception ex)
+                {
+                    WebPanelActionStatus = Res("SettingsAddressCopyFailed");
+                    LoggingService.LogWarning("Settings.CopyWebPanelUrl", ex.Message);
+                }
+            });
+
+            CopyWebPanelLanUrlCommand = new RelayCommand(async _ =>
+            {
+                await PrepareAndCopyWebPanelLanAccessAsync();
+            });
+
+            CopySecondPcDatabaseAccessCommand = new RelayCommand(_ =>
+            {
+                CopySecondPcDatabaseAccess();
+            });
+
+            RefreshConnectedClientsCommand = new RelayCommand(_ =>
+            {
+                RefreshConnectedClients();
+            });
+
+            ChangeSettingsSectionCommand = new RelayCommand(param =>
+            {
+                if (param is string section)
+                    CurrentSettingsSection = section;
+            });
+
+            CreateSqliteBackupFromPostgresCommand = new RelayCommand(async _ =>
+            {
+                await CreateSqliteBackupFromPostgresAsync();
+            }, _ => CanCreateSqliteBackupFromPostgres);
+
+            ResetPostgresDatabaseCommand = new RelayCommand(async _ =>
+            {
+                await ResetPostgresDatabaseAsync();
+            }, _ => CanResetPostgresDatabase);
+
+            ConfigurePostgresTailscaleAccessCommand = new RelayCommand(async _ =>
+            {
+                await ConfigurePostgresTailscaleAccessAsync();
+            }, _ => CanConfigurePostgresTailscaleAccess);
+
+            OpenWebPanelUrlCommand = new RelayCommand(_ =>
+            {
+                var url = WebPanelUrl;
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
+                    {
+                        UseShellExecute = true
+                    });
+                    WebPanelActionStatus = Res("SettingsWebPanelOpened");
+                }
+                catch (Exception ex)
+                {
+                    WebPanelActionStatus = Res("SettingsAddressOpenFailed");
+                    LoggingService.LogWarning("Settings.OpenWebPanelUrl", ex.Message);
+                }
+            });
+
+            RefreshSyncStatusCommand = new RelayCommand(_ =>
+            {
+                OnPropertyChanged(nameof(SyncEventsFolderPath));
+                OnPropertyChanged(nameof(SyncStatusSummary));
+            });
+
+            TestPostgresConnectionCommand = new RelayCommand(async _ =>
+            {
+                await TestPostgresConnectionAsync();
+            }, _ => !IsPostgresTesting && !IsPostgresMigrating);
+
+            RunPostgresMigrationCommand = new RelayCommand(async _ =>
+            {
+                await RunPostgresMigrationAsync();
+            }, _ => CanRunPostgresMigration);
+
+            ReplacePostgresFromSqliteCommand = new RelayCommand(async _ =>
+            {
+                await ReplacePostgresFromSqliteAsync();
+            }, _ => CanReplacePostgresFromSqlite);
+
+            UseSqliteStorageModeCommand = new RelayCommand(_ => UseSqliteStorageMode());
+            EnablePostgresStorageModeCommand = new RelayCommand(_ => EnablePostgresStorageMode(), _ => CanEnablePostgresStorageMode);
+            RestartApplicationCommand = new RelayCommand(_ => RestartApplication(), _ => HasDatabaseModeRestartPending);
+
+            RefreshConnectedClients();
         }
 
         private void AccessStatusService_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -838,6 +1382,603 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(AccessPlanCode));
             OnPropertyChanged(nameof(AccessPlanDisplay));
             OnPropertyChanged(nameof(HasAccessPlan));
+        }
+
+        private void RaiseLocalizedSettingsPropertiesChanged()
+        {
+            LoadPostgresLoginSettings();
+            RefreshTelegramState();
+            OnPropertyChanged(nameof(WebPanelStatus));
+            OnPropertyChanged(nameof(DatabaseStorageModeDisplay));
+            OnPropertyChanged(nameof(ActiveDatabaseRuntimeDisplay));
+            OnPropertyChanged(nameof(ActiveDatabaseRuntimeDetail));
+            OnPropertyChanged(nameof(SecondPcSharedFolderDisplay));
+            OnPropertyChanged(nameof(PostgresResetHint));
+            OnPropertyChanged(nameof(PostgresTailscaleIpDisplay));
+            OnPropertyChanged(nameof(PostgresMigrationActionText));
+            OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
+            OnPropertyChanged(nameof(PostgresModeStatus));
+            OnPropertyChanged(nameof(PostgresTestStatus));
+            OnPropertyChanged(nameof(PostgresMigrationStatus));
+            OnPropertyChanged(nameof(SqliteBackupFromPostgresStatus));
+            OnPropertyChanged(nameof(PostgresResetStatus));
+            OnPropertyChanged(nameof(PostgresNetworkAccessStatus));
+            OnPropertyChanged(nameof(SecondPcDatabaseAccessStatus));
+            OnPropertyChanged(nameof(ConnectedClientsStatus));
+            OnPropertyChanged(nameof(TelegramBotStatus));
+            OnPropertyChanged(nameof(TelegramPairingExpiryText));
+            RefreshConnectedClients();
+        }
+
+        private async System.Threading.Tasks.Task TestPostgresConnectionAsync()
+        {
+            if (!int.TryParse(PostgresPort, out var port))
+            {
+                PostgresTestStatus = Res("SettingsPostgresPortMustBeNumber");
+                return;
+            }
+
+            SavePostgresLoginSettings();
+            IsPostgresTesting = true;
+            CommandManager.InvalidateRequerySuggested();
+            PostgresTestStatus = string.Format(Res("SettingsPostgresCheckingFmt"), ActiveDatabaseRuntimeDisplay);
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var result = await _postgresConnectionTestService.TestAsync(
+                    new PostgresConnectionTestRequest
+                    {
+                        Host = PostgresHost,
+                        Port = port,
+                        Database = PostgresDatabase,
+                        Username = PostgresUsername,
+                        Password = PostgresPassword,
+                        TimeoutSeconds = 5
+                    },
+                    cts.Token);
+
+                PostgresTestStatus = result.Success
+                    ? string.Format(
+                        Res("SettingsPostgresConnectedFmt"),
+                        result.ServerVersion,
+                        result.Database,
+                        result.DatabaseExists ? Res("SettingsExists") : Res("SettingsNotFound"),
+                        result.CanCreateDatabase ? Res("SettingsYes") : Res("SettingsNo"),
+                        ActiveDatabaseRuntimeDisplay)
+                    : string.Format(Res("SettingsPostgresConnectFailedFmt"), result.ErrorMessage, ActiveDatabaseRuntimeDisplay);
+            }
+            finally
+            {
+                IsPostgresTesting = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private void LoadPostgresLoginSettings()
+        {
+            var settings = _appSettingsService.Settings;
+            if (string.Equals(settings.DatabaseStorageMode, DatabaseStorageModes.Postgres, StringComparison.OrdinalIgnoreCase)
+                && !DatabaseStorageModes.PostgresRuntimeStorageEnabled)
+            {
+                settings.DatabaseStorageMode = DatabaseStorageModes.Sqlite;
+                settings.PostgresEnabledAtUtc = string.Empty;
+                _appSettingsService.SaveSettings();
+                _postgresModeStatus = Res("SettingsPostgresModeRollbackNotReady");
+            }
+
+            _postgresHost = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost;
+            _postgresPort = settings.PostgresPort <= 0 ? "5432" : settings.PostgresPort.ToString();
+            _postgresDatabase = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase;
+            _postgresUsername = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername;
+            _postgresPassword = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword);
+
+            if (!string.IsNullOrWhiteSpace(settings.PostgresMigrationCompletedAtUtc))
+                _postgresMigrationStatus = string.Format(Res("SettingsMigrationAlreadyCompletedBlockedFmt"), settings.PostgresMigrationCompletedAtUtc);
+
+            _postgresTestStatus = string.Format(Res("SettingsPostgresNotCheckedFmt"), ActiveDatabaseRuntimeDisplay);
+            _sqliteBackupFromPostgresStatus = string.IsNullOrWhiteSpace(settings.LastSqliteBackupFromPostgresAtUtc)
+                ? Res("SettingsSqliteBackupNever")
+                : string.Format(Res("SettingsSqliteBackupLastFmt"), settings.LastSqliteBackupFromPostgresAtUtc);
+            _postgresResetStatus = Res("SettingsPostgresResetNotInWindow");
+            _postgresNetworkAccessStatus = _postgresNetworkAccessService.IsRunningAsAdministrator()
+                ? Res("SettingsPostgresNetworkReady")
+                : Res("SettingsPostgresNetworkAdminRequired");
+        }
+
+        private void SavePostgresLoginSettings()
+        {
+            var settings = _appSettingsService.Settings;
+            settings.PostgresHost = string.IsNullOrWhiteSpace(PostgresHost) ? "localhost" : PostgresHost.Trim();
+            settings.PostgresDatabase = string.IsNullOrWhiteSpace(PostgresDatabase) ? "agency_db" : PostgresDatabase.Trim();
+            settings.PostgresUsername = string.IsNullOrWhiteSpace(PostgresUsername) ? "postgres" : PostgresUsername.Trim();
+            settings.PostgresPort = int.TryParse(PostgresPort, out var port)
+                ? Math.Clamp(port, 1, 65535)
+                : 5432;
+            settings.EncryptedPostgresPassword = LocalSecretProtection.Protect(PostgresPassword);
+            _appSettingsService.SaveSettings();
+        }
+
+        private void UseSqliteStorageMode()
+        {
+            _appSettingsService.Settings.DatabaseStorageMode = DatabaseStorageModes.Sqlite;
+            _appSettingsService.Settings.PostgresEnabledAtUtc = string.Empty;
+            _appSettingsService.SaveSettings();
+            PostgresModeStatus = Res("SettingsSqliteModeSelectedRestart");
+            RaiseDatabaseModePropertiesChanged();
+        }
+
+        private void EnablePostgresStorageMode()
+        {
+            if (!CanEnablePostgresStorageMode)
+            {
+                PostgresModeStatus = Res("SettingsPostgresEnableNeedsMigration");
+                RaiseDatabaseModePropertiesChanged();
+                return;
+            }
+
+            SavePostgresLoginSettings();
+            _appSettingsService.Settings.DatabaseStorageMode = DatabaseStorageModes.Postgres;
+            _appSettingsService.Settings.PostgresEnabledAtUtc = DateTime.UtcNow.ToString("O");
+            _appSettingsService.SaveSettings();
+            PostgresModeStatus = Res("SettingsPostgresSelectedRestart");
+            RaiseDatabaseModePropertiesChanged();
+        }
+
+        private void RaiseDatabaseModePropertiesChanged()
+        {
+            OnPropertyChanged(nameof(DatabaseStorageModeDisplay));
+            OnPropertyChanged(nameof(ActiveDatabaseRuntimeDisplay));
+            OnPropertyChanged(nameof(ActiveDatabaseRuntimeDetail));
+            OnPropertyChanged(nameof(CurrentDatabaseStorageMode));
+            OnPropertyChanged(nameof(IsSqliteStorageMode));
+            OnPropertyChanged(nameof(IsPostgresStorageMode));
+            OnPropertyChanged(nameof(HasDatabaseModeRestartPending));
+            OnPropertyChanged(nameof(CanEnablePostgresStorageMode));
+            OnPropertyChanged(nameof(IsPostgresMigrationCompleted));
+            OnPropertyChanged(nameof(CanRunPostgresMigration));
+            OnPropertyChanged(nameof(CanReplacePostgresFromSqlite));
+            OnPropertyChanged(nameof(PostgresMigrationActionText));
+            OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
+            OnPropertyChanged(nameof(PostgresModeStatus));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void RestartApplication()
+        {
+            try
+            {
+                var exePath = Environment.ProcessPath;
+                if (string.IsNullOrWhiteSpace(exePath))
+                {
+                    PostgresModeStatus = Res("SettingsRestartPathMissing");
+                    RaiseDatabaseModePropertiesChanged();
+                    return;
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath)
+                {
+                    UseShellExecute = true
+                });
+
+                Application.Current?.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.RestartApplication", ex.Message);
+                PostgresModeStatus = string.Format(Res("SettingsRestartFailedFmt"), ex.Message);
+                RaiseDatabaseModePropertiesChanged();
+            }
+        }
+
+        private void RaiseMigrationActionPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(CanRunPostgresMigration));
+            OnPropertyChanged(nameof(CanReplacePostgresFromSqlite));
+            OnPropertyChanged(nameof(PostgresMigrationActionText));
+            OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
+            OnPropertyChanged(nameof(CanCreateSqliteBackupFromPostgres));
+            OnPropertyChanged(nameof(CanResetPostgresDatabase));
+            OnPropertyChanged(nameof(PostgresResetHint));
+            OnPropertyChanged(nameof(CanConfigurePostgresTailscaleAccess));
+            OnPropertyChanged(nameof(PostgresTailscaleIpDisplay));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void RaiseSecondPcDatabaseAccessPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(SecondPcDatabaseServerDisplay));
+            OnPropertyChanged(nameof(SecondPcDatabaseNameDisplay));
+            OnPropertyChanged(nameof(SecondPcDatabaseUserDisplay));
+            OnPropertyChanged(nameof(SecondPcSharedFolderDisplay));
+        }
+
+        private void CopySecondPcDatabaseAccess()
+        {
+            try
+            {
+                var text = BuildSecondPcDatabaseAccessText();
+                Clipboard.SetText(text);
+                SecondPcDatabaseAccessStatus = Res("SettingsSecondPcAccessCopied");
+            }
+            catch (Exception ex)
+            {
+                SecondPcDatabaseAccessStatus = Res("SettingsSecondPcAccessCopyFailed");
+                LoggingService.LogWarning("Settings.CopySecondPcDatabaseAccess", ex.Message);
+            }
+        }
+
+        private void RefreshConnectedClients()
+        {
+            ConnectedClients.Clear();
+
+            if (!_connectedClientsService.IsAvailable)
+            {
+                ConnectedClientsStatus = Res("SettingsConnectedClientsOnlyPostgres");
+                OnPropertyChanged(nameof(HasConnectedClients));
+                return;
+            }
+
+            try
+            {
+                _connectedClientsService.RefreshNow();
+                var nowUtc = DateTime.UtcNow;
+                var clients = _connectedClientsService.GetClients()
+                    .Select(client =>
+                    {
+                        var isOnline = client.ClosedAtUtc == null
+                            && nowUtc - client.LastSeenAtUtc.ToUniversalTime() <= TimeSpan.FromMinutes(3);
+
+                        return new ConnectedClientViewItem
+                        {
+                            MachineName = client.MachineName,
+                            WindowsUser = client.WindowsUser,
+                            UserDisplayName = string.IsNullOrWhiteSpace(client.ProfileName)
+                                ? client.WindowsUser
+                                : client.ProfileName,
+                            IpAddress = client.IpAddress,
+                            AppVersion = client.AppVersion,
+                            RootFolderPath = client.RootFolderPath,
+                            StartedDisplay = FormatLocalDateTime(client.StartedAtUtc),
+                            LastSeenDisplay = FormatLastSeen(client.LastSeenAtUtc, nowUtc),
+                            StatusDisplay = isOnline ? Res("SettingsClientOnline") : Res("SettingsClientOffline"),
+                            IsOnline = isOnline
+                        };
+                    })
+                    .OrderByDescending(client => client.IsOnline)
+                    .ThenBy(client => client.MachineName, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList();
+
+                foreach (var client in clients)
+                    ConnectedClients.Add(client);
+
+                var onlineCount = clients.Count(client => client.IsOnline);
+                ConnectedClientsStatus = clients.Count == 0
+                    ? Res("SettingsConnectedClientsEmpty")
+                    : string.Format(Res("SettingsConnectedClientsSummaryFmt"), clients.Count, onlineCount, DateTime.Now);
+            }
+            catch (Exception ex)
+            {
+                ConnectedClientsStatus = Res("SettingsConnectedClientsReadFailed");
+                LoggingService.LogWarning("Settings.RefreshConnectedClients", ex.Message);
+            }
+            finally
+            {
+                OnPropertyChanged(nameof(HasConnectedClients));
+            }
+        }
+
+        private async System.Threading.Tasks.Task CreateSqliteBackupFromPostgresAsync()
+        {
+            if (!CanCreateSqliteBackupFromPostgres)
+            {
+                SqliteBackupFromPostgresStatus = Res("SettingsSqliteBackupOnlyPostgres");
+                return;
+            }
+
+            IsCreatingSqliteBackupFromPostgres = true;
+            SqliteBackupFromPostgresStatus = Res("SettingsSqliteBackupStarting");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                var progress = new Progress<string>(message => SqliteBackupFromPostgresStatus = message);
+                var result = await _postgresToSqliteBackupService.CreateBackupAsync(progress, cts.Token);
+                SqliteBackupFromPostgresStatus = result.ToDisplayMessage();
+
+                if (result.Success)
+                {
+                    _appSettingsService.Settings.LastSqliteBackupFromPostgresAtUtc = DateTime.UtcNow.ToString("O");
+                    _appSettingsService.SaveSettings();
+                }
+            }
+            finally
+            {
+                IsCreatingSqliteBackupFromPostgres = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task ResetPostgresDatabaseAsync()
+        {
+            if (!CanResetPostgresDatabase)
+            {
+                PostgresResetStatus = _appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+                    ? Res("SettingsPostgresResetBlockedActive")
+                    : Res("SettingsPostgresResetUnavailable");
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                string.Format(Res("SettingsPostgresResetConfirmMessageFmt"), PostgresDatabase),
+                Res("SettingsPostgresResetConfirmTitle"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                PostgresResetStatus = Res("SettingsPostgresResetCancelled");
+                return;
+            }
+
+            IsResettingPostgresDatabase = true;
+            PostgresResetStatus = Res("SettingsPostgresResetDeleting");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var result = await _postgresResetService.DropApplicationSchemasAsync(cts.Token);
+                PostgresResetStatus = result.ToDisplayMessage();
+
+                if (result.Success)
+                {
+                    var settings = _appSettingsService.Settings;
+                    settings.DatabaseStorageMode = DatabaseStorageModes.Sqlite;
+                    settings.PostgresConnectionString = string.Empty;
+                    settings.PostgresMigrationCompletedAtUtc = string.Empty;
+                    settings.PostgresEnabledAtUtc = string.Empty;
+                    settings.LastSqliteBackupFromPostgresAtUtc = string.Empty;
+                    _appSettingsService.SaveSettings();
+
+                    PostgresMigrationStatus = Res("SettingsPostgresMigrationCleared");
+                    RaiseDatabaseModePropertiesChanged();
+                }
+            }
+            finally
+            {
+                IsResettingPostgresDatabase = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task ConfigurePostgresTailscaleAccessAsync()
+        {
+            IsConfiguringPostgresNetworkAccess = true;
+            PostgresNetworkAccessStatus = Res("SettingsPostgresNetworkConfiguring");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+                var result = await _postgresNetworkAccessService.ConfigureTailscaleAccessAsync(cts.Token);
+                PostgresNetworkAccessStatus = result.Message;
+
+                if (result.Success && !string.IsNullOrWhiteSpace(result.TailscaleIp))
+                {
+                    PostgresHost = result.TailscaleIp;
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
+                }
+
+                OnPropertyChanged(nameof(PostgresTailscaleIpDisplay));
+            }
+            finally
+            {
+                IsConfiguringPostgresNetworkAccess = false;
+            }
+        }
+
+        private static string FormatLocalDateTime(DateTime utcDateTime)
+        {
+            return utcDateTime.ToUniversalTime().ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+        }
+
+        private static string FormatLastSeen(DateTime lastSeenUtc, DateTime nowUtc)
+        {
+            var elapsed = nowUtc - lastSeenUtc.ToUniversalTime();
+            if (elapsed < TimeSpan.Zero)
+                elapsed = TimeSpan.Zero;
+
+            if (elapsed.TotalSeconds < 60)
+                return string.Format(Res("SettingsSecondsAgoFmt"), Math.Max(1, (int)elapsed.TotalSeconds));
+
+            if (elapsed.TotalMinutes < 60)
+                return string.Format(Res("SettingsMinutesAgoFmt"), (int)elapsed.TotalMinutes);
+
+            return FormatLocalDateTime(lastSeenUtc);
+        }
+
+        private string BuildSecondPcDatabaseAccessText()
+        {
+            var server = GetSecondPcPostgresHost();
+            var port = NormalizePostgresPort();
+            var database = SecondPcDatabaseNameDisplay;
+            var username = SecondPcDatabaseUserDisplay;
+            var password = string.IsNullOrEmpty(PostgresPassword) ? Res("SettingsPostgresPasswordPlaceholder") : PostgresPassword;
+            var rootFolder = RootFolderPath?.Trim() ?? string.Empty;
+            var sharedFolder = string.IsNullOrWhiteSpace(rootFolder)
+                ? Res("SettingsRootFolderPlaceholder")
+                : rootFolder.StartsWith(@"\\", StringComparison.Ordinal)
+                    ? rootFolder
+                    : string.Format(Res("SettingsSharedFolderNeedsSharingFmt"), rootFolder, Environment.MachineName);
+
+            return string.Join(Environment.NewLine,
+                Res("SettingsSecondPcCopyTitle"),
+                "",
+                $"PostgreSQL server: {server}",
+                $"Port: {port}",
+                $"Database: {database}",
+                $"User: {username}",
+                $"Password: {password}",
+                "",
+                string.Format(Res("SettingsSecondPcFilesFolderFmt"), sharedFolder),
+                "",
+                Res("SettingsSecondPcMainPcNetworkHint"),
+                Res("SettingsSecondPcNetworkHint"));
+        }
+
+        private string GetSecondPcPostgresHost()
+        {
+            var host = PostgresHost?.Trim();
+            if (string.IsNullOrWhiteSpace(host)
+                || string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase))
+            {
+                return GetLocalNetworkIpAddress();
+            }
+
+            return host;
+        }
+
+        private int NormalizePostgresPort()
+        {
+            return int.TryParse(PostgresPort, out var port)
+                ? Math.Clamp(port, 1, 65535)
+                : 5432;
+        }
+
+        private string BuildPostgresModeStatus()
+        {
+            if (!DatabaseStorageModes.PostgresRuntimeStorageEnabled)
+            {
+                return Res("SettingsPostgresRuntimeDisabledMode");
+            }
+
+            if (IsPostgresStorageMode)
+                return Res("SettingsPostgresModeSelectedHint");
+
+            return CanEnablePostgresStorageMode
+                ? Res("SettingsMigrationReadyModeHint")
+                : Res("SettingsSqliteModeMigrationNeeded");
+        }
+
+        private async System.Threading.Tasks.Task RunPostgresMigrationAsync()
+        {
+            if (IsPostgresMigrationCompleted)
+            {
+                PostgresMigrationStatus = string.Format(Res("SettingsMigrationAlreadyCompletedSafeFmt"), _appSettingsService.Settings.PostgresMigrationCompletedAtUtc);
+                RaiseDatabaseModePropertiesChanged();
+                return;
+            }
+
+            if (!int.TryParse(PostgresPort, out var port))
+            {
+                PostgresMigrationStatus = Res("SettingsPostgresPortMustBeNumber");
+                return;
+            }
+
+            if (string.Equals(PostgresDatabase?.Trim(), "postgres", StringComparison.OrdinalIgnoreCase))
+            {
+                PostgresMigrationStatus = Res("SettingsPostgresReservedDbMigration");
+                return;
+            }
+
+            SavePostgresLoginSettings();
+            IsPostgresMigrating = true;
+            CommandManager.InvalidateRequerySuggested();
+            PostgresMigrationStatus = Res("SettingsMigrationStarting");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                var progress = new Progress<string>(message => PostgresMigrationStatus = message);
+                var result = await _postgresMigrationService.MigrateAsync(
+                    new PostgresMigrationRequest
+                    {
+                        Host = PostgresHost,
+                        Port = port,
+                        Database = PostgresDatabase ?? "agency_db",
+                        Username = PostgresUsername,
+                        Password = PostgresPassword,
+                        TimeoutSeconds = 10
+                    },
+                    progress,
+                    cts.Token);
+
+                PostgresMigrationStatus = string.Format(Res("SettingsMigrationResultBlockedFmt"), result.ToDisplayMessage(), ActiveDatabaseRuntimeDisplay);
+                RaiseDatabaseModePropertiesChanged();
+            }
+            finally
+            {
+                IsPostgresMigrating = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private async System.Threading.Tasks.Task ReplacePostgresFromSqliteAsync()
+        {
+            if (!CanReplacePostgresFromSqlite)
+            {
+                PostgresMigrationStatus = _appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
+                    ? Res("SettingsReplaceBlockedActive")
+                    : Res("SettingsReplaceUnavailable");
+                RaiseDatabaseModePropertiesChanged();
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                string.Format(Res("SettingsReplaceConfirmMessageFmt"), PostgresDatabase),
+                Res("SettingsReplaceConfirmTitle"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                PostgresMigrationStatus = Res("SettingsReplaceCancelled");
+                return;
+            }
+
+            if (!int.TryParse(PostgresPort, out var port))
+            {
+                PostgresMigrationStatus = Res("SettingsPostgresPortMustBeNumber");
+                return;
+            }
+
+            if (string.Equals(PostgresDatabase?.Trim(), "postgres", StringComparison.OrdinalIgnoreCase))
+            {
+                PostgresMigrationStatus = Res("SettingsPostgresReservedDbReplace");
+                return;
+            }
+
+            SavePostgresLoginSettings();
+            IsPostgresMigrating = true;
+            CommandManager.InvalidateRequerySuggested();
+            PostgresMigrationStatus = Res("SettingsReplaceStarting");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                var progress = new Progress<string>(message => PostgresMigrationStatus = Res("SettingsReplaceProgressPrefix") + message);
+                var result = await _postgresMigrationService.MigrateAsync(
+                    new PostgresMigrationRequest
+                    {
+                        Host = PostgresHost,
+                        Port = port,
+                        Database = PostgresDatabase ?? "agency_db",
+                        Username = PostgresUsername,
+                        Password = PostgresPassword,
+                        TimeoutSeconds = 10
+                    },
+                    progress,
+                    cts.Token);
+
+                PostgresMigrationStatus = result.Success
+                    ? result.ToDisplayMessage() + " " + Res("SettingsReplaceSuccessSuffix")
+                    : result.ToDisplayMessage();
+                RaiseDatabaseModePropertiesChanged();
+            }
+            finally
+            {
+                IsPostgresMigrating = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
 
         private static string NormalizeAccessPlan(string? plan)
@@ -877,8 +2018,8 @@ namespace Win11DesktopApp.ViewModels
             SetProperty(ref _telegramEnabled, _appSettingsService.Settings.Telegram.Enabled, nameof(TelegramEnabled));
             TelegramBotStatus = string.IsNullOrWhiteSpace(_telegramBotService.LastStatus)
                 ? (HasTelegramBotToken
-                    ? $"Підключено: @{TelegramBotUsername}"
-                    : "Telegram-бот ще не налаштований.")
+                    ? string.Format(Res("SettingsTelegramConnectedFmt"), TelegramBotUsername)
+                    : Res("SettingsTelegramNotConfigured"))
                 : _telegramBotService.LastStatus;
 
             if (!HasTelegramQrCode && TelegramCanGenerateQr)
@@ -894,17 +2035,109 @@ namespace Win11DesktopApp.ViewModels
             CommandManager.InvalidateRequerySuggested();
         }
 
+        private async System.Threading.Tasks.Task ApplyWebPanelStateAsync()
+        {
+            try
+            {
+                if (WebPanelEnabled)
+                    await _webPanelHostService.StartAsync();
+                else
+                    await _webPanelHostService.StopAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.WebPanel", ex.Message);
+            }
+            finally
+            {
+                OnPropertyChanged(nameof(WebPanelStatus));
+                OnPropertyChanged(nameof(WebPanelUrl));
+                OnPropertyChanged(nameof(WebPanelLanUrl));
+            }
+        }
+
+        private async System.Threading.Tasks.Task PrepareAndCopyWebPanelLanAccessAsync()
+        {
+            try
+            {
+                var localIp = GetLocalNetworkIpAddress();
+                if (string.IsNullOrWhiteSpace(localIp) || localIp == "127.0.0.1")
+                {
+                    WebPanelActionStatus = Res("SettingsWebPanelLocalIpMissing");
+                    return;
+                }
+
+                var settings = _appSettingsService.Settings;
+                var needsRestart = _webPanelHostService.IsRunning && !string.Equals(settings.WebPanelBindAddress, "0.0.0.0", StringComparison.OrdinalIgnoreCase);
+                settings.WebPanelEnabled = true;
+                settings.WebPanelBindAddress = "0.0.0.0";
+                _appSettingsService.SaveSettings();
+
+                if (needsRestart)
+                    await _webPanelHostService.StopAsync();
+
+                await _webPanelHostService.StartAsync();
+
+                var url = $"http://{localIp}:{settings.WebPanelPort}";
+                Clipboard.SetText(url);
+                WebPanelActionStatus = string.Format(Res("SettingsWebPanelLanCopiedFmt"), url);
+                OnPropertyChanged(nameof(WebPanelEnabled));
+                OnPropertyChanged(nameof(WebPanelStatus));
+                OnPropertyChanged(nameof(WebPanelUrl));
+                OnPropertyChanged(nameof(WebPanelLanUrl));
+            }
+            catch (Exception ex)
+            {
+                WebPanelActionStatus = Res("SettingsWebPanelLanPrepareFailed");
+                LoggingService.LogWarning("Settings.CopyWebPanelLanUrl", ex.Message);
+            }
+        }
+
+        private static string GetLocalNetworkIpAddress()
+        {
+            try
+            {
+                var candidates = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(item => item.OperationalStatus == OperationalStatus.Up
+                        && item.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                        && item.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
+                    .SelectMany(item => item.GetIPProperties().UnicastAddresses)
+                    .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
+                    .Select(address => address.Address)
+                    .Where(address => !IPAddress.IsLoopback(address))
+                    .ToList();
+
+                return candidates.FirstOrDefault(IsPrivateIPv4Address)?.ToString()
+                    ?? candidates.FirstOrDefault()?.ToString()
+                    ?? "127.0.0.1";
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.GetLocalNetworkIpAddress", ex.Message);
+                return "127.0.0.1";
+            }
+        }
+
+        private static bool IsPrivateIPv4Address(IPAddress address)
+        {
+            var bytes = address.GetAddressBytes();
+            return bytes.Length == 4
+                && (bytes[0] == 10
+                    || bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31
+                    || bytes[0] == 192 && bytes[1] == 168);
+        }
+
         private async System.Threading.Tasks.Task ConnectTelegramBotAsync()
         {
             var token = TelegramBotTokenInput?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(token))
             {
-                TelegramBotStatus = "Вставте токен, який BotFather прислав для вашого бота.";
+                TelegramBotStatus = Res("SettingsTelegramPasteBotFatherToken");
                 return;
             }
 
             TelegramIsBusy = true;
-            TelegramBotStatus = "Перевіряю токен і запускаю бота...";
+            TelegramBotStatus = Res("SettingsTelegramCheckingToken");
             try
             {
                 var result = await _telegramBotService.ConnectAsync(token);
@@ -918,7 +2151,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                TelegramBotStatus = $"Помилка підключення: {ex.Message}";
+                TelegramBotStatus = string.Format(Res("SettingsTelegramConnectErrorFmt"), ex.Message);
                 LoggingService.LogWarning("Settings.ConnectTelegramBot", ex.Message);
             }
             finally
@@ -931,7 +2164,7 @@ namespace Win11DesktopApp.ViewModels
         private async System.Threading.Tasks.Task DisconnectTelegramBotAsync()
         {
             TelegramIsBusy = true;
-            TelegramBotStatus = "Відключаю Telegram-бота...";
+            TelegramBotStatus = Res("SettingsTelegramDisconnecting");
             try
             {
                 await _telegramBotService.DisconnectAsync();
@@ -941,7 +2174,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                TelegramBotStatus = $"Помилка відключення: {ex.Message}";
+                TelegramBotStatus = string.Format(Res("SettingsTelegramDisconnectErrorFmt"), ex.Message);
                 LoggingService.LogWarning("Settings.DisconnectTelegramBot", ex.Message);
             }
             finally
@@ -959,7 +2192,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                TelegramBotStatus = $"Не вдалося запустити Telegram-бота: {ex.Message}";
+                TelegramBotStatus = string.Format(Res("SettingsTelegramRestartErrorFmt"), ex.Message);
                 LoggingService.LogWarning("Settings.RestartTelegramBot", ex.Message);
             }
             finally
@@ -983,7 +2216,7 @@ namespace Win11DesktopApp.ViewModels
             var expiresAt = _telegramPairingService.GetExpiryUtc(TelegramPairingCode).ToLocalTime();
             var deepLink = _telegramPairingService.BuildDeepLink(TelegramBotUsername, TelegramPairingCode);
             TelegramQrCodeImage = _telegramPairingService.BuildQrImage(deepLink);
-            TelegramPairingExpiryText = $"Код діє до {expiresAt:HH:mm}";
+            TelegramPairingExpiryText = string.Format(Res("SettingsTelegramCodeValidUntilFmt"), expiresAt);
             OnPropertyChanged(nameof(HasTelegramQrCode));
         }
 

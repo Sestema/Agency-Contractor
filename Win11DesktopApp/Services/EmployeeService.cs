@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -46,6 +47,8 @@ namespace Win11DesktopApp.Services
         private readonly TagCatalogService _tagCatalogService;
         private readonly FolderService _folderService;
         private readonly LocalDbService? _localDbService;
+        private readonly IArchiveLogStorage? _archiveLogStorage;
+        private readonly IEmployeeHistoryStorage? _employeeHistoryStorage;
         private readonly EmployeeIndexDbService? _employeeIndexDbService;
         private readonly CurrentProfileService _currentProfileService;
         private readonly AdminMirrorSyncService? _adminMirrorSyncService;
@@ -76,12 +79,17 @@ namespace Win11DesktopApp.Services
             CurrentProfileService? currentProfileService = null,
             AdminMirrorSyncService? adminMirrorSyncService = null,
             FinanceService? financeService = null,
-            CompanyService? companyService = null)
+            CompanyService? companyService = null,
+            AppDataStorageFactory? storageFactory = null)
         {
             _appSettingsService = appSettingsService;
             _tagCatalogService = tagCatalogService;
             _folderService = folderService;
             _localDbService = localDbService;
+            _archiveLogStorage = storageFactory?.CreateArchiveLogStorage()
+                ?? (_localDbService == null ? null : new SqliteArchiveLogStorage(_localDbService));
+            _employeeHistoryStorage = storageFactory?.CreateEmployeeHistoryStorage()
+                ?? (_localDbService == null ? null : new SqliteEmployeeHistoryStorage(_localDbService));
             _employeeIndexDbService = employeeIndexDbService;
             _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
             _adminMirrorSyncService = adminMirrorSyncService;
@@ -348,6 +356,13 @@ namespace Win11DesktopApp.Services
                         var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                         if (rows.Count > 0)
                         {
+                            if (ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
+                            {
+                                rows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirm", firmName, reason);
+                                if (rows.Count == 0)
+                                    throw new InvalidOperationException("Employee index rebuild returned no rows.");
+                            }
+
                             var employees = rows
                                 .Select(BuildSummaryFromIndexRow)
                                 .ToList();
@@ -359,8 +374,15 @@ namespace Win11DesktopApp.Services
                         if (!HasAnyEmployeeFolders(employeesFolder))
                             return new List<EmployeeSummary>();
 
-                        LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
-                            $"Employee index returned no rows for '{firmName}' while employee folders exist. Falling back to file scan.");
+                        var rebuiltRows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirm", firmName, "index returned no rows while employee folders exist");
+                        if (rebuiltRows.Count > 0)
+                        {
+                            var employees = rebuiltRows
+                                .Select(BuildSummaryFromIndexRow)
+                                .ToList();
+                            StoreEmployeesForFirmCache(firmName, employees);
+                            return employees;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -371,7 +393,7 @@ namespace Win11DesktopApp.Services
 
                 var fileScanEmployees = GetEmployeesForFirmFromFiles(firmName, employeesFolder);
                 LoggingService.LogWarning("EmployeeService.GetEmployeesForFirm",
-                    $"Loaded {fileScanEmployees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. SQLite index was not used.");
+                    $"Loaded {fileScanEmployees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. Employee index was not used.");
                 StoreEmployeesForFirmCache(firmName, fileScanEmployees);
                 return fileScanEmployees;
             }
@@ -398,6 +420,13 @@ namespace Win11DesktopApp.Services
                     var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                     if (rows.Count > 0)
                     {
+                        if (ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
+                        {
+                            rows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirmWithStatus", firmName, reason);
+                            if (rows.Count == 0)
+                                throw new InvalidOperationException("Employee index rebuild returned no rows.");
+                        }
+
                         var employees = rows.Select(BuildSummaryFromIndexRow).ToList();
                         LogSlowEmployeeIndexLoad("EmployeeService.GetEmployeesForFirmWithStatus", firmName, employees.Count, stopwatch.ElapsedMilliseconds);
                         return (employees, "Ok");
@@ -406,8 +435,12 @@ namespace Win11DesktopApp.Services
                     if (!HasAnyEmployeeFolders(employeesFolder))
                         return (new List<EmployeeSummary>(), "NoEmployees");
 
-                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
-                        $"Employee index returned no rows for '{firmName}' while employee folders exist. Falling back to file scan.");
+                        var rebuiltRows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirmWithStatus", firmName, "index returned no rows while employee folders exist");
+                    if (rebuiltRows.Count > 0)
+                    {
+                        var employees = rebuiltRows.Select(BuildSummaryFromIndexRow).ToList();
+                        return (employees, "Ok");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -418,17 +451,18 @@ namespace Win11DesktopApp.Services
 
             var fileScanResult = GetEmployeesForFirmWithStatusFromFiles(firmName, employeesFolder);
             LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
-                $"Loaded {fileScanResult.Employees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. SQLite index was not used. Status: {fileScanResult.Status}.");
+                $"Loaded {fileScanResult.Employees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. Employee index was not used. Status: {fileScanResult.Status}.");
             return fileScanResult;
         }
 
-        private static void LogSlowEmployeeIndexLoad(string module, string firmName, int count, long elapsedMs)
+        private void LogSlowEmployeeIndexLoad(string module, string firmName, int count, long elapsedMs)
         {
             if (elapsedMs < SlowEmployeeIndexLoadMs)
                 return;
 
+            var storageName = _employeeIndexDbService?.ActiveStorageDisplay ?? "employee";
             LoggingService.LogWarning(module,
-                $"Slow SQLite index load: {count} employees for '{firmName}' in {elapsedMs} ms.");
+                $"Slow {storageName} index load: {count} employees for '{firmName}' in {elapsedMs} ms.");
         }
 
         private bool TryGetCachedEmployeesForFirm(string firmName, out List<EmployeeSummary> employees)
@@ -1120,6 +1154,105 @@ namespace Win11DesktopApp.Services
                 && Directory.GetDirectories(employeesFolder).Length > 0;
         }
 
+        private bool ShouldRebuildEmployeeIndexForFirm(IReadOnlyList<EmployeeIndexRow> rows, string employeesFolder, out string reason)
+        {
+            reason = string.Empty;
+            if (!Directory.Exists(employeesFolder))
+                return false;
+
+            var profileFolders = Directory.GetDirectories(employeesFolder)
+                .Where(folder => File.Exists(Path.Combine(folder, "employee.json")))
+                .ToList();
+
+            if (rows.Count < profileFolders.Count)
+            {
+                reason = $"index has {rows.Count} row(s), but {profileFolders.Count} employee profile folder(s) exist";
+                return true;
+            }
+
+            foreach (var row in rows)
+            {
+                var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
+                var jsonPath = string.IsNullOrWhiteSpace(employeeFolder)
+                    ? string.Empty
+                    : Path.Combine(employeeFolder, "employee.json");
+                if (string.IsNullOrWhiteSpace(employeeFolder) || !File.Exists(jsonPath))
+                {
+                    reason = $"index row points to a missing employee profile folder: '{row.EmployeeFolder}'";
+                    return true;
+                }
+
+                if (IsEmployeeIndexRowOlderThanJson(row, jsonPath, out reason))
+                    return true;
+
+                if (!string.IsNullOrWhiteSpace(row.UniqueId))
+                {
+                    var data = LoadEmployeeData(employeeFolder);
+                    if (data != null
+                        && !string.IsNullOrWhiteSpace(data.UniqueId)
+                        && !string.Equals(row.UniqueId.Trim(), data.UniqueId.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        reason = $"index row UniqueId '{row.UniqueId}' does not match employee.json UniqueId '{data.UniqueId}'";
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsEmployeeIndexRowOlderThanJson(EmployeeIndexRow row, string jsonPath, out string reason)
+        {
+            reason = string.Empty;
+            if (string.IsNullOrWhiteSpace(jsonPath) || !File.Exists(jsonPath))
+                return false;
+
+            if (!DateTime.TryParse(
+                    row.UpdatedAt,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var indexUpdatedAt))
+            {
+                reason = $"index row has no valid UpdatedAt for '{row.EmployeeFolder}'";
+                return true;
+            }
+
+            var jsonUpdatedAt = File.GetLastWriteTimeUtc(jsonPath);
+            var indexUpdatedUtc = indexUpdatedAt.Kind == DateTimeKind.Utc
+                ? indexUpdatedAt
+                : indexUpdatedAt.ToUniversalTime();
+
+            if (jsonUpdatedAt > indexUpdatedUtc.AddSeconds(2))
+            {
+                reason = $"employee.json is newer than index row for '{row.EmployeeFolder}'";
+                return true;
+            }
+
+            return false;
+        }
+
+        private List<EmployeeIndexRow> TryRebuildEmployeeIndexForFirm(string source, string firmName, string reason)
+        {
+            if (_employeeIndexDbService == null)
+                return new List<EmployeeIndexRow>();
+
+            LoggingService.LogWarning(source,
+                $"Employee index is stale for '{firmName}' ({reason}). Rebuilding employee index.");
+
+            var rebuild = RebuildEmployeeIndex();
+            if (!rebuild.IsSuccessful)
+            {
+                LoggingService.LogWarning(source,
+                    $"Employee index rebuild failed for '{firmName}'. Falling back to file scan. {rebuild.Message}");
+                return new List<EmployeeIndexRow>();
+            }
+
+            var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+            LoggingService.LogInfo(source,
+                $"Employee index rebuild completed for '{firmName}'. Rows after rebuild: {rows.Count}.");
+            return rows;
+        }
+
         private List<EmployeeSummary> GetEmployeesForFirmFromFiles(string firmName, string employeesFolder)
         {
             var summaries = new List<EmployeeSummary>();
@@ -1409,14 +1542,14 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                if (_localDbService == null)
-                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+                if (_archiveLogStorage == null)
+                    return new LocalDbMigrationResult { Message = "Archive log storage is not configured." };
 
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrWhiteSpace(path))
                     return new LocalDbMigrationResult { Message = "Archive log path is not available." };
 
-                var result = _localDbService.MigrateArchiveLogIfNeeded(path, LoadArchiveLogEntries(path));
+                var result = _archiveLogStorage.MigrateArchiveLogIfNeeded(path, LoadArchiveLogEntries(path));
                 _useLocalDbArchiveLog = result.IsSuccessful;
                 return result;
             }
@@ -1529,8 +1662,8 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                if (_useLocalDbArchiveLog && _localDbService != null)
-                    return _localDbService.GetAllArchiveLogs();
+                if (_useLocalDbArchiveLog && _archiveLogStorage != null)
+                    return _archiveLogStorage.GetAllArchiveLogs();
 
                 var path = GetArchiveLogPath();
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -1577,9 +1710,9 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrWhiteSpace(entry.OperationId))
                     entry.OperationId = Guid.NewGuid().ToString();
 
-                if (_useLocalDbArchiveLog && _localDbService != null)
+                if (_useLocalDbArchiveLog && _archiveLogStorage != null)
                 {
-                    _localDbService.InsertArchiveLog(entry);
+                    _archiveLogStorage.InsertArchiveLog(entry);
                     return;
                 }
 
@@ -1748,9 +1881,9 @@ namespace Win11DesktopApp.Services
                     return new UndoArchiveResult();
 
                 ArchiveLogEntry? target;
-                if (_useLocalDbArchiveLog && _localDbService != null)
+                if (_useLocalDbArchiveLog && _archiveLogStorage != null)
                 {
-                    target = _localDbService.GetActiveArchiveLogEntry(operationId);
+                    target = _archiveLogStorage.GetActiveArchiveLogEntry(operationId);
                 }
                 else
                 {
@@ -1939,9 +2072,9 @@ namespace Win11DesktopApp.Services
             await _historyLock.WaitAsync();
             try
             {
-                if (_useLocalDbArchiveLog && _localDbService != null)
+                if (_useLocalDbArchiveLog && _archiveLogStorage != null)
                 {
-                    _localDbService.MarkArchiveLogReverted(operationId, undoOperationId);
+                    _archiveLogStorage.MarkArchiveLogReverted(operationId, undoOperationId);
                     return;
                 }
 
@@ -2293,10 +2426,10 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                if (_localDbService == null)
-                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+                if (_employeeHistoryStorage == null)
+                    return new LocalDbMigrationResult { Message = "Employee history storage is not configured." };
 
-                var result = _localDbService.MigrateEmployeeHistoryIfNeeded(BuildEmployeeHistoryMigrationSources());
+                var result = _employeeHistoryStorage.MigrateEmployeeHistoryIfNeeded(BuildEmployeeHistoryMigrationSources());
                 _useLocalDbHistory = result.IsSuccessful;
                 return result;
             }
@@ -2325,9 +2458,9 @@ namespace Win11DesktopApp.Services
                         entry.ActorName = $"{profile.FirstName} {profile.LastName}".Trim();
                 }
 
-                if (_useLocalDbHistory && _localDbService != null && !string.IsNullOrWhiteSpace(employeeId))
+                if (_useLocalDbHistory && _employeeHistoryStorage != null && !string.IsNullOrWhiteSpace(employeeId))
                 {
-                    _localDbService.InsertEmployeeHistory(employeeId, employeeFolder, ResolveFirmNameForHistory(employeeFolder), entry);
+                    _employeeHistoryStorage.InsertEmployeeHistory(employeeId, employeeFolder, ResolveFirmNameForHistory(employeeFolder), entry);
                     return;
                 }
 
@@ -2354,9 +2487,9 @@ namespace Win11DesktopApp.Services
             try
             {
                 var employeeId = ReadEmployeeUniqueId(employeeFolder) ?? string.Empty;
-                if (_useLocalDbHistory && _localDbService != null && !string.IsNullOrWhiteSpace(employeeId))
+                if (_useLocalDbHistory && _employeeHistoryStorage != null && !string.IsNullOrWhiteSpace(employeeId))
                 {
-                    var dbEntries = _localDbService.GetEmployeeHistory(employeeId);
+                    var dbEntries = _employeeHistoryStorage.GetEmployeeHistory(employeeId);
                     if (dbEntries.Count > 0)
                         return dbEntries;
                 }
@@ -2382,9 +2515,9 @@ namespace Win11DesktopApp.Services
             await _historyLock.WaitAsync();
             try
             {
-                if (_useLocalDbHistory && _localDbService != null && !string.IsNullOrWhiteSpace(employeeId) && entry.Id > 0)
+                if (_useLocalDbHistory && _employeeHistoryStorage != null && !string.IsNullOrWhiteSpace(employeeId) && entry.Id > 0)
                 {
-                    _localDbService.DeleteEmployeeHistoryEntry(employeeId, entry.Id);
+                    _employeeHistoryStorage.DeleteEmployeeHistoryEntry(employeeId, entry.Id);
                     return;
                 }
 
@@ -2599,12 +2732,12 @@ namespace Win11DesktopApp.Services
 
         public int CleanupMigratedEmployeeHistoryBackups()
         {
-            if (_localDbService == null)
+            if (_employeeHistoryStorage == null)
                 return 0;
 
             try
             {
-                return _localDbService.CleanupMigratedEmployeeHistoryBackups(BuildEmployeeHistoryCleanupSources());
+                return _employeeHistoryStorage.CleanupMigratedEmployeeHistoryBackups(BuildEmployeeHistoryCleanupSources());
             }
             catch (Exception ex)
             {

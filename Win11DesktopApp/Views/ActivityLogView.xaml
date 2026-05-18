@@ -410,16 +410,16 @@
 
                                     <!-- Description -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS12}"
+                                        <TextBlock Text="{Binding DisplayDescription}" FontSize="{DynamicResource FS12}"
                                                    Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding Details}" FontSize="{DynamicResource FS10}"
+                                        <TextBlock Text="{Binding DisplayDetails}" FontSize="{DynamicResource FS10}"
                                                    Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"
                                                    TextWrapping="Wrap">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Details}" Value="">
+                                                        <DataTrigger Binding="{Binding DisplayDetails}" Value="">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>

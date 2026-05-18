@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
+using Win11DesktopApp.Converters;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -37,6 +38,8 @@ namespace Win11DesktopApp.ViewModels
                 GenerateStatusMessage = Res("MsgEmployeeFolderMissing");
                 return;
             }
+            if (!EnsureDocumentGenerationEmployeeMatch())
+                return;
 
             try
             {
@@ -134,6 +137,58 @@ namespace Win11DesktopApp.ViewModels
             {
                 IsGenerating = false;
             }
+        }
+
+        private bool EnsureDocumentGenerationEmployeeMatch()
+        {
+            var diskData = _employeeService.LoadEmployeeData(_employeeFolder);
+            if (diskData == null)
+            {
+                GenerateStatusMessage = Res("MsgEmployeeProfileMissing");
+                NotifyProfileUnavailable(GenerateStatusMessage);
+                return false;
+            }
+
+            var diskId = diskData.UniqueId?.Trim() ?? string.Empty;
+            var expectedId = string.IsNullOrWhiteSpace(_expectedEmployeeId)
+                ? Data.UniqueId?.Trim() ?? string.Empty
+                : _expectedEmployeeId.Trim();
+
+            if (string.IsNullOrWhiteSpace(expectedId) || string.Equals(diskId, expectedId, StringComparison.OrdinalIgnoreCase))
+            {
+                RefreshEmployeeDataForGeneration(diskData);
+                return true;
+            }
+
+            var expectedName = $"{Data.FirstName} {Data.LastName}".Trim();
+            var actualName = $"{diskData.FirstName} {diskData.LastName}".Trim();
+            var message = string.Format(
+                Res("MsgEmployeeProfileMismatch"),
+                string.IsNullOrWhiteSpace(expectedName) ? expectedId : expectedName,
+                string.IsNullOrWhiteSpace(actualName) ? diskId : actualName);
+
+            LoggingService.LogWarning("EmployeeDetailsViewModel.GenerateDocument",
+                $"Blocked document generation because selected employee id '{expectedId}' does not match employee.json id '{diskId}' in folder '{_employeeFolder}'.");
+            GenerateStatusMessage = message;
+            NotifyProfileUnavailable(message);
+            return false;
+        }
+
+        private void RefreshEmployeeDataForGeneration(EmployeeData diskData)
+        {
+            if (diskData == null || IsEditMode)
+                return;
+
+            Data = diskData;
+            Data.Status = StatusHelper.Normalize(Data.Status);
+            NormalizeInsuranceCompanyFields();
+            NormalizeEducationFields();
+            NormalizeDocumentProfileFields();
+            NotifyBankAccountStateChanged();
+            TryAutofillBankName(Data.BankAccountNumber);
+            RefreshExpiryWarnings();
+            OnPropertyChanged(nameof(Data));
+            OnPropertyChanged(nameof(FullName));
         }
 
         private static string SanitizeFileName(string name)

@@ -23,6 +23,7 @@ namespace Win11DesktopApp.Services
         private readonly FinanceService? _financeService;
         private readonly ActivityLogService? _activityLogService;
         private readonly LocalDbService? _localDbService;
+        private readonly IEmployeeHistoryStorage? _employeeHistoryStorage;
         private readonly EmployeeIndexDbService? _employeeIndexDbService;
 
         public RecentlyDeletedService(
@@ -32,7 +33,8 @@ namespace Win11DesktopApp.Services
             FinanceService? financeService = null,
             ActivityLogService? activityLogService = null,
             LocalDbService? localDbService = null,
-            EmployeeIndexDbService? employeeIndexDbService = null)
+            EmployeeIndexDbService? employeeIndexDbService = null,
+            AppDataStorageFactory? storageFactory = null)
         {
             _folderService = folderService;
             _employeeService = employeeService;
@@ -40,6 +42,8 @@ namespace Win11DesktopApp.Services
             _financeService = financeService;
             _activityLogService = activityLogService;
             _localDbService = localDbService;
+            _employeeHistoryStorage = storageFactory?.CreateEmployeeHistoryStorage()
+                ?? (_localDbService == null ? null : new SqliteEmployeeHistoryStorage(_localDbService));
             _employeeIndexDbService = employeeIndexDbService;
         }
 
@@ -269,7 +273,7 @@ namespace Win11DesktopApp.Services
 
                 _financeService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
                 _activityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
-                _localDbService?.DeleteEmployeeHistory(item.UniqueId);
+                _employeeHistoryStorage?.DeleteEmployeeHistory(item.UniqueId);
                 _employeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
 
                 DeleteDirectoryRobust(item.DeletedEmployeeFolder);
@@ -312,7 +316,7 @@ namespace Win11DesktopApp.Services
                     {
                         _financeService?.RemoveEmployeeReferences(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.UniqueId);
                         _activityLogService?.RemoveEmployeeEntries(item.OriginalEmployeeFolder, item.DeletedEmployeeFolder, item.FullName, item.FirmName);
-                        _localDbService?.DeleteEmployeeHistory(item.UniqueId);
+                        _employeeHistoryStorage?.DeleteEmployeeHistory(item.UniqueId);
                         _employeeIndexDbService?.DeleteEmployeeIndex(item.UniqueId);
                         DeleteDirectoryRobust(item.DeletedEmployeeFolder);
                     }

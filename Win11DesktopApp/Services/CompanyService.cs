@@ -20,6 +20,8 @@ namespace Win11DesktopApp.Services
         private readonly AppSettingsService _appSettingsService;
         private readonly PersistenceService _persistenceService;
         private readonly FolderService _folderService;
+        private readonly EmployeeIndexDbService? _employeeIndexDbService;
+        private readonly SyncEventService? _syncEventService;
         private AdminMirrorSyncService? _adminMirrorSyncService;
         private EmployerCompany? _selectedCompany;
 
@@ -120,12 +122,17 @@ namespace Win11DesktopApp.Services
         }
 
         public CompanyService(TagCatalogService tagCatalogService, AppSettingsService appSettingsService,
-            PersistenceService persistenceService, FolderService folderService)
+            PersistenceService persistenceService, FolderService folderService, EmployeeIndexDbService? employeeIndexDbService = null,
+            SyncEventService? syncEventService = null)
         {
             _tagCatalogService = tagCatalogService;
             _appSettingsService = appSettingsService;
             _persistenceService = persistenceService;
             _folderService = folderService;
+            _employeeIndexDbService = employeeIndexDbService;
+            _syncEventService = syncEventService;
+            if (_syncEventService != null)
+                _syncEventService.SyncEventReceived += OnSyncEventReceived;
 
             LoadCompanies();
             MigrateLegacyHiddenCompanies();
@@ -199,6 +206,7 @@ namespace Win11DesktopApp.Services
             _folderService.EnsureCompanyStructure(employer.Name);
             await _persistenceService.SaveCompaniesAsync(_companies);
             _adminMirrorSyncService?.EnqueueEmployerUpsert(employer);
+            _syncEventService?.PublishCompanyChanged("added", employer.Name);
             LoggingService.LogInfo("CompanyService", $"Company added: {employer.Name}");
             VisibilityChanged?.Invoke();
         }
@@ -210,7 +218,12 @@ namespace Win11DesktopApp.Services
                 company.LastModified = DateTime.Now;
 
                 if (!string.IsNullOrEmpty(oldName) && oldName != company.Name)
+                {
                     _folderService.RenameCompanyFolder(oldName, company.Name);
+                    var updatedRows = _employeeIndexDbService?.RenameFirmReferences(oldName, company.Name) ?? 0;
+                    LoggingService.LogInfo("CompanyService.UpdateCompany",
+                        $"Updated {updatedRows} employee index row(s) after company rename from '{oldName}' to '{company.Name}'.");
+                }
 
                 _folderService.EnsureCompanyStructure(company.Name);
 
@@ -222,6 +235,7 @@ namespace Win11DesktopApp.Services
 
                 await _persistenceService.SaveCompaniesAsync(_companies);
                 _adminMirrorSyncService?.EnqueueEmployerUpsert(company);
+                _syncEventService?.PublishCompanyChanged("updated", company.Name);
                 LoggingService.LogInfo("CompanyService", $"Company updated: {company.Name} (was: {oldName})");
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
                 VisibilityChanged?.Invoke();
@@ -252,6 +266,7 @@ namespace Win11DesktopApp.Services
                     LoggingService.LogWarning("CompanyService.DeleteCompany", $"Company deleted, but folder cleanup failed for {company.Name}.");
                 }
                 _adminMirrorSyncService?.EnqueueEmployerDelete(company);
+                _syncEventService?.PublishCompanyChanged("deleted", company.Name);
                 LoggingService.LogInfo("CompanyService", $"Company deleted: {company.Name}");
                 VisibilityChanged?.Invoke();
                 return true;
@@ -284,6 +299,26 @@ namespace Win11DesktopApp.Services
         private void QueueCompanySave()
         {
             _ = _persistenceService.SaveCompaniesAsync(_companies);
+        }
+
+        private void OnSyncEventReceived(object? sender, SyncEventReceivedEventArgs e)
+        {
+            if (!string.Equals(e.Record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                _companies.Clear();
+                LoadCompanies();
+                MigrateLegacyHiddenCompanies();
+                ApplySavedSelection();
+                SelectedCompanyChanged?.Invoke(_selectedCompany);
+                VisibilityChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("CompanyService.SyncEvent", ex.Message);
+            }
         }
     }
 }

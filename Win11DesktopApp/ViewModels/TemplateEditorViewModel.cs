@@ -439,8 +439,8 @@ namespace Win11DesktopApp.ViewModels
         {
             if (AvailablePageSizes.Count == 0)
             {
-                AvailablePageSizes.Add(new TemplateEditorPageSizeOption("a4", "A4", 794, 1123));
-                AvailablePageSizes.Add(new TemplateEditorPageSizeOption("letter", "Letter", 816, 1056));
+                AvailablePageSizes.Add(new TemplateEditorPageSizeOption("a4", "A4 (21 × 29,7 см)", 794, 1123));
+                AvailablePageSizes.Add(new TemplateEditorPageSizeOption("letter", "Letter (21,59 × 27,94 см)", 816, 1056));
             }
 
             if (AvailablePageOrientations.Count == 0)

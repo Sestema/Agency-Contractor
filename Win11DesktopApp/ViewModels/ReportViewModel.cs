@@ -67,6 +67,10 @@ namespace Win11DesktopApp.ViewModels
             new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 21, Width = 150 },
             new() { Key = "bankName", IsVisible = false, DisplayIndex = 22, Width = 150 },
             new() { Key = "position", IsVisible = true, DisplayIndex = 23, Width = 110 },
+            new() { Key = "visaStartDate", IsVisible = false, DisplayIndex = 24, Width = 110 },
+            new() { Key = "citizenship", IsVisible = false, DisplayIndex = 25, Width = 140 },
+            new() { Key = "birthCity", IsVisible = false, DisplayIndex = 26, Width = 150 },
+            new() { Key = "birthCountry", IsVisible = false, DisplayIndex = 27, Width = 150 },
         };
 
         public ICommand GoBackCommand { get; }
@@ -107,6 +111,7 @@ namespace Win11DesktopApp.ViewModels
             get => _isEmployeeDetailsOpen;
             set => SetProperty(ref _isEmployeeDetailsOpen, value);
         }
+        private bool _pendingDetailsRefresh;
 
         private EmployeeDetailsViewModel? _employeeDetailsVm;
         public EmployeeDetailsViewModel? EmployeeDetailsVm
@@ -460,6 +465,10 @@ namespace Win11DesktopApp.ViewModels
             "bankAccount" => "EmployeeBankAccountNumber",
             "bankName" => "EmployeeBankName",
             "position" => "ReportColPosition",
+            "visaStartDate" => "ReportColVisaStartDate",
+            "citizenship" => "ReportColCitizenship",
+            "birthCity" => "ReportColBirthCity",
+            "birthCountry" => "ReportColBirthCountry",
             _ => key
         };
 
@@ -497,6 +506,10 @@ namespace Win11DesktopApp.ViewModels
             "bankAccount" => employee.BankAccountNumber,
             "bankName" => employee.BankName,
             "position" => employee.Position,
+            "visaStartDate" => employee.VisaStartDate,
+            "citizenship" => employee.Citizenship,
+            "birthCity" => employee.BirthCity,
+            "birthCountry" => employee.BirthCountry,
             _ => string.Empty
         };
 
@@ -1422,6 +1435,8 @@ namespace Win11DesktopApp.ViewModels
                 DocumentType = GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
                 PassportNumber = data.PassportNumber ?? string.Empty,
                 VisaNumber = data.VisaNumber ?? string.Empty,
+                VisaAuthority = data.VisaAuthority ?? string.Empty,
+                VisaStartDate = data.VisaStartDate,
                 PassportExpiry = data.PassportExpiry,
                 VisaExpiry = data.VisaExpiry,
                 InsuranceExpiry = data.InsuranceExpiry,
@@ -1437,6 +1452,9 @@ namespace Win11DesktopApp.ViewModels
                 AddressCz = FormatAddress(data.AddressLocal),
                 AddressAbroad = FormatAddress(data.AddressAbroad),
                 BirthDate = data.BirthDate,
+                Citizenship = data.Citizenship,
+                BirthCity = data.PassportCity,
+                BirthCountry = data.PassportCountry,
                 Gender = GetGenderDisplay(data.Gender ?? string.Empty),
                 PassportIssuedBy = data.PassportAuthority,
                 IsArchived = true
@@ -1462,6 +1480,7 @@ namespace Win11DesktopApp.ViewModels
                 PassportNumber = employee.PassportNumber,
                 VisaNumber = employee.VisaNumber,
                 VisaAuthority = string.Empty,
+                VisaStartDate = string.Empty,
                 PassportExpiry = employee.PassportExpiry,
                 VisaExpiry = employee.VisaExpiry,
                 InsuranceExpiry = employee.InsuranceExpiry,
@@ -1489,6 +1508,7 @@ namespace Win11DesktopApp.ViewModels
                         row.PassportNumber = data.PassportNumber ?? employee.PassportNumber ?? string.Empty;
                         row.VisaNumber = data.VisaNumber ?? employee.VisaNumber ?? string.Empty;
                         row.VisaAuthority = data.VisaAuthority ?? string.Empty;
+                        row.VisaStartDate = data.VisaStartDate ?? string.Empty;
                         row.Position = string.IsNullOrWhiteSpace(data.PositionTag) ? row.Position : data.PositionTag;
                         row.PositionCode = data.PositionNumber ?? string.Empty;
                         row.WorkAddress = data.WorkAddressTag ?? string.Empty;
@@ -1496,6 +1516,9 @@ namespace Win11DesktopApp.ViewModels
                         row.AddressCz = FormatAddress(data.AddressLocal);
                         row.AddressAbroad = FormatAddress(data.AddressAbroad);
                         row.BirthDate = data.BirthDate ?? string.Empty;
+                        row.Citizenship = data.Citizenship ?? string.Empty;
+                        row.BirthCity = data.PassportCity ?? string.Empty;
+                        row.BirthCountry = data.PassportCountry ?? string.Empty;
                         row.Gender = GetGenderDisplay(data.Gender ?? string.Empty);
                         row.PassportIssuedBy = data.PassportAuthority ?? string.Empty;
                     }
@@ -1597,6 +1620,7 @@ namespace Win11DesktopApp.ViewModels
             }
 
             CleanupDetailsVm();
+            _pendingDetailsRefresh = false;
             EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(row.FirmName, resolvedFolder, _employeeService);
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
             EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
@@ -1612,8 +1636,21 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged() => _ = RefreshReportAsync(reloadFilters: false);
+        private void OnDetailsClose()
+        {
+            IsEmployeeDetailsOpen = false;
+
+            if (_pendingDetailsRefresh)
+            {
+                _pendingDetailsRefresh = false;
+                _ = RefreshReportAsync(reloadFilters: false);
+            }
+        }
+
+        private void OnDetailsDataChanged()
+        {
+            _pendingDetailsRefresh = true;
+        }
 
         private static bool IsTimestampInRange(string timestampStr, DateTime dateFrom, DateTime dateTo)
         {

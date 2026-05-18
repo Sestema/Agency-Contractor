@@ -10,7 +10,7 @@ namespace Win11DesktopApp.Services
     public class ActivityLogService
     {
         private readonly FolderService _folderService;
-        private readonly LocalDbService? _localDbService;
+        private readonly IActivityLogStorage? _activityLogStorage;
         private readonly CurrentProfileService _currentProfileService;
         private bool _useLocalDb;
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
@@ -18,11 +18,11 @@ namespace Win11DesktopApp.Services
 
         public ActivityLogService(
             FolderService folderService,
-            LocalDbService? localDbService = null,
+            IActivityLogStorage? activityLogStorage = null,
             CurrentProfileService? currentProfileService = null)
         {
             _folderService = folderService;
-            _localDbService = localDbService;
+            _activityLogStorage = activityLogStorage;
             _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
         }
 
@@ -39,15 +39,15 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                if (_localDbService == null)
-                    return new LocalDbMigrationResult { Message = "LocalDbService is not configured." };
+                if (_activityLogStorage == null)
+                    return new LocalDbMigrationResult { Message = "Activity log storage is not configured." };
 
                 var path = LogFilePath;
                 if (string.IsNullOrWhiteSpace(path))
                     return new LocalDbMigrationResult { Message = "Activity log path is not available." };
 
                 var entries = LoadEntries(path);
-                var result = _localDbService.MigrateActivityLogIfNeeded(path, entries);
+                var result = _activityLogStorage.MigrateActivityLogIfNeeded(path, entries);
                 _useLocalDb = result.IsSuccessful;
                 return result;
             }
@@ -89,9 +89,9 @@ namespace Win11DesktopApp.Services
                     ActorName = actorName
                 };
 
-                if (_useLocalDb && _localDbService != null)
+                if (_useLocalDb && _activityLogStorage != null)
                 {
-                    _localDbService.InsertActivityLog(entry);
+                    _activityLogStorage.InsertActivityLog(entry);
                     return;
                 }
 
@@ -123,9 +123,9 @@ namespace Win11DesktopApp.Services
                 var path = LogFilePath;
                 if (string.IsNullOrEmpty(path)) return new();
 
-                if (_useLocalDb && _localDbService != null)
+                if (_useLocalDb && _activityLogStorage != null)
                 {
-                    var dbEntries = _localDbService.GetAllActivityLogs();
+                    var dbEntries = _activityLogStorage.GetAllActivityLogs();
                     return dbEntries;
                 }
 
@@ -146,9 +146,9 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrEmpty(path))
                     return;
 
-                if (_useLocalDb && _localDbService != null)
+                if (_useLocalDb && _activityLogStorage != null)
                 {
-                    _localDbService.RemoveActivityLogEntries(originalFolder, deletedFolder, employeeName, firmName);
+                    _activityLogStorage.RemoveActivityLogEntries(originalFolder, deletedFolder, employeeName, firmName);
                     return;
                 }
 
@@ -177,9 +177,9 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                if (_useLocalDb && _localDbService != null)
+                if (_useLocalDb && _activityLogStorage != null)
                 {
-                    _localDbService.ClearActivityLogs();
+                    _activityLogStorage.ClearActivityLogs();
                     return;
                 }
 

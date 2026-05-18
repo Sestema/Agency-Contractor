@@ -794,6 +794,8 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                          Checked="EmployeeSelectionCheckBox_Changed"
+                                                          Unchecked="EmployeeSelectionCheckBox_Changed"
                                                           Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}"/>
                                                 <Border Grid.Column="1" Width="44" Height="44" CornerRadius="22" Background="{DynamicResource InfoChipBackgroundBrush}" VerticalAlignment="Top" Margin="0,0,10,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                     <Border.Clip><EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22"/></Border.Clip>
@@ -998,7 +1000,19 @@
                                                 </Style>
                                             </Border.Style>
                                             <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0"
+                                                              IsChecked="{Binding IsSelected}"
+                                                              VerticalAlignment="Top"
+                                                              Margin="0,2,8,0"
+                                                              Checked="EmployeeSelectionCheckBox_Changed"
+                                                              Unchecked="EmployeeSelectionCheckBox_Changed"
+                                                              Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}"/>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
                                                     <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource InfoChipBackgroundBrush}" Margin="0,0,8,0" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                         <Border.Clip><EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18"/></Border.Clip>
                                                         <Grid>
@@ -1011,7 +1025,8 @@
                                                         <TextBlock Text="{Binding PositionTitle}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,1,0,0"/>
                                                         <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS9}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
-                                                </StackPanel>
+                                                    </StackPanel>
+                                                </Grid>
                                                 <Border CornerRadius="8" Padding="6,2" Margin="0,0,0,4" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
                                                     <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold" Foreground="{Binding Status, Converter={StaticResource StatusColor}}"/>
                                                 </Border>
@@ -1122,6 +1137,12 @@
                                                 </Style>
                                             </Border.Style>
                                             <StackPanel HorizontalAlignment="Center">
+                                                <CheckBox IsChecked="{Binding IsSelected}"
+                                                          HorizontalAlignment="Left"
+                                                          Margin="0,0,0,4"
+                                                          Checked="EmployeeSelectionCheckBox_Changed"
+                                                          Unchecked="EmployeeSelectionCheckBox_Changed"
+                                                          Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}"/>
                                                 <Border Width="48" Height="48" CornerRadius="24" Background="{DynamicResource InfoChipBackgroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" BorderBrush="{DynamicResource InfoChipBorderBrush}" BorderThickness="1.5">
                                                     <Border.Clip><EllipseGeometry Center="24,24" RadiusX="24" RadiusY="24"/></Border.Clip>
                                                     <Grid>
@@ -1724,12 +1745,44 @@
                                        Foreground="{DynamicResource ForegroundBrush}"/>
                         </StackPanel>
                         <Button HorizontalAlignment="Right" Command="{Binding CloseBatchGenerateCommand}"
-                                Width="30" Height="30" Background="Transparent" BorderThickness="0" Foreground="#999" Cursor="Hand">
+                                Width="38" Height="38"
+                                Background="{DynamicResource CardHoverBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                BorderThickness="1"
+                                Foreground="{DynamicResource ForegroundBrush}"
+                                Cursor="Hand"
+                                ToolTip="{DynamicResource DetBtnClose}">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="CloseBd"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        CornerRadius="19">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="CloseBd" Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
                             <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                         </Button>
                     </Grid>
 
-                    <TextBlock Grid.Row="1" Text="{Binding BatchStatusMessage}" Foreground="#888" FontSize="{DynamicResource FS12}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" MaxHeight="95" Margin="0,0,0,10"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding BatchStatusMessage}" Foreground="#888" FontSize="{DynamicResource FS12}" TextWrapping="Wrap"/>
+                    </ScrollViewer>
 
                     <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="300">
                         <ItemsControl ItemsSource="{Binding BatchTemplates}">
@@ -1750,22 +1803,40 @@
                                                            HorizontalAlignment="Center" FontWeight="Bold" FontSize="{DynamicResource FS11}"
                                                            Foreground="{DynamicResource AccentBrush}"/>
                                             </Border>
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
-                                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
-                                            <Button Grid.Column="2" 
-                                                    Command="{Binding DataContext.BatchGenerateFromTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Padding="10,5" FontWeight="SemiBold"
-                                                    Background="{DynamicResource AccentBrush}" Foreground="White" 
-                                                    BorderThickness="0" VerticalAlignment="Center" Cursor="Hand">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS12}"/>
-                                                </StackPanel>
-                                            </Button>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Command="{Binding DataContext.BatchGenerateFromTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="8,5" FontWeight="SemiBold"
+                                                        Background="{DynamicResource AccentBrush}" Foreground="White" 
+                                                        BorderThickness="0" VerticalAlignment="Center" Cursor="Hand"
+                                                        Margin="0,0,6,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS11}"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding DataContext.BatchGenerateToFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="8,5" FontWeight="SemiBold"
+                                                        Background="{DynamicResource CardHoverBrush}"
+                                                        Foreground="{DynamicResource AccentBrush}"
+                                                        BorderBrush="{DynamicResource AccentBrush}"
+                                                        BorderThickness="1"
+                                                        VerticalAlignment="Center"
+                                                        Cursor="Hand"
+                                                        ToolTip="Вибрати папку для збереження">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="В папку..." FontSize="{DynamicResource FS11}"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

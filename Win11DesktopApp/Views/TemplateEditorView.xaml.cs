@@ -545,6 +545,54 @@ namespace Win11DesktopApp.Views
             return sb.ToString();
         }
 
+        private void UndoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isLoaded || Editor == null)
+                return;
+
+            if (Editor.CanUndo)
+            {
+                Editor.Undo();
+                _vm?.MarkDirty();
+            }
+
+            UpdateToolbarButtonStates();
+            Editor.Focus();
+        }
+
+        private void RedoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isLoaded || Editor == null)
+                return;
+
+            if (Editor.CanRedo)
+            {
+                Editor.Redo();
+                _vm?.MarkDirty();
+            }
+
+            UpdateToolbarButtonStates();
+            Editor.Focus();
+        }
+
+        private void FontFamilyCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents || Editor == null) return;
+
+            try
+            {
+                if (FontFamilyCombo.SelectedItem is ComboBoxItem item
+                    && !string.IsNullOrWhiteSpace(item.Content?.ToString()))
+                {
+                    ApplySelectionProperty(TextElement.FontFamilyProperty, new FontFamily(item.Content.ToString()!));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"FontFamilyCombo error: {ex.Message}");
+            }
+        }
+
         private void FontSizeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // Guard: skip during initialization
@@ -555,17 +603,94 @@ namespace Win11DesktopApp.Views
                 if (FontSizeCombo.SelectedItem is ComboBoxItem item &&
                     double.TryParse(item.Content?.ToString(), out double size))
                 {
-                    if (Editor.Selection != null && !Editor.Selection.IsEmpty)
-                    {
-                        Editor.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, size);
-                    }
-                    Editor.Focus();
+                    ApplySelectionProperty(TextElement.FontSizeProperty, size);
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"FontSizeCombo error: {ex.Message}");
             }
+        }
+
+        private void TextColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenButtonContextMenu(TextColorButton);
+        }
+
+        private void HighlightColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenButtonContextMenu(HighlightColorButton);
+        }
+
+        private void TextColorMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem item)
+                ApplyColorFromMenuItem(item, TextElement.ForegroundProperty);
+        }
+
+        private void HighlightColorMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem item)
+                ApplyColorFromMenuItem(item, TextElement.BackgroundProperty);
+        }
+
+        private void ClearFormattingButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents || Editor?.Selection == null)
+                return;
+
+            try
+            {
+                Editor.Selection.ClearAllProperties();
+                _vm?.MarkDirty();
+                UpdateToolbarButtonStates();
+                SyncParagraphFormattingControls();
+                Editor.Focus();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ClearFormatting error: {ex.Message}");
+            }
+        }
+
+        private void OpenButtonContextMenu(Button button)
+        {
+            if (!_isLoaded || button.ContextMenu == null)
+                return;
+
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.IsOpen = true;
+        }
+
+        private void ApplyColorFromMenuItem(MenuItem item, DependencyProperty property)
+        {
+            var tag = item.Tag?.ToString();
+            if (string.IsNullOrWhiteSpace(tag))
+                return;
+
+            try
+            {
+                Brush brush = string.Equals(tag, "Transparent", StringComparison.OrdinalIgnoreCase)
+                    ? Brushes.Transparent
+                    : new SolidColorBrush((Color)ColorConverter.ConvertFromString(tag));
+
+                ApplySelectionProperty(property, brush);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyColor error: {ex.Message}");
+            }
+        }
+
+        private void ApplySelectionProperty(DependencyProperty property, object value)
+        {
+            if (!_isLoaded || _suppressEditorEvents || Editor?.Selection == null)
+                return;
+
+            Editor.Selection.ApplyPropertyValue(property, value);
+            _vm?.MarkDirty();
+            UpdateToolbarButtonStates();
+            Editor.Focus();
         }
 
         private void Editor_TextChanged(object sender, TextChangedEventArgs e)
@@ -877,6 +1002,9 @@ namespace Win11DesktopApp.Views
 
             var selection = Editor.Selection;
             var paragraph = selection?.Start?.Paragraph;
+
+            UndoButton.IsEnabled = Editor.CanUndo;
+            RedoButton.IsEnabled = Editor.CanRedo;
 
             var isBold = IsSelectionPropertyActive(TextElement.FontWeightProperty, FontWeights.Bold);
             var isItalic = IsSelectionPropertyActive(TextElement.FontStyleProperty, FontStyles.Italic);

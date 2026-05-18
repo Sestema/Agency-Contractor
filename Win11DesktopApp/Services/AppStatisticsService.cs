@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Microsoft.Data.Sqlite;
+using Npgsql;
 
 namespace Win11DesktopApp.Services
 {
@@ -18,6 +19,8 @@ namespace Win11DesktopApp.Services
         private const string StatisticsFileName = "app_statistics.json";
         private const int CurrentSchemaVersion = 1;
         private readonly FolderService _folderService;
+        private readonly AppSettingsService? _settingsService;
+        private readonly AppDataStorageFactory? _storageFactory;
         private readonly string _machineName;
         private readonly string _userName;
         private readonly string _machineKey;
@@ -25,14 +28,24 @@ namespace Win11DesktopApp.Services
         private bool _isInitialized;
         private DateTime? _sessionStartedUtc;
 
-        public AppStatisticsService(FolderService folderService)
-            : this(folderService, Environment.MachineName, Environment.UserName)
+        public AppStatisticsService(
+            FolderService folderService,
+            AppSettingsService? settingsService = null,
+            AppDataStorageFactory? storageFactory = null)
+            : this(folderService, Environment.MachineName, Environment.UserName, settingsService, storageFactory)
         {
         }
 
-        internal AppStatisticsService(FolderService folderService, string machineName, string userName)
+        internal AppStatisticsService(
+            FolderService folderService,
+            string machineName,
+            string userName,
+            AppSettingsService? settingsService = null,
+            AppDataStorageFactory? storageFactory = null)
         {
             _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
+            _settingsService = settingsService;
+            _storageFactory = storageFactory;
             _machineName = string.IsNullOrWhiteSpace(machineName) ? "unknown-machine" : machineName;
             _userName = string.IsNullOrWhiteSpace(userName) ? "unknown-user" : userName;
             _machineKey = $"{_machineName}|{_userName}";
@@ -104,6 +117,9 @@ namespace Win11DesktopApp.Services
 
         private AppStatisticsSnapshot LoadUnlocked()
         {
+            if (UsePostgresStorage)
+                return LoadPostgresUnlocked();
+
             EnsureInitializedUnlocked();
             var path = StatisticsDbPath;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -139,6 +155,12 @@ WHERE machine_key = $machine_key;";
 
         private void SaveUnlocked(AppStatisticsSnapshot stats)
         {
+            if (UsePostgresStorage)
+            {
+                SavePostgresUnlocked(stats);
+                return;
+            }
+
             EnsureInitializedUnlocked();
             var path = StatisticsDbPath;
             if (string.IsNullOrWhiteSpace(path))
@@ -160,6 +182,13 @@ WHERE machine_key = $machine_key;";
             if (_isInitialized)
                 return;
 
+            if (UsePostgresStorage)
+            {
+                EnsurePostgresInitializedUnlocked();
+                _isInitialized = true;
+                return;
+            }
+
             var path = StatisticsDbPath;
             if (string.IsNullOrWhiteSpace(path))
                 return;
@@ -175,7 +204,7 @@ WHERE machine_key = $machine_key;";
 
         private SqliteConnection OpenConnection(string path)
         {
-            var connection = new SqliteConnection($"Data Source={path};Cache=Shared");
+            var connection = new SqliteConnection($"Data Source={path};Cache=Shared;Pooling=False");
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
@@ -397,6 +426,199 @@ WHERE machine_key = $machine_key;";
                 && reader.GetInt32(0) == expected.TotalEmployeesCreated
                 && reader.GetInt32(1) == expected.GeneratedDocumentsCount
                 && reader.GetInt32(2) == expected.TotalProgramRunMinutes;
+        }
+
+        private bool UsePostgresStorage => _storageFactory?.IsPostgresRuntimeActiveAtStartup == true;
+
+        private AppStatisticsSnapshot LoadPostgresUnlocked()
+        {
+            EnsureInitializedUnlocked();
+
+            try
+            {
+                using var connection = OpenPostgresConnection();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT total_employees_created, generated_documents_count, total_program_run_minutes
+FROM app.app_statistics
+WHERE machine_key = @machine_key;";
+                command.Parameters.AddWithValue("machine_key", _machineKey);
+
+                using var reader = command.ExecuteReader();
+                if (!reader.Read())
+                    return new AppStatisticsSnapshot();
+
+                return new AppStatisticsSnapshot
+                {
+                    TotalEmployeesCreated = reader.GetInt32(0),
+                    GeneratedDocumentsCount = reader.GetInt32(1),
+                    TotalProgramRunMinutes = reader.GetInt32(2)
+                };
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppStatisticsService.LoadPostgres", ex.Message);
+                return new AppStatisticsSnapshot();
+            }
+        }
+
+        private void SavePostgresUnlocked(AppStatisticsSnapshot stats)
+        {
+            EnsureInitializedUnlocked();
+
+            try
+            {
+                using var connection = OpenPostgresConnection();
+                UpsertPostgresSnapshot(connection, stats);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppStatisticsService.SavePostgres", ex.Message);
+            }
+        }
+
+        private void EnsurePostgresInitializedUnlocked()
+        {
+            try
+            {
+                using var connection = OpenPostgresConnection();
+                CreatePostgresSchema(connection);
+                MigrateSqliteStatisticsToPostgresIfNeeded(connection);
+                MigrateLegacyJsonToPostgresIfNeeded(connection);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppStatisticsService.EnsurePostgresInitialized", ex.Message);
+            }
+        }
+
+        private NpgsqlConnection OpenPostgresConnection()
+        {
+            var settings = _settingsService?.Settings
+                ?? throw new InvalidOperationException("PostgreSQL settings are not available.");
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
+                Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
+                Database = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase.Trim(),
+                Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
+                Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
+                Timeout = 10,
+                CommandTimeout = 30,
+                Pooling = true
+            };
+
+            var connection = new NpgsqlConnection(builder.ConnectionString);
+            connection.Open();
+            return connection;
+        }
+
+        private static void CreatePostgresSchema(NpgsqlConnection connection)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+CREATE SCHEMA IF NOT EXISTS app;
+
+CREATE TABLE IF NOT EXISTS app.app_statistics (
+    machine_key TEXT PRIMARY KEY,
+    machine_name TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    total_employees_created INTEGER NOT NULL DEFAULT 0,
+    generated_documents_count INTEGER NOT NULL DEFAULT 0,
+    total_program_run_minutes INTEGER NOT NULL DEFAULT 0,
+    updated_at_utc TEXT NOT NULL
+);";
+            command.ExecuteNonQuery();
+        }
+
+        private void UpsertPostgresSnapshot(NpgsqlConnection connection, AppStatisticsSnapshot stats)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+INSERT INTO app.app_statistics (
+    machine_key, machine_name, user_name,
+    total_employees_created, generated_documents_count, total_program_run_minutes, updated_at_utc
+) VALUES (
+    @machine_key, @machine_name, @user_name,
+    @total_employees_created, @generated_documents_count, @total_program_run_minutes, @updated_at_utc
+)
+ON CONFLICT(machine_key) DO UPDATE SET
+    machine_name = EXCLUDED.machine_name,
+    user_name = EXCLUDED.user_name,
+    total_employees_created = EXCLUDED.total_employees_created,
+    generated_documents_count = EXCLUDED.generated_documents_count,
+    total_program_run_minutes = EXCLUDED.total_program_run_minutes,
+    updated_at_utc = EXCLUDED.updated_at_utc;";
+            command.Parameters.AddWithValue("machine_key", _machineKey);
+            command.Parameters.AddWithValue("machine_name", _machineName);
+            command.Parameters.AddWithValue("user_name", _userName);
+            command.Parameters.AddWithValue("total_employees_created", stats.TotalEmployeesCreated);
+            command.Parameters.AddWithValue("generated_documents_count", stats.GeneratedDocumentsCount);
+            command.Parameters.AddWithValue("total_program_run_minutes", stats.TotalProgramRunMinutes);
+            command.Parameters.AddWithValue("updated_at_utc", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            command.ExecuteNonQuery();
+        }
+
+        private static void UpsertPostgresStatisticsRow(NpgsqlConnection connection, StatisticsRow row)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+INSERT INTO app.app_statistics (
+    machine_key, machine_name, user_name,
+    total_employees_created, generated_documents_count, total_program_run_minutes, updated_at_utc
+) VALUES (
+    @machine_key, @machine_name, @user_name,
+    @total_employees_created, @generated_documents_count, @total_program_run_minutes, @updated_at_utc
+)
+ON CONFLICT(machine_key) DO UPDATE SET
+    machine_name = EXCLUDED.machine_name,
+    user_name = EXCLUDED.user_name,
+    total_employees_created = GREATEST(app.app_statistics.total_employees_created, EXCLUDED.total_employees_created),
+    generated_documents_count = GREATEST(app.app_statistics.generated_documents_count, EXCLUDED.generated_documents_count),
+    total_program_run_minutes = GREATEST(app.app_statistics.total_program_run_minutes, EXCLUDED.total_program_run_minutes),
+    updated_at_utc = EXCLUDED.updated_at_utc;";
+            command.Parameters.AddWithValue("machine_key", row.MachineKey);
+            command.Parameters.AddWithValue("machine_name", row.MachineName);
+            command.Parameters.AddWithValue("user_name", row.UserName);
+            command.Parameters.AddWithValue("total_employees_created", row.TotalEmployeesCreated);
+            command.Parameters.AddWithValue("generated_documents_count", row.GeneratedDocumentsCount);
+            command.Parameters.AddWithValue("total_program_run_minutes", row.TotalProgramRunMinutes);
+            command.Parameters.AddWithValue("updated_at_utc", row.UpdatedAtUtc);
+            command.ExecuteNonQuery();
+        }
+
+        private void MigrateSqliteStatisticsToPostgresIfNeeded(NpgsqlConnection connection)
+        {
+            var path = StatisticsDbPath;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            try
+            {
+                foreach (var row in ReadStatisticsRows(path))
+                    UpsertPostgresStatisticsRow(connection, row);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppStatisticsService.PostgresMigration", ex.Message);
+            }
+        }
+
+        private void MigrateLegacyJsonToPostgresIfNeeded(NpgsqlConnection connection)
+        {
+            var legacyPath = LegacyStatisticsPath;
+            if (string.IsNullOrWhiteSpace(legacyPath) || !File.Exists(legacyPath))
+                return;
+
+            try
+            {
+                var legacy = SafeFileService.ReadJsonOrDefault(legacyPath, new AppStatisticsSnapshot());
+                UpsertPostgresSnapshot(connection, legacy);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppStatisticsService.PostgresJsonMigration", ex.Message);
+            }
         }
 
         internal string StatisticsDbPath

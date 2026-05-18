@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
+using System.Threading;
 using Microsoft.Data.Sqlite;
 using Win11DesktopApp.EmployeeModels;
 
@@ -21,20 +24,42 @@ namespace Win11DesktopApp.Services
     public sealed class EmployeeIndexDbService
     {
         private const int CurrentSchemaVersion = 1;
+        private static readonly TimeSpan IndexLockStaleAfter = TimeSpan.FromMinutes(3);
+        private static readonly JsonSerializerOptions LockJsonOptions = new() { WriteIndented = false };
         private readonly FolderService _folderService;
+        private readonly AppSettingsService? _settingsService;
+        private readonly PostgresEmployeeIndexStorage? _postgresStorage;
         private readonly object _initLock = new();
         private bool _isInitialized;
 
-        public EmployeeIndexDbService(FolderService folderService)
+        public EmployeeIndexDbService(FolderService folderService, AppSettingsService? settingsService = null)
         {
             _folderService = folderService;
+            _settingsService = settingsService;
+            if (settingsService != null)
+                _postgresStorage = new PostgresEmployeeIndexStorage(settingsService, folderService);
         }
 
         public string DatabasePath => _folderService.EmployeeIndexDbPath;
         public bool IsAvailable => !string.IsNullOrWhiteSpace(DatabasePath);
+        public string ActiveStorageDisplay => UsePostgresStorage ? "PostgreSQL" : "SQLite";
+        private bool UsePostgresStorage =>
+            _postgresStorage != null
+            && _settingsService != null
+            && DatabaseStorageModes.PostgresRuntimeStorageEnabled
+            && string.Equals(_settingsService.Settings.DatabaseStorageMode, DatabaseStorageModes.Postgres, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(_settingsService.Settings.PostgresConnectionString)
+            && !string.IsNullOrWhiteSpace(_settingsService.Settings.PostgresMigrationCompletedAtUtc)
+            && !string.IsNullOrWhiteSpace(_settingsService.Settings.PostgresEnabledAtUtc);
 
         public void EnsureInitialized()
         {
+            if (UsePostgresStorage)
+            {
+                _postgresStorage!.EnsureInitialized();
+                return;
+            }
+
             if (_isInitialized)
                 return;
 
@@ -51,6 +76,7 @@ namespace Win11DesktopApp.Services
                     return;
 
                 Directory.CreateDirectory(sqliteFolder);
+                TryDeleteStaleIndexLockFile();
 
                 using var connection = OpenConnection();
                 CreateSchema(connection);
@@ -63,7 +89,7 @@ namespace Win11DesktopApp.Services
             if (!IsAvailable)
                 throw new InvalidOperationException("Employee index SQLite path is not available.");
 
-            var connection = new SqliteConnection($"Data Source={DatabasePath};Cache=Shared");
+            var connection = new SqliteConnection($"Data Source={DatabasePath};Cache=Shared;Pooling=False");
             connection.Open();
 
             using (var command = connection.CreateCommand())
@@ -77,6 +103,9 @@ namespace Win11DesktopApp.Services
 
         public int GetEmployeeIndexCount()
         {
+            if (UsePostgresStorage)
+                return _postgresStorage!.GetEmployeeIndexCount();
+
             EnsureInitialized();
             if (!IsAvailable)
                 return 0;
@@ -95,6 +124,9 @@ namespace Win11DesktopApp.Services
 
         public bool HasLegacyAbsolutePaths()
         {
+            if (UsePostgresStorage)
+                return _postgresStorage!.HasLegacyAbsolutePaths();
+
             EnsureInitialized();
             if (!IsAvailable)
                 return false;
@@ -121,10 +153,17 @@ WHERE ifnull(employee_folder, '') <> ''
 
         public void UpsertEmployeeIndex(EmployeeIndexRow row)
         {
+            if (UsePostgresStorage)
+            {
+                _postgresStorage!.UpsertEmployeeIndex(row);
+                return;
+            }
+
             EnsureInitialized();
             if (!IsAvailable || string.IsNullOrWhiteSpace(row?.UniqueId))
                 return;
 
+            using var indexLock = AcquireIndexWriteLock(TimeSpan.FromSeconds(10), "upsert");
             using var connection = OpenConnection();
             using var transaction = connection.BeginTransaction();
             UpsertEmployeeIndex(connection, transaction, row);
@@ -133,10 +172,17 @@ WHERE ifnull(employee_folder, '') <> ''
 
         public void DeleteEmployeeIndex(string uniqueId)
         {
+            if (UsePostgresStorage)
+            {
+                _postgresStorage!.DeleteEmployeeIndex(uniqueId);
+                return;
+            }
+
             EnsureInitialized();
             if (!IsAvailable || string.IsNullOrWhiteSpace(uniqueId))
                 return;
 
+            using var indexLock = AcquireIndexWriteLock(TimeSpan.FromSeconds(10), "delete");
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM employee_index WHERE unique_id = @uniqueId;";
@@ -146,6 +192,9 @@ WHERE ifnull(employee_folder, '') <> ''
 
         public List<EmployeeIndexRow> GetEmployeesForFirmRows(string firmName)
         {
+            if (UsePostgresStorage)
+                return _postgresStorage!.GetEmployeesForFirmRows(firmName);
+
             EnsureInitialized();
             if (!IsAvailable || string.IsNullOrWhiteSpace(firmName))
                 return new List<EmployeeIndexRow>();
@@ -168,6 +217,9 @@ ORDER BY full_name, start_date;";
 
         public List<EmployeeIndexRow> GetArchivedEmployeeRows()
         {
+            if (UsePostgresStorage)
+                return _postgresStorage!.GetArchivedEmployeeRows();
+
             EnsureInitialized();
             if (!IsAvailable)
                 return new List<EmployeeIndexRow>();
@@ -188,6 +240,9 @@ ORDER BY full_name, start_date;";
 
         public EmployeeIndexRow? GetEmployeeRowByFolder(string employeeFolder)
         {
+            if (UsePostgresStorage)
+                return _postgresStorage!.GetEmployeeRowByFolder(employeeFolder);
+
             EnsureInitialized();
             if (!IsAvailable || string.IsNullOrWhiteSpace(employeeFolder))
                 return null;
@@ -214,8 +269,56 @@ LIMIT 1;";
             return rows.Count > 0 ? rows[0] : null;
         }
 
+        public int RenameFirmReferences(string oldName, string newName)
+        {
+            if (UsePostgresStorage)
+                return _postgresStorage!.RenameFirmReferences(oldName, newName);
+
+            EnsureInitialized();
+            if (!IsAvailable || string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName))
+                return 0;
+
+            var oldEmployeesFolder = _folderService.GetEmployeesFolder(oldName);
+            var newEmployeesFolder = _folderService.GetEmployeesFolder(newName);
+            var oldPortableFolder = ToPortablePath(oldEmployeesFolder);
+            var newPortableFolder = ToPortablePath(newEmployeesFolder);
+            var oldAbsoluteFolder = NormalizeFullPath(oldEmployeesFolder);
+            var newAbsoluteFolder = NormalizeFullPath(newEmployeesFolder);
+
+            using var indexLock = AcquireIndexWriteLock(TimeSpan.FromSeconds(15), "rename-firm");
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE employee_index
+SET firm_name = @newName,
+    employee_folder = CASE
+        WHEN @oldPortableFolder <> '' AND lower(employee_folder) = lower(@oldPortableFolder)
+            THEN @newPortableFolder
+        WHEN @oldPortableFolder <> '' AND lower(employee_folder) LIKE lower(@oldPortableFolderLike)
+            THEN @newPortableFolder || substr(employee_folder, length(@oldPortableFolder) + 1)
+        WHEN @oldAbsoluteFolder <> '' AND lower(employee_folder) = lower(@oldAbsoluteFolder)
+            THEN @newAbsoluteFolder
+        WHEN @oldAbsoluteFolder <> '' AND lower(employee_folder) LIKE lower(@oldAbsoluteFolderLike)
+            THEN @newAbsoluteFolder || substr(employee_folder, length(@oldAbsoluteFolder) + 1)
+        ELSE employee_folder
+    END
+WHERE lower(firm_name) = lower(@oldName);";
+            command.Parameters.AddWithValue("@oldName", oldName);
+            command.Parameters.AddWithValue("@newName", newName);
+            command.Parameters.AddWithValue("@oldPortableFolder", oldPortableFolder);
+            command.Parameters.AddWithValue("@newPortableFolder", newPortableFolder);
+            command.Parameters.AddWithValue("@oldPortableFolderLike", BuildChildPathLike(oldPortableFolder));
+            command.Parameters.AddWithValue("@oldAbsoluteFolder", oldAbsoluteFolder);
+            command.Parameters.AddWithValue("@newAbsoluteFolder", newAbsoluteFolder);
+            command.Parameters.AddWithValue("@oldAbsoluteFolderLike", BuildChildPathLike(oldAbsoluteFolder));
+            return command.ExecuteNonQuery();
+        }
+
         public EmployeeIndexRebuildResult RebuildEmployeeIndex(IReadOnlyList<EmployeeIndexRow> rows, LocalDbService? localDbService = null, int foldersScanned = 0, int foldersSkipped = 0)
         {
+            if (UsePostgresStorage)
+                return _postgresStorage!.RebuildEmployeeIndex(rows, foldersScanned, foldersSkipped);
+
             EnsureInitialized();
             if (!IsAvailable)
                 return new EmployeeIndexRebuildResult { Message = "Employee index SQLite path is unavailable." };
@@ -226,6 +329,7 @@ LIMIT 1;";
 
             try
             {
+                using var indexLock = AcquireIndexWriteLock(TimeSpan.FromSeconds(30), "rebuild");
                 using var connection = OpenConnection();
                 using var transaction = connection.BeginTransaction();
 
@@ -274,6 +378,175 @@ LIMIT 1;";
                     FoldersSkipped = foldersSkipped,
                     Message = ex.Message
                 };
+            }
+        }
+
+        private EmployeeIndexWriteLock AcquireIndexWriteLock(TimeSpan timeout, string operation)
+        {
+            var lockPath = DatabasePath + ".lock";
+            var folder = Path.GetDirectoryName(lockPath);
+            if (!string.IsNullOrWhiteSpace(folder))
+                Directory.CreateDirectory(folder);
+
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var ownerId = Guid.NewGuid().ToString("N");
+            var lockInfo = new EmployeeIndexLockInfo
+            {
+                OwnerId = ownerId,
+                MachineName = Environment.MachineName,
+                ProcessId = Environment.ProcessId,
+                Operation = operation,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            while (true)
+            {
+                var existingLock = TryReadIndexLock(lockPath);
+                if (existingLock != null && !IsIndexLockStale(existingLock))
+                {
+                    if (DateTime.UtcNow >= deadline)
+                    {
+                        throw new IOException(
+                            $"Employee index is locked by {existingLock.MachineName} pid={existingLock.ProcessId} operation={existingLock.Operation} since {existingLock.CreatedAtUtc:o}.");
+                    }
+
+                    Thread.Sleep(150);
+                    continue;
+                }
+
+                if (existingLock != null)
+                    TryDeleteStaleIndexLockFile(lockPath, existingLock);
+
+                try
+                {
+                    var stream = new FileStream(
+                        lockPath,
+                        FileMode.CreateNew,
+                        FileAccess.ReadWrite,
+                        FileShare.None,
+                        bufferSize: 4096,
+                        FileOptions.WriteThrough);
+
+                    using (var writer = new StreamWriter(stream, leaveOpen: true))
+                    {
+                        writer.Write(JsonSerializer.Serialize(lockInfo, LockJsonOptions));
+                        writer.Flush();
+                    }
+
+                    stream.Flush(true);
+                    stream.Position = 0;
+                    return new EmployeeIndexWriteLock(stream, lockPath, ownerId);
+                }
+                catch (IOException) when (DateTime.UtcNow < deadline)
+                {
+                    Thread.Sleep(150);
+                }
+                catch (UnauthorizedAccessException) when (DateTime.UtcNow < deadline)
+                {
+                    Thread.Sleep(150);
+                }
+            }
+        }
+
+        private void TryDeleteStaleIndexLockFile()
+        {
+            var lockPath = DatabasePath + ".lock";
+            var lockInfo = TryReadIndexLock(lockPath);
+            if (lockInfo != null && !IsIndexLockStale(lockInfo))
+                return;
+
+            TryDeleteStaleIndexLockFile(lockPath, lockInfo);
+        }
+
+        private static bool IsIndexLockStale(EmployeeIndexLockInfo lockInfo)
+        {
+            if (lockInfo.CreatedAtUtc == default)
+                return true;
+
+            return DateTime.UtcNow - lockInfo.CreatedAtUtc > IndexLockStaleAfter;
+        }
+
+        private static EmployeeIndexLockInfo? TryReadIndexLock(string lockPath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(lockPath) || !File.Exists(lockPath))
+                    return null;
+
+                var text = File.ReadAllText(lockPath);
+                if (string.IsNullOrWhiteSpace(text))
+                    return new EmployeeIndexLockInfo { CreatedAtUtc = File.GetLastWriteTimeUtc(lockPath) };
+
+                return JsonSerializer.Deserialize<EmployeeIndexLockInfo>(text, LockJsonOptions)
+                    ?? new EmployeeIndexLockInfo { CreatedAtUtc = File.GetLastWriteTimeUtc(lockPath) };
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is JsonException)
+            {
+                return null;
+            }
+        }
+
+        private static void TryDeleteStaleIndexLockFile(string lockPath, EmployeeIndexLockInfo? lockInfo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(lockPath) || !File.Exists(lockPath))
+                    return;
+
+                File.Delete(lockPath);
+                if (lockInfo != null)
+                {
+                    LoggingService.LogWarning("EmployeeIndexDbService.Lock",
+                        $"Removed stale employee index lock from {lockInfo.MachineName} pid={lockInfo.ProcessId} operation={lockInfo.Operation} created={lockInfo.CreatedAtUtc:o}.");
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // If another running process owns the lock, keeping the marker is expected.
+            }
+        }
+
+        private sealed class EmployeeIndexLockInfo
+        {
+            public string OwnerId { get; set; } = string.Empty;
+            public string MachineName { get; set; } = string.Empty;
+            public int ProcessId { get; set; }
+            public string Operation { get; set; } = string.Empty;
+            public DateTime CreatedAtUtc { get; set; }
+        }
+
+        private sealed class EmployeeIndexWriteLock : IDisposable
+        {
+            private readonly FileStream _stream;
+            private readonly string _lockPath;
+            private readonly string _ownerId;
+            private bool _disposed;
+
+            public EmployeeIndexWriteLock(FileStream stream, string lockPath, string ownerId)
+            {
+                _stream = stream;
+                _lockPath = lockPath;
+                _ownerId = ownerId;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+                _stream.Dispose();
+
+                try
+                {
+                    var info = TryReadIndexLock(_lockPath);
+                    if (info == null || string.Equals(info.OwnerId, _ownerId, StringComparison.OrdinalIgnoreCase))
+                        File.Delete(_lockPath);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // Another machine may already have synchronized or removed the lock marker.
+                }
             }
         }
 
@@ -550,6 +823,14 @@ ON CONFLICT(unique_id) DO UPDATE SET
                 || path.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
                 ? path
                 : path + Path.DirectorySeparatorChar;
+        }
+
+        private static string BuildChildPathLike(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            return EnsureTrailingSeparator(path) + "%";
         }
     }
 }
