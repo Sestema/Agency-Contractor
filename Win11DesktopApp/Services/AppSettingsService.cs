@@ -126,6 +126,7 @@ namespace Win11DesktopApp.Services
             public string PostgresDatabase { get; set; } = "agency_db";
             public string PostgresUsername { get; set; } = "postgres";
             public string EncryptedPostgresPassword { get; set; } = string.Empty;
+            public string PostgresDataDirectoryPath { get; set; } = string.Empty;
             public string PostgresMigrationCompletedAtUtc { get; set; } = string.Empty;
             public string PostgresEnabledAtUtc { get; set; } = string.Empty;
             public string LastSqliteBackupFromPostgresAtUtc { get; set; } = string.Empty;
@@ -318,6 +319,7 @@ namespace Win11DesktopApp.Services
                 ? "postgres"
                 : Settings.PostgresUsername.Trim();
             Settings.EncryptedPostgresPassword ??= string.Empty;
+            Settings.PostgresDataDirectoryPath = Settings.PostgresDataDirectoryPath?.Trim() ?? string.Empty;
 
             Settings.WindowLeft = SafeDouble(Settings.WindowLeft);
             Settings.WindowTop = SafeDouble(Settings.WindowTop);

@@ -68,6 +68,8 @@
                     <TextBox Text="{Binding Data.LastName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizBirthDate}" Style="{StaticResource WizLabel}"/>
                     <TextBox Text="{Binding Data.BirthDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <TextBlock Text="{DynamicResource DetFieldRodneCislo}" Style="{StaticResource WizLabel}"/>
+                    <TextBox Text="{Binding RodneCislo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                     <TextBlock Text="{DynamicResource WizGender}" Style="{StaticResource WizLabel}"/>
                     <Border Style="{StaticResource DialogPreviewSurface}" Padding="12,10" Margin="0,4,0,10">
                         <StackPanel Orientation="Horizontal">

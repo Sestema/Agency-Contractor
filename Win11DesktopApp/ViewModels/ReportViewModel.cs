@@ -52,25 +52,26 @@ namespace Win11DesktopApp.ViewModels
             new() { Key = "workAddress", IsVisible = false, DisplayIndex = 6, Width = 220 },
             new() { Key = "highestEducation", IsVisible = false, DisplayIndex = 7, Width = 220 },
             new() { Key = "birthDate", IsVisible = false, DisplayIndex = 8, Width = 100 },
-            new() { Key = "gender", IsVisible = false, DisplayIndex = 9, Width = 90 },
-            new() { Key = "addressCz", IsVisible = false, DisplayIndex = 10, Width = 220 },
-            new() { Key = "addressAbroad", IsVisible = false, DisplayIndex = 11, Width = 220 },
-            new() { Key = "passportIssuedBy", IsVisible = false, DisplayIndex = 12, Width = 180 },
-            new() { Key = "positionCode", IsVisible = false, DisplayIndex = 13, Width = 110 },
-            new() { Key = "agency", IsVisible = false, DisplayIndex = 14, Width = 150 },
-            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 15, Width = 100 },
-            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 16, Width = 100 },
-            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 17, Width = 100 },
-            new() { Key = "startDate", IsVisible = true, DisplayIndex = 18, Width = 90 },
-            new() { Key = "endDate", IsVisible = true, DisplayIndex = 19, Width = 90 },
-            new() { Key = "phone", IsVisible = true, DisplayIndex = 20, Width = 110 },
-            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 21, Width = 150 },
-            new() { Key = "bankName", IsVisible = false, DisplayIndex = 22, Width = 150 },
-            new() { Key = "position", IsVisible = true, DisplayIndex = 23, Width = 110 },
-            new() { Key = "visaStartDate", IsVisible = false, DisplayIndex = 24, Width = 110 },
-            new() { Key = "citizenship", IsVisible = false, DisplayIndex = 25, Width = 140 },
-            new() { Key = "birthCity", IsVisible = false, DisplayIndex = 26, Width = 150 },
-            new() { Key = "birthCountry", IsVisible = false, DisplayIndex = 27, Width = 150 },
+            new() { Key = "rodneCislo", IsVisible = false, DisplayIndex = 9, Width = 150 },
+            new() { Key = "gender", IsVisible = false, DisplayIndex = 10, Width = 90 },
+            new() { Key = "addressCz", IsVisible = false, DisplayIndex = 11, Width = 220 },
+            new() { Key = "addressAbroad", IsVisible = false, DisplayIndex = 12, Width = 220 },
+            new() { Key = "passportIssuedBy", IsVisible = false, DisplayIndex = 13, Width = 180 },
+            new() { Key = "positionCode", IsVisible = false, DisplayIndex = 14, Width = 110 },
+            new() { Key = "agency", IsVisible = false, DisplayIndex = 15, Width = 150 },
+            new() { Key = "passportExpiry", IsVisible = true, DisplayIndex = 16, Width = 100 },
+            new() { Key = "visaExpiry", IsVisible = true, DisplayIndex = 17, Width = 100 },
+            new() { Key = "insuranceExpiry", IsVisible = true, DisplayIndex = 18, Width = 100 },
+            new() { Key = "startDate", IsVisible = true, DisplayIndex = 19, Width = 90 },
+            new() { Key = "endDate", IsVisible = true, DisplayIndex = 20, Width = 90 },
+            new() { Key = "phone", IsVisible = true, DisplayIndex = 21, Width = 110 },
+            new() { Key = "bankAccount", IsVisible = false, DisplayIndex = 22, Width = 150 },
+            new() { Key = "bankName", IsVisible = false, DisplayIndex = 23, Width = 150 },
+            new() { Key = "position", IsVisible = true, DisplayIndex = 24, Width = 110 },
+            new() { Key = "visaStartDate", IsVisible = false, DisplayIndex = 25, Width = 110 },
+            new() { Key = "citizenship", IsVisible = false, DisplayIndex = 26, Width = 140 },
+            new() { Key = "birthCity", IsVisible = false, DisplayIndex = 27, Width = 150 },
+            new() { Key = "birthCountry", IsVisible = false, DisplayIndex = 28, Width = 150 },
         };
 
         public ICommand GoBackCommand { get; }
@@ -452,6 +453,7 @@ namespace Win11DesktopApp.ViewModels
             "addressCz" => "ReportColAddressCz",
             "addressAbroad" => "ReportColAddressAbroad",
             "birthDate" => "ReportColBirthDate",
+            "rodneCislo" => "ReportColRodneCislo",
             "gender" => "ReportColGender",
             "passportIssuedBy" => "ReportColPassportIssuedBy",
             "positionCode" => "ReportColPositionCode",
@@ -493,6 +495,7 @@ namespace Win11DesktopApp.ViewModels
             "addressCz" => employee.AddressCz,
             "addressAbroad" => employee.AddressAbroad,
             "birthDate" => employee.BirthDate,
+            "rodneCislo" => employee.RodneCislo,
             "gender" => employee.Gender,
             "passportIssuedBy" => employee.PassportIssuedBy,
             "positionCode" => employee.PositionCode,
@@ -1452,6 +1455,7 @@ namespace Win11DesktopApp.ViewModels
                 AddressCz = FormatAddress(data.AddressLocal),
                 AddressAbroad = FormatAddress(data.AddressAbroad),
                 BirthDate = data.BirthDate,
+                RodneCislo = data.HasRodneCisloData ? data.RodneCislo : string.Empty,
                 Citizenship = data.Citizenship,
                 BirthCity = data.PassportCity,
                 BirthCountry = data.PassportCountry,
@@ -1516,6 +1520,7 @@ namespace Win11DesktopApp.ViewModels
                         row.AddressCz = FormatAddress(data.AddressLocal);
                         row.AddressAbroad = FormatAddress(data.AddressAbroad);
                         row.BirthDate = data.BirthDate ?? string.Empty;
+                        row.RodneCislo = data.HasRodneCisloData ? data.RodneCislo ?? string.Empty : string.Empty;
                         row.Citizenship = data.Citizenship ?? string.Empty;
                         row.BirthCity = data.PassportCity ?? string.Empty;
                         row.BirthCountry = data.PassportCountry ?? string.Empty;

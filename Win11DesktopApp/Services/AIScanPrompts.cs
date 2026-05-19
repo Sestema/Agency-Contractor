@@ -46,8 +46,12 @@ STEP 5: Find nationality/citizenship and issuing country:
 - Citizenship: look for labels such as ""Nationality"", ""Citizenship"", ""Státní občanství"", ""Громадянство"". Normalize common variants like UKR / Ukraina / Ukraine to a sensible Latin country name.
 - IssuingCountry: country that issued the passport or ID card. Prefer the country name/code printed in the document header, coat of arms area, passport code, or issuer section (e.g. UKR -> Ukraine, CZE -> Czech Republic, ROU -> Romania). This is NOT the place of birth and NOT necessarily the citizenship if they differ.
 
+STEP 6: Find RodneCislo / personal identification number:
+- Ukrainian passport: use the field labeled ""Запис № / Record No."" (example 20001009-08996). This is NOT the passport number.
+- If the value is unclear, leave RodneCislo empty.
+
 Return ONLY this JSON (FirstName=given name, LastName=surname):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":""""}",
 
                 "insurance" => @"Read this insurance card/document photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
@@ -184,8 +188,13 @@ STEP 6: Find residence status / permit name if clearly visible:
 
 STEP 7: Find issuing authority / document issuer (PassportAuthority). Look for labels like 'Authority', 'Issued by', 'Orgán vydávající doklad', 'Vydal', 'Eliberată de', 'Орган видачі', or a dedicated issuer code. If the card shows only a code, return the code exactly. Do NOT use document number as authority.
 
+STEP 8: Find RodneCislo / personal identification number:
+- Romanian identity card: use the field labeled ""CNP"" (13 digits, example 1870826055109). Do NOT use SERIA/NR, card number, or the large top card number.
+- Czech residence card: use the number in ""POZNÁMKY"" if it has the birth-number format YYMMDD/XXXX (example 710508/1280).
+- If unsure, leave RodneCislo empty.
+
 Return ONLY this JSON (PassportExpiry = card expiry date):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
+{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
 
                 "passport2" => @"Read this passport second page or EU residence permit photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
 
@@ -317,7 +326,7 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
             return expectedDocKey switch
             {
                 "passport" => kind is "passport" or "eu_id_card_front" or "id_card_front",
-                "id_card" => kind is "eu_id_card_front" or "id_card_front",
+                "id_card" => kind is "eu_id_card_front" or "id_card_front" or "residence_permit",
                 "passport2" => kind is "passport_page2" or "eu_id_card_back" or "id_card_back" or "residence_permit",
                 "id_card_back" => kind is "eu_id_card_back" or "id_card_back" or "residence_permit",
                 "visa" => kind is "visa_sticker" or "visa" or "residence_permit",
@@ -358,7 +367,30 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
             if (LooksLikeVisaNumberUsedAsPassportNumber(parsed, fieldKey, value))
                 return true;
 
+            if (string.Equals(fieldKey, "RodneCislo", StringComparison.OrdinalIgnoreCase)
+                && IsSuspiciousRodneCisloValue(value))
+                return true;
+
             return false;
+        }
+
+        private static bool IsSuspiciousRodneCisloValue(string value)
+        {
+            var trimmed = (value ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+                return false;
+
+            var compact = Regex.Replace(trimmed.ToUpperInvariant(), @"\s+", string.Empty);
+            if (Regex.IsMatch(compact, @"^\d{8}-\d{5}$"))
+                return false;
+
+            if (Regex.IsMatch(compact, @"^\d{6}/\d{3,4}$"))
+                return false;
+
+            if (Regex.IsMatch(compact, @"^\d{13}$"))
+                return false;
+
+            return true;
         }
 
         private static bool IsSuspiciousDateValue(string fieldKey, string value, string? currentValue)

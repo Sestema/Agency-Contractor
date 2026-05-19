@@ -158,7 +158,7 @@ namespace Win11DesktopApp.Services
                 return new PostgresMigrationResult
                 {
                     Database = databaseName,
-                    ErrorMessage = ex.Message
+                    ErrorMessage = PostgresErrorMessageService.ToUserMessage(ex)
                 };
             }
             finally

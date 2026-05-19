@@ -1312,6 +1312,31 @@ body {
 .mock-id-line.scanned { background: var(--primary); animation: fillLine 3s infinite; }
 @keyframes fillLine { 0%, 30% { width: 0; opacity: 0; } 40%, 90% { width: 100%; opacity: 1; } 100% { opacity: 0; } }
 .mock-laser { position: absolute; top: 0; left: -20%; width: 20%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.8), transparent); animation: laserScan 3s infinite; transform: skewX(-20deg); z-index: 10; }
+
+@keyframes scanValueReveal {
+    0% { opacity: 0; transform: translateY(5px); }
+    5%, 90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; }
+}
+@keyframes scanBorderColor {
+    0% { border-left-color: #ccc; }
+    5%, 90% { border-left-color: var(--primary); }
+    100% { border-left-color: #ccc; }
+}
+
+.mock-scan-field {
+    animation: scanBorderColor 3s infinite;
+}
+.mock-scan-field:nth-child(1) { animation-delay: 0.8s; }
+.mock-scan-field:nth-child(2) { animation-delay: 1.2s; }
+.mock-scan-field:nth-child(3) { animation-delay: 1.6s; }
+
+.mock-scan-value {
+    animation: scanValueReveal 3s infinite;
+}
+.mock-scan-value.value-1 { animation-delay: 0.8s; }
+.mock-scan-value.value-2 { animation-delay: 1.2s; }
+.mock-scan-value.value-3 { animation-delay: 1.6s; }
 @keyframes laserScan { 0% { left: -30%; } 50%, 100% { left: 120%; } }
 
 /* 6. Анімація Popup (Документи) */

@@ -246,6 +246,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string AddressCz { get; set; } = string.Empty;
         public string AddressAbroad { get; set; } = string.Empty;
         public string BirthDate { get; set; } = string.Empty;
+        public string RodneCislo { get; set; } = string.Empty;
         public string Citizenship { get; set; } = string.Empty;
         public string BirthCity { get; set; } = string.Empty;
         public string BirthCountry { get; set; } = string.Empty;

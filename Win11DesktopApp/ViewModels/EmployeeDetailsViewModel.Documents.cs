@@ -12,6 +12,9 @@ using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using PdfSharp.Pdf;
 using PdfSharp.Drawing;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace Win11DesktopApp.ViewModels
 {
@@ -211,255 +214,213 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                using var doc = new PdfDocument();
-                doc.Info.Title = $"{Data.FirstName} {Data.LastName}";
-                var page = doc.AddPage();
-                page.Size = PdfSharp.PageSize.A4;
-                var gfx = XGraphics.FromPdfPage(page);
+                var company = _companyService.Companies.FirstOrDefault(c => string.Equals(c.Name, _firmName, StringComparison.OrdinalIgnoreCase));
+                var agencyName = company?.Agency?.Name ?? string.Empty;
+                var customDocuments = (Data.CustomDocuments ?? new List<CustomSignedDocument>())
+                    .Where(d => !d.IsHidden && (!string.IsNullOrWhiteSpace(d.Name) || !string.IsNullOrWhiteSpace(d.SignDate) || !string.IsNullOrWhiteSpace(d.ExpiryDate)))
+                    .ToList();
 
-                double pageW = page.Width.Point;
-                double pageH = page.Height.Point;
-
-                var accent = XColor.FromArgb(30, 126, 126);
-                var accentBrush = new XSolidBrush(accent);
-                var accentLight = XColor.FromArgb(55, 160, 160);
-                var sideTextLight = new XSolidBrush(XColor.FromArgb(200, 235, 235));
-                var sideTextMuted = new XSolidBrush(XColor.FromArgb(150, 210, 210));
-                var darkText = new XSolidBrush(XColor.FromArgb(51, 51, 51));
-                var grayLabel = new XSolidBrush(XColor.FromArgb(150, 150, 150));
-
-                double sideW = 200;
-                double sidePad = 24;
-
-                var fNameBig = new XFont("Segoe UI", 20, XFontStyleEx.Bold);
-                var fSub = new XFont("Segoe UI", 9, XFontStyleEx.Regular);
-                var fSideSection = new XFont("Segoe UI", 10, XFontStyleEx.Bold);
-                var fSideLabel = new XFont("Segoe UI", 7.5, XFontStyleEx.Regular);
-                var fSideValue = new XFont("Segoe UI", 9, XFontStyleEx.Regular);
-                var fSection = new XFont("Segoe UI", 11, XFontStyleEx.Bold);
-                var fLabel = new XFont("Segoe UI", 7.5, XFontStyleEx.Regular);
-                var fValue = new XFont("Segoe UI", 9, XFontStyleEx.Bold);
-
-                List<string> WrapText(string text, XFont font, double maxWidth)
+                string ValueOrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value.Trim();
+                string Money(decimal value) => value > 0 ? value.ToString("0.##") : string.Empty;
+                string Initials()
                 {
-                    var lines = new List<string>();
-                    var words = text.Split(' ');
-                    string currentLine = "";
-                    foreach (var word in words)
+                    var first = string.IsNullOrWhiteSpace(Data.FirstName) ? string.Empty : Data.FirstName.Trim()[0].ToString();
+                    var last = string.IsNullOrWhiteSpace(Data.LastName) ? string.Empty : Data.LastName.Trim()[0].ToString();
+                    var initials = (first + last).ToUpperInvariant();
+                    return string.IsNullOrWhiteSpace(initials) ? "AC" : initials;
+                }
+
+                List<(string Label, string Value)> Fields(params (string Label, string? Value)[] fields)
+                    => fields
+                        .Where(field => !string.IsNullOrWhiteSpace(field.Value))
+                        .Select(field => (field.Label, field.Value!.Trim()))
+                        .ToList();
+
+                void AddField(ColumnDescriptor column, string label, string value)
+                {
+                    column.Item().PaddingTop(4).Row(field =>
                     {
-                        string test = string.IsNullOrEmpty(currentLine) ? word : currentLine + " " + word;
-                        if (gfx.MeasureString(test, font).Width > maxWidth && !string.IsNullOrEmpty(currentLine))
+                        field.ConstantItem(78).Text($"{label}:").FontSize(6.7f).FontColor("#7F8F8F");
+                        field.RelativeItem().Text(value).FontSize(7.8f).SemiBold().FontColor("#243333");
+                    });
+                }
+
+                void AddSection(ColumnDescriptor column, string title, IReadOnlyList<(string Label, string Value)> fields)
+                {
+                    if (fields.Count == 0)
+                        return;
+
+                    column.Item().PaddingBottom(10).Background("#F7FBFB").BorderLeft(3).BorderColor("#1E7E7E").PaddingLeft(9).PaddingRight(8).PaddingVertical(8).Column(section =>
+                    {
+                        section.Item().Text(title.ToUpperInvariant()).FontSize(8.6f).Bold().FontColor("#1E7E7E");
+
+                        foreach (var field in fields)
+                            AddField(section, field.Label, field.Value);
+                    });
+                }
+
+                void AddDocumentRows(ColumnDescriptor column, string title, IReadOnlyList<CustomSignedDocument> documents)
+                {
+                    if (documents.Count == 0)
+                        return;
+
+                    column.Item().PaddingBottom(10).Background("#F7FBFB").BorderLeft(3).BorderColor("#1E7E7E").PaddingLeft(9).PaddingRight(8).PaddingVertical(8).Column(section =>
+                    {
+                        section.Item().Text(title.ToUpperInvariant()).FontSize(8.6f).Bold().FontColor("#1E7E7E");
+
+                        foreach (var document in documents)
                         {
-                            lines.Add(currentLine);
-                            currentLine = word;
+                            var parts = new[]
+                            {
+                                string.IsNullOrWhiteSpace(document.SignDate) ? null : $"{DocRes("DetFieldSignDate")}: {document.SignDate}",
+                                string.IsNullOrWhiteSpace(document.ExpiryDate) ? null : $"{DocRes("PdfFieldValidTo")}: {document.ExpiryDate}",
+                                string.IsNullOrWhiteSpace(document.FileName) ? null : document.FileName
+                            }.Where(part => !string.IsNullOrWhiteSpace(part));
+
+                            section.Item().PaddingTop(6).Column(item =>
+                            {
+                                item.Item().Text(ValueOrDash(document.Name)).FontSize(7.8f).SemiBold().FontColor("#273333");
+                                item.Item().Text(string.Join(" • ", parts)).FontSize(6.4f).FontColor("#7F8F8F");
+                            });
+                        }
+                    });
+                }
+
+                void PhotoBlock(IContainer container)
+                {
+                    container.Width(74).Height(74).Border(1).BorderColor("#D7E5E5").Background("#F3F8F8").Padding(3).Element(photo =>
+                    {
+                        if (HasPhoto && File.Exists(PhotoFilePath))
+                        {
+                            photo.Image(PhotoFilePath).FitArea();
                         }
                         else
                         {
-                            currentLine = test;
+                            photo.AlignCenter().AlignMiddle().Text(Initials()).FontSize(20).Bold().FontColor("#1E7E7E");
                         }
-                    }
-                    if (!string.IsNullOrEmpty(currentLine))
-                        lines.Add(currentLine);
-                    return lines.Count > 0 ? lines : new List<string> { text };
+                    });
                 }
 
-                double DrawWrapped(string text, XFont font, XBrush brush, double x, double y, double maxW, double lineH)
+                var document = QuestPDF.Fluent.Document.Create(container =>
                 {
-                    var lines = WrapText(text, font, maxW);
-                    foreach (var line in lines)
+                    container.Page(page =>
                     {
-                        gfx.DrawString(line, font, brush, new XRect(x, y, maxW, lineH), XStringFormats.TopLeft);
-                        y += lineH;
-                    }
-                    return lines.Count * lineH;
-                }
+                        page.Size(PageSizes.A4);
+                        page.Margin(24);
+                        page.DefaultTextStyle(style => style.FontFamily("Segoe UI").FontSize(7.5f).FontColor("#273333"));
 
-                gfx.DrawRectangle(accentBrush, 0, 0, sideW, pageH);
+                        page.Header().Background("#F2FAF9").Padding(9).Row(row =>
+                        {
+                            row.ConstantItem(84).Element(PhotoBlock);
+                            row.RelativeItem().PaddingLeft(12).Column(header =>
+                            {
+                                header.Item().Text(FullName).FontSize(17).Bold().FontColor("#1E7E7E");
+                                header.Item().PaddingTop(2).Text(ValueOrDash(Data.PositionTag)).FontSize(8.5f).FontColor("#516161");
+                                header.Item().PaddingTop(2).Text(ValueOrDash(_firmName)).FontSize(8).SemiBold().FontColor("#273333");
 
-                double sy = 40;
+                                header.Item().PaddingTop(5).Row(tags =>
+                                {
+                                    tags.AutoItem().Background("#E4F3F2").PaddingHorizontal(8).PaddingVertical(4)
+                                        .Text(ValueOrDash(Data.Status)).FontSize(6.5f).Bold().FontColor("#1E7E7E");
+                                    if (!string.IsNullOrWhiteSpace(Data.ContractType))
+                                    {
+                                        tags.AutoItem().PaddingLeft(6).Background("#F1F5F5").PaddingHorizontal(8).PaddingVertical(4)
+                                            .Text(Data.ContractType).FontSize(6.5f).Bold().FontColor("#516161");
+                                    }
+                                });
+                            });
+                        });
 
-                gfx.DrawString(Data.FirstName ?? "", fNameBig, XBrushes.White,
-                    new XRect(sidePad, sy, sideW - sidePad * 2, 26), XStringFormats.TopLeft);
-                sy += 26;
-                gfx.DrawString(Data.LastName ?? "", fNameBig, XBrushes.White,
-                    new XRect(sidePad, sy, sideW - sidePad * 2, 26), XStringFormats.TopLeft);
-                sy += 32;
+                        page.Content().PaddingTop(16).Column(content =>
+                        {
+                            content.Item().Row(columns =>
+                            {
+                                columns.RelativeItem().Column(left =>
+                                {
+                                    AddSection(left, DocRes("DetSecPassport"), Fields(
+                                        (DocRes("PdfFieldNumber"), Data.PassportNumber),
+                                        (DocRes("PdfFieldAuthority"), Data.PassportAuthority),
+                                        (DocRes("PdfFieldValidTo"), Data.PassportExpiry),
+                                        (DocRes("DetFieldBirthCity"), Data.PassportCity),
+                                        (DocRes("DetFieldBirthCountry"), Data.PassportCountry),
+                                        (DocRes("DetFieldCitizenship"), Data.Citizenship),
+                                        (DocRes("DetFieldIssuingCountry"), Data.IssuingCountry)));
 
-                if (!string.IsNullOrEmpty(Data.PositionTag))
-                {
-                    double h = DrawWrapped(Data.PositionTag, fSub, sideTextLight, sidePad, sy, sideW - sidePad * 2, 13);
-                    sy += h + 2;
-                }
-                if (!string.IsNullOrEmpty(Data.ContractType))
-                {
-                    double h = DrawWrapped(Data.ContractType, fSub, sideTextMuted, sidePad, sy, sideW - sidePad * 2, 13);
-                    sy += h + 2;
-                }
-                sy += 14;
+                                    AddSection(left, DocRes("DetSecVisa"), Fields(
+                                        (DocRes("PdfFieldNumber"), Data.VisaNumber),
+                                        (DocRes("PdfFieldAuthority"), Data.VisaAuthority),
+                                        (DocRes("PdfFieldType"), Data.VisaType),
+                                        (DocRes("PdfFieldIssued"), Data.VisaStartDate),
+                                        (DocRes("PdfFieldValidToF"), Data.VisaExpiry),
+                                        (DocRes("PdfFieldPermit"), Data.WorkPermitName)));
 
-                double photoR = 54;
-                double photoDia = photoR * 2;
-                double pcx = sideW / 2;
-                double pcy = sy + photoR;
-                double photoX = pcx - photoR;
-                double photoY = pcy - photoR;
+                                    AddSection(left, DocRes("DetDocWorkPermit"), Fields(
+                                        (DocRes("PdfFieldNumber"), Data.WorkPermitNumber),
+                                        (DocRes("PdfFieldType"), Data.WorkPermitType),
+                                        (DocRes("PdfFieldIssued"), Data.WorkPermitIssueDate),
+                                        (DocRes("PdfFieldValidTo"), Data.WorkPermitExpiry),
+                                        (DocRes("PdfFieldAuthority"), Data.WorkPermitAuthority)));
 
-                gfx.DrawEllipse(new XPen(XColors.White, 4),
-                    photoX - 6, photoY - 6, photoDia + 12, photoDia + 12);
+                                    AddSection(left, DocRes("PdfSecInsurance"), Fields(
+                                        (DocRes("DetFieldInsCompany"), Data.InsuranceCompanyShort),
+                                        (DocRes("DetFieldInsCompanyFull"), Data.InsuranceCompanyFull),
+                                        (DocRes("PdfFieldNumber"), Data.InsuranceNumber),
+                                        (DocRes("PdfFieldValidToF"), Data.InsuranceExpiry)));
+                                });
 
-                if (HasPhoto && File.Exists(PhotoFilePath))
-                {
-                    try
-                    {
-                        using var img = XImage.FromFile(PhotoFilePath);
-                        gfx.DrawImage(img, photoX, photoY, photoDia, photoDia);
+                                columns.ConstantItem(14);
 
-                        var mask = new XGraphicsPath();
-                        mask.FillMode = XFillMode.Alternate;
-                        mask.AddRectangle(photoX - 1, photoY - 1, photoDia + 2, photoDia + 2);
-                        mask.AddEllipse(photoX, photoY, photoDia, photoDia);
-                        gfx.DrawPath(accentBrush, mask);
-                    }
-                    catch (Exception ex) { LoggingService.LogWarning("EmployeeDetailsViewModel.ExportPdf", $"Photo render failed: {ex.Message}"); }
-                }
-                else
-                {
-                    gfx.DrawEllipse(new XSolidBrush(XColor.FromArgb(45, 148, 148)),
-                        photoX, photoY, photoDia, photoDia);
-                }
+                                columns.RelativeItem().Column(right =>
+                                {
+                                    AddSection(right, DocRes("PdfSecContacts"), Fields(
+                                        (DocRes("DetFieldPhone"), Data.Phone),
+                                        ("Email", Data.Email),
+                                        (DocRes("DetFieldStartDate"), Data.StartDate),
+                                        (DocRes("DetFieldBirthDate"), Data.BirthDate),
+                                        (DocRes("DetFieldRodneCislo"), Data.HasRodneCisloData ? Data.RodneCislo : string.Empty),
+                                        (DocRes("DetFieldBankAccount"), Data.BankAccountNumber),
+                                        (DocRes("DetFieldBankName"), Data.BankName)));
 
-                gfx.DrawEllipse(new XPen(XColors.White, 2.5), photoX, photoY, photoDia, photoDia);
-                sy = pcy + photoR + 20;
+                                    AddSection(right, DocRes("DetSecAddrLocal"), Fields(
+                                        (DocRes("DetFieldStreet"), Data.AddressLocal.Street),
+                                        (DocRes("PdfFieldNumber"), Data.AddressLocal.Number),
+                                        (DocRes("DetFieldCity"), Data.AddressLocal.City),
+                                        (DocRes("DetFieldZip"), Data.AddressLocal.Zip)));
 
-                var sepPen = new XPen(accentLight, 0.5);
-                gfx.DrawLine(sepPen, sidePad, sy, sideW - sidePad, sy);
-                sy += 16;
+                                    AddSection(right, DocRes("DetSecAddrAbroad"), Fields(
+                                        (DocRes("DetFieldStreet"), Data.AddressAbroad.Street),
+                                        (DocRes("PdfFieldNumber"), Data.AddressAbroad.Number),
+                                        (DocRes("DetFieldCity"), Data.AddressAbroad.City),
+                                        (DocRes("DetFieldZip"), Data.AddressAbroad.Zip)));
 
-                gfx.DrawString(DocRes("PdfSecContacts"), fSideSection, XBrushes.White, new XPoint(sidePad, sy));
-                sy += 20;
+                                    AddSection(right, DocRes("DetSecWork"), Fields(
+                                        ("Firma", _firmName),
+                                        ("Agency", agencyName),
+                                        (DocRes("DetFieldPosition"), Data.PositionTag),
+                                        (DocRes("PdfFieldPosNumber"), Data.PositionNumber),
+                                        (DocRes("DetFieldSalary"), Money(Data.MonthlySalaryBrutto)),
+                                        (DocRes("DetFieldHourly"), Money(Data.HourlySalary)),
+                                        (DocRes("DetFieldContractType"), Data.ContractType),
+                                        (DocRes("PdfFieldDepartment"), Data.Department),
+                                        (DocRes("DetFieldStartDate"), Data.StartDate),
+                                        (DocRes("DetFieldEndDate"), Data.EndDate),
+                                        (DocRes("DetFieldSignDate"), Data.ContractSignDate),
+                                        ("Work address", Data.WorkAddressTag)));
 
-                void SideContact(string label, string? val, ref double y)
-                {
-                    if (string.IsNullOrWhiteSpace(val)) return;
-                    gfx.DrawEllipse(new XSolidBrush(accentLight), sidePad, y - 5, 7, 7);
-                    gfx.DrawString(label, fSideLabel, sideTextMuted, new XPoint(sidePad + 14, y - 3));
-                    y += 11;
-                    gfx.DrawString(val, fSideValue, XBrushes.White, new XPoint(sidePad + 14, y));
-                    y += 18;
-                }
+                                    AddDocumentRows(right, DocRes("DetSecCustomDocuments"), customDocuments);
+                                });
+                            });
+                        });
 
-                SideContact(DocRes("DetFieldPhone"), Data.Phone, ref sy);
-                SideContact("Email", Data.Email, ref sy);
-                SideContact(DocRes("DetFieldStartDate"), Data.StartDate, ref sy);
+                        page.Footer().AlignRight().Text(text =>
+                        {
+                            text.Span("Agency Contractor • ").FontSize(7).FontColor("#7F8F8F");
+                            text.Span(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(7).FontColor("#7F8F8F");
+                        });
+                    });
+                });
 
-                sy += 8;
-                gfx.DrawLine(sepPen, sidePad, sy, sideW - sidePad, sy);
-                sy += 16;
-
-                if (!string.IsNullOrEmpty(Data.InsuranceNumber) || !string.IsNullOrEmpty(Data.InsuranceExpiry))
-                {
-                    gfx.DrawString(DocRes("PdfSecInsurance"), fSideSection, XBrushes.White, new XPoint(sidePad, sy));
-                    sy += 20;
-
-                    void SideField(string lbl, string? val, ref double y)
-                    {
-                        if (string.IsNullOrWhiteSpace(val)) return;
-                        gfx.DrawString(lbl, fSideLabel, sideTextMuted, new XPoint(sidePad, y));
-                        y += 11;
-                        gfx.DrawString(val, fSideValue, XBrushes.White, new XPoint(sidePad, y));
-                        y += 16;
-                    }
-
-                    SideField(DocRes("DetFieldInsCompany"), Data.InsuranceCompanyShort, ref sy);
-                    SideField(DocRes("DetFieldInsCompanyFull"), Data.InsuranceCompanyFull, ref sy);
-                    SideField(DocRes("PdfFieldNumber"), Data.InsuranceNumber, ref sy);
-                    SideField(DocRes("PdfFieldValidToF"), Data.InsuranceExpiry, ref sy);
-                }
-
-                double cx = sideW + 28;
-                double cw = pageW - sideW - 56;
-                double subW = cw / 2 - 10;
-                double lx = cx;
-                double rxx = cx + subW + 20;
-
-                void ContentSection(string title, double sx, double lineW, ref double y)
-                {
-                    gfx.DrawString(title.ToUpper(), fSection, accentBrush, new XPoint(sx, y));
-                    y += 14;
-                    gfx.DrawLine(new XPen(XColor.FromArgb(220, 220, 220), 0.5), sx, y, sx + lineW, y);
-                    y += 10;
-                }
-
-                void ContentField(string label, string? value, double sx, ref double y)
-                {
-                    if (string.IsNullOrWhiteSpace(value)) return;
-                    gfx.DrawString(label, fLabel, grayLabel, new XPoint(sx, y));
-                    y += 11;
-                    double h = DrawWrapped(value, fValue, darkText, sx, y, subW, 13);
-                    y += h + 2;
-                }
-
-                double yL = 40, yR = 40;
-
-                ContentSection(DocRes("DetSecPassport"), lx, subW, ref yL);
-                ContentField(DocRes("PdfFieldNumber"), Data.PassportNumber, lx, ref yL);
-                ContentField(DocRes("PdfFieldAuthority"), Data.PassportAuthority, lx, ref yL);
-                ContentField(DocRes("PdfFieldValidTo"), Data.PassportExpiry, lx, ref yL);
-                ContentField(DocRes("DetFieldBirthCity"), Data.PassportCity, lx, ref yL);
-                ContentField(DocRes("DetFieldBirthCountry"), Data.PassportCountry, lx, ref yL);
-                ContentField(DocRes("DetFieldCitizenship"), Data.Citizenship, lx, ref yL);
-                ContentField(DocRes("DetFieldIssuingCountry"), Data.IssuingCountry, lx, ref yL);
-                yL += 10;
-
-                if (!string.IsNullOrEmpty(Data.VisaNumber) || !string.IsNullOrEmpty(Data.VisaExpiry))
-                {
-                    ContentSection(DocRes("DetSecVisa"), lx, subW, ref yL);
-                    ContentField(DocRes("PdfFieldNumber"), Data.VisaNumber, lx, ref yL);
-                    ContentField(DocRes("PdfFieldAuthority"), Data.VisaAuthority, lx, ref yL);
-                    ContentField(DocRes("PdfFieldType"), Data.VisaType, lx, ref yL);
-                    ContentField(DocRes("PdfFieldValidToF"), Data.VisaExpiry, lx, ref yL);
-                    if (!string.IsNullOrEmpty(Data.WorkPermitName))
-                        ContentField(DocRes("PdfFieldPermit"), Data.WorkPermitName, lx, ref yL);
-                    yL += 10;
-                }
-
-                if (Data.EmployeeType == "work_permit")
-                {
-                    ContentSection(DocRes("DetDocWorkPermit"), lx, subW, ref yL);
-                    ContentField(DocRes("PdfFieldNumber"), Data.WorkPermitNumber, lx, ref yL);
-                    ContentField(DocRes("PdfFieldType"), Data.WorkPermitType, lx, ref yL);
-                    ContentField(DocRes("PdfFieldIssued"), Data.WorkPermitIssueDate, lx, ref yL);
-                    ContentField(DocRes("PdfFieldValidTo"), Data.WorkPermitExpiry, lx, ref yL);
-                    ContentField(DocRes("PdfFieldAuthority"), Data.WorkPermitAuthority, lx, ref yL);
-                    yL += 10;
-                }
-
-                ContentSection(DocRes("DetSecAddrLocal"), rxx, subW, ref yR);
-                ContentField(DocRes("DetFieldStreet"), Data.AddressLocal.Street, rxx, ref yR);
-                ContentField(DocRes("PdfFieldNumber"), Data.AddressLocal.Number, rxx, ref yR);
-                ContentField(DocRes("DetFieldCity"), Data.AddressLocal.City, rxx, ref yR);
-                ContentField(DocRes("DetFieldZip"), Data.AddressLocal.Zip, rxx, ref yR);
-                yR += 10;
-
-                ContentSection(DocRes("DetSecAddrAbroad"), rxx, subW, ref yR);
-                ContentField(DocRes("DetFieldStreet"), Data.AddressAbroad.Street, rxx, ref yR);
-                ContentField(DocRes("PdfFieldNumber"), Data.AddressAbroad.Number, rxx, ref yR);
-                ContentField(DocRes("DetFieldCity"), Data.AddressAbroad.City, rxx, ref yR);
-                ContentField(DocRes("DetFieldZip"), Data.AddressAbroad.Zip, rxx, ref yR);
-                yR += 10;
-
-                ContentSection(DocRes("DetSecWork"), rxx, subW, ref yR);
-                ContentField(DocRes("DetFieldPosition"), Data.PositionTag, rxx, ref yR);
-                ContentField(DocRes("PdfFieldPosNumber"), Data.PositionNumber, rxx, ref yR);
-                ContentField(DocRes("DetFieldSalary"), Data.MonthlySalaryBrutto > 0 ? Data.MonthlySalaryBrutto.ToString() : "", rxx, ref yR);
-                ContentField(DocRes("DetFieldHourly"), Data.HourlySalary > 0 ? Data.HourlySalary.ToString() : "", rxx, ref yR);
-                ContentField(DocRes("DetFieldContractType"), Data.ContractType, rxx, ref yR);
-                ContentField(DocRes("PdfFieldDepartment"), Data.Department, rxx, ref yR);
-                ContentField(DocRes("DetFieldStartDate"), Data.StartDate, rxx, ref yR);
-                ContentField(DocRes("DetFieldSignDate"), Data.ContractSignDate, rxx, ref yR);
-
-                gfx.Dispose();
-                doc.Save(dlg.FileName);
+                document.GeneratePdf(dlg.FileName);
                 _activityLogService.Log("ExportPdf", "Export", _firmName, FullName,
                     $"Експортовано анкету {FullName} → PDF",
                     details: $"Фірма: {_firmName}; Документ: анкета працівника; Файл: {Path.GetFileName(dlg.FileName)}",

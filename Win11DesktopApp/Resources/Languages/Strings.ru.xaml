@@ -615,6 +615,7 @@
     <sys:String x:Key="DetFieldFirstName">Имя</sys:String>
     <sys:String x:Key="DetFieldLastName">Фамилия</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="DetFieldRodneCislo">Идентификационный номер</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Наивысшее достигнутое образование</sys:String>
     <sys:String x:Key="DetFieldGender">Пол</sys:String>
     <sys:String x:Key="DetFieldDocumentProfileType">Тип сотрудника / комплект документов</sys:String>
@@ -652,6 +653,7 @@
     <sys:String x:Key="DetFieldWorkAddr">Адрес выполнения работы</sys:String>
     <sys:String x:Key="DetSecContacts">Контакты и даты</sys:String>
     <sys:String x:Key="EmployeeBankSection">Данные банковского счёта</sys:String>
+    <sys:String x:Key="EmployeeRodneCisloToggle">Показать идентификационный номер</sys:String>
     <sys:String x:Key="EmployeeBankToggle">Показать данные банковского счёта</sys:String>
     <sys:String x:Key="EmployeeBankAccountNumber">Номер счёта</sys:String>
     <sys:String x:Key="EmployeeBankName">Название банка</sys:String>
@@ -1011,6 +1013,7 @@
     <sys:String x:Key="ReportColAddressCz">Полный адрес проживания</sys:String>
     <sys:String x:Key="ReportColAddressAbroad">Адрес за границей</sys:String>
     <sys:String x:Key="ReportColBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="ReportColRodneCislo">Идентификационный номер</sys:String>
     <sys:String x:Key="ReportColCitizenship">Гражданство</sys:String>
     <sys:String x:Key="ReportColBirthCity">Город рождения</sys:String>
     <sys:String x:Key="ReportColBirthCountry">Страна рождения</sys:String>
@@ -1311,6 +1314,7 @@
     <sys:String x:Key="TagDescEmpLastName">Фамилия сотрудника</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Полное имя сотрудника</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="TagDescEmpRodneCislo">Идентификационный номер / Rodné číslo</sys:String>
     <sys:String x:Key="TagDescEmpHighestEducation">Наивысшее достигнутое образование</sys:String>
     <sys:String x:Key="TagDescEmpGender">Пол (Мужчина / Женщина)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
@@ -1798,6 +1802,7 @@
     <sys:String x:Key="HistFieldFirstName">Имя</sys:String>
     <sys:String x:Key="HistFieldLastName">Фамилия</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата рождения</sys:String>
+    <sys:String x:Key="HistFieldRodneCislo">Идентификационный номер</sys:String>
     <sys:String x:Key="HistFieldHighestEducation">Наивысшее достигнутое образование</sys:String>
     <sys:String x:Key="HistFieldGender">Пол</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорта</sys:String>
@@ -2116,10 +2121,28 @@
     <sys:String x:Key="SettingsSecondPcTitle">Подключение второго ПК</sys:String>
     <sys:String x:Key="SettingsSecondPcDesc">Для второго ПК программа подставляет LAN-адрес этого компьютера вместо localhost. Второй ПК должен быть в той же сети или через VPN/Tailscale/ZeroTier.</sys:String>
     <sys:String x:Key="SettingsSecondPcCopy">Скопировать данные для второго ПК</sys:String>
+    <sys:String x:Key="SettingsSecondPcLocalServerLabel">На этом ПК</sys:String>
+    <sys:String x:Key="SettingsSecondPcTailscaleServerLabel">Для второго ПК через Tailscale</sys:String>
+    <sys:String x:Key="SettingsSecondPcLanServerLabel">Для второго ПК в локальной сети</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideButton">Инструкция для NAS / Synology</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideTitle">Настройка PostgreSQL на Synology NAS</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideSubtitle">Пошагово: что установить на NAS, где нажимать в DSM и что ввести в программе.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideOpenFailed">Не удалось открыть инструкцию для NAS.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideBody">Что будет на Synology NAS&#x0a;&#x0a;NAS будет сервером PostgreSQL. Все ПК подключаются к нему по IP NAS и порту 5432. Фото, PDF и документы сотрудников лучше хранить в отдельной общей папке Synology.&#x0a;&#x0a;Важно: поле PostgreSQL data folder и кнопки настройки локальной сети/Tailscale нужны только для PostgreSQL, установленного на Windows ПК. Для Synology NAS они не нужны.&#x0a;&#x0a;1. Подготовьте Synology DSM&#x0a;&#x0a;1. Откройте DSM в браузере: http://IP_NAS:5000 или https://IP_NAS:5001, например http://192.168.0.50:5000.&#x0a;2. Войдите пользователем с правами администратора.&#x0a;3. Откройте Package Center.&#x0a;4. Установите Container Manager. На DS225+ он должен быть доступен.&#x0a;&#x0a;2. Создайте папки на NAS&#x0a;&#x0a;В File Station создайте общую папку docker, а внутри нее postgres/data. Пример пути: /volume1/docker/postgres/data. Отдельно создайте общую папку AgencyData для фото, PDF и документов программы.&#x0a;&#x0a;3. Скачайте PostgreSQL контейнер&#x0a;&#x0a;В Container Manager откройте Registry, найдите postgres, выберите официальный образ и нажмите Download. Рекомендуемая стабильная версия: postgres:16, можно postgres:17.&#x0a;&#x0a;4. Создайте контейнер&#x0a;&#x0a;В разделе Image выберите postgres:16, нажмите Run, задайте имя контейнера agency-postgres и включите автозапуск после перезагрузки NAS.&#x0a;&#x0a;5. Переменные окружения&#x0a;&#x0a;POSTGRES_DB = agency_db&#x0a;POSTGRES_USER = postgres&#x0a;POSTGRES_PASSWORD = ваш_надежный_пароль&#x0a;&#x0a;Сохраните пароль. Его нужно будет вводить в программе на каждом ПК.&#x0a;&#x0a;6. Порты&#x0a;&#x0a;Настройте проброс портов: NAS 5432 -> container 5432, протокол TCP. Если порт занят, можно использовать 5433 и указать этот порт в программе.&#x0a;&#x0a;7. Постоянное хранилище&#x0a;&#x0a;Настройте папку: /volume1/docker/postgres/data -> /var/lib/postgresql/data. Доступ должен быть Read/Write, чтобы база не пропала после перезапуска контейнера.&#x0a;&#x0a;8. Запуск и проверка&#x0a;&#x0a;Нажмите Done / Apply. В списке Container проверьте, что agency-postgres имеет статус Running. Если контейнер остановился, откройте Details / Log и проверьте пароль и папку data.&#x0a;&#x0a;9. Firewall Synology&#x0a;&#x0a;Если DSM Firewall включен: Control Panel - Security - Firewall - Edit Rules - Create rule. Разрешите TCP порт 5432 для локальной сети, например 192.168.0.0/24.&#x0a;&#x0a;10. Общая папка для файлов&#x0a;&#x0a;Создайте общую папку AgencyData и дайте доступ Windows-пользователям. В Windows она открывается как \\IP_NAS\AgencyData, например \\192.168.0.50\AgencyData. Эту же папку выберите как корневую папку программы на всех ПК.&#x0a;&#x0a;11. Что ввести в программе&#x0a;&#x0a;Сервер: IP Synology, например 192.168.0.50&#x0a;Порт: 5432&#x0a;База: agency_db&#x0a;Пользователь: postgres&#x0a;Пароль: POSTGRES_PASSWORD&#x0a;&#x0a;Для NAS не выбирайте PostgreSQL data folder в программе. Это поле только для PostgreSQL на Windows.&#x0a;&#x0a;12. Миграция&#x0a;&#x0a;На главном ПК нажмите Проверить PostgreSQL. Если подключение работает, запустите миграцию SQLite -> PostgreSQL. После завершения выберите PostgreSQL - для нескольких ПК и перезапустите программу. На остальных ПК введите те же данные и выберите ту же общую папку.&#x0a;&#x0a;13. Если не подключается&#x0a;&#x0a;Проверьте IP NAS, что контейнер agency-postgres запущен, порт 5432 проброшен, DSM Firewall разрешает TCP 5432, ПК и NAS в одной сети, пароль postgres правильный, база называется agency_db.&#x0a;&#x0a;14. Tailscale&#x0a;&#x0a;Установите Tailscale на Synology и в программе используйте Tailscale IP NAS как сервер. Порт остается 5432. В DSM Firewall разрешите диапазон 100.64.0.0/10 или конкретные Tailscale IP.</sys:String>
     <sys:String x:Key="SettingsTailscaleTitle">Доступ PostgreSQL через Tailscale</sys:String>
     <sys:String x:Key="SettingsTailscaleDesc">Автоматически добавляет диапазон Tailscale 100.64.0.0/10 в pg_hba.conf, включает listen_addresses='*', открывает порт 5432 в Firewall и перезапускает PostgreSQL. Нужен запуск от имени администратора.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectory">Папка PostgreSQL data на этом ПК</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryBrowse">Выбрать папку</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAuto">Если поле пустое, программа попробует найти PostgreSQL в стандартной папке.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryValid">Папка правильная: найдены PG_VERSION, pg_hba.conf и postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryInvalid">Это не папка PostgreSQL data. Нужна папка, где есть PG_VERSION, pg_hba.conf и postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySaved">Путь к PostgreSQL data сохранен.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAutoDetectedFmt">Папка PostgreSQL data найдена внутри выбранной папки: {0}</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySelectTitle">Выберите папку PostgreSQL data</sys:String>
     <sys:String x:Key="SettingsTailscaleIp">Tailscale IP этого ПК</sys:String>
     <sys:String x:Key="SettingsTailscaleConfigure">Настроить PostgreSQL для Tailscale</sys:String>
+    <sys:String x:Key="SettingsLanIp">LAN IP этого ПК</sys:String>
+    <sys:String x:Key="SettingsLanConfigure">Настроить PostgreSQL для локальной сети</sys:String>
     <sys:String x:Key="SettingsConnectedClientsTitle">Подключенные ПК</sys:String>
     <sys:String x:Key="SettingsConnectedClientsDesc">Список показывает программы, которые работают с этой PostgreSQL базой. Онлайн означает, что ПК обновлял статус за последние 3 минуты.</sys:String>
     <sys:String x:Key="SettingsDbModeTitle">Режим работы базы</sys:String>
@@ -2173,6 +2196,7 @@
     <sys:String x:Key="SettingsPostgresResetHintActive">Чтобы удалить PostgreSQL данные, сначала выберите режим SQLite, перезапустите программу, а затем нажмите эту кнопку.</sys:String>
     <sys:String x:Key="SettingsPostgresResetHintReady">Удаляет только данные программы в PostgreSQL: схемы core, app, salary. После этого миграцию можно запустить заново.</sys:String>
     <sys:String x:Key="SettingsTailscaleIpMissing">Tailscale IP не найден</sys:String>
+    <sys:String x:Key="SettingsLanIpMissing">LAN IP не найден</sys:String>
     <sys:String x:Key="SettingsMigrationCompletedAction">Миграция уже выполнена</sys:String>
     <sys:String x:Key="SettingsMigrationPrepareAction">Подготовить и перенести данные</sys:String>
     <sys:String x:Key="SettingsReplacePgFromSqliteAction">Заменить PostgreSQL данными из старой базы</sys:String>
@@ -2184,6 +2208,20 @@
     <sys:String x:Key="SettingsPostgresCheckingFmt">Проверяю PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Подключено. PostgreSQL {0}. База "{1}": {2}. Право создавать базы: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Не удалось подключиться: {0}. {1}.</sys:String>
+    <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Технические детали: {1}</sys:String>
+    <sys:String x:Key="PostgresErrCancelled">Операция PostgreSQL отменена.</sys:String>
+    <sys:String x:Key="PostgresErrDatabaseMissing">База PostgreSQL не существует. Проверьте название базы или запустите миграцию SQLite → PostgreSQL.</sys:String>
+    <sys:String x:Key="PostgresErrInvalidPassword">Неправильный пароль PostgreSQL. Проверьте пароль пользователя.</sys:String>
+    <sys:String x:Key="PostgresErrPgHba">PostgreSQL не разрешает подключение с этого IP. Для Windows-сервера запустите настройку локальной сети/Tailscale или проверьте pg_hba.conf.</sys:String>
+    <sys:String x:Key="PostgresErrAuthorization">PostgreSQL отклонил авторизацию. Проверьте пользователя, пароль и правила доступа.</sys:String>
+    <sys:String x:Key="PostgresErrInsufficientPrivilege">У пользователя PostgreSQL недостаточно прав для этого действия.</sys:String>
+    <sys:String x:Key="PostgresErrAdminShutdown">PostgreSQL перезапускается или был остановлен администратором. Попробуйте ещё раз через несколько секунд.</sys:String>
+    <sys:String x:Key="PostgresErrTooManyConnections">В PostgreSQL слишком много подключений. Закройте лишние программы или увеличьте лимит подключений.</sys:String>
+    <sys:String x:Key="PostgresErrConnectionRefused">Сервер PostgreSQL не отвечает на этом IP/порту. Проверьте адрес, порт, службу PostgreSQL и Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrHostNotFound">Не удалось найти сервер PostgreSQL. Проверьте IP или имя NAS/ПК.</sys:String>
+    <sys:String x:Key="PostgresErrTimeout">PostgreSQL не ответил за отведённое время. Проверьте сеть, NAS/сервер и Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrNetwork">Сетевая ошибка подключения к PostgreSQL. Проверьте кабель/Wi-Fi/VPN/Tailscale и Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrGeneric">Произошла ошибка PostgreSQL. Проверьте настройки подключения.</sys:String>
     <sys:String x:Key="SettingsExists">существует</sys:String>
     <sys:String x:Key="SettingsNotFound">не найдена</sys:String>
     <sys:String x:Key="SettingsYes">да</sys:String>
@@ -2217,6 +2255,11 @@
     <sys:String x:Key="SettingsPostgresResetDeleting">Удаляю PostgreSQL данные программы...</sys:String>
     <sys:String x:Key="SettingsPostgresMigrationCleared">Миграция очищена. Можно подготовить PostgreSQL заново.</sys:String>
     <sys:String x:Key="SettingsPostgresNetworkConfiguring">Настраиваю PostgreSQL для Tailscale...</sys:String>
+    <sys:String x:Key="SettingsPostgresLanConfiguring">Настраиваю PostgreSQL для локальной сети...</sys:String>
+    <sys:String x:Key="SettingsPostgresNetworkRestartingAsAdmin">Нужны права администратора. Перезапускаю программу от имени администратора...</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmTitle">Нужны права администратора</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmMessage">Для настройки PostgreSQL нужны права администратора. Программа сейчас перезапустится от имени администратора.</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartCancelled">Перезапуск от имени администратора отменен.</sys:String>
     <sys:String x:Key="SettingsSecondsAgoFmt">{0} сек назад</sys:String>
     <sys:String x:Key="SettingsMinutesAgoFmt">{0} мин назад</sys:String>
     <sys:String x:Key="SettingsPostgresPasswordPlaceholder">(введите пароль PostgreSQL)</sys:String>

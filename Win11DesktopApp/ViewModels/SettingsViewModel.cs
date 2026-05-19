@@ -136,6 +136,9 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CreateSqliteBackupFromPostgresCommand { get; }
         public ICommand ResetPostgresDatabaseCommand { get; }
         public ICommand ConfigurePostgresTailscaleAccessCommand { get; }
+        public ICommand ConfigurePostgresLanAccessCommand { get; }
+        public ICommand SelectPostgresDataDirectoryCommand { get; }
+        public ICommand OpenNasPostgresGuideCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -195,6 +198,7 @@ namespace Win11DesktopApp.ViewModels
         private string _postgresDatabase = "agency_db";
         private string _postgresUsername = "postgres";
         private string _postgresPassword = string.Empty;
+        private string _postgresDataDirectoryPath = string.Empty;
         private string _postgresTestStatus = string.Empty;
         private bool _isPostgresTesting;
         private string _postgresMigrationStatus = Res("SettingsPostgresMigrationNotRun");
@@ -331,6 +335,30 @@ namespace Win11DesktopApp.ViewModels
 
         public string SecondPcDatabaseServerDisplay => $"{GetSecondPcPostgresHost()}:{NormalizePostgresPort()}";
 
+        public string SecondPcLocalServerDisplay => $"localhost:{NormalizePostgresPort()}";
+
+        public string SecondPcTailscaleServerDisplay
+        {
+            get
+            {
+                var tailscaleIp = _postgresNetworkAccessService.TailscaleIpAddress;
+                return string.IsNullOrWhiteSpace(tailscaleIp)
+                    ? Res("SettingsTailscaleIpMissing")
+                    : $"{tailscaleIp}:{NormalizePostgresPort()}";
+            }
+        }
+
+        public string SecondPcLanServerDisplay
+        {
+            get
+            {
+                var lanIp = _postgresNetworkAccessService.LanIpAddress;
+                return string.IsNullOrWhiteSpace(lanIp)
+                    ? Res("SettingsLanIpMissing")
+                    : $"{lanIp}:{NormalizePostgresPort()}";
+            }
+        }
+
         public string SecondPcDatabaseNameDisplay =>
             string.IsNullOrWhiteSpace(PostgresDatabase) ? "agency_db" : PostgresDatabase.Trim();
 
@@ -426,6 +454,19 @@ namespace Win11DesktopApp.ViewModels
                 ? Res("SettingsTailscaleIpMissing")
                 : _postgresNetworkAccessService.TailscaleIpAddress;
 
+        public string PostgresLanIpDisplay
+        {
+            get
+            {
+                var lanIp = _postgresNetworkAccessService.LanIpAddress;
+                var lanCidr = _postgresNetworkAccessService.LanCidr;
+                if (string.IsNullOrWhiteSpace(lanIp))
+                    return Res("SettingsLanIpMissing");
+
+                return string.IsNullOrWhiteSpace(lanCidr) ? lanIp : $"{lanIp} ({lanCidr})";
+            }
+        }
+
         public string PostgresNetworkAccessStatus
         {
             get => _postgresNetworkAccessStatus;
@@ -440,12 +481,16 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _isConfiguringPostgresNetworkAccess, value))
                 {
                     OnPropertyChanged(nameof(CanConfigurePostgresTailscaleAccess));
+                    OnPropertyChanged(nameof(CanConfigurePostgresLanAccess));
                     CommandManager.InvalidateRequerySuggested();
                 }
             }
         }
 
         public bool CanConfigurePostgresTailscaleAccess =>
+            !IsConfiguringPostgresNetworkAccess && !IsPostgresTesting && !IsPostgresMigrating;
+
+        public bool CanConfigurePostgresLanAccess =>
             !IsConfiguringPostgresNetworkAccess && !IsPostgresTesting && !IsPostgresMigrating;
 
         public string CurrentDatabaseStorageMode => _appSettingsService.Settings.DatabaseStorageMode;
@@ -556,6 +601,32 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _postgresPassword, value))
                     SavePostgresLoginSettings();
+            }
+        }
+
+        public string PostgresDataDirectoryPath
+        {
+            get => _postgresDataDirectoryPath;
+            set
+            {
+                if (SetProperty(ref _postgresDataDirectoryPath, value?.Trim() ?? string.Empty))
+                {
+                    SavePostgresDataDirectoryPath();
+                    OnPropertyChanged(nameof(PostgresDataDirectoryStatus));
+                }
+            }
+        }
+
+        public string PostgresDataDirectoryStatus
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(PostgresDataDirectoryPath))
+                    return Res("SettingsPostgresDataDirectoryAuto");
+
+                return PostgresNetworkAccessService.IsValidPostgresDataDirectory(PostgresDataDirectoryPath)
+                    ? Res("SettingsPostgresDataDirectoryValid")
+                    : Res("SettingsPostgresDataDirectoryInvalid");
             }
         }
 
@@ -1103,6 +1174,31 @@ namespace Win11DesktopApp.ViewModels
                 }
             });
 
+            SelectPostgresDataDirectoryCommand = new RelayCommand(o =>
+            {
+                var dialog = new OpenFolderDialog
+                {
+                    Title = Res("SettingsPostgresDataDirectorySelectTitle")
+                };
+
+                if (!string.IsNullOrWhiteSpace(PostgresDataDirectoryPath)
+                    && System.IO.Directory.Exists(PostgresDataDirectoryPath))
+                {
+                    dialog.InitialDirectory = PostgresDataDirectoryPath;
+                }
+
+                if (dialog.ShowDialog() == true)
+                {
+                    var selectedPath = ResolvePostgresDataDirectorySelection(dialog.FolderName);
+                    PostgresDataDirectoryPath = selectedPath;
+                    PostgresNetworkAccessStatus = PostgresNetworkAccessService.IsValidPostgresDataDirectory(selectedPath)
+                        ? selectedPath.Equals(dialog.FolderName, StringComparison.OrdinalIgnoreCase)
+                            ? Res("SettingsPostgresDataDirectorySaved")
+                            : string.Format(Res("SettingsPostgresDataDirectoryAutoDetectedFmt"), selectedPath)
+                        : Res("SettingsPostgresDataDirectoryInvalid");
+                }
+            });
+
             OpenTagVisibilityCommand = new RelayCommand(o =>
             {
                 var window = new TagVisibilityWindow(_appSettingsService, _tagCatalogService)
@@ -1311,6 +1407,14 @@ namespace Win11DesktopApp.ViewModels
             {
                 await ConfigurePostgresTailscaleAccessAsync();
             }, _ => CanConfigurePostgresTailscaleAccess);
+            ConfigurePostgresLanAccessCommand = new RelayCommand(async _ =>
+            {
+                await ConfigurePostgresLanAccessAsync();
+            }, _ => CanConfigurePostgresLanAccess);
+            OpenNasPostgresGuideCommand = new RelayCommand(_ =>
+            {
+                OpenNasPostgresGuide();
+            });
 
             OpenWebPanelUrlCommand = new RelayCommand(_ =>
             {
@@ -1395,6 +1499,11 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(SecondPcSharedFolderDisplay));
             OnPropertyChanged(nameof(PostgresResetHint));
             OnPropertyChanged(nameof(PostgresTailscaleIpDisplay));
+            OnPropertyChanged(nameof(PostgresLanIpDisplay));
+            OnPropertyChanged(nameof(SecondPcLocalServerDisplay));
+            OnPropertyChanged(nameof(SecondPcTailscaleServerDisplay));
+            OnPropertyChanged(nameof(SecondPcLanServerDisplay));
+            OnPropertyChanged(nameof(PostgresDataDirectoryStatus));
             OnPropertyChanged(nameof(PostgresMigrationActionText));
             OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
             OnPropertyChanged(nameof(PostgresModeStatus));
@@ -1472,6 +1581,7 @@ namespace Win11DesktopApp.ViewModels
             _postgresDatabase = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase;
             _postgresUsername = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername;
             _postgresPassword = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword);
+            _postgresDataDirectoryPath = settings.PostgresDataDirectoryPath ?? string.Empty;
 
             if (!string.IsNullOrWhiteSpace(settings.PostgresMigrationCompletedAtUtc))
                 _postgresMigrationStatus = string.Format(Res("SettingsMigrationAlreadyCompletedBlockedFmt"), settings.PostgresMigrationCompletedAtUtc);
@@ -1497,6 +1607,23 @@ namespace Win11DesktopApp.ViewModels
                 : 5432;
             settings.EncryptedPostgresPassword = LocalSecretProtection.Protect(PostgresPassword);
             _appSettingsService.SaveSettings();
+        }
+
+        private void SavePostgresDataDirectoryPath()
+        {
+            _appSettingsService.Settings.PostgresDataDirectoryPath = PostgresDataDirectoryPath;
+            _appSettingsService.SaveSettings();
+        }
+
+        private static string ResolvePostgresDataDirectorySelection(string selectedPath)
+        {
+            if (PostgresNetworkAccessService.IsValidPostgresDataDirectory(selectedPath))
+                return selectedPath;
+
+            var nestedDataPath = System.IO.Path.Combine(selectedPath, "data");
+            return PostgresNetworkAccessService.IsValidPostgresDataDirectory(nestedDataPath)
+                ? nestedDataPath
+                : selectedPath;
         }
 
         private void UseSqliteStorageMode()
@@ -1581,13 +1708,18 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(CanResetPostgresDatabase));
             OnPropertyChanged(nameof(PostgresResetHint));
             OnPropertyChanged(nameof(CanConfigurePostgresTailscaleAccess));
+            OnPropertyChanged(nameof(CanConfigurePostgresLanAccess));
             OnPropertyChanged(nameof(PostgresTailscaleIpDisplay));
+            OnPropertyChanged(nameof(PostgresLanIpDisplay));
             CommandManager.InvalidateRequerySuggested();
         }
 
         private void RaiseSecondPcDatabaseAccessPropertiesChanged()
         {
             OnPropertyChanged(nameof(SecondPcDatabaseServerDisplay));
+            OnPropertyChanged(nameof(SecondPcLocalServerDisplay));
+            OnPropertyChanged(nameof(SecondPcTailscaleServerDisplay));
+            OnPropertyChanged(nameof(SecondPcLanServerDisplay));
             OnPropertyChanged(nameof(SecondPcDatabaseNameDisplay));
             OnPropertyChanged(nameof(SecondPcDatabaseUserDisplay));
             OnPropertyChanged(nameof(SecondPcSharedFolderDisplay));
@@ -1605,6 +1737,23 @@ namespace Win11DesktopApp.ViewModels
             {
                 SecondPcDatabaseAccessStatus = Res("SettingsSecondPcAccessCopyFailed");
                 LoggingService.LogWarning("Settings.CopySecondPcDatabaseAccess", ex.Message);
+            }
+        }
+
+        private void OpenNasPostgresGuide()
+        {
+            try
+            {
+                var window = new NasPostgresGuideWindow
+                {
+                    Owner = Application.Current?.MainWindow
+                };
+                window.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.OpenNasPostgresGuide", ex.Message);
+                MessageBox.Show(Res("SettingsNasPostgresGuideOpenFailed"), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -1751,6 +1900,12 @@ namespace Win11DesktopApp.ViewModels
 
         private async System.Threading.Tasks.Task ConfigurePostgresTailscaleAccessAsync()
         {
+            if (!_postgresNetworkAccessService.IsRunningAsAdministrator())
+            {
+                ConfirmAndRestartAsAdministrator();
+                return;
+            }
+
             IsConfiguringPostgresNetworkAccess = true;
             PostgresNetworkAccessStatus = Res("SettingsPostgresNetworkConfiguring");
 
@@ -1771,6 +1926,83 @@ namespace Win11DesktopApp.ViewModels
             finally
             {
                 IsConfiguringPostgresNetworkAccess = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task ConfigurePostgresLanAccessAsync()
+        {
+            if (!_postgresNetworkAccessService.IsRunningAsAdministrator())
+            {
+                ConfirmAndRestartAsAdministrator();
+                return;
+            }
+
+            IsConfiguringPostgresNetworkAccess = true;
+            PostgresNetworkAccessStatus = Res("SettingsPostgresLanConfiguring");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+                var result = await _postgresNetworkAccessService.ConfigureLanAccessAsync(cts.Token);
+                PostgresNetworkAccessStatus = result.Message;
+
+                if (result.Success && !string.IsNullOrWhiteSpace(result.LanIp))
+                {
+                    PostgresHost = result.LanIp;
+                    RaiseSecondPcDatabaseAccessPropertiesChanged();
+                }
+
+                OnPropertyChanged(nameof(PostgresLanIpDisplay));
+            }
+            finally
+            {
+                IsConfiguringPostgresNetworkAccess = false;
+            }
+        }
+
+        private bool ConfirmAndRestartAsAdministrator()
+        {
+            var confirm = MessageBox.Show(
+                Res("SettingsPostgresAdminRestartConfirmMessage"),
+                Res("SettingsPostgresAdminRestartConfirmTitle"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                PostgresNetworkAccessStatus = Res("SettingsPostgresAdminRestartCancelled");
+                return false;
+            }
+
+            RestartAsAdministrator();
+            return true;
+        }
+
+        private void RestartAsAdministrator()
+        {
+            try
+            {
+                var exePath = Environment.ProcessPath;
+                if (string.IsNullOrWhiteSpace(exePath))
+                {
+                    PostgresNetworkAccessStatus = Res("SettingsRestartPathMissing");
+                    return;
+                }
+
+                PostgresNetworkAccessStatus = Res("SettingsPostgresNetworkRestartingAsAdmin");
+                LoggingService.LogInfo("Settings.RestartAsAdministrator", "Restarting as administrator for PostgreSQL network configuration.");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath)
+                {
+                    UseShellExecute = true,
+                    Verb = "runas"
+                });
+
+                Application.Current?.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.RestartAsAdministrator", ex.Message);
+                PostgresNetworkAccessStatus = string.Format(Res("SettingsRestartFailedFmt"), ex.Message);
             }
         }
 
@@ -1797,6 +2029,8 @@ namespace Win11DesktopApp.ViewModels
         private string BuildSecondPcDatabaseAccessText()
         {
             var server = GetSecondPcPostgresHost();
+            var tailscaleServer = SecondPcTailscaleServerDisplay;
+            var lanServer = SecondPcLanServerDisplay;
             var port = NormalizePostgresPort();
             var database = SecondPcDatabaseNameDisplay;
             var username = SecondPcDatabaseUserDisplay;
@@ -1811,7 +2045,10 @@ namespace Win11DesktopApp.ViewModels
             return string.Join(Environment.NewLine,
                 Res("SettingsSecondPcCopyTitle"),
                 "",
-                $"PostgreSQL server: {server}",
+                $"{Res("SettingsSecondPcLocalServerLabel")}: localhost:{port}",
+                $"{Res("SettingsSecondPcTailscaleServerLabel")}: {tailscaleServer}",
+                $"{Res("SettingsSecondPcLanServerLabel")}: {lanServer}",
+                $"{Res("SettingsSecondPcServerLabel")}: {server}",
                 $"Port: {port}",
                 $"Database: {database}",
                 $"User: {username}",

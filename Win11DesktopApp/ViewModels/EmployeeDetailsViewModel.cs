@@ -87,6 +87,40 @@ namespace Win11DesktopApp.ViewModels
         public bool ShowBankAccountSection => HasBankAccountData;
         public bool ShowBankAccountCard => IsEditMode || HasBankAccountData;
 
+        public bool HasRodneCisloData
+        {
+            get => Data?.HasRodneCisloData ?? false;
+            set
+            {
+                if (Data == null || Data.HasRodneCisloData == value)
+                    return;
+
+                Data.HasRodneCisloData = value;
+                NotifyRodneCisloStateChanged();
+                OnPropertyChanged(nameof(Data));
+            }
+        }
+
+        public bool ShowRodneCisloField => HasRodneCisloData;
+
+        public string RodneCislo
+        {
+            get => Data?.RodneCislo ?? string.Empty;
+            set
+            {
+                if (Data == null)
+                    return;
+
+                var normalized = value ?? string.Empty;
+                if (Data.RodneCislo == normalized)
+                    return;
+
+                Data.RodneCislo = normalized;
+                OnPropertyChanged(nameof(RodneCislo));
+                OnPropertyChanged(nameof(Data));
+            }
+        }
+
         public string BankAccountNumber
         {
             get => Data?.BankAccountNumber ?? string.Empty;
@@ -140,6 +174,7 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _isEditMode, value))
                 {
                     OnPropertyChanged(nameof(ShowBankAccountCard));
+                    OnPropertyChanged(nameof(ShowRodneCisloField));
                     if (!value)
                         IsDocumentProfileEditorOpen = false;
                 }
@@ -207,6 +242,13 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(ShowBankAccountCard));
             OnPropertyChanged(nameof(BankAccountNumber));
             OnPropertyChanged(nameof(BankName));
+        }
+
+        private void NotifyRodneCisloStateChanged()
+        {
+            OnPropertyChanged(nameof(HasRodneCisloData));
+            OnPropertyChanged(nameof(ShowRodneCisloField));
+            OnPropertyChanged(nameof(RodneCislo));
         }
 
         private void TryAutofillBankName(string accountNumber)
@@ -1285,6 +1327,7 @@ namespace Win11DesktopApp.ViewModels
             NormalizeEducationFields();
             NormalizeDocumentProfileFields();
             NotifyBankAccountStateChanged();
+            NotifyRodneCisloStateChanged();
             TryAutofillBankName(Data.BankAccountNumber);
             RefreshDocuments();
             LoadCompanyPositions();
@@ -1829,6 +1872,7 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(Data));
                 OnPropertyChanged(nameof(FullName));
                 NotifyBankAccountStateChanged();
+                NotifyRodneCisloStateChanged();
                 TryAutofillBankName(Data.BankAccountNumber);
             }
             IsEditMode = false;
@@ -3156,6 +3200,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             CompareAIField(items, GetPassportFieldSource("PassportCountry"), "PassportCountry", Data.PassportCountry, Res("HistFieldPassportCountry") ?? "Passport Country", GetPassportFieldSourceKey("PassportCountry"));
             CompareAIField(items, passportData, "Citizenship", Data.Citizenship, Res("HistFieldCitizenship") ?? "Citizenship", "passport");
             CompareAIField(items, passportData, "IssuingCountry", Data.IssuingCountry, Res("HistFieldIssuingCountry") ?? "Issuing Country", "passport");
+            CompareAIField(items, GetPassportFieldSource("RodneCislo"), "RodneCislo", Data.HasRodneCisloData ? Data.RodneCislo : string.Empty, Res("HistFieldRodneCislo") ?? "Personal identification number", GetPassportFieldSourceKey("RodneCislo"));
 
             CompareAIField(items, visaData, "VisaNumber", Data.VisaNumber, Res("HistFieldVisaNum") ?? "Visa Number", SecondaryDocumentSourceDocumentKey);
             if (ShowVisaDocumentCard)
@@ -3658,6 +3703,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
         private static bool IsDocumentNumberField(string fieldKey)
         {
             return string.Equals(fieldKey, "PassportNumber", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "RodneCislo", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(fieldKey, "VisaNumber", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(fieldKey, "InsuranceNumber", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(fieldKey, "WorkPermitNumber", StringComparison.OrdinalIgnoreCase);
@@ -3782,6 +3828,11 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             switch (item.FieldKey)
             {
                 case "PassportNumber": Data.PassportNumber = item.SuggestedValue; break;
+                case "RodneCislo":
+                    Data.RodneCislo = item.SuggestedValue;
+                    Data.HasRodneCisloData = true;
+                    NotifyRodneCisloStateChanged();
+                    break;
                 case "PassportExpiry": Data.PassportExpiry = item.SuggestedValue; break;
                 case "PassportAuthority": Data.PassportAuthority = item.SuggestedValue; break;
                 case "PassportCity": Data.PassportCity = item.SuggestedValue; break;

@@ -51,6 +51,8 @@ namespace Win11DesktopApp.EmployeeModels
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string BirthDate { get; set; } = string.Empty;
+        public bool HasRodneCisloData { get; set; }
+        public string RodneCislo { get; set; } = string.Empty;
         public string Gender { get; set; } = "male";
         public string HighestEducationCode { get; set; } = string.Empty;
         public string PassportNumber { get; set; } = string.Empty;

@@ -632,6 +632,7 @@
     <sys:String x:Key="DetFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="DetFieldLastName">Příjmení</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="DetFieldRodneCislo">Rodné číslo</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="DetFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="DetFieldDocumentProfileType">Typ pracovníka / sada dokumentů</sys:String>
@@ -669,6 +670,7 @@
     <sys:String x:Key="DetFieldWorkAddr">Adresa výkonu práce</sys:String>
     <sys:String x:Key="DetSecContacts">Kontakty a data</sys:String>
     <sys:String x:Key="EmployeeBankSection">Údaje bankovního účtu</sys:String>
+    <sys:String x:Key="EmployeeRodneCisloToggle">Zobrazit rodné číslo</sys:String>
     <sys:String x:Key="EmployeeBankToggle">Zobrazit údaje bankovního účtu</sys:String>
     <sys:String x:Key="EmployeeBankAccountNumber">Číslo účtu</sys:String>
     <sys:String x:Key="EmployeeBankName">Název banky</sys:String>
@@ -1028,6 +1030,7 @@
     <sys:String x:Key="ReportColAddressCz">Celá adresa bydliště</sys:String>
     <sys:String x:Key="ReportColAddressAbroad">Zahraniční adresa</sys:String>
     <sys:String x:Key="ReportColBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="ReportColRodneCislo">Rodné číslo</sys:String>
     <sys:String x:Key="ReportColCitizenship">Státní příslušnost</sys:String>
     <sys:String x:Key="ReportColBirthCity">Město narození</sys:String>
     <sys:String x:Key="ReportColBirthCountry">Země narození</sys:String>
@@ -1328,6 +1331,7 @@
     <sys:String x:Key="TagDescEmpLastName">Příjmení zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Celé jméno zaměstnance</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="TagDescEmpRodneCislo">Rodné číslo</sys:String>
     <sys:String x:Key="TagDescEmpHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="TagDescEmpGender">Pohlaví (Muž / Žena)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Telefon</sys:String>
@@ -1815,6 +1819,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistFieldFirstName">Jméno</sys:String>
     <sys:String x:Key="HistFieldLastName">Příjmení</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Datum narození</sys:String>
+    <sys:String x:Key="HistFieldRodneCislo">Rodné číslo</sys:String>
     <sys:String x:Key="HistFieldHighestEducation">Nejvyšší dosažené vzdělání</sys:String>
     <sys:String x:Key="HistFieldGender">Pohlaví</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Číslo pasu</sys:String>
@@ -2133,10 +2138,28 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="SettingsSecondPcTitle">Připojení druhého PC</sys:String>
     <sys:String x:Key="SettingsSecondPcDesc">Pro druhé PC program použije LAN adresu tohoto počítače místo localhost. Druhé PC musí být ve stejné síti nebo připojené přes VPN/Tailscale/ZeroTier.</sys:String>
     <sys:String x:Key="SettingsSecondPcCopy">Zkopírovat údaje pro druhé PC</sys:String>
+    <sys:String x:Key="SettingsSecondPcLocalServerLabel">Na tomto PC</sys:String>
+    <sys:String x:Key="SettingsSecondPcTailscaleServerLabel">Pro druhé PC přes Tailscale</sys:String>
+    <sys:String x:Key="SettingsSecondPcLanServerLabel">Pro druhé PC v lokální síti</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideButton">Návod pro NAS / Synology</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideTitle">Nastavení PostgreSQL na Synology NAS</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideSubtitle">Krok za krokem: co nainstalovat na NAS, kde kliknout v DSM a co zadat v aplikaci.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideOpenFailed">Návod pro NAS se nepodařilo otevřít.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideBody">Co bude běžet na Synology NAS&#x0a;&#x0a;NAS bude server PostgreSQL. Všechna PC se k němu připojují přes IP adresu NAS a port 5432. Fotky, PDF a dokumenty zaměstnanců je nejlepší uložit do samostatné sdílené složky Synology.&#x0a;&#x0a;Důležité: pole PostgreSQL data folder a tlačítka pro nastavení lokální sítě/Tailscale jsou určena pro PostgreSQL nainstalovaný na Windows PC. Pro Synology NAS nejsou potřeba.&#x0a;&#x0a;1. Připravte Synology DSM&#x0a;&#x0a;1. Otevřete DSM v prohlížeči: http://IP_NAS:5000 nebo https://IP_NAS:5001, například http://192.168.0.50:5000.&#x0a;2. Přihlaste se jako správce.&#x0a;3. Otevřete Package Center.&#x0a;4. Nainstalujte Container Manager. Na DS225+ by měl být dostupný.&#x0a;&#x0a;2. Vytvořte složky na NAS&#x0a;&#x0a;Ve File Station vytvořte sdílenou složku docker a v ní postgres/data. Příklad cesty: /volume1/docker/postgres/data. Potom vytvořte samostatnou sdílenou složku AgencyData pro fotky, PDF a dokumenty programu.&#x0a;&#x0a;3. Stáhněte PostgreSQL kontejner&#x0a;&#x0a;V Container Manager otevřete Registry, vyhledejte postgres, vyberte oficiální obraz a klikněte Download. Doporučená stabilní verze je postgres:16, případně postgres:17.&#x0a;&#x0a;4. Vytvořte kontejner&#x0a;&#x0a;V části Image vyberte postgres:16, klikněte Run, název kontejneru nastavte na agency-postgres a zapněte automatické spuštění po restartu NAS.&#x0a;&#x0a;5. Proměnné prostředí&#x0a;&#x0a;POSTGRES_DB = agency_db&#x0a;POSTGRES_USER = postgres&#x0a;POSTGRES_PASSWORD = vaše_silné_heslo&#x0a;&#x0a;Heslo si uložte. Bude potřeba v aplikaci na každém PC.&#x0a;&#x0a;6. Porty&#x0a;&#x0a;Nastavte mapování portů: NAS 5432 -> container 5432, protokol TCP. Pokud je port obsazený, použijte například 5433 a stejný port zadejte v aplikaci.&#x0a;&#x0a;7. Trvalé úložiště&#x0a;&#x0a;Nastavte mapování složky: /volume1/docker/postgres/data -> /var/lib/postgresql/data. Přístup musí být Read/Write, aby databáze nezmizela po restartu kontejneru.&#x0a;&#x0a;8. Spuštění a kontrola&#x0a;&#x0a;Klikněte Done / Apply. V seznamu Container zkontrolujte, že agency-postgres má stav Running. Pokud se zastaví, otevřete Details / Log a zkontrolujte heslo a mapování složky data.&#x0a;&#x0a;9. Firewall Synology&#x0a;&#x0a;Pokud je DSM Firewall zapnutý: Control Panel - Security - Firewall - Edit Rules - Create rule. Povolte TCP port 5432 pro lokální síť, například 192.168.0.0/24.&#x0a;&#x0a;10. Sdílená složka pro soubory&#x0a;&#x0a;Vytvořte sdílenou složku AgencyData a nastavte oprávnění pro uživatele Windows. Ve Windows se otevře jako \\IP_NAS\AgencyData, například \\192.168.0.50\AgencyData. Stejnou složku vyberte jako kořenovou složku programu na všech PC.&#x0a;&#x0a;11. Co zadat v aplikaci&#x0a;&#x0a;Server: IP Synology, například 192.168.0.50&#x0a;Port: 5432&#x0a;Databáze: agency_db&#x0a;Uživatel: postgres&#x0a;Heslo: POSTGRES_PASSWORD&#x0a;&#x0a;Pro NAS nevybírejte PostgreSQL data folder v aplikaci. Toto pole je jen pro PostgreSQL na Windows.&#x0a;&#x0a;12. Migrace&#x0a;&#x0a;Na hlavním PC klikněte Zkontrolovat PostgreSQL. Pokud připojení funguje, spusťte migraci SQLite -> PostgreSQL. Po dokončení vyberte PostgreSQL - pro více PC a restartujte aplikaci. Na ostatních PC zadejte stejné údaje a stejnou sdílenou složku.&#x0a;&#x0a;13. Když se nepřipojí&#x0a;&#x0a;Zkontrolujte IP NAS, stav kontejneru agency-postgres, mapování portu 5432, DSM Firewall, síť PC a NAS, heslo postgres a název databáze agency_db.&#x0a;&#x0a;14. Tailscale&#x0a;&#x0a;Nainstalujte Tailscale na Synology a v aplikaci použijte Tailscale IP NAS jako server. Port zůstává 5432. Ve Firewallu DSM povolte rozsah 100.64.0.0/10 nebo konkrétní Tailscale IP.</sys:String>
     <sys:String x:Key="SettingsTailscaleTitle">Přístup k PostgreSQL přes Tailscale</sys:String>
     <sys:String x:Key="SettingsTailscaleDesc">Automaticky přidá rozsah Tailscale 100.64.0.0/10 do pg_hba.conf, zapne listen_addresses='*', otevře port 5432 ve Firewallu a restartuje PostgreSQL. Jsou vyžadována práva správce.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectory">Složka PostgreSQL data na tomto PC</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryBrowse">Vybrat složku</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAuto">Pokud je pole prázdné, program se pokusí najít PostgreSQL ve standardní složce.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryValid">Složka je správná: nalezeno PG_VERSION, pg_hba.conf a postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryInvalid">Toto není složka PostgreSQL data. Vyberte složku, kde je PG_VERSION, pg_hba.conf a postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySaved">Cesta ke složce PostgreSQL data byla uložena.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAutoDetectedFmt">Složka PostgreSQL data byla nalezena uvnitř vybrané složky: {0}</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySelectTitle">Vyberte složku PostgreSQL data</sys:String>
     <sys:String x:Key="SettingsTailscaleIp">Tailscale IP tohoto PC</sys:String>
     <sys:String x:Key="SettingsTailscaleConfigure">Nastavit PostgreSQL pro Tailscale</sys:String>
+    <sys:String x:Key="SettingsLanIp">LAN IP tohoto PC</sys:String>
+    <sys:String x:Key="SettingsLanConfigure">Nastavit PostgreSQL pro lokální síť</sys:String>
     <sys:String x:Key="SettingsConnectedClientsTitle">Připojené PC</sys:String>
     <sys:String x:Key="SettingsConnectedClientsDesc">Seznam ukazuje programy, které pracují s touto PostgreSQL databází. Online znamená, že PC aktualizovalo stav během posledních 3 minut.</sys:String>
     <sys:String x:Key="SettingsDbModeTitle">Režim databáze</sys:String>
@@ -2190,6 +2213,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="SettingsPostgresResetHintActive">Chcete-li odstranit data PostgreSQL, nejprve vyberte režim SQLite, restartujte program a potom stiskněte toto tlačítko.</sys:String>
     <sys:String x:Key="SettingsPostgresResetHintReady">Odstraní pouze data programu v PostgreSQL: schémata core, app, salary. Poté lze migraci spustit znovu.</sys:String>
     <sys:String x:Key="SettingsTailscaleIpMissing">Tailscale IP nenalezena</sys:String>
+    <sys:String x:Key="SettingsLanIpMissing">LAN IP nenalezena</sys:String>
     <sys:String x:Key="SettingsMigrationCompletedAction">Migrace již byla dokončena</sys:String>
     <sys:String x:Key="SettingsMigrationPrepareAction">Připravit a přenést data</sys:String>
     <sys:String x:Key="SettingsReplacePgFromSqliteAction">Nahradit PostgreSQL daty ze staré databáze</sys:String>
@@ -2201,6 +2225,20 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="SettingsPostgresCheckingFmt">Kontroluji PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Připojeno. PostgreSQL {0}. Databáze "{1}": {2}. Právo vytvářet databáze: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Připojení se nezdařilo: {0}. {1}.</sys:String>
+    <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Technické detaily: {1}</sys:String>
+    <sys:String x:Key="PostgresErrCancelled">Operace PostgreSQL byla zrušena.</sys:String>
+    <sys:String x:Key="PostgresErrDatabaseMissing">Databáze PostgreSQL neexistuje. Zkontrolujte název databáze nebo spusťte migraci SQLite → PostgreSQL.</sys:String>
+    <sys:String x:Key="PostgresErrInvalidPassword">Heslo PostgreSQL je nesprávné. Zkontrolujte heslo uživatele.</sys:String>
+    <sys:String x:Key="PostgresErrPgHba">PostgreSQL nepovoluje připojení z této IP. Pro Windows server spusťte nastavení lokální sítě/Tailscale nebo zkontrolujte pg_hba.conf.</sys:String>
+    <sys:String x:Key="PostgresErrAuthorization">PostgreSQL odmítl autorizaci. Zkontrolujte uživatele, heslo a pravidla přístupu.</sys:String>
+    <sys:String x:Key="PostgresErrInsufficientPrivilege">Uživatel PostgreSQL nemá dostatečná práva pro tuto akci.</sys:String>
+    <sys:String x:Key="PostgresErrAdminShutdown">PostgreSQL se restartuje nebo byl zastaven správcem. Zkuste to znovu za několik sekund.</sys:String>
+    <sys:String x:Key="PostgresErrTooManyConnections">PostgreSQL má příliš mnoho připojení. Zavřete další programy nebo zvyšte limit připojení.</sys:String>
+    <sys:String x:Key="PostgresErrConnectionRefused">Server PostgreSQL neodpovídá na této IP/portu. Zkontrolujte adresu, port, službu PostgreSQL a Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrHostNotFound">Server PostgreSQL nebyl nalezen. Zkontrolujte IP adresu nebo název NAS/PC.</sys:String>
+    <sys:String x:Key="PostgresErrTimeout">PostgreSQL neodpověděl včas. Zkontrolujte síť, NAS/server a Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrNetwork">Síťová chyba při připojení k PostgreSQL. Zkontrolujte kabel/Wi-Fi/VPN/Tailscale a Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrGeneric">Došlo k chybě PostgreSQL. Zkontrolujte nastavení připojení.</sys:String>
     <sys:String x:Key="SettingsExists">existuje</sys:String>
     <sys:String x:Key="SettingsNotFound">nenalezena</sys:String>
     <sys:String x:Key="SettingsYes">ano</sys:String>
@@ -2234,6 +2272,11 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="SettingsPostgresResetDeleting">Odstraňuji PostgreSQL data programu...</sys:String>
     <sys:String x:Key="SettingsPostgresMigrationCleared">Migrace vyčištěna. PostgreSQL lze znovu připravit.</sys:String>
     <sys:String x:Key="SettingsPostgresNetworkConfiguring">Nastavuji PostgreSQL pro Tailscale...</sys:String>
+    <sys:String x:Key="SettingsPostgresLanConfiguring">Nastavuji PostgreSQL pro lokální síť...</sys:String>
+    <sys:String x:Key="SettingsPostgresNetworkRestartingAsAdmin">Jsou vyžadována práva správce. Restartuji program jako správce...</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmTitle">Jsou vyžadována práva správce</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmMessage">Pro nastavení PostgreSQL jsou vyžadována práva správce. Program se nyní restartuje jako správce.</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartCancelled">Restart jako správce byl zrušen.</sys:String>
     <sys:String x:Key="SettingsSecondsAgoFmt">před {0} s</sys:String>
     <sys:String x:Key="SettingsMinutesAgoFmt">před {0} min</sys:String>
     <sys:String x:Key="SettingsPostgresPasswordPlaceholder">(zadejte heslo PostgreSQL)</sys:String>

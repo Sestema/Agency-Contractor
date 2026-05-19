@@ -635,6 +635,7 @@
     <sys:String x:Key="DetFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="DetFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="DetFieldRodneCislo">Ідентифікаційний код</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="DetFieldGender">Стать</sys:String>
     <sys:String x:Key="DetFieldDocumentProfileType">Тип працівника / комплект документів</sys:String>
@@ -672,6 +673,7 @@
     <sys:String x:Key="DetFieldWorkAddr">Адреса виконання роботи</sys:String>
     <sys:String x:Key="DetSecContacts">Контакти та дати</sys:String>
     <sys:String x:Key="EmployeeBankSection">Дані Банківського рахунку</sys:String>
+    <sys:String x:Key="EmployeeRodneCisloToggle">Показати ідентифікаційний код</sys:String>
     <sys:String x:Key="EmployeeBankToggle">Відкрити дані банківського рахунку</sys:String>
     <sys:String x:Key="EmployeeBankAccountNumber">Номер рахунку</sys:String>
     <sys:String x:Key="EmployeeBankName">Назва банку</sys:String>
@@ -1033,6 +1035,7 @@
     <sys:String x:Key="ReportColAddressCz">Повна адреса проживання</sys:String>
     <sys:String x:Key="ReportColAddressAbroad">Адреса за кордоном</sys:String>
     <sys:String x:Key="ReportColBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="ReportColRodneCislo">Ідентифікаційний код</sys:String>
     <sys:String x:Key="ReportColCitizenship">Громадянство</sys:String>
     <sys:String x:Key="ReportColBirthCity">Місто народження</sys:String>
     <sys:String x:Key="ReportColBirthCountry">Країна народження</sys:String>
@@ -1333,6 +1336,7 @@
     <sys:String x:Key="TagDescEmpLastName">Прізвище працівника</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Повне ім'я працівника</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="TagDescEmpRodneCislo">Ідентифікаційний код / Rodné číslo</sys:String>
     <sys:String x:Key="TagDescEmpHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="TagDescEmpGender">Стать (Чоловік / Жінка)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Телефон</sys:String>
@@ -1818,6 +1822,7 @@
     <sys:String x:Key="HistFieldFirstName">Ім'я</sys:String>
     <sys:String x:Key="HistFieldLastName">Прізвище</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
+    <sys:String x:Key="HistFieldRodneCislo">Ідентифікаційний код</sys:String>
     <sys:String x:Key="HistFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="HistFieldDocumentProfileType">Тип працівника / комплект документів</sys:String>
@@ -2135,10 +2140,28 @@
     <sys:String x:Key="SettingsSecondPcTitle">Підключення другого ПК</sys:String>
     <sys:String x:Key="SettingsSecondPcDesc">Для другого ПК програма підставляє LAN-адресу цього комп'ютера замість localhost. Другий ПК має бути в цій самій мережі або через VPN/Tailscale/ZeroTier.</sys:String>
     <sys:String x:Key="SettingsSecondPcCopy">Скопіювати дані для другого ПК</sys:String>
+    <sys:String x:Key="SettingsSecondPcLocalServerLabel">На цьому ПК</sys:String>
+    <sys:String x:Key="SettingsSecondPcTailscaleServerLabel">Для другого ПК через Tailscale</sys:String>
+    <sys:String x:Key="SettingsSecondPcLanServerLabel">Для другого ПК у локальній мережі</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideButton">Інструкція для NAS / Synology</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideTitle">Налаштування PostgreSQL на Synology NAS</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideSubtitle">Покроково: що встановити на NAS, де натискати в DSM і що ввести в програмі на ПК.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideOpenFailed">Не вдалося відкрити інструкцію для NAS.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideBody">Що буде на Synology NAS&#x0a;&#x0a;NAS буде сервером PostgreSQL. Усі комп'ютери підключаються до нього через IP NAS і порт 5432. Файли працівників, фото, PDF і документи краще тримати в окремій спільній папці Synology.&#x0a;&#x0a;Важливо: поле PostgreSQL data folder і кнопки Налаштувати PostgreSQL для локальної мережі/Tailscale потрібні тільки коли PostgreSQL встановлений на Windows ПК. Для Synology NAS вони не потрібні, бо PostgreSQL працює всередині DSM або контейнера.&#x0a;&#x0a;1. Підготуй Synology DSM&#x0a;&#x0a;1. Відкрий браузер і зайди в DSM: http://IP_NAS:5000 або https://IP_NAS:5001. Наприклад: http://192.168.0.50:5000.&#x0a;2. Увійди під користувачем з правами адміністратора.&#x0a;3. Відкрий Package Center.&#x0a;4. Знайди і встанови Container Manager. Якщо Container Manager недоступний, перевір модель NAS і версію DSM. Для DS225+ він має бути доступний.&#x0a;&#x0a;2. Створи папки на NAS&#x0a;&#x0a;1. В DSM відкрий File Station.&#x0a;2. Створи або відкрий спільну папку docker. Якщо її немає: Control Panel - Shared Folder - Create.&#x0a;3. У папці docker створи папку postgres.&#x0a;4. Усередині postgres створи папку data. Приклад шляху на NAS: /volume1/docker/postgres/data.&#x0a;5. Окремо створи спільну папку для файлів програми, наприклад AgencyData. У ній будуть фото, PDF і документи працівників.&#x0a;&#x0a;3. Завантаж PostgreSQL контейнер&#x0a;&#x0a;1. Відкрий Container Manager.&#x0a;2. Перейди в Registry.&#x0a;3. У пошуку введи postgres.&#x0a;4. Вибери офіційний образ postgres.&#x0a;5. Натисни Download.&#x0a;6. Вибери версію postgres:16 або postgres:17. Для стабільності краще postgres:16.&#x0a;&#x0a;4. Створи контейнер PostgreSQL&#x0a;&#x0a;1. У Container Manager відкрий Image.&#x0a;2. Вибери завантажений образ postgres:16.&#x0a;3. Натисни Run.&#x0a;4. Назва контейнера: agency-postgres.&#x0a;5. Увімкни автоматичний запуск контейнера після перезавантаження NAS, якщо така опція є.&#x0a;&#x0a;5. Налаштуй змінні середовища&#x0a;&#x0a;У розділі Environment / Environment variables додай:&#x0a;&#x0a;POSTGRES_DB = agency_db&#x0a;POSTGRES_USER = postgres&#x0a;POSTGRES_PASSWORD = твій_надійний_пароль&#x0a;&#x0a;Пароль запиши і не губи. Саме його треба буде вводити в програмі на кожному ПК.&#x0a;&#x0a;6. Налаштуй порт&#x0a;&#x0a;У розділі Port settings / Port mapping додай:&#x0a;&#x0a;Local port на NAS: 5432&#x0a;Container port: 5432&#x0a;Protocol: TCP&#x0a;&#x0a;Якщо 5432 зайнятий, можна вибрати інший зовнішній порт, наприклад 5433, але тоді в програмі теж треба вказати 5433.&#x0a;&#x0a;7. Налаштуй постійне сховище&#x0a;&#x0a;У розділі Volume settings / Folder mapping додай:&#x0a;&#x0a;/volume1/docker/postgres/data -> /var/lib/postgresql/data&#x0a;&#x0a;Тип доступу: Read/Write. Це важливо, щоб база не зникла після перезапуску контейнера.&#x0a;&#x0a;8. Запусти контейнер і перевір статус&#x0a;&#x0a;1. Натисни Done / Apply.&#x0a;2. У Container Manager відкрий Container.&#x0a;3. Перевір, що agency-postgres має статус Running.&#x0a;4. Якщо контейнер зупинився, відкрий Details / Log і перевір, чи правильно задано пароль і папку data.&#x0a;&#x0a;9. Відкрий порт у Synology Firewall&#x0a;&#x0a;Якщо Firewall у DSM увімкнений:&#x0a;&#x0a;1. Відкрий Control Panel.&#x0a;2. Security.&#x0a;3. Firewall.&#x0a;4. Edit Rules.&#x0a;5. Create rule.&#x0a;6. Ports: Custom, TCP, 5432.&#x0a;7. Source IP: локальна мережа, наприклад 192.168.0.0/24.&#x0a;8. Action: Allow.&#x0a;9. Збережи правила.&#x0a;&#x0a;10. Налаштуй спільну папку AgencyData&#x0a;&#x0a;1. Control Panel - Shared Folder - Create.&#x0a;2. Назва: AgencyData.&#x0a;3. Дай доступ Windows-користувачам, які будуть працювати з програмою.&#x0a;4. На ПК відкрий папку так: \\IP_NAS\AgencyData. Наприклад: \\192.168.0.50\AgencyData.&#x0a;5. У програмі на всіх ПК вибери цю папку як кореневу папку для файлів.&#x0a;&#x0a;11. Що ввести в програмі на ПК&#x0a;&#x0a;У Налаштування - Сервери - PostgreSQL введи:&#x0a;&#x0a;Сервер: IP Synology NAS, наприклад 192.168.0.50&#x0a;Порт: 5432&#x0a;База: agency_db&#x0a;Користувач: postgres&#x0a;Пароль: пароль з POSTGRES_PASSWORD&#x0a;&#x0a;Папку PostgreSQL data у програмі не вибирай для NAS. Вона потрібна тільки для PostgreSQL на Windows.&#x0a;&#x0a;12. Перший запуск і міграція&#x0a;&#x0a;1. На головному ПК натисни Перевірити PostgreSQL.&#x0a;2. Якщо підключення успішне, запусти SQLite -> PostgreSQL міграцію.&#x0a;3. Після успішної міграції вибери PostgreSQL - для кількох ПК.&#x0a;4. Перезапусти програму.&#x0a;5. На інших ПК введи ті самі PostgreSQL дані і вибери ту саму спільну папку \\IP_NAS\AgencyData.&#x0a;&#x0a;13. Якщо не підключається&#x0a;&#x0a;Перевір по черзі:&#x0a;&#x0a;- Чи NAS має постійний IP, наприклад 192.168.0.50.&#x0a;- Чи контейнер agency-postgres запущений.&#x0a;- Чи порт 5432 проброшений NAS 5432 -> container 5432.&#x0a;- Чи Synology Firewall дозволяє TCP 5432.&#x0a;- Чи ПК і NAS в одній мережі.&#x0a;- Чи правильно введено пароль postgres.&#x0a;- Чи база називається agency_db.&#x0a;&#x0a;14. Якщо працюєш через Tailscale&#x0a;&#x0a;Встанови Tailscale на Synology з Package Center або вручну з сайту Tailscale. Потім у програмі в полі Сервер введи Tailscale IP NAS, наприклад 100.x.x.x. Порт залишається 5432. У Firewall DSM можна дозволити доступ для Tailscale мережі 100.64.0.0/10 або для конкретних Tailscale IP.</sys:String>
     <sys:String x:Key="SettingsTailscaleTitle">PostgreSQL доступ через Tailscale</sys:String>
     <sys:String x:Key="SettingsTailscaleDesc">Автоматично додає Tailscale-діапазон 100.64.0.0/10 у pg_hba.conf, вмикає listen_addresses='*', відкриває порт 5432 у Firewall і перезапускає PostgreSQL. Потрібен запуск від імені адміністратора.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectory">Папка PostgreSQL data на цьому ПК</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryBrowse">Вибрати папку</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAuto">Якщо поле порожнє, програма спробує знайти PostgreSQL у стандартній папці.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryValid">Папка правильна: знайдено PG_VERSION, pg_hba.conf і postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryInvalid">Це не папка PostgreSQL data. Потрібна папка, де є PG_VERSION, pg_hba.conf і postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySaved">Шлях до PostgreSQL data збережено.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAutoDetectedFmt">Знайдено папку PostgreSQL data всередині вибраної папки: {0}</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySelectTitle">Виберіть папку PostgreSQL data</sys:String>
     <sys:String x:Key="SettingsTailscaleIp">Tailscale IP цього ПК</sys:String>
     <sys:String x:Key="SettingsTailscaleConfigure">Налаштувати PostgreSQL для Tailscale</sys:String>
+    <sys:String x:Key="SettingsLanIp">LAN IP цього ПК</sys:String>
+    <sys:String x:Key="SettingsLanConfigure">Налаштувати PostgreSQL для локальної мережі</sys:String>
     <sys:String x:Key="SettingsConnectedClientsTitle">Підключені ПК</sys:String>
     <sys:String x:Key="SettingsConnectedClientsDesc">Список показує програми, які працюють із цією PostgreSQL базою. Онлайн означає, що ПК оновлював статус за останні 3 хвилини.</sys:String>
     <sys:String x:Key="SettingsDbModeTitle">Режим роботи бази</sys:String>
@@ -2192,6 +2215,7 @@
     <sys:String x:Key="SettingsPostgresResetHintActive">Щоб видалити PostgreSQL дані, спочатку виберіть SQLite режим, перезапустіть програму, а потім натисніть цю кнопку.</sys:String>
     <sys:String x:Key="SettingsPostgresResetHintReady">Видаляє тільки дані програми у PostgreSQL: схеми core, app, salary. Після цього міграцію можна запустити заново.</sys:String>
     <sys:String x:Key="SettingsTailscaleIpMissing">Tailscale IP не знайдено</sys:String>
+    <sys:String x:Key="SettingsLanIpMissing">LAN IP не знайдено</sys:String>
     <sys:String x:Key="SettingsMigrationCompletedAction">Міграція вже виконана</sys:String>
     <sys:String x:Key="SettingsMigrationPrepareAction">Підготувати і перенести дані</sys:String>
     <sys:String x:Key="SettingsReplacePgFromSqliteAction">Замінити PostgreSQL даними зі старої бази</sys:String>
@@ -2203,6 +2227,20 @@
     <sys:String x:Key="SettingsPostgresCheckingFmt">Перевіряю PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Підключено. PostgreSQL {0}. База "{1}": {2}. Право створювати бази: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Не вдалося підключитись: {0}. {1}.</sys:String>
+    <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Технічні деталі: {1}</sys:String>
+    <sys:String x:Key="PostgresErrCancelled">Операцію PostgreSQL скасовано.</sys:String>
+    <sys:String x:Key="PostgresErrDatabaseMissing">База PostgreSQL не існує. Перевірте назву бази або запустіть міграцію SQLite → PostgreSQL.</sys:String>
+    <sys:String x:Key="PostgresErrInvalidPassword">Неправильний пароль PostgreSQL. Перевірте пароль користувача.</sys:String>
+    <sys:String x:Key="PostgresErrPgHba">PostgreSQL не дозволяє підключення з цього IP. Для Windows-сервера натисніть налаштування локальної мережі/Tailscale або перевірте pg_hba.conf.</sys:String>
+    <sys:String x:Key="PostgresErrAuthorization">PostgreSQL відхилив авторизацію. Перевірте користувача, пароль і правила доступу.</sys:String>
+    <sys:String x:Key="PostgresErrInsufficientPrivilege">Користувачу PostgreSQL не вистачає прав для цієї дії.</sys:String>
+    <sys:String x:Key="PostgresErrAdminShutdown">PostgreSQL перезапускається або був зупинений адміністратором. Спробуйте ще раз через кілька секунд.</sys:String>
+    <sys:String x:Key="PostgresErrTooManyConnections">PostgreSQL має забагато підключень. Закрийте зайві програми або збільшіть ліміт підключень.</sys:String>
+    <sys:String x:Key="PostgresErrConnectionRefused">PostgreSQL сервер не відповідає на цьому IP/порті. Перевірте адресу, порт, службу PostgreSQL і Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrHostNotFound">Не вдалося знайти сервер PostgreSQL. Перевірте IP або ім'я NAS/ПК.</sys:String>
+    <sys:String x:Key="PostgresErrTimeout">PostgreSQL не відповів за відведений час. Перевірте мережу, NAS/сервер і Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrNetwork">Мережева помилка підключення до PostgreSQL. Перевірте кабель/Wi-Fi/VPN/Tailscale і Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrGeneric">Сталася помилка PostgreSQL. Перевірте налаштування підключення.</sys:String>
     <sys:String x:Key="SettingsExists">існує</sys:String>
     <sys:String x:Key="SettingsNotFound">не знайдена</sys:String>
     <sys:String x:Key="SettingsYes">так</sys:String>
@@ -2236,6 +2274,11 @@
     <sys:String x:Key="SettingsPostgresResetDeleting">Видаляю PostgreSQL дані програми...</sys:String>
     <sys:String x:Key="SettingsPostgresMigrationCleared">Міграція очищена. Можна підготувати PostgreSQL заново.</sys:String>
     <sys:String x:Key="SettingsPostgresNetworkConfiguring">Налаштовую PostgreSQL для Tailscale...</sys:String>
+    <sys:String x:Key="SettingsPostgresLanConfiguring">Налаштовую PostgreSQL для локальної мережі...</sys:String>
+    <sys:String x:Key="SettingsPostgresNetworkRestartingAsAdmin">Потрібні права адміністратора. Перезапускаю програму від імені адміністратора...</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmTitle">Потрібні права адміністратора</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmMessage">Для налаштування PostgreSQL потрібні права адміністратора. Програма зараз перезапуститься від імені адміністратора.</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartCancelled">Перезапуск від імені адміністратора скасовано.</sys:String>
     <sys:String x:Key="SettingsSecondsAgoFmt">{0} сек тому</sys:String>
     <sys:String x:Key="SettingsMinutesAgoFmt">{0} хв тому</sys:String>
     <sys:String x:Key="SettingsPostgresPasswordPlaceholder">(введи пароль PostgreSQL)</sys:String>

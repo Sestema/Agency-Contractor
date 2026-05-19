@@ -70,7 +70,7 @@ namespace Win11DesktopApp.Services
                 return new PostgresConnectionTestResult
                 {
                     Database = databaseName,
-                    ErrorMessage = ex.Message
+                    ErrorMessage = PostgresErrorMessageService.ToUserMessage(ex)
                 };
             }
         }

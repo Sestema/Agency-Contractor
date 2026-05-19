@@ -1363,6 +1363,14 @@
                                                     <TextBox Text="{Binding Data.LastName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
                                                     <TextBlock Text="{DynamicResource DetFieldBirthDate}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBox Text="{Binding Data.BirthDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    <CheckBox Content="{DynamicResource EmployeeRodneCisloToggle}"
+                                                              IsChecked="{Binding HasRodneCisloData}"
+                                                              Margin="0,0,0,8"
+                                                              Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"/>
+                                                    <StackPanel Visibility="{Binding ShowRodneCisloField, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{DynamicResource DetFieldRodneCislo}" Style="{StaticResource FieldLabel}"/>
+                                                        <TextBox Text="{Binding RodneCislo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource FieldInput}" IsReadOnly="{Binding IsEditMode, Converter={StaticResource InverseBool}}"/>
+                                                    </StackPanel>
                                                     <TextBlock Text="{DynamicResource DetFieldHighestEducation}" Style="{StaticResource FieldLabel}"/>
                                                     <TextBlock Text="{Binding HighestEducationDisplay}"
                                                                FontSize="{DynamicResource FS13}"

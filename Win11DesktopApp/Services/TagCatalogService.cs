@@ -179,6 +179,8 @@ namespace Win11DesktopApp.Services
 
             AddTag("EMPLOYEE_Phone", "Employee", companyName, Res("TagDescEmpPhone"), data.Phone);
             AddTag("EMPLOYEE_Email", "Employee", companyName, Res("TagDescEmpEmail"), data.Email);
+            AddTag("EMPLOYEE_RodneCislo", "Employee", companyName, Res("TagDescEmpRodneCislo"),
+                data.HasRodneCisloData ? data.RodneCislo : string.Empty);
             AddTag("EMPLOYEE_BankAccountNumber", "Employee", companyName, Res("TagDescEmpBankAccountNumber"),
                 data.HasBankAccountData ? data.BankAccountNumber : string.Empty);
             AddTag("EMPLOYEE_BankName", "Employee", companyName, Res("TagDescEmpBankName"),
@@ -257,6 +259,7 @@ namespace Win11DesktopApp.Services
             map["EMPLOYEE_Department"] = employeeData.Department;
             map["EMPLOYEE_Phone"] = employeeData.Phone;
             map["EMPLOYEE_Email"] = employeeData.Email;
+            map["EMPLOYEE_RodneCislo"] = employeeData.HasRodneCisloData ? employeeData.RodneCislo : string.Empty;
             map["EMPLOYEE_BankAccountNumber"] = employeeData.HasBankAccountData ? employeeData.BankAccountNumber : string.Empty;
             map["EMPLOYEE_BankName"] = employeeData.HasBankAccountData ? employeeData.BankName : string.Empty;
             map["EMPLOYEE_Status"] = StatusHelper.GetDisplayText(employeeData.Status);
@@ -386,6 +389,7 @@ namespace Win11DesktopApp.Services
                 new() { Tag = "EMPLOYEE_Gender", Category = "Employee.Personal", Description = Res("TagDescEmpGender") },
                 new() { Tag = "EMPLOYEE_Phone", Category = "Employee.Personal", Description = Res("TagDescEmpPhone") },
                 new() { Tag = "EMPLOYEE_Email", Category = "Employee.Personal", Description = Res("TagDescEmpEmail") },
+                new() { Tag = "EMPLOYEE_RodneCislo", Category = "Employee.Personal", Description = Res("TagDescEmpRodneCislo") },
                 new() { Tag = "EMPLOYEE_BankAccountNumber", Category = "Employee.Personal", Description = Res("TagDescEmpBankAccountNumber") },
                 new() { Tag = "EMPLOYEE_BankName", Category = "Employee.Personal", Description = Res("TagDescEmpBankName") },
                 new() { Tag = "EMPLOYEE_Status", Category = "Employee.Personal", Description = Res("TagDescEmpStatus") },

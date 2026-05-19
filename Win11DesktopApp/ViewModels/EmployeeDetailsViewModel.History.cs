@@ -229,6 +229,7 @@ namespace Win11DesktopApp.ViewModels
             Check(Res("HistFieldFirstName"), oldData.FirstName, newData.FirstName);
             Check(Res("HistFieldLastName"), oldData.LastName, newData.LastName);
             Check(Res("HistFieldBirthDate"), oldData.BirthDate, newData.BirthDate);
+            Check(Res("HistFieldRodneCislo"), oldData.RodneCislo, newData.RodneCislo);
             Check(Res("HistFieldHighestEducation"),
                 EducationCatalog.GetFullDisplay(oldData.HighestEducationCode),
                 EducationCatalog.GetFullDisplay(newData.HighestEducationCode));

@@ -76,7 +76,7 @@ DROP SCHEMA IF EXISTS core CASCADE;";
                 return new PostgresResetResult
                 {
                     Database = databaseName,
-                    ErrorMessage = ex.Message
+                    ErrorMessage = PostgresErrorMessageService.ToUserMessage(ex)
                 };
             }
         }

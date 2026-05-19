@@ -91,6 +91,21 @@ namespace Win11DesktopApp.ViewModels
 
         public bool ShowBankAccountSection => HasBankAccountData;
 
+        public string RodneCislo
+        {
+            get => Data.RodneCislo;
+            set
+            {
+                var normalized = value ?? string.Empty;
+                if (Data.RodneCislo == normalized)
+                    return;
+
+                Data.RodneCislo = normalized;
+                Data.HasRodneCisloData = !string.IsNullOrWhiteSpace(normalized);
+                OnPropertyChanged(nameof(RodneCislo));
+            }
+        }
+
         public string BankAccountNumber
         {
             get => Data.BankAccountNumber;
@@ -1295,7 +1310,7 @@ namespace Win11DesktopApp.ViewModels
                 !string.IsNullOrWhiteSpace(PassportPage2PreviewPath) || !string.IsNullOrWhiteSpace(VisaPage2PreviewPath)) return true;
             var d = Data;
             if (!string.IsNullOrWhiteSpace(d.FirstName) || !string.IsNullOrWhiteSpace(d.LastName) ||
-                !string.IsNullOrWhiteSpace(d.BirthDate) || !string.IsNullOrWhiteSpace(d.PassportNumber) ||
+                !string.IsNullOrWhiteSpace(d.BirthDate) || !string.IsNullOrWhiteSpace(d.RodneCislo) || !string.IsNullOrWhiteSpace(d.PassportNumber) ||
                 !string.IsNullOrWhiteSpace(d.VisaNumber) || !string.IsNullOrWhiteSpace(d.StartDate) ||
                 !string.IsNullOrWhiteSpace(d.Phone) || !string.IsNullOrWhiteSpace(d.Email)) return true;
             if (d.AddressLocal != null && (!string.IsNullOrWhiteSpace(d.AddressLocal.Street) || !string.IsNullOrWhiteSpace(d.AddressLocal.City))) return true;
@@ -1616,6 +1631,7 @@ namespace Win11DesktopApp.ViewModels
                     Set("FirstName", v => Data.FirstName = ToTitleCase(v));
                     Set("LastName", v => Data.LastName = ToTitleCase(v));
                     Set("BirthDate", v => Data.BirthDate = v);
+                    Set("RodneCislo", v => { Data.RodneCislo = v; Data.HasRodneCisloData = true; OnPropertyChanged(nameof(RodneCislo)); });
                     Set("Sex", v => Data.Gender = NormalizeGender(v));
                     Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
                     Set("PassportAuthority", v => Data.PassportAuthority = v);
@@ -1642,6 +1658,7 @@ namespace Win11DesktopApp.ViewModels
                         Set("FirstName", v => Data.FirstName = ToTitleCase(v));
                         Set("LastName", v => Data.LastName = ToTitleCase(v));
                         Set("BirthDate", v => Data.BirthDate = v);
+                        Set("RodneCislo", v => { Data.RodneCislo = v; Data.HasRodneCisloData = true; OnPropertyChanged(nameof(RodneCislo)); });
                         Set("Sex", v => Data.Gender = NormalizeGender(v));
                         Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
                         Set("PassportAuthority", v => Data.PassportAuthority = v);

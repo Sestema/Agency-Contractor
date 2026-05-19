@@ -618,6 +618,7 @@
     <sys:String x:Key="DetFieldFirstName">First name</sys:String>
     <sys:String x:Key="DetFieldLastName">Last name</sys:String>
     <sys:String x:Key="DetFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="DetFieldRodneCislo">Personal identification number</sys:String>
     <sys:String x:Key="DetFieldHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="DetFieldGender">Gender</sys:String>
     <sys:String x:Key="DetFieldDocumentProfileType">Employee type / document set</sys:String>
@@ -655,6 +656,7 @@
     <sys:String x:Key="DetFieldWorkAddr">Work address</sys:String>
     <sys:String x:Key="DetSecContacts">Contacts and dates</sys:String>
     <sys:String x:Key="EmployeeBankSection">Bank account details</sys:String>
+    <sys:String x:Key="EmployeeRodneCisloToggle">Show personal identification number</sys:String>
     <sys:String x:Key="EmployeeBankToggle">Show bank account details</sys:String>
     <sys:String x:Key="EmployeeBankAccountNumber">Account number</sys:String>
     <sys:String x:Key="EmployeeBankName">Bank name</sys:String>
@@ -1014,6 +1016,7 @@
     <sys:String x:Key="ReportColAddressCz">Full country address</sys:String>
     <sys:String x:Key="ReportColAddressAbroad">Foreign address</sys:String>
     <sys:String x:Key="ReportColBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="ReportColRodneCislo">Personal identification number</sys:String>
     <sys:String x:Key="ReportColCitizenship">Citizenship</sys:String>
     <sys:String x:Key="ReportColBirthCity">Birth city</sys:String>
     <sys:String x:Key="ReportColBirthCountry">Birth country</sys:String>
@@ -1314,6 +1317,7 @@
     <sys:String x:Key="TagDescEmpLastName">Employee last name</sys:String>
     <sys:String x:Key="TagDescEmpFullName">Employee full name</sys:String>
     <sys:String x:Key="TagDescEmpBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="TagDescEmpRodneCislo">Personal identification number / Rodné číslo</sys:String>
     <sys:String x:Key="TagDescEmpHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="TagDescEmpGender">Gender (Male / Female)</sys:String>
     <sys:String x:Key="TagDescEmpPhone">Phone</sys:String>
@@ -1801,6 +1805,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistFieldFirstName">First name</sys:String>
     <sys:String x:Key="HistFieldLastName">Last name</sys:String>
     <sys:String x:Key="HistFieldBirthDate">Date of birth</sys:String>
+    <sys:String x:Key="HistFieldRodneCislo">Personal identification number</sys:String>
     <sys:String x:Key="HistFieldHighestEducation">Highest attained education</sys:String>
     <sys:String x:Key="HistFieldGender">Gender</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Passport number</sys:String>
@@ -2119,10 +2124,28 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="SettingsSecondPcTitle">Second PC connection</sys:String>
     <sys:String x:Key="SettingsSecondPcDesc">For the second PC, the program uses this computer's LAN address instead of localhost. The second PC must be on the same network or connected through VPN/Tailscale/ZeroTier.</sys:String>
     <sys:String x:Key="SettingsSecondPcCopy">Copy details for second PC</sys:String>
+    <sys:String x:Key="SettingsSecondPcLocalServerLabel">On this PC</sys:String>
+    <sys:String x:Key="SettingsSecondPcTailscaleServerLabel">For second PC through Tailscale</sys:String>
+    <sys:String x:Key="SettingsSecondPcLanServerLabel">For second PC on local network</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideButton">NAS / Synology guide</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideTitle">PostgreSQL setup on Synology NAS</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideSubtitle">Step by step: what to install on the NAS, where to click in DSM, and what to enter in the desktop app.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideOpenFailed">Could not open the NAS guide.</sys:String>
+    <sys:String x:Key="SettingsNasPostgresGuideBody">What runs on Synology NAS&#x0a;&#x0a;The NAS is the PostgreSQL server. All PCs connect to it through the NAS IP address and port 5432. Employee photos, PDFs and documents should be stored in a separate Synology shared folder.&#x0a;&#x0a;Important: the PostgreSQL data folder field and the Configure PostgreSQL for local network/Tailscale buttons are for PostgreSQL installed on a Windows PC. They are not needed for Synology NAS because PostgreSQL runs inside DSM or a container.&#x0a;&#x0a;1. Prepare Synology DSM&#x0a;&#x0a;1. Open DSM in a browser: http://NAS_IP:5000 or https://NAS_IP:5001, for example http://192.168.0.50:5000.&#x0a;2. Sign in as an administrator.&#x0a;3. Open Package Center.&#x0a;4. Install Container Manager. On DS225+ it should be available in DSM.&#x0a;&#x0a;2. Create folders on the NAS&#x0a;&#x0a;1. Open File Station.&#x0a;2. Create or open the shared folder docker. If it does not exist, use Control Panel - Shared Folder - Create.&#x0a;3. Create docker/postgres/data. Example NAS path: /volume1/docker/postgres/data.&#x0a;4. Create another shared folder for program files, for example AgencyData. This folder stores employee photos, PDFs and documents.&#x0a;&#x0a;3. Download PostgreSQL&#x0a;&#x0a;1. Open Container Manager.&#x0a;2. Go to Registry.&#x0a;3. Search for postgres.&#x0a;4. Select the official postgres image.&#x0a;5. Click Download.&#x0a;6. Choose postgres:16 or postgres:17. For stability, postgres:16 is a good choice.&#x0a;&#x0a;4. Create the container&#x0a;&#x0a;1. Open Image.&#x0a;2. Select postgres:16.&#x0a;3. Click Run.&#x0a;4. Container name: agency-postgres.&#x0a;5. Enable automatic start after NAS reboot if the option is available.&#x0a;&#x0a;5. Environment variables&#x0a;&#x0a;Add these variables:&#x0a;&#x0a;POSTGRES_DB = agency_db&#x0a;POSTGRES_USER = postgres&#x0a;POSTGRES_PASSWORD = your_strong_password&#x0a;&#x0a;Save the password. The same password must be entered in the app on every PC.&#x0a;&#x0a;6. Port mapping&#x0a;&#x0a;Add this port mapping:&#x0a;&#x0a;Local port on NAS: 5432&#x0a;Container port: 5432&#x0a;Protocol: TCP&#x0a;&#x0a;If 5432 is already used, choose another external port such as 5433 and enter that port in the app.&#x0a;&#x0a;7. Persistent storage&#x0a;&#x0a;Add this folder mapping:&#x0a;&#x0a;/volume1/docker/postgres/data -> /var/lib/postgresql/data&#x0a;&#x0a;Access: Read/Write. This is required so the database survives container restarts.&#x0a;&#x0a;8. Start and check&#x0a;&#x0a;1. Click Done / Apply.&#x0a;2. Open Container.&#x0a;3. Check that agency-postgres is Running.&#x0a;4. If it stops, open Details / Log and check the password and data folder mapping.&#x0a;&#x0a;9. Synology Firewall&#x0a;&#x0a;If DSM Firewall is enabled: Control Panel - Security - Firewall - Edit Rules - Create rule. Allow Custom TCP port 5432 from your local network, for example 192.168.0.0/24. Save the rules.&#x0a;&#x0a;10. Shared folder for files&#x0a;&#x0a;Create a shared folder named AgencyData and give access to Windows users. On Windows open it as \\NAS_IP\AgencyData, for example \\192.168.0.50\AgencyData. Select this same folder as the program root folder on every PC.&#x0a;&#x0a;11. What to enter in the app&#x0a;&#x0a;Server: Synology IP, for example 192.168.0.50&#x0a;Port: 5432&#x0a;Database: agency_db&#x0a;User: postgres&#x0a;Password: POSTGRES_PASSWORD&#x0a;&#x0a;Do not choose a PostgreSQL data folder in the app for NAS. That field is only for PostgreSQL installed on Windows.&#x0a;&#x0a;12. First migration&#x0a;&#x0a;1. On the main PC, click Check PostgreSQL.&#x0a;2. If the connection works, run SQLite -> PostgreSQL migration.&#x0a;3. After successful migration, select PostgreSQL - for multiple PCs.&#x0a;4. Restart the app.&#x0a;5. On other PCs, enter the same PostgreSQL settings and choose the same shared folder \\NAS_IP\AgencyData.&#x0a;&#x0a;13. Troubleshooting&#x0a;&#x0a;Check that the NAS has a stable IP, the agency-postgres container is running, port 5432 is mapped, DSM Firewall allows TCP 5432, the PC and NAS are on the same network, the password is correct, and the database name is agency_db.&#x0a;&#x0a;14. Tailscale&#x0a;&#x0a;Install Tailscale on Synology, then use the NAS Tailscale IP as the Server in the app. The port stays 5432. In DSM Firewall allow the Tailscale range 100.64.0.0/10 or specific Tailscale IP addresses.</sys:String>
     <sys:String x:Key="SettingsTailscaleTitle">PostgreSQL access through Tailscale</sys:String>
     <sys:String x:Key="SettingsTailscaleDesc">Automatically adds the Tailscale range 100.64.0.0/10 to pg_hba.conf, enables listen_addresses='*', opens port 5432 in Firewall and restarts PostgreSQL. Administrator rights are required.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectory">PostgreSQL data folder on this PC</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryBrowse">Choose folder</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAuto">If this field is empty, the program will try to find PostgreSQL in the standard folder.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryValid">Folder is valid: PG_VERSION, pg_hba.conf and postgresql.conf were found.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryInvalid">This is not a PostgreSQL data folder. Choose the folder containing PG_VERSION, pg_hba.conf and postgresql.conf.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySaved">PostgreSQL data path saved.</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectoryAutoDetectedFmt">Found the PostgreSQL data folder inside the selected folder: {0}</sys:String>
+    <sys:String x:Key="SettingsPostgresDataDirectorySelectTitle">Choose PostgreSQL data folder</sys:String>
     <sys:String x:Key="SettingsTailscaleIp">This PC's Tailscale IP</sys:String>
     <sys:String x:Key="SettingsTailscaleConfigure">Configure PostgreSQL for Tailscale</sys:String>
+    <sys:String x:Key="SettingsLanIp">This PC's LAN IP</sys:String>
+    <sys:String x:Key="SettingsLanConfigure">Configure PostgreSQL for local network</sys:String>
     <sys:String x:Key="SettingsConnectedClientsTitle">Connected PCs</sys:String>
     <sys:String x:Key="SettingsConnectedClientsDesc">The list shows programs working with this PostgreSQL database. Online means the PC updated its status within the last 3 minutes.</sys:String>
     <sys:String x:Key="SettingsDbModeTitle">Database mode</sys:String>
@@ -2176,6 +2199,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="SettingsPostgresResetHintActive">To delete PostgreSQL data, first select SQLite mode, restart the program, then press this button.</sys:String>
     <sys:String x:Key="SettingsPostgresResetHintReady">Deletes only program data in PostgreSQL: schemas core, app, salary. After that, migration can be run again.</sys:String>
     <sys:String x:Key="SettingsTailscaleIpMissing">Tailscale IP not found</sys:String>
+    <sys:String x:Key="SettingsLanIpMissing">LAN IP not found</sys:String>
     <sys:String x:Key="SettingsMigrationCompletedAction">Migration already completed</sys:String>
     <sys:String x:Key="SettingsMigrationPrepareAction">Prepare and migrate data</sys:String>
     <sys:String x:Key="SettingsReplacePgFromSqliteAction">Replace PostgreSQL with old database data</sys:String>
@@ -2187,6 +2211,20 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="SettingsPostgresCheckingFmt">Checking PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Connected. PostgreSQL {0}. Database "{1}": {2}. Can create databases: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Could not connect: {0}. {1}.</sys:String>
+    <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Technical details: {1}</sys:String>
+    <sys:String x:Key="PostgresErrCancelled">The PostgreSQL operation was cancelled.</sys:String>
+    <sys:String x:Key="PostgresErrDatabaseMissing">The PostgreSQL database does not exist. Check the database name or run SQLite → PostgreSQL migration.</sys:String>
+    <sys:String x:Key="PostgresErrInvalidPassword">The PostgreSQL password is incorrect. Check the user password.</sys:String>
+    <sys:String x:Key="PostgresErrPgHba">PostgreSQL does not allow connections from this IP. For a Windows server, run local network/Tailscale setup or check pg_hba.conf.</sys:String>
+    <sys:String x:Key="PostgresErrAuthorization">PostgreSQL rejected authorization. Check the user, password and access rules.</sys:String>
+    <sys:String x:Key="PostgresErrInsufficientPrivilege">The PostgreSQL user does not have enough privileges for this action.</sys:String>
+    <sys:String x:Key="PostgresErrAdminShutdown">PostgreSQL is restarting or was stopped by an administrator. Try again in a few seconds.</sys:String>
+    <sys:String x:Key="PostgresErrTooManyConnections">PostgreSQL has too many connections. Close extra programs or increase the connection limit.</sys:String>
+    <sys:String x:Key="PostgresErrConnectionRefused">The PostgreSQL server is not responding on this IP/port. Check the address, port, PostgreSQL service and Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrHostNotFound">Could not find the PostgreSQL server. Check the NAS/PC IP address or name.</sys:String>
+    <sys:String x:Key="PostgresErrTimeout">PostgreSQL did not respond in time. Check the network, NAS/server and Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrNetwork">Network error while connecting to PostgreSQL. Check cable/Wi-Fi/VPN/Tailscale and Firewall.</sys:String>
+    <sys:String x:Key="PostgresErrGeneric">A PostgreSQL error occurred. Check the connection settings.</sys:String>
     <sys:String x:Key="SettingsExists">exists</sys:String>
     <sys:String x:Key="SettingsNotFound">not found</sys:String>
     <sys:String x:Key="SettingsYes">yes</sys:String>
@@ -2220,6 +2258,11 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="SettingsPostgresResetDeleting">Deleting program PostgreSQL data...</sys:String>
     <sys:String x:Key="SettingsPostgresMigrationCleared">Migration cleared. PostgreSQL can be prepared again.</sys:String>
     <sys:String x:Key="SettingsPostgresNetworkConfiguring">Configuring PostgreSQL for Tailscale...</sys:String>
+    <sys:String x:Key="SettingsPostgresLanConfiguring">Configuring PostgreSQL for local network...</sys:String>
+    <sys:String x:Key="SettingsPostgresNetworkRestartingAsAdmin">Administrator rights are required. Restarting the program as administrator...</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmTitle">Administrator rights required</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartConfirmMessage">Administrator rights are required to configure PostgreSQL. The program will now restart as administrator.</sys:String>
+    <sys:String x:Key="SettingsPostgresAdminRestartCancelled">Restart as administrator was cancelled.</sys:String>
     <sys:String x:Key="SettingsSecondsAgoFmt">{0} sec ago</sys:String>
     <sys:String x:Key="SettingsMinutesAgoFmt">{0} min ago</sys:String>
     <sys:String x:Key="SettingsPostgresPasswordPlaceholder">(enter PostgreSQL password)</sys:String>

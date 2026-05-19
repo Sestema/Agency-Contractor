@@ -116,7 +116,7 @@ namespace Win11DesktopApp.Services
                 LoggingService.LogError("PostgresToSqliteBackupService.CreateBackupAsync", ex);
                 return new PostgresToSqliteBackupResult
                 {
-                    ErrorMessage = ex.Message
+                    ErrorMessage = PostgresErrorMessageService.ToUserMessage(ex)
                 };
             }
             finally

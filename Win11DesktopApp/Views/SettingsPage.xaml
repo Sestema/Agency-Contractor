@@ -2460,6 +2460,62 @@
                                         </StackPanel>
                                     </Grid>
 
+                                    <Border Margin="0,10,0,0"
+                                            Padding="10,8"
+                                            CornerRadius="10"
+                                            Background="{DynamicResource CardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="12"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="12"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{DynamicResource SettingsSecondPcLocalServerLabel}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                <TextBlock Text="{Binding SecondPcLocalServerDisplay}"
+                                                           Margin="0,3,0,0"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="{DynamicResource SettingsSecondPcTailscaleServerLabel}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                <TextBlock Text="{Binding SecondPcTailscaleServerDisplay}"
+                                                           Margin="0,3,0,0"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="4">
+                                                <TextBlock Text="{DynamicResource SettingsSecondPcLanServerLabel}"
+                                                           FontSize="{DynamicResource FS10}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                <TextBlock Text="{Binding SecondPcLanServerDisplay}"
+                                                           Margin="0,3,0,0"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
                                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                                         <Button Command="{Binding CopySecondPcDatabaseAccessCommand}"
                                                 Padding="14,8"
@@ -2496,6 +2552,53 @@
                                                Foreground="{DynamicResource MutedForegroundBrush}"
                                                TextWrapping="Wrap"/>
 
+                                    <Button Command="{Binding OpenNasPostgresGuideCommand}"
+                                            Padding="14,8"
+                                            Margin="0,0,0,10"
+                                            HorizontalAlignment="Left"
+                                            Style="{StaticResource DialogAccentSoftButton}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE946;"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="{DynamicResource FS12}"
+                                                       Margin="0,0,8,0"/>
+                                            <TextBlock Text="{DynamicResource SettingsNasPostgresGuideButton}"
+                                                       FontSize="{DynamicResource FS12}"
+                                                       FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{DynamicResource SettingsPostgresDataDirectory}"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                            <TextBox Text="{Binding PostgresDataDirectoryPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     Margin="0,4,0,0"
+                                                     FontSize="{DynamicResource FS12}"/>
+                                            <TextBlock Text="{Binding PostgresDataDirectoryStatus}"
+                                                       Margin="0,4,0,0"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Command="{Binding SelectPostgresDataDirectoryCommand}"
+                                                Padding="14,8"
+                                                Margin="12,18,0,0"
+                                                VerticalAlignment="Top"
+                                                Style="{StaticResource DialogAccentSoftButton}">
+                                            <TextBlock Text="{DynamicResource SettingsPostgresDataDirectoryBrowse}"
+                                                       FontSize="{DynamicResource FS12}"
+                                                       FontWeight="SemiBold"/>
+                                        </Button>
+                                    </Grid>
+
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -2521,6 +2624,36 @@
                                                 VerticalAlignment="Center"
                                                 Style="{StaticResource DialogAccentSoftButton}">
                                             <TextBlock Text="{DynamicResource SettingsTailscaleConfigure}"
+                                                       FontSize="{DynamicResource FS12}"
+                                                       FontWeight="SemiBold"/>
+                                        </Button>
+                                    </Grid>
+
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{DynamicResource SettingsLanIp}"
+                                                       FontSize="{DynamicResource FS10}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                            <TextBlock Text="{Binding PostgresLanIpDisplay}"
+                                                       Margin="0,3,0,0"
+                                                       FontSize="{DynamicResource FS12}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Command="{Binding ConfigurePostgresLanAccessCommand}"
+                                                IsEnabled="{Binding CanConfigurePostgresLanAccess}"
+                                                Padding="14,8"
+                                                Margin="12,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource DialogAccentSoftButton}">
+                                            <TextBlock Text="{DynamicResource SettingsLanConfigure}"
                                                        FontSize="{DynamicResource FS12}"
                                                        FontWeight="SemiBold"/>
                                         </Button>

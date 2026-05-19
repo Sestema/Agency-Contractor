@@ -1355,6 +1355,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 case "passport":
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportNumber", data.PassportNumber, "Номер паспорта/ID");
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "RodneCislo", data.HasRodneCisloData ? data.RodneCislo : string.Empty, "Ідентифікаційний код");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportExpiry", data.PassportExpiry, "Дійсний до");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportAuthority", data.PassportAuthority, "Ким виданий паспорт");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportCity", data.PassportCity, "Місто народження");
@@ -1363,6 +1364,7 @@ namespace Win11DesktopApp.ViewModels
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "IssuingCountry", data.IssuingCountry, "Країна видачі");
                     break;
                 case "visa":
+                    AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "RodneCislo", data.HasRodneCisloData ? data.RodneCislo : string.Empty, "Ідентифікаційний код");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaNumber", data.VisaNumber, "Номер візи/карти");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaStartDate", data.VisaStartDate, "Початок візи");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaExpiry", data.VisaExpiry, "Кінець візи");
@@ -1762,6 +1764,7 @@ namespace Win11DesktopApp.ViewModels
                 case "FirstName": data.FirstName = value; return true;
                 case "LastName": data.LastName = value; return true;
                 case "BirthDate": data.BirthDate = value; return true;
+                case "RodneCislo": data.RodneCislo = value; data.HasRodneCisloData = true; return true;
                 case "PassportNumber": data.PassportNumber = value; return true;
                 case "PassportExpiry": data.PassportExpiry = value; return true;
                 case "PassportAuthority": data.PassportAuthority = value; return true;
@@ -1842,7 +1845,8 @@ namespace Win11DesktopApp.ViewModels
                     return currentDate.Value.Date == suggestedDate.Value.Date;
             }
 
-            if (fieldKey.Contains("Number", StringComparison.OrdinalIgnoreCase))
+            if (fieldKey.Contains("Number", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "RodneCislo", StringComparison.OrdinalIgnoreCase))
             {
                 return string.Equals(NormalizeBatchDocumentNumber(current), NormalizeBatchDocumentNumber(suggested), StringComparison.OrdinalIgnoreCase);
             }

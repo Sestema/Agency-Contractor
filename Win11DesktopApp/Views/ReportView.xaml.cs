@@ -108,6 +108,7 @@ namespace Win11DesktopApp.Views
                     "WorkAddress" => "workAddress",
                     "HighestEducation" => "highestEducation",
                     "BirthDate" => "birthDate",
+                    "RodneCislo" => "rodneCislo",
                     "Citizenship" => "citizenship",
                     "BirthCity" => "birthCity",
                     "BirthCountry" => "birthCountry",
