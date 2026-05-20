@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -11,6 +12,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using Npgsql;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.Telegram;
@@ -126,6 +128,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand RefreshSyncStatusCommand { get; }
         public ICommand TestPostgresConnectionCommand { get; }
         public ICommand RunPostgresMigrationCommand { get; }
+        public ICommand AttachExistingPostgresDatabaseCommand { get; }
         public ICommand ReplacePostgresFromSqliteCommand { get; }
         public ICommand UseSqliteStorageModeCommand { get; }
         public ICommand EnablePostgresStorageModeCommand { get; }
@@ -518,6 +521,11 @@ namespace Win11DesktopApp.ViewModels
 
         public bool CanRunPostgresMigration =>
             !IsPostgresMigrationCompleted
+            && !IsPostgresTesting
+            && !IsPostgresMigrating;
+
+        public bool CanAttachExistingPostgresDatabase =>
+            !_appDataStorageFactory.IsPostgresRuntimeActiveAtStartup
             && !IsPostgresTesting
             && !IsPostgresMigrating;
 
@@ -1450,6 +1458,11 @@ namespace Win11DesktopApp.ViewModels
                 await RunPostgresMigrationAsync();
             }, _ => CanRunPostgresMigration);
 
+            AttachExistingPostgresDatabaseCommand = new RelayCommand(async _ =>
+            {
+                await AttachExistingPostgresDatabaseAsync();
+            }, _ => CanAttachExistingPostgresDatabase);
+
             ReplacePostgresFromSqliteCommand = new RelayCommand(async _ =>
             {
                 await ReplacePostgresFromSqliteAsync();
@@ -1506,6 +1519,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(PostgresDataDirectoryStatus));
             OnPropertyChanged(nameof(PostgresMigrationActionText));
             OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
+            OnPropertyChanged(nameof(CanAttachExistingPostgresDatabase));
             OnPropertyChanged(nameof(PostgresModeStatus));
             OnPropertyChanged(nameof(PostgresTestStatus));
             OnPropertyChanged(nameof(PostgresMigrationStatus));
@@ -1615,6 +1629,31 @@ namespace Win11DesktopApp.ViewModels
             _appSettingsService.SaveSettings();
         }
 
+        private static string BuildPostgresConnectionString(
+            string? host,
+            int port,
+            string? databaseName,
+            string? username,
+            string? password,
+            bool includePassword)
+        {
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = string.IsNullOrWhiteSpace(host) ? "localhost" : host.Trim(),
+                Port = port <= 0 ? 5432 : port,
+                Database = string.IsNullOrWhiteSpace(databaseName) ? "agency_db" : databaseName.Trim(),
+                Username = username?.Trim() ?? string.Empty,
+                Timeout = 10,
+                CommandTimeout = 10,
+                Pooling = true
+            };
+
+            if (includePassword)
+                builder.Password = password ?? string.Empty;
+
+            return builder.ConnectionString;
+        }
+
         private static string ResolvePostgresDataDirectorySelection(string selectedPath)
         {
             if (PostgresNetworkAccessService.IsValidPostgresDataDirectory(selectedPath))
@@ -1664,6 +1703,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(CanEnablePostgresStorageMode));
             OnPropertyChanged(nameof(IsPostgresMigrationCompleted));
             OnPropertyChanged(nameof(CanRunPostgresMigration));
+            OnPropertyChanged(nameof(CanAttachExistingPostgresDatabase));
             OnPropertyChanged(nameof(CanReplacePostgresFromSqlite));
             OnPropertyChanged(nameof(PostgresMigrationActionText));
             OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
@@ -1701,6 +1741,7 @@ namespace Win11DesktopApp.ViewModels
         private void RaiseMigrationActionPropertiesChanged()
         {
             OnPropertyChanged(nameof(CanRunPostgresMigration));
+            OnPropertyChanged(nameof(CanAttachExistingPostgresDatabase));
             OnPropertyChanged(nameof(CanReplacePostgresFromSqlite));
             OnPropertyChanged(nameof(PostgresMigrationActionText));
             OnPropertyChanged(nameof(ReplacePostgresFromSqliteActionText));
@@ -2147,6 +2188,116 @@ namespace Win11DesktopApp.ViewModels
                 IsPostgresMigrating = false;
                 CommandManager.InvalidateRequerySuggested();
             }
+        }
+
+        private async System.Threading.Tasks.Task AttachExistingPostgresDatabaseAsync()
+        {
+            if (!int.TryParse(PostgresPort, out var port))
+            {
+                PostgresMigrationStatus = Res("SettingsPostgresPortMustBeNumber");
+                return;
+            }
+
+            var databaseName = string.IsNullOrWhiteSpace(PostgresDatabase)
+                ? "agency_db"
+                : PostgresDatabase.Trim();
+
+            SavePostgresLoginSettings();
+            IsPostgresTesting = true;
+            CommandManager.InvalidateRequerySuggested();
+            PostgresMigrationStatus = Res("SettingsAttachExistingPgChecking");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                await using var connection = new NpgsqlConnection(BuildPostgresConnectionString(
+                    PostgresHost,
+                    port,
+                    databaseName,
+                    PostgresUsername,
+                    PostgresPassword,
+                    includePassword: true));
+                await connection.OpenAsync(cts.Token);
+
+                var missingObjects = await GetMissingPostgresApplicationObjectsAsync(connection, cts.Token);
+                if (missingObjects.Count > 0)
+                {
+                    PostgresMigrationStatus = string.Format(
+                        Res("SettingsAttachExistingPgMissingSchemaFmt"),
+                        string.Join(", ", missingObjects));
+                    RaiseDatabaseModePropertiesChanged();
+                    return;
+                }
+
+                var now = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+                var settings = _appSettingsService.Settings;
+                settings.PostgresConnectionString = BuildPostgresConnectionString(
+                    PostgresHost,
+                    port,
+                    databaseName,
+                    PostgresUsername,
+                    null,
+                    includePassword: false);
+                settings.PostgresHost = string.IsNullOrWhiteSpace(PostgresHost) ? "localhost" : PostgresHost.Trim();
+                settings.PostgresPort = Math.Clamp(port, 1, 65535);
+                settings.PostgresDatabase = databaseName;
+                settings.PostgresUsername = PostgresUsername?.Trim() ?? string.Empty;
+                settings.EncryptedPostgresPassword = LocalSecretProtection.Protect(PostgresPassword);
+                settings.PostgresMigrationCompletedAtUtc = now;
+                settings.DatabaseStorageMode = DatabaseStorageModes.Postgres;
+                settings.PostgresEnabledAtUtc = now;
+                _appSettingsService.SaveSettings();
+
+                PostgresMigrationStatus = string.Format(Res("SettingsAttachExistingPgSuccessFmt"), databaseName);
+                PostgresModeStatus = Res("SettingsPostgresSelectedRestart");
+                RaiseDatabaseModePropertiesChanged();
+            }
+            catch (OperationCanceledException)
+            {
+                PostgresMigrationStatus = Res("SettingsAttachExistingPgTimeout");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.AttachExistingPostgresDatabase", ex.Message);
+                PostgresMigrationStatus = string.Format(
+                    Res("SettingsAttachExistingPgFailedFmt"),
+                    PostgresErrorMessageService.ToUserMessage(ex));
+            }
+            finally
+            {
+                IsPostgresTesting = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private static async System.Threading.Tasks.Task<List<string>> GetMissingPostgresApplicationObjectsAsync(
+            NpgsqlConnection connection,
+            CancellationToken cancellationToken)
+        {
+            var requiredObjects = new[]
+            {
+                "core.schema_version",
+                "core.app_database",
+                "app.schema_version",
+                "app.migration_journal",
+                "app.employee_index",
+                "salary.salary_entries"
+            };
+
+            var missingObjects = new List<string>();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT to_regclass(@object_name)::text;";
+            var parameter = command.Parameters.Add("object_name", NpgsqlTypes.NpgsqlDbType.Text);
+
+            foreach (var objectName in requiredObjects)
+            {
+                parameter.Value = objectName;
+                var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                if (value == null || value == DBNull.Value || string.IsNullOrWhiteSpace(value.ToString()))
+                    missingObjects.Add(objectName);
+            }
+
+            return missingObjects;
         }
 
         private async System.Threading.Tasks.Task ReplacePostgresFromSqliteAsync()

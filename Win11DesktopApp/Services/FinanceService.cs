@@ -911,6 +911,9 @@ WHERE stage = 'salary_entries'
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
             => MonthPaymentsService.SaveAllFirmPayments(year, month, allEntries, allExpenses);
 
+        public bool UpsertSalaryEntries(int year, int month, List<SalaryEntry> entries)
+            => MonthPaymentsService.UpsertSalaryEntries(year, month, entries);
+
         public bool SaveFirmPayments(int year, int month, string firmName, List<SalaryEntry> entries, List<FirmExpense> expenses)
             => MonthPaymentsService.SaveFirmPayments(year, month, firmName, entries, expenses);
 

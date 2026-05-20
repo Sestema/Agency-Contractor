@@ -938,7 +938,7 @@ namespace Win11DesktopApp
         private static void InitializeStartupServices()
         {
             LicenseService.Initialize(AppSettingsService);
-            PolicyService.Initialize(AppSettingsService);
+            PolicyService.Initialize(AppSettingsService, CurrentProfileService);
             TelemetryService.Initialize(AppSettingsService, CompanyService);
             CompanyService.InitializeAdminMirrorSyncService(AdminMirrorSyncService);
             AdminMirrorSyncService.InitializeEmployeeService(EmployeeService);

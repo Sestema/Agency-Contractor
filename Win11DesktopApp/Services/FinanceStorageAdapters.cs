@@ -12,6 +12,7 @@ namespace Win11DesktopApp.Services
         IEnumerable<(int year, int month, string path)> EnumerateMonthDatabases();
         (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadMonthPayments(int year, int month);
         void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses);
+        void UpsertSalaryEntries(int year, int month, IReadOnlyList<SalaryEntry> entries);
         void ReplaceFirmPaymentsForFirm(int year, int month, string firmName, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses);
         void UpsertFirmExpense(int year, int month, FirmExpense expense);
         bool DeleteFirmExpense(int year, int month, string expenseId);
@@ -117,6 +118,9 @@ namespace Win11DesktopApp.Services
 
         public void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
             => _salaryDbService.SaveMonthPayments(year, month, entries, expenses);
+
+        public void UpsertSalaryEntries(int year, int month, IReadOnlyList<SalaryEntry> entries)
+            => _salaryDbService.SaveMonthPayments(year, month, entries, Array.Empty<FirmExpense>());
 
         public void ReplaceFirmPaymentsForFirm(int year, int month, string firmName, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
         {

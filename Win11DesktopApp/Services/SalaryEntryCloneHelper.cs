@@ -15,6 +15,7 @@ namespace Win11DesktopApp.Services
                 EmployeeFolder = entry.EmployeeFolder,
                 FullName = entry.FullName,
                 FirmName = entry.FirmName,
+                UpdatedAt = entry.UpdatedAt,
                 HoursWorked = entry.HoursWorked,
                 HourlyRate = entry.HourlyRate,
                 Advance = entry.Advance,

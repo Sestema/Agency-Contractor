@@ -1532,6 +1532,9 @@
     <sys:String x:Key="FinSalarySaved">Saved!</sys:String>
     <sys:String x:Key="FinSalarySaveGenericError">Failed to save salary file. The file may be in use by another program.</sys:String>
     <sys:String x:Key="FinSalarySaveRecoveryCreated">Could not update the main file, but new data was saved to a recovery file.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedLoading">PostgreSQL save was blocked while the month is still loading. Wait until the table finishes loading and save again.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedStale">PostgreSQL save was blocked because the loaded table does not match the selected month. Reload the month and save again.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedEmpty">PostgreSQL save was blocked because the salary table is empty. This prevents accidental deletion of the shared month.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Unsaved changes</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Delete advance</sys:String>
     <sys:String x:Key="FinSalaryExported">Exported!</sys:String>
@@ -2156,6 +2159,9 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="SettingsPostgresTest">Check PostgreSQL</sys:String>
     <sys:String x:Key="SettingsMigrationTitle">SQLite to PostgreSQL migration wizard</sys:String>
     <sys:String x:Key="SettingsMigrationDesc">Creates the database, tables and copies core.db, app.db and Vyplaty/*.db to PostgreSQL. This does not switch the program to PostgreSQL yet.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgTitle">Second PC: connect to an existing PostgreSQL database</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgDesc">Use this when the database was already created and migrated on the first PC. No data is imported or cleared; the program only checks the database structure and enables PostgreSQL locally.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgAction">Connect existing database</sys:String>
     <sys:String x:Key="SettingsRepeatMigrationTitle">Repeat migration with PostgreSQL cleanup</sys:String>
     <sys:String x:Key="SettingsRepeatMigrationDesc">If you worked in the old SQLite database after a PostgreSQL backup, this action clears PostgreSQL and imports the current old database again. Available only when this program run is using SQLite mode.</sys:String>
     <sys:String x:Key="SettingsSqliteBackupTitle">SQLite backup from PostgreSQL</sys:String>
@@ -2211,6 +2217,11 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="SettingsPostgresCheckingFmt">Checking PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Connected. PostgreSQL {0}. Database "{1}": {2}. Can create databases: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Could not connect: {0}. {1}.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgChecking">Checking the existing PostgreSQL database and required tables...</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgSuccessFmt">Existing PostgreSQL database "{0}" is connected. Restart the program so this second PC starts using it.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgMissingSchemaFmt">This does not look like a ready program database. Missing: {0}. Run migration on the first PC first or check the database name.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgFailedFmt">Could not connect the existing PostgreSQL database: {0}</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgTimeout">PostgreSQL did not respond in time. Check the IP, port, Firewall and that the database is reachable from this PC.</sys:String>
     <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Technical details: {1}</sys:String>
     <sys:String x:Key="PostgresErrCancelled">The PostgreSQL operation was cancelled.</sys:String>
     <sys:String x:Key="PostgresErrDatabaseMissing">The PostgreSQL database does not exist. Check the database name or run SQLite → PostgreSQL migration.</sys:String>

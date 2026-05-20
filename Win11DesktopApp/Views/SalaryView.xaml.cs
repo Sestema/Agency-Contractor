@@ -126,13 +126,28 @@ namespace Win11DesktopApp.Views
         {
             if (sender is not SalaryViewModel vm) return;
 
-            // Show overlay immediately when loading starts, reset DataGrid position
-            if (e.PropertyName == nameof(SalaryViewModel.IsLoading) && vm.IsLoading)
+            // Show overlay immediately when loading starts, reset DataGrid position.
+            // Also hide it when loading is cancelled or skipped before DataLoaded fires.
+            if (e.PropertyName == nameof(SalaryViewModel.IsLoading))
             {
-                LoadingOverlay.BeginAnimation(UIElement.OpacityProperty, null);
-                LoadingOverlay.Opacity = 1;
-                DataGridSlide.BeginAnimation(TranslateTransform.YProperty, null);
-                DataGridSlide.Y = -30;
+                if (vm.IsLoading)
+                {
+                    LoadingOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+                    LoadingOverlay.Opacity = 1;
+                    DataGridSlide.BeginAnimation(TranslateTransform.YProperty, null);
+                    DataGridSlide.Y = -30;
+                }
+                else
+                {
+                    var fadeEase = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    LoadingOverlay.BeginAnimation(
+                        UIElement.OpacityProperty,
+                        new DoubleAnimation(LoadingOverlay.Opacity, 0, new Duration(TimeSpan.FromMilliseconds(180)))
+                        {
+                            EasingFunction = fadeEase
+                        });
+                }
+
                 return;
             }
 

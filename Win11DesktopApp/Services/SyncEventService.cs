@@ -26,6 +26,7 @@ public sealed class SyncEventRecord
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Type { get; set; } = string.Empty;
     public string EmployeeId { get; set; } = string.Empty;
+    public string EmployeeFolder { get; set; } = string.Empty;
     public string EmployeeName { get; set; } = string.Empty;
     public string FirmName { get; set; } = string.Empty;
     public string ActorName { get; set; } = string.Empty;
@@ -34,6 +35,7 @@ public sealed class SyncEventRecord
     public int Year { get; set; }
     public int Month { get; set; }
     public string Operation { get; set; } = string.Empty;
+    public string ChangeScope { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public string Details { get; set; } = string.Empty;
 }
@@ -44,6 +46,8 @@ public sealed class SyncEventService
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(6);
     private static readonly TimeSpan CleanupAfter = TimeSpan.FromDays(3);
+    private static readonly TimeSpan SalaryPublishMinInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan SalaryNotificationMinInterval = TimeSpan.FromSeconds(30);
     /// <summary>Seconds between TCP keepalive probes so dead VPN / sleep states are detected faster.</summary>
     private const int PostgresConnectionKeepAliveSeconds = 30;
 
@@ -53,6 +57,8 @@ public sealed class SyncEventService
     private readonly AppSettingsService? _settingsService;
     private readonly AppDataStorageFactory? _storageFactory;
     private readonly HashSet<string> _processedIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTime> _lastSalaryPublishUtcByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTime> _lastSalaryNotificationUtcByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
     private CancellationTokenSource? _cts;
     private Task? _worker;
@@ -112,6 +118,9 @@ public sealed class SyncEventService
 
     public void PublishSalaryChanged(int year, int month, string firmName)
     {
+        if (!ShouldPublishSalaryChanged(year, month, firmName))
+            return;
+
         Publish(new SyncEventRecord
         {
             Type = "SalaryChanged",
@@ -123,6 +132,45 @@ public sealed class SyncEventService
             SourceMachineId = LicenseService.GetMachineId(),
             CreatedAtUtc = DateTime.UtcNow
         });
+    }
+
+    public void PublishSalaryEntryChanged(int year, int month, SalaryEntry entry)
+    {
+        if (entry == null)
+            return;
+
+        Publish(new SyncEventRecord
+        {
+            Type = "SalaryEntryChanged",
+            ChangeScope = "Entry",
+            EmployeeId = entry.EmployeeId ?? string.Empty,
+            EmployeeFolder = entry.EmployeeFolder ?? string.Empty,
+            EmployeeName = entry.FullName ?? string.Empty,
+            FirmName = entry.FirmName ?? string.Empty,
+            Year = year,
+            Month = month,
+            ActorName = GetCurrentActorName(),
+            MachineName = Environment.MachineName,
+            SourceMachineId = LicenseService.GetMachineId(),
+            CreatedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    private bool ShouldPublishSalaryChanged(int year, int month, string firmName)
+    {
+        var key = BuildSalarySyncKey(year, month, firmName);
+        var now = DateTime.UtcNow;
+        lock (_gate)
+        {
+            if (_lastSalaryPublishUtcByKey.TryGetValue(key, out var last)
+                && now - last < SalaryPublishMinInterval)
+            {
+                return false;
+            }
+
+            _lastSalaryPublishUtcByKey[key] = now;
+            return true;
+        }
     }
 
     public void PublishCompanyChanged(string operation, string firmName)
@@ -424,12 +472,18 @@ public sealed class SyncEventService
             var message = $"{actor} додав(ла) працівника {record.EmployeeName} у фірму {record.FirmName}.";
             _notificationService.Info(title, message);
         }
-        else if (string.Equals(record.Type, "SalaryChanged", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(record.Type, "SalaryChanged", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(record.Type, "SalaryEntryChanged", StringComparison.OrdinalIgnoreCase))
         {
-            var actor = string.IsNullOrWhiteSpace(record.ActorName) ? record.MachineName : record.ActorName;
-            _notificationService.Info(
-                "Оновлено зарплати",
-                $"{actor} змінив(ла) зарплати за {record.Month:D2}.{record.Year:D4}.");
+            if (ShouldShowSalaryNotification(record))
+            {
+                var actor = string.IsNullOrWhiteSpace(record.ActorName) ? record.MachineName : record.ActorName;
+                var target = string.Equals(record.Type, "SalaryEntryChanged", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(record.EmployeeName)
+                        ? $"{record.EmployeeName} ({record.FirmName})"
+                        : $"за {record.Month:D2}.{record.Year:D4}";
+                _notificationService.Info("Оновлено зарплати", $"{actor} змінив(ла) зарплати: {target}.");
+            }
         }
         else if (string.Equals(record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
         {
@@ -440,6 +494,29 @@ public sealed class SyncEventService
         }
 
         SyncEventReceived?.Invoke(this, new SyncEventReceivedEventArgs(record));
+    }
+
+    private bool ShouldShowSalaryNotification(SyncEventRecord record)
+    {
+        var key = BuildSalarySyncKey(record.Year, record.Month, record.FirmName);
+        var now = DateTime.UtcNow;
+        lock (_gate)
+        {
+            if (_lastSalaryNotificationUtcByKey.TryGetValue(key, out var last)
+                && now - last < SalaryNotificationMinInterval)
+            {
+                return false;
+            }
+
+            _lastSalaryNotificationUtcByKey[key] = now;
+            return true;
+        }
+    }
+
+    private static string BuildSalarySyncKey(int year, int month, string? firmName)
+    {
+        var firm = string.IsNullOrWhiteSpace(firmName) ? "*" : firmName.Trim();
+        return $"{year:D4}-{month:D2}|{firm}";
     }
 
     private bool IsOwnEvent(SyncEventRecord record)

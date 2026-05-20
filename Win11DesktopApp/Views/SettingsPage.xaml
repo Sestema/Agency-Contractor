@@ -2975,6 +2975,33 @@
                                                FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource MutedForegroundBrush}"
                                                TextWrapping="Wrap"/>
+                                    <Border Margin="0,0,0,12"
+                                            Padding="10,8"
+                                            CornerRadius="10"
+                                            Background="{DynamicResource CardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{DynamicResource SettingsAttachExistingPgTitle}"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="{DynamicResource SettingsAttachExistingPgDesc}"
+                                                       Margin="0,4,0,8"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource MutedForegroundBrush}"
+                                                       TextWrapping="Wrap"/>
+                                            <Button Command="{Binding AttachExistingPostgresDatabaseCommand}"
+                                                    IsEnabled="{Binding CanAttachExistingPostgresDatabase}"
+                                                    Padding="14,8"
+                                                    HorizontalAlignment="Left"
+                                                    Style="{StaticResource DialogAccentSoftButton}">
+                                                <TextBlock Text="{DynamicResource SettingsAttachExistingPgAction}"
+                                                           FontSize="{DynamicResource FS12}"
+                                                           FontWeight="SemiBold"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Command="{Binding RunPostgresMigrationCommand}"
                                                 IsEnabled="{Binding CanRunPostgresMigration}"

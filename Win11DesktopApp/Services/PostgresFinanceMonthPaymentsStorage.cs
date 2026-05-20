@@ -70,7 +70,7 @@ ORDER BY source_year, source_month;";
             {
                 command.CommandText = @"
 SELECT employee_id, employee_folder, full_name, firm_name, hours_worked, hourly_rate, advance,
-       saved_net_salary, status, note, color_tag, custom_values
+       saved_net_salary, status, note, color_tag, custom_values, updated_at
 FROM salary.salary_entries
 WHERE source_year = @year AND source_month = @month
 ORDER BY lower(firm_name), COALESCE(updated_at, '') DESC, id DESC, lower(full_name);";
@@ -114,6 +114,26 @@ ORDER BY firm_name, name;";
 
             foreach (var expense in expenses ?? Array.Empty<FirmExpense>())
                 InsertSalaryExpense(connection, transaction, year, month, expense);
+
+            transaction.Commit();
+        }
+
+        public void UpsertSalaryEntries(int year, int month, IReadOnlyList<SalaryEntry> entries)
+        {
+            if (entries == null || entries.Count == 0)
+                return;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+
+            var rowId = GetNextRowId(connection, transaction, year, month);
+            foreach (var entry in entries)
+            {
+                EnsureSalaryEntryNotStale(connection, transaction, year, month, entry);
+                DeleteSalaryEntry(connection, transaction, year, month, entry);
+                InsertSalaryEntry(connection, transaction, year, month, rowId++, entry);
+            }
 
             transaction.Commit();
         }
@@ -397,6 +417,27 @@ WHERE source_year = @year
             }
         }
 
+        private static void DeleteSalaryEntry(NpgsqlConnection connection, NpgsqlTransaction transaction, int year, int month, SalaryEntry entry)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+DELETE FROM salary.salary_entries
+WHERE source_year = @year
+  AND source_month = @month
+  AND lower(firm_name) = lower(@firmName)
+  AND (
+        (@employeeId <> '' AND COALESCE(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+        OR lower(COALESCE(employee_folder, '')) = lower(@employeeFolder)
+      );";
+            command.Parameters.AddWithValue("year", year);
+            command.Parameters.AddWithValue("month", month);
+            command.Parameters.AddWithValue("firmName", entry.FirmName ?? string.Empty);
+            command.Parameters.AddWithValue("employeeId", entry.EmployeeId ?? string.Empty);
+            command.Parameters.AddWithValue("employeeFolder", entry.EmployeeFolder ?? string.Empty);
+            command.ExecuteNonQuery();
+        }
+
         private static int GetNextRowId(NpgsqlConnection connection, NpgsqlTransaction transaction, int year, int month)
         {
             using var command = connection.CreateCommand();
@@ -413,6 +454,7 @@ WHERE source_year = @year AND source_month = @month;";
 
         private static void InsertSalaryEntry(NpgsqlConnection connection, NpgsqlTransaction transaction, int year, int month, int rowId, SalaryEntry entry)
         {
+            var updatedAt = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = @"
@@ -441,8 +483,41 @@ INSERT INTO salary.salary_entries (
             command.Parameters.AddWithValue("note", entry.Note ?? string.Empty);
             command.Parameters.AddWithValue("colorTag", entry.ColorTag ?? string.Empty);
             command.Parameters.AddWithValue("customValues", JsonSerializer.Serialize(entry.CustomValues ?? new Dictionary<string, decimal>()));
-            command.Parameters.AddWithValue("updatedAt", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("updatedAt", updatedAt);
             command.ExecuteNonQuery();
+            entry.UpdatedAt = updatedAt;
+        }
+
+        private static void EnsureSalaryEntryNotStale(NpgsqlConnection connection, NpgsqlTransaction transaction, int year, int month, SalaryEntry entry)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+SELECT updated_at
+FROM salary.salary_entries
+WHERE source_year = @year
+  AND source_month = @month
+  AND lower(firm_name) = lower(@firmName)
+  AND (
+        (@employeeId <> '' AND COALESCE(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+        OR lower(COALESCE(employee_folder, '')) = lower(@employeeFolder)
+      )
+ORDER BY COALESCE(updated_at, '') DESC, id DESC
+LIMIT 1;";
+            command.Parameters.AddWithValue("year", year);
+            command.Parameters.AddWithValue("month", month);
+            command.Parameters.AddWithValue("firmName", entry.FirmName ?? string.Empty);
+            command.Parameters.AddWithValue("employeeId", entry.EmployeeId ?? string.Empty);
+            command.Parameters.AddWithValue("employeeFolder", entry.EmployeeFolder ?? string.Empty);
+            var currentUpdatedAt = command.ExecuteScalar() as string ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(currentUpdatedAt)
+                || string.Equals(currentUpdatedAt, entry.UpdatedAt ?? string.Empty, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Зарплату працівника {entry.FullName} вже змінено на іншому ПК. Оновіть рядок перед збереженням.");
         }
 
         private static void InsertSalaryExpense(NpgsqlConnection connection, NpgsqlTransaction transaction, int year, int month, FirmExpense expense)
@@ -492,7 +567,8 @@ ON CONFLICT(source_year, source_month, id) DO UPDATE SET
                 Status = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
                 Note = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
                 ColorTag = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
-                CustomValues = customValues
+                CustomValues = customValues,
+                UpdatedAt = reader.IsDBNull(12) ? string.Empty : reader.GetString(12)
             };
         }
 

@@ -63,7 +63,7 @@ namespace Win11DesktopApp.Services
         {
             var companyFolder = GetCompanyFolder(companyName);
             if (string.IsNullOrEmpty(companyFolder)) return string.Empty;
-            return FindOrCreateLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(FolderLanguageCode), FolderNames.AllTemplatesFolderNames);
+            return FindOrCreateTemplateSubfolder(companyFolder, FolderNames.GetTemplatesFolder(FolderLanguageCode));
         }
 
         /// <summary>
@@ -220,7 +220,8 @@ namespace Win11DesktopApp.Services
         /// {Root}/{CompanyName}/
         /// {Root}/{CompanyName}/{Працівники|Employees}/
         /// {Root}/{CompanyName}/{Шаблони|Templates}/
-        /// If subfolders already exist under a different language name, they are renamed.
+        /// Employee/payment folders follow the preferred language name. The templates folder
+        /// keeps whichever localized name already exists so templates stay visible across PCs.
         /// </summary>
         public void EnsureCompanyStructure(string companyName)
         {
@@ -231,7 +232,7 @@ namespace Win11DesktopApp.Services
                 Directory.CreateDirectory(companyFolder);
 
                 EnsureLocalizedSubfolder(companyFolder, FolderNames.GetEmployeesFolder(FolderLanguageCode), FolderNames.AllEmployeesFolderNames);
-                EnsureLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(FolderLanguageCode), FolderNames.AllTemplatesFolderNames);
+                EnsureExistingLocalizedSubfolder(companyFolder, FolderNames.GetTemplatesFolder(FolderLanguageCode), FolderNames.AllTemplatesFolderNames);
                 EnsureLocalizedSubfolder(companyFolder, FolderNames.GetPaymentFolder(FolderLanguageCode), FolderNames.AllPaymentFolderNames);
 
                 Debug.WriteLine($"FolderService.EnsureCompanyStructure: {companyFolder}");
@@ -392,6 +393,42 @@ namespace Win11DesktopApp.Services
             return preferredPath;
         }
 
+        private string FindOrCreateTemplateSubfolder(string parentFolder, string preferredName)
+        {
+            var preferredPath = Path.Combine(parentFolder, preferredName);
+            var existingFolders = FolderNames.AllTemplatesFolderNames
+                .Select(name => Path.Combine(parentFolder, name))
+                .Where(Directory.Exists)
+                .ToArray();
+
+            var indexedFolder = existingFolders.FirstOrDefault(path => File.Exists(Path.Combine(path, "index.json")));
+            if (!string.IsNullOrWhiteSpace(indexedFolder))
+                return indexedFolder;
+
+            var nonEmptyFolder = existingFolders.FirstOrDefault(DirectoryHasEntries);
+            if (!string.IsNullOrWhiteSpace(nonEmptyFolder))
+                return nonEmptyFolder;
+
+            var preferredExistingFolder = existingFolders.FirstOrDefault(path =>
+                string.Equals(path, preferredPath, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(preferredExistingFolder))
+                return preferredExistingFolder;
+
+            return existingFolders.FirstOrDefault() ?? preferredPath;
+        }
+
+        private static bool DirectoryHasEntries(string folderPath)
+        {
+            try
+            {
+                return Directory.EnumerateFileSystemEntries(folderPath).Any();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>
         /// Ensures a localized subfolder exists. If it already exists under a different
         /// language name, renames it to the preferred name instead of creating a duplicate.
@@ -422,6 +459,17 @@ namespace Win11DesktopApp.Services
             }
 
             Directory.CreateDirectory(preferredPath);
+        }
+
+        /// <summary>
+        /// Ensures a localized subfolder exists without renaming an existing localized variant.
+        /// Used for shared template storage so PCs with different UI languages keep one folder.
+        /// </summary>
+        private void EnsureExistingLocalizedSubfolder(string parentFolder, string preferredName, string[] allNames)
+        {
+            var folderPath = FindOrCreateLocalizedSubfolder(parentFolder, preferredName, allNames);
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
         }
 
         private static void NormalizeAttributesRecursive(string directory)

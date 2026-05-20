@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Npgsql;
+using NpgsqlTypes;
 using Win11DesktopApp.EmployeeModels;
 
 namespace Win11DesktopApp.Services
@@ -45,7 +46,9 @@ namespace Win11DesktopApp.Services
             using var command = connection.CreateCommand();
             command.CommandText = @"
 SELECT id, timestamp, action_type, category, firm_name, employee_name, employee_folder,
-       description, old_value, new_value, details, related_operation_id, actor_name
+       description, old_value, new_value, details, related_operation_id, actor_name,
+       tenant_id, actor_user_id, session_id, machine_id, entity_type, entity_id,
+       old_values_json, new_values_json
 FROM app.activity_log
 ORDER BY timestamp DESC, id DESC;";
 
@@ -67,7 +70,15 @@ ORDER BY timestamp DESC, id DESC;";
                     NewValue = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
                     Details = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
                     RelatedOperationId = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
-                    ActorName = reader.IsDBNull(12) ? string.Empty : reader.GetString(12)
+                    ActorName = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+                    TenantId = reader.IsDBNull(13) ? string.Empty : reader.GetGuid(13).ToString(),
+                    ActorUserId = reader.IsDBNull(14) ? string.Empty : reader.GetGuid(14).ToString(),
+                    SessionId = reader.IsDBNull(15) ? string.Empty : reader.GetGuid(15).ToString(),
+                    MachineId = reader.IsDBNull(16) ? string.Empty : reader.GetString(16),
+                    EntityType = reader.IsDBNull(17) ? string.Empty : reader.GetString(17),
+                    EntityId = reader.IsDBNull(18) ? string.Empty : reader.GetString(18),
+                    OldValuesJson = reader.IsDBNull(19) ? string.Empty : reader.GetString(19),
+                    NewValuesJson = reader.IsDBNull(20) ? string.Empty : reader.GetString(20)
                 });
             }
 
@@ -132,12 +143,34 @@ CREATE TABLE IF NOT EXISTS app.activity_log (
     new_value TEXT NOT NULL,
     details TEXT NOT NULL,
     related_operation_id TEXT NOT NULL,
-    actor_name TEXT NOT NULL
+    actor_name TEXT NOT NULL,
+    tenant_id UUID,
+    actor_user_id UUID,
+    session_id UUID,
+    machine_id TEXT,
+    entity_type TEXT,
+    entity_id TEXT,
+    old_values_json TEXT,
+    new_values_json TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_activity_log_timestamp ON app.activity_log(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_pg_activity_log_employee_folder ON app.activity_log(employee_folder);
-CREATE INDEX IF NOT EXISTS idx_pg_activity_log_firm_employee ON app.activity_log(firm_name, employee_name);";
+CREATE INDEX IF NOT EXISTS idx_pg_activity_log_firm_employee ON app.activity_log(firm_name, employee_name);
+
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS tenant_id UUID;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS actor_user_id UUID;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS session_id UUID;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS machine_id TEXT;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS entity_type TEXT;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS entity_id TEXT;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS old_values_json TEXT;
+ALTER TABLE app.activity_log ADD COLUMN IF NOT EXISTS new_values_json TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_pg_activity_log_tenant_id ON app.activity_log(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_pg_activity_log_actor_user_id ON app.activity_log(actor_user_id);
+CREATE INDEX IF NOT EXISTS idx_pg_activity_log_session_id ON app.activity_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_pg_activity_log_entity ON app.activity_log(entity_type, entity_id);";
                 command.ExecuteNonQuery();
                 _isInitialized = true;
             }
@@ -150,10 +183,14 @@ CREATE INDEX IF NOT EXISTS idx_pg_activity_log_firm_employee ON app.activity_log
             command.CommandText = @"
 INSERT INTO app.activity_log (
     id, timestamp, action_type, category, firm_name, employee_name, employee_folder,
-    description, old_value, new_value, details, related_operation_id, actor_name
+    description, old_value, new_value, details, related_operation_id, actor_name,
+    tenant_id, actor_user_id, session_id, machine_id, entity_type, entity_id,
+    old_values_json, new_values_json
 ) VALUES (
     @id, @timestamp, @actionType, @category, @firmName, @employeeName, @employeeFolder,
-    @description, @oldValue, @newValue, @details, @relatedOperationId, @actorName
+    @description, @oldValue, @newValue, @details, @relatedOperationId, @actorName,
+    @tenantId, @actorUserId, @sessionId, @machineId, @entityType, @entityId,
+    @oldValuesJson, @newValuesJson
 )
 ON CONFLICT(id) DO UPDATE SET
     timestamp = EXCLUDED.timestamp,
@@ -167,7 +204,15 @@ ON CONFLICT(id) DO UPDATE SET
     new_value = EXCLUDED.new_value,
     details = EXCLUDED.details,
     related_operation_id = EXCLUDED.related_operation_id,
-    actor_name = EXCLUDED.actor_name;";
+    actor_name = EXCLUDED.actor_name,
+    tenant_id = EXCLUDED.tenant_id,
+    actor_user_id = EXCLUDED.actor_user_id,
+    session_id = EXCLUDED.session_id,
+    machine_id = EXCLUDED.machine_id,
+    entity_type = EXCLUDED.entity_type,
+    entity_id = EXCLUDED.entity_id,
+    old_values_json = EXCLUDED.old_values_json,
+    new_values_json = EXCLUDED.new_values_json;";
             command.Parameters.AddWithValue("id", entry.Id ?? Guid.NewGuid().ToString());
             command.Parameters.AddWithValue("timestamp", entry.Timestamp ?? string.Empty);
             command.Parameters.AddWithValue("actionType", entry.ActionType ?? string.Empty);
@@ -181,7 +226,23 @@ ON CONFLICT(id) DO UPDATE SET
             command.Parameters.AddWithValue("details", entry.Details ?? string.Empty);
             command.Parameters.AddWithValue("relatedOperationId", entry.RelatedOperationId ?? string.Empty);
             command.Parameters.AddWithValue("actorName", entry.ActorName ?? string.Empty);
+            AddUuidParameter(command, "tenantId", entry.TenantId);
+            AddUuidParameter(command, "actorUserId", entry.ActorUserId);
+            AddUuidParameter(command, "sessionId", entry.SessionId);
+            command.Parameters.AddWithValue("machineId", entry.MachineId ?? string.Empty);
+            command.Parameters.AddWithValue("entityType", entry.EntityType ?? string.Empty);
+            command.Parameters.AddWithValue("entityId", entry.EntityId ?? string.Empty);
+            command.Parameters.AddWithValue("oldValuesJson", entry.OldValuesJson ?? string.Empty);
+            command.Parameters.AddWithValue("newValuesJson", entry.NewValuesJson ?? string.Empty);
             command.ExecuteNonQuery();
+        }
+
+        private static void AddUuidParameter(NpgsqlCommand command, string name, string? value)
+        {
+            var parameter = command.Parameters.Add(name, NpgsqlDbType.Uuid);
+            parameter.Value = Guid.TryParse(value, out var parsed)
+                ? parsed
+                : DBNull.Value;
         }
 
         private static void TrimActivityLog(NpgsqlConnection connection, NpgsqlTransaction transaction, int maxEntries)

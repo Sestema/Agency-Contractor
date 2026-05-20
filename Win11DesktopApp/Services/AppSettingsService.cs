@@ -119,6 +119,11 @@ namespace Win11DesktopApp.Services
             public int WebPanelPort { get; set; } = 47831;
             public string WebPanelBindAddress { get; set; } = "127.0.0.1";
             public bool WebPanelPreventSleep { get; set; } = true;
+            public bool ExperimentalMultiUser { get; set; } = false;
+            public bool PermissionSoftMode { get; set; } = true;
+            public bool UseApiV2ForWebPanel { get; set; } = false;
+            public bool UsePostgresNotify { get; set; } = false;
+            public bool MultiUserHardEnforcement { get; set; } = false;
             public string DatabaseStorageMode { get; set; } = "Sqlite";
             public string PostgresConnectionString { get; set; } = string.Empty;
             public string PostgresHost { get; set; } = "localhost";

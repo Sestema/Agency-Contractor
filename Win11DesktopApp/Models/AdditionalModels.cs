@@ -297,6 +297,14 @@ namespace Win11DesktopApp.EmployeeModels
         public string Details { get; set; } = string.Empty;
         public string RelatedOperationId { get; set; } = string.Empty;
         public string ActorName { get; set; } = string.Empty;
+        public string TenantId { get; set; } = string.Empty;
+        public string ActorUserId { get; set; } = string.Empty;
+        public string SessionId { get; set; } = string.Empty;
+        public string MachineId { get; set; } = string.Empty;
+        public string EntityType { get; set; } = string.Empty;
+        public string EntityId { get; set; } = string.Empty;
+        public string OldValuesJson { get; set; } = string.Empty;
+        public string NewValuesJson { get; set; } = string.Empty;
         public string TimeDisplay => DateTime.TryParse(Timestamp, out var dt) ? dt.ToString("HH:mm") : Timestamp;
         public string DisplayDescription => ActivityLogTextLocalizer.LocalizeDescription(this);
         public string DisplayDetails => ActivityLogTextLocalizer.LocalizeDetails(Details);

@@ -396,7 +396,15 @@ CREATE TABLE IF NOT EXISTS app.activity_log (
     new_value TEXT NOT NULL,
     details TEXT NOT NULL,
     related_operation_id TEXT NOT NULL,
-    actor_name TEXT NOT NULL
+    actor_name TEXT NOT NULL,
+    tenant_id UUID,
+    actor_user_id UUID,
+    session_id UUID,
+    machine_id TEXT,
+    entity_type TEXT,
+    entity_id TEXT,
+    old_values_json TEXT,
+    new_values_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS app.archive_log (

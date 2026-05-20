@@ -66,14 +66,16 @@ namespace Win11DesktopApp.Services
 
         public void Log(string actionType, string category, string firmName, string employeeName,
             string description, string oldValue = "", string newValue = "", string details = "",
-            string employeeFolder = "", string relatedOperationId = "")
+            string employeeFolder = "", string relatedOperationId = "", string entityType = "",
+            string entityId = "", string oldValuesJson = "", string newValuesJson = "", string sessionId = "")
         {
             try
             {
                 var path = LogFilePath;
                 if (string.IsNullOrEmpty(path)) return;
 
-                var actorName = GetCurrentActorName();
+                var profile = _currentProfileService.CurrentProfile;
+                var actorName = GetCurrentActorName(profile);
                 var entry = new ActivityLogEntry
                 {
                     ActionType = actionType,
@@ -86,7 +88,15 @@ namespace Win11DesktopApp.Services
                     NewValue = newValue,
                     Details = details,
                     RelatedOperationId = relatedOperationId,
-                    ActorName = actorName
+                    ActorName = actorName,
+                    TenantId = profile?.TenantId ?? string.Empty,
+                    ActorUserId = profile?.Id ?? string.Empty,
+                    SessionId = sessionId,
+                    MachineId = LicenseService.GetMachineId(),
+                    EntityType = entityType,
+                    EntityId = entityId,
+                    OldValuesJson = oldValuesJson,
+                    NewValuesJson = newValuesJson
                 };
 
                 if (_useLocalDb && _activityLogStorage != null)
@@ -107,9 +117,8 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        private string GetCurrentActorName()
+        private string GetCurrentActorName(Win11DesktopApp.Models.ClientProfileRecord? profile)
         {
-            var profile = _currentProfileService.CurrentProfile;
             if (profile == null)
                 return string.Empty;
 

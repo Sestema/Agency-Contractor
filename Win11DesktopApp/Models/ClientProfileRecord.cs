@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Win11DesktopApp.Models
 {
@@ -15,6 +16,10 @@ namespace Win11DesktopApp.Models
         public int SessionVersion { get; set; } = 1;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string TenantId { get; set; } = string.Empty;
+        public string RoleKey { get; set; } = string.Empty;
+        public bool? IsActive { get; set; }
+        public List<string> Permissions { get; set; } = new();
     }
 
     public sealed class ProfileCheckResult
@@ -52,6 +57,10 @@ namespace Win11DesktopApp.Models
         public int SessionVersion { get; set; } = 1;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string TenantId { get; set; } = string.Empty;
+        public string RoleKey { get; set; } = string.Empty;
+        public bool? IsActive { get; set; }
+        public List<string> Permissions { get; set; } = new();
 
         public ClientProfileRecord ToRecord()
         {
@@ -67,7 +76,11 @@ namespace Win11DesktopApp.Models
                 RememberMeEnabled = RememberMeEnabled,
                 SessionVersion = SessionVersion,
                 CreatedAt = CreatedAt,
-                UpdatedAt = UpdatedAt
+                UpdatedAt = UpdatedAt,
+                TenantId = TenantId,
+                RoleKey = RoleKey,
+                IsActive = IsActive,
+                Permissions = Permissions ?? new List<string>()
             };
         }
     }

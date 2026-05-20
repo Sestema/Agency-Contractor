@@ -1546,6 +1546,9 @@
     <sys:String x:Key="FinSalarySaved">Uloženo!</sys:String>
     <sys:String x:Key="FinSalarySaveGenericError">Nepodařilo se uložit soubor mezd. Soubor může být používán jiným programem.</sys:String>
     <sys:String x:Key="FinSalarySaveRecoveryCreated">Hlavní soubor se nepodařilo aktualizovat, ale nová data byla uložena do recovery souboru.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedLoading">Uložení do PostgreSQL bylo zastaveno, protože se měsíc ještě načítá. Počkejte na dokončení tabulky a uložte znovu.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedStale">Uložení do PostgreSQL bylo zastaveno, protože načtená tabulka neodpovídá vybranému měsíci. Znovu načtěte měsíc a uložte.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedEmpty">Uložení do PostgreSQL bylo zastaveno, protože tabulka mezd je prázdná. Jde o ochranu před náhodným smazáním sdíleného měsíce.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Neuložené změny</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Smazat zálohu</sys:String>
     <sys:String x:Key="FinSalaryExported">Exportováno!</sys:String>
@@ -2170,6 +2173,9 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="SettingsPostgresTest">Zkontrolovat PostgreSQL</sys:String>
     <sys:String x:Key="SettingsMigrationTitle">Průvodce migrací SQLite → PostgreSQL</sys:String>
     <sys:String x:Key="SettingsMigrationDesc">Vytvoří databázi, tabulky a zkopíruje core.db, app.db a Vyplaty/*.db do PostgreSQL. Program se tím ještě nepřepne na PostgreSQL.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgTitle">Druhý PC: připojit se k hotové PostgreSQL databázi</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgDesc">Použijte, pokud už byla databáze vytvořena a migrována na prvním PC. Data se neimportují ani nemažou; program pouze zkontroluje strukturu databáze a zapne PostgreSQL lokálně.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgAction">Připojit hotovou databázi</sys:String>
     <sys:String x:Key="SettingsRepeatMigrationTitle">Opakovaná migrace s vyčištěním PostgreSQL</sys:String>
     <sys:String x:Key="SettingsRepeatMigrationDesc">Pokud jste po PostgreSQL záloze pracovali ve staré SQLite databázi, tato akce vyčistí PostgreSQL a znovu tam přenese aktuální starou databázi. Dostupné pouze když tento běh programu používá režim SQLite.</sys:String>
     <sys:String x:Key="SettingsSqliteBackupTitle">SQLite záloha z PostgreSQL</sys:String>
@@ -2225,6 +2231,11 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="SettingsPostgresCheckingFmt">Kontroluji PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Připojeno. PostgreSQL {0}. Databáze "{1}": {2}. Právo vytvářet databáze: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Připojení se nezdařilo: {0}. {1}.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgChecking">Kontroluji hotovou PostgreSQL databázi a potřebné tabulky...</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgSuccessFmt">Hotová PostgreSQL databáze "{0}" je připojena. Restartujte program, aby ji tento druhý PC začal používat.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgMissingSchemaFmt">Toto nevypadá jako hotová databáze programu. Chybí: {0}. Nejprve spusťte migraci na prvním PC nebo zkontrolujte název databáze.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgFailedFmt">Hotovou PostgreSQL databázi se nepodařilo připojit: {0}</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgTimeout">PostgreSQL neodpověděl včas. Zkontrolujte IP, port, Firewall a zda je databáze z tohoto PC dostupná.</sys:String>
     <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Technické detaily: {1}</sys:String>
     <sys:String x:Key="PostgresErrCancelled">Operace PostgreSQL byla zrušena.</sys:String>
     <sys:String x:Key="PostgresErrDatabaseMissing">Databáze PostgreSQL neexistuje. Zkontrolujte název databáze nebo spusťte migraci SQLite → PostgreSQL.</sys:String>

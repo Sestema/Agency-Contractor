@@ -2092,7 +2092,9 @@ WHERE year = @year
             using var command = connection.CreateCommand();
             command.CommandText = @"
 SELECT id, timestamp, action_type, category, firm_name, employee_name, employee_folder,
-       description, old_value, new_value, details, related_operation_id, actor_name
+       description, old_value, new_value, details, related_operation_id, actor_name,
+       tenant_id, actor_user_id, session_id, machine_id, entity_type, entity_id,
+       old_values_json, new_values_json
 FROM activity_log
 ORDER BY datetime(timestamp) DESC, rowid DESC;";
 
@@ -2114,7 +2116,15 @@ ORDER BY datetime(timestamp) DESC, rowid DESC;";
                     NewValue = reader.GetString(9),
                     Details = reader.GetString(10),
                     RelatedOperationId = reader.GetString(11),
-                    ActorName = reader.GetString(12)
+                    ActorName = reader.GetString(12),
+                    TenantId = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                    ActorUserId = reader.IsDBNull(14) ? string.Empty : reader.GetString(14),
+                    SessionId = reader.IsDBNull(15) ? string.Empty : reader.GetString(15),
+                    MachineId = reader.IsDBNull(16) ? string.Empty : reader.GetString(16),
+                    EntityType = reader.IsDBNull(17) ? string.Empty : reader.GetString(17),
+                    EntityId = reader.IsDBNull(18) ? string.Empty : reader.GetString(18),
+                    OldValuesJson = reader.IsDBNull(19) ? string.Empty : reader.GetString(19),
+                    NewValuesJson = reader.IsDBNull(20) ? string.Empty : reader.GetString(20)
                 });
             }
 
@@ -2285,10 +2295,14 @@ WHERE (@originalFolder <> '' AND lower(employee_folder) = lower(@originalFolder)
             command.CommandText = @"
 INSERT INTO activity_log (
     id, timestamp, action_type, category, firm_name, employee_name, employee_folder,
-    description, old_value, new_value, details, related_operation_id, actor_name
+    description, old_value, new_value, details, related_operation_id, actor_name,
+    tenant_id, actor_user_id, session_id, machine_id, entity_type, entity_id,
+    old_values_json, new_values_json
 ) VALUES (
     @id, @timestamp, @actionType, @category, @firmName, @employeeName, @employeeFolder,
-    @description, @oldValue, @newValue, @details, @relatedOperationId, @actorName
+    @description, @oldValue, @newValue, @details, @relatedOperationId, @actorName,
+    @tenantId, @actorUserId, @sessionId, @machineId, @entityType, @entityId,
+    @oldValuesJson, @newValuesJson
 )
 ON CONFLICT(id) DO UPDATE SET
     timestamp = excluded.timestamp,
@@ -2302,7 +2316,15 @@ ON CONFLICT(id) DO UPDATE SET
     new_value = excluded.new_value,
     details = excluded.details,
     related_operation_id = excluded.related_operation_id,
-    actor_name = excluded.actor_name;";
+    actor_name = excluded.actor_name,
+    tenant_id = excluded.tenant_id,
+    actor_user_id = excluded.actor_user_id,
+    session_id = excluded.session_id,
+    machine_id = excluded.machine_id,
+    entity_type = excluded.entity_type,
+    entity_id = excluded.entity_id,
+    old_values_json = excluded.old_values_json,
+    new_values_json = excluded.new_values_json;";
 
             command.Parameters.AddWithValue("@id", entry.Id ?? Guid.NewGuid().ToString());
             command.Parameters.AddWithValue("@timestamp", entry.Timestamp ?? string.Empty);
@@ -2317,6 +2339,14 @@ ON CONFLICT(id) DO UPDATE SET
             command.Parameters.AddWithValue("@details", entry.Details ?? string.Empty);
             command.Parameters.AddWithValue("@relatedOperationId", entry.RelatedOperationId ?? string.Empty);
             command.Parameters.AddWithValue("@actorName", entry.ActorName ?? string.Empty);
+            command.Parameters.AddWithValue("@tenantId", entry.TenantId ?? string.Empty);
+            command.Parameters.AddWithValue("@actorUserId", entry.ActorUserId ?? string.Empty);
+            command.Parameters.AddWithValue("@sessionId", entry.SessionId ?? string.Empty);
+            command.Parameters.AddWithValue("@machineId", entry.MachineId ?? string.Empty);
+            command.Parameters.AddWithValue("@entityType", entry.EntityType ?? string.Empty);
+            command.Parameters.AddWithValue("@entityId", entry.EntityId ?? string.Empty);
+            command.Parameters.AddWithValue("@oldValuesJson", entry.OldValuesJson ?? string.Empty);
+            command.Parameters.AddWithValue("@newValuesJson", entry.NewValuesJson ?? string.Empty);
             command.ExecuteNonQuery();
         }
 
@@ -2396,7 +2426,15 @@ CREATE TABLE IF NOT EXISTS activity_log (
     new_value TEXT NOT NULL,
     details TEXT NOT NULL,
     related_operation_id TEXT NOT NULL,
-    actor_name TEXT NOT NULL
+    actor_name TEXT NOT NULL,
+    tenant_id TEXT,
+    actor_user_id TEXT,
+    session_id TEXT,
+    machine_id TEXT,
+    entity_type TEXT,
+    entity_id TEXT,
+    old_values_json TEXT,
+    new_values_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS archive_log (
@@ -2527,6 +2565,14 @@ CREATE INDEX IF NOT EXISTS idx_acc_emp_ym ON accommodations(employee_folder, yea
 
             EnsureColumnExists(connection, "migration_journal", "folders_scanned", "INTEGER NOT NULL DEFAULT 0");
             EnsureColumnExists(connection, "migration_journal", "folders_skipped", "INTEGER NOT NULL DEFAULT 0");
+            EnsureColumnExists(connection, "activity_log", "tenant_id", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "actor_user_id", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "session_id", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "machine_id", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "entity_type", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "entity_id", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "old_values_json", "TEXT");
+            EnsureColumnExists(connection, "activity_log", "new_values_json", "TEXT");
 
             using var countCommand = connection.CreateCommand();
             countCommand.CommandText = "SELECT COUNT(1) FROM schema_version;";

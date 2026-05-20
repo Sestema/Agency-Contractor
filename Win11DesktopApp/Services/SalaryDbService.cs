@@ -194,7 +194,7 @@ GROUP BY status;";
             {
                 command.CommandText = @"
 SELECT employee_id, employee_folder, full_name, firm_name, hours_worked, hourly_rate, advance,
-       saved_net_salary, status, note, color_tag, custom_values
+       saved_net_salary, status, note, color_tag, custom_values, updated_at
 FROM salary_entries
 ORDER BY lower(firm_name), ifnull(updated_at, '') DESC, id DESC, lower(full_name);";
                 using var reader = command.ExecuteReader();
@@ -747,7 +747,9 @@ CREATE INDEX IF NOT EXISTS idx_sexp_firm ON salary_expenses(firm_name);";
 
         private static void InsertSalaryEntry(SqliteConnection connection, SqliteTransaction transaction, int year, int month, SalaryEntry entry)
         {
+            EnsureSalaryEntryNotStale(connection, transaction, entry);
             DeleteDuplicateEmployeeRows(connection, transaction, entry);
+            var updatedAt = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
 
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
@@ -786,8 +788,37 @@ ON CONFLICT(firm_name, employee_folder) DO UPDATE SET
             command.Parameters.AddWithValue("@note", entry.Note ?? string.Empty);
             command.Parameters.AddWithValue("@colorTag", entry.ColorTag ?? string.Empty);
             command.Parameters.AddWithValue("@customValues", JsonSerializer.Serialize(entry.CustomValues ?? new Dictionary<string, decimal>()));
-            command.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("@updatedAt", updatedAt);
             command.ExecuteNonQuery();
+            entry.UpdatedAt = updatedAt;
+        }
+
+        private static void EnsureSalaryEntryNotStale(SqliteConnection connection, SqliteTransaction transaction, SalaryEntry entry)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+SELECT updated_at
+FROM salary_entries
+WHERE lower(firm_name) = lower(@firmName)
+  AND (
+        (@employeeId <> '' AND ifnull(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+        OR lower(ifnull(employee_folder, '')) = lower(@employeeFolder)
+      )
+ORDER BY ifnull(updated_at, '') DESC, id DESC
+LIMIT 1;";
+            command.Parameters.AddWithValue("@firmName", entry.FirmName ?? string.Empty);
+            command.Parameters.AddWithValue("@employeeId", entry.EmployeeId ?? string.Empty);
+            command.Parameters.AddWithValue("@employeeFolder", entry.EmployeeFolder ?? string.Empty);
+            var currentUpdatedAt = command.ExecuteScalar() as string ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(currentUpdatedAt)
+                || string.Equals(currentUpdatedAt, entry.UpdatedAt ?? string.Empty, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Зарплату працівника {entry.FullName} вже змінено на іншому ПК. Оновіть рядок перед збереженням.");
         }
 
         private static void DeleteDuplicateEmployeeRows(SqliteConnection connection, SqliteTransaction transaction, SalaryEntry entry)
@@ -854,7 +885,8 @@ ON CONFLICT(id) DO UPDATE SET
                 Status = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
                 Note = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
                 ColorTag = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
-                CustomValues = customValues
+                CustomValues = customValues,
+                UpdatedAt = reader.IsDBNull(12) ? string.Empty : reader.GetString(12)
             };
         }
 

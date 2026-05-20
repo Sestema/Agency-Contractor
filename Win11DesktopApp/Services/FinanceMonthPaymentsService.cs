@@ -199,6 +199,43 @@ namespace Win11DesktopApp.Services
             return true;
         }
 
+        public bool UpsertSalaryEntries(int year, int month, List<SalaryEntry> entries)
+        {
+            _clearLastSaveRecoveryPath();
+
+            if (string.IsNullOrEmpty(_folderService.RootPath))
+                return false;
+
+            if (_monthPaymentsStorage == null)
+            {
+                LoggingService.LogWarning("FinanceMonthPaymentsService.UpsertSalaryEntries.Storage", "Month payments storage is not configured.");
+                return false;
+            }
+
+            if (entries == null || entries.Count == 0)
+                return true;
+
+            try
+            {
+                _monthPaymentsStorage.UpsertSalaryEntries(year, month, entries);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("вже змінено", StringComparison.OrdinalIgnoreCase))
+            {
+                LoggingService.LogWarning("FinanceMonthPaymentsService.UpsertSalaryEntries.Conflict", ex.Message);
+                _setSalaryConflictMessage(ex.Message);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceMonthPaymentsService.UpsertSalaryEntries", ex);
+                return false;
+            }
+
+            InvalidatePaymentsCache(year, month);
+            _clearSalarySaveState();
+            return true;
+        }
+
         public bool SaveFirmPayments(int year, int month, string firmName, List<SalaryEntry> entries, List<FirmExpense> expenses)
         {
             _clearLastSaveRecoveryPath();

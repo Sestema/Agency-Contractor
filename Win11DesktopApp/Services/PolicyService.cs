@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
@@ -27,11 +28,13 @@ namespace Win11DesktopApp.Services
     public static class PolicyService
     {
         private static AppSettingsService? _appSettingsService;
+        private static CurrentProfileService? _currentProfileService;
         public static RemotePolicy CurrentPolicy { get; private set; } = new();
 
-        public static void Initialize(AppSettingsService appSettingsService)
+        public static void Initialize(AppSettingsService appSettingsService, CurrentProfileService? currentProfileService = null)
         {
             _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
+            _currentProfileService = currentProfileService;
         }
 
         private static AppSettingsService.AppSettings? Settings => _appSettingsService?.Settings;
@@ -90,6 +93,51 @@ namespace Win11DesktopApp.Services
             };
         }
 
+        public static bool HasPermission(string permissionKey)
+        {
+            if (!IsMultiUserPermissionEnabled)
+                return true;
+
+            if (string.IsNullOrWhiteSpace(permissionKey))
+                return true;
+
+            var profile = _currentProfileService?.CurrentProfile;
+            if (profile == null)
+                return true;
+
+            if (profile.IsActive == false)
+                return false;
+
+            var roleKey = NormalizeRoleKey(profile.RoleKey);
+            if (string.Equals(roleKey, "owner", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return ContainsPermission(profile, permissionKey);
+        }
+
+        public static bool RequirePermission(string permissionKey, string actionName)
+        {
+            var allowed = HasPermission(permissionKey);
+            if (allowed)
+                return true;
+
+            var settings = Settings;
+            var profile = _currentProfileService?.CurrentProfile;
+            var user = profile == null
+                ? "unknown"
+                : $"{profile.FirstName} {profile.LastName}".Trim();
+
+            LoggingService.LogWarning(
+                "PolicyService.RequirePermission",
+                $"Permission denied. action=\"{actionName}\" permission=\"{permissionKey}\" user=\"{user}\" role=\"{profile?.RoleKey ?? string.Empty}\" softMode={settings?.PermissionSoftMode ?? true} hardEnforcement={settings?.MultiUserHardEnforcement ?? false}.");
+
+            if (settings?.PermissionSoftMode != false || settings?.MultiUserHardEnforcement != true)
+                return true;
+
+            ToastService.Instance.Warning($"Дія \"{actionName}\" недоступна для вашої ролі.");
+            return false;
+        }
+
         public static bool EnsureWriteAllowed(string actionName)
         {
             if (!IsReadOnlyMode)
@@ -107,6 +155,32 @@ namespace Win11DesktopApp.Services
 
             var message = $"Дія \"{actionName}\" вимкнена політикою адміністратора.";
             ToastService.Instance.Warning(message);
+            return false;
+        }
+
+        private static bool IsMultiUserPermissionEnabled => Settings?.ExperimentalMultiUser == true;
+
+        private static string NormalizeRoleKey(string? roleKey)
+        {
+            return string.IsNullOrWhiteSpace(roleKey)
+                ? "owner"
+                : roleKey.Trim();
+        }
+
+        private static bool ContainsPermission(ClientProfileRecord profile, string permissionKey)
+        {
+            if (profile.Permissions == null || profile.Permissions.Count == 0)
+                return false;
+
+            foreach (var permission in profile.Permissions)
+            {
+                if (string.Equals(permission, permissionKey, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(permission, "*", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 

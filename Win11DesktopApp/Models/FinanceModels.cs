@@ -78,6 +78,7 @@ namespace Win11DesktopApp.Models
         public string EmployeeFolder { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;
+        public string UpdatedAt { get; set; } = string.Empty;
 
         private decimal _hoursWorked;
         public decimal HoursWorked

@@ -396,19 +396,8 @@ namespace Win11DesktopApp.Services
                     Path.Combine(newCompanyFolder, FolderNames.GetEmployeesFolder(langCode)));
 
                 // --- Migrate Templates ---
-                var oldTemplatesFolder = Path.Combine(newCompanyFolder, "Templates");
-                var newTemplatesFolder = Path.Combine(newCompanyFolder, FolderNames.GetTemplatesFolder(langCode));
-
-                if (Directory.Exists(oldTemplatesFolder) && !Directory.Exists(newTemplatesFolder)
-                    && langCode == "uk")
-                {
-                    Debug.WriteLine($"Migration: renaming {oldTemplatesFolder} -> {newTemplatesFolder}");
-                    try { Directory.Move(oldTemplatesFolder, newTemplatesFolder); }
-                    catch (Exception ex) { LoggingService.LogWarning("PersistenceService.Migration", $"Move templates folder failed: {ex.Message}"); }
-                }
-
-                // Ensure templates folder exists
-                if (!Directory.Exists(newTemplatesFolder) && !Directory.Exists(oldTemplatesFolder))
+                var existingTemplatesFolder = FindBestLocalizedTemplateFolder(newCompanyFolder);
+                if (string.IsNullOrWhiteSpace(existingTemplatesFolder))
                 {
                     Directory.CreateDirectory(Path.Combine(newCompanyFolder, FolderNames.GetTemplatesFolder(langCode)));
                 }
@@ -419,6 +408,36 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"PersistenceService.MigrateCompanyFolders error for {companyName}: {ex.Message}");
+            }
+        }
+
+        private static string? FindBestLocalizedTemplateFolder(string companyFolder)
+        {
+            var existingFolders = FolderNames.AllTemplatesFolderNames
+                .Select(name => Path.Combine(companyFolder, name))
+                .Where(Directory.Exists)
+                .ToArray();
+
+            var indexedFolder = existingFolders.FirstOrDefault(path => File.Exists(Path.Combine(path, "index.json")));
+            if (!string.IsNullOrWhiteSpace(indexedFolder))
+                return indexedFolder;
+
+            var nonEmptyFolder = existingFolders.FirstOrDefault(DirectoryHasEntries);
+            if (!string.IsNullOrWhiteSpace(nonEmptyFolder))
+                return nonEmptyFolder;
+
+            return existingFolders.FirstOrDefault();
+        }
+
+        private static bool DirectoryHasEntries(string folderPath)
+        {
+            try
+            {
+                return Directory.EnumerateFileSystemEntries(folderPath).Any();
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -468,17 +487,7 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                // Find the templates folder (may be old or new name)
-                string? templatesFolder = null;
-                foreach (var name in FolderNames.AllTemplatesFolderNames)
-                {
-                    var path = Path.Combine(companyFolder, name);
-                    if (Directory.Exists(path))
-                    {
-                        templatesFolder = path;
-                        break;
-                    }
-                }
+                var templatesFolder = FindBestLocalizedTemplateFolder(companyFolder);
                 if (templatesFolder == null) return;
 
                 var indexPath = Path.Combine(templatesFolder, "index.json");

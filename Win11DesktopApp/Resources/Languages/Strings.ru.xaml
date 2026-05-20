@@ -1529,6 +1529,9 @@
     <sys:String x:Key="FinSalarySaved">Сохранено!</sys:String>
     <sys:String x:Key="FinSalarySaveGenericError">Не удалось сохранить файл зарплаты. Файл может быть занят другой программой.</sys:String>
     <sys:String x:Key="FinSalarySaveRecoveryCreated">Основной файл не удалось обновить, но новые данные сохранены в recovery-файл.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedLoading">Сохранение PostgreSQL остановлено, потому что месяц ещё загружается. Дождитесь таблицы и сохраните ещё раз.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedStale">Сохранение PostgreSQL остановлено, потому что загруженная таблица не соответствует выбранному месяцу. Перезагрузите месяц и сохраните ещё раз.</sys:String>
+    <sys:String x:Key="FinSalaryPostgresSaveBlockedEmpty">Сохранение PostgreSQL остановлено, потому что таблица зарплат пустая. Это защита от случайной очистки общего месяца.</sys:String>
     <sys:String x:Key="FinUnsavedChanges">Несохранённые изменения</sys:String>
     <sys:String x:Key="FinAdvanceDeleteConfirm">Удалить аванс</sys:String>
     <sys:String x:Key="FinSalaryExported">Экспортировано!</sys:String>
@@ -2153,6 +2156,9 @@
     <sys:String x:Key="SettingsPostgresTest">Проверить PostgreSQL</sys:String>
     <sys:String x:Key="SettingsMigrationTitle">Мастер миграции SQLite → PostgreSQL</sys:String>
     <sys:String x:Key="SettingsMigrationDesc">Создаст базу, таблицы и скопирует core.db, app.db и Vyplaty/*.db в PostgreSQL. Это еще не переключает программу на PostgreSQL.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgTitle">Второй ПК: подключиться к готовой PostgreSQL базе</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgDesc">Используйте это, если база уже создана и миграция выполнена на первом ПК. Данные не переносятся и не очищаются, программа только проверит структуру базы и включит PostgreSQL локально.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgAction">Подключить готовую базу</sys:String>
     <sys:String x:Key="SettingsRepeatMigrationTitle">Повторная миграция с очисткой PostgreSQL</sys:String>
     <sys:String x:Key="SettingsRepeatMigrationDesc">Если после PostgreSQL backup вы работали в старой SQLite базе, это действие очистит PostgreSQL и заново перенесет туда текущую старую базу. Доступно только когда этот запуск программы работает в режиме SQLite.</sys:String>
     <sys:String x:Key="SettingsSqliteBackupTitle">SQLite backup из PostgreSQL</sys:String>
@@ -2208,6 +2214,11 @@
     <sys:String x:Key="SettingsPostgresCheckingFmt">Проверяю PostgreSQL... {0}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectedFmt">Подключено. PostgreSQL {0}. База "{1}": {2}. Право создавать базы: {3}. {4}.</sys:String>
     <sys:String x:Key="SettingsPostgresConnectFailedFmt">Не удалось подключиться: {0}. {1}.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgChecking">Проверяю готовую PostgreSQL базу и нужные таблицы...</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgSuccessFmt">Готовая PostgreSQL база "{0}" подключена. Перезапустите программу, чтобы второй ПК начал работать с ней.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgMissingSchemaFmt">Это не похоже на готовую базу программы. Не найдено: {0}. На первом ПК сначала выполните миграцию или проверьте название базы.</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgFailedFmt">Не удалось подключить готовую PostgreSQL базу: {0}</sys:String>
+    <sys:String x:Key="SettingsAttachExistingPgTimeout">PostgreSQL не ответил за отведённое время. Проверьте IP, порт, Firewall и что база доступна с этого ПК.</sys:String>
     <sys:String x:Key="PostgresErrWithDetailsFmt">{0} Технические детали: {1}</sys:String>
     <sys:String x:Key="PostgresErrCancelled">Операция PostgreSQL отменена.</sys:String>
     <sys:String x:Key="PostgresErrDatabaseMissing">База PostgreSQL не существует. Проверьте название базы или запустите миграцию SQLite → PostgreSQL.</sys:String>
