@@ -35,6 +35,43 @@ namespace Win11DesktopApp.Services
             public double Width { get; set; } = 120;
         }
 
+        public class UserAccessScopeSetting
+        {
+            public string Mode { get; set; } = "AllData";
+            public List<string> AgencyNames { get; set; } = new();
+            public List<string> EmployerCompanyIds { get; set; } = new();
+        }
+
+        public class ModulePermissionSetting
+        {
+            public string ModuleKey { get; set; } = string.Empty;
+            public string AccessLevel { get; set; } = "None";
+        }
+
+        public class EmployerPermissionSetting
+        {
+            public string EmployerCompanyId { get; set; } = string.Empty;
+            public string AccessLevel { get; set; } = "None";
+        }
+
+        public class BusinessUserSetting
+        {
+            public string UserId { get; set; } = string.Empty;
+            public string Login { get; set; } = string.Empty;
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
+            public string RoleKey { get; set; } = "manager";
+            public bool IsActive { get; set; } = true;
+            public string PasswordHash { get; set; } = string.Empty;
+            public string PasswordSalt { get; set; } = string.Empty;
+            public bool MustChangePassword { get; set; } = true;
+            public DateTime? CreatedAtUtc { get; set; }
+            public DateTime? LastLoginAtUtc { get; set; }
+            public UserAccessScopeSetting AccessScope { get; set; } = new();
+            public List<ModulePermissionSetting> ModulePermissions { get; set; } = new();
+            public List<EmployerPermissionSetting> EmployerPermissions { get; set; } = new();
+        }
+
         public class AppSettings
         {
             public string RootFolderPath { get; set; } = string.Empty;
@@ -120,10 +157,16 @@ namespace Win11DesktopApp.Services
             public string WebPanelBindAddress { get; set; } = "127.0.0.1";
             public bool WebPanelPreventSleep { get; set; } = true;
             public bool ExperimentalMultiUser { get; set; } = false;
+            public bool PendingMemberRoleSelection { get; set; } = false;
             public bool PermissionSoftMode { get; set; } = true;
             public bool UseApiV2ForWebPanel { get; set; } = false;
             public bool UsePostgresNotify { get; set; } = false;
             public bool MultiUserHardEnforcement { get; set; } = false;
+            public List<BusinessUserSetting> BusinessUsers { get; set; } = new();
+            public string CurrentBusinessUserId { get; set; } = string.Empty;
+            public bool RememberBusinessUserLogin { get; set; } = false;
+            public string RememberedBusinessUserId { get; set; } = string.Empty;
+            public string EncryptedBusinessUserSessionToken { get; set; } = string.Empty;
             public string DatabaseStorageMode { get; set; } = "Sqlite";
             public string PostgresConnectionString { get; set; } = string.Empty;
             public string PostgresHost { get; set; } = "localhost";
@@ -309,6 +352,54 @@ namespace Win11DesktopApp.Services
             Settings.Telegram.DailyDigestTime = string.IsNullOrWhiteSpace(Settings.Telegram.DailyDigestTime)
                 ? "08:00"
                 : Settings.Telegram.DailyDigestTime.Trim();
+            Settings.BusinessUsers ??= new List<BusinessUserSetting>();
+            foreach (var user in Settings.BusinessUsers)
+            {
+                user.UserId = user.UserId?.Trim() ?? string.Empty;
+                user.Login = user.Login?.Trim() ?? string.Empty;
+                user.FirstName = user.FirstName?.Trim() ?? string.Empty;
+                user.LastName = user.LastName?.Trim() ?? string.Empty;
+                user.RoleKey = string.IsNullOrWhiteSpace(user.RoleKey) ? "manager" : user.RoleKey.Trim();
+                user.PasswordHash ??= string.Empty;
+                user.PasswordSalt ??= string.Empty;
+                user.AccessScope ??= new UserAccessScopeSetting();
+                user.AccessScope.Mode = NormalizeUserAccessScopeMode(user.AccessScope.Mode);
+                user.AccessScope.AgencyNames = user.AccessScope.AgencyNames?
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Select(name => name.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList() ?? new List<string>();
+                user.AccessScope.EmployerCompanyIds = user.AccessScope.EmployerCompanyIds?
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Select(id => id.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList() ?? new List<string>();
+                user.ModulePermissions = user.ModulePermissions?
+                    .Where(permission => !string.IsNullOrWhiteSpace(permission.ModuleKey))
+                    .Select(permission => new ModulePermissionSetting
+                    {
+                        ModuleKey = permission.ModuleKey.Trim(),
+                        AccessLevel = NormalizeUserAccessLevel(permission.AccessLevel, allowExport: true)
+                    })
+                    .GroupBy(permission => permission.ModuleKey, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToList() ?? new List<ModulePermissionSetting>();
+                user.EmployerPermissions = user.EmployerPermissions?
+                    .Where(permission => !string.IsNullOrWhiteSpace(permission.EmployerCompanyId))
+                    .Select(permission => new EmployerPermissionSetting
+                    {
+                        EmployerCompanyId = permission.EmployerCompanyId.Trim(),
+                        AccessLevel = NormalizeUserAccessLevel(permission.AccessLevel)
+                    })
+                    .GroupBy(permission => permission.EmployerCompanyId, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToList() ?? new List<EmployerPermissionSetting>();
+            }
+            Settings.CurrentBusinessUserId = Settings.BusinessUsers.Any(user =>
+                    string.Equals(user.UserId, Settings.CurrentBusinessUserId, StringComparison.OrdinalIgnoreCase)
+                    && user.IsActive)
+                ? Settings.CurrentBusinessUserId.Trim()
+                : string.Empty;
 
             Settings.DatabaseStorageMode = string.Equals(Settings.DatabaseStorageMode, "Postgres", StringComparison.OrdinalIgnoreCase)
                 ? "Postgres"
@@ -358,6 +449,28 @@ namespace Win11DesktopApp.Services
                     })
                     .ToList();
             }
+        }
+
+        private static string NormalizeUserAccessScopeMode(string? mode)
+        {
+            return (mode ?? string.Empty).Trim() switch
+            {
+                "SelectedAgencies" => "SelectedAgencies",
+                "SelectedEmployers" => "SelectedEmployers",
+                "SelectedAgenciesAndEmployers" => "SelectedAgenciesAndEmployers",
+                _ => "AllData"
+            };
+        }
+
+        private static string NormalizeUserAccessLevel(string? accessLevel, bool allowExport = false)
+        {
+            return (accessLevel ?? string.Empty).Trim() switch
+            {
+                "View" => "View",
+                "Edit" => "Edit",
+                "Export" when allowExport => "Export",
+                _ => "None"
+            };
         }
 
         public void SaveSettings()

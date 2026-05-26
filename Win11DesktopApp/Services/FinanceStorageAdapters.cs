@@ -68,6 +68,7 @@ namespace Win11DesktopApp.Services
         List<SalaryHistoryRecord> GetSalaryHistory(string employeeId, string employeeFolder);
         bool IsSalaryHistoryMigrationCompleted();
         int CleanupMigratedSalaryHistoryBackups(IEnumerable<SalaryHistoryMigrationSource> sources);
+        int RemoveDuplicateSalaryHistoryRecords();
     }
 
     public interface IActivityLogStorage
@@ -277,6 +278,9 @@ namespace Win11DesktopApp.Services
 
         public int CleanupMigratedSalaryHistoryBackups(IEnumerable<SalaryHistoryMigrationSource> sources)
             => _localDbService.CleanupMigratedSalaryHistoryBackups(sources);
+
+        public int RemoveDuplicateSalaryHistoryRecords()
+            => _localDbService.RemoveDuplicateSalaryHistoryRecords();
     }
 
     public sealed class SqliteActivityLogStorage : IActivityLogStorage

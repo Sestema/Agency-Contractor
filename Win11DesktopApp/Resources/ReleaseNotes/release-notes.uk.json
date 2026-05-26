@@ -1,4 +1,11 @@
 {
+  "0.1.76": [
+    "Beta 0.1.76: автоочищення дублікатів salary history при старті (SQLite і PostgreSQL).",
+    "Централізований PostgresConnectionFactory — стабільніше підключення для всіх PostgreSQL-модулів.",
+    "Workspace session heartbeat, immutable workspace passport і conflict detection на OneDrive.",
+    "Усі покращення зарплат multi-PC з beta 0.1.75: row-level upsert, stale cache protection, точніші sync-події.",
+    "Multi-user фундамент лишається вимкненим за замовчуванням."
+  ],
   "0.1.75": [
     "Beta-реліз із захистом зарплат при роботі з кількох ПК: звичайне збереження тепер записує тільки змінених працівників, а не весь місяць.",
     "SQLite і PostgreSQL використовують row-level upsert для зарплатних рядків, щоб кеш одного ПК не перезаписував години іншого ПК.",

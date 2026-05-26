@@ -52,8 +52,14 @@ namespace Win11DesktopApp
         private static AppStatisticsService AppStatisticsService => GetRequiredService<AppStatisticsService>();
         private static GeminiApiService GeminiApiService => GetRequiredService<GeminiApiService>();
         private static ProfileDialogFactory ProfileDialogFactory => GetRequiredService<ProfileDialogFactory>();
+        private static StartupDialogFactory StartupDialogFactory => GetRequiredService<StartupDialogFactory>();
+        private static UnifiedLoginService UnifiedLoginService => GetRequiredService<UnifiedLoginService>();
+        private static BusinessUserAuthService BusinessUserAuthService => GetRequiredService<BusinessUserAuthService>();
         private static ProfileAuthService ProfileAuthService => GetRequiredService<ProfileAuthService>();
         private static ProfileSessionService ProfileSessionService => GetRequiredService<ProfileSessionService>();
+        private static BusinessUserSessionService BusinessUserSessionService => GetRequiredService<BusinessUserSessionService>();
+        private static BusinessUserDirectoryService BusinessUserDirectoryService => GetRequiredService<BusinessUserDirectoryService>();
+        private static WorkspaceSessionService WorkspaceSessionService => GetRequiredService<WorkspaceSessionService>();
         private static AccessStatusService AccessStatusService => GetRequiredService<AccessStatusService>();
         private static CurrentProfileService CurrentProfileService => GetRequiredService<CurrentProfileService>();
         private static TelegramBotService TelegramBotService => GetRequiredService<TelegramBotService>();
@@ -62,6 +68,14 @@ namespace Win11DesktopApp
         private static SyncEventService SyncEventService => GetRequiredService<SyncEventService>();
         private static ConnectedClientsService ConnectedClientsService => GetRequiredService<ConnectedClientsService>();
         private static DailySqliteBackupService DailySqliteBackupService => GetRequiredService<DailySqliteBackupService>();
+
+        private enum MultiUserStartupResult
+        {
+            Skipped,
+            OwnerSelected,
+            MemberLoggedIn,
+            Cancelled
+        }
 
         private sealed class StartupFlowState
         {
@@ -145,8 +159,21 @@ namespace Win11DesktopApp
 
             var startupState = CreateStartupFlowState();
             await ResolveStartupAccessAsync(startupState, LogStartupPhase);
-            if (!await RunProfileGateAsync(startupState, LogStartupPhase))
+
+            var multiUserStartupResult = await RunMultiUserStartupGateAsync(startupState, LogStartupPhase);
+            if (multiUserStartupResult == MultiUserStartupResult.Cancelled)
                 return;
+
+            if (multiUserStartupResult != MultiUserStartupResult.MemberLoggedIn)
+            {
+                if (!await RunProfileGateAsync(startupState, LogStartupPhase))
+                    return;
+
+                if (multiUserStartupResult == MultiUserStartupResult.OwnerSelected)
+                    ClearBusinessUserSession();
+                else
+                    RestoreBusinessUserSession();
+            }
             await TryMigrateLegacyLicenseAsync(startupState, LogStartupPhase);
             if (!await ApplyStartupPolicyAsync(startupState, LogStartupPhase))
                 return;
@@ -212,6 +239,7 @@ namespace Win11DesktopApp
                     }
                 }
 
+                RemoveDuplicateSalaryHistoryAtStartup("PostgreSQL");
                 return;
             }
 
@@ -463,7 +491,26 @@ namespace Win11DesktopApp
                 LoggingService.LogWarning("App.MigratedBackupCleanup", ex.Message);
             }
 
+            RemoveDuplicateSalaryHistoryAtStartup("SQLite");
             RecentlyDeletedService.EnsureStorage();
+        }
+
+        private static void RemoveDuplicateSalaryHistoryAtStartup(string storageName)
+        {
+            try
+            {
+                var removed = FinanceService.RemoveDuplicateSalaryHistoryRecordsAtStartup();
+                if (removed > 0)
+                {
+                    LoggingService.LogInfo(
+                        "App.SalaryHistoryDuplicateCleanup",
+                        $"Removed {removed} duplicate salary history row(s) from {storageName}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("App.SalaryHistoryDuplicateCleanup", ex.Message);
+            }
         }
 
         private static StartupFlowState CreateStartupFlowState()
@@ -484,6 +531,133 @@ namespace Win11DesktopApp
         {
             CurrentProfileService.SetCurrentProfile(profile);
         }
+
+        private static void RestoreBusinessUserSession()
+        {
+            var userId = AppSettingsService.Settings.CurrentBusinessUserId;
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                CurrentProfileService.SetCurrentBusinessUser(null);
+                return;
+            }
+
+            var user = AppSettingsService.Settings.BusinessUsers.FirstOrDefault(candidate =>
+                candidate.IsActive
+                && string.Equals(candidate.UserId, userId, StringComparison.OrdinalIgnoreCase));
+            CurrentProfileService.SetCurrentBusinessUser(user);
+        }
+
+        private static void ClearBusinessUserSession()
+        {
+            BusinessUserAuthService.LogoutSession();
+        }
+
+        private async Task<MultiUserStartupResult> RunMultiUserStartupGateAsync(StartupFlowState state, Action<string> logStartupPhase)
+        {
+            if (!AppSettingsService.Settings.ExperimentalMultiUser)
+            {
+                logStartupPhase("unified_login_skipped");
+                return MultiUserStartupResult.Skipped;
+            }
+
+            if (!UnifiedLoginService.ShouldShowUnifiedLogin(AppSettingsService.Settings))
+            {
+                UnifiedLoginService.ImportBusinessUsersFromRootIfAvailable();
+                if (BusinessUserSessionService.TryRestoreRememberedSession())
+                {
+                    logStartupPhase("unified_login_member_remembered");
+                    return MultiUserStartupResult.MemberLoggedIn;
+                }
+
+                logStartupPhase("unified_login_skipped");
+                return MultiUserStartupResult.Skipped;
+            }
+
+            if (AppSettingsService.Settings.PendingMemberRoleSelection)
+            {
+                AppSettingsService.Settings.PendingMemberRoleSelection = false;
+                AppSettingsService.SaveSettings();
+            }
+
+            ClearBusinessUserSession();
+            UnifiedLoginService.ImportBusinessUsersFromRootIfAvailable();
+
+            ClientProfileRecord? ownerProfile = null;
+            if (!string.IsNullOrWhiteSpace(state.StartupClientId))
+            {
+                var profileCheck = await ProfileAuthService.CheckProfileAsync(state.StartupClientId);
+                if (profileCheck.IsFeatureAvailable)
+                    ownerProfile = profileCheck.Profile;
+            }
+
+            var loginWindow = StartupDialogFactory.CreateUnifiedLoginWindow(state.StartupClientId, ownerProfile);
+            MainWindow = loginWindow;
+            var loginAccepted = loginWindow.ShowDialog() == true;
+            MainWindow = null;
+
+            if (!loginAccepted)
+            {
+                ClearBusinessUserSession();
+                Shutdown();
+                logStartupPhase("unified_login_cancelled");
+                return MultiUserStartupResult.Cancelled;
+            }
+
+            if (loginWindow.LoginKind == UnifiedLoginKind.Member)
+            {
+                if (string.IsNullOrWhiteSpace(AppSettingsService.Settings.RootFolderPath))
+                {
+                    var folderWindow = StartupDialogFactory.CreateMemberRootFolderWindow();
+                    MainWindow = folderWindow;
+                    var folderAccepted = folderWindow.ShowDialog() == true
+                        && !string.IsNullOrWhiteSpace(folderWindow.SelectedRootFolderPath);
+                    MainWindow = null;
+
+                    if (!folderAccepted)
+                    {
+                        ClearBusinessUserSession();
+                        Shutdown();
+                        logStartupPhase("unified_login_member_folder_cancelled");
+                        return MultiUserStartupResult.Cancelled;
+                    }
+                }
+
+                if (!UnifiedLoginService.TryImportBusinessUsersFromRoot(out _)
+                    || loginWindow.AuthenticatedMember == null
+                    || CurrentProfileService.CurrentBusinessUser == null)
+                {
+                    MessageBox.Show(
+                        Res("BusinessUserLoginUsersNotImported"),
+                        "Agency Contractor",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    ClearBusinessUserSession();
+                    Shutdown();
+                    logStartupPhase("unified_login_member_import_failed");
+                    return MultiUserStartupResult.Cancelled;
+                }
+
+                BusinessUserAuthService.ActivateSession(loginWindow.AuthenticatedMember);
+                logStartupPhase("unified_login_member_logged_in");
+                return MultiUserStartupResult.MemberLoggedIn;
+            }
+
+            if (loginWindow.LoginKind == UnifiedLoginKind.Owner && loginWindow.AuthenticatedProfile != null)
+            {
+                SetCurrentProfile(loginWindow.AuthenticatedProfile);
+                ClearBusinessUserSession();
+                logStartupPhase("unified_login_owner_logged_in");
+                return MultiUserStartupResult.OwnerSelected;
+            }
+
+            ClearBusinessUserSession();
+            Shutdown();
+            logStartupPhase("unified_login_failed");
+            return MultiUserStartupResult.Cancelled;
+        }
+
+        private static string Res(string key) =>
+            Application.Current?.TryFindResource(key) as string ?? key;
 
         private static async Task ResolveStartupAccessAsync(StartupFlowState state, Action<string> logStartupPhase)
         {
@@ -553,6 +727,15 @@ namespace Win11DesktopApp
                 else if (profileCheck.IsFeatureAvailable && profileCheck.Profile != null)
                 {
                     var profile = profileCheck.Profile;
+                    var existingProfile = CurrentProfileService.CurrentProfile;
+                    if (existingProfile != null
+                        && string.Equals(existingProfile.ClientId, profile.ClientId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        SetCurrentProfile(existingProfile);
+                        logStartupPhase("profile_gate_unified_skip");
+                        return true;
+                    }
+
                     if (profile.MustResetPassword)
                     {
                         ProfileSessionService.ClearRememberedSession();
@@ -703,6 +886,7 @@ namespace Win11DesktopApp
                 await CommandService.ExecutePendingCommandsAsync(state.StartupAccess.PendingCommands, state.StartupClientId);
 
             RunBackgroundTask("App.HeartbeatLoop", StartHeartbeatLoopAsync, BackgroundTaskToken);
+            _ = WorkspaceSessionService.ReportSessionAsync(state.StartupClientId);
             if (!string.IsNullOrEmpty(AppSettingsService.PendingUpdateFrom))
             {
                 var previousVersion = AppSettingsService.PendingUpdateFrom;
@@ -753,7 +937,10 @@ namespace Win11DesktopApp
 
             // Resolve the minimum set first so logging is configured before other services can emit startup diagnostics.
             if (!string.IsNullOrEmpty(FolderService.RootPath))
+            {
                 LoggingService.Initialize(FolderService.RootPath);
+                FolderService.EnsureWorkspacePassport();
+            }
 
             LoggingService.LogInfo("App", $"Application started v{AppSettingsService.CurrentAppVersion}");
 
@@ -908,6 +1095,12 @@ namespace Win11DesktopApp
             services.AddSingleton<FinanceModuleViewModelFactory>();
             services.AddSingleton<AiWindowFactory>();
             services.AddSingleton<ProfileDialogFactory>();
+            services.AddSingleton<StartupDialogFactory>();
+            services.AddSingleton<BusinessUserAuthService>();
+            services.AddSingleton<BusinessUserDirectoryService>();
+            services.AddSingleton<WorkspaceSessionService>();
+            services.AddSingleton<BusinessUserSessionService>();
+            services.AddSingleton<UnifiedLoginService>();
             services.AddSingleton<ProfileAuthService>();
             services.AddSingleton(sp => new ProfileSessionService(sp.GetRequiredService<AppSettingsService>()));
             services.AddSingleton<DocumentGenerationService>();
@@ -1058,6 +1251,8 @@ namespace Win11DesktopApp
                         }
                         if (heartbeat.PendingCommands.Count > 0)
                             await CommandService.ExecutePendingCommandsAsync(heartbeat.PendingCommands, heartbeat.ClientId).ConfigureAwait(false);
+
+                        _ = WorkspaceSessionService.ReportSessionAsync(heartbeat.ClientId);
                     }
                     catch (Exception ex)
                     {
@@ -1101,6 +1296,12 @@ namespace Win11DesktopApp
 
                 try { ConnectedClientsService.Stop(); }
                 catch (Exception ex) { LoggingService.LogWarning("App.OnExit.ConnectedClientsService", ex.Message); }
+
+                try
+                {
+                    WorkspaceSessionService.EndSessionAsync().GetAwaiter().GetResult();
+                }
+                catch (Exception ex) { LoggingService.LogWarning("App.OnExit.WorkspaceSessionService", ex.Message); }
 
                 try
                 {

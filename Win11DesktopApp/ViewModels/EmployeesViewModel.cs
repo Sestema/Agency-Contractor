@@ -503,6 +503,8 @@ namespace Win11DesktopApp.ViewModels
                 try
                 {
                     if (_company == null) return;
+                    if (!PolicyService.CanAccessCompany(_company)) return;
+                    if (!PolicyService.RequireCanEditCompany(_company, "Додати працівника")) return;
                     if (!PolicyService.EnsureWriteAllowed("Додати працівника"))
                         return;
 
@@ -535,6 +537,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (o is EmployeeModels.EmployeeSummary emp && !string.IsNullOrEmpty(emp.EmployeeFolder))
                 {
+                    if (!CanAccessEmployee(emp)) return;
                     try { Process.Start(new ProcessStartInfo { FileName = emp.EmployeeFolder, UseShellExecute = true }); }
                     catch (Exception ex) { LoggingService.LogWarning("EmployeesViewModel.OpenFolder", ex.Message); }
                 }
@@ -627,6 +630,7 @@ namespace Win11DesktopApp.ViewModels
                 if (_showAllCompanies)
                 {
                     var companyNames = _companyService?.VisibleCompanies
+                        .Where(PolicyService.CanAccessCompany)
                         .Select(company => company.Name)
                         .Where(name => !string.IsNullOrWhiteSpace(name))
                         .ToList() ?? new List<string>();
@@ -658,6 +662,17 @@ namespace Win11DesktopApp.ViewModels
                     HasVisibleEmployees = false;
                     IsError = false;
                     StatusMessage = GetString("MsgEmployeesSelectCompany") ?? "Please select a company.";
+                    return;
+                }
+
+                if (!PolicyService.CanAccessCompany(_company))
+                {
+                    _allEmployees = new List<EmployeeModels.EmployeeSummary>();
+                    Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
+                    HasEmployees = false;
+                    HasVisibleEmployees = false;
+                    IsError = false;
+                    StatusMessage = GetString("MsgEmployeesEmpty") ?? "No employees yet.";
                     return;
                 }
 
@@ -811,6 +826,8 @@ namespace Win11DesktopApp.ViewModels
             List<EmployeeModels.EmployeeSummary> list;
 
             IEnumerable<EmployeeModels.EmployeeSummary> source = _allEmployees;
+            if (PolicyService.IsCompanyDataScopeRestricted)
+                source = source.Where(CanAccessEmployee);
 
             if (_statFilter == "problems")
                 source = source.Where(e => HasExpiringDocs(e));
@@ -901,6 +918,12 @@ namespace Win11DesktopApp.ViewModels
                 || (_company != null && string.Equals(_company.Name, e.Record.FirmName, StringComparison.OrdinalIgnoreCase));
             if (!affectsThisView)
                 return;
+            if (PolicyService.IsCompanyDataScopeRestricted)
+            {
+                var company = FindCompanyByName(e.Record.FirmName);
+                if (company != null && !PolicyService.CanAccessCompany(company))
+                    return;
+            }
 
             Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
             {
@@ -913,6 +936,7 @@ namespace Win11DesktopApp.ViewModels
         {
             var firmName = ResolveEmployeeFirmName(employee);
             if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
+            if (!CanAccessEmployee(employee)) return;
             CleanupDetailsVm();
             EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(
                 firmName,
@@ -931,6 +955,8 @@ namespace Win11DesktopApp.ViewModels
                 return;
             var firmName = ResolveEmployeeFirmName(employee);
             if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
+            if (!CanAccessEmployee(employee)) return;
+            if (!CanEditEmployee(employee)) return;
             CleanupDetailsVm();
             EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(
                 firmName,
@@ -971,11 +997,45 @@ namespace Win11DesktopApp.ViewModels
             return employee?.FirmName ?? string.Empty;
         }
 
+        private bool CanAccessEmployee(EmployeeModels.EmployeeSummary? employee)
+        {
+            var firmName = ResolveEmployeeFirmName(employee);
+            if (employee == null || string.IsNullOrWhiteSpace(firmName))
+                return false;
+
+            var company = FindCompanyByName(firmName);
+            if (company != null)
+                return PolicyService.CanAccessCompany(company);
+
+            return PolicyService.CanAccessEmployer(null, firmName, null);
+        }
+
+        private bool CanEditEmployee(EmployeeModels.EmployeeSummary? employee)
+        {
+            var firmName = ResolveEmployeeFirmName(employee);
+            if (employee == null || string.IsNullOrWhiteSpace(firmName))
+                return false;
+
+            var company = FindCompanyByName(firmName);
+            if (company != null)
+                return PolicyService.RequireCanEditCompany(company, "Редагувати працівника");
+
+            return PolicyService.CanEditEmployer(null, firmName, null);
+        }
+
+        private EmployerCompany? FindCompanyByName(string firmName)
+        {
+            return _companyService?.Companies?.FirstOrDefault(company =>
+                string.Equals(company.Name, firmName, StringComparison.OrdinalIgnoreCase));
+        }
+
         private void AskDeleteEmployee(EmployeeModels.EmployeeSummary? employee)
         {
             if (!PolicyService.EnsureWriteAllowed("Видалити працівника"))
                 return;
             if (employee == null) return;
+            if (!CanAccessEmployee(employee)) return;
+            if (!CanEditEmployee(employee)) return;
             EmployeeToDelete = employee;
             IsDeleteConfirmOpen = true;
         }
@@ -985,6 +1045,8 @@ namespace Win11DesktopApp.ViewModels
             if (!PolicyService.EnsureWriteAllowed("Видалити працівника"))
                 return;
             if (EmployeeToDelete == null) return;
+            if (!CanAccessEmployee(EmployeeToDelete)) return;
+            if (!CanEditEmployee(EmployeeToDelete)) return;
 
             var currentProfile = _currentProfileService.CurrentProfile;
             if (currentProfile == null || string.IsNullOrWhiteSpace(currentProfile.ClientId))

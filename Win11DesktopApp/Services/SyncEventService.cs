@@ -49,7 +49,7 @@ public sealed class SyncEventService
     private static readonly TimeSpan SalaryPublishMinInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan SalaryNotificationMinInterval = TimeSpan.FromSeconds(30);
     /// <summary>Seconds between TCP keepalive probes so dead VPN / sleep states are detected faster.</summary>
-    private const int PostgresConnectionKeepAliveSeconds = 30;
+    private static readonly int PostgresConnectionKeepAliveSeconds = PostgresConnectionFactory.SyncEventKeepAliveSeconds;
 
     private readonly FolderService _folderService;
     private readonly CurrentProfileService _currentProfileService;
@@ -375,24 +375,10 @@ public sealed class SyncEventService
     }
 
     private NpgsqlConnection OpenPostgresConnection()
-    {
-        var settings = _settingsService?.Settings
-            ?? throw new InvalidOperationException("PostgreSQL settings are not available.");
-        var builder = new NpgsqlConnectionStringBuilder
+        => PostgresConnectionFactory.CreateConnection(_settingsService!, new PostgresConnectionStringOptions
         {
-            Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
-            Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
-            Database = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase.Trim(),
-            Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
-            Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
-            Timeout = 10,
-            CommandTimeout = 30,
-            Pooling = true,
-            KeepAlive = PostgresConnectionKeepAliveSeconds
-        };
-
-        return new NpgsqlConnection(builder.ConnectionString);
-    }
+            KeepAliveSeconds = PostgresConnectionKeepAliveSeconds
+        });
 
     private async Task PollLoopAsync(CancellationToken token)
     {

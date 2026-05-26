@@ -586,24 +586,7 @@ ON CONFLICT(source_year, source_month, id) DO UPDATE SET
         }
 
         private NpgsqlConnection OpenConnection()
-        {
-            var settings = _settingsService.Settings;
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
-                Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
-                Database = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase.Trim(),
-                Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
-                Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
-                Timeout = 10,
-                CommandTimeout = 30,
-                Pooling = true
-            };
-
-            var connection = new NpgsqlConnection(builder.ConnectionString);
-            connection.Open();
-            return connection;
-        }
+            => PostgresConnectionFactory.OpenConnection(_settingsService);
 
         private static string BuildSourcePath(int year, int month) => $"postgres://salary/{year:D4}-{month:D2}";
 

@@ -54,6 +54,7 @@ namespace AdminPanel
         {
             "standard" => "Standard",
             "pro" => "Pro",
+            "business" => "Business",
             _ => "Trial"
         };
 
@@ -119,8 +120,44 @@ namespace AdminPanel
         private static string NormalizePlan(string? plan)
         {
             var normalized = (plan ?? string.Empty).Trim().ToLowerInvariant();
-            return normalized == "standard" || normalized == "pro" ? normalized : "trial";
+            return normalized switch
+            {
+                "standard" => "standard",
+                "pro" => "pro",
+                "business" => "business",
+                _ => "trial"
+            };
         }
+    }
+
+    public class TenantRecord
+    {
+        public string Id { get; set; } = "";
+        public string SupabaseClientId { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string PlanKey { get; set; } = "";
+        public int MaxUsers { get; set; } = 1;
+        public int MaxDevices { get; set; } = 1;
+        public bool MultiUserEnabled { get; set; }
+        public string Status { get; set; } = "active";
+        public DateTime? LicenseExpiresAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public sealed class BusinessTenantAccessConfig
+    {
+        public int MaxUsers { get; set; } = 10;
+        public int MaxDevices { get; set; } = 3;
+        public bool MultiUserEnabled { get; set; } = true;
+        public string TenantStatus { get; set; } = "active";
+        public string TenantName { get; set; } = "";
+    }
+
+    public sealed class ClientAccessUpdateResult
+    {
+        public string Plan { get; set; } = "";
+        public TenantRecord? Tenant { get; set; }
     }
 
     public class TelemetryRecord
@@ -437,14 +474,46 @@ namespace AdminPanel
             });
         }
 
-        public async Task UpdateClientAccessAsync(string clientId, string plan, string geminiApiKey)
+        public async Task<ClientAccessUpdateResult?> UpdateClientAccessAsync(
+            string clientId,
+            string plan,
+            string geminiApiKey,
+            BusinessTenantAccessConfig? businessConfig = null)
         {
-            await CallAsync<object>("update_client_access", new
+            var payload = new Dictionary<string, object?>
             {
-                client_id = clientId,
-                plan,
-                gemini_api_key = geminiApiKey
-            });
+                ["client_id"] = clientId,
+                ["plan"] = plan,
+                ["gemini_api_key"] = geminiApiKey
+            };
+
+            if (businessConfig != null)
+            {
+                payload["max_users"] = businessConfig.MaxUsers;
+                payload["max_devices"] = businessConfig.MaxDevices;
+                payload["multi_user_enabled"] = businessConfig.MultiUserEnabled;
+                payload["tenant_status"] = businessConfig.TenantStatus;
+                payload["tenant_name"] = businessConfig.TenantName;
+            }
+
+            return await CallAsync<ClientAccessUpdateResult>("update_client_access", payload);
+        }
+
+        public async Task<TenantRecord?> GetTenantForClientAsync(string clientId)
+        {
+            return await TryGetTenantForClientAsync(clientId);
+        }
+
+        public async Task<TenantRecord?> TryGetTenantForClientAsync(string clientId)
+        {
+            try
+            {
+                return await CallAsync<TenantRecord>("get_tenant_for_client", new { client_id = clientId });
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public async Task UpdateNotesAsync(string clientId, string notes)

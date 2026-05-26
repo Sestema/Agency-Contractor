@@ -428,3 +428,11 @@ CREATE TRIGGER trg_tenant_users_updated_at
 BEFORE UPDATE ON app.tenant_users
 FOR EACH ROW
 EXECUTE FUNCTION app.touch_updated_at_utc();
+
+-- Required for admin-gateway edge function (service_role via PostgREST).
+-- Also add "app" to Supabase Dashboard -> Project Settings -> API -> Exposed schemas.
+GRANT USAGE ON SCHEMA app TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA app TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA app TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT ALL ON SEQUENCES TO service_role;

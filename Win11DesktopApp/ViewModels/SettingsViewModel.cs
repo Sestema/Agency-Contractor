@@ -7,6 +7,8 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
@@ -71,10 +73,104 @@ namespace Win11DesktopApp.ViewModels
         public bool IsOnline { get; init; }
     }
 
+    public sealed class WorkspaceTeamSessionViewItem
+    {
+        public string UserDisplayName { get; init; } = string.Empty;
+        public string MachineName { get; init; } = string.Empty;
+        public string WindowsUser { get; init; } = string.Empty;
+        public string LastSeenDisplay { get; init; } = string.Empty;
+        public string StatusDisplay { get; init; } = string.Empty;
+        public bool IsOnline { get; init; }
+    }
+
+    public sealed class UserRolePreviewItem
+    {
+        public string UserId { get; init; } = string.Empty;
+        public string DisplayName { get; init; } = string.Empty;
+        public string RoleName { get; init; } = string.Empty;
+        public string AccessSummary { get; init; } = string.Empty;
+        public string Status { get; init; } = string.Empty;
+        public bool IsCurrentUser { get; init; }
+        public bool IsEnabled { get; init; } = true;
+        public bool CanEdit { get; init; }
+    }
+
+    public sealed class UserPermissionOption
+    {
+        public string Key { get; init; } = string.Empty;
+        public string DisplayName { get; init; } = string.Empty;
+
+        public override string ToString() => DisplayName;
+    }
+
+    public sealed class BusinessUserModuleEditorItem : ViewModelBase
+    {
+        private string _selectedAccessLevel = "None";
+
+        public string ModuleKey { get; init; } = string.Empty;
+        public string ModuleName { get; init; } = string.Empty;
+        public ObservableCollection<UserPermissionOption> AccessOptions { get; } = new();
+
+        public string SelectedAccessLevel
+        {
+            get => _selectedAccessLevel;
+            set => SetProperty(ref _selectedAccessLevel, value);
+        }
+    }
+
+    public sealed class BusinessUserAgencyEditorItem : ViewModelBase
+    {
+        private bool _isSelected;
+        private readonly Action? _selectionChanged;
+
+        public string AgencyName { get; init; } = string.Empty;
+        public int EmployerCount { get; init; }
+        public string DisplayName => $"{AgencyName} ({EmployerCount})";
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (SetProperty(ref _isSelected, value))
+                    _selectionChanged?.Invoke();
+            }
+        }
+
+        public BusinessUserAgencyEditorItem(Action? selectionChanged = null)
+        {
+            _selectionChanged = selectionChanged;
+        }
+    }
+
+    public sealed class BusinessUserEmployerEditorItem : ViewModelBase
+    {
+        private bool _isSelected;
+        private string _selectedAccessLevel = "View";
+
+        public string EmployerCompanyId { get; init; } = string.Empty;
+        public string EmployerName { get; init; } = string.Empty;
+        public string AgencyName { get; init; } = string.Empty;
+        public ObservableCollection<UserPermissionOption> AccessOptions { get; } = new();
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
+
+        public string SelectedAccessLevel
+        {
+            get => _selectedAccessLevel;
+            set => SetProperty(ref _selectedAccessLevel, value);
+        }
+    }
+
     public class SettingsViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly AppSettingsService _appSettingsService;
+        private readonly FolderService _folderService;
         private readonly ThemeService _themeService;
         private readonly LanguageService _languageService;
         private readonly CompanyService _companyService;
@@ -98,6 +194,11 @@ namespace Win11DesktopApp.ViewModels
         private readonly PostgresNetworkAccessService _postgresNetworkAccessService;
         private readonly AppDataStorageFactory _appDataStorageFactory;
         private readonly ConnectedClientsService _connectedClientsService;
+        private readonly BusinessUserAuthService _businessUserAuthService;
+        private readonly BusinessUserDirectoryService _businessUserDirectoryService;
+        private readonly BusinessUserSessionService _businessUserSessionService;
+        private readonly WorkspaceSessionService _workspaceSessionService;
+        private readonly List<BusinessUserEmployerEditorItem> _allBusinessUserEmployerEditorItems = new();
 
         public ICommand GoBackCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
@@ -114,6 +215,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand OpenGeminiSiteCommand { get; }
         public ICommand CheckForUpdatesCommand { get; }
         public ICommand SaveProfileCommand { get; }
+        public ICommand LogoutProfileCommand { get; }
         public ICommand ChangeProfilePasswordCommand { get; }
         public ICommand EditProfileCommand { get; }
         public ICommand CancelProfileEditCommand { get; }
@@ -142,6 +244,14 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ConfigurePostgresLanAccessCommand { get; }
         public ICommand SelectPostgresDataDirectoryCommand { get; }
         public ICommand OpenNasPostgresGuideCommand { get; }
+        public ICommand OpenBusinessUserEditorCommand { get; }
+        public ICommand EditBusinessUserCommand { get; }
+        public ICommand CloseBusinessUserEditorCommand { get; }
+        public ICommand SaveBusinessUserCommand { get; }
+        public ICommand LoginBusinessUserCommand { get; }
+        public ICommand LogoutBusinessUserCommand { get; }
+        public ICommand ChangeBusinessUserPasswordCommand { get; }
+        public ICommand RefreshWorkspaceTeamStatusCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -152,6 +262,14 @@ namespace Win11DesktopApp.ViewModels
 
         public ObservableCollection<CompanyVisibilityItem> CompanyVisibilityItems { get; } = new();
         public ObservableCollection<ConnectedClientViewItem> ConnectedClients { get; } = new();
+        public ObservableCollection<WorkspaceTeamSessionViewItem> WorkspaceTeamSessions { get; } = new();
+        public ObservableCollection<UserRolePreviewItem> UserRolePreviewItems { get; } = new();
+        public ObservableCollection<UserPermissionOption> BusinessUserRoleOptions { get; } = new();
+        public ObservableCollection<UserPermissionOption> BusinessUserScopeModeOptions { get; } = new();
+        public ObservableCollection<UserPermissionOption> BusinessUserLoginOptions { get; } = new();
+        public ObservableCollection<BusinessUserModuleEditorItem> BusinessUserModuleEditorItems { get; } = new();
+        public ObservableCollection<BusinessUserAgencyEditorItem> BusinessUserAgencyEditorItems { get; } = new();
+        public ObservableCollection<BusinessUserEmployerEditorItem> BusinessUserEmployerEditorItems { get; } = new();
 
         private string _updateStatus = "";
         public string UpdateStatus
@@ -179,6 +297,8 @@ namespace Win11DesktopApp.ViewModels
         private string _profileFirstName = string.Empty;
         private string _profileLastName = string.Empty;
         private bool _profileRememberMeEnabled;
+        private bool _memberRememberMeEnabled;
+        private bool _isSyncingMemberRememberMe;
         private string _profileCurrentPassword = string.Empty;
         private string _profileNewPassword = string.Empty;
         private string _profileConfirmPassword = string.Empty;
@@ -187,6 +307,26 @@ namespace Win11DesktopApp.ViewModels
         private bool _isInitializingProfileFields;
         private bool _isSyncingRememberMe;
         private bool _isProfileEditMode;
+        private bool _isInitializingBusinessUserEditor;
+        private bool _isBusinessUserEditorOpen;
+        private string _editingBusinessUserId = string.Empty;
+        private string _businessUserLogin = string.Empty;
+        private string _businessUserTemporaryPassword = string.Empty;
+        private string _businessUserFirstName = string.Empty;
+        private string _businessUserLastName = string.Empty;
+        private string _businessUserRoleKey = "manager";
+        private bool _businessUserIsActive = true;
+        private string _businessUserScopeMode = "AllData";
+        private string _businessUserEditorStatus = string.Empty;
+        private string _selectedBusinessUserLoginId = string.Empty;
+        private string _businessUserLoginPassword = string.Empty;
+        private string _businessUserLoginStatus = string.Empty;
+        private string _businessUserCurrentPassword = string.Empty;
+        private string _businessUserNewPassword = string.Empty;
+        private string _businessUserConfirmPassword = string.Empty;
+        private string _businessUserPasswordStatus = string.Empty;
+        private string _workspaceIdDisplay = string.Empty;
+        private string _workspaceTeamStatus = string.Empty;
         private bool _isEditingGeminiApiKey;
         private string _geminiApiKeyDraft = string.Empty;
         private bool _telegramEnabled;
@@ -222,25 +362,56 @@ namespace Win11DesktopApp.ViewModels
         public string CurrentSettingsSection
         {
             get => _currentSettingsSection;
-            set
-            {
-                var normalized = string.Equals(value, "Servers", StringComparison.OrdinalIgnoreCase)
-                    ? "Servers"
-                    : "Program";
-
-                if (SetProperty(ref _currentSettingsSection, normalized))
-                {
-                    OnPropertyChanged(nameof(IsProgramSettingsSection));
-                    OnPropertyChanged(nameof(IsServerSettingsSection));
-                }
-            }
+            set => SetCurrentSettingsSection(value, force: false);
         }
+
+        public bool IsMemberSettingsSession =>
+            _currentProfileService.CurrentBusinessUser != null
+            && _currentProfileService.CurrentProfile == null;
+
+        public bool CanShowOwnerSettingsSections => !IsMemberSettingsSession;
+
+        public bool CanShowUsersSettingsTab =>
+            CanShowOwnerSettingsSections
+            && string.Equals(AccessPlanCode, "business", StringComparison.OrdinalIgnoreCase);
+
+        public bool CanShowUsersAdminPanel => CanShowUsersSettingsTab;
+
+        public bool CanShowWorkspaceTeamPanel => CanShowUsersSettingsTab;
+
+        public string WorkspaceIdDisplay
+        {
+            get => _workspaceIdDisplay;
+            private set => SetProperty(ref _workspaceIdDisplay, value);
+        }
+
+        public string WorkspaceTeamStatus
+        {
+            get => _workspaceTeamStatus;
+            private set => SetProperty(ref _workspaceTeamStatus, value);
+        }
+
+        public bool HasWorkspaceTeamSessions => WorkspaceTeamSessions.Count > 0;
+
+        public bool CanShowMemberAccountPanel => IsMemberSettingsSession;
+
+        public bool IsMemberProgramAccountSection =>
+            IsProgramSettingsSection && CanShowMemberAccountPanel;
+
+        public bool IsUsersAdminSettingsSection =>
+            IsUsersSettingsSection && CanShowUsersSettingsTab;
+
+        public bool IsOwnerProgramSettingsSection =>
+            IsProgramSettingsSection && CanShowOwnerSettingsSections;
 
         public bool IsProgramSettingsSection =>
             string.Equals(CurrentSettingsSection, "Program", StringComparison.OrdinalIgnoreCase);
 
         public bool IsServerSettingsSection =>
             string.Equals(CurrentSettingsSection, "Servers", StringComparison.OrdinalIgnoreCase);
+
+        public bool IsUsersSettingsSection =>
+            string.Equals(CurrentSettingsSection, "Users", StringComparison.OrdinalIgnoreCase);
 
         public string RootFolderPath
         {
@@ -252,11 +423,110 @@ namespace Win11DesktopApp.ViewModels
                     var oldPath = _appSettingsService.Settings.RootFolderPath;
                     _appSettingsService.Settings.RootFolderPath = value;
                     _appSettingsService.SaveSettings();
+                    EnsureWorkspacePassportForRoot(value);
                     _activityLogService.Log("RootFolderChanged", "Settings", "", "",
                         $"Змінено кореневу папку", oldPath ?? "", value);
                     OnPropertyChanged();
                     RaiseSecondPcDatabaseAccessPropertiesChanged();
                 }
+            }
+        }
+
+        private void EnsureWorkspacePassportForRoot(string rootFolderPath)
+        {
+            var allowCreate = !IsMemberSettingsSession;
+            var result = _folderService.EnsureWorkspacePassport(rootFolderPath, allowCreate);
+            if (result.HasConflict)
+            {
+                LoggingService.LogWarning(
+                    "Settings.RootFolder.WorkspacePassport",
+                    $"Workspace passport conflict detected: {result.PassportPath}");
+            }
+            else if (result.IsInvalid)
+            {
+                LoggingService.LogWarning(
+                    "Settings.RootFolder.WorkspacePassport",
+                    $"Workspace passport is invalid and was not replaced: {result.PassportPath}");
+            }
+
+            RefreshWorkspaceIdentityDisplay();
+        }
+
+        private void RefreshWorkspaceIdentityDisplay()
+        {
+            if (!_folderService.TryGetWorkspacePassport(RootFolderPath, out var passport)
+                || passport == null
+                || string.IsNullOrWhiteSpace(passport.WorkspaceId))
+            {
+                WorkspaceIdDisplay = string.Empty;
+                return;
+            }
+
+            WorkspaceIdDisplay = passport.WorkspaceId;
+        }
+
+        private async System.Threading.Tasks.Task RefreshWorkspaceTeamStatusAsync()
+        {
+            RefreshWorkspaceIdentityDisplay();
+            WorkspaceTeamSessions.Clear();
+
+            if (!CanShowWorkspaceTeamPanel)
+            {
+                WorkspaceTeamStatus = string.Empty;
+                OnPropertyChanged(nameof(HasWorkspaceTeamSessions));
+                return;
+            }
+
+            WorkspaceTeamStatus = Res("SettingsWorkspaceTeamLoading");
+            try
+            {
+                var ownerClientId = _currentProfileService.CurrentProfile?.ClientId
+                    ?? TelemetryService.GetCurrentClientId();
+                var status = await _workspaceSessionService.RefreshWorkspaceStatusAsync(ownerClientId);
+                if (status == null || !status.Ok)
+                {
+                    if (!string.IsNullOrWhiteSpace(status?.Error))
+                        LoggingService.LogWarning("Settings.RefreshWorkspaceTeamStatus", status.Error);
+
+                    WorkspaceTeamStatus = Res("SettingsWorkspaceTeamUnavailable");
+                    return;
+                }
+
+                var sessions = status.Sessions
+                    .OrderByDescending(item => item.IsOnline)
+                    .ThenByDescending(item => item.LastSeenAtUtc ?? DateTime.MinValue)
+                    .Select(item => new WorkspaceTeamSessionViewItem
+                    {
+                        UserDisplayName = string.IsNullOrWhiteSpace(item.ActorDisplayName)
+                            ? item.ActorKind
+                            : item.ActorDisplayName,
+                        MachineName = item.MachineName,
+                        WindowsUser = item.WindowsUser,
+                        LastSeenDisplay = item.LastSeenAtUtc.HasValue
+                            ? FormatLocalDateTime(item.LastSeenAtUtc.Value)
+                            : string.Empty,
+                        StatusDisplay = item.IsOnline ? Res("SettingsClientOnline") : Res("SettingsClientOffline"),
+                        IsOnline = item.IsOnline
+                    })
+                    .ToList();
+
+                foreach (var session in sessions)
+                    WorkspaceTeamSessions.Add(session);
+
+                WorkspaceTeamStatus = string.Format(
+                    Res("SettingsWorkspaceTeamSummaryFmt"),
+                    status.DevicesOnline,
+                    status.MaxDevices,
+                    WorkspaceIdDisplay);
+            }
+            catch (Exception ex)
+            {
+                WorkspaceTeamStatus = Res("SettingsWorkspaceTeamUnavailable");
+                LoggingService.LogWarning("Settings.RefreshWorkspaceTeamStatus", ex.Message);
+            }
+            finally
+            {
+                OnPropertyChanged(nameof(HasWorkspaceTeamSessions));
             }
         }
 
@@ -809,19 +1079,239 @@ namespace Win11DesktopApp.ViewModels
         public bool HasAccessPlan => !string.IsNullOrWhiteSpace(AccessPlanCode);
         public string AccessStatusSeverity => _accessStatusService.Severity ?? "Info";
         public string MachineId => Services.LicenseService.GetMachineId();
+        public string UsersAccessModeDisplay => _appSettingsService.Settings.PermissionSoftMode
+            ? Res("SettingsUsersSoftMode")
+            : Res("SettingsUsersHardMode");
+        public string UsersBusinessAvailabilityDisplay => AccessPlanCode == "business"
+            ? Res("SettingsUsersBusinessActive")
+            : Res("SettingsUsersAvailableForTesting");
+        public string UsersTenantDisplay => string.IsNullOrWhiteSpace(_currentProfileService.CurrentProfile?.TenantId)
+            ? Res("SettingsUsersTenantNotAssigned")
+            : _currentProfileService.CurrentProfile!.TenantId;
+        public bool HasUserRolePreviewItems => UserRolePreviewItems.Count > 0;
+        public bool IsBusinessUserEditorOpen
+        {
+            get => _isBusinessUserEditorOpen;
+            set => SetProperty(ref _isBusinessUserEditorOpen, value);
+        }
+
+        public bool IsEditingBusinessUser => !string.IsNullOrWhiteSpace(_editingBusinessUserId);
+        public string BusinessUserEditorTitle => IsEditingBusinessUser
+            ? Res("SettingsUsersEditorEditTitle")
+            : Res("SettingsUsersEditorTitle");
+        public string BusinessUserEditorPasswordHint => IsEditingBusinessUser
+            ? Res("SettingsUsersPasswordEditHint")
+            : Res("SettingsUsersTempPasswordHint");
+
+        public string BusinessUserFirstName
+        {
+            get => _businessUserFirstName;
+            set
+            {
+                if (SetProperty(ref _businessUserFirstName, value))
+                {
+                    UpdateBusinessUserGeneratedLogin();
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public string BusinessUserLastName
+        {
+            get => _businessUserLastName;
+            set
+            {
+                if (SetProperty(ref _businessUserLastName, value))
+                {
+                    UpdateBusinessUserGeneratedLogin();
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+        }
+
+        public string BusinessUserLogin
+        {
+            get => _businessUserLogin;
+            set
+            {
+                if (SetProperty(ref _businessUserLogin, NormalizeBusinessUserLogin(value)))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserTemporaryPassword
+        {
+            get => _businessUserTemporaryPassword;
+            set
+            {
+                if (SetProperty(ref _businessUserTemporaryPassword, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserRoleKey
+        {
+            get => _businessUserRoleKey;
+            set
+            {
+                if (!SetProperty(ref _businessUserRoleKey, value))
+                    return;
+
+                if (!_isInitializingBusinessUserEditor)
+                    ApplyBusinessUserRoleDefaults(value);
+            }
+        }
+
+        public bool BusinessUserIsActive
+        {
+            get => _businessUserIsActive;
+            set => SetProperty(ref _businessUserIsActive, value);
+        }
+
+        public string BusinessUserScopeMode
+        {
+            get => _businessUserScopeMode;
+            set
+            {
+                if (SetProperty(ref _businessUserScopeMode, value))
+                {
+                    OnPropertyChanged(nameof(ShowBusinessUserAgencySelector));
+                    RefreshBusinessUserEmployerEditorItems();
+                }
+            }
+        }
+
+        public bool ShowBusinessUserAgencySelector =>
+            BusinessUserScopeMode is "SelectedAgencies" or "SelectedAgenciesAndEmployers";
+
+        public string BusinessUserEditorStatus
+        {
+            get => _businessUserEditorStatus;
+            set => SetProperty(ref _businessUserEditorStatus, value);
+        }
+
+        public bool CanSaveBusinessUser =>
+            !string.IsNullOrWhiteSpace(BusinessUserFirstName)
+            && !string.IsNullOrWhiteSpace(BusinessUserLastName)
+            && !string.IsNullOrWhiteSpace(BusinessUserLogin)
+            && (IsEditingBusinessUser || !string.IsNullOrWhiteSpace(BusinessUserTemporaryPassword));
+
+        public string SelectedBusinessUserLoginId
+        {
+            get => _selectedBusinessUserLoginId;
+            set
+            {
+                if (SetProperty(ref _selectedBusinessUserLoginId, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserLoginPassword
+        {
+            get => _businessUserLoginPassword;
+            set
+            {
+                if (SetProperty(ref _businessUserLoginPassword, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserLoginStatus
+        {
+            get => _businessUserLoginStatus;
+            set => SetProperty(ref _businessUserLoginStatus, value);
+        }
+
+        public bool HasBusinessUserLoginOptions => BusinessUserLoginOptions.Count > 0;
+        public bool IsBusinessUserSessionActive => _currentProfileService.CurrentBusinessUser != null;
+        public string CurrentBusinessUserDisplayName => _currentProfileService.CurrentBusinessUser == null
+            ? Res("SettingsUsersNoActiveBusinessUser")
+            : $"{_currentProfileService.CurrentBusinessUser.FirstName} {_currentProfileService.CurrentBusinessUser.LastName}".Trim();
+        public string CurrentBusinessUserPermissionSummary => BuildCurrentBusinessUserPermissionSummary();
+        public bool CanLoginBusinessUser =>
+            !string.IsNullOrWhiteSpace(SelectedBusinessUserLoginId)
+            && !string.IsNullOrWhiteSpace(BusinessUserLoginPassword);
+
+        public string BusinessUserCurrentPassword
+        {
+            get => _businessUserCurrentPassword;
+            set
+            {
+                if (SetProperty(ref _businessUserCurrentPassword, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserNewPassword
+        {
+            get => _businessUserNewPassword;
+            set
+            {
+                if (SetProperty(ref _businessUserNewPassword, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserConfirmPassword
+        {
+            get => _businessUserConfirmPassword;
+            set
+            {
+                if (SetProperty(ref _businessUserConfirmPassword, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public string BusinessUserPasswordStatus
+        {
+            get => _businessUserPasswordStatus;
+            set => SetProperty(ref _businessUserPasswordStatus, value);
+        }
+
+        public bool BusinessUserMustChangePassword => _currentProfileService.CurrentBusinessUser?.MustChangePassword == true;
+        public string BusinessUserPasswordHint => BusinessUserMustChangePassword
+            ? Res("SettingsUsersMustChangePasswordHint")
+            : Res("SettingsUsersChangePasswordHint");
+        public bool CanChangeBusinessUserPassword =>
+            IsBusinessUserSessionActive
+            && !string.IsNullOrWhiteSpace(BusinessUserCurrentPassword)
+            && !string.IsNullOrWhiteSpace(BusinessUserNewPassword)
+            && !string.IsNullOrWhiteSpace(BusinessUserConfirmPassword);
+
         public bool HasProfile => _currentProfileService.CurrentProfile != null;
         public string ProfileClientId => _currentProfileService.CurrentProfile?.ClientId ?? string.Empty;
 
         public string ProfileFirstName
         {
             get => _profileFirstName;
-            set => SetProperty(ref _profileFirstName, value);
+            set
+            {
+                if (SetProperty(ref _profileFirstName, value))
+                    OnPropertyChanged(nameof(ProfileInitials));
+            }
         }
 
         public string ProfileLastName
         {
             get => _profileLastName;
-            set => SetProperty(ref _profileLastName, value);
+            set
+            {
+                if (SetProperty(ref _profileLastName, value))
+                    OnPropertyChanged(nameof(ProfileInitials));
+            }
+        }
+
+        public string ProfileInitials
+        {
+            get
+            {
+                var first = (_profileFirstName ?? string.Empty).Trim();
+                var last = (_profileLastName ?? string.Empty).Trim();
+                var initials = string.Concat(
+                    first.Length > 0 ? char.ToUpperInvariant(first[0]).ToString() : string.Empty,
+                    last.Length > 0 ? char.ToUpperInvariant(last[0]).ToString() : string.Empty);
+                return string.IsNullOrEmpty(initials) ? "?" : initials;
+            }
         }
 
         public bool ProfileRememberMeEnabled
@@ -836,6 +1326,21 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 _ = SyncRememberMeAsync(value);
+            }
+        }
+
+        public bool MemberRememberMeEnabled
+        {
+            get => _memberRememberMeEnabled;
+            set
+            {
+                if (!SetProperty(ref _memberRememberMeEnabled, value))
+                    return;
+
+                if (_isSyncingMemberRememberMe || _currentProfileService.CurrentBusinessUser == null)
+                    return;
+
+                SyncMemberRememberMe(value);
             }
         }
 
@@ -1077,6 +1582,7 @@ namespace Win11DesktopApp.ViewModels
         public SettingsViewModel(
             NavigationService? navigationService = null,
             AppSettingsService? appSettingsService = null,
+            FolderService? folderService = null,
             ThemeService? themeService = null,
             LanguageService? languageService = null,
             CompanyService? companyService = null,
@@ -1099,10 +1605,15 @@ namespace Win11DesktopApp.ViewModels
             PostgresResetService? postgresResetService = null,
             PostgresNetworkAccessService? postgresNetworkAccessService = null,
             AppDataStorageFactory? appDataStorageFactory = null,
-            ConnectedClientsService? connectedClientsService = null)
+            ConnectedClientsService? connectedClientsService = null,
+            BusinessUserAuthService? businessUserAuthService = null,
+            BusinessUserDirectoryService? businessUserDirectoryService = null,
+            BusinessUserSessionService? businessUserSessionService = null,
+            WorkspaceSessionService? workspaceSessionService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _themeService = themeService ?? throw new InvalidOperationException("ThemeService is not initialized.");
             _languageService = languageService ?? throw new InvalidOperationException("LanguageService is not initialized.");
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
@@ -1126,6 +1637,10 @@ namespace Win11DesktopApp.ViewModels
             _postgresNetworkAccessService = postgresNetworkAccessService ?? throw new InvalidOperationException("PostgresNetworkAccessService is not initialized.");
             _appDataStorageFactory = appDataStorageFactory ?? throw new InvalidOperationException("AppDataStorageFactory is not initialized.");
             _connectedClientsService = connectedClientsService ?? throw new InvalidOperationException("ConnectedClientsService is not initialized.");
+            _businessUserAuthService = businessUserAuthService ?? throw new InvalidOperationException("BusinessUserAuthService is not initialized.");
+            _businessUserDirectoryService = businessUserDirectoryService ?? throw new InvalidOperationException("BusinessUserDirectoryService is not initialized.");
+            _businessUserSessionService = businessUserSessionService ?? throw new InvalidOperationException("BusinessUserSessionService is not initialized.");
+            _workspaceSessionService = workspaceSessionService ?? throw new InvalidOperationException("WorkspaceSessionService is not initialized.");
 
             _currentLanguage = _appSettingsService.Settings.LanguageCode;
             _currentTheme = DetectCurrentTheme();
@@ -1136,8 +1651,14 @@ namespace Win11DesktopApp.ViewModels
             _telegramEnabled = _appSettingsService.Settings.Telegram.Enabled;
             LoadPostgresLoginSettings();
             InitializeProfileFields();
+            InitializeMemberAccountFields();
+            InitializeBusinessUserEditorOptions();
+            RefreshBusinessUserLoginOptions();
+            RefreshUserRolePreview();
             InitializeAccentPresets();
             RefreshTelegramState();
+            EnsureValidSettingsSection();
+            RefreshWorkspaceIdentityDisplay();
             _accessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
             _telegramBotService.StateChanged += TelegramBotService_StateChanged;
 
@@ -1324,6 +1845,7 @@ namespace Win11DesktopApp.ViewModels
             });
 
             SaveProfileCommand = new AsyncRelayCommand(_ => SaveProfileAsync(), _ => HasProfile);
+            LogoutProfileCommand = new AsyncRelayCommand(_ => LogoutProfileAsync(), _ => HasProfile);
             ChangeProfilePasswordCommand = new AsyncRelayCommand(_ => ChangeProfilePasswordAsync(), _ => HasProfile);
             EditProfileCommand = new RelayCommand(_ =>
             {
@@ -1397,9 +1919,35 @@ namespace Win11DesktopApp.ViewModels
 
             ChangeSettingsSectionCommand = new RelayCommand(param =>
             {
-                if (param is string section)
-                    CurrentSettingsSection = section;
+                if (param is not string section)
+                    return;
+
+                if (IsMemberSettingsSession)
+                    return;
+
+                if (section.Equals("Servers", StringComparison.OrdinalIgnoreCase)
+                    && !CanShowOwnerSettingsSections)
+                {
+                    return;
+                }
+
+                if (section.Equals("Users", StringComparison.OrdinalIgnoreCase)
+                    && !CanShowUsersSettingsTab)
+                {
+                    return;
+                }
+
+                SetCurrentSettingsSection(section, force: true);
             });
+
+            OpenBusinessUserEditorCommand = new RelayCommand(_ => OpenBusinessUserEditor());
+            EditBusinessUserCommand = new RelayCommand(param => EditBusinessUser(param as string), param => param is string id && !string.IsNullOrWhiteSpace(id));
+            CloseBusinessUserEditorCommand = new RelayCommand(_ => IsBusinessUserEditorOpen = false);
+            SaveBusinessUserCommand = new RelayCommand(_ => SaveBusinessUser(), _ => CanSaveBusinessUser);
+            LoginBusinessUserCommand = new RelayCommand(_ => LoginBusinessUser(), _ => CanLoginBusinessUser);
+            LogoutBusinessUserCommand = new RelayCommand(_ => LogoutBusinessUser(), _ => IsBusinessUserSessionActive);
+            ChangeBusinessUserPasswordCommand = new RelayCommand(_ => ChangeBusinessUserPassword(), _ => CanChangeBusinessUserPassword);
+            RefreshWorkspaceTeamStatusCommand = new RelayCommand(async _ => await RefreshWorkspaceTeamStatusAsync());
 
             CreateSqliteBackupFromPostgresCommand = new RelayCommand(async _ =>
             {
@@ -1499,12 +2047,71 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(AccessPlanCode));
             OnPropertyChanged(nameof(AccessPlanDisplay));
             OnPropertyChanged(nameof(HasAccessPlan));
+            OnPropertyChanged(nameof(UsersBusinessAvailabilityDisplay));
+            OnPropertyChanged(nameof(CanShowUsersSettingsTab));
+            OnPropertyChanged(nameof(CanShowUsersAdminPanel));
+            OnPropertyChanged(nameof(IsUsersAdminSettingsSection));
+            EnsureValidSettingsSection();
+            RefreshUserRolePreview();
+        }
+
+        private void SetCurrentSettingsSection(string? value, bool force)
+        {
+            var normalized = NormalizeSettingsSection(value);
+            if (!force && string.Equals(_currentSettingsSection, normalized, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (SetProperty(ref _currentSettingsSection, normalized, nameof(CurrentSettingsSection)))
+            {
+                OnPropertyChanged(nameof(IsProgramSettingsSection));
+                OnPropertyChanged(nameof(IsServerSettingsSection));
+                OnPropertyChanged(nameof(IsUsersSettingsSection));
+                OnPropertyChanged(nameof(IsUsersAdminSettingsSection));
+                OnPropertyChanged(nameof(IsMemberProgramAccountSection));
+                OnPropertyChanged(nameof(IsOwnerProgramSettingsSection));
+
+                if (IsUsersSettingsSection && CanShowWorkspaceTeamPanel)
+                    _ = RefreshWorkspaceTeamStatusAsync();
+            }
+        }
+
+        private string NormalizeSettingsSection(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            normalized = normalized.Equals("Servers", StringComparison.OrdinalIgnoreCase)
+                ? "Servers"
+                : normalized.Equals("Users", StringComparison.OrdinalIgnoreCase)
+                    ? "Users"
+                    : "Program";
+
+            if (IsMemberSettingsSession)
+                return "Program";
+
+            if (normalized.Equals("Users", StringComparison.OrdinalIgnoreCase) && !CanShowUsersSettingsTab)
+                return "Program";
+
+            if (normalized.Equals("Servers", StringComparison.OrdinalIgnoreCase) && !CanShowOwnerSettingsSections)
+                return "Program";
+
+            return normalized;
+        }
+
+        private void EnsureValidSettingsSection()
+        {
+            var normalized = NormalizeSettingsSection(_currentSettingsSection);
+            if (string.Equals(_currentSettingsSection, normalized, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            SetCurrentSettingsSection(normalized, force: true);
         }
 
         private void RaiseLocalizedSettingsPropertiesChanged()
         {
             LoadPostgresLoginSettings();
+            InitializeBusinessUserEditorOptions();
+            RefreshBusinessUserLoginOptions();
             RefreshTelegramState();
+            RefreshUserRolePreview();
             OnPropertyChanged(nameof(WebPanelStatus));
             OnPropertyChanged(nameof(DatabaseStorageModeDisplay));
             OnPropertyChanged(nameof(ActiveDatabaseRuntimeDisplay));
@@ -1637,21 +2244,20 @@ namespace Win11DesktopApp.ViewModels
             string? password,
             bool includePassword)
         {
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(host) ? "localhost" : host.Trim(),
-                Port = port <= 0 ? 5432 : port,
-                Database = string.IsNullOrWhiteSpace(databaseName) ? "agency_db" : databaseName.Trim(),
-                Username = username?.Trim() ?? string.Empty,
-                Timeout = 10,
-                CommandTimeout = 10,
-                Pooling = true
-            };
-
-            if (includePassword)
-                builder.Password = password ?? string.Empty;
-
-            return builder.ConnectionString;
+            return PostgresConnectionFactory.BuildConnectionString(
+                host,
+                port,
+                databaseName,
+                username,
+                password,
+                new PostgresConnectionStringOptions
+                {
+                    ConnectionTimeoutSeconds = PostgresConnectionFactory.DefaultConnectionTimeoutSeconds,
+                    CommandTimeoutSeconds = PostgresConnectionFactory.DefaultConnectionTimeoutSeconds,
+                    Pooling = true,
+                    IncludePassword = includePassword,
+                    UseDefaultUsernameWhenEmpty = false
+                });
         }
 
         private static string ResolvePostgresDataDirectorySelection(string selectedPath)
@@ -2373,8 +2979,10 @@ namespace Win11DesktopApp.ViewModels
         {
             return (plan ?? string.Empty).Trim().ToLowerInvariant() switch
             {
+                "business" => "business",
+                "ultimate" => "ultimate",
+                "pro" => "ultimate",
                 "standard" => "standard",
-                "pro" => "pro",
                 _ => "trial"
             };
         }
@@ -2383,10 +2991,763 @@ namespace Win11DesktopApp.ViewModels
         {
             return NormalizeAccessPlan(plan) switch
             {
+                "business" => "Business",
+                "ultimate" => "Ultimate",
                 "standard" => "Standard",
-                "pro" => "Pro",
                 _ => "Trial"
             };
+        }
+
+        private void RefreshUserRolePreview()
+        {
+            UserRolePreviewItems.Clear();
+
+            var profile = _currentProfileService.CurrentProfile;
+            var displayName = profile == null
+                ? Res("SettingsUsersOwnerFallback")
+                : string.Join(" ", new[] { profile.FirstName, profile.LastName }
+                    .Where(part => !string.IsNullOrWhiteSpace(part))).Trim();
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                displayName = profile?.ClientId ?? Res("SettingsUsersOwnerFallback");
+
+            UserRolePreviewItems.Add(new UserRolePreviewItem
+            {
+                DisplayName = displayName,
+                RoleName = string.IsNullOrWhiteSpace(profile?.RoleKey)
+                    ? Res("SettingsUsersRoleOwner")
+                    : FormatRoleName(profile.RoleKey),
+                AccessSummary = Res("SettingsUsersOwnerAccess"),
+                Status = Res("SettingsUsersStatusActive"),
+                IsCurrentUser = true,
+                IsEnabled = profile?.IsActive != false
+            });
+
+            foreach (var user in _appSettingsService.Settings.BusinessUsers
+                         .OrderBy(user => user.LastName, StringComparer.CurrentCultureIgnoreCase)
+                         .ThenBy(user => user.FirstName, StringComparer.CurrentCultureIgnoreCase))
+            {
+                var userName = string.Join(" ", new[] { user.FirstName, user.LastName }
+                    .Where(part => !string.IsNullOrWhiteSpace(part))).Trim();
+                UserRolePreviewItems.Add(new UserRolePreviewItem
+                {
+                    UserId = user.UserId,
+                    DisplayName = string.IsNullOrWhiteSpace(userName) ? user.UserId : userName,
+                    RoleName = FormatRoleName(user.RoleKey),
+                    AccessSummary = BuildBusinessUserAccessSummary(user),
+                    Status = user.IsActive ? Res("SettingsUsersStatusActive") : Res("SettingsUsersStatusDisabled"),
+                    IsEnabled = user.IsActive,
+                    CanEdit = true
+                });
+            }
+
+            UserRolePreviewItems.Add(new UserRolePreviewItem
+            {
+                DisplayName = Res("SettingsUsersAccountantExample"),
+                RoleName = Res("SettingsUsersRoleAccountant"),
+                AccessSummary = Res("SettingsUsersAccountantAccess"),
+                Status = Res("SettingsUsersStatusTemplate"),
+                IsEnabled = false
+            });
+
+            UserRolePreviewItems.Add(new UserRolePreviewItem
+            {
+                DisplayName = Res("SettingsUsersManagerExample"),
+                RoleName = Res("SettingsUsersRoleManager"),
+                AccessSummary = Res("SettingsUsersManagerAccess"),
+                Status = Res("SettingsUsersStatusTemplate"),
+                IsEnabled = false
+            });
+
+            OnPropertyChanged(nameof(HasUserRolePreviewItems));
+            OnPropertyChanged(nameof(UsersAccessModeDisplay));
+            OnPropertyChanged(nameof(UsersBusinessAvailabilityDisplay));
+            OnPropertyChanged(nameof(UsersTenantDisplay));
+        }
+
+        private static string FormatRoleName(string roleKey)
+        {
+            return roleKey.Trim().ToLowerInvariant() switch
+            {
+                "owner" => Res("SettingsUsersRoleOwner"),
+                "admin" => Res("SettingsUsersRoleAdmin"),
+                "accountant" => Res("SettingsUsersRoleAccountant"),
+                "manager" => Res("SettingsUsersRoleManager"),
+                "viewer" => Res("SettingsUsersRoleViewer"),
+                _ => roleKey
+            };
+        }
+
+        private string BuildBusinessUserAccessSummary(AppSettingsService.BusinessUserSetting user)
+        {
+            var moduleCount = user.ModulePermissions.Count(permission => permission.AccessLevel != "None");
+            var employerCount = user.EmployerPermissions.Count(permission => permission.AccessLevel != "None");
+            var scope = user.AccessScope.Mode switch
+            {
+                "SelectedAgencies" => string.Format(Res("SettingsUsersSummaryAgenciesFmt"), user.AccessScope.AgencyNames.Count),
+                "SelectedEmployers" => string.Format(Res("SettingsUsersSummaryEmployersFmt"), user.AccessScope.EmployerCompanyIds.Count),
+                "SelectedAgenciesAndEmployers" => string.Format(Res("SettingsUsersSummaryMixedFmt"), user.AccessScope.AgencyNames.Count, user.AccessScope.EmployerCompanyIds.Count),
+                _ => Res("SettingsUsersSummaryAllData")
+            };
+
+            return string.Format(Res("SettingsUsersSummaryFmt"), scope, moduleCount, employerCount);
+        }
+
+        private void InitializeBusinessUserEditorOptions()
+        {
+            BusinessUserRoleOptions.Clear();
+            BusinessUserRoleOptions.Add(new UserPermissionOption { Key = "admin", DisplayName = Res("SettingsUsersRoleAdmin") });
+            BusinessUserRoleOptions.Add(new UserPermissionOption { Key = "manager", DisplayName = Res("SettingsUsersRoleManager") });
+            BusinessUserRoleOptions.Add(new UserPermissionOption { Key = "accountant", DisplayName = Res("SettingsUsersRoleAccountant") });
+            BusinessUserRoleOptions.Add(new UserPermissionOption { Key = "viewer", DisplayName = Res("SettingsUsersRoleViewer") });
+
+            BusinessUserScopeModeOptions.Clear();
+            BusinessUserScopeModeOptions.Add(new UserPermissionOption { Key = "AllData", DisplayName = Res("SettingsUsersScopeAllTitle") });
+            BusinessUserScopeModeOptions.Add(new UserPermissionOption { Key = "SelectedAgencies", DisplayName = Res("SettingsUsersScopeAgenciesTitle") });
+            BusinessUserScopeModeOptions.Add(new UserPermissionOption { Key = "SelectedEmployers", DisplayName = Res("SettingsUsersScopeEmployersTitle") });
+            BusinessUserScopeModeOptions.Add(new UserPermissionOption { Key = "SelectedAgenciesAndEmployers", DisplayName = Res("SettingsUsersScopeMixedTitle") });
+        }
+
+        private void RefreshBusinessUserLoginOptions()
+        {
+            BusinessUserLoginOptions.Clear();
+            foreach (var user in _appSettingsService.Settings.BusinessUsers
+                         .Where(user => user.IsActive)
+                         .OrderBy(user => user.LastName, StringComparer.CurrentCultureIgnoreCase)
+                         .ThenBy(user => user.FirstName, StringComparer.CurrentCultureIgnoreCase))
+            {
+                var name = $"{user.FirstName} {user.LastName}".Trim();
+                var login = string.IsNullOrWhiteSpace(user.Login) ? user.UserId : user.Login;
+                BusinessUserLoginOptions.Add(new UserPermissionOption
+                {
+                    Key = user.UserId,
+                    DisplayName = string.IsNullOrWhiteSpace(name)
+                        ? login
+                        : $"{name} ({login})"
+                });
+            }
+
+            if (!BusinessUserLoginOptions.Any(option =>
+                    string.Equals(option.Key, SelectedBusinessUserLoginId, StringComparison.OrdinalIgnoreCase)))
+                SelectedBusinessUserLoginId = BusinessUserLoginOptions.FirstOrDefault()?.Key ?? string.Empty;
+
+            OnPropertyChanged(nameof(HasBusinessUserLoginOptions));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void OpenBusinessUserEditor()
+        {
+            _isInitializingBusinessUserEditor = true;
+            try
+            {
+                _editingBusinessUserId = string.Empty;
+                BusinessUserFirstName = string.Empty;
+                BusinessUserLastName = string.Empty;
+                BusinessUserLogin = string.Empty;
+                BusinessUserTemporaryPassword = GenerateTemporaryPassword();
+                BusinessUserRoleKey = "manager";
+                BusinessUserIsActive = true;
+                BusinessUserScopeMode = "AllData";
+                BusinessUserEditorStatus = string.Empty;
+                BuildBusinessUserEditorCollections();
+                ApplyBusinessUserRoleDefaults(BusinessUserRoleKey);
+            }
+            finally
+            {
+                _isInitializingBusinessUserEditor = false;
+            }
+
+            RaiseBusinessUserEditorModePropertiesChanged();
+            IsBusinessUserEditorOpen = true;
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void EditBusinessUser(string? userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return;
+
+            var user = _appSettingsService.Settings.BusinessUsers.FirstOrDefault(candidate =>
+                string.Equals(candidate.UserId, userId, StringComparison.OrdinalIgnoreCase));
+            if (user == null)
+                return;
+
+            _isInitializingBusinessUserEditor = true;
+            try
+            {
+                _editingBusinessUserId = user.UserId;
+                BusinessUserFirstName = user.FirstName;
+                BusinessUserLastName = user.LastName;
+                BusinessUserLogin = user.Login;
+                BusinessUserTemporaryPassword = string.Empty;
+                BusinessUserRoleKey = string.IsNullOrWhiteSpace(user.RoleKey) ? "manager" : user.RoleKey;
+                BusinessUserIsActive = user.IsActive;
+                BusinessUserScopeMode = string.IsNullOrWhiteSpace(user.AccessScope?.Mode) ? "AllData" : user.AccessScope.Mode;
+                BusinessUserEditorStatus = string.Empty;
+                BuildBusinessUserEditorCollections();
+                ApplyBusinessUserEditorValues(user);
+            }
+            finally
+            {
+                _isInitializingBusinessUserEditor = false;
+            }
+
+            RaiseBusinessUserEditorModePropertiesChanged();
+            IsBusinessUserEditorOpen = true;
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void RaiseBusinessUserEditorModePropertiesChanged()
+        {
+            OnPropertyChanged(nameof(IsEditingBusinessUser));
+            OnPropertyChanged(nameof(BusinessUserEditorTitle));
+            OnPropertyChanged(nameof(BusinessUserEditorPasswordHint));
+            OnPropertyChanged(nameof(CanSaveBusinessUser));
+        }
+
+        private void BuildBusinessUserEditorCollections()
+        {
+            BusinessUserModuleEditorItems.Clear();
+            foreach (var module in GetBusinessUserModules())
+            {
+                var item = new BusinessUserModuleEditorItem
+                {
+                    ModuleKey = module.Key,
+                    ModuleName = module.DisplayName
+                };
+                foreach (var option in GetModuleAccessOptions(module.AllowExport))
+                    item.AccessOptions.Add(option);
+                BusinessUserModuleEditorItems.Add(item);
+            }
+
+            BusinessUserAgencyEditorItems.Clear();
+            foreach (var agency in _companyService.Companies
+                         .Where(company => !string.IsNullOrWhiteSpace(company.Agency?.Name))
+                         .GroupBy(company => company.Agency.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase))
+            {
+                BusinessUserAgencyEditorItems.Add(new BusinessUserAgencyEditorItem(RefreshBusinessUserEmployerEditorItems)
+                {
+                    AgencyName = agency.Key,
+                    EmployerCount = agency.Count()
+                });
+            }
+
+            _allBusinessUserEmployerEditorItems.Clear();
+            foreach (var company in _companyService.Companies
+                         .Where(company => !string.IsNullOrWhiteSpace(company.Name))
+                         .OrderBy(company => company.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                var item = new BusinessUserEmployerEditorItem
+                {
+                    EmployerCompanyId = company.Id.ToString(),
+                    EmployerName = company.Name.Trim(),
+                    AgencyName = string.IsNullOrWhiteSpace(company.Agency?.Name)
+                        ? Res("SettingsUsersEmployerNoAgency")
+                        : company.Agency.Name.Trim()
+                };
+                item.AccessOptions.Add(new UserPermissionOption { Key = "View", DisplayName = Res("SettingsUsersAccessView") });
+                item.AccessOptions.Add(new UserPermissionOption { Key = "Edit", DisplayName = Res("SettingsUsersAccessEdit") });
+                _allBusinessUserEmployerEditorItems.Add(item);
+            }
+
+            RefreshBusinessUserEmployerEditorItems();
+        }
+
+        private void RefreshBusinessUserEmployerEditorItems()
+        {
+            if (_allBusinessUserEmployerEditorItems.Count == 0)
+                return;
+
+            var selectedAgencies = BusinessUserAgencyEditorItems
+                .Where(item => item.IsSelected)
+                .Select(item => item.AgencyName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            IEnumerable<BusinessUserEmployerEditorItem> source = _allBusinessUserEmployerEditorItems;
+
+            if (BusinessUserScopeMode is "SelectedAgencies" or "SelectedAgenciesAndEmployers"
+                && selectedAgencies.Count > 0)
+            {
+                source = source.Where(item =>
+                    selectedAgencies.Contains(item.AgencyName)
+                    || (BusinessUserScopeMode == "SelectedAgenciesAndEmployers" && item.IsSelected));
+            }
+            else if (BusinessUserScopeMode == "SelectedAgencies" && selectedAgencies.Count == 0)
+            {
+                source = Enumerable.Empty<BusinessUserEmployerEditorItem>();
+            }
+
+            BusinessUserEmployerEditorItems.Clear();
+            foreach (var item in source.OrderBy(item => item.EmployerName, StringComparer.CurrentCultureIgnoreCase))
+                BusinessUserEmployerEditorItems.Add(item);
+        }
+
+        private void ApplyBusinessUserEditorValues(AppSettingsService.BusinessUserSetting user)
+        {
+            var modulePermissions = user.ModulePermissions
+                .GroupBy(permission => permission.ModuleKey, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First().AccessLevel, StringComparer.OrdinalIgnoreCase);
+            foreach (var item in BusinessUserModuleEditorItems)
+            {
+                if (modulePermissions.TryGetValue(item.ModuleKey, out var accessLevel))
+                    item.SelectedAccessLevel = accessLevel;
+            }
+
+            var selectedAgencies = user.AccessScope?.AgencyNames?
+                .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in BusinessUserAgencyEditorItems)
+                item.IsSelected = selectedAgencies.Contains(item.AgencyName);
+
+            var employerPermissions = user.EmployerPermissions
+                .GroupBy(permission => permission.EmployerCompanyId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First().AccessLevel, StringComparer.OrdinalIgnoreCase);
+            var scopeEmployerIds = user.AccessScope?.EmployerCompanyIds?
+                .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in _allBusinessUserEmployerEditorItems)
+            {
+                if (employerPermissions.TryGetValue(item.EmployerCompanyId, out var accessLevel)
+                    || scopeEmployerIds.Contains(item.EmployerCompanyId))
+                {
+                    item.IsSelected = true;
+                    item.SelectedAccessLevel = string.IsNullOrWhiteSpace(accessLevel) ? "View" : accessLevel;
+                }
+            }
+
+            RefreshBusinessUserEmployerEditorItems();
+        }
+
+        private void ApplyBusinessUserRoleDefaults(string roleKey)
+        {
+            var normalized = (roleKey ?? string.Empty).Trim().ToLowerInvariant();
+            foreach (var item in BusinessUserModuleEditorItems)
+            {
+                item.SelectedAccessLevel = GetDefaultModuleAccess(normalized, item.ModuleKey);
+            }
+        }
+
+        private static string GetDefaultModuleAccess(string roleKey, string moduleKey)
+        {
+            return roleKey switch
+            {
+                "admin" => moduleKey == "reports" ? "Export" : "Edit",
+                "accountant" => moduleKey switch
+                {
+                    "salary" => "Edit",
+                    "reports" => "Export",
+                    "settings" => "None",
+                    _ => "View"
+                },
+                "viewer" => moduleKey is "salary" or "settings" ? "None" : "View",
+                _ => moduleKey switch
+                {
+                    "employees" or "documents" => "Edit",
+                    "salary" or "companies" or "reports" => "View",
+                    _ => "None"
+                }
+            };
+        }
+
+        private void SaveBusinessUser()
+        {
+            if (!CanSaveBusinessUser)
+            {
+                BusinessUserEditorStatus = Res("SettingsUsersEditorLoginRequired");
+                return;
+            }
+
+            var isEditing = IsEditingBusinessUser;
+            if (_appSettingsService.Settings.BusinessUsers.Any(user =>
+                    !string.Equals(user.UserId, _editingBusinessUserId, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(user.Login, BusinessUserLogin, StringComparison.OrdinalIgnoreCase)))
+            {
+                BusinessUserEditorStatus = Res("SettingsUsersEditorLoginExists");
+                return;
+            }
+
+            var user = isEditing
+                ? _appSettingsService.Settings.BusinessUsers.FirstOrDefault(candidate =>
+                    string.Equals(candidate.UserId, _editingBusinessUserId, StringComparison.OrdinalIgnoreCase))
+                : null;
+            if (isEditing && user == null)
+            {
+                BusinessUserEditorStatus = Res("SettingsUsersLoginUserNotFound");
+                return;
+            }
+
+            user ??= new AppSettingsService.BusinessUserSetting
+            {
+                UserId = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            var selectedAgencies = BusinessUserAgencyEditorItems
+                .Where(item => item.IsSelected)
+                .Select(item => item.AgencyName)
+                .ToList();
+            var selectedEmployers = BusinessUserEmployerEditorItems
+                .Where(item => item.IsSelected)
+                .Select(item => item.EmployerCompanyId)
+                .ToList();
+
+            user.Login = BusinessUserLogin;
+            user.FirstName = BusinessUserFirstName.Trim();
+            user.LastName = BusinessUserLastName.Trim();
+            user.RoleKey = BusinessUserRoleKey;
+            user.IsActive = BusinessUserIsActive;
+            user.AccessScope = new AppSettingsService.UserAccessScopeSetting
+            {
+                Mode = BusinessUserScopeMode,
+                AgencyNames = selectedAgencies,
+                EmployerCompanyIds = selectedEmployers
+            };
+            user.ModulePermissions = BusinessUserModuleEditorItems
+                .Select(item => new AppSettingsService.ModulePermissionSetting
+                {
+                    ModuleKey = item.ModuleKey,
+                    AccessLevel = item.SelectedAccessLevel
+                })
+                .ToList();
+            user.EmployerPermissions = BusinessUserEmployerEditorItems
+                .Where(item => item.IsSelected)
+                .Select(item => new AppSettingsService.EmployerPermissionSetting
+                {
+                    EmployerCompanyId = item.EmployerCompanyId,
+                    AccessLevel = item.SelectedAccessLevel
+                })
+                .ToList();
+
+            if (!string.IsNullOrWhiteSpace(BusinessUserTemporaryPassword) || !isEditing)
+            {
+                user.PasswordSalt = BusinessUserAuthService.GenerateSalt();
+                user.PasswordHash = BusinessUserAuthService.HashPassword(BusinessUserTemporaryPassword, user.PasswordSalt);
+                user.MustChangePassword = true;
+            }
+
+            if (!isEditing)
+                _appSettingsService.Settings.BusinessUsers.Add(user);
+
+            _appSettingsService.SaveSettings();
+            _businessUserDirectoryService.SyncToRootFolder();
+            _activityLogService.Log(
+                isEditing ? "BusinessUserUpdated" : "BusinessUserAdded",
+                "Settings",
+                "",
+                "",
+                string.Format(isEditing ? Res("SettingsUsersUpdatedLogFmt") : Res("SettingsUsersAddedLogFmt"), $"{user.FirstName} {user.LastName}".Trim(), FormatRoleName(user.RoleKey)),
+                "",
+                BuildBusinessUserAccessSummary(user),
+                entityType: "BusinessUser",
+                entityId: user.UserId);
+
+            if (string.Equals(_currentProfileService.CurrentBusinessUser?.UserId, user.UserId, StringComparison.OrdinalIgnoreCase))
+            {
+                _currentProfileService.SetCurrentBusinessUser(user.IsActive ? user : null);
+                if (!user.IsActive)
+                {
+                    _appSettingsService.Settings.CurrentBusinessUserId = string.Empty;
+                    _appSettingsService.SaveSettings();
+                }
+                RaiseBusinessUserSessionPropertiesChanged();
+            }
+
+            RefreshUserRolePreview();
+            RefreshBusinessUserLoginOptions();
+            IsBusinessUserEditorOpen = false;
+        }
+
+        private void LoginBusinessUser()
+        {
+            var result = _businessUserAuthService.TryLoginByUserId(SelectedBusinessUserLoginId, BusinessUserLoginPassword);
+            if (!result.Success || result.User == null)
+            {
+                BusinessUserLoginStatus = result.FailureReason switch
+                {
+                    "wrong_password" => Res("SettingsUsersLoginWrongPassword"),
+                    _ => Res("SettingsUsersLoginUserNotFound")
+                };
+                return;
+            }
+
+            var user = result.User;
+            BusinessUserLoginPassword = string.Empty;
+            BusinessUserLoginStatus = string.Format(Res("SettingsUsersLoginSuccessFmt"), $"{user.FirstName} {user.LastName}".Trim());
+            BusinessUserPasswordStatus = user.MustChangePassword ? Res("SettingsUsersMustChangePasswordStatus") : string.Empty;
+            RaiseBusinessUserSessionPropertiesChanged();
+            _activityLogService.Log(
+                "BusinessUserLogin",
+                "Settings",
+                "",
+                "",
+                string.Format(Res("SettingsUsersLoginLogFmt"), $"{user.FirstName} {user.LastName}".Trim()),
+                entityType: "BusinessUser",
+                entityId: user.UserId);
+        }
+
+        private void LogoutBusinessUser()
+        {
+            var previous = _currentProfileService.CurrentBusinessUser;
+            var isMemberSession = IsMemberSettingsSession;
+            _businessUserAuthService.LogoutSession();
+            BusinessUserLoginStatus = Res("SettingsUsersLogoutSuccess");
+            ClearBusinessUserPasswordFields();
+            BusinessUserPasswordStatus = string.Empty;
+            RaiseBusinessUserSessionPropertiesChanged();
+            if (previous != null)
+            {
+                _activityLogService.Log(
+                    "BusinessUserLogout",
+                    "Settings",
+                    "",
+                    "",
+                    string.Format(Res("SettingsUsersLogoutLogFmt"), $"{previous.FirstName} {previous.LastName}".Trim()),
+                    entityType: "BusinessUser",
+                    entityId: previous.UserId);
+            }
+
+            if (isMemberSession)
+            {
+                _businessUserSessionService.ClearRememberedSession();
+                _memberRememberMeEnabled = false;
+                OnPropertyChanged(nameof(MemberRememberMeEnabled));
+                _appSettingsService.Settings.PendingMemberRoleSelection = true;
+                _appSettingsService.SaveSettings();
+                RestartApplicationForLogin();
+            }
+        }
+
+        private void RaiseBusinessUserSessionPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(IsBusinessUserSessionActive));
+            OnPropertyChanged(nameof(IsMemberSettingsSession));
+            OnPropertyChanged(nameof(CanShowOwnerSettingsSections));
+            OnPropertyChanged(nameof(CanShowUsersSettingsTab));
+            OnPropertyChanged(nameof(CanShowUsersAdminPanel));
+            OnPropertyChanged(nameof(CanShowMemberAccountPanel));
+            OnPropertyChanged(nameof(IsMemberProgramAccountSection));
+            OnPropertyChanged(nameof(IsOwnerProgramSettingsSection));
+            OnPropertyChanged(nameof(IsUsersAdminSettingsSection));
+            OnPropertyChanged(nameof(CurrentBusinessUserDisplayName));
+            OnPropertyChanged(nameof(CurrentBusinessUserPermissionSummary));
+            OnPropertyChanged(nameof(BusinessUserMustChangePassword));
+            OnPropertyChanged(nameof(BusinessUserPasswordHint));
+            OnPropertyChanged(nameof(CanChangeBusinessUserPassword));
+            RefreshMemberRememberMeEnabled();
+            EnsureValidSettingsSection();
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void InitializeMemberAccountFields()
+        {
+            RefreshMemberRememberMeEnabled();
+        }
+
+        private void RefreshMemberRememberMeEnabled()
+        {
+            var enabled = _businessUserSessionService.IsRememberEnabled;
+            if (_memberRememberMeEnabled == enabled)
+                return;
+
+            _memberRememberMeEnabled = enabled;
+            OnPropertyChanged(nameof(MemberRememberMeEnabled));
+        }
+
+        private void SyncMemberRememberMe(bool enabled)
+        {
+            var user = _currentProfileService.CurrentBusinessUser;
+            if (user == null)
+                return;
+
+            _isSyncingMemberRememberMe = true;
+            try
+            {
+                if (enabled)
+                    _businessUserSessionService.SaveRememberedSession(user);
+                else
+                    _businessUserSessionService.ClearRememberedSession();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("Settings.SyncMemberRememberMe", ex.Message);
+                RefreshMemberRememberMeEnabled();
+            }
+            finally
+            {
+                _isSyncingMemberRememberMe = false;
+            }
+        }
+
+        private void ChangeBusinessUserPassword()
+        {
+            var currentUser = _currentProfileService.CurrentBusinessUser;
+            if (currentUser == null)
+            {
+                BusinessUserPasswordStatus = Res("SettingsUsersPasswordNoActiveUser");
+                return;
+            }
+
+            var user = _appSettingsService.Settings.BusinessUsers.FirstOrDefault(candidate =>
+                string.Equals(candidate.UserId, currentUser.UserId, StringComparison.OrdinalIgnoreCase));
+            if (user == null)
+            {
+                BusinessUserPasswordStatus = Res("SettingsUsersLoginUserNotFound");
+                return;
+            }
+
+            if (!BusinessUserAuthService.VerifyPassword(user, BusinessUserCurrentPassword))
+            {
+                BusinessUserPasswordStatus = Res("SettingsUsersLoginWrongPassword");
+                return;
+            }
+
+            if (!string.Equals(BusinessUserNewPassword, BusinessUserConfirmPassword, StringComparison.Ordinal))
+            {
+                BusinessUserPasswordStatus = Res("SettingsUsersPasswordMismatch");
+                return;
+            }
+
+            if (BusinessUserNewPassword.Trim().Length < 6)
+            {
+                BusinessUserPasswordStatus = Res("SettingsUsersPasswordTooShort");
+                return;
+            }
+
+            user.PasswordSalt = BusinessUserAuthService.GenerateSalt();
+            user.PasswordHash = BusinessUserAuthService.HashPassword(BusinessUserNewPassword, user.PasswordSalt);
+            user.MustChangePassword = false;
+            _appSettingsService.SaveSettings();
+            _businessUserDirectoryService.SyncToRootFolder();
+            _currentProfileService.SetCurrentBusinessUser(user);
+            ClearBusinessUserPasswordFields();
+            BusinessUserPasswordStatus = Res("SettingsUsersPasswordChanged");
+            RaiseBusinessUserSessionPropertiesChanged();
+            _activityLogService.Log(
+                "BusinessUserPasswordChanged",
+                "Settings",
+                "",
+                "",
+                string.Format(Res("SettingsUsersPasswordChangedLogFmt"), $"{user.FirstName} {user.LastName}".Trim()),
+                entityType: "BusinessUser",
+                entityId: user.UserId);
+        }
+
+        private void ClearBusinessUserPasswordFields()
+        {
+            BusinessUserCurrentPassword = string.Empty;
+            BusinessUserNewPassword = string.Empty;
+            BusinessUserConfirmPassword = string.Empty;
+        }
+
+        private string BuildCurrentBusinessUserPermissionSummary()
+        {
+            var user = _currentProfileService.CurrentBusinessUser;
+            if (user == null)
+                return Res("SettingsUsersOwnerPermissionSummary");
+
+            if (string.Equals(user.RoleKey, "admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(user.RoleKey, "owner", StringComparison.OrdinalIgnoreCase))
+            {
+                return Res("SettingsUsersAdminPermissionSummary");
+            }
+
+            var activeModules = user.ModulePermissions
+                .Where(permission => !string.Equals(permission.AccessLevel, "None", StringComparison.OrdinalIgnoreCase))
+                .Select(permission => $"{FormatModuleName(permission.ModuleKey)}: {FormatAccessLevel(permission.AccessLevel)}")
+                .ToList();
+
+            if (activeModules.Count == 0)
+                return Res("SettingsUsersNoModulePermissions");
+
+            return string.Join(" · ", activeModules);
+        }
+
+        private string FormatModuleName(string moduleKey)
+        {
+            return GetBusinessUserModules().FirstOrDefault(module =>
+                string.Equals(module.Key, moduleKey, StringComparison.OrdinalIgnoreCase)).DisplayName
+                ?? moduleKey;
+        }
+
+        private static string FormatAccessLevel(string accessLevel)
+        {
+            return accessLevel switch
+            {
+                "Edit" => Res("SettingsUsersAccessEdit"),
+                "Export" => Res("SettingsUsersAccessExport"),
+                "View" => Res("SettingsUsersAccessView"),
+                _ => Res("SettingsUsersAccessNone")
+            };
+        }
+
+        private IEnumerable<(string Key, string DisplayName, bool AllowExport)> GetBusinessUserModules()
+        {
+            yield return ("employees", Res("SettingsUsersModuleEmployees"), false);
+            yield return ("salary", Res("SettingsUsersModuleSalary"), false);
+            yield return ("documents", Res("SettingsUsersModuleDocuments"), false);
+            yield return ("companies", Res("SettingsUsersModuleCompanies"), false);
+            yield return ("reports", Res("SettingsUsersModuleReports"), true);
+            yield return ("settings", Res("SettingsUsersModuleSettings"), false);
+        }
+
+        private IEnumerable<UserPermissionOption> GetModuleAccessOptions(bool allowExport)
+        {
+            yield return new UserPermissionOption { Key = "None", DisplayName = Res("SettingsUsersAccessNone") };
+            yield return new UserPermissionOption { Key = "View", DisplayName = Res("SettingsUsersAccessView") };
+            yield return new UserPermissionOption { Key = "Edit", DisplayName = Res("SettingsUsersAccessEdit") };
+            if (allowExport)
+                yield return new UserPermissionOption { Key = "Export", DisplayName = Res("SettingsUsersAccessExport") };
+        }
+
+        private void UpdateBusinessUserGeneratedLogin()
+        {
+            if (_isInitializingBusinessUserEditor)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(BusinessUserLogin))
+                return;
+
+            var first = NormalizeLoginPart(BusinessUserFirstName);
+            var last = NormalizeLoginPart(BusinessUserLastName);
+            BusinessUserLogin = string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(last)
+                ? string.Empty
+                : $"{first}.{last}";
+        }
+
+        private static string NormalizeBusinessUserLogin(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+            var builder = new StringBuilder(normalized.Length);
+            foreach (var ch in normalized)
+            {
+                if (char.IsLetterOrDigit(ch) || ch is '.' or '_' or '-')
+                    builder.Append(ch);
+            }
+
+            return builder.ToString();
+        }
+
+        private static string NormalizeLoginPart(string? value)
+        {
+            var text = (value ?? string.Empty).Trim().ToLowerInvariant();
+            var builder = new StringBuilder(text.Length);
+            foreach (var ch in text)
+            {
+                if (char.IsLetterOrDigit(ch))
+                    builder.Append(ch);
+            }
+
+            return builder.ToString();
+        }
+
+        private static string GenerateTemporaryPassword()
+        {
+            const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+            Span<byte> bytes = stackalloc byte[10];
+            RandomNumberGenerator.Fill(bytes);
+            var chars = bytes.ToArray()
+                .Select(value => alphabet[value % alphabet.Length])
+                .ToArray();
+            return new string(chars);
         }
 
         private void TelegramBotService_StateChanged(object? sender, EventArgs e)
@@ -2811,6 +4172,63 @@ namespace Win11DesktopApp.ViewModels
             ProfileNewPassword = string.Empty;
             ProfileConfirmPassword = string.Empty;
             SetProfileStatus(Res("SettingsProfilePasswordChanged"), false);
+        }
+
+        private async System.Threading.Tasks.Task LogoutProfileAsync()
+        {
+            var profile = _currentProfileService.CurrentProfile;
+            if (profile == null)
+            {
+                SetProfileStatus(Res("SettingsProfileNotLoadedError"), true);
+                return;
+            }
+
+            var title = Res("SettingsProfileLogoutTitle");
+            var message = Res("SettingsProfileLogoutConfirm");
+            if (MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                if (profile.RememberMeEnabled)
+                    await _profileAuthService.UpdateRememberMeAsync(profile.ClientId, enabled: false);
+
+                _profileSessionService.ClearRememberedSession();
+                _appSettingsService.Settings.CurrentBusinessUserId = string.Empty;
+                if (_appSettingsService.Settings.ExperimentalMultiUser)
+                    _appSettingsService.Settings.PendingMemberRoleSelection = true;
+                _appSettingsService.SaveSettings();
+                _currentProfileService.SetCurrentBusinessUser(null);
+
+                _activityLogService.Log(
+                    "ProfileLogout",
+                    "Settings",
+                    "",
+                    "",
+                    string.Format(Res("SettingsProfileLogoutLogFmt"), $"{profile.FirstName} {profile.LastName}".Trim()));
+
+                RestartApplicationForLogin();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("Settings.LogoutProfile", ex);
+                SetProfileStatus(Res("SettingsProfileLogoutFailed"), true);
+            }
+        }
+
+        private static void RestartApplicationForLogin()
+        {
+            var executablePath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(executablePath) && System.IO.File.Exists(executablePath))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = executablePath,
+                    UseShellExecute = true
+                });
+            }
+
+            Application.Current.Shutdown();
         }
 
         private void UpdateCurrentProfile(ClientProfileRecord profile)

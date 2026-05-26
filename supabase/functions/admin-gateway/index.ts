@@ -20,6 +20,7 @@ type AdminRequest = {
     | "unblock_client"
     | "extend_license"
     | "update_client_access"
+    | "get_tenant_for_client"
     | "update_notes"
     | "delete_client"
     | "get_profile"
@@ -78,8 +79,9 @@ serve(async (req) => {
         await extendLicense(admin, payload);
         return json({ ok: true, data: true });
       case "update_client_access":
-        await updateClientAccess(admin, payload);
-        return json({ ok: true, data: true });
+        return json({ ok: true, data: await updateClientAccess(admin, payload) });
+      case "get_tenant_for_client":
+        return json({ ok: true, data: await getTenantForClient(admin, payload) });
       case "update_notes":
         await updateNotes(admin, payload);
         return json({ ok: true, data: true });
@@ -101,9 +103,30 @@ serve(async (req) => {
         return json({ ok: false, error: "unknown_action" }, 400);
     }
   } catch (error) {
-    return json({ ok: false, error: error instanceof Error ? error.message : "admin_gateway_failed" }, 500);
+    return json({ ok: false, error: describeGatewayError(error) }, 500);
   }
 });
+
+function describeGatewayError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    if (typeof record.message === "string" && record.message.trim()) {
+      return record.message;
+    }
+    if (typeof record.error === "string" && record.error.trim()) {
+      return record.error;
+    }
+    if (typeof record.details === "string" && record.details.trim()) {
+      return record.details;
+    }
+  }
+
+  return "admin_gateway_failed";
+}
 
 async function listClients(admin: ReturnType<typeof createAdminClient>) {
   const telemetrySince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
@@ -227,11 +250,84 @@ async function updateClientAccess(admin: ReturnType<typeof createAdminClient>, p
     throw new Error("client_id_required");
   }
 
+  const plan = normalizeClientPlan(payload.plan);
+  const { data: clientRow, error: loadError } = await admin
+    .from("clients")
+    .select("id,license_key,machine_name,expires_at,plan")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (loadError) throw loadError;
+  if (!clientRow) {
+    throw new Error("client_not_found");
+  }
+
   const { error } = await admin.from("clients").update({
-    plan: normalizeClientPlan(payload.plan),
+    plan,
     gemini_api_key: sanitizeText(payload.gemini_api_key, 2048),
   }).eq("id", clientId);
   if (error) throw error;
+
+  const tenant = await syncTenantForClientAccess(admin, clientId, plan, payload, clientRow as Record<string, unknown>);
+  return {
+    plan,
+    tenant,
+  };
+}
+
+async function getTenantForClient(admin: ReturnType<typeof createAdminClient>, payload: Record<string, unknown>) {
+  const clientId = String(payload.client_id ?? "");
+  if (!clientId) {
+    throw new Error("client_id_required");
+  }
+
+  try {
+    const { data, error } = await admin.rpc("admin_get_tenant_for_client", {
+      p_client_id: clientId,
+    });
+    if (error) {
+      console.error("get_tenant_for_client failed", error);
+      return null;
+    }
+    return data;
+  } catch (error) {
+    console.error("get_tenant_for_client failed", error);
+    return null;
+  }
+}
+
+async function syncTenantForClientAccess(
+  admin: ReturnType<typeof createAdminClient>,
+  clientId: string,
+  plan: string,
+  payload: Record<string, unknown>,
+  clientRow: Record<string, unknown>,
+) {
+  const licenseExpiresAt = clientRow.expires_at ?? null;
+  const licenseKey = clientRow.license_key ?? null;
+  const tenantName = sanitizeText(payload.tenant_name, 200)
+    || sanitizeText(clientRow.machine_name, 200)
+    || `Client ${clientId}`;
+
+  const rpcPayload: Record<string, unknown> = {
+    p_client_id: clientId,
+    p_plan: plan,
+    p_tenant_name: tenantName,
+    p_license_key: licenseKey,
+    p_license_expires_at: licenseExpiresAt,
+  };
+
+  if (plan === "business") {
+    rpcPayload.p_max_users = clampInt(payload.max_users, 10, 1, 500);
+    rpcPayload.p_max_devices = clampInt(payload.max_devices, 3, 1, 100);
+    rpcPayload.p_multi_user_enabled = payload.multi_user_enabled !== false;
+    rpcPayload.p_tenant_status = normalizeTenantStatus(payload.tenant_status);
+  }
+
+  const { data, error } = await admin.rpc("admin_sync_client_tenant", rpcPayload);
+  if (error) {
+    throw error;
+  }
+  return data;
 }
 
 async function updateNotes(admin: ReturnType<typeof createAdminClient>, payload: Record<string, unknown>) {
@@ -361,7 +457,23 @@ function stripProfileSecrets(profile: Record<string, unknown> | null) {
 
 function normalizeClientPlan(value: unknown): string {
   const normalized = String(value ?? "").trim().toLowerCase();
-  return normalized === "standard" || normalized === "pro" ? normalized : "trial";
+  if (normalized === "standard" || normalized === "pro" || normalized === "business") {
+    return normalized;
+  }
+  return "trial";
+}
+
+function normalizeTenantStatus(value: unknown): string {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "suspended" || normalized === "blocked" || normalized === "expired" || normalized === "trial"
+    ? normalized
+    : "active";
+}
+
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+  const resolved = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.max(min, Math.min(max, Math.trunc(resolved)));
 }
 
 function hasStats(eventData: unknown): boolean {

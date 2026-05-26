@@ -247,8 +247,11 @@ namespace Win11DesktopApp.ViewModels
             var cs = _companyService;
             if (cs == null) return;
             foreach (var c in cs.Companies)
-                if (cs.IsCompanyVisible(c))
+                if (cs.IsCompanyVisible(c) && PolicyService.CanAccessCompany(c))
                     _visibleCompanies.Add(c);
+
+            if (SelectedCompany != null && !_visibleCompanies.Contains(SelectedCompany))
+                SelectedCompany = _visibleCompanies.FirstOrDefault();
         }
 
         public EmployerCompany? SelectedCompany
@@ -256,6 +259,9 @@ namespace Win11DesktopApp.ViewModels
             get => _companyService.SelectedCompany;
             set
             {
+                if (value != null && !PolicyService.CanAccessCompany(value))
+                    return;
+
                 _companyService.SelectedCompany = value;
                 OnPropertyChanged(nameof(SelectedCompany));
                 OnPropertyChanged(nameof(HasSelectedCompany));
@@ -326,6 +332,9 @@ namespace Win11DesktopApp.ViewModels
             {
                 var company = o as EmployerCompany ?? SelectedCompany;
                 if (company == null) return;
+                if (!PolicyService.CanAccessCompany(company)) return;
+                if (!PolicyService.RequireCanEditCompany(company, Res("CompanyDialogTitleEdit") ?? "Редагувати фірму"))
+                    return;
                 if (!PolicyService.EnsureWriteAllowed(Res("CompanyDialogTitleEdit") ?? "Редагувати фірму"))
                     return;
 
@@ -340,13 +349,13 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
                     return;
-                if (o is EmployerCompany c) _companyService.MoveCompanyUp(c);
+                if (o is EmployerCompany c && PolicyService.CanAccessCompany(c) && PolicyService.RequireCanEditCompany(c, "Змінити порядок фірм")) _companyService.MoveCompanyUp(c);
             });
             MoveCompanyDownCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
                     return;
-                if (o is EmployerCompany c) _companyService.MoveCompanyDown(c);
+                if (o is EmployerCompany c && PolicyService.CanAccessCompany(c) && PolicyService.RequireCanEditCompany(c, "Змінити порядок фірм")) _companyService.MoveCompanyDown(c);
             });
 
             CloseAddCompanyDialogCommand = new RelayCommand(o => IsAddCompanyDialogOpen = false);
@@ -523,8 +532,9 @@ namespace Win11DesktopApp.ViewModels
         private void OnAddCompanyClose()
         {
             IsAddCompanyDialogOpen = false;
-            if (SelectedCompany == null && Companies.Any())
-                SelectedCompany = Companies.Last();
+            RefreshVisibleCompanies();
+            if (SelectedCompany == null && VisibleCompanies.Any())
+                SelectedCompany = VisibleCompanies.Last();
             OnPropertyChanged(nameof(SelectedCompany));
             OnPropertyChanged(nameof(HasSelectedCompany));
             OnPropertyChanged(nameof(SelectedCompanyDisplayName));
@@ -537,6 +547,7 @@ namespace Win11DesktopApp.ViewModels
         private void OnEditCompanyClose()
         {
             IsAddCompanyDialogOpen = false;
+            RefreshVisibleCompanies();
             OnPropertyChanged(nameof(SelectedCompany));
             OnPropertyChanged(nameof(HasSelectedCompany));
             OnPropertyChanged(nameof(SelectedCompanyDisplayName));
@@ -660,7 +671,9 @@ namespace Win11DesktopApp.ViewModels
         {
             var results = new List<SearchResultItem>();
             var q = query;
-            var companies = _companyService.Companies.ToList();
+            var companies = _companyService.Companies
+                .Where(PolicyService.CanAccessCompany)
+                .ToList();
 
             foreach (var company in companies)
             {
@@ -875,7 +888,9 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
             var all = new List<EmployeeSummary>();
             var sb = new StringBuilder();
             int idx = 0;
-            var companies = _companyService.Companies.ToList();
+            var companies = _companyService.Companies
+                .Where(PolicyService.CanAccessCompany)
+                .ToList();
 
             foreach (var company in companies)
             {
@@ -920,7 +935,9 @@ Consider: names, companies, document expiry, salary, nationality, dates, status.
 
         private void NavigateToResult(SearchResultItem item)
         {
-            var companies = _companyService.Companies;
+            var companies = _companyService.Companies
+                .Where(PolicyService.CanAccessCompany)
+                .ToList();
             switch (item.Category)
             {
                 case var c when c == Res("SearchCatEmployees"):

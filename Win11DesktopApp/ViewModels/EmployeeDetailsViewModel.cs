@@ -1356,6 +1356,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!PolicyService.EnsureWriteAllowed("Редагувати профіль працівника"))
                     return;
+                if (!CanEditCurrentFirm("Редагувати профіль працівника"))
+                    return;
 
                 IsEditMode = true;
             }, _ => !IsReadOnlyMode && !IsArchiveMode);
@@ -1530,6 +1532,16 @@ namespace Win11DesktopApp.ViewModels
             IsPageBusy = isBusy;
         }
 
+        private bool CanEditCurrentFirm(string actionName)
+        {
+            var company = _companyService.Companies.FirstOrDefault(c =>
+                string.Equals(c.Name, _firmName, StringComparison.OrdinalIgnoreCase));
+            if (company != null)
+                return PolicyService.RequireCanEditCompany(company, actionName);
+
+            return PolicyService.CanEditEmployer(null, _firmName, null);
+        }
+
         private void ShowExtendDialog(string type)
         {
             _extendType = type;
@@ -1686,6 +1698,8 @@ namespace Win11DesktopApp.ViewModels
         private async Task SaveProfileAsync()
         {
             if (!PolicyService.EnsureWriteAllowed("Зберегти профіль працівника"))
+                return;
+            if (!CanEditCurrentFirm("Зберегти профіль працівника"))
                 return;
 
             try

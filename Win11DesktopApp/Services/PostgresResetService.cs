@@ -46,7 +46,13 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                await using var connection = new NpgsqlConnection(BuildConnectionString(databaseName));
+                await using var connection = new NpgsqlConnection(PostgresConnectionFactory.BuildConnectionStringFromSettings(
+                    settings,
+                    new PostgresConnectionStringOptions
+                    {
+                        Database = databaseName,
+                        Pooling = false
+                    }));
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
                 await using var command = connection.CreateCommand();
@@ -80,25 +86,6 @@ DROP SCHEMA IF EXISTS core CASCADE;";
                 };
             }
         }
-
-        private string BuildConnectionString(string databaseName)
-        {
-            var settings = _settingsService.Settings;
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
-                Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
-                Database = databaseName,
-                Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
-                Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
-                Timeout = 10,
-                CommandTimeout = 30,
-                Pooling = false
-            };
-
-            return builder.ConnectionString;
-        }
-
         private static bool IsReservedDatabase(string databaseName)
         {
             return string.Equals(databaseName, "postgres", StringComparison.OrdinalIgnoreCase)

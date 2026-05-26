@@ -40,7 +40,8 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                await using var connection = new NpgsqlConnection(BuildConnectionString(request, databaseName));
+                await using var connection = new NpgsqlConnection(
+                    PostgresConnectionFactory.BuildConnectionStringFromTestRequest(request, databaseName));
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
                 var serverVersion = connection.PostgreSqlVersion?.ToString() ?? string.Empty;
@@ -74,24 +75,6 @@ namespace Win11DesktopApp.Services
                 };
             }
         }
-
-        private static string BuildConnectionString(PostgresConnectionTestRequest request, string databaseName)
-        {
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(request.Host) ? "localhost" : request.Host.Trim(),
-                Port = request.Port <= 0 ? 5432 : request.Port,
-                Database = databaseName,
-                Username = request.Username?.Trim() ?? string.Empty,
-                Password = request.Password ?? string.Empty,
-                Timeout = request.TimeoutSeconds <= 0 ? 5 : request.TimeoutSeconds,
-                CommandTimeout = request.TimeoutSeconds <= 0 ? 5 : request.TimeoutSeconds,
-                Pooling = false
-            };
-
-            return builder.ConnectionString;
-        }
-
         private static async Task<bool> DatabaseExistsAsync(
             NpgsqlConnection connection,
             string databaseName,

@@ -494,23 +494,10 @@ WHERE machine_key = @machine_key;";
 
         private NpgsqlConnection OpenPostgresConnection()
         {
-            var settings = _settingsService?.Settings
-                ?? throw new InvalidOperationException("PostgreSQL settings are not available.");
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
-                Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
-                Database = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase.Trim(),
-                Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
-                Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
-                Timeout = 10,
-                CommandTimeout = 30,
-                Pooling = true
-            };
+            if (_settingsService?.Settings == null)
+                throw new InvalidOperationException("PostgreSQL settings are not available.");
 
-            var connection = new NpgsqlConnection(builder.ConnectionString);
-            connection.Open();
-            return connection;
+            return PostgresConnectionFactory.OpenConnection(_settingsService);
         }
 
         private static void CreatePostgresSchema(NpgsqlConnection connection)

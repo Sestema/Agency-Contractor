@@ -60,6 +60,7 @@ namespace AdminPanel
         private readonly SupabaseService _svc;
         private ClientRecord? _selected;
         private ClientProfileRecord? _selectedProfile;
+        private TenantRecord? _loadedTenant;
         private List<ClientRecord> _allClients = new();
         private List<TelemetryRecord> _activeTelemetry = new();
         private string? _telemetryNextCursor;
@@ -68,7 +69,10 @@ namespace AdminPanel
         private string? _telemetryLoadingClientId;
         private string? _profileClientId;
         private string? _profileLoadingClientId;
+        private string? _tenantClientId;
+        private string? _tenantLoadingClientId;
         private bool _isUpdatingTelemetryEventFilter;
+        private bool _isPopulatingAccessConfig;
         private WindowState _lastNonMinimizedWindowState = WindowState.Normal;
 
         private const string BaseUrl = "https://tssgxhatnjvqthdiyuwo.supabase.co";
@@ -502,6 +506,8 @@ namespace AdminPanel
         {
             _selectedProfile = null;
             _profileClientId = null;
+            _loadedTenant = null;
+            _tenantClientId = null;
 
             _activeTelemetry = new List<TelemetryRecord>();
             _telemetryNextCursor = null;
@@ -514,6 +520,50 @@ namespace AdminPanel
             UpdateStats(_activeTelemetry, _selected?.Id);
             PopulateClientDetails(_selected);
             UpdateActionButtons();
+
+            var selectedId = _selected?.Id;
+            if (!string.IsNullOrWhiteSpace(selectedId))
+                _ = EnsureSelectedClientTenantLoadedAsync(selectedId);
+        }
+
+        private async Task EnsureSelectedClientTenantLoadedAsync(string expectedClientId)
+        {
+            if (string.IsNullOrWhiteSpace(expectedClientId))
+                return;
+
+            if (string.Equals(_tenantClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            if (string.Equals(_tenantLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            _tenantLoadingClientId = expectedClientId;
+
+            try
+            {
+                var tenant = await _svc.TryGetTenantForClientAsync(expectedClientId);
+                if (!string.Equals(_selected?.Id, expectedClientId, StringComparison.Ordinal))
+                    return;
+
+                _loadedTenant = tenant;
+                _tenantClientId = expectedClientId;
+                SetAccessConfigFields(() =>
+                {
+                    ApplyBusinessTenantFields(_selected, tenant);
+                    UpdateBusinessPanelVisibility();
+                });
+                UpdateActionButtons();
+            }
+            catch (Exception ex)
+            {
+                TxtBusinessTenantInfo.Text = "Tenant недоступний. Запустіть supabase/admin_tenant_rpc.sql у SQL Editor.";
+                TxtStatus.Text = $"Tenant load: {ex.Message}";
+            }
+            finally
+            {
+                if (string.Equals(_tenantLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                    _tenantLoadingClientId = null;
+            }
         }
 
         private async Task EnsureSelectedClientTelemetryLoadedAsync(string expectedClientId)
@@ -894,8 +944,17 @@ namespace AdminPanel
                 TxtDetailProfileStatus.Text = "—";
                 TxtDetailRememberMe.Text = "—";
                 TxtDetailProfileUpdatedAt.Text = "—";
-                SelectComboTag(CmbAccessPlan, "trial");
-                TxtManagedGeminiKey.Text = string.Empty;
+                SetAccessConfigFields(() =>
+                {
+                    SelectComboTag(CmbAccessPlan, "trial");
+                    TxtManagedGeminiKey.Text = string.Empty;
+                    BusinessTenantPanel.Visibility = Visibility.Collapsed;
+                    TxtBusinessMaxUsers.Text = "10";
+                    TxtBusinessMaxDevices.Text = "3";
+                    ChkBusinessMultiUserEnabled.IsChecked = true;
+                    SelectComboTag(CmbBusinessTenantStatus, "active");
+                    TxtBusinessTenantInfo.Text = "Tenant буде створено при збереженні";
+                });
                 TxtNotes.Text = string.Empty;
                 BtnSaveNotes.IsEnabled = false;
                 BtnSaveAccessConfig.IsEnabled = false;
@@ -936,11 +995,68 @@ namespace AdminPanel
                 : _selectedProfile.RememberMeEnabled ? "Увімкнено" : "Вимкнено";
             TxtDetailProfileUpdatedAt.Text = _selectedProfile?.UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                 ?? (string.IsNullOrWhiteSpace(client.ProfileFullName) ? "—" : "На вимогу");
-            SelectComboTag(CmbAccessPlan, NormalizeClientPlan(client.Plan));
-            TxtManagedGeminiKey.Text = client.GeminiApiKey ?? string.Empty;
+            SetAccessConfigFields(() =>
+            {
+                SelectComboTag(CmbAccessPlan, NormalizeClientPlan(client.Plan));
+                TxtManagedGeminiKey.Text = client.GeminiApiKey ?? string.Empty;
+                ApplyBusinessTenantFields(client, _loadedTenant);
+                UpdateBusinessPanelVisibility();
+            });
             TxtNotes.Text = client.Notes ?? string.Empty;
             BtnSaveNotes.IsEnabled = HasNotesChanged();
             BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+        }
+
+        private void SetAccessConfigFields(Action apply)
+        {
+            _isPopulatingAccessConfig = true;
+            try
+            {
+                apply();
+            }
+            finally
+            {
+                _isPopulatingAccessConfig = false;
+            }
+        }
+
+        private bool CanReactToAccessConfigChanges()
+        {
+            return IsLoaded && !_isPopulatingAccessConfig;
+        }
+
+        private void UpdateBusinessPanelVisibility()
+        {
+            BusinessTenantPanel.Visibility = GetSelectedAccessPlan() == "business"
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void ApplyBusinessTenantFields(ClientRecord? client, TenantRecord? tenant)
+        {
+            if (client == null)
+                return;
+
+            if (tenant != null && string.Equals(tenant.SupabaseClientId, client.Id, StringComparison.Ordinal))
+            {
+                TxtBusinessMaxUsers.Text = tenant.MaxUsers.ToString();
+                TxtBusinessMaxDevices.Text = tenant.MaxDevices.ToString();
+                ChkBusinessMultiUserEnabled.IsChecked = tenant.MultiUserEnabled;
+                SelectComboTag(CmbBusinessTenantStatus, NormalizeTenantStatus(tenant.Status));
+                var updatedDisplay = tenant.UpdatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—";
+                TxtBusinessTenantInfo.Text = string.IsNullOrWhiteSpace(tenant.Id)
+                    ? "Tenant буде створено при збереженні"
+                    : $"Tenant ID: {tenant.Id} | plan_key: {tenant.PlanKey} | оновлено: {updatedDisplay}";
+                return;
+            }
+
+            TxtBusinessMaxUsers.Text = "10";
+            TxtBusinessMaxDevices.Text = "3";
+            ChkBusinessMultiUserEnabled.IsChecked = true;
+            SelectComboTag(CmbBusinessTenantStatus, "active");
+            TxtBusinessTenantInfo.Text = NormalizeClientPlan(client.Plan) == "business"
+                ? "Tenant буде створено при збереженні"
+                : "Tenant не налаштовано";
         }
 
         private string BuildLatestStateSummary()
@@ -1108,6 +1224,34 @@ namespace AdminPanel
 
         private void CmbAccessPlan_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!CanReactToAccessConfigChanges())
+                return;
+
+            UpdateBusinessPanelVisibility();
+            BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+        }
+
+        private void BusinessTenantField_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!CanReactToAccessConfigChanges())
+                return;
+
+            BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+        }
+
+        private void BusinessTenantField_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!CanReactToAccessConfigChanges())
+                return;
+
+            BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+        }
+
+        private void BusinessTenantField_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!CanReactToAccessConfigChanges())
+                return;
+
             BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
         }
 
@@ -1128,12 +1272,57 @@ namespace AdminPanel
                 var previousHasManagedKey = !string.IsNullOrWhiteSpace(_selected.GeminiApiKey);
                 var nextPlan = GetSelectedAccessPlan();
                 var nextManagedKey = (TxtManagedGeminiKey.Text ?? string.Empty).Trim();
+                BusinessTenantAccessConfig? businessConfig = null;
+                if (nextPlan == "business")
+                {
+                    if (!TryBuildBusinessTenantConfig(_selected, out businessConfig, out var validationError))
+                    {
+                        MessageBox.Show(validationError, "Business workspace", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                }
 
-                await _svc.UpdateClientAccessAsync(selectedId, nextPlan, nextManagedKey);
+                var updateResult = await _svc.UpdateClientAccessAsync(selectedId, nextPlan, nextManagedKey, businessConfig);
+                var savedPlan = NormalizeClientPlan(updateResult?.Plan ?? string.Empty);
+                if (!string.Equals(savedPlan, nextPlan, StringComparison.Ordinal))
+                {
+                    MessageBox.Show(
+                        $"Сервер зберег план \"{savedPlan}\" замість \"{nextPlan}\".\n\n" +
+                        "Ймовірно на Supabase ще стара версія admin-gateway без підтримки Business.\n" +
+                        "Запустіть deploy:\n" +
+                        "supabase\\deploy-admin-gateway.ps1",
+                        "План не збережено",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    await RefreshAsync(selectedId);
+                    return;
+                }
+
+                _tenantClientId = null;
                 await _svc.TryWriteAuditAsync(selectedId, "client_access_updated",
-                    new { plan = previousPlan, has_managed_ai_key = previousHasManagedKey },
-                    new { plan = nextPlan, has_managed_ai_key = !string.IsNullOrWhiteSpace(nextManagedKey) },
-                    "Оператор оновив план клієнта та managed Gemini key");
+                    new
+                    {
+                        plan = previousPlan,
+                        has_managed_ai_key = previousHasManagedKey,
+                        tenant = BuildTenantAuditSnapshot(_loadedTenant)
+                    },
+                    new
+                    {
+                        plan = nextPlan,
+                        has_managed_ai_key = !string.IsNullOrWhiteSpace(nextManagedKey),
+                        tenant = businessConfig == null
+                            ? null
+                            : new
+                            {
+                                max_users = businessConfig.MaxUsers,
+                                max_devices = businessConfig.MaxDevices,
+                                multi_user_enabled = businessConfig.MultiUserEnabled,
+                                status = businessConfig.TenantStatus
+                            }
+                    },
+                    nextPlan == "business"
+                        ? "Оператор оновив план клієнта на Business та workspace tenant"
+                        : "Оператор оновив план клієнта та managed Gemini key");
                 await RefreshAsync(selectedId);
                 TxtStatus.Text = $"План та AI оновлено: {DateTime.Now:HH:mm:ss}";
             }
@@ -1160,7 +1349,90 @@ namespace AdminPanel
                 return false;
 
             return !string.Equals(NormalizeClientPlan(_selected.Plan), GetSelectedAccessPlan(), StringComparison.Ordinal)
-                || !string.Equals((_selected.GeminiApiKey ?? string.Empty).Trim(), (TxtManagedGeminiKey.Text ?? string.Empty).Trim(), StringComparison.Ordinal);
+                || !string.Equals((_selected.GeminiApiKey ?? string.Empty).Trim(), (TxtManagedGeminiKey.Text ?? string.Empty).Trim(), StringComparison.Ordinal)
+                || HasBusinessTenantChanged();
+        }
+
+        private bool HasBusinessTenantChanged()
+        {
+            if (GetSelectedAccessPlan() != "business")
+                return false;
+
+            if (!TryBuildBusinessTenantConfig(_selected, out var nextConfig, out _))
+                return true;
+
+            if (_loadedTenant == null || !string.Equals(_loadedTenant.SupabaseClientId, _selected?.Id, StringComparison.Ordinal))
+                return true;
+
+            return _loadedTenant.MaxUsers != nextConfig!.MaxUsers
+                || _loadedTenant.MaxDevices != nextConfig.MaxDevices
+                || _loadedTenant.MultiUserEnabled != nextConfig.MultiUserEnabled
+                || !string.Equals(NormalizeTenantStatus(_loadedTenant.Status), nextConfig.TenantStatus, StringComparison.Ordinal);
+        }
+
+        private bool TryBuildBusinessTenantConfig(
+            ClientRecord? client,
+            out BusinessTenantAccessConfig? config,
+            out string validationError)
+        {
+            config = null;
+            validationError = string.Empty;
+
+            if (client == null)
+            {
+                validationError = "Клієнт не вибраний.";
+                return false;
+            }
+
+            if (!int.TryParse((TxtBusinessMaxUsers.Text ?? string.Empty).Trim(), out var maxUsers) || maxUsers < 1)
+            {
+                validationError = "Max users має бути цілим числом не менше 1.";
+                return false;
+            }
+
+            if (!int.TryParse((TxtBusinessMaxDevices.Text ?? string.Empty).Trim(), out var maxDevices) || maxDevices < 1)
+            {
+                validationError = "Max devices має бути цілим числом не менше 1.";
+                return false;
+            }
+
+            config = new BusinessTenantAccessConfig
+            {
+                MaxUsers = maxUsers,
+                MaxDevices = maxDevices,
+                MultiUserEnabled = ChkBusinessMultiUserEnabled.IsChecked == true,
+                TenantStatus = NormalizeTenantStatus(GetSelectedComboTag(CmbBusinessTenantStatus)),
+                TenantName = client.DisplayName
+            };
+            return true;
+        }
+
+        private static object? BuildTenantAuditSnapshot(TenantRecord? tenant)
+        {
+            if (tenant == null)
+                return null;
+
+            return new
+            {
+                id = tenant.Id,
+                max_users = tenant.MaxUsers,
+                max_devices = tenant.MaxDevices,
+                multi_user_enabled = tenant.MultiUserEnabled,
+                status = tenant.Status,
+                plan_key = tenant.PlanKey
+            };
+        }
+
+        private static string NormalizeTenantStatus(string? status)
+        {
+            return (status ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "suspended" => "suspended",
+                "blocked" => "blocked",
+                "expired" => "expired",
+                "trial" => "trial",
+                _ => "active"
+            };
         }
 
         private string GetSelectedAccessPlan()
@@ -1174,6 +1446,7 @@ namespace AdminPanel
             {
                 "standard" => "standard",
                 "pro" => "pro",
+                "business" => "business",
                 _ => "trial"
             };
         }

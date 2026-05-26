@@ -13,11 +13,18 @@ import {
 } from "../_shared/common.ts";
 
 type GatewayRequest = {
-  action: "startup" | "heartbeat" | "track_event" | "ack_command" | "migrate_legacy_license";
+  action: "startup" | "heartbeat" | "track_event" | "ack_command" | "migrate_legacy_license"
+    | "workspace_session_heartbeat" | "get_workspace_device_status" | "end_workspace_device_session";
   machine_id: string;
   machine_name?: string;
   app_version?: string;
   ip_address?: string;
+  owner_client_id?: string;
+  workspace_id?: string;
+  actor_kind?: string;
+  local_user_id?: string;
+  actor_display_name?: string;
+  windows_user?: string;
   event_type?: string;
   event_data?: Record<string, unknown>;
   command_id?: string;
@@ -98,6 +105,15 @@ serve(async (req) => {
           return json({ ok: false, error: "client_blocked" }, 403);
         }
         return await acknowledgeCommand(admin, client.id, body);
+
+      case "workspace_session_heartbeat":
+        return await workspaceSessionHeartbeat(admin, client, body, ipAddress);
+
+      case "get_workspace_device_status":
+        return await getWorkspaceDeviceStatus(admin, body);
+
+      case "end_workspace_device_session":
+        return await endWorkspaceDeviceSession(admin, client, body);
 
       default:
         return json({ ok: false, error: "unknown_action" }, 400);
@@ -296,4 +312,95 @@ function isClaimStrongerThanServer(
   }
 
   return claimed > server;
+}
+
+async function workspaceSessionHeartbeat(
+  admin: ReturnType<typeof createAdminClient>,
+  client: ClientRow,
+  body: GatewayRequest,
+  ipAddress: string,
+) {
+  const ownerClientId = String(body.owner_client_id ?? client.id).trim();
+  const { data, error } = await admin.rpc("client_upsert_workspace_device_session", {
+    p_owner_client_id: ownerClientId,
+    p_workspace_id: body.workspace_id ?? "",
+    p_machine_id: body.machine_id,
+    p_machine_name: body.machine_name ?? client.machine_name,
+    p_windows_user: body.windows_user ?? "",
+    p_actor_kind: body.actor_kind ?? "owner",
+    p_local_user_id: body.local_user_id ?? "",
+    p_actor_display_name: body.actor_display_name ?? "",
+    p_app_version: body.app_version ?? client.app_version,
+    p_ip_address: ipAddress,
+  });
+
+  if (error) {
+    throw rpcError(error);
+  }
+
+  return json({
+    ok: data?.ok !== false,
+    client_id: client.id,
+    ...(data ?? {}),
+  });
+}
+
+async function getWorkspaceDeviceStatus(
+  admin: ReturnType<typeof createAdminClient>,
+  body: GatewayRequest,
+) {
+  const ownerClientId = String(body.owner_client_id ?? "").trim();
+  if (!ownerClientId) {
+    return json({ ok: false, error: "owner_client_id_required" }, 400);
+  }
+
+  const { data, error } = await admin.rpc("client_get_workspace_device_status", {
+    p_owner_client_id: ownerClientId,
+    p_workspace_id: body.workspace_id ?? null,
+  });
+
+  if (error) {
+    throw rpcError(error);
+  }
+
+  return json(data ?? { ok: false, error: "workspace_status_unavailable" });
+}
+
+async function endWorkspaceDeviceSession(
+  admin: ReturnType<typeof createAdminClient>,
+  client: ClientRow,
+  body: GatewayRequest,
+) {
+  const ownerClientId = String(body.owner_client_id ?? client.id).trim();
+  const { data, error } = await admin.rpc("client_end_workspace_device_session", {
+    p_owner_client_id: ownerClientId,
+    p_workspace_id: body.workspace_id ?? "",
+    p_machine_id: body.machine_id,
+    p_windows_user: body.windows_user ?? "",
+  });
+
+  if (error) {
+    throw rpcError(error);
+  }
+
+  return json({
+    ok: true,
+    client_id: client.id,
+    ...(data ?? {}),
+  });
+}
+
+function rpcError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim() !== "") {
+      return new Error(message);
+    }
+  }
+
+  return new Error("rpc_failed");
 }

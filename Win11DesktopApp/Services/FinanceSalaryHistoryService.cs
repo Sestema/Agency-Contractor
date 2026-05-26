@@ -162,22 +162,29 @@ namespace Win11DesktopApp.Services
             return DeduplicateSalaryHistoryRecords(SafeFileService.ReadJsonOrDefault(filePath, new List<SalaryHistoryRecord>()));
         }
 
+        public int RemoveDuplicateSalaryHistoryRecordsAtStartup()
+        {
+            if (_salaryHistoryStorage == null)
+                return 0;
+
+            try
+            {
+                return _salaryHistoryStorage.RemoveDuplicateSalaryHistoryRecords();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceSalaryHistoryService.RemoveDuplicateSalaryHistoryRecordsAtStartup", ex);
+                return 0;
+            }
+        }
+
         private static List<SalaryHistoryRecord> DeduplicateSalaryHistoryRecords(IEnumerable<SalaryHistoryRecord> records)
         {
             var source = records
                 .Where(record => record != null)
                 .ToList();
 
-            var deduped = source
-                .GroupBy(record => BuildSalaryHistoryDedupeKey(record), StringComparer.OrdinalIgnoreCase)
-                .Select(group => group
-                    .OrderByDescending(record => record.PaidAt)
-                    .ThenByDescending(record => record.Id ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                    .First())
-                .OrderByDescending(record => record.Year)
-                .ThenByDescending(record => record.Month)
-                .ThenByDescending(record => record.PaidAt)
-                .ToList();
+            var deduped = SalaryHistoryDuplicateCleanup.DeduplicateRecords(source);
 
             if (deduped.Count != source.Count)
             {
@@ -189,26 +196,8 @@ namespace Win11DesktopApp.Services
             return deduped;
         }
 
-        private static string BuildSalaryHistoryDedupeKey(SalaryHistoryRecord record)
-        {
-            return string.Join(
-                "|",
-                record.Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture),
-                record.Month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
-                NormalizeSalaryHistoryFirmKey(record.FirmName));
-        }
-
         private static string NormalizeSalaryHistoryFirmKey(string? firmName)
-        {
-            if (string.IsNullOrWhiteSpace(firmName))
-                return string.Empty;
-
-            return string.Join(
-                " ",
-                firmName.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
-                .Trim()
-                .ToUpperInvariant();
-        }
+            => SalaryHistoryDuplicateCleanup.NormalizeSalaryHistoryFirmKey(firmName);
 
         public int CleanupMigratedSalaryHistoryBackups()
         {

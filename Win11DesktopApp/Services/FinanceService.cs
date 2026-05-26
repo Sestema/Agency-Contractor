@@ -956,6 +956,9 @@ WHERE stage = 'salary_entries'
         public int CleanupMigratedSalaryHistoryBackups()
             => SalaryHistoryService.CleanupMigratedSalaryHistoryBackups();
 
+        public int RemoveDuplicateSalaryHistoryRecordsAtStartup()
+            => SalaryHistoryService.RemoveDuplicateSalaryHistoryRecordsAtStartup();
+
         #endregion
 
         #region Cross-Cutting Finance Operations

@@ -1698,6 +1698,59 @@ ORDER BY year DESC, month DESC, datetime(paid_at) DESC, id DESC;";
             return result;
         }
 
+        public int RemoveDuplicateSalaryHistoryRecords()
+        {
+            EnsureInitialized();
+            if (!IsAvailable)
+                return 0;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT id, employee_id, employee_folder, paid_at, year, month, firm_name
+FROM salary_history;";
+
+            var rows = new List<SalaryHistoryDuplicateCleanupRow>();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    rows.Add(new SalaryHistoryDuplicateCleanupRow
+                    {
+                        Id = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                        EmployeeId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        EmployeeFolder = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                        PaidAt = reader.IsDBNull(3)
+                            ? DateTime.MinValue
+                            : (DateTime.TryParse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var paidAt)
+                                ? paidAt
+                                : DateTime.MinValue),
+                        Year = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                        Month = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                        FirmName = reader.IsDBNull(6) ? string.Empty : reader.GetString(6)
+                    });
+                }
+            }
+
+            var idsToRemove = SalaryHistoryDuplicateCleanup.GetDuplicateRecordIdsToRemove(rows);
+            if (idsToRemove.Count == 0)
+                return 0;
+
+            using var transaction = connection.BeginTransaction();
+            var removed = 0;
+            foreach (var id in idsToRemove)
+            {
+                using var deleteCommand = connection.CreateCommand();
+                deleteCommand.Transaction = transaction;
+                deleteCommand.CommandText = "DELETE FROM salary_history WHERE id = @id;";
+                deleteCommand.Parameters.AddWithValue("@id", id);
+                removed += deleteCommand.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            return removed;
+        }
+
         public void UpsertSalaryHistoryRecord(string employeeId, string employeeFolder, SalaryHistoryRecord record)
         {
             EnsureInitialized();

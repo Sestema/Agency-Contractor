@@ -16,6 +16,7 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <local:InverseBooleanConverter x:Key="InverseBool"/>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource PageBackgroundBrush}">
@@ -115,6 +116,22 @@
                                        Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <Border CornerRadius="8" Padding="10,5" Margin="12,0,0,0"
+                            Background="{DynamicResource WarningLightBrush}"
+                            BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1"
+                            VerticalAlignment="Center"
+                            ToolTip="{DynamicResource FinSalaryViewOnlyHint}"
+                            Visibility="{Binding ShowSalaryViewOnlyBadge, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7B3;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                       Foreground="{DynamicResource WarningBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource FinSalaryViewOnlyBadge}" FontSize="{DynamicResource FS11}"
+                                       FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- Search -->
@@ -326,7 +343,9 @@
                     <DataGrid x:Name="SalaryGrid"
                               Style="{x:Null}"
                               ItemsSource="{Binding GroupedEntries}" SelectedItem="{Binding SelectedEntry}"
+                              IsReadOnly="{Binding IsSalaryReadOnly}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                              BeginningEdit="SalaryGrid_BeginningEdit"
                               CanUserResizeColumns="True" CanUserSortColumns="True"
                               SelectionMode="Single" SelectionUnit="FullRow"
                               HeadersVisibility="Column"                               GridLinesVisibility="All"
@@ -626,8 +645,18 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                Cursor="Hand" Padding="4,2"
+                                                Padding="4,2"
                                                 MouseLeftButtonDown="AdvanceCell_Click" Tag="{Binding}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CanEditSalary}" Value="False">
+                                                            <Setter Property="Cursor" Value="Arrow"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                             <TextBlock Text="{Binding Advance, StringFormat={}{0:N0}}" 
                                                        VerticalAlignment="Center" HorizontalAlignment="Center">
                                                 <TextBlock.Style>
@@ -696,6 +725,7 @@
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center">
                                             <CheckBox IsChecked="{Binding IsPaid, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                      IsEnabled="{Binding CanEditSalary}"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
                                                       Cursor="Hand"
@@ -1006,7 +1036,8 @@
                                                     <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=LostFocus}"
                                                              FontSize="{DynamicResource FS11}" VerticalAlignment="Center"
                                                              BorderThickness="0" Background="Transparent"
-                                                             Foreground="{DynamicResource ForegroundBrush}" Padding="2,1"/>
+                                                             Foreground="{DynamicResource ForegroundBrush}" Padding="2,1"
+                                                             IsReadOnly="{Binding CanEdit, Converter={StaticResource InverseBool}}"/>
 
                                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding FirmName}"
                                                                FontSize="{DynamicResource FS10}"
@@ -1017,9 +1048,11 @@
                                                              FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                                              HorizontalContentAlignment="Right" VerticalAlignment="Center"
                                                              BorderThickness="0" Background="Transparent"
-                                                             Foreground="{DynamicResource WarningBrush}" Padding="2,1"/>
+                                                             Foreground="{DynamicResource WarningBrush}" Padding="2,1"
+                                                             IsReadOnly="{Binding CanEdit, Converter={StaticResource InverseBool}}"/>
 
                                                     <Button Grid.RowSpan="2" Grid.Column="2" Cursor="Hand" Margin="4,0,0,0"
+                                                            IsEnabled="{Binding CanEdit}"
                                                             Command="{Binding DataContext.RemoveExpenseCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                             CommandParameter="{Binding Id}">
                                                         <Button.Template>

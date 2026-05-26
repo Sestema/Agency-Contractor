@@ -209,6 +209,12 @@
             <Style TargetType="CheckBox">
                 <Setter Property="FocusVisualStyle" Value="{StaticResource Win11FocusVisual}"/>
             </Style>
+            <Style x:Key="SettingsCheckBox" TargetType="CheckBox">
+                <Setter Property="FocusVisualStyle" Value="{StaticResource Win11FocusVisual}"/>
+                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
             <Style TargetType="RadioButton">
                 <Setter Property="FocusVisualStyle" Value="{StaticResource Win11FocusVisual}"/>
             </Style>

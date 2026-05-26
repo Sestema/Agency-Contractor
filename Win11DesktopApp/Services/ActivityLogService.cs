@@ -75,7 +75,7 @@ namespace Win11DesktopApp.Services
                 if (string.IsNullOrEmpty(path)) return;
 
                 var profile = _currentProfileService.CurrentProfile;
-                var actorName = GetCurrentActorName(profile);
+                var actorName = _currentProfileService.CurrentActorDisplayName;
                 var entry = new ActivityLogEntry
                 {
                     ActionType = actionType,
@@ -90,7 +90,7 @@ namespace Win11DesktopApp.Services
                     RelatedOperationId = relatedOperationId,
                     ActorName = actorName,
                     TenantId = profile?.TenantId ?? string.Empty,
-                    ActorUserId = profile?.Id ?? string.Empty,
+                    ActorUserId = _currentProfileService.CurrentBusinessUser?.UserId ?? profile?.Id ?? string.Empty,
                     SessionId = sessionId,
                     MachineId = LicenseService.GetMachineId(),
                     EntityType = entityType,
@@ -115,14 +115,6 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogWarning("ActivityLogService.Log", ex.Message);
             }
-        }
-
-        private string GetCurrentActorName(Win11DesktopApp.Models.ClientProfileRecord? profile)
-        {
-            if (profile == null)
-                return string.Empty;
-
-            return $"{profile.FirstName} {profile.LastName}".Trim();
         }
 
         public List<ActivityLogEntry> GetAll()

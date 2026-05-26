@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Win11DesktopApp.Helpers;
 
 namespace Win11DesktopApp.Services
@@ -13,7 +15,13 @@ namespace Win11DesktopApp.Services
     /// </summary>
     public class FolderService
     {
+        public const string WorkspacePassportFileName = ".agency-workspace.json";
+
         private readonly AppSettingsService _appSettingsService;
+        private static readonly JsonSerializerOptions WorkspacePassportJsonOptions = new()
+        {
+            WriteIndented = true
+        };
 
         public FolderService(AppSettingsService appSettingsService)
         {
@@ -24,6 +32,286 @@ namespace Win11DesktopApp.Services
         /// Root folder path from settings.
         /// </summary>
         public string RootPath => _appSettingsService.Settings.RootFolderPath;
+
+        public static string GetWorkspacePassportPath(string rootFolderPath) =>
+            Path.Combine(rootFolderPath.Trim(), WorkspacePassportFileName);
+
+        public WorkspacePassportResult EnsureWorkspacePassport(bool allowCreate = true) =>
+            EnsureWorkspacePassport(RootPath, allowCreate);
+
+        public WorkspacePassportResult EnsureWorkspacePassport(string rootFolderPath, bool allowCreate = true)
+        {
+            if (string.IsNullOrWhiteSpace(rootFolderPath))
+                return WorkspacePassportResult.Skipped("Root folder is empty.");
+
+            try
+            {
+                if (!Directory.Exists(rootFolderPath))
+                    return WorkspacePassportResult.Skipped($"Root folder does not exist: {rootFolderPath}");
+
+                var passportPath = GetWorkspacePassportPath(rootFolderPath);
+                var conflictPaths = DetectPassportConflictPaths(rootFolderPath);
+                if (conflictPaths.Count > 0)
+                {
+                    return WorkspacePassportResult.Conflict(
+                        passportPath,
+                        "OneDrive workspace passport conflict detected.");
+                }
+
+                if (File.Exists(passportPath))
+                    return ReadWorkspacePassport(passportPath);
+
+                if (!allowCreate)
+                {
+                    return WorkspacePassportResult.Failed(
+                        "Workspace passport is missing. Wait for the owner OneDrive folder to sync, then try again.");
+                }
+
+                var passport = new WorkspacePassport
+                {
+                    WorkspaceId = "ws_" + Guid.NewGuid().ToString("N"),
+                    TenantId = string.Empty,
+                    OwnerClientId = string.Empty,
+                    WorkspaceName = new DirectoryInfo(rootFolderPath).Name,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    CreatedByMachine = Environment.MachineName
+                };
+
+                SafeFileService.WriteJsonAtomic(passportPath, passport, WorkspacePassportJsonOptions);
+                if (!File.Exists(passportPath))
+                {
+                    return File.Exists(passportPath)
+                        ? ReadWorkspacePassport(passportPath)
+                        : WorkspacePassportResult.Failed("Workspace passport was created by another PC but cannot be read.");
+                }
+
+                LoggingService.LogInfo(
+                    "WorkspacePassport",
+                    $"Created workspace passport. workspaceId={passport.WorkspaceId}; root=\"{rootFolderPath}\"");
+                return WorkspacePassportResult.Created(passport, passportPath);
+            }
+            catch (IOException)
+            {
+                var passportPath = GetWorkspacePassportPath(rootFolderPath);
+                return File.Exists(passportPath)
+                    ? ReadWorkspacePassport(passportPath)
+                    : WorkspacePassportResult.Failed("Workspace passport was created by another PC but cannot be read.");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("WorkspacePassport", $"Failed to ensure workspace passport: {ex.Message}");
+                return WorkspacePassportResult.Failed(ex.Message);
+            }
+        }
+
+        public bool TryGetWorkspacePassport(string? rootFolderPath, out WorkspacePassport? passport)
+        {
+            passport = null;
+            if (string.IsNullOrWhiteSpace(rootFolderPath))
+                return false;
+
+            var result = EnsureWorkspacePassport(rootFolderPath, allowCreate: false);
+            if (!result.Success || result.Passport == null)
+                return false;
+
+            passport = result.Passport;
+            return true;
+        }
+
+        public WorkspacePassportResult TryBindWorkspaceOwner(string rootFolderPath, string ownerClientId)
+        {
+            if (string.IsNullOrWhiteSpace(ownerClientId))
+                return WorkspacePassportResult.Failed("Owner client id is missing.");
+
+            var readResult = ReadWorkspacePassportIfExists(rootFolderPath);
+            if (!readResult.Success || readResult.Passport == null)
+                return readResult;
+
+            var passport = readResult.Passport;
+            if (!string.IsNullOrWhiteSpace(passport.OwnerClientId))
+            {
+                return string.Equals(passport.OwnerClientId, ownerClientId, StringComparison.OrdinalIgnoreCase)
+                    ? readResult
+                    : WorkspacePassportResult.Failed("Workspace passport is already bound to another owner.");
+            }
+
+            passport.OwnerClientId = ownerClientId.Trim();
+            return WriteWorkspacePassport(rootFolderPath, passport, readResult.PassportPath);
+        }
+
+        public WorkspacePassportResult TryBindWorkspaceTenant(string rootFolderPath, string tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return WorkspacePassportResult.Failed("Tenant id is missing.");
+
+            var readResult = ReadWorkspacePassportIfExists(rootFolderPath);
+            if (!readResult.Success || readResult.Passport == null)
+                return readResult;
+
+            var passport = readResult.Passport;
+            if (!string.IsNullOrWhiteSpace(passport.TenantId))
+            {
+                return string.Equals(passport.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)
+                    ? readResult
+                    : WorkspacePassportResult.Failed("Workspace passport is already bound to another tenant.");
+            }
+
+            passport.TenantId = tenantId.Trim();
+            return WriteWorkspacePassport(rootFolderPath, passport, readResult.PassportPath);
+        }
+
+        public IReadOnlyList<string> DetectPassportConflictPaths(string rootFolderPath)
+        {
+            if (string.IsNullOrWhiteSpace(rootFolderPath) || !Directory.Exists(rootFolderPath))
+                return Array.Empty<string>();
+
+            var passportPath = GetWorkspacePassportPath(rootFolderPath);
+            var passportFileName = WorkspacePassportFileName;
+            var conflicts = Directory.EnumerateFiles(rootFolderPath)
+                .Where(path =>
+                {
+                    var fileName = Path.GetFileName(path);
+                    if (string.Equals(fileName, passportFileName, StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    if (string.Equals(fileName, passportFileName + ".recovery", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    if (!fileName.StartsWith(passportFileName, StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    return fileName.Contains("conflict", StringComparison.OrdinalIgnoreCase)
+                           || fileName.Contains(" (", StringComparison.Ordinal)
+                           || fileName.EndsWith(".recovery", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (conflicts.Count > 0)
+                return conflicts;
+
+            return Array.Empty<string>();
+        }
+
+        private static WorkspacePassportResult ReadWorkspacePassportIfExists(string rootFolderPath)
+        {
+            var passportPath = GetWorkspacePassportPath(rootFolderPath);
+            return File.Exists(passportPath)
+                ? ReadWorkspacePassport(passportPath)
+                : WorkspacePassportResult.Failed("Workspace passport is missing.");
+        }
+
+        private static WorkspacePassportResult ReadWorkspacePassport(string passportPath)
+        {
+            try
+            {
+                var passport = SafeFileService.ReadJsonShared<WorkspacePassport>(passportPath, WorkspacePassportJsonOptions);
+                if (passport == null || string.IsNullOrWhiteSpace(passport.WorkspaceId))
+                {
+                    LoggingService.LogWarning("WorkspacePassport", $"Invalid workspace passport: {passportPath}");
+                    return WorkspacePassportResult.Invalid(passportPath);
+                }
+
+                LoggingService.LogInfo(
+                    "WorkspacePassport",
+                    $"Using workspace passport. workspaceId={passport.WorkspaceId}; file=\"{passportPath}\"");
+                return WorkspacePassportResult.Existing(passport, passportPath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("WorkspacePassport", $"Cannot read workspace passport '{passportPath}': {ex.Message}");
+                return WorkspacePassportResult.Invalid(passportPath);
+            }
+        }
+
+        private static WorkspacePassportResult WriteWorkspacePassport(
+            string rootFolderPath,
+            WorkspacePassport passport,
+            string passportPath)
+        {
+            try
+            {
+                SafeFileService.WriteJsonAtomic(passportPath, passport, WorkspacePassportJsonOptions);
+                LoggingService.LogInfo(
+                    "WorkspacePassport",
+                    $"Updated workspace passport. workspaceId={passport.WorkspaceId}; root=\"{rootFolderPath}\"");
+                return WorkspacePassportResult.Existing(passport, passportPath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("WorkspacePassport", $"Failed to update workspace passport: {ex.Message}");
+                return WorkspacePassportResult.Failed(ex.Message);
+            }
+        }
+
+        public sealed class WorkspacePassport
+        {
+            [JsonPropertyName("workspace_id")]
+            public string WorkspaceId { get; set; } = string.Empty;
+
+            [JsonPropertyName("tenant_id")]
+            public string TenantId { get; set; } = string.Empty;
+
+            [JsonPropertyName("owner_client_id")]
+            public string OwnerClientId { get; set; } = string.Empty;
+
+            [JsonPropertyName("workspace_name")]
+            public string WorkspaceName { get; set; } = string.Empty;
+
+            [JsonPropertyName("created_at_utc")]
+            public DateTime CreatedAtUtc { get; set; }
+
+            [JsonPropertyName("created_by_machine")]
+            public string CreatedByMachine { get; set; } = string.Empty;
+        }
+
+        public sealed class WorkspacePassportResult
+        {
+            public bool Success { get; init; }
+            public bool WasCreated { get; init; }
+            public bool IsInvalid { get; init; }
+            public bool HasConflict { get; init; }
+            public string Message { get; init; } = string.Empty;
+            public string PassportPath { get; init; } = string.Empty;
+            public WorkspacePassport? Passport { get; init; }
+
+            public static WorkspacePassportResult Created(WorkspacePassport passport, string passportPath) => new()
+            {
+                Success = true,
+                WasCreated = true,
+                Passport = passport,
+                PassportPath = passportPath
+            };
+
+            public static WorkspacePassportResult Existing(WorkspacePassport passport, string passportPath) => new()
+            {
+                Success = true,
+                Passport = passport,
+                PassportPath = passportPath
+            };
+
+            public static WorkspacePassportResult Invalid(string passportPath) => new()
+            {
+                IsInvalid = true,
+                Message = "Workspace passport is invalid.",
+                PassportPath = passportPath
+            };
+
+            public static WorkspacePassportResult Conflict(string passportPath, string message) => new()
+            {
+                HasConflict = true,
+                Message = message,
+                PassportPath = passportPath
+            };
+
+            public static WorkspacePassportResult Skipped(string message) => new()
+            {
+                Message = message
+            };
+
+            public static WorkspacePassportResult Failed(string message) => new()
+            {
+                Message = message
+            };
+        }
 
         /// <summary>
         /// Language code used for physical folder names on disk.

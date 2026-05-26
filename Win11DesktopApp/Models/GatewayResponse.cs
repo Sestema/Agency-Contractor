@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.Models
@@ -16,5 +17,6 @@ namespace Win11DesktopApp.Models
         public List<RemoteCommand> PendingCommands { get; set; } = new();
         public string MigrationResult { get; set; } = string.Empty;
         public string Error { get; set; } = string.Empty;
+        public Dictionary<string, JsonElement>? RawPayload { get; set; }
     }
 }

@@ -146,6 +146,34 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isDirty, value);
         }
 
+        public bool IsSalaryReadOnly => !CanEditSalaryModule;
+
+        private static bool CanEditSalaryModule =>
+            PolicyService.HasPermission("salary:edit") && !PolicyService.IsReadOnlyMode;
+
+        public bool ShowSalaryViewOnlyBadge => !CanEditAnyVisibleSalary;
+
+        public bool CanEditAnyVisibleSalary =>
+            CanEditSalaryModule && Entries.Any(entry => entry.CanEditSalary);
+
+        public bool CanEditVisibleSalaryData =>
+            CanEditSalaryModule && VisibleEntries().Any(entry => entry.CanEditSalary);
+
+        public bool CanEditSelectedFirmExpenses => CanEditExpensesForSelectedFirm();
+
+        public bool CanEditSelectedSalaryEntry =>
+            SelectedEntry != null && CanEditSalaryEntry(SelectedEntry);
+
+        private DateTime _lastViewOnlyWarningUtc = DateTime.MinValue;
+
+        public bool CanEditSalaryEntry(SalaryEntry? entry)
+        {
+            if (entry == null || !CanEditSalaryModule)
+                return false;
+
+            return CanEditSalaryFirmSilently(entry.FirmName);
+        }
+
         private string _statusMessage = string.Empty;
         public string StatusMessage
         {
@@ -242,7 +270,15 @@ namespace Win11DesktopApp.ViewModels
         public DateTime AdvanceDate { get => _advanceDate; set => SetProperty(ref _advanceDate, value); }
 
         private SalaryEntry? _selectedEntry;
-        public SalaryEntry? SelectedEntry { get => _selectedEntry; set => SetProperty(ref _selectedEntry, value); }
+        public SalaryEntry? SelectedEntry
+        {
+            get => _selectedEntry;
+            set
+            {
+                if (SetProperty(ref _selectedEntry, value))
+                    RefreshSalaryEditCapability();
+            }
+        }
 
         private string _searchText = string.Empty;
         public string SearchText
@@ -266,6 +302,7 @@ namespace Win11DesktopApp.ViewModels
                     ApplyFilter();
                     LoadExpenses();
                     OnPropertyChanged(nameof(IsFirmFiltered));
+                    RefreshSalaryEditCapability();
                 }
             }
         }
@@ -335,25 +372,26 @@ namespace Win11DesktopApp.ViewModels
 
             GoBackCommand = new AsyncRelayCommand(async o =>
             {
-                if (await SaveReportAsync())
-                    _navigationService.NavigateTo<FinanceTablesViewModel>();
+                await GoBackAsync();
             });
-            SaveCommand = new AsyncRelayCommand(async o => await SaveReportAsync());
+            SaveCommand = new AsyncRelayCommand(async o => await SaveReportAsync(), _ => CanEditVisibleSalaryData);
             ExportExcelCommand = new RelayCommand(o => ExportToExcel());
             PrevMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(-1), _ => !IsLoading);
             NextMonthCommand = new AsyncRelayCommand(_ => ChangeMonthAsync(1), _ => !IsLoading);
             LoadEmployeesCommand = new RelayCommand(o => { });
-            OpenAdvanceDialogCommand = new RelayCommand(o => OpenAdvanceDialog());
+            OpenAdvanceDialogCommand = new RelayCommand(o => OpenAdvanceDialog(), _ => CanEditAnyVisibleSalary);
             CloseAdvanceDialogCommand = new RelayCommand(o => IsAdvanceDialogOpen = false);
-            ConfirmAdvanceCommand = new RelayCommand(o => ConfirmAdvance());
-            AddAdvanceCommand = new RelayCommand(o => OpenAdvanceDialog());
-            ManageColumnsCommand = new RelayCommand(o => OpenManageColumns());
-            AddExpenseCommand = new RelayCommand(o => AddExpense());
-            RemoveExpenseCommand = new RelayCommand(o => RemoveExpense(o as string));
+            ConfirmAdvanceCommand = new RelayCommand(o => ConfirmAdvance(), _ => CanEditAnyVisibleSalary);
+            AddAdvanceCommand = new RelayCommand(o => OpenAdvanceDialog(), _ => CanEditAnyVisibleSalary);
+            ManageColumnsCommand = new RelayCommand(o => OpenManageColumns(), _ => CanEditAnyVisibleSalary);
+            AddExpenseCommand = new RelayCommand(o => AddExpense(), _ => CanEditSelectedFirmExpenses);
+            RemoveExpenseCommand = new RelayCommand(
+                o => RemoveExpense(o as string),
+                o => o is string id && CanRemoveExpense(id));
             SelectFirmCommand = new RelayCommand(o => SelectFirm(o as string));
-            MarkAllPaidCommand = new AsyncRelayCommand(async o => await MarkAllPaidAsync());
-            MarkAllUnpaidCommand = new AsyncRelayCommand(async o => await MarkAllUnpaidAsync());
-            CreateNextMonthCommand = new AsyncRelayCommand(async o => await CreateNextMonthAsync());
+            MarkAllPaidCommand = new AsyncRelayCommand(async o => await MarkAllPaidAsync(), _ => CanEditVisibleSalaryData);
+            MarkAllUnpaidCommand = new AsyncRelayCommand(async o => await MarkAllUnpaidAsync(), _ => CanEditVisibleSalaryData);
+            CreateNextMonthCommand = new AsyncRelayCommand(async o => await CreateNextMonthAsync(), _ => CanEditAnyVisibleSalary);
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as SalaryEntry));
             ToggleStatsSettingsCommand = new RelayCommand(o => IsStatsSettingsOpen = !IsStatsSettingsOpen);
             ClearSearchCommand = new RelayCommand(o => SearchText = string.Empty);
@@ -593,6 +631,144 @@ namespace Win11DesktopApp.ViewModels
             return snapshot;
         }
 
+        private List<EmployerCompany> GetVisibleAccessibleCompanies(int year, int month)
+        {
+            var companyService = _companyService;
+            return companyService?.Companies?
+                .Where(c => companyService.IsCompanyVisibleForPeriod(c, year, month))
+                .Where(PolicyService.CanAccessCompany)
+                .ToList()
+                ?? new List<EmployerCompany>();
+        }
+
+        private HashSet<string> GetAccessibleFirmNames(int year, int month)
+        {
+            return GetVisibleAccessibleCompanies(year, month)
+                .Select(company => company.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private EmployerCompany? FindCompanyByName(string firmName)
+        {
+            return _companyService.Companies.FirstOrDefault(company =>
+                string.Equals(company.Name, firmName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private bool CanEditSalaryFirm(string firmName, string actionName)
+        {
+            if (CanEditSalaryFirmSilently(firmName))
+                return true;
+
+            ShowSalaryViewOnlyWarning();
+            return false;
+        }
+
+        private bool CanEditSalaryFirmSilently(string firmName)
+        {
+            var company = FindCompanyByName(firmName);
+            return company != null
+                ? PolicyService.CanEditCompany(company)
+                : PolicyService.CanEditEmployer(null, firmName, null);
+        }
+
+        private bool CanEditSalaryEntries(IEnumerable<SalaryEntry> entries, string actionName)
+        {
+            foreach (var firmName in entries
+                         .Select(entry => entry.FirmName)
+                         .Where(name => !string.IsNullOrWhiteSpace(name))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!CanEditSalaryFirmSilently(firmName))
+                {
+                    ShowSalaryViewOnlyWarning();
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool CanEditExpensesForSelectedFirm()
+        {
+            if (!CanEditSalaryModule)
+                return false;
+
+            var allLabel = L("FinFilterAll") ?? "All";
+            if (string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel)
+                return false;
+
+            return CanEditSalaryFirmSilently(_selectedFirmFilter);
+        }
+
+        private bool CanRemoveExpense(string? expenseId)
+        {
+            if (string.IsNullOrWhiteSpace(expenseId))
+                return false;
+
+            var item = FirmExpenses.FirstOrDefault(expense => expense.Id == expenseId);
+            return item != null && item.CanEdit;
+        }
+
+        private void RefreshSalaryEditCapability()
+        {
+            OnPropertyChanged(nameof(ShowSalaryViewOnlyBadge));
+            OnPropertyChanged(nameof(CanEditAnyVisibleSalary));
+            OnPropertyChanged(nameof(CanEditVisibleSalaryData));
+            OnPropertyChanged(nameof(CanEditSelectedFirmExpenses));
+            OnPropertyChanged(nameof(CanEditSelectedSalaryEntry));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void ShowSalaryViewOnlyWarning()
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _lastViewOnlyWarningUtc).TotalSeconds < 2)
+                return;
+
+            _lastViewOnlyWarningUtc = now;
+            var message = L("FinSalaryViewOnlyMessage")
+                ?? "You have view-only access. You cannot change data.";
+            StatusMessage = message;
+            ToastService.Instance.Warning(message);
+        }
+
+        private bool CanEditSalaryEntriesSilently(IEnumerable<SalaryEntry> entries)
+        {
+            foreach (var firmName in entries
+                         .Select(entry => entry.FirmName)
+                         .Where(name => !string.IsNullOrWhiteSpace(name))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!CanEditSalaryFirmSilently(firmName))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private async Task GoBackAsync()
+        {
+            if (!HasUnsavedSalaryChanges())
+            {
+                _navigationService.NavigateTo<FinanceTablesViewModel>();
+                return;
+            }
+
+            var changedEntries = BuildChangedEntriesForSave();
+            if (!CanEditSalaryModule || !CanEditSalaryEntriesSilently(changedEntries))
+            {
+                LoggingService.LogInfo(
+                    "Salary.GoBack",
+                    "Leaving salary screen without auto-save because current user has view-only access.");
+                _navigationService.NavigateTo<FinanceTablesViewModel>();
+                return;
+            }
+
+            if (await SaveReportAsync())
+                _navigationService.NavigateTo<FinanceTablesViewModel>();
+        }
+
         private async Task LoadReportAsync()
         {
             var loadVersion = Interlocked.Increment(ref _loadReportVersion);
@@ -618,11 +794,7 @@ namespace Win11DesktopApp.ViewModels
             var year = _selectedYear;
             var month = _selectedMonth;
             var monthEnd = new DateTime(year, month, 1).AddMonths(1).AddDays(-1);
-            var companyService = _companyService;
-            var companiesSnapshot = companyService?.Companies?
-                .Where(c => companyService.IsCompanyVisibleForPeriod(c, year, month))
-                .ToList()
-                ?? new List<EmployerCompany>();
+            var companiesSnapshot = GetVisibleAccessibleCompanies(year, month);
 
             // Build all entries in background — no UI thread blocking
             var snapshotSw = Stopwatch.StartNew();
@@ -666,6 +838,7 @@ namespace Win11DesktopApp.ViewModels
             _dirtySalaryEntryKeys.Clear();
             foreach (var entry in newEntries)
             {
+                entry.CanEditSalary = CanEditSalaryEntry(entry);
                 entry.PropertyChanged += OnEntryChanged;
                 Entries.Add(entry);
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
@@ -730,6 +903,10 @@ namespace Win11DesktopApp.ViewModels
                 $"NextMonth={nextMonthMs}ms");
 
             IsLoading = false;
+            StatusMessage = ShowSalaryViewOnlyBadge
+                ? (L("FinSalaryViewOnlyHint") ?? "View-only access. Data cannot be changed.")
+                : (L("FinSalaryLoaded") ?? "Loaded");
+            RefreshSalaryEditCapability();
             DataLoaded?.Invoke();
             }
             catch (Exception ex)
@@ -776,6 +953,10 @@ namespace Win11DesktopApp.ViewModels
             };
             var entries = new List<SalaryEntry>();
             var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var allowedFirmNames = companies
+                .Select(company => company.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             bool needResave = false;
             var activeFoldersByFirm = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -802,6 +983,8 @@ namespace Win11DesktopApp.ViewModels
             foreach (var arc in allHistory)
             {
                 if (string.IsNullOrEmpty(arc.FirmName))
+                    continue;
+                if (!allowedFirmNames.Contains(arc.FirmName))
                     continue;
 
                 var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, arc.FirmName);
@@ -832,6 +1015,9 @@ namespace Win11DesktopApp.ViewModels
             var canonicalizeSw = Stopwatch.StartNew();
             foreach (var entry in sharedEntries)
             {
+                if (!allowedFirmNames.Contains(entry.FirmName))
+                    continue;
+
                 var idLookupSw = Stopwatch.StartNew();
                 var canonicalId = TryResolveEmployeeIdBackground(entry.EmployeeFolder, entry.FullName, employeesSnapshot, out var resolveInsideLookupMs);
                 timing.CanonicalizeResolveMs += resolveInsideLookupMs;
@@ -913,6 +1099,7 @@ namespace Win11DesktopApp.ViewModels
                 if (!ArchivedWorkedInMonth(arc, year, month)) continue;
                 var firmName = arc.FirmName;
                 if (string.IsNullOrEmpty(firmName)) continue;
+                if (!allowedFirmNames.Contains(firmName)) continue;
                 var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
 
@@ -1073,6 +1260,9 @@ namespace Win11DesktopApp.ViewModels
             if (_suppressEntryChangeTracking)
                 return;
 
+            if (IsSalaryReadOnly)
+                return;
+
             IsDirty = true;
             if (sender is SalaryEntry changedEntry)
                 _dirtySalaryEntryKeys.Add(BuildEmployeeFirmKey(changedEntry.EmployeeId, changedEntry.EmployeeFolder, changedEntry.FirmName));
@@ -1147,10 +1337,7 @@ namespace Win11DesktopApp.ViewModels
             var fieldList = ActiveCustomFields.ToList();
             var initMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
 
-            var companyService = _companyService;
-            var companiesInit = companyService?.Companies?
-                .Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
-                .ToList();
+            var companiesInit = GetVisibleAccessibleCompanies(_selectedYear, _selectedMonth);
             if (companiesInit != null)
             {
                 foreach (var company in companiesInit)
@@ -1173,6 +1360,7 @@ namespace Win11DesktopApp.ViewModels
                     };
 
                     entry.RecalcNet();
+                    entry.CanEditSalary = CanEditSalaryEntry(entry);
                     entry.PropertyChanged += OnEntryChanged;
                     Entries.Add(entry);
                 }
@@ -1224,10 +1412,11 @@ namespace Win11DesktopApp.ViewModels
             var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var nextMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
-            var companyService = _companyService;
-            var companiesCreate = companyService?.Companies?
-                .Where(c => companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
-                .ToList();
+            var companiesCreate = GetVisibleAccessibleCompanies(_selectedYear, _selectedMonth);
+            var allowedFirmNames = companiesCreate
+                .Select(company => company.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (companiesCreate != null)
             {
                 foreach (var company in companiesCreate)
@@ -1258,6 +1447,7 @@ namespace Win11DesktopApp.ViewModels
                     };
 
                     entry.RecalcNet();
+                    entry.CanEditSalary = CanEditSalaryEntry(entry);
                     entry.PropertyChanged += OnEntryChanged;
                     Entries.Add(entry);
                     existingKeys.Add(key);
@@ -1276,6 +1466,7 @@ namespace Win11DesktopApp.ViewModels
 
                 var firmName = arc.FirmName;
                 if (string.IsNullOrEmpty(firmName)) continue;
+                if (!allowedFirmNames.Contains(firmName)) continue;
 
                     var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
@@ -1297,6 +1488,7 @@ namespace Win11DesktopApp.ViewModels
                 };
 
                 entry.RecalcNet();
+                entry.CanEditSalary = CanEditSalaryEntry(entry);
                 entry.PropertyChanged += OnEntryChanged;
                 Entries.Add(entry);
                 existingKeys.Add(key);
@@ -1424,6 +1616,8 @@ namespace Win11DesktopApp.ViewModels
                     PaidCount = g.Count(e => e.IsPaid),
                     IsSelected = g.Key == _selectedFirmFilter
                 }));
+
+            RefreshSalaryEditCapability();
         }
 
         private void SaveReport()
@@ -1470,6 +1664,13 @@ namespace Win11DesktopApp.ViewModels
                 var expensesForSave = forceSaveAllEntries
                     ? BuildExpensesForSave(saveYear, saveMonth)
                     : new List<FirmExpense>();
+                if (PolicyService.IsCompanyDataScopeRestricted && expensesForSave.Count > 0)
+                {
+                    LoggingService.LogInfo(
+                        "Salary.Save.RestrictedScope",
+                        $"Skipped bulk expense save for restricted business user in {saveYear:D4}-{saveMonth:D2}; salary rows will be upserted only.");
+                    expensesForSave = new List<FirmExpense>();
+                }
 
                 foreach (var entry in Entries)
                     entry.SavedNetSalary = entry.NetSalary;
@@ -1481,6 +1682,14 @@ namespace Win11DesktopApp.ViewModels
                 var entriesForSave = forceSaveAllEntries
                     ? Entries.ToList()
                     : BuildChangedEntriesForSave();
+                var isRestrictedBusinessSave = PolicyService.IsCompanyDataScopeRestricted;
+                if (!CanEditSalaryEntries(entriesForSave, "зберегти зарплатний звіт"))
+                {
+                    StatusMessage = L("FinSalaryViewOnlyNoEdit")
+                        ?? "You do not have permission to edit salary for the selected firm.";
+                    return false;
+                }
+
                 var hadDirtySalaryEntries = _dirtySalaryEntryKeys.Count > 0;
                 var hadSnapshotChanges = EntriesHaveSnapshotChanges(entriesForSave);
 
@@ -1507,7 +1716,7 @@ namespace Win11DesktopApp.ViewModels
                     $"snapshots={_originalEntrySnapshots.Count} dirty={_dirtySalaryEntryKeys.Count} " +
                     $"toSave={entriesForSave.Count} expensesToSave={expensesForSave.Count}");
 
-                var useEntryUpsert = !forceSaveAllEntries && expensesForSave.Count == 0;
+                var useEntryUpsert = (!forceSaveAllEntries || isRestrictedBusinessSave) && expensesForSave.Count == 0;
                 var saveSucceeded = useEntryUpsert
                     ? _financeService.UpsertSalaryEntries(saveYear, saveMonth, entriesForSave)
                     : isFirmScopedSave
@@ -1878,6 +2087,7 @@ namespace Win11DesktopApp.ViewModels
                 CanonicalizeSalaryEntriesForPropagation(futureEntries);
 
                 bool anyUpdated = false;
+                var updatedEntries = new List<SalaryEntry>();
                 foreach (var fe in futureEntries)
                 {
                     var matched = FindChangedNoteForEntry(changed, fe);
@@ -1890,12 +2100,17 @@ namespace Win11DesktopApp.ViewModels
                     if (fe.Note == change.OldNote || fe.Note == change.NewNote || string.IsNullOrEmpty(fe.Note))
                     {
                         fe.Note = change.NewNote;
+                        updatedEntries.Add(fe);
                         anyUpdated = true;
                     }
                 }
 
                 token.ThrowIfCancellationRequested();
-                if (anyUpdated && !_financeService.SaveAllFirmPayments(date.Year, date.Month, futureEntries, futureExpenses))
+                var saveSucceeded = !anyUpdated
+                    || (PolicyService.IsCompanyDataScopeRestricted
+                        ? _financeService.UpsertSalaryEntries(date.Year, date.Month, updatedEntries)
+                        : _financeService.SaveAllFirmPayments(date.Year, date.Month, futureEntries, futureExpenses));
+                if (!saveSucceeded)
                 {
                     LoggingService.LogWarning(
                         "SalaryViewModel.PropagateNoteChangesForward",
@@ -1962,6 +2177,12 @@ namespace Win11DesktopApp.ViewModels
             if (!PolicyService.EnsureWriteAllowed("додати аванс"))
                 return;
 
+            if (SelectedEntry != null && !SelectedEntry.CanEditSalary)
+            {
+                ShowSalaryViewOnlyWarning();
+                return;
+            }
+
             if (SelectedEntry != null)
                 AdvanceName = SelectedEntry.FullName;
             AdvanceAmount = "";
@@ -1987,6 +2208,8 @@ namespace Win11DesktopApp.ViewModels
                 StatusMessage = L("FinAdvanceNotFound") ?? "Employee not found";
                 return;
             }
+            if (!CanEditSalaryFirm(target.FirmName, "підтвердити аванс"))
+                return;
 
             var advance = new AdvancePayment
             {
@@ -2133,6 +2356,8 @@ namespace Win11DesktopApp.ViewModels
         public void DeleteAdvance(string advanceId, string employeeName = "", string firmName = "", decimal amount = 0)
         {
             if (!PolicyService.EnsureWriteAllowed("видалити аванс"))
+                return;
+            if (!string.IsNullOrWhiteSpace(firmName) && !CanEditSalaryFirm(firmName, "видалити аванс"))
                 return;
 
             if (amount >= 1000)
@@ -2727,8 +2952,19 @@ namespace Win11DesktopApp.ViewModels
                 ? _financeService.GetFirmExpenses(_selectedYear, _selectedMonth)
                 : _financeService.GetFirmExpenses(_selectedYear, _selectedMonth, _selectedFirmFilter);
 
+            if (PolicyService.IsCompanyDataScopeRestricted)
+            {
+                var accessibleFirmNames = GetAccessibleFirmNames(_selectedYear, _selectedMonth);
+                expenses = expenses
+                    .Where(expense => accessibleFirmNames.Contains(expense.FirmName))
+                    .ToList();
+            }
+
             foreach (var exp in expenses)
+            {
+                exp.CanEdit = CanEditSalaryFirmSilently(exp.FirmName);
                 exp.PropertyChanged += OnExpenseChanged;
+            }
 
             FirmExpenses = new ObservableCollection<FirmExpense>(expenses);
             OnPropertyChanged(nameof(ExpenseHeaderText));
@@ -2740,7 +2976,12 @@ namespace Win11DesktopApp.ViewModels
             RecalcTotals();
             OnPropertyChanged(nameof(ExpenseHeaderText));
             if (sender is FirmExpense exp)
+            {
+                if (!CanEditSalaryFirm(exp.FirmName, "змінити витрату"))
+                    return;
+
                 _financeService.UpdateFirmExpense(exp);
+            }
         }
 
         private void AddExpense()
@@ -2756,6 +2997,8 @@ namespace Win11DesktopApp.ViewModels
                 StatusMessage = L("FinExpenseSelectFirm") ?? "Select a firm first to add expenses";
                 return;
             }
+            if (!CanEditSalaryFirm(_selectedFirmFilter, "додати витрату"))
+                return;
 
             var exp = new FirmExpense
             {
@@ -2763,7 +3006,8 @@ namespace Win11DesktopApp.ViewModels
                 Month = _selectedMonth,
                 FirmName = _selectedFirmFilter,
                 Name = L("FinExpenseNew") ?? "New expense",
-                Amount = 0
+                Amount = 0,
+                CanEdit = true
             };
             _financeService.AddFirmExpense(exp);
             exp.PropertyChanged += OnExpenseChanged;
@@ -2781,6 +3025,9 @@ namespace Win11DesktopApp.ViewModels
             var item = FirmExpenses.FirstOrDefault(e => e.Id == expenseId);
             if (item != null)
             {
+                if (!CanEditSalaryFirm(item.FirmName, "видалити витрату"))
+                    return;
+
                 item.PropertyChanged -= OnExpenseChanged;
                 FirmExpenses.Remove(item);
                 _financeService.RemoveFirmExpense(expenseId, item.Year, item.Month);
@@ -2793,8 +3040,14 @@ namespace Win11DesktopApp.ViewModels
         {
             if (!PolicyService.EnsureWriteAllowed("позначити зарплати як оплачені"))
                 return;
+            var visibleEntries = VisibleEntries().Where(entry => entry.CanEditSalary).ToList();
+            if (visibleEntries.Count == 0)
+            {
+                ShowSalaryViewOnlyWarning();
+                return;
+            }
 
-            foreach (var e in VisibleEntries())
+            foreach (var e in visibleEntries)
             {
                 e.IsPaid = true;
                 WriteSalaryHistory(e);
@@ -2811,8 +3064,14 @@ namespace Win11DesktopApp.ViewModels
         {
             if (!PolicyService.EnsureWriteAllowed("зняти позначку оплати зарплат"))
                 return;
+            var visibleEntries = VisibleEntries().Where(entry => entry.CanEditSalary).ToList();
+            if (visibleEntries.Count == 0)
+            {
+                ShowSalaryViewOnlyWarning();
+                return;
+            }
 
-            foreach (var e in VisibleEntries())
+            foreach (var e in visibleEntries)
             {
                 e.IsPaid = false;
                 RemoveSalaryHistory(e);
@@ -2825,6 +3084,22 @@ namespace Win11DesktopApp.ViewModels
         {
             if (entry != null)
             {
+                if (!entry.CanEditSalary)
+                {
+                    _suppressEntryChangeTracking = true;
+                    try
+                    {
+                        entry.IsPaid = !entry.IsPaid;
+                    }
+                    finally
+                    {
+                        _suppressEntryChangeTracking = false;
+                    }
+
+                    ShowSalaryViewOnlyWarning();
+                    return;
+                }
+
                 if (entry.IsPaid)
                     WriteSalaryHistory(entry);
                 else
@@ -2867,6 +3142,17 @@ namespace Win11DesktopApp.ViewModels
 
             var allLabel = L("FinFilterAll") ?? "All";
             var isAll = string.IsNullOrEmpty(_selectedFirmFilter) || _selectedFirmFilter == allLabel;
+            if (!isAll && !CanEditSalaryFirm(_selectedFirmFilter, "зберегти витрати"))
+                return;
+
+            if (PolicyService.IsCompanyDataScopeRestricted && isAll)
+            {
+                LoggingService.LogInfo(
+                    "Salary.SaveExpenses.RestrictedScope",
+                    $"Skipped all-firm expense save for restricted business user in {_selectedYear:D4}-{_selectedMonth:D2}.");
+                return;
+            }
+
             _financeService.SaveFirmExpenses(FirmExpenses.ToList(), _selectedYear, _selectedMonth, isAll ? null : _selectedFirmFilter);
         }
 

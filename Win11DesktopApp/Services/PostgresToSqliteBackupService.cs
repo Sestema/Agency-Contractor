@@ -466,22 +466,10 @@ ON CONFLICT(id) DO UPDATE SET
         }
 
         private NpgsqlConnection OpenPostgresConnection()
-        {
-            var settings = _settingsService.Settings;
-            var builder = new NpgsqlConnectionStringBuilder
+            => PostgresConnectionFactory.CreateConnection(_settingsService, new PostgresConnectionStringOptions
             {
-                Host = string.IsNullOrWhiteSpace(settings.PostgresHost) ? "localhost" : settings.PostgresHost.Trim(),
-                Port = settings.PostgresPort <= 0 ? 5432 : settings.PostgresPort,
-                Database = string.IsNullOrWhiteSpace(settings.PostgresDatabase) ? "agency_db" : settings.PostgresDatabase.Trim(),
-                Username = string.IsNullOrWhiteSpace(settings.PostgresUsername) ? "postgres" : settings.PostgresUsername.Trim(),
-                Password = LocalSecretProtection.Unprotect(settings.EncryptedPostgresPassword),
-                Timeout = 10,
-                CommandTimeout = 60,
-                Pooling = true
-            };
-
-            return new NpgsqlConnection(builder.ConnectionString);
-        }
+                CommandTimeoutSeconds = 60
+            });
 
         private static string BuildSqliteInsertSql(string targetTable, IReadOnlyList<string> columns, bool insertOrReplace)
         {

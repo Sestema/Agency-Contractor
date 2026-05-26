@@ -652,7 +652,9 @@ namespace Win11DesktopApp.ViewModels
         {
             var selectedCompanies = CompanyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
             var selectedAgencies = AgencyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
-            var companies = _companyService.Companies.ToList();
+            var companies = _companyService.Companies
+                .Where(PolicyService.CanAccessCompany)
+                .ToList();
             var companyService = _companyService;
             var dateFrom = DateFrom;
             var dateTo = DateTo;
@@ -709,7 +711,9 @@ namespace Win11DesktopApp.ViewModels
                 if (reloadFilters)
                     await LoadFiltersAsync(cts.Token);
 
-                var companiesSnapshot = _companyService.Companies.ToList();
+                var companiesSnapshot = _companyService.Companies
+                    .Where(PolicyService.CanAccessCompany)
+                    .ToList();
                 var filterSnapshot = CreateFilterSelectionSnapshot();
                 var dateFrom = DateFrom;
                 var dateTo = DateTo;
@@ -883,9 +887,12 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var effectiveFirmsSet = effectiveFirms.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var scopedArchiveLog = visibleArchiveLog
+                .Where(log => string.IsNullOrWhiteSpace(log.FirmName) || effectiveFirmsSet.Contains(log.FirmName))
+                .ToList();
             var archivedByFirm = LoadArchivedEmployeesForReport(
                 effectiveFirmsSet,
-                visibleArchiveLog,
+                scopedArchiveLog,
                 archivedEmployees,
                 activeFirmHistory,
                 GetEmployeesCached,
@@ -992,17 +999,17 @@ namespace Win11DesktopApp.ViewModels
                 })
                 .ToList();
 
-            int archivedPeriod = visibleArchiveLog.Count(l =>
+            int archivedPeriod = scopedArchiveLog.Count(l =>
                 l.Action == "Archived"
                 && IsTimestampInRange(l.Timestamp, dateFrom, dateTo)
                 && (effectiveFirmsSet.Contains(l.FirmName) || string.IsNullOrEmpty(l.FirmName)));
 
-            int restoredPeriod = visibleArchiveLog.Count(l =>
+            int restoredPeriod = scopedArchiveLog.Count(l =>
                 l.Action == "Restored" && IsTimestampInRange(l.Timestamp, dateFrom, dateTo));
 
-            int totalActions = visibleArchiveLog.Count(l => IsTimestampInRange(l.Timestamp, dateFrom, dateTo));
+            int totalActions = scopedArchiveLog.Count(l => IsTimestampInRange(l.Timestamp, dateFrom, dateTo));
 
-            var archiveHistory = visibleArchiveLog
+            var archiveHistory = scopedArchiveLog
                 .Where(l => IsTimestampInRange(l.Timestamp, dateFrom, dateTo))
                 .OrderByDescending(l => l.Timestamp)
                 .ToList();
@@ -1012,7 +1019,7 @@ namespace Win11DesktopApp.ViewModels
                 agencyDetails,
                 archiveHistory,
                 allEmployees,
-                visibleArchiveLog,
+                scopedArchiveLog,
                 effectiveFirms,
                 totalEmp,
                 activeEmp,

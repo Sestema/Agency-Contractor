@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -225,7 +226,10 @@ namespace Win11DesktopApp.Services
                     ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
                 }).ConfigureAwait(false);
                 if (gateway == null || !gateway.Ok)
+                {
+                    ApplyRemoteMultiUserFlag(accessState.Plan);
                     return accessState;
+                }
 
                 accessState = BuildAccessState(gateway, isFromCache: false);
                 UpdateCachedGatewayState(gateway, accessState);
@@ -234,6 +238,7 @@ namespace Win11DesktopApp.Services
             catch (Exception ex)
             {
                 LoggingService.LogWarning("TelemetryService.GetStartupAccessState", ex.Message);
+                ApplyRemoteMultiUserFlag(accessState.Plan);
                 if (!accessState.HasKnownState)
                     return accessState;
 
@@ -367,7 +372,7 @@ namespace Win11DesktopApp.Services
                 LoggingService.LogWarning("TelemetryService.Gateway", $"{action}: {(int)resp.StatusCode} {json}");
                 try
                 {
-                    var errorResponse = JsonSerializer.Deserialize<GatewayResponse>(json, _jsonOptions);
+                    var errorResponse = DeserializeGatewayResponse(json);
                     if (errorResponse != null)
                     {
                         errorResponse.Ok = false;
@@ -387,7 +392,27 @@ namespace Win11DesktopApp.Services
                 };
             }
 
-            return JsonSerializer.Deserialize<GatewayResponse>(json, _jsonOptions);
+            return DeserializeGatewayResponse(json);
+        }
+
+        private static GatewayResponse? DeserializeGatewayResponse(string json)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                var gateway = JsonSerializer.Deserialize<GatewayResponse>(json, _jsonOptions);
+                if (gateway == null)
+                    return null;
+
+                gateway.RawPayload = document.RootElement.EnumerateObject()
+                    .ToDictionary(item => item.Name, item => item.Value.Clone());
+                return gateway;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.DeserializeGatewayResponse", ex.Message);
+                return JsonSerializer.Deserialize<GatewayResponse>(json, _jsonOptions);
+            }
         }
 
         private static ClientAccessState BuildAccessState(GatewayResponse gateway, bool isFromCache)
@@ -466,7 +491,270 @@ namespace Win11DesktopApp.Services
             settings.CachedAccessLastCheckedAtUtc = accessState.LastServerCheckUtc?.ToString("o") ?? DateTime.UtcNow.ToString("o");
             settings.CachedAccessSource = "server";
             settings.CachedAccessPlan = accessState.Plan;
+            ApplyRemoteMultiUserFlag(accessState.Plan);
             _appSettingsService?.SaveSettings();
+        }
+
+        private static void ApplyRemoteMultiUserFlag(string? plan)
+        {
+            var settings = _appSettingsService?.Settings;
+            if (settings == null)
+                return;
+
+            var normalized = (plan ?? string.Empty).Trim().ToLowerInvariant();
+            var shouldEnable = normalized == "business";
+            if (settings.ExperimentalMultiUser == shouldEnable)
+                return;
+
+            settings.ExperimentalMultiUser = shouldEnable;
+            LoggingService.LogInfo(
+                "TelemetryService.ApplyRemoteMultiUserFlag",
+                shouldEnable
+                    ? "Enabled ExperimentalMultiUser from remote Business plan."
+                    : "Disabled ExperimentalMultiUser because remote plan is not Business.");
+        }
+
+        public static async Task<WorkspaceDeviceSessionGatewayResponse?> ReportWorkspaceDeviceSessionAsync(
+            string ownerClientId,
+            string workspaceId,
+            string actorKind,
+            string localUserId,
+            string actorDisplayName)
+        {
+            try
+            {
+                var gateway = await CallGatewayAsync("workspace_session_heartbeat", new Dictionary<string, object?>
+                {
+                    ["owner_client_id"] = ownerClientId,
+                    ["workspace_id"] = workspaceId,
+                    ["actor_kind"] = actorKind,
+                    ["local_user_id"] = localUserId,
+                    ["actor_display_name"] = actorDisplayName,
+                    ["windows_user"] = Environment.UserName,
+                    ["ip_address"] = await GetIpSilentAsync().ConfigureAwait(false)
+                }).ConfigureAwait(false);
+
+                return ParseWorkspaceSessionGatewayResponse(gateway);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.WorkspaceSessionHeartbeat", ex.Message);
+                return null;
+            }
+        }
+
+        public static async Task<WorkspaceDeviceStatusResult?> GetWorkspaceDeviceStatusAsync(
+            string ownerClientId,
+            string? workspaceId = null)
+        {
+            try
+            {
+                var gateway = await CallGatewayAsync("get_workspace_device_status", new Dictionary<string, object?>
+                {
+                    ["owner_client_id"] = ownerClientId,
+                    ["workspace_id"] = workspaceId
+                }).ConfigureAwait(false);
+
+                if (gateway?.RawPayload == null)
+                    return null;
+
+                return ParseWorkspaceDeviceStatus(gateway.RawPayload);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.GetWorkspaceDeviceStatus", ex.Message);
+                return null;
+            }
+        }
+
+        public static async Task EndWorkspaceDeviceSessionAsync(string ownerClientId, string workspaceId)
+        {
+            try
+            {
+                await CallGatewayAsync("end_workspace_device_session", new Dictionary<string, object?>
+                {
+                    ["owner_client_id"] = ownerClientId,
+                    ["workspace_id"] = workspaceId,
+                    ["windows_user"] = Environment.UserName
+                }).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TelemetryService.EndWorkspaceDeviceSession", ex.Message);
+            }
+        }
+
+        private static WorkspaceDeviceSessionGatewayResponse? ParseWorkspaceSessionGatewayResponse(GatewayResponse? gateway)
+        {
+            if (gateway == null)
+                return null;
+
+            var payload = gateway.RawPayload;
+            if (payload != null && payload.ContainsKey("tenant_id"))
+            {
+                return new WorkspaceDeviceSessionGatewayResponse
+                {
+                    Ok = ReadBool(payload, "ok"),
+                    Error = ReadString(payload, "error"),
+                    TenantId = ReadString(payload, "tenant_id"),
+                    MaxDevices = ReadInt(payload, "max_devices"),
+                    ActiveDevices = ReadInt(payload, "active_devices")
+                };
+            }
+
+            return new WorkspaceDeviceSessionGatewayResponse
+            {
+                Ok = gateway.Ok,
+                Error = gateway.Error ?? string.Empty
+            };
+        }
+
+        private static WorkspaceDeviceStatusResult? ParseWorkspaceDeviceStatus(Dictionary<string, JsonElement>? payload)
+        {
+            if (payload == null || !ReadBool(payload, "ok"))
+            {
+                return new WorkspaceDeviceStatusResult
+                {
+                    Ok = false,
+                    Error = payload == null ? "empty_payload" : ReadString(payload, "error")
+                };
+            }
+
+            var summary = ReadObject(payload, "summary");
+            var users = new List<WorkspaceDeviceUserStatus>();
+            if (payload.TryGetValue("users", out var usersElement) && usersElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var userElement in usersElement.EnumerateArray())
+                {
+                    users.Add(new WorkspaceDeviceUserStatus
+                    {
+                        LocalUserId = ReadString(userElement, "local_user_id"),
+                        ActorKind = ReadString(userElement, "actor_kind"),
+                        DisplayName = ReadString(userElement, "display_name"),
+                        LastSeenAtUtc = ReadDateTime(userElement, "last_seen_at"),
+                        DevicesOnline = ReadInt(userElement, "devices_online"),
+                        DevicesTotal = ReadInt(userElement, "devices_total")
+                    });
+                }
+            }
+
+            var sessions = new List<WorkspaceDeviceSessionStatus>();
+            if (payload.TryGetValue("sessions", out var sessionsElement) && sessionsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var sessionElement in sessionsElement.EnumerateArray())
+                {
+                    sessions.Add(new WorkspaceDeviceSessionStatus
+                    {
+                        WorkspaceId = ReadString(sessionElement, "workspace_id"),
+                        MachineId = ReadString(sessionElement, "machine_id"),
+                        MachineName = ReadString(sessionElement, "machine_name"),
+                        WindowsUser = ReadString(sessionElement, "windows_user"),
+                        ActorKind = ReadString(sessionElement, "actor_kind"),
+                        LocalUserId = ReadString(sessionElement, "local_user_id"),
+                        ActorDisplayName = ReadString(sessionElement, "actor_display_name"),
+                        AppVersion = ReadString(sessionElement, "app_version"),
+                        IpAddress = ReadString(sessionElement, "ip_address"),
+                        LastSeenAtUtc = ReadDateTime(sessionElement, "last_seen_at"),
+                        IsOnline = ReadBool(sessionElement, "is_online")
+                    });
+                }
+            }
+
+            return new WorkspaceDeviceStatusResult
+            {
+                Ok = true,
+                MaxDevices = ReadInt(summary, "max_devices"),
+                DevicesOnline = ReadInt(summary, "devices_online"),
+                Users = users,
+                Sessions = sessions
+            };
+        }
+
+        private static Dictionary<string, JsonElement>? ReadObject(Dictionary<string, JsonElement>? payload, string key)
+        {
+            if (payload == null || !payload.TryGetValue(key, out var element) || element.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return element.EnumerateObject().ToDictionary(item => item.Name, item => item.Value);
+        }
+
+        private static string ReadString(Dictionary<string, JsonElement>? payload, string key)
+        {
+            if (payload == null || !payload.TryGetValue(key, out var element))
+                return string.Empty;
+
+            return ReadJsonScalarString(element);
+        }
+
+        private static string ReadString(JsonElement element, string key)
+        {
+            if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var property))
+                return ReadJsonScalarString(property);
+
+            return string.Empty;
+        }
+
+        private static string ReadJsonScalarString(JsonElement element) =>
+            element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString() ?? string.Empty,
+                JsonValueKind.Number => element.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => string.Empty
+            };
+
+        private static int ReadInt(Dictionary<string, JsonElement>? payload, string key)
+        {
+            if (payload == null || !payload.TryGetValue(key, out var element))
+                return 0;
+
+            if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var directValue))
+                return directValue;
+
+            return ReadInt(element, key);
+        }
+
+        private static int ReadInt(JsonElement element, string key)
+        {
+            if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var property))
+            {
+                if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var value))
+                    return value;
+            }
+
+            return 0;
+        }
+
+        private static bool ReadBool(Dictionary<string, JsonElement>? payload, string key)
+        {
+            if (payload == null || !payload.TryGetValue(key, out var element))
+                return false;
+
+            if (element.ValueKind == JsonValueKind.True)
+                return true;
+
+            if (element.ValueKind == JsonValueKind.False)
+                return false;
+
+            return ReadBool(element, key);
+        }
+
+        private static bool ReadBool(JsonElement element, string key)
+        {
+            if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var property))
+                return property.ValueKind == JsonValueKind.True;
+
+            return false;
+        }
+
+        private static DateTime? ReadDateTime(JsonElement element, string key)
+        {
+            var text = ReadString(element, key);
+            if (string.IsNullOrWhiteSpace(text))
+                return null;
+
+            return DateTime.TryParse(text, out var parsed) ? parsed.ToUniversalTime() : null;
         }
     }
 }

@@ -187,6 +187,18 @@ namespace Win11DesktopApp.Views
                 vm.OnEntryPaidChanged(sender as SalaryEntry);
         }
 
+        private void SalaryGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+        {
+            if (e.Row?.Item is not SalaryEntry entry)
+                return;
+
+            if (DataContext is not SalaryViewModel vm || !vm.CanEditSalaryEntry(entry))
+            {
+                e.Cancel = true;
+                Keyboard.ClearFocus();
+            }
+        }
+
         private void RebuildDynamicColumns()
         {
             if (DataContext is not SalaryViewModel vm) return;
@@ -516,6 +528,7 @@ namespace Win11DesktopApp.Views
             if (border.Tag is not SalaryEntry entry) return;
             if (DataContext is not SalaryViewModel vm) return;
 
+            var canEditAdvances = entry.CanEditSalary;
             var advances = vm.GetAdvancesForEmployeeFirm(entry.EmployeeFolder, entry.FirmName);
             var debtItems = vm.GetDebtInfoForEmployeeFirm(entry.EmployeeFolder, entry.FirmName);
 
@@ -627,33 +640,36 @@ namespace Win11DesktopApp.Views
                     Grid.SetColumn(amountTb, 2);
                     row.Children.Add(amountTb);
 
-                    var errorFg = Application.Current.TryFindResource("ErrorBrush") as Brush ?? new SolidColorBrush(Color.FromRgb(0xCC, 0x44, 0x44));
-                    var deleteBtn = new Button
+                    if (canEditAdvances)
                     {
-                        Content = "\uE74D",
-                        FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                        FontSize = 11,
-                        Background = System.Windows.Media.Brushes.Transparent,
-                        BorderThickness = new Thickness(0),
-                        Foreground = errorFg,
-                        Cursor = Cursors.Hand,
-                        Padding = new Thickness(2),
-                        Tag = adv.Id,
-                        VerticalAlignment = VerticalAlignment.Center
-                    };
-                    var advAmount = adv.Amount;
-                    var advEmpName = entry.FullName;
-                    var advFirmName = entry.FirmName;
-                    deleteBtn.Click += (s, args) =>
-                    {
-                        if (s is Button btn && btn.Tag is string advId)
+                        var errorFg = Application.Current.TryFindResource("ErrorBrush") as Brush ?? new SolidColorBrush(Color.FromRgb(0xCC, 0x44, 0x44));
+                        var deleteBtn = new Button
                         {
-                            vm.DeleteAdvance(advId, advEmpName, advFirmName, advAmount);
-                            AdvancePopup.IsOpen = false;
-                        }
-                    };
-                    Grid.SetColumn(deleteBtn, 3);
-                    row.Children.Add(deleteBtn);
+                            Content = "\uE74D",
+                            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                            FontSize = 11,
+                            Background = System.Windows.Media.Brushes.Transparent,
+                            BorderThickness = new Thickness(0),
+                            Foreground = errorFg,
+                            Cursor = Cursors.Hand,
+                            Padding = new Thickness(2),
+                            Tag = adv.Id,
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        var advAmount = adv.Amount;
+                        var advEmpName = entry.FullName;
+                        var advFirmName = entry.FirmName;
+                        deleteBtn.Click += (s, args) =>
+                        {
+                            if (s is Button btn && btn.Tag is string advId)
+                            {
+                                vm.DeleteAdvance(advId, advEmpName, advFirmName, advAmount);
+                                AdvancePopup.IsOpen = false;
+                            }
+                        };
+                        Grid.SetColumn(deleteBtn, 3);
+                        row.Children.Add(deleteBtn);
+                    }
 
                     AdvancePopupList.Children.Add(row);
                 }

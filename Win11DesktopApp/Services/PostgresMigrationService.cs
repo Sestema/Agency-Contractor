@@ -91,7 +91,8 @@ namespace Win11DesktopApp.Services
                 progress?.Report("Перевіряю PostgreSQL і створюю базу, якщо її ще немає...");
                 await EnsureDatabaseExistsAsync(request, databaseName, cancellationToken).ConfigureAwait(false);
 
-                await using var postgres = new NpgsqlConnection(BuildConnectionString(request, databaseName));
+                await using var postgres = new NpgsqlConnection(
+                    PostgresConnectionFactory.BuildConnectionStringFromMigrationRequest(request, databaseName));
                 await postgres.OpenAsync(cancellationToken).ConfigureAwait(false);
 
                 progress?.Report("Створюю таблиці PostgreSQL...");
@@ -119,7 +120,8 @@ namespace Win11DesktopApp.Services
 
                     await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
-                    _settingsService.Settings.PostgresConnectionString = BuildConnectionStringWithoutPassword(request, databaseName);
+                    _settingsService.Settings.PostgresConnectionString =
+                        PostgresConnectionFactory.BuildConnectionStringFromMigrationRequest(request, databaseName, includePassword: false);
                     _settingsService.Settings.PostgresHost = string.IsNullOrWhiteSpace(request.Host) ? "localhost" : request.Host.Trim();
                     _settingsService.Settings.PostgresPort = request.Port <= 0 ? 5432 : request.Port;
                     _settingsService.Settings.PostgresDatabase = databaseName;
@@ -329,7 +331,8 @@ namespace Win11DesktopApp.Services
 
         private static async Task EnsureDatabaseExistsAsync(PostgresMigrationRequest request, string databaseName, CancellationToken cancellationToken)
         {
-            await using var connection = new NpgsqlConnection(BuildConnectionString(request, "postgres"));
+            await using var connection = new NpgsqlConnection(
+                PostgresConnectionFactory.BuildConnectionStringFromMigrationRequest(request, "postgres"));
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             await using (var exists = connection.CreateCommand())
@@ -611,40 +614,6 @@ TRUNCATE TABLE
     salary.salary_expenses;";
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-
-        private static string BuildConnectionString(PostgresMigrationRequest request, string databaseName)
-        {
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(request.Host) ? "localhost" : request.Host.Trim(),
-                Port = request.Port <= 0 ? 5432 : request.Port,
-                Database = databaseName,
-                Username = request.Username?.Trim() ?? string.Empty,
-                Password = request.Password ?? string.Empty,
-                Timeout = request.TimeoutSeconds <= 0 ? 10 : request.TimeoutSeconds,
-                CommandTimeout = request.TimeoutSeconds <= 0 ? 10 : request.TimeoutSeconds,
-                Pooling = true
-            };
-
-            return builder.ConnectionString;
-        }
-
-        private static string BuildConnectionStringWithoutPassword(PostgresMigrationRequest request, string databaseName)
-        {
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = string.IsNullOrWhiteSpace(request.Host) ? "localhost" : request.Host.Trim(),
-                Port = request.Port <= 0 ? 5432 : request.Port,
-                Database = databaseName,
-                Username = request.Username?.Trim() ?? string.Empty,
-                Timeout = request.TimeoutSeconds <= 0 ? 10 : request.TimeoutSeconds,
-                CommandTimeout = request.TimeoutSeconds <= 0 ? 10 : request.TimeoutSeconds,
-                Pooling = true
-            };
-
-            return builder.ConnectionString;
-        }
-
         private static string NormalizeDatabaseName(string? databaseName)
         {
             var normalized = string.IsNullOrWhiteSpace(databaseName) ? "agency_db" : databaseName.Trim();

@@ -415,7 +415,66 @@
                                     <ComboBoxItem Tag="trial">Trial</ComboBoxItem>
                                     <ComboBoxItem Tag="standard">Standard</ComboBoxItem>
                                     <ComboBoxItem Tag="pro">Pro</ComboBoxItem>
+                                    <ComboBoxItem Tag="business">Business</ComboBoxItem>
                                 </ComboBox>
+
+                                <Border x:Name="BusinessTenantPanel"
+                                        Background="#252836"
+                                        CornerRadius="6"
+                                        Padding="10"
+                                        Margin="0,0,0,10"
+                                        Visibility="Collapsed">
+                                    <StackPanel>
+                                        <TextBlock Text="Business workspace"
+                                                   Foreground="#CDD6F4"
+                                                   FontSize="12.5"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,0,0,8"/>
+                                        <TextBlock Text="Max users"
+                                                   Style="{StaticResource DetailLabel}"/>
+                                        <TextBox x:Name="TxtBusinessMaxUsers"
+                                                 Text="10"
+                                                 TextChanged="BusinessTenantField_TextChanged"
+                                                 Background="#1E1E2E"
+                                                 Foreground="#CDD6F4"
+                                                 BorderBrush="#585B70"
+                                                 BorderThickness="1"
+                                                 Padding="10"
+                                                 Margin="0,0,0,8"/>
+                                        <TextBlock Text="Max devices"
+                                                   Style="{StaticResource DetailLabel}"/>
+                                        <TextBox x:Name="TxtBusinessMaxDevices"
+                                                 Text="3"
+                                                 TextChanged="BusinessTenantField_TextChanged"
+                                                 Background="#1E1E2E"
+                                                 Foreground="#CDD6F4"
+                                                 BorderBrush="#585B70"
+                                                 BorderThickness="1"
+                                                 Padding="10"
+                                                 Margin="0,0,0,8"/>
+                                        <CheckBox x:Name="ChkBusinessMultiUserEnabled"
+                                                  Content="Multi-user enabled"
+                                                  IsChecked="True"
+                                                  Foreground="#CDD6F4"
+                                                  Margin="0,0,0,8"
+                                                  Checked="BusinessTenantField_Changed"
+                                                  Unchecked="BusinessTenantField_Changed"/>
+                                        <TextBlock Text="Tenant status"
+                                                   Style="{StaticResource DetailLabel}"/>
+                                        <ComboBox x:Name="CmbBusinessTenantStatus"
+                                                  Style="{StaticResource FilterComboBox}"
+                                                  Margin="0,0,0,8"
+                                                  SelectionChanged="BusinessTenantField_SelectionChanged">
+                                            <ComboBoxItem Tag="active">Active</ComboBoxItem>
+                                            <ComboBoxItem Tag="suspended">Suspended</ComboBoxItem>
+                                        </ComboBox>
+                                        <TextBlock x:Name="TxtBusinessTenantInfo"
+                                                   Foreground="#A6ADC8"
+                                                   FontSize="11"
+                                                   TextWrapping="Wrap"
+                                                   Text="Tenant буде створено при збереженні"/>
+                                    </StackPanel>
+                                </Border>
 
                                 <TextBlock Text="Admin Gemini API key" Style="{StaticResource DetailLabel}"/>
                                 <TextBox x:Name="TxtManagedGeminiKey"
@@ -426,7 +485,7 @@
                                          BorderThickness="1"
                                          Padding="10"
                                          Margin="0,0,0,6"/>
-                                <TextBlock Text="Для Standard можна залишити порожнім. Для Pro або Trial ключ можна задати тут."
+                                <TextBlock Text="Для Standard можна залишити порожнім. Для Pro, Business або Trial ключ можна задати тут."
                                            Foreground="#A6ADC8"
                                            FontSize="11"
                                            TextWrapping="Wrap"

@@ -44,6 +44,14 @@ namespace Win11DesktopApp.Models
             set { _amount = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Amount))); }
         }
 
+        private bool _canEdit = true;
+        [JsonIgnore]
+        public bool CanEdit
+        {
+            get => _canEdit;
+            set { _canEdit = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CanEdit))); }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
@@ -189,6 +197,14 @@ namespace Win11DesktopApp.Models
         {
             get => _isFinished;
             set { _isFinished = value; OnPropertyChanged(nameof(IsFinished)); }
+        }
+
+        private bool _canEditSalary = true;
+        [JsonIgnore]
+        public bool CanEditSalary
+        {
+            get => _canEditSalary;
+            set { _canEditSalary = value; OnPropertyChanged(nameof(CanEditSalary)); }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
