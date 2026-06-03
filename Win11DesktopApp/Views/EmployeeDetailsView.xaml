@@ -2910,7 +2910,7 @@
                 </Border.InputBindings>
             </Border>
             <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12"
-                    Width="440" Padding="24"
+                    Width="520" Padding="24"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
@@ -2948,6 +2948,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundBrush}"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
@@ -2964,7 +2965,14 @@
                                            Visibility="{Binding NewCustomDocFilePath, Converter={StaticResource StringToVis}}"/>
                             </Grid>
                         </Border>
-                        <Button Grid.Column="1" Command="{Binding BrowseCustomDocFileCommand}"
+                        <Button Grid.Column="1" Command="{Binding ScanCustomDocFileCommand}"
+                                Margin="8,0,0,0" Padding="12,8" Cursor="Hand"
+                                Background="{DynamicResource AccentLightBrush}"
+                                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                                Foreground="{DynamicResource AccentDarkBrush}">
+                            <TextBlock Text="{DynamicResource DetBtnScanDoc}" FontSize="{DynamicResource FS12}"/>
+                        </Button>
+                        <Button Grid.Column="2" Command="{Binding BrowseCustomDocFileCommand}"
                                 Margin="8,0,0,0" Padding="12,8" Cursor="Hand"
                                 Background="{DynamicResource ContentBackgroundBrush}"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"

@@ -553,6 +553,14 @@ namespace Win11DesktopApp.Services
                     ? Res("MsgStartupHealthRecovered")
                     : Res("MsgStartupHealthWarnings");
 
+            if (_warningCount > 0 && !string.IsNullOrWhiteSpace(message))
+            {
+                var logFileName = LoggingService.GetLogFileName();
+                message = string.IsNullOrWhiteSpace(logFileName)
+                    ? message
+                    : string.Format(message, logFileName);
+            }
+
             Application.Current?.Dispatcher?.BeginInvoke(() =>
             {
                 if (string.IsNullOrWhiteSpace(message) || Application.Current?.MainWindow?.IsVisible != true)

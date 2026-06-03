@@ -486,6 +486,44 @@ namespace Win11DesktopApp.Views
             }
         }
 
+        private void BtnFlipHorizontal_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_currentMat == null || _currentMat.Empty()) return;
+                var flipped = _service.FlipHorizontal(_currentMat);
+                _currentMat.Dispose();
+                _currentMat = flipped;
+                BuildPreviewMat();
+                ClearCropSelection();
+                RefreshPreviewAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ImageEditorWindow.BtnFlipHorizontal", ex.Message);
+                StatusText.Text = $"Error: {ex.Message}";
+            }
+        }
+
+        private void BtnFlipVertical_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_currentMat == null || _currentMat.Empty()) return;
+                var flipped = _service.FlipVertical(_currentMat);
+                _currentMat.Dispose();
+                _currentMat = flipped;
+                BuildPreviewMat();
+                ClearCropSelection();
+                RefreshPreviewAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ImageEditorWindow.BtnFlipVertical", ex.Message);
+                StatusText.Text = $"Error: {ex.Message}";
+            }
+        }
+
         private void BtnSharpen_Click(object sender, RoutedEventArgs e)
         {
             try

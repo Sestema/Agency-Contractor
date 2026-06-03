@@ -85,6 +85,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand OpenEmployeeDetailCommand { get; }
         public ICommand OpenMonthlyMovementDetailsCommand { get; }
         public ICommand CloseMonthlyMovementDetailsCommand { get; }
+        public ICommand ToggleMovementPeriodMenuCommand { get; }
+        public ICommand SetMovementMonthCountCommand { get; }
         public ICommand OpenMovementEmployeeDetailCommand { get; }
         public ICommand OpenCompanyDetailsCommand { get; }
         public ICommand CloseCompanyDetailsCommand { get; }
@@ -149,6 +151,67 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _isMonthlyMovementDetailsOpen;
             set => SetProperty(ref _isMonthlyMovementDetailsOpen, value);
+        }
+
+        private bool _isMovementPeriodMenuOpen;
+        public bool IsMovementPeriodMenuOpen
+        {
+            get => _isMovementPeriodMenuOpen;
+            set => SetProperty(ref _isMovementPeriodMenuOpen, value);
+        }
+
+        private int _movementMonthCount = 1;
+        public int MovementMonthCount
+        {
+            get => _movementMonthCount;
+            private set
+            {
+                if (SetProperty(ref _movementMonthCount, NormalizeMovementMonthCount(value)))
+                {
+                    OnPropertyChanged(nameof(IsMovementPeriod1));
+                    OnPropertyChanged(nameof(IsMovementPeriod2));
+                    OnPropertyChanged(nameof(IsMovementPeriod3));
+                }
+            }
+        }
+
+        public bool IsMovementPeriod1 => MovementMonthCount == 1;
+        public bool IsMovementPeriod2 => MovementMonthCount == 2;
+        public bool IsMovementPeriod3 => MovementMonthCount == 3;
+
+        private string _movementPeriodHint = string.Empty;
+        public string MovementPeriodHint
+        {
+            get => _movementPeriodHint;
+            private set => SetProperty(ref _movementPeriodHint, value);
+        }
+
+        private string _movementAddedColumnTitle = string.Empty;
+        public string MovementAddedColumnTitle
+        {
+            get => _movementAddedColumnTitle;
+            private set => SetProperty(ref _movementAddedColumnTitle, value);
+        }
+
+        private string _movementArchivedColumnTitle = string.Empty;
+        public string MovementArchivedColumnTitle
+        {
+            get => _movementArchivedColumnTitle;
+            private set => SetProperty(ref _movementArchivedColumnTitle, value);
+        }
+
+        private string _movementAddedEmptyText = string.Empty;
+        public string MovementAddedEmptyText
+        {
+            get => _movementAddedEmptyText;
+            private set => SetProperty(ref _movementAddedEmptyText, value);
+        }
+
+        private string _movementArchivedEmptyText = string.Empty;
+        public string MovementArchivedEmptyText
+        {
+            get => _movementArchivedEmptyText;
+            private set => SetProperty(ref _movementArchivedEmptyText, value);
         }
 
         private bool _isCompanyDetailsOpen;
@@ -369,7 +432,23 @@ namespace Win11DesktopApp.ViewModels
                 }
             });
             OpenMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = true);
-            CloseMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = false);
+            CloseMonthlyMovementDetailsCommand = new RelayCommand(_ =>
+            {
+                IsMonthlyMovementDetailsOpen = false;
+                IsMovementPeriodMenuOpen = false;
+            });
+            ToggleMovementPeriodMenuCommand = new RelayCommand(_ => IsMovementPeriodMenuOpen = !IsMovementPeriodMenuOpen);
+            SetMovementMonthCountCommand = new RelayCommand(o =>
+            {
+                if (o == null)
+                    return;
+
+                var raw = o.ToString();
+                if (!int.TryParse(raw, out var count))
+                    return;
+
+                ApplyMovementMonthCount(count);
+            });
             OpenMovementEmployeeDetailCommand = new RelayCommand(o =>
             {
                 if (o is MonthlyMovementItem item && !string.IsNullOrEmpty(item.EmployeeFolder))
@@ -417,7 +496,58 @@ namespace Win11DesktopApp.ViewModels
             });
 
             LoadLayout();
+            UpdateMovementPeriodTexts();
             LoadDataAsync();
+        }
+
+        private void ApplyMovementMonthCount(int count)
+        {
+            count = NormalizeMovementMonthCount(count);
+            if (MovementMonthCount == count)
+            {
+                IsMovementPeriodMenuOpen = false;
+                return;
+            }
+
+            MovementMonthCount = count;
+            _appSettingsService.Settings.DashMovementMonthCount = count;
+            _appSettingsService.SaveSettings();
+            IsMovementPeriodMenuOpen = false;
+            UpdateMovementPeriodTexts();
+            LoadDataAsync();
+        }
+
+        private void UpdateMovementPeriodTexts()
+        {
+            MovementPeriodHint = BuildMovementPeriodHint(MovementMonthCount, DateTime.Today);
+            if (MovementMonthCount <= 1)
+            {
+                MovementAddedColumnTitle = Res("DashMovementAddedTitle") ?? "Наступили цього місяця";
+                MovementArchivedColumnTitle = Res("DashMovementArchivedTitle") ?? "Закінчили цього місяця";
+                MovementAddedEmptyText = Res("DashMovementAddedEmpty") ?? string.Empty;
+                MovementArchivedEmptyText = Res("DashMovementArchivedEmpty") ?? string.Empty;
+            }
+            else
+            {
+                MovementAddedColumnTitle = Res("DashMovementAddedTitlePeriod") ?? "Наступили за період";
+                MovementArchivedColumnTitle = Res("DashMovementArchivedTitlePeriod") ?? "Закінчили за період";
+                MovementAddedEmptyText = Res("DashMovementAddedEmptyPeriod") ?? string.Empty;
+                MovementArchivedEmptyText = Res("DashMovementArchivedEmptyPeriod") ?? string.Empty;
+            }
+        }
+
+        private static int NormalizeMovementMonthCount(int count)
+            => count < 1 ? 1 : count > 3 ? 3 : count;
+
+        private static string BuildMovementPeriodHint(int monthCount, DateTime now)
+        {
+            monthCount = NormalizeMovementMonthCount(monthCount);
+            var start = new DateTime(now.Year, now.Month, 1).AddMonths(-(monthCount - 1));
+            var end = new DateTime(now.Year, now.Month, 1);
+            if (monthCount <= 1)
+                return FormatMonthLabel(end.Year, end.Month);
+
+            return $"{FormatMonthLabel(start.Year, start.Month)} – {FormatMonthLabel(end.Year, end.Month)}";
         }
 
         private async void GenerateAIReport()
@@ -518,6 +648,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             Slot2 = string.IsNullOrEmpty(s.DashSlot2) ? "salary" : s.DashSlot2;
             ColumnRatio = s.DashColumnRatio > 0.1 ? s.DashColumnRatio : 1.0;
             RowRatio = s.DashRowRatio > 0.05 ? s.DashRowRatio : 0.4;
+            MovementMonthCount = NormalizeMovementMonthCount(s.DashMovementMonthCount);
         }
 
         public void SaveLayout()
@@ -598,6 +729,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
             result.TotalCompanies = companies.Count;
             var now = DateTime.Today;
+            var movementMonthCount = MovementMonthCount;
             var visibleFirmNames = new HashSet<string>(companies.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
             var addedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var addedFallbacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -623,7 +755,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                     {
                         AddEmployeeIdentity(allTimeEmployeeIds, allTimeEmployeeFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate);
 
-                        if (IsDateInCurrentMonth(emp.StartDate, now)
+                        if (IsDateInMovementPeriod(emp.StartDate, now, movementMonthCount)
                             && AddEmployeeIdentity(addedIds, addedFallbacks, emp.UniqueId, company.Name, emp.FullName, emp.StartDate))
                         {
                             result.MonthlyAddedEmployees.Add(CreateMovementItem(
@@ -675,7 +807,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                     AddEmployeeIdentity(allTimeEmployeeIds, allTimeEmployeeFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate);
 
-                    if (IsDateInCurrentMonth(archived.StartDate, now)
+                    if (IsDateInMovementPeriod(archived.StartDate, now, movementMonthCount)
                         && AddEmployeeIdentity(addedIds, addedFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate))
                     {
                         result.MonthlyAddedEmployees.Add(CreateMovementItem(
@@ -688,7 +820,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                             "#4CAF50"));
                     }
 
-                    if (IsDateInCurrentMonth(archived.EndDate, now))
+                    if (IsDateInMovementPeriod(archived.EndDate, now, movementMonthCount))
                     {
                         archivedThisMonth++;
                         result.MonthlyArchivedEmployees.Add(CreateMovementItem(
@@ -834,10 +966,17 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             }
         }
 
-        private static bool IsDateInCurrentMonth(string dateText, DateTime now)
+        private static bool IsDateInMovementPeriod(string dateText, DateTime now, int monthCount)
         {
             var date = DateParsingHelper.TryParseDate(dateText);
-            return date != null && date.Value.Year == now.Year && date.Value.Month == now.Month;
+            if (date == null)
+                return false;
+
+            monthCount = NormalizeMovementMonthCount(monthCount);
+            var periodStart = new DateTime(now.Year, now.Month, 1).AddMonths(-(monthCount - 1));
+            var periodEnd = new DateTime(now.Year, now.Month, 1).AddMonths(1).AddDays(-1);
+            var value = date.Value.Date;
+            return value >= periodStart && value <= periodEnd;
         }
 
         private static bool AddEmployeeIdentity(HashSet<string> ids, HashSet<string> fallbacks, string uniqueId, string firmName, string fullName, string startDate)

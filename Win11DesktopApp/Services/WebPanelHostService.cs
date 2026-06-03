@@ -224,11 +224,12 @@ namespace Win11DesktopApp.Services
                 return Results.Ok(rows);
             });
 
-            app.MapGet("/api/v1/dashboard", () =>
+            app.MapGet("/api/v1/dashboard", (HttpRequest request) =>
             {
                 try
                 {
-                    return Results.Ok(BuildDashboardModel());
+                    var movementMonths = ParseDashboardMovementMonthCount(request.Query["movementMonths"]);
+                    return Results.Ok(BuildDashboardModel(movementMonths));
                 }
                 catch (Exception ex)
                 {
@@ -381,8 +382,16 @@ namespace Win11DesktopApp.Services
             });
         }
 
-        private object BuildDashboardModel()
+        private static int ParseDashboardMovementMonthCount(string? raw)
         {
+            if (!int.TryParse(raw, out var count))
+                return 1;
+            return count < 1 ? 1 : count > 3 ? 3 : count;
+        }
+
+        private object BuildDashboardModel(int movementMonthCount = 1)
+        {
+            movementMonthCount = ParseDashboardMovementMonthCount(movementMonthCount.ToString());
             var companies = SnapshotCompanies()
                 .Where(company => _companyService.IsCompanyVisible(company))
                 .ToList();
@@ -421,7 +430,7 @@ namespace Win11DesktopApp.Services
                 {
                     AddDashboardEmployeeIdentity(allTimeIds, allTimeFallbacks, employee.UniqueId, company.Name, employee.FullName, employee.StartDate);
 
-                    if (IsDashboardDateInCurrentMonth(employee.StartDate, now)
+                    if (IsDashboardDateInMovementPeriod(employee.StartDate, now, movementMonthCount)
                         && AddDashboardEmployeeIdentity(addedIds, addedFallbacks, employee.UniqueId, company.Name, employee.FullName, employee.StartDate))
                     {
                         monthlyAdded.Add(MapDashboardMovement(employee.FullName, company.Name, employee.StartDate, employee.UniqueId, "Додано", "#22c55e"));
@@ -455,13 +464,13 @@ namespace Win11DesktopApp.Services
 
                     AddDashboardEmployeeIdentity(allTimeIds, allTimeFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate);
 
-                    if (IsDashboardDateInCurrentMonth(archived.StartDate, now)
+                    if (IsDashboardDateInMovementPeriod(archived.StartDate, now, movementMonthCount)
                         && AddDashboardEmployeeIdentity(addedIds, addedFallbacks, archived.UniqueId, archived.FirmName, archived.FullName, archived.StartDate))
                     {
                         monthlyAdded.Add(MapDashboardMovement(archived.FullName, archived.FirmName, archived.StartDate, archived.UniqueId, "Додано", "#22c55e"));
                     }
 
-                    if (IsDashboardDateInCurrentMonth(archived.EndDate, now))
+                    if (IsDashboardDateInMovementPeriod(archived.EndDate, now, movementMonthCount))
                         monthlyArchived.Add(MapDashboardMovement(archived.FullName, archived.FirmName, archived.EndDate, archived.UniqueId, "Архів", "#ef4444"));
                 }
             }
@@ -501,6 +510,8 @@ namespace Win11DesktopApp.Services
                     monthlyAdded = addedIds.Count + addedFallbacks.Count,
                     monthlyArchived = archivedCount,
                     monthlyMovementText = $"+{addedIds.Count + addedFallbacks.Count} / -{archivedCount}",
+                    movementMonthCount,
+                    movementPeriodHint = BuildDashboardMovementPeriodHint(movementMonthCount, now),
                     movementMax,
                     problemTrend = expiredCount > 0 ? $"{expiredCount} прострочено" : "Все добре",
                     totalEmployeesAllTime = allTimeEmployees,
@@ -630,10 +641,42 @@ namespace Win11DesktopApp.Services
             });
         }
 
-        private static bool IsDashboardDateInCurrentMonth(string dateText, DateTime now)
+        private static bool IsDashboardDateInMovementPeriod(string dateText, DateTime now, int monthCount)
         {
             var date = DateParsingHelper.TryParseDate(dateText);
-            return date != null && date.Value.Year == now.Year && date.Value.Month == now.Month;
+            if (date == null)
+                return false;
+
+            monthCount = ParseDashboardMovementMonthCount(monthCount.ToString());
+            var periodStart = new DateTime(now.Year, now.Month, 1).AddMonths(-(monthCount - 1));
+            var periodEnd = new DateTime(now.Year, now.Month, 1).AddMonths(1).AddDays(-1);
+            var value = date.Value.Date;
+            return value >= periodStart && value <= periodEnd;
+        }
+
+        private static string BuildDashboardMovementPeriodHint(int monthCount, DateTime now)
+        {
+            monthCount = ParseDashboardMovementMonthCount(monthCount.ToString());
+            var end = new DateTime(now.Year, now.Month, 1);
+            if (monthCount <= 1)
+                return FormatDashboardMonthLabel(end.Year, end.Month);
+
+            var start = end.AddMonths(-(monthCount - 1));
+            return $"{FormatDashboardMonthLabel(start.Year, start.Month)} – {FormatDashboardMonthLabel(end.Year, end.Month)}";
+        }
+
+        private static string FormatDashboardMonthLabel(int year, int month)
+        {
+            try
+            {
+                var dt = new DateTime(year, month, 1);
+                var name = dt.ToString("MMMM", System.Globalization.CultureInfo.CurrentUICulture);
+                return char.ToUpper(name[0]) + name[1..] + " " + year;
+            }
+            catch
+            {
+                return $"{month:D2}.{year}";
+            }
         }
 
         private static bool AddDashboardEmployeeIdentity(HashSet<string> ids, HashSet<string> fallbacks, string uniqueId, string firmName, string fullName, string startDate)
@@ -672,21 +715,6 @@ namespace Win11DesktopApp.Services
             if (hours <= 0)
                 return $"{minutes} хв";
             return minutes > 0 ? $"{hours} год {minutes} хв" : $"{hours} год";
-        }
-
-        private static string FormatDashboardMonthLabel(int year, int month)
-        {
-            try
-            {
-                var dt = new DateTime(year, month, 1);
-                var culture = System.Threading.Thread.CurrentThread.CurrentUICulture;
-                var name = dt.ToString("MMMM", culture);
-                return char.ToUpper(name[0]) + name[1..] + " " + year;
-            }
-            catch
-            {
-                return $"{month:D2}.{year}";
-            }
         }
 
         private EmployeeSummary? FindEmployeeSummaryById(string id)
@@ -2830,6 +2858,14 @@ namespace Win11DesktopApp.Services
       font-weight: 750;
     }
 
+    .dash-movement-head-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .dash-movement-settings,
     .dash-movement-close {
       width: 44px;
       height: 44px;
@@ -2840,6 +2876,79 @@ namespace Win11DesktopApp.Services
       font: inherit;
       font-size: 24px;
       cursor: pointer;
+    }
+
+    .dash-movement-period-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 300px;
+      max-width: 340px;
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, .98);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+      padding: 8px;
+      z-index: 5;
+    }
+
+    .dash-movement-period-menu.is-hidden {
+      display: none;
+    }
+
+    .dash-movement-period-menu-title {
+      padding: 4px 12px 10px;
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.4;
+      color: #f1f5f9;
+    }
+
+    .dash-movement-period-option {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #e2e8f0;
+      text-align: left;
+      padding: 10px 12px;
+      font: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .dash-movement-period-option-text {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .dash-movement-period-option-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .dash-movement-period-option-desc {
+      font-size: 11px;
+      line-height: 1.35;
+      color: rgba(226, 232, 240, .62);
+    }
+
+    .dash-movement-period-option:hover {
+      background: rgba(99, 102, 241, .16);
+    }
+
+    .dash-movement-period-option.is-active {
+      background: rgba(34, 197, 94, .12);
+    }
+
+    .dash-movement-period-check {
+      color: #22c55e;
+      font-weight: 900;
+      min-width: 14px;
     }
 
     .dash-movement-grid {
@@ -2861,22 +2970,29 @@ namespace Win11DesktopApp.Services
     }
 
     .dash-movement-column-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 12px;
       align-items: center;
       color: #f8fafc;
       font-size: 17px;
       font-weight: 950;
     }
 
+    .dash-movement-column-title > span:first-child {
+      min-width: 0;
+    }
+
     .dash-movement-count {
-      min-width: 92px;
+      width: 48px;
+      box-sizing: border-box;
       border-radius: 9px;
-      padding: 4px 9px;
-      text-align: left;
+      padding: 4px 6px;
+      text-align: center;
       font-size: 12px;
       font-weight: 950;
+      flex-shrink: 0;
+      justify-self: end;
     }
 
     .dash-movement-list {
@@ -5678,20 +5794,28 @@ namespace Win11DesktopApp.Services
           <div>
             <h2>Рух за місяць</h2>
             <p id="dashMovementDialogSummary">+0 / -0</p>
+            <p id="dashMovementPeriodHint" style="margin:4px 0 0;color:rgba(226,232,240,.55);font-size:12px;"></p>
           </div>
-          <button class="dash-movement-close" type="button" data-close-movement>×</button>
+          <div class="dash-movement-head-actions">
+            <button id="dashMovementSettingsBtn" class="dash-movement-settings" type="button">⚙</button>
+            <button class="dash-movement-close" type="button" data-close-movement>×</button>
+            <div id="dashMovementPeriodMenu" class="dash-movement-period-menu is-hidden">
+              <div id="dashMovementPeriodMenuTitle" class="dash-movement-period-menu-title"></div>
+              <div id="dashMovementPeriodMenuOptions"></div>
+            </div>
+          </div>
         </div>
         <div class="dash-movement-grid">
           <section class="dash-movement-column">
             <div class="dash-movement-column-title">
-              <span>Наступили цього місяця</span>
+              <span id="dashMovementAddedTitle">Наступили цього місяця</span>
               <span class="dash-movement-count" style="background:rgba(34,197,94,.18);color:#22c55e;" id="dashMovementAddedBadge">0</span>
             </div>
             <div id="dashMovementAddedList" class="dash-movement-list"><div class="empty">—</div></div>
           </section>
           <section class="dash-movement-column">
             <div class="dash-movement-column-title">
-              <span>Закінчили цього місяця</span>
+              <span id="dashMovementArchivedTitle">Закінчили цього місяця</span>
               <span class="dash-movement-count" style="background:rgba(239,68,68,.18);color:#ef4444;" id="dashMovementArchivedBadge">0</span>
             </div>
             <div id="dashMovementArchivedList" class="dash-movement-list"><div class="empty">—</div></div>
@@ -6074,6 +6198,7 @@ namespace Win11DesktopApp.Services
       employees: [],
       reportRows: [],
       dashboard: null,
+      movementMonthCount: 1,
       dashboardLayout: { slots: ["salary", "efficiency", "expiring"], rightRatio: .42 },
       query: "",
       reportQuery: "",
@@ -6546,6 +6671,13 @@ namespace Win11DesktopApp.Services
     };
 
     Object.assign(webExtraTranslations.uk, {
+      dashMovementPeriodMenuTitle: "Виберіть термін, за який відображатиметься інформація",
+      dashMovementPeriod1Title: "1 місяць",
+      dashMovementPeriod1Desc: "Лише поточний місяць — хто наступив і хто закінчив у цьому місяці",
+      dashMovementPeriod2Title: "2 місяці",
+      dashMovementPeriod2Desc: "Поточний місяць і попередній — дані за два останні місяці",
+      dashMovementPeriod3Title: "3 місяці",
+      dashMovementPeriod3Desc: "Поточний місяць і ще два назад — дані за три останні місяці",
       docsTab: "Документи", profileTab: "Анкета", historyTab: "Історія", salaryTab: "Зарплата",
       employeeDocuments: "Документи працівника", filesPreview: "Перегляд файлів з анкети", employeeProfile: "Анкета працівника",
       readOnly: "Тільки перегляд", editProfile: "Редагувати анкету", editOnlyApp: "Редагування доступне лише в основній програмі.",
@@ -6553,6 +6685,13 @@ namespace Win11DesktopApp.Services
       salaryHistory: "Історія нарахувань", noSalary: "Записів зарплати ще немає.", loadingProfile: "Завантаження анкети…"
     });
     Object.assign(webExtraTranslations.cs, {
+      dashMovementPeriodMenuTitle: "Vyberte období, za které se zobrazí informace",
+      dashMovementPeriod1Title: "1 měsíc",
+      dashMovementPeriod1Desc: "Pouze aktuální měsíc — kdo nastoupil a kdo ukončil v tomto měsíci",
+      dashMovementPeriod2Title: "2 měsíce",
+      dashMovementPeriod2Desc: "Aktuální a předchozí měsíc — data za poslední dva měsíce",
+      dashMovementPeriod3Title: "3 měsíce",
+      dashMovementPeriod3Desc: "Aktuální měsíc a další dva zpět — data za poslední tři měsíce",
       docsTab: "Dokumenty", profileTab: "Dotazník", historyTab: "Historie", salaryTab: "Mzda",
       employeeDocuments: "Dokumenty pracovníka", filesPreview: "Náhled souborů z dotazníku", employeeProfile: "Dotazník pracovníka",
       readOnly: "Pouze prohlížení", editProfile: "Upravit dotazník", editOnlyApp: "Úpravy jsou dostupné pouze v hlavním programu.",
@@ -6560,6 +6699,13 @@ namespace Win11DesktopApp.Services
       salaryHistory: "Historie výpočtů", noSalary: "Zatím nejsou žádné záznamy mzdy.", loadingProfile: "Načítání dotazníku…"
     });
     Object.assign(webExtraTranslations.en, {
+      dashMovementPeriodMenuTitle: "Choose the period to display information for",
+      dashMovementPeriod1Title: "1 month",
+      dashMovementPeriod1Desc: "Current month only — who started and who finished this month",
+      dashMovementPeriod2Title: "2 months",
+      dashMovementPeriod2Desc: "Current and previous month — data for the last two months",
+      dashMovementPeriod3Title: "3 months",
+      dashMovementPeriod3Desc: "Current month and two before — data for the last three months",
       docsTab: "Documents", profileTab: "Profile", historyTab: "History", salaryTab: "Salary",
       employeeDocuments: "Employee documents", filesPreview: "File previews from the profile", employeeProfile: "Employee profile",
       readOnly: "View only", editProfile: "Edit profile", editOnlyApp: "Editing is available only in the main app.",
@@ -6649,6 +6795,7 @@ namespace Win11DesktopApp.Services
         node.textContent = webT(node.getAttribute("data-i18n"));
       });
       applySiteLanguage();
+      renderMovementPeriodMenu();
       updateWebSettingsControls();
       updateWebSettingsStatus();
       if (state.firms.length || state.employees.length || state.reportRows.length) {
@@ -7030,21 +7177,135 @@ namespace Win11DesktopApp.Services
       }).join("");
     }
 
+    function normalizeMovementMonthCount(count) {
+      var n = Number(count) || 1;
+      return n < 1 ? 1 : n > 3 ? 3 : n;
+    }
+
+    function loadMovementMonthCount() {
+      try {
+        var saved = parseInt(localStorage.getItem("agencyContractor.movementMonthCount") || "1", 10);
+        state.movementMonthCount = normalizeMovementMonthCount(saved);
+      } catch (e) {
+        state.movementMonthCount = 1;
+      }
+    }
+
+    function saveMovementMonthCount() {
+      try {
+        localStorage.setItem("agencyContractor.movementMonthCount", String(state.movementMonthCount));
+      } catch (e) {}
+    }
+
+    function movementTextsForPeriod() {
+      if (state.movementMonthCount <= 1) {
+        return {
+          addedTitle: "Наступили цього місяця",
+          archivedTitle: "Закінчили цього місяця",
+          addedEmpty: "Немає працівників за поточний місяць",
+          archivedEmpty: "Немає завершених працівників за поточний місяць"
+        };
+      }
+      return {
+        addedTitle: "Наступили за період",
+        archivedTitle: "Закінчили за період",
+        addedEmpty: "Немає працівників за обраний період",
+        archivedEmpty: "Немає завершених працівників за обраний період"
+      };
+    }
+
+    function movementPeriodMenuLabels() {
+      return [
+        { months: 1, title: webT("dashMovementPeriod1Title"), desc: webT("dashMovementPeriod1Desc") },
+        { months: 2, title: webT("dashMovementPeriod2Title"), desc: webT("dashMovementPeriod2Desc") },
+        { months: 3, title: webT("dashMovementPeriod3Title"), desc: webT("dashMovementPeriod3Desc") }
+      ];
+    }
+
+    function renderMovementPeriodMenu() {
+      var titleNode = byId("dashMovementPeriodMenuTitle");
+      var optionsNode = byId("dashMovementPeriodMenuOptions");
+      var settingsBtn = byId("dashMovementSettingsBtn");
+      if (titleNode) titleNode.textContent = webT("dashMovementPeriodMenuTitle");
+      if (settingsBtn) settingsBtn.title = webT("dashMovementPeriodMenuTitle");
+      if (!optionsNode) return;
+      optionsNode.innerHTML = movementPeriodMenuLabels().map(function(item) {
+        return `<button type="button" class="dash-movement-period-option" data-movement-months="${item.months}">
+          <span class="dash-movement-period-check" data-movement-check="${item.months}"></span>
+          <span class="dash-movement-period-option-text">
+            <span class="dash-movement-period-option-title">${escapeHtml(item.title)}</span>
+            <span class="dash-movement-period-option-desc">${escapeHtml(item.desc)}</span>
+          </span>
+        </button>`;
+      }).join("");
+      updateMovementPeriodMenuUi();
+    }
+
+    function updateMovementPeriodMenuUi() {
+      var menu = byId("dashMovementPeriodMenu");
+      if (!menu) return;
+      menu.querySelectorAll("[data-movement-months]").forEach(function(btn) {
+        var count = normalizeMovementMonthCount(btn.getAttribute("data-movement-months"));
+        btn.classList.toggle("is-active", count === state.movementMonthCount);
+        var check = btn.querySelector("[data-movement-check]");
+        if (check) check.textContent = count === state.movementMonthCount ? "✓" : "";
+      });
+    }
+
+    function closeMovementPeriodMenu() {
+      var menu = byId("dashMovementPeriodMenu");
+      if (menu) menu.classList.add("is-hidden");
+    }
+
+    function toggleMovementPeriodMenu() {
+      var menu = byId("dashMovementPeriodMenu");
+      if (!menu) return;
+      menu.classList.toggle("is-hidden");
+      if (!menu.classList.contains("is-hidden")) updateMovementPeriodMenuUi();
+    }
+
+    async function setMovementMonthCount(count) {
+      count = normalizeMovementMonthCount(count);
+      if (state.movementMonthCount === count) {
+        closeMovementPeriodMenu();
+        return;
+      }
+      state.movementMonthCount = count;
+      saveMovementMonthCount();
+      closeMovementPeriodMenu();
+      var wasOpen = byId("dashMovementOverlay").classList.contains("is-open");
+      try {
+        state.dashboard = await fetchJson("/api/v1/dashboard?movementMonths=" + count, 3);
+        renderDashboard();
+        if (wasOpen) openDashboardMovement();
+      } catch (e) {
+        console.warn("dashboard period reload failed", e);
+      }
+    }
+
     function openDashboardMovement() {
       var data = state.dashboard || {};
       var totals = data.totals || {};
       var added = Array.isArray(data.monthlyAdded) ? data.monthlyAdded : [];
       var archived = Array.isArray(data.monthlyArchived) ? data.monthlyArchived : [];
+      var texts = movementTextsForPeriod();
       byId("dashMovementDialogSummary").textContent = totals.monthlyMovementText || "+0 / -0";
+      setTextById("dashMovementPeriodHint", totals.movementPeriodHint || "");
+      setTextById("dashMovementAddedTitle", texts.addedTitle);
+      setTextById("dashMovementArchivedTitle", texts.archivedTitle);
       byId("dashMovementAddedBadge").textContent = String(totals.monthlyAdded || added.length || 0);
       byId("dashMovementArchivedBadge").textContent = String(totals.monthlyArchived || archived.length || 0);
-      byId("dashMovementAddedList").innerHTML = renderDashboardMovementList(added, "added");
-      byId("dashMovementArchivedList").innerHTML = renderDashboardMovementList(archived, "archived");
+      var addedList = byId("dashMovementAddedList");
+      var archivedList = byId("dashMovementArchivedList");
+      if (addedList) addedList.innerHTML = added.length ? renderDashboardMovementList(added, "added") : `<div class="empty">${escapeHtml(texts.addedEmpty)}</div>`;
+      if (archivedList) archivedList.innerHTML = archived.length ? renderDashboardMovementList(archived, "archived") : `<div class="empty">${escapeHtml(texts.archivedEmpty)}</div>`;
+      updateMovementPeriodMenuUi();
       byId("dashMovementOverlay").classList.add("is-open");
       document.body.classList.add("dashboard-movement-open");
     }
 
     function closeDashboardMovement() {
+      closeMovementPeriodMenu();
       byId("dashMovementOverlay").classList.remove("is-open");
       document.body.classList.remove("dashboard-movement-open");
     }
@@ -8554,7 +8815,7 @@ namespace Win11DesktopApp.Services
           fetchJson("/api/v1/firms", 3),
           fetchJson("/api/v1/employees", 3),
           fetchJson("/api/v1/report/employees", 3),
-          fetchJson("/api/v1/dashboard", 3)
+          fetchJson("/api/v1/dashboard?movementMonths=" + state.movementMonthCount, 3)
         ]);
         var health = results[0];
         var firms = results[1];
@@ -8656,6 +8917,25 @@ namespace Win11DesktopApp.Services
       if ((event.key === "Enter" || event.key === " ") && event.target.closest("#dashMovementCard")) {
         event.preventDefault();
         openDashboardMovement();
+      }
+    });
+
+    byId("dashMovementSettingsBtn").addEventListener("click", function(event) {
+      event.stopPropagation();
+      toggleMovementPeriodMenu();
+    });
+
+    byId("dashMovementPeriodMenu").addEventListener("click", function(event) {
+      event.stopPropagation();
+      var option = event.target.closest("[data-movement-months]");
+      if (!option) return;
+      var count = normalizeMovementMonthCount(option.getAttribute("data-movement-months"));
+      setMovementMonthCount(count);
+    });
+
+    document.addEventListener("click", function(event) {
+      if (!event.target.closest("#dashMovementSettingsBtn") && !event.target.closest("#dashMovementPeriodMenu")) {
+        closeMovementPeriodMenu();
       }
     });
 
@@ -8949,6 +9229,8 @@ namespace Win11DesktopApp.Services
     loadReportColumns();
     loadFinanceColumnWidths();
     loadDashboardLayout();
+    loadMovementMonthCount();
+    renderMovementPeriodMenu();
     setupDashboardInteractions();
     setupFinanceColumnResizing();
     updateClock();

@@ -14,6 +14,7 @@ using Win11DesktopApp.Converters;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
+using Win11DesktopApp.Views;
 using PdfSharp.Pdf;
 using PdfSharp.Drawing;
 
@@ -382,14 +383,22 @@ namespace Win11DesktopApp.ViewModels
         public string VisaPreviewPath
         {
             get => _visaPreviewPath;
-            set => SetProperty(ref _visaPreviewPath, value);
+            set
+            {
+                if (SetProperty(ref _visaPreviewPath, value))
+                    NotifySecondaryDocumentPreviewBindings();
+            }
         }
 
         private DocPreviewState _visaPreviewState = DocPreviewState.Empty;
         public DocPreviewState VisaPreviewState
         {
             get => _visaPreviewState;
-            set => SetProperty(ref _visaPreviewState, value);
+            set
+            {
+                if (SetProperty(ref _visaPreviewState, value))
+                    NotifySecondaryDocumentPreviewBindings();
+            }
         }
 
         private string _passportPage2FilePath = string.Empty;
@@ -403,14 +412,22 @@ namespace Win11DesktopApp.ViewModels
         public string PassportPage2PreviewPath
         {
             get => _passportPage2PreviewPath;
-            set => SetProperty(ref _passportPage2PreviewPath, value);
+            set
+            {
+                if (SetProperty(ref _passportPage2PreviewPath, value))
+                    NotifySecondaryDocumentPreviewBindings();
+            }
         }
 
         private DocPreviewState _passportPage2PreviewState = DocPreviewState.Empty;
         public DocPreviewState PassportPage2PreviewState
         {
             get => _passportPage2PreviewState;
-            set => SetProperty(ref _passportPage2PreviewState, value);
+            set
+            {
+                if (SetProperty(ref _passportPage2PreviewState, value))
+                    NotifySecondaryDocumentPreviewBindings();
+            }
         }
 
         private string _insuranceFilePath = string.Empty;
@@ -580,6 +597,13 @@ namespace Win11DesktopApp.ViewModels
         public string SecondaryDocumentRetryPreviewKey => UsesPassportPage2SecondaryDocument
             ? "passport_page2"
             : "visa";
+
+        private void NotifySecondaryDocumentPreviewBindings()
+        {
+            OnPropertyChanged(nameof(SecondaryDocumentPreviewPath));
+            OnPropertyChanged(nameof(SecondaryDocumentPreviewState));
+        }
+
         public string SecondaryDocumentAIValidationKey => UsesPassportPage2SecondaryDocument
             ? (IsEuIdCardEmployee ? "id_card_back" : "passport2")
             : "visa";
@@ -641,6 +665,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CancelAddCustomDocCommand { get; private set; } = null!;
         public ICommand ConfirmAddCustomDocCommand { get; private set; } = null!;
         public ICommand BrowseCustomDocFileCommand { get; private set; } = null!;
+        public ICommand ScanCustomDocFileCommand { get; private set; } = null!;
         public ICommand OpenCustomDocCommand { get; private set; } = null!;
         public ICommand OpenCustomDocFolderCommand { get; private set; } = null!;
         public ICommand ToggleHideCustomDocCommand { get; private set; } = null!;
@@ -1462,6 +1487,7 @@ namespace Win11DesktopApp.ViewModels
             CancelAddCustomDocCommand = new RelayCommand(o => IsAddCustomDocOpen = false, _ => !IsReadOnlyMode);
             ConfirmAddCustomDocCommand = new AsyncRelayCommand(_ => ConfirmAddCustomDocAsync(), _ => !IsReadOnlyMode);
             BrowseCustomDocFileCommand = new RelayCommand(o => BrowseCustomDocFile(), _ => !IsReadOnlyMode);
+            ScanCustomDocFileCommand = new RelayCommand(o => ScanCustomDocFile(), _ => !IsReadOnlyMode);
             OpenCustomDocCommand = new RelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd)
@@ -3982,6 +4008,18 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             };
             if (dialog.ShowDialog() == true)
                 NewCustomDocFilePath = dialog.FileName;
+        }
+
+        private void ScanCustomDocFile()
+        {
+            var window = new DocumentScanWindow(_appSettingsService)
+            {
+                Owner = Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+                    ?? Application.Current?.MainWindow
+            };
+
+            if (window.ShowDialog() == true && !string.IsNullOrWhiteSpace(window.ResultPath))
+                NewCustomDocFilePath = window.ResultPath;
         }
 
         private async Task ConfirmAddCustomDocAsync()

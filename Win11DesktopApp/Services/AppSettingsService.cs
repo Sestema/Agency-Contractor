@@ -141,6 +141,11 @@ namespace Win11DesktopApp.Services
             public string DashSlot2 { get; set; } = "salary";
             public double DashColumnRatio { get; set; } = 1.0;
             public double DashRowRatio { get; set; } = 0.4;
+            public int DashMovementMonthCount { get; set; } = 1;
+            public int ScanDefaultDpi { get; set; } = 300;
+            public int ScanDefaultColorMode { get; set; } = 0;
+            public int ScanDefaultSource { get; set; } = 0;
+            public string ScanDefaultDeviceId { get; set; } = string.Empty;
             public bool RememberProfileLogin { get; set; } = false;
             public string EncryptedProfileSessionToken { get; set; } = string.Empty;
             public int ProfileSessionVersion { get; set; } = 0;

@@ -72,6 +72,20 @@ namespace Win11DesktopApp.Services
             return result;
         }
 
+        public Mat FlipHorizontal(Mat src)
+        {
+            var result = new Mat();
+            Cv2.Flip(src, result, FlipMode.Y);
+            return result;
+        }
+
+        public Mat FlipVertical(Mat src)
+        {
+            var result = new Mat();
+            Cv2.Flip(src, result, FlipMode.X);
+            return result;
+        }
+
         public Mat CropRegion(Mat src, int x, int y, int width, int height)
         {
             x = Math.Max(0, Math.Min(x, src.Cols - 1));

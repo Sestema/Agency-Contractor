@@ -24,13 +24,20 @@ namespace Win11DesktopApp.Services
             WriteIndented = false
         };
         private static string? _logPath;
+        private static string? _logFileName;
         private const int MaxLogSizeBytes = 5 * 1024 * 1024; // 5 MB
 
         public static void Initialize(string rootPath)
         {
             if (string.IsNullOrEmpty(rootPath)) return;
             Directory.CreateDirectory(rootPath);
-            _logPath = Path.Combine(rootPath, "error.log");
+            _logFileName = BuildLogFileName();
+            _logPath = Path.Combine(rootPath, _logFileName);
+        }
+
+        public static string GetLogFileName()
+        {
+            return _logFileName ?? string.Empty;
         }
 
         public static void LogError(string source, Exception ex)
@@ -225,6 +232,21 @@ namespace Win11DesktopApp.Services
                 return baseLine;
 
             return $"{baseLine}{Environment.NewLine}{entry.Details}";
+        }
+
+        private static string BuildLogFileName()
+        {
+            return $"error-{SanitizeFileNamePart(Environment.MachineName)}.log";
+        }
+
+        private static string SanitizeFileNamePart(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "unknown";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var sanitized = new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
+            return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
         }
     }
 }

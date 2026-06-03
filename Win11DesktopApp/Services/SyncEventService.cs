@@ -45,7 +45,9 @@ public sealed class SyncEventService
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(6);
-    private static readonly TimeSpan CleanupAfter = TimeSpan.FromDays(3);
+    private static readonly TimeSpan CleanupAfter = TimeSpan.FromHours(24);
+    private static readonly TimeSpan LegacyFileCleanupInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan SyncEventToastMaxAge = TimeSpan.FromHours(2);
     private static readonly TimeSpan SalaryPublishMinInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan SalaryNotificationMinInterval = TimeSpan.FromSeconds(30);
     /// <summary>Seconds between TCP keepalive probes so dead VPN / sleep states are detected faster.</summary>
@@ -87,9 +89,17 @@ public sealed class SyncEventService
                 return;
 
             _cts = new CancellationTokenSource();
-            _worker = Task.Run(() => UsePostgresTransport
-                ? PostgresListenLoopAsync(_cts.Token)
-                : PollLoopAsync(_cts.Token));
+            var token = _cts.Token;
+            _worker = Task.Run(async () =>
+            {
+                CleanupOldEvents();
+                if (UsePostgresTransport)
+                    await Task.WhenAll(
+                        PostgresListenLoopAsync(token),
+                        LegacySyncEventsFileCleanupLoopAsync(token)).ConfigureAwait(false);
+                else
+                    await PollLoopAsync(token).ConfigureAwait(false);
+            });
         }
     }
 
@@ -380,6 +390,25 @@ public sealed class SyncEventService
             KeepAliveSeconds = PostgresConnectionKeepAliveSeconds
         });
 
+    private async Task LegacySyncEventsFileCleanupLoopAsync(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                CleanupOldEvents();
+                await Task.Delay(LegacyFileCleanupInterval, token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogError("SyncEventService.LegacyFileCleanupLoop", ex);
+        }
+    }
+
     private async Task PollLoopAsync(CancellationToken token)
     {
         try
@@ -451,12 +480,14 @@ public sealed class SyncEventService
 
     private void HandleEvent(SyncEventRecord record)
     {
+        var showToast = ShouldShowSyncToast(record);
+
         if (string.Equals(record.Type, "EmployeeCreated", StringComparison.OrdinalIgnoreCase))
         {
             var actor = string.IsNullOrWhiteSpace(record.ActorName) ? record.MachineName : record.ActorName;
             var title = "Новий працівник";
             var message = $"{actor} додав(ла) працівника {record.EmployeeName} у фірму {record.FirmName}.";
-            _notificationService.Info(title, message);
+            _notificationService.Info(title, message, showToast);
         }
         else if (string.Equals(record.Type, "SalaryChanged", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(record.Type, "SalaryEntryChanged", StringComparison.OrdinalIgnoreCase))
@@ -468,7 +499,7 @@ public sealed class SyncEventService
                     && !string.IsNullOrWhiteSpace(record.EmployeeName)
                         ? $"{record.EmployeeName} ({record.FirmName})"
                         : $"за {record.Month:D2}.{record.Year:D4}";
-                _notificationService.Info("Оновлено зарплати", $"{actor} змінив(ла) зарплати: {target}.");
+                _notificationService.Info("Оновлено зарплати", $"{actor} змінив(ла) зарплати: {target}.", showToast);
             }
         }
         else if (string.Equals(record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
@@ -476,10 +507,17 @@ public sealed class SyncEventService
             var actor = string.IsNullOrWhiteSpace(record.ActorName) ? record.MachineName : record.ActorName;
             _notificationService.Info(
                 "Оновлено фірми",
-                $"{actor} змінив(ла) список фірм" + (string.IsNullOrWhiteSpace(record.FirmName) ? "." : $": {record.FirmName}."));
+                $"{actor} змінив(ла) список фірм" + (string.IsNullOrWhiteSpace(record.FirmName) ? "." : $": {record.FirmName}."),
+                showToast);
         }
 
         SyncEventReceived?.Invoke(this, new SyncEventReceivedEventArgs(record));
+    }
+
+    private static bool ShouldShowSyncToast(SyncEventRecord record)
+    {
+        var createdAt = record.CreatedAtUtc == default ? DateTime.UtcNow : record.CreatedAtUtc;
+        return DateTime.UtcNow - createdAt <= SyncEventToastMaxAge;
     }
 
     private bool ShouldShowSalaryNotification(SyncEventRecord record)
@@ -554,8 +592,8 @@ public sealed class SyncEventService
         try
         {
             var cutoff = DateTime.UtcNow - CleanupAfter;
-            DeleteOldFiles(_folderService.GetSyncEventsInboxFolder(), "*.json", cutoff);
-            DeleteOldFiles(_folderService.GetSyncEventsReadFolder(), "*.read", cutoff);
+            DeleteOldInboxFiles(_folderService.GetSyncEventsInboxFolder(), cutoff);
+            DeleteOldReadMarkers(_folderService.GetSyncEventsReadFolder(), cutoff);
         }
         catch (Exception ex)
         {
@@ -563,23 +601,75 @@ public sealed class SyncEventService
         }
     }
 
-    private static void DeleteOldFiles(string folder, string pattern, DateTime cutoffUtc)
+    private static void DeleteOldInboxFiles(string folder, DateTime cutoffUtc)
     {
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
             return;
 
-        foreach (var path in Directory.EnumerateFiles(folder, pattern))
+        foreach (var path in Directory.EnumerateFiles(folder, "*.json"))
         {
             try
             {
-                if (File.GetLastWriteTimeUtc(path) < cutoffUtc)
+                if (GetInboxEventUtc(path) < cutoffUtc)
                     SafeFileService.DeleteFile(path);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                LoggingService.LogWarning("SyncEventService.DeleteOldFiles", ex.Message);
+                LoggingService.LogWarning("SyncEventService.DeleteOldInboxFiles", ex.Message);
             }
         }
+    }
+
+    private static void DeleteOldReadMarkers(string folder, DateTime cutoffUtc)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            return;
+
+        foreach (var path in Directory.EnumerateFiles(folder, "*.read"))
+        {
+            try
+            {
+                if (GetReadMarkerUtc(path) < cutoffUtc)
+                    SafeFileService.DeleteFile(path);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                LoggingService.LogWarning("SyncEventService.DeleteOldReadMarkers", ex.Message);
+            }
+        }
+    }
+
+    private static DateTime GetInboxEventUtc(string path)
+    {
+        var fileName = Path.GetFileName(path);
+        if (fileName.Length >= 19
+            && DateTime.TryParseExact(
+                fileName.AsSpan(0, 19),
+                "yyyyMMdd_HHmmss_fff",
+                null,
+                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                out var createdAt))
+        {
+            return createdAt;
+        }
+
+        return File.GetLastWriteTimeUtc(path);
+    }
+
+    private static DateTime GetReadMarkerUtc(string path)
+    {
+        try
+        {
+            var text = File.ReadAllText(path).Trim();
+            if (DateTime.TryParse(text, null, System.Globalization.DateTimeStyles.RoundtripKind, out var writtenAt))
+                return writtenAt.Kind == DateTimeKind.Utc ? writtenAt : writtenAt.ToUniversalTime();
+        }
+        catch
+        {
+            // fall back to file timestamp
+        }
+
+        return File.GetLastWriteTimeUtc(path);
     }
 
     private string GetCurrentActorName()

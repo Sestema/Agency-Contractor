@@ -32,6 +32,7 @@ public sealed class AppNotificationItem : ViewModelBase
 public sealed class AppNotificationService : ViewModelBase
 {
     private const int MaxNotifications = 100;
+    private static readonly TimeSpan NotificationMaxAge = TimeSpan.FromHours(24);
     private const string NotificationsFileName = "notifications.json";
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _notificationsPath;
@@ -90,6 +91,8 @@ public sealed class AppNotificationService : ViewModelBase
     {
         void AddOnUiThread()
         {
+            PurgeOldNotifications();
+
             var item = new AppNotificationItem
             {
                 Title = title,
@@ -162,8 +165,27 @@ public sealed class AppNotificationService : ViewModelBase
         finally
         {
             _suspendSave = false;
+            PurgeOldNotifications();
             RaiseUnreadChanged();
         }
+    }
+
+    private void PurgeOldNotifications()
+    {
+        var cutoff = DateTime.Now - NotificationMaxAge;
+        var removed = false;
+
+        for (var i = Notifications.Count - 1; i >= 0; i--)
+        {
+            if (Notifications[i].CreatedAt >= cutoff)
+                continue;
+
+            Notifications.RemoveAt(i);
+            removed = true;
+        }
+
+        if (removed)
+            SaveNotifications();
     }
 
     private void SaveNotifications()

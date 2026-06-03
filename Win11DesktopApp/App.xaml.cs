@@ -12,6 +12,7 @@ using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
+using Win11DesktopApp.Services.Scanning;
 using Win11DesktopApp.Telegram;
 using Win11DesktopApp.ViewModels;
 
@@ -1036,6 +1037,9 @@ namespace Win11DesktopApp
             services.AddSingleton<StarterTemplateCatalogService>();
             services.AddSingleton(sp => new AdminMirrorSyncService(
                 sp.GetRequiredService<CompanyService>()));
+            services.AddSingleton<ImageEnhancementService>();
+            services.AddSingleton<IScannerService, CompositeScannerService>();
+            services.AddSingleton<IScanDocumentAssemblyService, ScanDocumentAssemblyService>();
             services.AddSingleton(sp => new EmployeeService(
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<TagCatalogService>(),

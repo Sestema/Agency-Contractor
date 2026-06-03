@@ -1,9 +1,11 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Shell;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
+using Win11DesktopApp.Views;
 
 namespace Win11DesktopApp;
 
@@ -72,6 +74,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             LoggingService.LogInfo("MainWindow.Closing",
                 $"Main window closing. Cancel={args.Cancel}; State={WindowState}; DataContext={DataContext?.GetType().Name ?? "null"}.");
+
+            if (Application.Current?.Windows
+                    .OfType<DocumentScanWindow>()
+                    .Any(w => w.DataContext is DocumentScanViewModel vm && vm.IsScanning) == true)
+            {
+                args.Cancel = true;
+                Application.Current?.Windows
+                    .OfType<DocumentScanWindow>()
+                    .FirstOrDefault(w => w.DataContext is DocumentScanViewModel vm && vm.IsScanning)
+                    ?.Activate();
+                return;
+            }
+
             SaveWindowBoundsAndFlushSettings();
         };
     }

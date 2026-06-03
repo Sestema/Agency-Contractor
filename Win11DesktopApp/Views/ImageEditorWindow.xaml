@@ -61,9 +61,21 @@
                 </Button>
                 <!-- Rotate Right -->
                 <Button x:Name="BtnRotR" Click="BtnRotateRight_Click" ToolTip="{DynamicResource ImgEditorRotateR}"
-                        Width="36" Height="36" Margin="0,0,10,4" Cursor="Hand"
+                        Width="36" Height="36" Margin="0,0,4,4" Cursor="Hand"
                         Style="{StaticResource ToolbarIconButton}">
                     <TextBlock Text="&#xE80D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+                <Button x:Name="BtnFlipH" Click="BtnFlipHorizontal_Click" ToolTip="{DynamicResource ImgEditorFlipH}"
+                        Width="36" Height="36" Margin="0,0,4,4" Cursor="Hand"
+                        Style="{StaticResource ToolbarIconButton}">
+                    <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                </Button>
+                <Button x:Name="BtnFlipV" Click="BtnFlipVertical_Click" ToolTip="{DynamicResource ImgEditorFlipV}"
+                        Width="36" Height="36" Margin="0,0,10,4" Cursor="Hand"
+                        Style="{StaticResource ToolbarIconButton}">
+                    <TextBlock Text="&#xE7A6;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                Foreground="{DynamicResource ForegroundBrush}"/>
                 </Button>
 
