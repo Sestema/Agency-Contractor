@@ -17,16 +17,6 @@ namespace Win11DesktopApp.Services
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         }
 
-        public LocalDbMigrationResult MigrateEmployeeHistoryIfNeeded(IEnumerable<EmployeeHistoryMigrationSource> sources)
-        {
-            return new LocalDbMigrationResult
-            {
-                WasMigrationAttempted = false,
-                IsSuccessful = true,
-                Message = "PostgreSQL employee history is populated by the SQLite to PostgreSQL migration wizard."
-            };
-        }
-
         public void InsertEmployeeHistory(string employeeId, string employeeFolder, string firmName, EmployeeHistoryEntry entry)
         {
             EnsureInitialized();
@@ -104,8 +94,6 @@ WHERE id = @id
             command.Parameters.AddWithValue("employeeId", employeeId);
             command.ExecuteNonQuery();
         }
-
-        public int CleanupMigratedEmployeeHistoryBackups(IEnumerable<EmployeeHistoryMigrationSource> sources) => 0;
 
         private void EnsureInitialized()
         {

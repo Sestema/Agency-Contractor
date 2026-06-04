@@ -25,6 +25,7 @@ namespace Win11DesktopApp
         private static bool _heartbeatFailureActive;
         private static ClientAccessState _currentGeminiAccessState = new();
         private static string? _recommendedVersionPromptedFor;
+        private static Views.SplashWindow? _splashWindow;
         private static int _versionPolicyEnforcementActive;
         private const string AccessPlanTrial = "trial";
         private const string AccessPlanStandard = "standard";
@@ -153,6 +154,7 @@ namespace Win11DesktopApp
             }
 
             ApplySavedLanguageAndTheme();
+            ShowSplashWindow();
             RunStartupMigrations();
             AppStatisticsService.StartSession();
             LoggingService.LogInfo("App", "All services initialized");
@@ -244,89 +246,6 @@ namespace Win11DesktopApp
                 return;
             }
 
-            var activityLogMigration = ActivityLogService.EnsureMigratedToLocalDb();
-            if (activityLogMigration.WasMigrationAttempted)
-            {
-                if (activityLogMigration.IsSuccessful)
-                {
-                    var successMessage = string.Format(
-                        Res("MsgActivityLogMigrationSuccess", "Activity log was migrated to SQLite. Imported records: {0}. Backup: {1}"),
-                        activityLogMigration.RecordsImported,
-                        string.IsNullOrWhiteSpace(activityLogMigration.BackupPath)
-                            ? Res("MsgActivityLogMigrationNoBackup", "not created")
-                            : activityLogMigration.BackupPath);
-                    ToastService.Instance.Warning(successMessage);
-                    LoggingService.LogInfo("App.ActivityLogMigration", successMessage);
-                }
-                else
-                {
-                    var failedMessage = string.Format(
-                        Res("MsgActivityLogMigrationFailed", "Activity log migration to SQLite failed. The program will keep using the previous source. Details: {0}"),
-                        activityLogMigration.Message);
-                    MessageBox.Show(
-                        failedMessage,
-                        Res("TitleWarning", "Warning"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    LoggingService.LogWarning("App.ActivityLogMigration", failedMessage);
-                }
-            }
-
-            var employeeHistoryMigration = EmployeeService.EnsureEmployeeHistoryMigratedToLocalDb();
-            if (employeeHistoryMigration.WasMigrationAttempted)
-            {
-                if (employeeHistoryMigration.IsSuccessful)
-                {
-                    var successMessage = string.Format(
-                        Res("MsgEmployeeHistoryMigrationSuccess", "Employee history was migrated to SQLite. Imported records: {0}. Folders scanned: {1}. Skipped: {2}"),
-                        employeeHistoryMigration.RecordsImported,
-                        employeeHistoryMigration.FoldersScanned,
-                        employeeHistoryMigration.FoldersSkipped);
-                    ToastService.Instance.Warning(successMessage);
-                    LoggingService.LogInfo("App.EmployeeHistoryMigration", successMessage);
-                }
-                else
-                {
-                    var failedMessage = string.Format(
-                        Res("MsgEmployeeHistoryMigrationFailed", "Employee history migration to SQLite failed. The program will keep using the previous source. Details: {0}"),
-                        employeeHistoryMigration.Message);
-                    MessageBox.Show(
-                        failedMessage,
-                        Res("TitleWarning", "Warning"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    LoggingService.LogWarning("App.EmployeeHistoryMigration", failedMessage);
-                }
-            }
-
-            var archiveLogMigration = EmployeeService.EnsureArchiveLogMigratedToLocalDb();
-            if (archiveLogMigration.WasMigrationAttempted)
-            {
-                if (archiveLogMigration.IsSuccessful)
-                {
-                    var successMessage = string.Format(
-                        Res("MsgArchiveLogMigrationSuccess", "Archive log was migrated to SQLite. Imported records: {0}. Backup: {1}"),
-                        archiveLogMigration.RecordsImported,
-                        string.IsNullOrWhiteSpace(archiveLogMigration.BackupPath)
-                            ? Res("MsgArchiveLogMigrationNoBackup", "not created")
-                            : archiveLogMigration.BackupPath);
-                    ToastService.Instance.Warning(successMessage);
-                    LoggingService.LogInfo("App.ArchiveLogMigration", successMessage);
-                }
-                else
-                {
-                    var failedMessage = string.Format(
-                        Res("MsgArchiveLogMigrationFailed", "Archive log migration to SQLite failed. The program will keep using the previous source. Details: {0}"),
-                        archiveLogMigration.Message);
-                    MessageBox.Show(
-                        failedMessage,
-                        Res("TitleWarning", "Warning"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    LoggingService.LogWarning("App.ArchiveLogMigration", failedMessage);
-                }
-            }
-
             var employeeIndexRebuild = EmployeeService.EnsureEmployeeIndexBuilt();
             if (employeeIndexRebuild.WasRebuildAttempted)
             {
@@ -360,136 +279,6 @@ namespace Win11DesktopApp
                         MessageBoxImage.Warning);
                     LoggingService.LogWarning("App.EmployeeIndexBuild", failedMessage);
                 }
-            }
-
-            var salaryMigration = FinanceService.EnsureSalaryMigratedToLocalDb();
-            if (salaryMigration.WasMigrationAttempted)
-            {
-                if (salaryMigration.IsSuccessful)
-                {
-                    var successMessage = string.Format(
-                        Res("MsgSalaryMigrationSuccess", "Salary month databases were built in SQLite. Files: {0}. Entries: {1}. Expenses: {2}."),
-                        salaryMigration.FilesScanned,
-                        salaryMigration.RecordsImported,
-                        salaryMigration.ExpensesImported);
-                    ToastService.Instance.Warning(successMessage);
-                    LoggingService.LogInfo("App.SalaryMigration", successMessage);
-                }
-                else
-                {
-                    var failedMessage = string.Format(
-                        Res("MsgSalaryMigrationFailed", "Salary migration to SQLite failed. The program will keep using JSON. Details: {0}"),
-                        salaryMigration.Message);
-                    MessageBox.Show(
-                        failedMessage,
-                        Res("TitleWarning", "Warning"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    LoggingService.LogWarning("App.SalaryMigration", failedMessage);
-                }
-            }
-
-            var salaryHistoryMigration = FinanceService.EnsureSalaryHistoryMigratedToLocalDb();
-            if (salaryHistoryMigration.WasMigrationAttempted)
-            {
-                if (salaryHistoryMigration.IsSuccessful)
-                {
-                    var successMessage = $"Salary history was migrated to SQLite. Folders: {salaryHistoryMigration.FoldersScanned}. Records: {salaryHistoryMigration.RecordsImported}.";
-                    LoggingService.LogInfo("App.SalaryHistoryMigration", successMessage);
-                }
-                else
-                {
-                    var failedMessage = $"Salary history migration to SQLite failed. The program will keep using JSON fallback. Details: {salaryHistoryMigration.Message}";
-                    LoggingService.LogWarning("App.SalaryHistoryMigration", failedMessage);
-                }
-            }
-
-            var customFieldsMigration = FinanceService.EnsureCustomFieldsMigratedToLocalDb();
-            if (customFieldsMigration.WasMigrationAttempted)
-            {
-                if (customFieldsMigration.IsSuccessful)
-                {
-                    LoggingService.LogInfo("App.CustomFieldsMigration", customFieldsMigration.Message);
-                }
-                else
-                {
-                    var failedMessage = $"Custom fields migration to SQLite failed. Details: {customFieldsMigration.Message}";
-                    LoggingService.LogWarning("App.CustomFieldsMigration", failedMessage);
-                }
-            }
-
-            var advancesMigration = FinanceService.EnsureAdvancesMigratedToLocalDb();
-            if (advancesMigration.WasMigrationAttempted)
-            {
-                if (advancesMigration.IsSuccessful)
-                {
-                    LoggingService.LogInfo("App.AdvancesMigration", advancesMigration.Message);
-                }
-                else
-                {
-                    var failedMessage = $"Advances migration to SQLite failed. Details: {advancesMigration.Message}";
-                    LoggingService.LogWarning("App.AdvancesMigration", failedMessage);
-                }
-            }
-
-            var reportsMigration = FinanceService.EnsureReportsMigratedToLocalDb();
-            if (reportsMigration.WasMigrationAttempted)
-            {
-                if (reportsMigration.IsSuccessful)
-                {
-                    LoggingService.LogInfo("App.ReportsMigration", reportsMigration.Message);
-                }
-                else
-                {
-                    var failedMessage = $"Reports migration to SQLite failed. Details: {reportsMigration.Message}";
-                    LoggingService.LogWarning("App.ReportsMigration", failedMessage);
-                }
-            }
-
-            var accommodationsMigration = FinanceService.EnsureAccommodationsMigratedToLocalDb();
-            if (accommodationsMigration.WasMigrationAttempted)
-            {
-                if (accommodationsMigration.IsSuccessful)
-                {
-                    LoggingService.LogInfo("App.AccommodationsMigration", accommodationsMigration.Message);
-                }
-                else
-                {
-                    var failedMessage = $"Accommodations migration to SQLite failed. Details: {accommodationsMigration.Message}";
-                    LoggingService.LogWarning("App.AccommodationsMigration", failedMessage);
-                }
-            }
-
-            if (FinanceService.CloseMigratedFinanceDataIfSafe())
-                LoggingService.LogInfo("App.FinanceDataMigration", "Renamed finance_data.json to finance_data.json.migrated after confirmed SQLite migration.");
-
-            try
-            {
-                var deletedActivityLogBackup = LocalDbService.CleanupMigratedActivityLogBackup();
-                if (deletedActivityLogBackup)
-                    LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted activity_log.json.migrated after confirmed SQLite migration.");
-
-                var deletedArchiveLogBackup = LocalDbService.CleanupMigratedArchiveLogBackup();
-                if (deletedArchiveLogBackup)
-                    LoggingService.LogInfo("App.MigratedBackupCleanup", "Deleted archive_log.json.migrated after confirmed SQLite migration.");
-
-                var deletedEmployeeHistoryBackups = EmployeeService.CleanupMigratedEmployeeHistoryBackups();
-                if (deletedEmployeeHistoryBackups > 0)
-                {
-                    LoggingService.LogInfo("App.MigratedBackupCleanup",
-                        $"Deleted history.json.migrated backups after confirmed SQLite migration. Files: {deletedEmployeeHistoryBackups}.");
-                }
-
-                var deletedSalaryHistoryBackups = FinanceService.CleanupMigratedSalaryHistoryBackups();
-                if (deletedSalaryHistoryBackups > 0)
-                {
-                    LoggingService.LogInfo("App.MigratedBackupCleanup",
-                        $"Deleted salary_history.json.migrated backups after confirmed SQLite migration. Files: {deletedSalaryHistoryBackups}.");
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("App.MigratedBackupCleanup", ex.Message);
             }
 
             RemoveDuplicateSalaryHistoryAtStartup("SQLite");
@@ -1200,8 +989,6 @@ namespace Win11DesktopApp
                     return;
                 }
 
-                LocalDbService.IsSalaryHistoryMigrationCompleted();
-
                 var monthDbs = SalaryDbService.EnumerateMonthDatabases()
                     .OrderByDescending(monthDb => monthDb.year)
                     .ThenByDescending(monthDb => monthDb.month)
@@ -1333,6 +1120,11 @@ namespace Win11DesktopApp
         private static void OnAnyWindowLoaded_FadeIn(object sender, RoutedEventArgs e)
         {
             if (sender is not Window window) return;
+
+            // The first real window (a startup gate dialog or the main window) dismisses the splash.
+            if (_splashWindow != null && !ReferenceEquals(window, _splashWindow))
+                CloseSplashWindow();
+
             if (window.AllowsTransparency) return; // layered windows animate poorly
             var anim = new System.Windows.Media.Animation.DoubleAnimation
             {
@@ -1345,6 +1137,29 @@ namespace Win11DesktopApp
                 }
             };
             window.BeginAnimation(UIElement.OpacityProperty, anim);
+        }
+
+        private static void ShowSplashWindow()
+        {
+            try
+            {
+                _splashWindow = new Views.SplashWindow();
+                _splashWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("App.Splash", $"Could not show splash window: {ex.Message}");
+                _splashWindow = null;
+            }
+        }
+
+        private static void CloseSplashWindow()
+        {
+            var splash = _splashWindow;
+            if (splash == null) return;
+            _splashWindow = null;
+            try { splash.FadeOutAndClose(); }
+            catch { /* window may already be closing */ }
         }
 
         private static RemotePolicy? BuildEffectivePolicy(LocalLicenseStatus localLicenseStatus, ClientAccessState accessState, RemotePolicy? policy)

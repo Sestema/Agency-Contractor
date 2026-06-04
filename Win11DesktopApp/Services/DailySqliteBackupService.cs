@@ -195,6 +195,7 @@ public sealed class DailySqliteBackupService
     private static int CopySqliteFiles(string sqliteFolder, string destinationFolder, CancellationToken cancellationToken)
     {
         var files = EnumerateSqliteFiles(sqliteFolder).ToList();
+        var copied = 0;
         foreach (var sourcePath in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -204,10 +205,23 @@ public sealed class DailySqliteBackupService
             if (!string.IsNullOrWhiteSpace(destinationDirectory))
                 Directory.CreateDirectory(destinationDirectory);
 
-            CopyFileShared(sourcePath, destinationPath);
+            try
+            {
+                CopyFileShared(sourcePath, destinationPath);
+                copied++;
+            }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+            {
+                // SQLite -wal/-shm sidecar files are transient: the engine can checkpoint and
+                // delete them between enumeration and copy. Their contents are already merged
+                // into the main .db, so skip the vanished file instead of failing the whole backup.
+                LoggingService.LogWarning(
+                    "DailySqliteBackupService.CopySqliteFiles",
+                    $"Skipped backup of file that disappeared during copy: {sourcePath} ({ex.Message})");
+            }
         }
 
-        return files.Count;
+        return copied;
     }
 
     private static IEnumerable<string> EnumerateSqliteFiles(string sqliteFolder)

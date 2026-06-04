@@ -17,18 +17,6 @@ namespace Win11DesktopApp.Services
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         }
 
-        public LocalDbMigrationResult MigrateActivityLogIfNeeded(string jsonPath, IReadOnlyList<ActivityLogEntry> sourceEntries)
-        {
-            return new LocalDbMigrationResult
-            {
-                WasMigrationAttempted = false,
-                IsSuccessful = true,
-                RecordsFound = sourceEntries?.Count ?? 0,
-                RecordsImported = 0,
-                Message = "PostgreSQL activity log is populated by the SQLite to PostgreSQL migration wizard."
-            };
-        }
-
         public void InsertActivityLog(ActivityLogEntry entry)
         {
             EnsureInitialized();

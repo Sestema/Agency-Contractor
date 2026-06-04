@@ -2031,6 +2031,7 @@
     <sys:String x:Key="ReplDocOldValue">Было</sys:String>
     <sys:String x:Key="ReplDocLoadError">Не удалось загрузить превью документа</sys:String>
     <sys:String x:Key="ReplDocEditorNotForPdf">Редактор доступен только для изображений</sys:String>
+    <sys:String x:Key="ReplDocInsuranceNumberChanged">Номер отличается от предыдущего — проверьте перед сохранением</sys:String>
     <sys:String x:Key="PreviewLoading">Загрузка...</sys:String>
     <sys:String x:Key="PreviewFailed">Не удалось показать</sys:String>
     <sys:String x:Key="PreviewRetry">Повторить</sys:String>

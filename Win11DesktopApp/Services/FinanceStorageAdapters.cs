@@ -62,18 +62,14 @@ namespace Win11DesktopApp.Services
 
     public interface IFinanceSalaryHistoryStorage
     {
-        LocalDbMigrationResult MigrateSalaryHistoryIfNeeded(IEnumerable<SalaryHistoryMigrationSource> sources);
         void UpsertSalaryHistoryRecord(string employeeId, string employeeFolder, SalaryHistoryRecord record);
         void DeleteSalaryHistoryRecord(string employeeId, string employeeFolder, int year, int month, string firmName);
         List<SalaryHistoryRecord> GetSalaryHistory(string employeeId, string employeeFolder);
-        bool IsSalaryHistoryMigrationCompleted();
-        int CleanupMigratedSalaryHistoryBackups(IEnumerable<SalaryHistoryMigrationSource> sources);
         int RemoveDuplicateSalaryHistoryRecords();
     }
 
     public interface IActivityLogStorage
     {
-        LocalDbMigrationResult MigrateActivityLogIfNeeded(string jsonPath, IReadOnlyList<ActivityLogEntry> sourceEntries);
         void InsertActivityLog(ActivityLogEntry entry);
         List<ActivityLogEntry> GetAllActivityLogs();
         void RemoveActivityLogEntries(string originalFolder, string deletedFolder, string employeeName, string firmName);
@@ -82,7 +78,6 @@ namespace Win11DesktopApp.Services
 
     public interface IArchiveLogStorage
     {
-        LocalDbMigrationResult MigrateArchiveLogIfNeeded(string jsonPath, IReadOnlyList<ArchiveLogEntry> sourceEntries);
         List<ArchiveLogEntry> GetAllArchiveLogs();
         ArchiveLogEntry? GetActiveArchiveLogEntry(string operationId);
         void InsertArchiveLog(ArchiveLogEntry entry);
@@ -91,12 +86,10 @@ namespace Win11DesktopApp.Services
 
     public interface IEmployeeHistoryStorage
     {
-        LocalDbMigrationResult MigrateEmployeeHistoryIfNeeded(IEnumerable<EmployeeHistoryMigrationSource> sources);
         void InsertEmployeeHistory(string employeeId, string employeeFolder, string firmName, EmployeeHistoryEntry entry);
         List<EmployeeHistoryEntry> GetEmployeeHistory(string employeeId);
         void DeleteEmployeeHistoryEntry(string employeeId, long historyEntryId);
         void DeleteEmployeeHistory(string employeeId);
-        int CleanupMigratedEmployeeHistoryBackups(IEnumerable<EmployeeHistoryMigrationSource> sources);
     }
 
     public sealed class SqliteFinanceMonthPaymentsStorage : IFinanceMonthPaymentsStorage
@@ -261,9 +254,6 @@ namespace Win11DesktopApp.Services
             _localDbService = localDbService ?? throw new ArgumentNullException(nameof(localDbService));
         }
 
-        public LocalDbMigrationResult MigrateSalaryHistoryIfNeeded(IEnumerable<SalaryHistoryMigrationSource> sources)
-            => _localDbService.MigrateSalaryHistoryIfNeeded(sources);
-
         public void UpsertSalaryHistoryRecord(string employeeId, string employeeFolder, SalaryHistoryRecord record)
             => _localDbService.UpsertSalaryHistoryRecord(employeeId, employeeFolder, record);
 
@@ -272,12 +262,6 @@ namespace Win11DesktopApp.Services
 
         public List<SalaryHistoryRecord> GetSalaryHistory(string employeeId, string employeeFolder)
             => _localDbService.GetSalaryHistory(employeeId, employeeFolder);
-
-        public bool IsSalaryHistoryMigrationCompleted()
-            => _localDbService.IsSalaryHistoryMigrationCompleted();
-
-        public int CleanupMigratedSalaryHistoryBackups(IEnumerable<SalaryHistoryMigrationSource> sources)
-            => _localDbService.CleanupMigratedSalaryHistoryBackups(sources);
 
         public int RemoveDuplicateSalaryHistoryRecords()
             => _localDbService.RemoveDuplicateSalaryHistoryRecords();
@@ -291,9 +275,6 @@ namespace Win11DesktopApp.Services
         {
             _localDbService = localDbService ?? throw new ArgumentNullException(nameof(localDbService));
         }
-
-        public LocalDbMigrationResult MigrateActivityLogIfNeeded(string jsonPath, IReadOnlyList<ActivityLogEntry> sourceEntries)
-            => _localDbService.MigrateActivityLogIfNeeded(jsonPath, sourceEntries);
 
         public void InsertActivityLog(ActivityLogEntry entry)
             => _localDbService.InsertActivityLog(entry);
@@ -317,9 +298,6 @@ namespace Win11DesktopApp.Services
             _localDbService = localDbService ?? throw new ArgumentNullException(nameof(localDbService));
         }
 
-        public LocalDbMigrationResult MigrateArchiveLogIfNeeded(string jsonPath, IReadOnlyList<ArchiveLogEntry> sourceEntries)
-            => _localDbService.MigrateArchiveLogIfNeeded(jsonPath, sourceEntries);
-
         public List<ArchiveLogEntry> GetAllArchiveLogs()
             => _localDbService.GetAllArchiveLogs();
 
@@ -342,9 +320,6 @@ namespace Win11DesktopApp.Services
             _localDbService = localDbService ?? throw new ArgumentNullException(nameof(localDbService));
         }
 
-        public LocalDbMigrationResult MigrateEmployeeHistoryIfNeeded(IEnumerable<EmployeeHistoryMigrationSource> sources)
-            => _localDbService.MigrateEmployeeHistoryIfNeeded(sources);
-
         public void InsertEmployeeHistory(string employeeId, string employeeFolder, string firmName, EmployeeHistoryEntry entry)
             => _localDbService.InsertEmployeeHistory(employeeId, employeeFolder, firmName, entry);
 
@@ -356,8 +331,5 @@ namespace Win11DesktopApp.Services
 
         public void DeleteEmployeeHistory(string employeeId)
             => _localDbService.DeleteEmployeeHistory(employeeId);
-
-        public int CleanupMigratedEmployeeHistoryBackups(IEnumerable<EmployeeHistoryMigrationSource> sources)
-            => _localDbService.CleanupMigratedEmployeeHistoryBackups(sources);
     }
 }

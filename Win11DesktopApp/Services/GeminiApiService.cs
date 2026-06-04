@@ -565,6 +565,7 @@ namespace Win11DesktopApp.Services
             {
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".png" => "image/png",
+                ".heic" or ".heif" => "image/heic",
                 ".bmp" => "image/bmp",
                 ".webp" => "image/webp",
                 ".gif" => "image/gif",

@@ -2265,12 +2265,22 @@ namespace Win11DesktopApp.ViewModels
             var currentAdvancesByRequest = advancesTask.Result;
             var carriedDebtByRequest = debtTask.Result;
 
-            foreach (var entry in entries)
+            // Advance is a derived value (advances + carried debt) recomputed on every load.
+            // Suppress change tracking so recomputing it does not mark untouched rows dirty.
+            _suppressEntryChangeTracking = true;
+            try
             {
-                var requestKey = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
-                currentAdvancesByRequest.TryGetValue(requestKey, out var currentAdvances);
-                carriedDebtByRequest.TryGetValue(requestKey, out var carriedDebt);
-                entry.Advance = currentAdvances + carriedDebt;
+                foreach (var entry in entries)
+                {
+                    var requestKey = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                    currentAdvancesByRequest.TryGetValue(requestKey, out var currentAdvances);
+                    carriedDebtByRequest.TryGetValue(requestKey, out var carriedDebt);
+                    entry.Advance = currentAdvances + carriedDebt;
+                }
+            }
+            finally
+            {
+                _suppressEntryChangeTracking = false;
             }
         }
 
@@ -2324,12 +2334,22 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var applySw = Stopwatch.StartNew();
-            foreach (var entry in Entries)
+            // Advance is a derived value (advances + carried debt) recomputed on every load.
+            // Suppress change tracking so recomputing it does not mark untouched rows dirty.
+            _suppressEntryChangeTracking = true;
+            try
             {
-                var requestKey = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
-                currentAdvancesByRequest.TryGetValue(requestKey, out var currentAdvances);
-                carriedDebtByRequest.TryGetValue(requestKey, out var carriedDebt);
-                entry.Advance = currentAdvances + carriedDebt;
+                foreach (var entry in Entries)
+                {
+                    var requestKey = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                    currentAdvancesByRequest.TryGetValue(requestKey, out var currentAdvances);
+                    carriedDebtByRequest.TryGetValue(requestKey, out var carriedDebt);
+                    entry.Advance = currentAdvances + carriedDebt;
+                }
+            }
+            finally
+            {
+                _suppressEntryChangeTracking = false;
             }
             applyMs = applySw.ElapsedMilliseconds;
 
@@ -3208,7 +3228,6 @@ namespace Win11DesktopApp.ViewModels
             private readonly string _updatedAt;
             private readonly decimal _hoursWorked;
             private readonly decimal _hourlyRate;
-            private readonly decimal _advance;
             private readonly decimal _savedNetSalary;
             private readonly string _status;
             private readonly string _note;
@@ -3224,7 +3243,6 @@ namespace Win11DesktopApp.ViewModels
                 _updatedAt = entry.UpdatedAt ?? string.Empty;
                 _hoursWorked = entry.HoursWorked;
                 _hourlyRate = entry.HourlyRate;
-                _advance = entry.Advance;
                 _savedNetSalary = entry.SavedNetSalary;
                 _status = entry.Status ?? string.Empty;
                 _note = entry.Note ?? string.Empty;
@@ -3243,7 +3261,8 @@ namespace Win11DesktopApp.ViewModels
                     && string.Equals(_updatedAt, entry.UpdatedAt ?? string.Empty, StringComparison.Ordinal)
                     && _hoursWorked == entry.HoursWorked
                     && _hourlyRate == entry.HourlyRate
-                    && _advance == entry.Advance
+                    // Advance is a derived value (recomputed on every load), so it must not
+                    // by itself mark a row as changed — otherwise every recompute resaves all rows.
                     && _savedNetSalary == entry.SavedNetSalary
                     && string.Equals(_status, entry.Status ?? string.Empty, StringComparison.Ordinal)
                     && string.Equals(_note, entry.Note ?? string.Empty, StringComparison.Ordinal)

@@ -21,16 +21,6 @@ namespace Win11DesktopApp.Services
             _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
         }
 
-        public LocalDbMigrationResult MigrateSalaryHistoryIfNeeded(IEnumerable<SalaryHistoryMigrationSource> sources)
-        {
-            return new LocalDbMigrationResult
-            {
-                WasMigrationAttempted = false,
-                IsSuccessful = true,
-                Message = "PostgreSQL salary history is populated by the SQLite to PostgreSQL migration wizard."
-            };
-        }
-
         public void UpsertSalaryHistoryRecord(string employeeId, string employeeFolder, SalaryHistoryRecord record)
         {
             EnsureInitialized();
@@ -82,10 +72,6 @@ ORDER BY year DESC, month DESC, paid_at DESC, id DESC;";
 
             return result;
         }
-
-        public bool IsSalaryHistoryMigrationCompleted() => true;
-
-        public int CleanupMigratedSalaryHistoryBackups(IEnumerable<SalaryHistoryMigrationSource> sources) => 0;
 
         public int RemoveDuplicateSalaryHistoryRecords()
         {

@@ -200,21 +200,13 @@ namespace Win11DesktopApp.Tests
                 },
                 new List<FirmExpense>());
 
+            var (loadedBeforeSave, _) = _salaryDbService.LoadMonthPayments(2026, 12);
+            var changedA = loadedBeforeSave.Single(entry => entry.EmployeeId == "emp-a");
+            changedA.HoursWorked = 10m;
+            changedA.SavedNetSalary = 1000m;
+
             _salaryDbService.SaveMonthPayments(2026, 12,
-                new List<SalaryEntry>
-                {
-                    new()
-                    {
-                        EmployeeId = "emp-a",
-                        EmployeeFolder = @"C:\Employees\A",
-                        FirmName = "Firm A",
-                        FullName = "Employee A",
-                        HoursWorked = 10m,
-                        HourlyRate = 100m,
-                        SavedNetSalary = 1000m,
-                        Status = "pending"
-                    }
-                },
+                new List<SalaryEntry> { changedA },
                 new List<FirmExpense>());
 
             var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 12);
@@ -244,21 +236,14 @@ namespace Win11DesktopApp.Tests
                 },
                 new List<FirmExpense>());
 
+            var (loadedBeforeSave, _) = _salaryDbService.LoadMonthPayments(2026, 5);
+            var changedA = loadedBeforeSave.Single(entry => entry.EmployeeId == "emp-a");
+            changedA.EmployeeFolder = @"C:\Employees\NewA";
+            changedA.HoursWorked = 233m;
+            changedA.SavedNetSalary = 23300m;
+
             _salaryDbService.SaveMonthPayments(2026, 5,
-                new List<SalaryEntry>
-                {
-                    new()
-                    {
-                        EmployeeId = "emp-a",
-                        EmployeeFolder = @"C:\Employees\NewA",
-                        FirmName = "Firm A",
-                        FullName = "Employee A",
-                        HoursWorked = 233m,
-                        HourlyRate = 100m,
-                        SavedNetSalary = 23300m,
-                        Status = "pending"
-                    }
-                },
+                new List<SalaryEntry> { changedA },
                 new List<FirmExpense>());
 
             var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 5);

@@ -75,7 +75,7 @@ namespace Win11DesktopApp.Tests
 
             var jsonSnapshotPath = Path.Combine(_testRootPath, "database.json");
             var pendingFolder = Path.Combine(_testRootPath, "SQLite", "PendingChanges");
-            var writeLockPath = Path.Combine(_testRootPath, "SQLite", "write.lock");
+            var writeLockPath = Path.Combine(_testRootPath, "SQLite", "core.db.lock");
 
             Assert.False(File.Exists(jsonSnapshotPath));
             Assert.False(File.Exists(writeLockPath));
@@ -103,7 +103,7 @@ namespace Win11DesktopApp.Tests
         {
             var sqliteFolder = Path.Combine(_testRootPath, "SQLite");
             Directory.CreateDirectory(sqliteFolder);
-            var writeLockPath = Path.Combine(sqliteFolder, "write.lock");
+            var writeLockPath = Path.Combine(sqliteFolder, "core.db.lock");
             File.WriteAllText(writeLockPath, "stale", Encoding.UTF8);
             File.SetLastWriteTimeUtc(writeLockPath, DateTime.UtcNow.AddMinutes(-10));
 
@@ -226,30 +226,6 @@ END;";
             Assert.Equal("Integrity Test", loaded[0].Name);
             Assert.False(File.Exists(filePath));
             Assert.True(File.Exists(filePath + ".migrated"));
-        }
-
-        [Fact]
-        public void LoadCompanies_ShouldMigrateLegacyDatabaseJsonToCoreDb()
-        {
-            var legacyJsonPath = Path.Combine(_testRootPath, "database.json");
-            var legacyChecksumPath = Path.Combine(_testRootPath, "database.json.sha256");
-            var coreDbPath = Path.Combine(_testRootPath, "SQLite", "core.db");
-            WriteLegacyDatabaseJson(legacyJsonPath, legacyChecksumPath, new DatabaseRoot
-            {
-                Version = "2.0",
-                Companies = new List<EmployerCompany> { new EmployerCompany { Name = "Migration Test" } },
-                Settings = new DatabaseSettings { LanguageCode = "en" }
-            });
-
-            var loaded = _persistenceService.LoadCompanies();
-
-            Assert.Single(loaded);
-            Assert.Equal("Migration Test", loaded[0].Name);
-            Assert.True(File.Exists(coreDbPath));
-            Assert.False(File.Exists(legacyJsonPath));
-            Assert.False(File.Exists(legacyChecksumPath));
-            Assert.True(File.Exists(legacyJsonPath + ".migrated"));
-            Assert.True(File.Exists(legacyChecksumPath + ".migrated"));
         }
 
         [Fact]

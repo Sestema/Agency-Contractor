@@ -30,6 +30,10 @@ namespace Win11DesktopApp.Services
 
         public static async Task<UpdateInfo?> CheckForUpdatesAsync(string? channel = null)
         {
+            // Non-installed (dev) builds cannot check for updates; skip quietly to avoid noisy warnings.
+            if (!IsInstalled)
+                return null;
+
             try
             {
                 var mgr = GetManager(channel);

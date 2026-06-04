@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using Win11DesktopApp.EmployeeModels;
@@ -13,15 +14,21 @@ namespace Win11DesktopApp.Views
 {
     public partial class ReplaceDocumentWindow : Window
     {
+        private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+            { ".jpg", ".jpeg", ".png", ".heic", ".heif", ".pdf" };
+
         private readonly GeminiApiService _geminiApiService;
         private readonly EmployeeService _employeeService;
         private readonly string _docType;
         private readonly EmployeeData _data;
         private string? _selectedFilePath;
+        private bool _selectedIsPdf;
+        private string? _sessionTempFolder;
         private readonly Dictionary<string, (TextBox newBox, string oldValue)> _fields = new();
         private readonly List<string> _pdfPreviewPages = new();
         private int _currentPdfPageIndex;
         private string? _pdfPreviewTempFolder;
+        private TextBlock? _insuranceNumberMismatchHint;
 
         public bool Saved { get; private set; }
         public string? ResultFilePath => _selectedFilePath;
@@ -99,10 +106,64 @@ namespace Win11DesktopApp.Views
                     Text = oldValue,
                     Padding = new Thickness(8, 6, 8, 6),
                     FontSize = 13,
-                    Margin = new Thickness(0, 0, 0, 10)
+                    Margin = new Thickness(0, 0, 0, _docType == "insurance" && key == "InsuranceNumber" ? 2 : 10)
                 };
                 FieldsPanel.Children.Add(tb);
                 _fields[key] = (tb, oldValue);
+
+                if (_docType == "insurance" && key == "InsuranceNumber")
+                {
+                    tb.TextChanged += (_, _) => UpdateInsuranceNumberHighlight();
+                    _insuranceNumberMismatchHint = new TextBlock
+                    {
+                        Text = Res("ReplDocInsuranceNumberChanged"),
+                        FontSize = 11,
+                        Foreground = (Brush)FindResource("ErrorBrush"),
+                        Margin = new Thickness(0, 0, 0, 10),
+                        Visibility = Visibility.Collapsed,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    FieldsPanel.Children.Add(_insuranceNumberMismatchHint);
+                    UpdateInsuranceNumberHighlight();
+                }
+            }
+        }
+
+        private static string NormalizeInsuranceNumber(string? value) =>
+            string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : new string(value.Where(char.IsDigit).ToArray());
+
+        private static bool InsuranceNumbersDiffer(string oldValue, string newValue)
+        {
+            var oldNorm = NormalizeInsuranceNumber(oldValue);
+            if (string.IsNullOrEmpty(oldNorm))
+                return false;
+
+            var newNorm = NormalizeInsuranceNumber(newValue);
+            return !string.Equals(oldNorm, newNorm, StringComparison.Ordinal);
+        }
+
+        private void UpdateInsuranceNumberHighlight()
+        {
+            if (_docType != "insurance" || !_fields.TryGetValue("InsuranceNumber", out var field))
+                return;
+
+            if (InsuranceNumbersDiffer(field.oldValue, field.newBox.Text))
+            {
+                field.newBox.BorderBrush = (Brush)FindResource("ErrorBrush");
+                field.newBox.BorderThickness = new Thickness(1);
+                field.newBox.Background = (Brush)FindResource("ErrorLightBrush");
+                if (_insuranceNumberMismatchHint != null)
+                    _insuranceNumberMismatchHint.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                field.newBox.ClearValue(TextBox.BorderBrushProperty);
+                field.newBox.ClearValue(TextBox.BorderThicknessProperty);
+                field.newBox.ClearValue(TextBox.BackgroundProperty);
+                if (_insuranceNumberMismatchHint != null)
+                    _insuranceNumberMismatchHint.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -176,30 +237,93 @@ namespace Win11DesktopApp.Views
         {
             var dialog = new OpenFileDialog
             {
-                Filter = "Documents|*.jpg;*.jpeg;*.png;*.heic;*.pdf"
+                Filter = "Documents|*.jpg;*.jpeg;*.png;*.heic;*.heif;*.pdf"
             };
             if (dialog.ShowDialog() != true) return;
             LoadPreview(dialog.FileName);
         }
 
+        private void EnsureSessionTempFolder()
+        {
+            if (!string.IsNullOrWhiteSpace(_sessionTempFolder) && Directory.Exists(_sessionTempFolder))
+                return;
+
+            _sessionTempFolder = Path.Combine(Path.GetTempPath(), "AC_ReplDoc_" + Guid.NewGuid().ToString("N")[..8]);
+            Directory.CreateDirectory(_sessionTempFolder);
+        }
+
         private void LoadPreview(string path)
         {
-            _selectedFilePath = path;
-            CleanupPdfTemp();
+            ResetPreviewUi();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                    throw new FileNotFoundException(Res("MsgFileNotFound"));
+
+                var normalizedPath = Path.GetFullPath(path);
+                if (!File.Exists(normalizedPath))
+                    throw new FileNotFoundException(Res("MsgFileNotFound"), normalizedPath);
+
+                if (new FileInfo(normalizedPath).Length <= 0)
+                    throw new IOException(Res("MsgOpenFileFail"));
+
+                var ext = Path.GetExtension(normalizedPath);
+                if (!AllowedExtensions.Contains(ext))
+                {
+                    MessageBox.Show(Res("DragDropInvalidFormat"), Res("TitleError"),
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                EnsureSessionTempFolder();
+                var sessionFolder = _sessionTempFolder!;
+                var temp = _employeeService.PrepareTempDocument(normalizedPath, sessionFolder, "upload");
+
+                if (temp.IsPdf)
+                {
+                    if (string.IsNullOrWhiteSpace(temp.PdfPath) || !File.Exists(temp.PdfPath))
+                        throw new IOException(Res("MsgOpenFileFail"));
+
+                    _selectedFilePath = temp.PdfPath;
+                    _selectedIsPdf = true;
+                    LoadPdfPreview(temp.PdfPath);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(temp.ImagePath) || !File.Exists(temp.ImagePath))
+                    throw new IOException(Res("MsgOpenFileFail"));
+
+                _selectedFilePath = temp.ImagePath;
+                _selectedIsPdf = false;
+                LoadBitmapPreview(temp.ImagePath);
+            }
+            catch (Exception ex)
+            {
+                _selectedFilePath = null;
+                _selectedIsPdf = false;
+                LoggingService.LogError("ReplaceDoc.LoadPreview", ex);
+                NoImageText.Text = Res("ReplDocLoadError");
+                NoImageText.Visibility = Visibility.Visible;
+                MessageBox.Show(
+                    string.Format(Res("MsgOpenFileError"), ex.Message),
+                    Res("TitleError"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void ResetPreviewUi()
+        {
+            _selectedFilePath = null;
+            _selectedIsPdf = false;
+            CleanupPdfPagePreviews();
             PreviewImage.Source = null;
             NoImageText.Text = Res("ReplDocUploadHint");
             NoImageText.Visibility = Visibility.Visible;
             PagerPanel.Visibility = Visibility.Collapsed;
             _pdfPreviewPages.Clear();
             _currentPdfPageIndex = 0;
-
-            if (IsPdfFile(path))
-            {
-                LoadPdfPreview(path);
-                return;
-            }
-
-            LoadBitmapPreview(path);
         }
 
         private void LoadPdfPreview(string path)
@@ -208,13 +332,14 @@ namespace Win11DesktopApp.Views
             {
                 NoImageText.Text = Res("PreviewLoading");
                 NoImageText.Visibility = Visibility.Visible;
-                _pdfPreviewTempFolder = Path.Combine(Path.GetTempPath(), "AC_ReplDoc_" + Guid.NewGuid().ToString("N")[..8]);
+                EnsureSessionTempFolder();
+                _pdfPreviewTempFolder = Path.Combine(_sessionTempFolder!, "pdf_pages");
                 Directory.CreateDirectory(_pdfPreviewTempFolder);
 
                 var pages = _employeeService.RenderPdfPages(path, _pdfPreviewTempFolder, "preview");
                 if (pages.Count == 0)
                 {
-                    CleanupPdfTemp();
+                    CleanupPdfPagePreviews();
                     NoImageText.Text = Res("ReplDocLoadError");
                     NoImageText.Visibility = Visibility.Visible;
                     PagerPanel.Visibility = Visibility.Collapsed;
@@ -266,9 +391,22 @@ namespace Win11DesktopApp.Views
             }
         }
 
-        private static bool IsPdfFile(string? path) =>
-            !string.IsNullOrEmpty(path)
-            && string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
+        private string? GetAiScanImagePath()
+        {
+            if (_selectedIsPdf)
+            {
+                if (_pdfPreviewPages.Count == 0)
+                    return null;
+
+                var pageIndex = Math.Clamp(_currentPdfPageIndex, 0, _pdfPreviewPages.Count - 1);
+                var pagePath = _pdfPreviewPages[pageIndex];
+                return File.Exists(pagePath) ? pagePath : null;
+            }
+
+            return string.IsNullOrEmpty(_selectedFilePath) || !File.Exists(_selectedFilePath)
+                ? null
+                : _selectedFilePath;
+        }
 
         private void BtnEditor_Click(object sender, RoutedEventArgs e)
         {
@@ -278,7 +416,7 @@ namespace Win11DesktopApp.Views
                 return;
             }
 
-            if (IsPdfFile(_selectedFilePath))
+            if (_selectedIsPdf)
             {
                 MessageBox.Show(Res("ReplDocEditorNotForPdf"), Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -294,7 +432,8 @@ namespace Win11DesktopApp.Views
                 if (editor.Saved && !string.IsNullOrEmpty(editor.ResultPath) && File.Exists(editor.ResultPath))
                 {
                     _selectedFilePath = editor.ResultPath;
-                    LoadPreview(_selectedFilePath);
+                    _selectedIsPdf = false;
+                    LoadBitmapPreview(_selectedFilePath);
                 }
             }
             catch (Exception ex)
@@ -333,7 +472,21 @@ namespace Win11DesktopApp.Views
                 else if (docKey == "passport_page2")
                     docKey = "passport2";
                 var prompt = AIScanPrompts.GetPrompt(docKey);
-                var result = await _geminiApiService.ChatWithImageAsync(_selectedFilePath, prompt, null);
+
+                string result;
+                if (_selectedIsPdf)
+                    result = await _geminiApiService.ChatWithFileAsync(_selectedFilePath, prompt, null);
+                else
+                {
+                    var imagePath = GetAiScanImagePath();
+                    if (string.IsNullOrEmpty(imagePath))
+                    {
+                        AIScanStatus.Text = Res("ReplDocLoadError");
+                        return;
+                    }
+
+                    result = await _geminiApiService.ChatWithImageAsync(imagePath, prompt, null);
+                }
 
                 if (result.StartsWith("["))
                 {
@@ -405,6 +558,7 @@ namespace Win11DesktopApp.Views
             {
                 BtnAIScan.IsEnabled = true;
                 AIScanSpinner.Visibility = Visibility.Collapsed;
+                UpdateInsuranceNumberHighlight();
             }
         }
 
@@ -425,8 +579,9 @@ namespace Win11DesktopApp.Views
             BtnNextPage.IsEnabled = _currentPdfPageIndex < _pdfPreviewPages.Count - 1;
         }
 
-        private void CleanupPdfTemp()
+        private void CleanupPdfPagePreviews()
         {
+            _pdfPreviewPages.Clear();
             if (!string.IsNullOrWhiteSpace(_pdfPreviewTempFolder) && Directory.Exists(_pdfPreviewTempFolder))
             {
                 try
@@ -439,6 +594,23 @@ namespace Win11DesktopApp.Views
             }
 
             _pdfPreviewTempFolder = null;
+        }
+
+        private void CleanupSessionTemp()
+        {
+            CleanupPdfPagePreviews();
+            if (!string.IsNullOrWhiteSpace(_sessionTempFolder) && Directory.Exists(_sessionTempFolder))
+            {
+                try
+                {
+                    Directory.Delete(_sessionTempFolder, true);
+                }
+                catch
+                {
+                }
+            }
+
+            _sessionTempFolder = null;
         }
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
@@ -460,7 +632,7 @@ namespace Win11DesktopApp.Views
 
         protected override void OnClosed(EventArgs e)
         {
-            CleanupPdfTemp();
+            CleanupSessionTemp();
             base.OnClosed(e);
         }
     }

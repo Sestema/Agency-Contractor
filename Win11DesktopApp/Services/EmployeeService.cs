@@ -95,6 +95,8 @@ namespace Win11DesktopApp.Services
             _adminMirrorSyncService = adminMirrorSyncService;
             _financeService = financeService;
             _companyService = companyService;
+            _useLocalDbArchiveLog = _archiveLogStorage != null;
+            _useLocalDbHistory = _employeeHistoryStorage != null;
             CleanupStaleTempFolders();
         }
 
@@ -1538,34 +1540,6 @@ namespace Win11DesktopApp.Services
             return Path.Combine(archiveFolder, "archive_log.json");
         }
 
-        public LocalDbMigrationResult EnsureArchiveLogMigratedToLocalDb()
-        {
-            try
-            {
-                if (_archiveLogStorage == null)
-                    return new LocalDbMigrationResult { Message = "Archive log storage is not configured." };
-
-                var path = GetArchiveLogPath();
-                if (string.IsNullOrWhiteSpace(path))
-                    return new LocalDbMigrationResult { Message = "Archive log path is not available." };
-
-                var result = _archiveLogStorage.MigrateArchiveLogIfNeeded(path, LoadArchiveLogEntries(path));
-                _useLocalDbArchiveLog = result.IsSuccessful;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _useLocalDbArchiveLog = false;
-                LoggingService.LogError("EmployeeService.EnsureArchiveLogMigratedToLocalDb", ex);
-                return new LocalDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = false,
-                    Message = ex.Message
-                };
-            }
-        }
-
         public EmployeeIndexRebuildResult EnsureEmployeeIndexBuilt()
         {
             try
@@ -2422,30 +2396,6 @@ namespace Win11DesktopApp.Services
 
         // ============ HISTORY ============
 
-        public LocalDbMigrationResult EnsureEmployeeHistoryMigratedToLocalDb()
-        {
-            try
-            {
-                if (_employeeHistoryStorage == null)
-                    return new LocalDbMigrationResult { Message = "Employee history storage is not configured." };
-
-                var result = _employeeHistoryStorage.MigrateEmployeeHistoryIfNeeded(BuildEmployeeHistoryMigrationSources());
-                _useLocalDbHistory = result.IsSuccessful;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _useLocalDbHistory = false;
-                LoggingService.LogError("EmployeeService.EnsureEmployeeHistoryMigratedToLocalDb", ex);
-                return new LocalDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = false,
-                    Message = ex.Message
-                };
-            }
-        }
-
         public async Task AddHistoryEntry(string employeeFolder, string employeeId, EmployeeHistoryEntry entry)
         {
             await _historyLock.WaitAsync();
@@ -2669,81 +2619,6 @@ namespace Win11DesktopApp.Services
             entries.Add(entry);
             WriteJsonAtomic(historyFile, entries);
             await Task.CompletedTask;
-        }
-
-        private IEnumerable<EmployeeHistoryMigrationSource> BuildEmployeeHistoryMigrationSources()
-        {
-            foreach (var source in EnumerateEmployeeFolders())
-            {
-                var historyJsonPath = Path.Combine(source.EmployeeFolder, "history.json");
-                if (!File.Exists(historyJsonPath) || File.Exists(historyJsonPath + ".migrated"))
-                    continue;
-
-                var data = LoadEmployeeData(source.EmployeeFolder);
-                if (data == null || string.IsNullOrWhiteSpace(data.UniqueId))
-                {
-                    LoggingService.LogWarning("EmployeeService.BuildEmployeeHistoryMigrationSources",
-                        $"Skipped history migration because employee.json or UniqueId is missing: {source.EmployeeFolder}");
-                    yield return new EmployeeHistoryMigrationSource
-                    {
-                        EmployeeFolder = source.EmployeeFolder,
-                        FirmName = source.FirmName,
-                        HistoryJsonPath = historyJsonPath
-                    };
-                    continue;
-                }
-
-                yield return new EmployeeHistoryMigrationSource
-                {
-                    EmployeeId = data.UniqueId,
-                    EmployeeFolder = source.EmployeeFolder,
-                    FirmName = source.FirmName,
-                    HistoryJsonPath = historyJsonPath,
-                    Entries = LoadHistoryEntries(historyJsonPath)
-                };
-            }
-        }
-
-        private IEnumerable<EmployeeHistoryMigrationSource> BuildEmployeeHistoryCleanupSources()
-        {
-            foreach (var source in EnumerateEmployeeFolders())
-            {
-                var historyJsonPath = Path.Combine(source.EmployeeFolder, "history.json");
-                if (File.Exists(historyJsonPath) || !File.Exists(historyJsonPath + ".migrated"))
-                    continue;
-
-                var data = LoadEmployeeData(source.EmployeeFolder);
-                if (data == null || string.IsNullOrWhiteSpace(data.UniqueId))
-                {
-                    LoggingService.LogWarning("EmployeeService.BuildEmployeeHistoryCleanupSources",
-                        $"Skipped history cleanup because employee.json or UniqueId is missing: {source.EmployeeFolder}");
-                    continue;
-                }
-
-                yield return new EmployeeHistoryMigrationSource
-                {
-                    EmployeeId = data.UniqueId,
-                    EmployeeFolder = source.EmployeeFolder,
-                    FirmName = source.FirmName,
-                    HistoryJsonPath = historyJsonPath
-                };
-            }
-        }
-
-        public int CleanupMigratedEmployeeHistoryBackups()
-        {
-            if (_employeeHistoryStorage == null)
-                return 0;
-
-            try
-            {
-                return _employeeHistoryStorage.CleanupMigratedEmployeeHistoryBackups(BuildEmployeeHistoryCleanupSources());
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("EmployeeService.CleanupMigratedEmployeeHistoryBackups", ex.Message);
-                return 0;
-            }
         }
 
         private IEnumerable<(string EmployeeFolder, string FirmName)> EnumerateEmployeeFolders()

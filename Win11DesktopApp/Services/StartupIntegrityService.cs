@@ -229,7 +229,7 @@ namespace Win11DesktopApp.Services
                 if (File.Exists(legacyDatabasePath))
                 {
                     LoggingService.LogInfo("StartupIntegrityService.Database",
-                        "Legacy company_data.json detected. Migration will run during load.");
+                        "Legacy company_data.json detected. It is no longer auto-migrated and will be ignored; core.db is authoritative.");
                 }
 
                 return;

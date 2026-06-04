@@ -23,6 +23,11 @@ namespace Win11DesktopApp.Services
             WriteIndented = true
         };
 
+        // Workspace passport is read on many operations; remember the last logged identity so the
+        // informative "Using workspace passport" line appears once per change instead of dozens of times.
+        private static readonly object WorkspacePassportLogLock = new();
+        private static string _lastLoggedWorkspacePassportKey = string.Empty;
+
         public FolderService(AppSettingsService appSettingsService)
         {
             _appSettingsService = appSettingsService;
@@ -210,9 +215,18 @@ namespace Win11DesktopApp.Services
                     return WorkspacePassportResult.Invalid(passportPath);
                 }
 
-                LoggingService.LogInfo(
-                    "WorkspacePassport",
-                    $"Using workspace passport. workspaceId={passport.WorkspaceId}; file=\"{passportPath}\"");
+                var logKey = $"{passport.WorkspaceId}|{passportPath}";
+                lock (WorkspacePassportLogLock)
+                {
+                    if (!string.Equals(_lastLoggedWorkspacePassportKey, logKey, StringComparison.Ordinal))
+                    {
+                        _lastLoggedWorkspacePassportKey = logKey;
+                        LoggingService.LogInfo(
+                            "WorkspacePassport",
+                            $"Using workspace passport. workspaceId={passport.WorkspaceId}; file=\"{passportPath}\"");
+                    }
+                }
+
                 return WorkspacePassportResult.Existing(passport, passportPath);
             }
             catch (Exception ex)

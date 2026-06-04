@@ -2049,6 +2049,7 @@
     <sys:String x:Key="ReplDocOldValue">Було</sys:String>
     <sys:String x:Key="ReplDocLoadError">Не вдалося завантажити прев'ю документа</sys:String>
     <sys:String x:Key="ReplDocEditorNotForPdf">Редактор доступний лише для зображень</sys:String>
+    <sys:String x:Key="ReplDocInsuranceNumberChanged">Номер відрізняється від попереднього — перевірте перед збереженням</sys:String>
     <sys:String x:Key="PreviewLoading">Завантаження...</sys:String>
     <sys:String x:Key="PreviewFailed">Не вдалося показати</sys:String>
     <sys:String x:Key="PreviewRetry">Повторити</sys:String>

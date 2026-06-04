@@ -2048,6 +2048,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="ReplDocOldValue">Bylo</sys:String>
     <sys:String x:Key="ReplDocLoadError">Nepodařilo se načíst náhled dokumentu</sys:String>
     <sys:String x:Key="ReplDocEditorNotForPdf">Editor je dostupný pouze pro obrázky</sys:String>
+    <sys:String x:Key="ReplDocInsuranceNumberChanged">Číslo se liší od předchozího — před uložením zkontrolujte</sys:String>
     <sys:String x:Key="PreviewLoading">Načítání...</sys:String>
     <sys:String x:Key="PreviewFailed">Nepodařilo se zobrazit</sys:String>
     <sys:String x:Key="PreviewRetry">Zkusit znovu</sys:String>

@@ -22,40 +22,14 @@ namespace Win11DesktopApp.Services
             IFinanceSalaryHistoryStorage? salaryHistoryStorage,
             CompanyService companyService,
             Func<string, string?> resolveEmployeeId,
-            Func<string, string?, string> resolveEmployeeFolder,
-            bool useStorageImmediately = false)
+            Func<string, string?, string> resolveEmployeeFolder)
         {
             _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _salaryHistoryStorage = salaryHistoryStorage;
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _resolveEmployeeId = resolveEmployeeId;
             _resolveEmployeeFolder = resolveEmployeeFolder;
-            _useLocalDb = useStorageImmediately && _salaryHistoryStorage != null;
-        }
-
-        public LocalDbMigrationResult EnsureMigratedToLocalDb()
-        {
-            try
-            {
-                if (_salaryHistoryStorage == null)
-                    return new LocalDbMigrationResult { Message = "Salary history storage is not configured." };
-
-                var sources = BuildSalaryHistoryMigrationSources().ToList();
-                var result = _salaryHistoryStorage.MigrateSalaryHistoryIfNeeded(sources);
-                _useLocalDb = result.IsSuccessful;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _useLocalDb = false;
-                LoggingService.LogError("FinanceSalaryHistoryService.EnsureMigratedToLocalDb", ex);
-                return new LocalDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = false,
-                    Message = ex.Message
-                };
-            }
+            _useLocalDb = _salaryHistoryStorage != null;
         }
 
         public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
@@ -133,8 +107,7 @@ namespace Win11DesktopApp.Services
                 if (_useLocalDb && _salaryHistoryStorage != null)
                 {
                     var dbRecords = _salaryHistoryStorage.GetSalaryHistory(employeeId, employeeFolder);
-                    if (dbRecords.Count > 0 || _salaryHistoryStorage.IsSalaryHistoryMigrationCompleted())
-                        return DeduplicateSalaryHistoryRecords(dbRecords);
+                    return DeduplicateSalaryHistoryRecords(dbRecords);
                 }
 
                 return LoadSalaryHistoryFromResolvedFolder(employeeFolder, employeeId);
@@ -151,8 +124,7 @@ namespace Win11DesktopApp.Services
             if (_useLocalDb && _salaryHistoryStorage != null)
             {
                 var dbRecords = _salaryHistoryStorage.GetSalaryHistory(employeeId ?? string.Empty, employeeFolder);
-                if (dbRecords.Count > 0 || _salaryHistoryStorage.IsSalaryHistoryMigrationCompleted())
-                    return DeduplicateSalaryHistoryRecords(dbRecords);
+                return DeduplicateSalaryHistoryRecords(dbRecords);
             }
 
             var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
@@ -198,96 +170,5 @@ namespace Win11DesktopApp.Services
 
         private static string NormalizeSalaryHistoryFirmKey(string? firmName)
             => SalaryHistoryDuplicateCleanup.NormalizeSalaryHistoryFirmKey(firmName);
-
-        public int CleanupMigratedSalaryHistoryBackups()
-        {
-            if (_salaryHistoryStorage == null)
-                return 0;
-
-            try
-            {
-                return _salaryHistoryStorage.CleanupMigratedSalaryHistoryBackups(BuildSalaryHistoryCleanupSources());
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("FinanceSalaryHistoryService.CleanupMigratedSalaryHistoryBackups", ex);
-                return 0;
-            }
-        }
-
-        private IEnumerable<SalaryHistoryMigrationSource> BuildSalaryHistoryMigrationSources()
-        {
-            foreach (var employeeFolder in EnumerateSalaryHistoryEmployeeFolders())
-            {
-                var historyJsonPath = Path.Combine(employeeFolder, SalaryHistoryFile);
-                if (!File.Exists(historyJsonPath) || File.Exists(historyJsonPath + ".migrated"))
-                    continue;
-
-                var employeeId = _resolveEmployeeId(employeeFolder) ?? string.Empty;
-                IReadOnlyList<SalaryHistoryRecord> records;
-                try
-                {
-                    records = SafeFileService.ReadJsonOrDefault(historyJsonPath, new List<SalaryHistoryRecord>());
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("FinanceSalaryHistoryService.BuildSalaryHistoryMigrationSources",
-                        $"Skipped salary history migration because salary_history.json could not be read: {employeeFolder}. {ex.Message}");
-                    continue;
-                }
-
-                yield return new SalaryHistoryMigrationSource
-                {
-                    EmployeeId = employeeId,
-                    EmployeeFolder = employeeFolder,
-                    HistoryJsonPath = historyJsonPath,
-                    Records = records
-                };
-            }
-        }
-
-        private IEnumerable<SalaryHistoryMigrationSource> BuildSalaryHistoryCleanupSources()
-        {
-            foreach (var employeeFolder in EnumerateSalaryHistoryEmployeeFolders())
-            {
-                var historyJsonPath = Path.Combine(employeeFolder, SalaryHistoryFile);
-                if (File.Exists(historyJsonPath) || !File.Exists(historyJsonPath + ".migrated"))
-                    continue;
-
-                yield return new SalaryHistoryMigrationSource
-                {
-                    EmployeeId = _resolveEmployeeId(employeeFolder) ?? string.Empty,
-                    EmployeeFolder = employeeFolder,
-                    HistoryJsonPath = historyJsonPath
-                };
-            }
-        }
-
-        private IEnumerable<string> EnumerateSalaryHistoryEmployeeFolders()
-        {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var company in _companyService.Companies)
-            {
-                var employeesFolder = _folderService.GetEmployeesFolder(company.Name);
-                if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
-                    continue;
-
-                foreach (var folder in Directory.GetDirectories(employeesFolder))
-                {
-                    if (seen.Add(folder))
-                        yield return folder;
-                }
-            }
-
-            var archiveFolder = _folderService.GetArchiveFolder();
-            if (string.IsNullOrWhiteSpace(archiveFolder) || !Directory.Exists(archiveFolder))
-                yield break;
-
-            foreach (var folder in Directory.GetDirectories(archiveFolder))
-            {
-                if (seen.Add(folder))
-                    yield return folder;
-            }
-        }
     }
 }

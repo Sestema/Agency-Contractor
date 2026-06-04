@@ -24,6 +24,7 @@ namespace Win11DesktopApp.Services
             _folderService = folderService;
             _activityLogStorage = activityLogStorage;
             _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
+            _useLocalDb = _activityLogStorage != null;
         }
 
         private string LogFilePath
@@ -32,35 +33,6 @@ namespace Win11DesktopApp.Services
             {
                 var root = _folderService.RootPath;
                 return string.IsNullOrEmpty(root) ? "" : Path.Combine(root, "activity_log.json");
-            }
-        }
-
-        public LocalDbMigrationResult EnsureMigratedToLocalDb()
-        {
-            try
-            {
-                if (_activityLogStorage == null)
-                    return new LocalDbMigrationResult { Message = "Activity log storage is not configured." };
-
-                var path = LogFilePath;
-                if (string.IsNullOrWhiteSpace(path))
-                    return new LocalDbMigrationResult { Message = "Activity log path is not available." };
-
-                var entries = LoadEntries(path);
-                var result = _activityLogStorage.MigrateActivityLogIfNeeded(path, entries);
-                _useLocalDb = result.IsSuccessful;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _useLocalDb = false;
-                LoggingService.LogWarning("ActivityLogService.EnsureMigratedToLocalDb", ex.Message);
-                return new LocalDbMigrationResult
-                {
-                    WasMigrationAttempted = true,
-                    IsSuccessful = false,
-                    Message = ex.Message
-                };
             }
         }
 

@@ -2034,6 +2034,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="ReplDocOldValue">Was</sys:String>
     <sys:String x:Key="ReplDocLoadError">Could not load document preview</sys:String>
     <sys:String x:Key="ReplDocEditorNotForPdf">Editor is available for images only</sys:String>
+    <sys:String x:Key="ReplDocInsuranceNumberChanged">Number differs from the previous one — verify before saving</sys:String>
     <sys:String x:Key="PreviewLoading">Loading...</sys:String>
     <sys:String x:Key="PreviewFailed">Preview failed</sys:String>
     <sys:String x:Key="PreviewRetry">Retry</sys:String>
