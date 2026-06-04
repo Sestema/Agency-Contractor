@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,7 +22,7 @@ namespace Win11DesktopApp.Views
 
         private bool _isDragging;
         private PdfPlacementViewModel? _dragPlacement;
-        private Border? _dragElement;
+        private FrameworkElement? _dragElement;
         private Point _dragStartMouse;
         private double _dragStartLeft;
         private double _dragStartTop;
@@ -291,6 +292,48 @@ namespace Win11DesktopApp.Views
 
         #region Tag Overlays
 
+        private double GetOverlayPixelsPerDip()
+        {
+            var source = PresentationSource.FromVisual(this);
+            if (source?.CompositionTarget != null)
+                return source.CompositionTarget.TransformToDevice.M11;
+            return 1.0;
+        }
+
+        private static (double width, double height) MeasureOverlayText(
+            string text,
+            string fontFamily,
+            double fontSizePx,
+            double maxTextWidthPx,
+            double pixelsPerDip,
+            bool allowWrap)
+        {
+            var sample = string.IsNullOrWhiteSpace(text) ? " " : text;
+            var typeface = new Typeface(
+                new FontFamily(fontFamily),
+                FontStyles.Normal,
+                FontWeights.Normal,
+                FontStretches.Normal);
+
+            var formatted = new FormattedText(
+                sample,
+                CultureInfo.CurrentUICulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                fontSizePx,
+                Brushes.Black,
+                pixelsPerDip);
+
+            if (maxTextWidthPx > 0)
+                formatted.MaxTextWidth = maxTextWidthPx;
+
+            if (!allowWrap)
+                formatted.MaxLineCount = 1;
+
+            return (Math.Ceiling(formatted.WidthIncludingTrailingWhitespace),
+                Math.Ceiling(formatted.Height));
+        }
+
         private void RenderTagOverlays()
         {
             if (DataContext is not PdfEditorViewModel vm) return;
@@ -317,98 +360,51 @@ namespace Win11DesktopApp.Views
             var selectedBorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 152, 0));
             var selectedBg = new SolidColorBrush(Color.FromArgb(220, 255, 243, 224));
 
-            HorizontalAlignment ResolveFieldAlignment(string? align) =>
-                string.Equals(align, "center", StringComparison.OrdinalIgnoreCase)
-                    ? HorizontalAlignment.Center
-                    : string.Equals(align, "right", StringComparison.OrdinalIgnoreCase)
-                        ? HorizontalAlignment.Right
-                        : HorizontalAlignment.Left;
+            var pixelsPerDip = GetOverlayPixelsPerDip();
+            var pageScaleY = canvasH / vm.PdfPageHeight;
+            var pageScaleX = canvasW / vm.PdfPageWidth;
 
             foreach (var placement in vm.CurrentPagePlacements)
             {
                 double x = placement.X * canvasW;
                 double y = placement.Y * canvasH;
 
-                double scaledFontSize = Math.Max(8, placement.FontSize * (canvasH / vm.PdfPageHeight) * 0.75);
+                var pdfFontSize = placement.FontSize > 0 ? placement.FontSize : 10;
+                var fontFamily = string.IsNullOrWhiteSpace(placement.FontFamily) ? "Arial" : placement.FontFamily;
+                double scaledFontSize = Math.Max(6, pdfFontSize * pageScaleY);
                 bool isSelected = placement.IsSelected;
                 bool isField = placement.IsField;
+                bool allowWrap = isField || placement.IsInlineText;
                 double scaledMaxW = placement.MaxWidth > 0
-                    ? placement.MaxWidth * (canvasW / vm.PdfPageWidth)
-                    : 160 * (canvasW / vm.PdfPageWidth);
-                double scaledBoxHeight = placement.BoxHeight > 0
-                    ? placement.BoxHeight * (canvasH / vm.PdfPageHeight)
-                    : Math.Max(18, scaledFontSize * 1.8);
+                    ? placement.MaxWidth * pageScaleX
+                    : 0;
 
-                var border = new Border
-                {
-                    Background = isSelected ? selectedBg : bgBrush,
-                    BorderBrush = isSelected ? selectedBorderBrush : accentBrush,
-                    BorderThickness = new Thickness(isSelected ? 2 : 1.5),
-                    CornerRadius = new CornerRadius(3),
-                    Padding = isField ? new Thickness(4, 2, 4, 2) : new Thickness(4, 1, 4, 1),
-                    Cursor = Cursors.SizeAll,
-                    Tag = placement
-                };
+                var (textWidth, textHeight) = MeasureOverlayText(
+                    placement.OverlayText,
+                    fontFamily,
+                    scaledFontSize,
+                    scaledMaxW,
+                    pixelsPerDip,
+                    allowWrap);
 
-                if (isField)
-                {
-                    border.Width = Math.Max(60, scaledMaxW);
-                    border.Height = Math.Max(18, scaledBoxHeight);
-                }
+                const double chromePadH = 2;
+                const double chromePadV = 1;
+                var deleteSize = Math.Max(12, scaledFontSize * 0.85);
+                var contentWidth = Math.Max(8, textWidth);
+                var contentHeight = Math.Max(8, textHeight);
 
-                var grid = new Grid();
-                if (isField)
-                {
-                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-                }
-                else
-                {
-                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                }
-
-                var deleteBtn = new Button
-                {
-                    Content = "\uE711",
-                    FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                    FontSize = Math.Max(8, scaledFontSize * 0.6),
-                    Width = Math.Max(13, scaledFontSize * 0.85),
-                    Height = Math.Max(13, scaledFontSize * 0.85),
-                    Background = new SolidColorBrush(Color.FromArgb(200, 220, 40, 40)),
-                    Foreground = Brushes.White,
-                    BorderThickness = new Thickness(0),
-                    Padding = new Thickness(0),
-                    Cursor = Cursors.Hand,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                    HorizontalContentAlignment = HorizontalAlignment.Center,
-                    VerticalContentAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 3, 0)
-                };
-                deleteBtn.Tag = placement;
-                deleteBtn.Click += DeleteBtn_Click;
-                if (isField)
-                    Grid.SetRow(deleteBtn, 0);
-                else
-                    Grid.SetColumn(deleteBtn, 0);
-                grid.Children.Add(deleteBtn);
-
-                var text = new TextBlock
+                var textBlock = new TextBlock
                 {
                     Text = placement.OverlayText,
                     FontSize = scaledFontSize,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = isSelected ? new SolidColorBrush(Color.FromArgb(255, 230, 81, 0)) : accentBrush,
-                    FontFamily = new FontFamily(placement.FontFamily ?? "Consolas"),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxWidth = isField
-                        ? Math.Max(40, scaledMaxW - 8)
-                        : placement.MaxWidth > 0
-                            ? Math.Max(40, scaledMaxW)
-                            : 320,
-                    HorizontalAlignment = isField ? ResolveFieldAlignment(placement.TextAlign) : HorizontalAlignment.Left,
+                    FontWeight = FontWeights.Normal,
+                    Foreground = isSelected
+                        ? new SolidColorBrush(Color.FromArgb(255, 230, 81, 0))
+                        : accentBrush,
+                    FontFamily = new FontFamily(fontFamily),
+                    TextTrimming = allowWrap ? TextTrimming.None : TextTrimming.CharacterEllipsis,
+                    TextWrapping = allowWrap && scaledMaxW > 0 ? TextWrapping.Wrap : TextWrapping.NoWrap,
+                    MaxWidth = scaledMaxW > 0 ? Math.Max(8, scaledMaxW) : double.PositiveInfinity,
                     TextAlignment = string.Equals(placement.TextAlign, "center", StringComparison.OrdinalIgnoreCase)
                         ? TextAlignment.Center
                         : string.Equals(placement.TextAlign, "right", StringComparison.OrdinalIgnoreCase)
@@ -416,50 +412,67 @@ namespace Win11DesktopApp.Views
                             : TextAlignment.Left
                 };
 
-                var sizeInfo = new TextBlock
+                var chrome = new Border
                 {
-                    Text = $" {placement.FontSize}pt",
-                    FontSize = Math.Max(7, scaledFontSize * 0.55),
-                    Foreground = new SolidColorBrush(Color.FromArgb(150, 100, 100, 100)),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(3, 0, 0, 0)
+                    Width = contentWidth + chromePadH * 2,
+                    Height = contentHeight + chromePadV * 2,
+                    Background = isSelected ? selectedBg : bgBrush,
+                    BorderBrush = isSelected ? selectedBorderBrush : accentBrush,
+                    BorderThickness = new Thickness(isSelected ? 2 : 1),
+                    CornerRadius = new CornerRadius(2),
+                    IsHitTestVisible = false
                 };
 
-                if (isField)
+                var host = new Canvas
                 {
-                    var fieldGrid = new Grid
-                    {
-                        VerticalAlignment = VerticalAlignment.Stretch,
-                        HorizontalAlignment = HorizontalAlignment.Stretch
-                    };
-                    fieldGrid.Children.Add(text);
-                    Grid.SetRow(fieldGrid, 1);
-                    grid.Children.Add(fieldGrid);
-                }
-                else
+                    Tag = placement,
+                    Cursor = Cursors.SizeAll,
+                    Background = Brushes.Transparent,
+                    Width = contentWidth,
+                    Height = contentHeight
+                };
+
+                var deleteBtn = new Button
                 {
-                    var textStack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-                    textStack.Children.Add(text);
-                    textStack.Children.Add(sizeInfo);
-                    Grid.SetColumn(textStack, 1);
-                    grid.Children.Add(textStack);
-                }
+                    Content = "\uE711",
+                    FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                    FontSize = Math.Max(7, scaledFontSize * 0.55),
+                    Width = deleteSize,
+                    Height = deleteSize,
+                    Background = new SolidColorBrush(Color.FromArgb(200, 220, 40, 40)),
+                    Foreground = Brushes.White,
+                    BorderThickness = new Thickness(0),
+                    Padding = new Thickness(0),
+                    Cursor = Cursors.Hand,
+                    HorizontalContentAlignment = HorizontalAlignment.Center,
+                    VerticalContentAlignment = VerticalAlignment.Center
+                };
+                deleteBtn.Tag = placement;
+                deleteBtn.Click += DeleteBtn_Click;
 
-                border.Child = grid;
-                if (!isField && placement.MaxWidth > 0)
-                    border.MaxWidth = scaledMaxW + 20;
+                Canvas.SetLeft(chrome, -chromePadH);
+                Canvas.SetTop(chrome, -chromePadV);
+                Canvas.SetLeft(textBlock, 0);
+                Canvas.SetTop(textBlock, 0);
+                Canvas.SetLeft(deleteBtn, -deleteSize - 3);
+                Canvas.SetTop(deleteBtn, Math.Max(0, (contentHeight - deleteSize) / 2));
 
-                border.MouseLeftButtonDown += TagBorder_MouseLeftButtonDown;
-                border.MouseMove += TagBorder_MouseMove;
-                border.MouseLeftButtonUp += TagBorder_MouseLeftButtonUp;
+                host.Children.Add(chrome);
+                host.Children.Add(textBlock);
+                host.Children.Add(deleteBtn);
 
-                Canvas.SetLeft(border, x);
-                Canvas.SetTop(border, y);
-                PdfCanvas.Children.Add(border);
+                host.MouseLeftButtonDown += TagBorder_MouseLeftButtonDown;
+                host.MouseMove += TagBorder_MouseMove;
+                host.MouseLeftButtonUp += TagBorder_MouseLeftButtonUp;
+
+                Canvas.SetLeft(host, x);
+                Canvas.SetTop(host, y);
+                PdfCanvas.Children.Add(host);
 
                 var dot = new Ellipse
                 {
-                    Width = 6, Height = 6,
+                    Width = 6,
+                    Height = 6,
                     Fill = isSelected ? selectedBorderBrush : accentBrush,
                     Stroke = Brushes.White,
                     StrokeThickness = 1,
@@ -576,7 +589,7 @@ namespace Win11DesktopApp.Views
 
         private void TagBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is not Border border) return;
+            if (sender is not FrameworkElement border) return;
             if (border.Tag is not PdfPlacementViewModel placement) return;
             if (DataContext is not PdfEditorViewModel vm) return;
 
@@ -706,7 +719,7 @@ namespace Win11DesktopApp.Views
 
         private void PlacedTag_Click(object sender, MouseButtonEventArgs e)
         {
-            if (sender is not Border border) return;
+            if (sender is not FrameworkElement border) return;
             if (border.Tag is not PdfPlacementViewModel placement) return;
             if (DataContext is not PdfEditorViewModel vm) return;
 

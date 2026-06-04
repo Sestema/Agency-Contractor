@@ -1179,7 +1179,7 @@ namespace Win11DesktopApp.ViewModels
                 FontSize = NewTagFontSize,
                 FontFamily = NewTagFontFamily,
                 MaxWidth = NewTagMaxWidth > 0 ? NewTagMaxWidth : 160,
-                BoxHeight = NewFieldHeight > 0 ? NewFieldHeight : 18,
+                BoxHeight = NewFieldHeight > 0 ? NewFieldHeight : Math.Max(NewTagFontSize * 1.25, NewTagFontSize + 2),
                 TextAlign = SelectedTextAlign,
                 PdfPageWidth = PdfPageWidth,
                 PdfPageHeight = PdfPageHeight

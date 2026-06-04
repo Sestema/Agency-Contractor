@@ -444,15 +444,7 @@ namespace Win11DesktopApp.Services
                 outputDoc.AddPage(sourceDoc.Pages[i]);
             }
 
-            // Top-left string format so that (x, y) is the top-left corner of the text,
-            // matching exactly where the user placed the tag marker in the editor.
-            var topLeftFormat = new XStringFormat
-            {
-                Alignment = XStringAlignment.Near,
-                LineAlignment = XLineAlignment.Near
-            };
-
-            // Draw tag values on each page
+            // Draw tag values on each page (top-left anchor matches editor overlay).
             foreach (var placement in tagMap.Placements)
             {
                 if (placement.Page < 0 || placement.Page >= outputDoc.PageCount) continue;
@@ -463,36 +455,7 @@ namespace Win11DesktopApp.Services
 
                 var page = outputDoc.Pages[placement.Page];
                 using var gfx = XGraphics.FromPdfPage(page);
-
-                var fontSize = placement.FontSize > 0 ? placement.FontSize : 10;
-                var fontFamily = !string.IsNullOrEmpty(placement.FontFamily) ? placement.FontFamily : "Arial";
-                var font = new XFont(fontFamily, fontSize);
-
-                var x = placement.X * page.Width.Point;
-                var y = placement.Y * page.Height.Point;
-
-                if (string.Equals(placement.Kind, "field", StringComparison.OrdinalIgnoreCase))
-                {
-                    var width = placement.MaxWidth > 0 ? placement.MaxWidth : 160;
-                    var height = placement.BoxHeight > 0 ? placement.BoxHeight : Math.Max(fontSize * 1.8, 18);
-                    var rect = new XRect(x, y, width, height);
-                    gfx.DrawString(value, font, XBrushes.Black, rect, BuildFieldStringFormat(placement.TextAlign));
-                }
-                else if (placement.MaxWidth > 0)
-                {
-                    var maxW = placement.MaxWidth;
-                    var rect = new XRect(x, y, maxW, page.Height.Point - y);
-                    var wrapFormat = new XStringFormat
-                    {
-                        Alignment = XStringAlignment.Near,
-                        LineAlignment = XLineAlignment.Near
-                    };
-                    gfx.DrawString(value, font, XBrushes.Black, rect, wrapFormat);
-                }
-                else
-                {
-                    gfx.DrawString(value, font, XBrushes.Black, new XPoint(x, y), topLeftFormat);
-                }
+                PdfTextLayoutHelper.DrawPlacement(gfx, page, placement, value);
             }
 
             outputDoc.Save(outputPath);
@@ -539,21 +502,6 @@ namespace Win11DesktopApp.Services
 
             var tagName = placement.Tag;
             return tagValues.TryGetValue(tagName, out var value) ? value ?? string.Empty : string.Empty;
-        }
-
-        private static XStringFormat BuildFieldStringFormat(string? textAlign)
-        {
-            var alignment = string.Equals(textAlign, "center", StringComparison.OrdinalIgnoreCase)
-                ? XStringAlignment.Center
-                : string.Equals(textAlign, "right", StringComparison.OrdinalIgnoreCase)
-                    ? XStringAlignment.Far
-                    : XStringAlignment.Near;
-
-            return new XStringFormat
-            {
-                Alignment = alignment,
-                LineAlignment = XLineAlignment.Center
-            };
         }
 
         private static void ApplyPdfFormFieldValue(object field, string value)

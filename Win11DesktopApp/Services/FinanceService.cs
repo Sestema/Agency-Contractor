@@ -223,15 +223,7 @@ namespace Win11DesktopApp.Services
 
         public IReadOnlyList<(int year, int month)> GetAvailableSalaryMonths()
         {
-            if (_salaryDbService == null)
-                return Array.Empty<(int year, int month)>();
-
-            return _salaryDbService.EnumerateMonthDatabases()
-                .Select(db => (db.year, db.month))
-                .Distinct()
-                .OrderByDescending(item => item.year)
-                .ThenByDescending(item => item.month)
-                .ToList();
+            return MonthPaymentsService.GetAvailableMonths();
         }
 
         public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)

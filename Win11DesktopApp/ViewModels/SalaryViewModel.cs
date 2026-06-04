@@ -39,6 +39,9 @@ namespace Win11DesktopApp.ViewModels
         private readonly SemaphoreSlim _saveReportGate = new(1, 1);
         private int _advanceRefreshVersion;
         private int _loadReportVersion;
+        // Deterministic snapshot of months that have salary data (works in both SQLite and PostgreSQL
+        // modes). Swapped atomically by reference so concurrent loads never see a half-built set.
+        private volatile HashSet<(int year, int month)>? _availableSalaryMonths;
         private int _loadedReportYear;
         private int _loadedReportMonth;
         private bool _hasLoadedReport;
@@ -447,6 +450,7 @@ namespace Win11DesktopApp.ViewModels
                 _selectedMonth = date.Month;
                 OnPropertyChanged(nameof(SelectedYear));
                 OnPropertyChanged(nameof(SelectedMonth));
+                RecomputeNextMonthExists();
                 await LoadReportAsync();
             }
             finally
@@ -880,7 +884,7 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var nextMonthSw = Stopwatch.StartNew();
-            await CheckNextMonthExistsAsync();
+            await RefreshAvailableSalaryMonthsAsync();
             nextMonthMs = nextMonthSw.ElapsedMilliseconds;
 
             totalSw.Stop();
@@ -1225,23 +1229,37 @@ namespace Win11DesktopApp.ViewModels
             return entry;
         }
 
-        private async Task CheckNextMonthExistsAsync()
+        // Synchronously decides whether the "next month" arrow should be shown, based on the cached
+        // set of available months for the CURRENT selection. Always writes a value (never bails out),
+        // so navigating back can't leave a stale flag behind. Instant and race-free.
+        private void RecomputeNextMonthExists()
+        {
+            var set = _availableSalaryMonths;
+            if (set == null)
+                return;
+
+            var next = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1);
+            NextMonthExists = set.Contains((next.Year, next.Month));
+        }
+
+        // Rebuilds the available-months snapshot from storage (background) and recomputes the flag for
+        // whatever month is selected when the query returns. Picks up months created on other PCs.
+        private async Task RefreshAvailableSalaryMonthsAsync()
         {
             try
             {
-                var year = _selectedYear;
-                var month = _selectedMonth;
-                var next = new DateTime(year, month, 1).AddMonths(1);
-                var hasEntries = await Task.Run(() => _financeService.MonthDataExists(next.Year, next.Month));
+                var months = await Task.Run(() => _financeService.GetAvailableSalaryMonths());
 
-                if (_selectedYear != year || _selectedMonth != month)
-                    return;
+                var set = new HashSet<(int year, int month)>();
+                foreach (var m in months)
+                    set.Add((m.year, m.month));
 
-                NextMonthExists = hasEntries;
+                _availableSalaryMonths = set;
+                RecomputeNextMonthExists();
             }
             catch (Exception ex)
             {
-                LoggingService.LogError("SalaryViewModel.CheckNextMonthExistsAsync", ex);
+                LoggingService.LogError("SalaryViewModel.RefreshAvailableSalaryMonthsAsync", ex);
             }
         }
 
@@ -1499,7 +1517,7 @@ namespace Win11DesktopApp.ViewModels
             await RefreshAdvanceSumsAsync();
             LoadExpenses();
             await SaveReportAsync(forceSaveAllEntries: true);
-            await CheckNextMonthExistsAsync();
+            await RefreshAvailableSalaryMonthsAsync();
         }
 
         private decimal GetDefaultRate(string employeeFolder)

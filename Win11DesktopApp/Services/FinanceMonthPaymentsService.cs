@@ -298,6 +298,27 @@ namespace Win11DesktopApp.Services
             return _monthPaymentsStorage!.MonthDbExists(year, month);
         }
 
+        public IReadOnlyList<(int year, int month)> GetAvailableMonths()
+        {
+            if (_monthPaymentsStorage == null)
+                return Array.Empty<(int year, int month)>();
+
+            try
+            {
+                return _monthPaymentsStorage.EnumerateMonthDatabases()
+                    .Select(db => (db.year, db.month))
+                    .Distinct()
+                    .OrderByDescending(item => item.year)
+                    .ThenByDescending(item => item.month)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("FinanceMonthPaymentsService.GetAvailableMonths", ex.Message);
+                return Array.Empty<(int year, int month)>();
+            }
+        }
+
         public void UpdateHourlyRateForward(
             string? employeeId,
             string employeeFolder,
