@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
+             xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="1000">
     <UserControl.Resources>
@@ -112,6 +113,32 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- History filter chips (same active pattern as DetTab*) -->
+        <Style x:Key="HistoryFilterBtn" TargetType="Button" BasedOn="{StaticResource TabBtn}">
+            <Setter Property="Padding" Value="11,6"/>
+            <Setter Property="Margin" Value="0,0,6,4"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Style.Triggers>
+                <DataTrigger Value="True">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{x:Static vm:EqualityConverter.Instance}">
+                            <Binding Path="Tag" RelativeSource="{RelativeSource Self}"/>
+                            <Binding Path="HistoryFilter"/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="SidebarSecondaryButton" TargetType="Button">
@@ -1773,37 +1800,12 @@
 
                                     <!-- Filter buttons -->
                                     <WrapPanel Grid.Row="1" Margin="0,0,0,14">
-                                        <WrapPanel.Resources>
-                                                <Style x:Key="FilterBtn" TargetType="Button">
-                                                <Setter Property="Padding" Value="11,6"/>
-                                                <Setter Property="Margin" Value="0,0,6,4"/>
-                                                <Setter Property="Cursor" Value="Hand"/>
-                                                <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border x:Name="bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
-                                                                    Padding="{TemplateBinding Padding}"
-                                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                                    <Setter Property="Foreground" Value="White"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </WrapPanel.Resources>
-                                        <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterAll}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="All"/>
-                                        <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterCreated}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Created"/>
-                                        <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterProfile}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Profile"/>
-                                        <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterDocuments}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Documents"/>
-                                        <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterStatus}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Status"/>
-                                        <Button Style="{StaticResource FilterBtn}" Content="{DynamicResource HistFilterArchive}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Archive"/>
+                                        <Button Style="{StaticResource HistoryFilterBtn}" Tag="All" Content="{DynamicResource HistFilterAll}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="All"/>
+                                        <Button Style="{StaticResource HistoryFilterBtn}" Tag="Created" Content="{DynamicResource HistFilterCreated}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Created"/>
+                                        <Button Style="{StaticResource HistoryFilterBtn}" Tag="Profile" Content="{DynamicResource HistFilterProfile}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Profile"/>
+                                        <Button Style="{StaticResource HistoryFilterBtn}" Tag="Documents" Content="{DynamicResource HistFilterDocuments}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Documents"/>
+                                        <Button Style="{StaticResource HistoryFilterBtn}" Tag="Status" Content="{DynamicResource HistFilterStatus}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Status"/>
+                                        <Button Style="{StaticResource HistoryFilterBtn}" Tag="Archive" Content="{DynamicResource HistFilterArchive}" Command="{Binding SetHistoryFilterCommand}" CommandParameter="Archive"/>
                                     </WrapPanel>
 
                                     <Grid Grid.Row="2">

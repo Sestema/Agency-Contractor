@@ -14,6 +14,13 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
+    public sealed class PaySignAgencyItem
+    {
+        /// <summary>null = all agencies, empty string = employers without agency, otherwise agency name.</summary>
+        public string? FilterKey { get; init; }
+        public string DisplayName { get; init; } = string.Empty;
+    }
+
     public class PaymentSignViewModel : ViewModelBase
     {
         private readonly EmployeeService _employeeService;
@@ -25,6 +32,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly DocumentLocalizationService _documentLocalizationService;
 
         public ObservableCollection<FirmCheckItem> Firms { get; } = new();
+        public ObservableCollection<PaySignAgencyItem> Agencies { get; } = new();
         public ObservableCollection<int> Months { get; } = new(Enumerable.Range(1, 12));
         public ObservableCollection<int> Years { get; } = new(Enumerable.Range(DateTime.Now.Year - 1, 7));
 
@@ -32,14 +40,21 @@ namespace Win11DesktopApp.ViewModels
         public int SelectedMonth
         {
             get => _selectedMonth;
-            set { if (SetProperty(ref _selectedMonth, value)) LoadFirms(); }
+            set { if (SetProperty(ref _selectedMonth, value)) ReloadAgenciesAndFirms(); }
         }
 
         private int _selectedYear;
         public int SelectedYear
         {
             get => _selectedYear;
-            set { if (SetProperty(ref _selectedYear, value)) LoadFirms(); }
+            set { if (SetProperty(ref _selectedYear, value)) ReloadAgenciesAndFirms(); }
+        }
+
+        private PaySignAgencyItem? _selectedAgency;
+        public PaySignAgencyItem? SelectedAgency
+        {
+            get => _selectedAgency;
+            set { if (SetProperty(ref _selectedAgency, value)) LoadFirms(); }
         }
 
         private string _paymentDate = string.Empty;
@@ -86,21 +101,74 @@ namespace Win11DesktopApp.ViewModels
             GeneratePdfCommand = new RelayCommand(o => GeneratePdf());
             SelectAllCommand = new RelayCommand(o => ToggleSelectAll());
 
-            LoadFirms();
+            ReloadAgenciesAndFirms();
         }
 
-        private void LoadFirms()
+        private void ReloadAgenciesAndFirms()
         {
-            var prevSelected = Firms.Where(f => f.IsSelected).Select(f => f.FirmName).ToHashSet();
+            var prevAgencyKey = _selectedAgency?.FilterKey;
+            var prevSelected = Firms.Where(f => f.IsSelected).Select(f => f.FirmName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var visibleCompanies = _companyService.Companies
+                .Where(c => _companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
+                .ToList();
+
+            var agencyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var hasNoAgency = false;
+            foreach (var company in visibleCompanies)
+            {
+                var agencyName = company.Agency?.Name?.Trim();
+                if (string.IsNullOrWhiteSpace(agencyName))
+                    hasNoAgency = true;
+                else
+                    agencyNames.Add(agencyName);
+            }
+
+            Agencies.Clear();
+            Agencies.Add(new PaySignAgencyItem
+            {
+                FilterKey = null,
+                DisplayName = GetString("ReportAllAgencies")
+            });
+            foreach (var agencyName in agencyNames.OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+            {
+                Agencies.Add(new PaySignAgencyItem
+                {
+                    FilterKey = agencyName,
+                    DisplayName = agencyName
+                });
+            }
+
+            if (hasNoAgency)
+            {
+                Agencies.Add(new PaySignAgencyItem
+                {
+                    FilterKey = string.Empty,
+                    DisplayName = GetString("SettingsUsersEmployerNoAgency")
+                });
+            }
+
+            _selectedAgency = Agencies.FirstOrDefault(a => a.FilterKey == prevAgencyKey) ?? Agencies.FirstOrDefault();
+            OnPropertyChanged(nameof(SelectedAgency));
+
+            LoadFirms(prevSelected);
+        }
+
+        private void LoadFirms(HashSet<string>? prevSelected = null)
+        {
+            prevSelected ??= Firms.Where(f => f.IsSelected).Select(f => f.FirmName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             Firms.Clear();
 
             var (salaryEntries, _) = _financeService.LoadAllFirmPayments(_selectedYear, _selectedMonth);
 
             var countByFirm = salaryEntries
                 .GroupBy(e => e.FirmName)
-                .ToDictionary(g => g.Key, g => g.Count());
+                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
-            foreach (var company in _companyService.Companies.Where(c => _companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth)))
+            foreach (var company in _companyService.Companies
+                         .Where(c => _companyService.IsCompanyVisibleForPeriod(c, _selectedYear, _selectedMonth))
+                         .Where(MatchesAgencyFilter)
+                         .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
             {
                 countByFirm.TryGetValue(company.Name, out int count);
                 Firms.Add(new FirmCheckItem
@@ -110,6 +178,18 @@ namespace Win11DesktopApp.ViewModels
                     IsSelected = prevSelected.Count == 0 || prevSelected.Contains(company.Name)
                 });
             }
+        }
+
+        private bool MatchesAgencyFilter(EmployerCompany company)
+        {
+            if (_selectedAgency == null || _selectedAgency.FilterKey == null)
+                return true;
+
+            var agencyName = company.Agency?.Name?.Trim() ?? string.Empty;
+            if (_selectedAgency.FilterKey == string.Empty)
+                return string.IsNullOrWhiteSpace(agencyName);
+
+            return string.Equals(agencyName, _selectedAgency.FilterKey, StringComparison.OrdinalIgnoreCase);
         }
 
         private void ToggleSelectAll()

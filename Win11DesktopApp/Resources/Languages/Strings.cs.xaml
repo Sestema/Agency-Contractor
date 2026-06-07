@@ -1552,6 +1552,7 @@
     <sys:String x:Key="PaySignTitle">Výplata na podpisy</sys:String>
     <sys:String x:Key="PaySignDesc">Generování PDF podpisového listu za převzetí mzdy za vybraný měsíc</sys:String>
     <sys:String x:Key="PaySignMonth">Měsíc:</sys:String>
+    <sys:String x:Key="PaySignAgency">Agentura:</sys:String>
     <sys:String x:Key="PaySignPayDate">Datum výplaty:</sys:String>
     <sys:String x:Key="PaySignSelectFirms">Vyberte firmy:</sys:String>
     <sys:String x:Key="PaySignGenerate">Generovat PDF</sys:String>

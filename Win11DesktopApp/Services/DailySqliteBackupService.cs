@@ -138,6 +138,8 @@ public sealed class DailySqliteBackupService
         Directory.CreateDirectory(backupRoot);
 
         var deleted = CleanupOldBackups(backupRoot, cancellationToken);
+        PruneEmptyDatedBackupFolders(backupRoot, cancellationToken);
+        CleanupStaleTempFolders(backupRoot, cancellationToken);
 
         if (Directory.Exists(todayBackup))
         {
@@ -158,7 +160,7 @@ public sealed class DailySqliteBackupService
         bool exportedFromPostgres,
         CancellationToken cancellationToken)
     {
-        SafeDeleteDirectory(context.TempBackup);
+        TryDeleteBackupDirectory(context.TempBackup);
         Directory.CreateDirectory(context.TempBackup);
 
         try
@@ -169,7 +171,7 @@ public sealed class DailySqliteBackupService
                 $"CreatedAtUtc={DateTime.UtcNow:O}{Environment.NewLine}Source={context.SqliteFolder}{Environment.NewLine}ExportedFromPostgres={exportedFromPostgres}{Environment.NewLine}FilesCopied={filesCopied}{Environment.NewLine}");
 
             if (Directory.Exists(context.TodayBackup))
-                SafeDeleteDirectory(context.TodayBackup);
+                TryDeleteBackupDirectory(context.TodayBackup);
 
             Directory.Move(context.TempBackup, context.TodayBackup);
 
@@ -187,7 +189,7 @@ public sealed class DailySqliteBackupService
         }
         catch
         {
-            SafeDeleteDirectory(context.TempBackup);
+            TryDeleteBackupDirectory(context.TempBackup);
             throw;
         }
     }
@@ -278,11 +280,90 @@ public sealed class DailySqliteBackupService
         foreach (var item in datedBackups.Skip(RetentionDays))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (TryDeleteDirectory(item.Path))
+            if (TryDeleteBackupDirectory(item.Path))
                 deleted++;
         }
 
         return deleted;
+    }
+
+    private static void PruneEmptyDatedBackupFolders(string backupRoot, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(backupRoot))
+            return;
+
+        foreach (var path in Directory.EnumerateDirectories(backupRoot))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var folderName = Path.GetFileName(path);
+            if (!DateTime.TryParseExact(
+                    folderName,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out _))
+            {
+                continue;
+            }
+
+            if (!IsDirectoryEmpty(path))
+                continue;
+
+            TryDeleteBackupDirectory(path);
+        }
+    }
+
+    private static void CleanupStaleTempFolders(string backupRoot, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(backupRoot))
+            return;
+
+        foreach (var path in Directory.EnumerateDirectories(backupRoot))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var folderName = Path.GetFileName(path);
+            if (!folderName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            TryDeleteBackupDirectory(path, "daily-backup-tmp-folder");
+        }
+    }
+
+    private static bool TryDeleteBackupDirectory(string path, string pendingReason = "daily-backup-old-folder")
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            return true;
+
+        if (EmployeeService.TryCleanupDeferredDirectory(path))
+            return true;
+
+        if (Directory.Exists(path))
+        {
+            LoggingService.LogWarning(
+                "DailySqliteBackupService.TryDeleteBackupDirectory",
+                $"Backup folder cleanup deferred: {path}");
+            _ = PendingCleanupService.EnqueueAsync(path, pendingReason);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsDirectoryEmpty(string path)
+    {
+        try
+        {
+            return Directory.Exists(path) && !Directory.EnumerateFileSystemEntries(path).Any();
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+        {
+            LoggingService.LogWarning(
+                "DailySqliteBackupService.IsDirectoryEmpty",
+                $"Cannot inspect backup folder '{path}': {ex.Message}");
+            return false;
+        }
     }
 
     private static SharedBackupLock? TryAcquireSharedBackupLock(string backupRoot, out string message)
@@ -336,27 +417,6 @@ public sealed class DailySqliteBackupService
             return true;
         }
         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    private static void SafeDeleteDirectory(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-            return;
-
-        Directory.Delete(path, recursive: true);
-    }
-
-    private static bool TryDeleteDirectory(string path)
-    {
-        try
-        {
-            SafeDeleteDirectory(path);
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
         {
             return false;
         }

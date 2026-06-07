@@ -300,7 +300,7 @@ namespace Win11DesktopApp.Views
             return 1.0;
         }
 
-        private static (double width, double height) MeasureOverlayText(
+        private static (double width, double height, double baseline) MeasureOverlayText(
             string text,
             string fontFamily,
             double fontSizePx,
@@ -331,7 +331,38 @@ namespace Win11DesktopApp.Views
                 formatted.MaxLineCount = 1;
 
             return (Math.Ceiling(formatted.WidthIncludingTrailingWhitespace),
-                Math.Ceiling(formatted.Height));
+                Math.Ceiling(formatted.Height),
+                formatted.Baseline);
+        }
+
+        // Returns the font's glyph-cell metrics in pixels (ascent and full cell height = ascent+descent),
+        // matching the metrics PdfSharp uses when it draws the generated text. This lets the editor box
+        // hug the font tightly and sit exactly where the generated text will land.
+        private static (double ascentPx, double cellHeightPx) GetFontCellMetrics(string fontFamily, double emPx)
+        {
+            try
+            {
+                var typeface = new Typeface(
+                    new FontFamily(fontFamily),
+                    FontStyles.Normal,
+                    FontWeights.Normal,
+                    FontStretches.Normal);
+
+                if (typeface.TryGetGlyphTypeface(out var glyphTypeface))
+                {
+                    var ascent = glyphTypeface.Baseline * emPx;
+                    var cell = glyphTypeface.Height * emPx;
+                    if (ascent > 0 && cell > 0)
+                        return (ascent, cell);
+                }
+            }
+            catch
+            {
+                // Fall through to approximate metrics below.
+            }
+
+            // Typical Latin font fallback (ascent ~0.9 em, cell ~1.15 em).
+            return (emPx * 0.9, emPx * 1.15);
         }
 
         private void RenderTagOverlays()
@@ -379,7 +410,7 @@ namespace Win11DesktopApp.Views
                     ? placement.MaxWidth * pageScaleX
                     : 0;
 
-                var (textWidth, textHeight) = MeasureOverlayText(
+                var (textWidth, textHeight, textBaseline) = MeasureOverlayText(
                     placement.OverlayText,
                     fontFamily,
                     scaledFontSize,
@@ -387,11 +418,18 @@ namespace Win11DesktopApp.Views
                     pixelsPerDip,
                     allowWrap);
 
-                const double chromePadH = 2;
-                const double chromePadV = 1;
+                // WYSIWYG box: hug the font cell (ascent+descent) and anchor it at the placement origin,
+                // so the box mirrors exactly where and how tall the generated PDF text will be.
+                var (ascentPx, cellHeightPx) = GetFontCellMetrics(fontFamily, scaledFontSize);
                 var deleteSize = Math.Max(12, scaledFontSize * 0.85);
                 var contentWidth = Math.Max(8, textWidth);
-                var contentHeight = Math.Max(8, textHeight);
+                // Single-line tags hug the glyph cell; wrapped fields grow to the measured text height.
+                var contentHeight = (allowWrap && scaledMaxW > 0)
+                    ? Math.Max(cellHeightPx, textHeight)
+                    : cellHeightPx;
+                // Shift the preview text up by the WPF line-box leading so its baseline lands at the same
+                // spot PdfSharp uses when generating (top-of-cell + ascent).
+                var textTopOffset = ascentPx - textBaseline;
 
                 var textBlock = new TextBlock
                 {
@@ -414,8 +452,8 @@ namespace Win11DesktopApp.Views
 
                 var chrome = new Border
                 {
-                    Width = contentWidth + chromePadH * 2,
-                    Height = contentHeight + chromePadV * 2,
+                    Width = contentWidth,
+                    Height = contentHeight,
                     Background = isSelected ? selectedBg : bgBrush,
                     BorderBrush = isSelected ? selectedBorderBrush : accentBrush,
                     BorderThickness = new Thickness(isSelected ? 2 : 1),
@@ -450,10 +488,10 @@ namespace Win11DesktopApp.Views
                 deleteBtn.Tag = placement;
                 deleteBtn.Click += DeleteBtn_Click;
 
-                Canvas.SetLeft(chrome, -chromePadH);
-                Canvas.SetTop(chrome, -chromePadV);
+                Canvas.SetLeft(chrome, 0);
+                Canvas.SetTop(chrome, 0);
                 Canvas.SetLeft(textBlock, 0);
-                Canvas.SetTop(textBlock, 0);
+                Canvas.SetTop(textBlock, textTopOffset);
                 Canvas.SetLeft(deleteBtn, -deleteSize - 3);
                 Canvas.SetTop(deleteBtn, Math.Max(0, (contentHeight - deleteSize) / 2));
 

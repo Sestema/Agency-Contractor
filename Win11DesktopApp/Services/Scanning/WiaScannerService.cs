@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -378,11 +379,16 @@ namespace Win11DesktopApp.Services.Scanning
                     throw new InvalidOperationException("No scanner device found.");
 
                 device = deviceInfo.Connect();
-                item = device.Items[1];
+                if (device == null)
+                    throw new InvalidOperationException("Could not connect to the scanner.");
 
-                SetProperty(item, WiaHorizontalResolution, settings.Dpi);
-                SetProperty(item, WiaVerticalResolution, settings.Dpi);
-                SetProperty(item, WiaCurrentIntent, settings.ColorMode switch
+                item = TryResolveScanItem(device);
+                if (item == null)
+                    throw new InvalidOperationException("Scanner connected but no scan source was found.");
+
+                TrySetItemProperty(item, WiaHorizontalResolution, settings.Dpi);
+                TrySetItemProperty(item, WiaVerticalResolution, settings.Dpi);
+                TrySetItemProperty(item, WiaCurrentIntent, settings.ColorMode switch
                 {
                     ScanColorMode.Grayscale => WiaIntentGrayscale,
                     ScanColorMode.BlackWhite => WiaIntentText,
@@ -390,12 +396,14 @@ namespace Win11DesktopApp.Services.Scanning
                 });
 
                 if (settings.Source == ScanSource.Feeder)
-                    SetProperty(item, WiaDocumentHandlingSelect, 1);
+                    TrySetItemProperty(item, WiaDocumentHandlingSelect, 1);
                 else if (settings.Source == ScanSource.Flatbed)
-                    SetProperty(item, WiaDocumentHandlingSelect, 2);
+                    TrySetItemProperty(item, WiaDocumentHandlingSelect, 2);
 
                 ThrowIfCancelled(cancellationToken);
                 image = item.Transfer(WiaFormatJpeg);
+                if (image == null)
+                    throw new InvalidOperationException("Scanner returned no image.");
 
                 Directory.CreateDirectory(outputFolder);
                 var outputPath = Path.Combine(outputFolder, $"wia-{Guid.NewGuid():N}.jpg");
@@ -602,28 +610,167 @@ namespace Win11DesktopApp.Services.Scanning
             }
         }
 
-        private static void SetProperty(dynamic item, int propertyId, object value)
-        {
-            foreach (dynamic property in item.Properties)
-            {
-                if ((int)property.PropertyID != propertyId)
-                    continue;
-
-                SetPropertyValue(property, value);
-                return;
-            }
-        }
-
-        private static void SetPropertyValue(dynamic property, object value)
+        private static dynamic? TryResolveScanItem(dynamic device)
         {
             try
             {
-                property.Value = value;
+                var count = SafeInt(device.Items.Count);
+                if (count < 1)
+                    return null;
+
+                for (var i = 1; i <= count; i++)
+                {
+                    try
+                    {
+                        var candidate = device.Items[i];
+                        if (candidate != null)
+                            return candidate;
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("WiaScannerService.TryResolveScanItem", ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("WiaScannerService.TryResolveScanItem", ex.Message);
+            }
+
+            return null;
+        }
+
+        private static void TrySetItemProperty(object item, int propertyId, object value)
+        {
+            if (TrySetPropertyViaIndex(item, propertyId, value) ||
+                TrySetPropertyViaEnumeration(item, propertyId, value))
+                return;
+
+            LoggingService.LogWarning(
+                "WiaScannerService.TrySetItemProperty",
+                $"Could not set WIA property {propertyId}; scanner will use its default.");
+        }
+
+        private static bool TrySetPropertyViaIndex(object item, int propertyId, object value)
+        {
+            try
+            {
+                dynamic dynamicItem = item;
+                dynamic properties = dynamicItem.Properties;
+                if (properties == null)
+                    return false;
+
+                try
+                {
+                    dynamic property = properties[propertyId];
+                    if (property != null && TrySetPropertyValue(property, value))
+                        return true;
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    dynamic property = properties.Item[propertyId];
+                    if (property != null && TrySetPropertyValue(property, value))
+                        return true;
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    dynamic property = properties.Item(propertyId);
+                    if (property != null && TrySetPropertyValue(property, value))
+                        return true;
+                }
+                catch
+                {
+                }
             }
             catch
             {
-                property.set_Value(value);
             }
+
+            return false;
+        }
+
+        private static bool TrySetPropertyViaEnumeration(object item, int propertyId, object value)
+        {
+            try
+            {
+                dynamic dynamicItem = item;
+                foreach (dynamic property in dynamicItem.Properties)
+                {
+                    if (property == null)
+                        continue;
+
+                    if (SafeInt(property.PropertyID) != propertyId)
+                        continue;
+
+                    if (TrySetPropertyValue(property, value))
+                        return true;
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+
+        private static bool TrySetPropertyValue(object property, object value)
+        {
+            if (property == null)
+                return false;
+
+            const BindingFlags instancePublic = BindingFlags.Instance | BindingFlags.Public;
+            var type = property.GetType();
+
+            try
+            {
+                type.InvokeMember(
+                    "Value",
+                    instancePublic | BindingFlags.SetProperty,
+                    null,
+                    property,
+                    new[] { value });
+                return true;
+            }
+            catch
+            {
+            }
+
+            foreach (var methodName in new[] { "set_Value", "put_Value" })
+            {
+                try
+                {
+                    type.InvokeMember(
+                        methodName,
+                        instancePublic | BindingFlags.InvokeMethod,
+                        null,
+                        property,
+                        new[] { value });
+                    return true;
+                }
+                catch
+                {
+                }
+            }
+
+            try
+            {
+                dynamic dynamicProperty = property;
+                dynamicProperty.Value = value;
+                return true;
+            }
+            catch
+            {
+            }
+
+            return false;
         }
 
         private static string? ReadProperty(dynamic properties, string name)

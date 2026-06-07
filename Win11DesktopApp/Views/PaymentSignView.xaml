@@ -51,14 +51,16 @@
                 </StackPanel>
             </Border>
 
-            <!-- Parameters: Month + Date -->
+            <!-- Parameters: Month + Agency + Date -->
             <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                     CornerRadius="14" Padding="{StaticResource CardInnerPadding}" Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -76,8 +78,18 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Payment date -->
+                    <!-- Agency filter -->
                     <StackPanel Grid.Column="2">
+                        <TextBlock Text="{DynamicResource PaySignAgency}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,8"/>
+                        <ComboBox ItemsSource="{Binding Agencies}"
+                                  SelectedItem="{Binding SelectedAgency}"
+                                  DisplayMemberPath="DisplayName"
+                                  FontSize="{DynamicResource FS14}" Padding="8,6"/>
+                    </StackPanel>
+
+                    <!-- Payment date -->
+                    <StackPanel Grid.Column="4">
                         <TextBlock Text="{DynamicResource PaySignPayDate}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,8"/>
                         <TextBox Text="{Binding PaymentDate, UpdateSourceTrigger=PropertyChanged}"

@@ -1037,7 +1037,8 @@
                                                              FontSize="{DynamicResource FS11}" VerticalAlignment="Center"
                                                              BorderThickness="0" Background="Transparent"
                                                              Foreground="{DynamicResource ForegroundBrush}" Padding="2,1"
-                                                             IsReadOnly="{Binding CanEdit, Converter={StaticResource InverseBool}}"/>
+                                                             IsReadOnly="{Binding CanEdit, Converter={StaticResource InverseBool}}"
+                                                             KeyDown="ExpenseField_KeyDown"/>
 
                                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding FirmName}"
                                                                FontSize="{DynamicResource FS10}"
@@ -1049,7 +1050,8 @@
                                                              HorizontalContentAlignment="Right" VerticalAlignment="Center"
                                                              BorderThickness="0" Background="Transparent"
                                                              Foreground="{DynamicResource WarningBrush}" Padding="2,1"
-                                                             IsReadOnly="{Binding CanEdit, Converter={StaticResource InverseBool}}"/>
+                                                             IsReadOnly="{Binding CanEdit, Converter={StaticResource InverseBool}}"
+                                                             KeyDown="ExpenseField_KeyDown"/>
 
                                                     <Button Grid.RowSpan="2" Grid.Column="2" Cursor="Hand" Margin="4,0,0,0"
                                                             IsEnabled="{Binding CanEdit}"

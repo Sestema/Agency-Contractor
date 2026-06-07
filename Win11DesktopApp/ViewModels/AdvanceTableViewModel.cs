@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -50,6 +51,9 @@ namespace Win11DesktopApp.ViewModels
 
         private const int EmptyRowsPerFirm = 4;
         private const int AdvanceColumns = 4;
+        private const double NameCellPadding = 12;
+        private const double MaxNameColumnShare = 0.40;
+        private const double MinAdvancePairWidth = 38;
 
         public AdvanceTableViewModel(
             EmployeeService? employeeService = null,
@@ -127,7 +131,7 @@ namespace Win11DesktopApp.ViewModels
 
                 var fontTitle = new XFont("Segoe UI", 13, XFontStyleEx.BoldItalic);
                 var fontHeader = new XFont("Segoe UI", 10, XFontStyleEx.Bold);
-                var fontCell = new XFont("Segoe UI", 12, XFontStyleEx.Bold);
+                XFont fontCell = new XFont("Segoe UI", 12, XFontStyleEx.Bold);
                 var fontNum = new XFont("Segoe UI", 10, XFontStyleEx.Regular);
                 var fontPage = new XFont("Segoe UI", 11, XFontStyleEx.Bold);
 
@@ -177,18 +181,56 @@ namespace Win11DesktopApp.ViewModels
                 double colSign = 0;
                 double numW = 20;
 
-                void CalcColumns()
+                void CalcColumns(IReadOnlyList<string> names)
                 {
                     contentW = pageW - marginLeft * 2;
-                    double remaining = contentW - numW;
-                    colName = remaining * 0.24;
-                    double pairW = remaining * 0.76 / AdvanceColumns;
-                    colDateAmount = pairW * 0.5;
-                    colSign = pairW * 0.5;
+                    double advanceBudget = contentW - numW;
+                    double minAdvanceTotal = AdvanceColumns * MinAdvancePairWidth;
+                    double maxNameCol = Math.Min(
+                        advanceBudget * MaxNameColumnShare,
+                        advanceBudget - minAdvanceTotal);
+
+                    var headerText = DocString("AdvTableColName");
+                    double fontSize = 12;
+
+                    while (fontSize >= 9)
+                    {
+                        fontCell = new XFont("Segoe UI", fontSize, XFontStyleEx.Bold);
+
+                        double maxTextW = gfx!.MeasureString(headerText, fontCell).Width;
+                        foreach (var name in names)
+                        {
+                            if (string.IsNullOrWhiteSpace(name))
+                                continue;
+
+                            var textW = gfx.MeasureString(name.Trim(), fontCell).Width;
+                            if (textW > maxTextW)
+                                maxTextW = textW;
+                        }
+
+                        colName = Math.Min(maxTextW + NameCellPadding, maxNameCol);
+                        double advanceW = advanceBudget - colName;
+                        double pairW = advanceW / AdvanceColumns;
+
+                        if (pairW >= MinAdvancePairWidth && maxTextW + NameCellPadding <= colName + 0.5)
+                        {
+                            colDateAmount = pairW * 0.5;
+                            colSign = pairW * 0.5;
+                            return;
+                        }
+
+                        fontSize -= 0.5;
+                    }
+
+                    fontCell = new XFont("Segoe UI", 9, XFontStyleEx.Bold);
+                    colName = maxNameCol;
+                    double fallbackAdvance = advanceBudget - colName;
+                    double fallbackPair = fallbackAdvance / AdvanceColumns;
+                    colDateAmount = fallbackPair * 0.5;
+                    colSign = fallbackPair * 0.5;
                 }
 
                 AddPage();
-                CalcColumns();
 
                 void DrawTableHeader(string firmName, int empCount)
                 {
@@ -255,7 +297,8 @@ namespace Win11DesktopApp.ViewModels
                     if (!string.IsNullOrEmpty(name))
                     {
                         gfx.DrawString(name, fontCell, XBrushes.Black,
-                            new XRect(cx + 5, y, colName - 10, rowHeight), XStringFormats.CenterLeft);
+                            new XRect(cx + NameCellPadding / 2, y, colName - NameCellPadding, rowHeight),
+                            XStringFormats.CenterLeft);
                     }
                     cx += colName;
 
@@ -284,6 +327,12 @@ namespace Win11DesktopApp.ViewModels
                     double neededForFirm = 24 + headerRowHeight * 2 + rowHeight * 2;
                     if (y > marginTop && y + neededForFirm > pageH - marginBottom)
                         AddPage();
+
+                    var employeeNames = employees
+                        .Select(e => e.FullName)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList();
+                    CalcColumns(employeeNames);
 
                     DrawTableHeader(firmItem.FirmName, employees.Count);
 

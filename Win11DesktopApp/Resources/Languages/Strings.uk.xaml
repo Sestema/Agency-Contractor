@@ -1556,6 +1556,7 @@
     <sys:String x:Key="PaySignTitle">Виплата на підписи</sys:String>
     <sys:String x:Key="PaySignDesc">Генерація PDF листа підписів за отримання зарплати за обраний місяць</sys:String>
     <sys:String x:Key="PaySignMonth">Місяць:</sys:String>
+    <sys:String x:Key="PaySignAgency">Агенція:</sys:String>
     <sys:String x:Key="PaySignPayDate">Дата виплати:</sys:String>
     <sys:String x:Key="PaySignSelectFirms">Оберіть фірми:</sys:String>
     <sys:String x:Key="PaySignGenerate">Згенерувати PDF</sys:String>

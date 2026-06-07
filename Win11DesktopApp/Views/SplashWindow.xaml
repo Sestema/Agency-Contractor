@@ -10,95 +10,182 @@
         WindowStartupLocation="CenterScreen"
         SizeToContent="WidthAndHeight"
         Focusable="False"
-        IsTabStop="False">
+        IsTabStop="False"
+        Opacity="0">
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1"
+                                     Duration="0:0:0.38">
+                        <DoubleAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
 
-    <Border Width="440" Height="320"
-            CornerRadius="24"
-            SnapsToDevicePixels="True">
-        <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#FF20232E" Offset="0"/>
-                <GradientStop Color="#FF14161E" Offset="1"/>
-            </LinearGradientBrush>
-        </Border.Background>
-        <Border.BorderBrush>
-            <SolidColorBrush Color="#22FFFFFF"/>
-        </Border.BorderBrush>
-        <Border.BorderThickness>1</Border.BorderThickness>
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="36" ShadowDepth="0" Opacity="0.55"/>
-        </Border.Effect>
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid Width="440" Height="440" ClipToBounds="False">
+            <Border x:Name="GlowHost"
+                    Width="400" Height="400"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    ClipToBounds="False"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform x:Name="ContentScale" ScaleX="0.94" ScaleY="0.94"/>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect x:Name="GlowEffect"
+                                      Color="#00E5FF"
+                                      BlurRadius="40"
+                                      ShadowDepth="0"
+                                      Opacity="0.34"/>
+                </Border.Effect>
+                <Border.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="ContentScale"
+                                                 Storyboard.TargetProperty="ScaleX"
+                                                 To="1" Duration="0:0:0.45">
+                                    <DoubleAnimation.EasingFunction>
+                                        <QuadraticEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="ContentScale"
+                                                 Storyboard.TargetProperty="ScaleY"
+                                                 To="1" Duration="0:0:0.45">
+                                    <DoubleAnimation.EasingFunction>
+                                        <QuadraticEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="GlowHost"
+                                                 Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
+                                                 From="0.24" To="0.46"
+                                                 Duration="0:0:2.1"
+                                                 AutoReverse="True"
+                                                 RepeatBehavior="Forever"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Border.Triggers>
 
-        <Grid Margin="32">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                <Grid Width="300" Height="300"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      ClipToBounds="False">
+                    <Ellipse Width="294" Height="294"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Fill="#1200E5FF"
+                             Opacity="0.22">
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         From="0.14" To="0.28"
+                                                         Duration="0:0:2.1"
+                                                         AutoReverse="True"
+                                                         RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
 
-            <!-- Logo -->
-            <Image Grid.Row="0"
-                   Source="pack://application:,,,/Resources/splash_logo.png"
-                   Width="112" Height="112"
-                   VerticalAlignment="Center"
-                   HorizontalAlignment="Center"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Ellipse Width="280" Height="280"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Fill="#FF000000"
+                             StrokeThickness="1.5">
+                        <Ellipse.Stroke>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FF00E5FF" Offset="0"/>
+                                <GradientStop Color="#FFFF00FF" Offset="0.55"/>
+                                <GradientStop Color="#8800E5FF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Ellipse.Stroke>
+                    </Ellipse>
 
-            <!-- App name -->
-            <TextBlock Grid.Row="1"
-                       Text="Agency Contractor"
-                       FontFamily="Segoe UI Variable Display, Segoe UI"
-                       FontSize="24"
-                       FontWeight="SemiBold"
-                       Foreground="#FFFFFFFF"
-                       HorizontalAlignment="Center"
-                       Margin="0,16,0,0"/>
+                    <Viewbox Width="250" Height="250"
+                             Stretch="Uniform"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             ClipToBounds="False">
+                        <Image Source="pack://application:,,,/Resources/splash_logo.png"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Viewbox>
 
-            <!-- Version -->
-            <TextBlock x:Name="VersionText"
-                       Grid.Row="2"
-                       Text="v0.0.0"
-                       FontFamily="Segoe UI Variable Small, Segoe UI"
-                       FontSize="12"
-                       Foreground="#99FFFFFF"
-                       HorizontalAlignment="Center"
-                       Margin="0,4,0,0"/>
+                    <Canvas Width="300" Height="300"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsHitTestVisible="False">
+                        <Ellipse Canvas.Left="8" Canvas.Top="8"
+                                 Width="284" Height="284"
+                                 StrokeThickness="1.5"
+                                 Opacity="0.28">
+                            <Ellipse.Stroke>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#6600E5FF" Offset="0"/>
+                                    <GradientStop Color="#66FF00FF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Stroke>
+                        </Ellipse>
 
-            <!-- Spinner -->
-            <Canvas Grid.Row="3"
-                    Width="44" Height="44"
-                    Margin="0,22,0,0"
-                    HorizontalAlignment="Center">
-                <Path StrokeThickness="4"
-                      StrokeStartLineCap="Round"
-                      StrokeEndLineCap="Round"
-                      Data="M 22,4 A 18,18 0 1 1 4,22"
-                      Width="44" Height="44">
-                    <Path.Stroke>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#FF2D5BFF" Offset="0"/>
-                            <GradientStop Color="#FF7C3AED" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Path.Stroke>
-                    <Path.RenderTransform>
-                        <RotateTransform x:Name="SpinnerRotate" Angle="0" CenterX="22" CenterY="22"/>
-                    </Path.RenderTransform>
-                    <Path.Triggers>
-                        <EventTrigger RoutedEvent="Loaded">
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetName="SpinnerRotate"
-                                                     Storyboard.TargetProperty="Angle"
-                                                     From="0" To="360"
-                                                     Duration="0:0:0.9"
-                                                     RepeatBehavior="Forever"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                    </Path.Triggers>
-                </Path>
-            </Canvas>
+                        <Path StrokeThickness="4"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              Data="M 150,14 A 136,136 0 1 1 38,230"
+                              Width="300" Height="300">
+                            <Path.Stroke>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#FF00E5FF" Offset="0"/>
+                                    <GradientStop Color="#FFFF00FF" Offset="0.55"/>
+                                    <GradientStop Color="#4400E5FF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Path.Stroke>
+                            <Path.RenderTransform>
+                                <RotateTransform x:Name="SpinnerRotate" Angle="0" CenterX="150" CenterY="150"/>
+                            </Path.RenderTransform>
+                            <Path.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SpinnerRotate"
+                                                             Storyboard.TargetProperty="Angle"
+                                                             From="0" To="360"
+                                                             Duration="0:0:1.75"
+                                                             RepeatBehavior="Forever"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Path.Triggers>
+                        </Path>
+                    </Canvas>
+                </Grid>
+            </Border>
         </Grid>
-    </Border>
+
+        <TextBlock Text="{DynamicResource DashLoading}"
+                   FontFamily="Segoe UI Variable Small, Segoe UI"
+                   FontSize="12"
+                   Foreground="#BB00E5FF"
+                   HorizontalAlignment="Center"
+                   Margin="0,4,0,0"/>
+
+        <TextBlock x:Name="VersionText"
+                   Text="v0.0.0"
+                   FontFamily="Segoe UI Variable Small, Segoe UI"
+                   FontSize="11"
+                   Foreground="#7700E5FF"
+                   HorizontalAlignment="Center"
+                   Margin="0,2,0,0"/>
+    </StackPanel>
 </Window>

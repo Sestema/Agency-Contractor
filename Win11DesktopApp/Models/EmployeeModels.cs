@@ -140,6 +140,23 @@ namespace Win11DesktopApp.EmployeeModels
         public string EmployeeType { get; set; } = "visa";
         public string WorkPermitName { get; set; } = string.Empty;
         public string WorkPermitExpiry { get; set; } = string.Empty;
+
+        public string Initials
+        {
+            get
+            {
+                var name = (FullName ?? string.Empty).Trim();
+                if (name.Length == 0)
+                    return "?";
+
+                var parts = name.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
+                    return string.Concat(char.ToUpperInvariant(parts[0][0]), char.ToUpperInvariant(parts[1][0]));
+
+                return char.ToUpperInvariant(parts[0][0]).ToString();
+            }
+        }
+
         public bool IsSelected
         {
             get => _isSelected;

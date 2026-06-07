@@ -37,7 +37,7 @@ namespace Win11DesktopApp.Views
                 {
                     From = Opacity,
                     To = 0,
-                    Duration = TimeSpan.FromMilliseconds(280)
+                    Duration = TimeSpan.FromMilliseconds(380)
                 };
                 fade.Completed += (_, _) => SafeClose();
                 BeginAnimation(OpacityProperty, fade);

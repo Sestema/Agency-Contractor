@@ -1538,6 +1538,7 @@
     <sys:String x:Key="PaySignTitle">Payment Signatures</sys:String>
     <sys:String x:Key="PaySignDesc">Generate PDF signature sheet for salary receipt for the selected month</sys:String>
     <sys:String x:Key="PaySignMonth">Month:</sys:String>
+    <sys:String x:Key="PaySignAgency">Agency:</sys:String>
     <sys:String x:Key="PaySignPayDate">Payment date:</sys:String>
     <sys:String x:Key="PaySignSelectFirms">Select firms:</sys:String>
     <sys:String x:Key="PaySignGenerate">Generate PDF</sys:String>

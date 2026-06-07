@@ -93,6 +93,26 @@
         <GradientStop Color="#5856D6" Offset="1"/>
     </LinearGradientBrush>
 
+    <LinearGradientBrush x:Key="DrawerHeaderBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#5AC8FA" Offset="0"/>
+        <GradientStop Color="#64D2FF" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="DrawerHeaderForegroundBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderSubtitleBrush" Color="#E8FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderIconBackgroundBrush" Color="#33FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderIconBorderBrush" Color="#66FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderChipBackgroundBrush" Color="#D9FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderChipBorderBrush" Color="#59FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderChipLabelBrush" Color="#5E6670"/>
+    <SolidColorBrush x:Key="DrawerHeaderChipValueBrush" Color="#121214"/>
+    <SolidColorBrush x:Key="DrawerHeaderChipIconBrush" Color="#2E7D32"/>
+    <SolidColorBrush x:Key="DrawerHeaderCloseForegroundBrush" Color="#99FFFFFF"/>
+    <SolidColorBrush x:Key="DrawerHeaderCloseHoverBrush" Color="#33FFFFFF"/>
+    <RadialGradientBrush x:Key="DrawerHeaderGlowBrush">
+        <GradientStop Color="#44FFFFFF" Offset="0"/>
+        <GradientStop Color="#00FFFFFF" Offset="1"/>
+    </RadialGradientBrush>
+
     <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="4" Direction="270" Color="#0A0E1C" Opacity="0.18"/>
     <DropShadowEffect x:Key="CardShadowHover" BlurRadius="36" ShadowDepth="10" Direction="270" Color="#0A0E1C" Opacity="0.26"/>
     <DropShadowEffect x:Key="DialogShadow" BlurRadius="56" ShadowDepth="18" Direction="270" Color="#05081A" Opacity="0.38"/>

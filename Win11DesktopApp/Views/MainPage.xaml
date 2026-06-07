@@ -586,61 +586,87 @@
             <Grid Margin="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- ===== HEADER ===== -->
-                <Border Grid.Row="0" Padding="20,20,20,16" Background="{DynamicResource AccentBrush}">
+                <!-- ===== HEADER (title + selected chip) ===== -->
+                <Border Grid.Row="0" Padding="18,18,18,14"
+                        Background="{DynamicResource DrawerHeaderBackgroundBrush}">
                     <Grid>
-                        <Ellipse Width="170" Height="170" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                 Margin="0,-105,-55,0" Opacity="0.26" IsHitTestVisible="False">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush>
-                                    <GradientStop Color="#22FFFFFF" Offset="0"/>
-                                    <GradientStop Color="#00FFFFFF" Offset="1"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Width="42" Height="42" CornerRadius="12" Background="{DynamicResource AccentLightBrush}"
-                                    BorderBrush="{DynamicResource GlassInnerHighlightBrush}" BorderThickness="1" Margin="0,0,14,0">
-                                <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource DrawerTitle}" FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="White"/>
-                                <TextBlock Text="{DynamicResource MainSelectCompany}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </StackPanel>
+                        <Ellipse Width="190" Height="190" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                 Margin="0,-115,-60,0" Opacity="0.3" IsHitTestVisible="False"
+                                 Fill="{DynamicResource DrawerHeaderGlowBrush}"/>
 
-                        <!-- Close button -->
-                        <Button HorizontalAlignment="Right" VerticalAlignment="Top" 
-                                Command="{Binding ToggleDrawerCommand}"
-                                Width="30" Height="30" Background="Transparent" BorderThickness="0" Cursor="Hand">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Foreground="#AAFFFFFF"/>
-                        </Button>
+                        <StackPanel>
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,40,0">
+                                    <Border Width="44" Height="44" CornerRadius="12"
+                                            Background="{DynamicResource DrawerHeaderIconBackgroundBrush}"
+                                            BorderBrush="{DynamicResource DrawerHeaderIconBorderBrush}"
+                                            BorderThickness="1" Margin="0,0,14,0">
+                                        <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS20}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource DrawerHeaderForegroundBrush}"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource DrawerTitle}"
+                                                   FontFamily="{DynamicResource AppDisplayFontFamily}"
+                                                   FontSize="{DynamicResource FS20}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource DrawerHeaderForegroundBrush}"/>
+                                        <TextBlock Text="{DynamicResource MainSelectCompany}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   Foreground="{DynamicResource DrawerHeaderSubtitleBrush}"
+                                                   Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Command="{Binding ToggleDrawerCommand}"
+                                        Width="32" Height="32" Cursor="Hand"
+                                        Background="Transparent" BorderThickness="0">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="CloseBd" Background="Transparent" CornerRadius="8">
+                                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="{DynamicResource FS13}"
+                                                           Foreground="{DynamicResource DrawerHeaderCloseForegroundBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="CloseBd" Property="Background"
+                                                            Value="{DynamicResource DrawerHeaderCloseHoverBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+
+                            <Border Margin="0,14,0,0" CornerRadius="10"
+                                    Background="{DynamicResource DrawerHeaderChipBackgroundBrush}"
+                                    BorderBrush="{DynamicResource DrawerHeaderChipBorderBrush}"
+                                    BorderThickness="1" Padding="12,8">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource DrawerHeaderChipIconBrush}"
+                                               Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock FontSize="{DynamicResource FS12}" VerticalAlignment="Center">
+                                        <Run Text="{DynamicResource MainSelected}"
+                                             Foreground="{DynamicResource DrawerHeaderChipLabelBrush}"/>
+                                        <Run Text="{Binding SelectedCompany.Name, FallbackValue='—', Mode=OneWay}"
+                                             FontWeight="SemiBold"
+                                             Foreground="{DynamicResource DrawerHeaderChipValueBrush}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- ===== SELECTED INDICATOR ===== -->
-                <Border Grid.Row="1" Padding="16,10"
-                        Background="{DynamicResource CardBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" 
-                                   Foreground="{DynamicResource SuccessBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center">
-                            <Run Text="{DynamicResource MainSelected}"/>
-                            <Run Text="{Binding SelectedCompany.Name, FallbackValue='—', Mode=OneWay}" 
-                                 FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
-
                 <!-- ===== COMPANY LIST ===== -->
-                <ScrollViewer x:Name="CompanyScrollViewer" Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4,6,0">
+                <ScrollViewer x:Name="CompanyScrollViewer" Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="6,4,6,0">
                     <ListBox ItemsSource="{Binding VisibleCompanies}" 
                              SelectedItem="{Binding SelectedCompany}"
                              Background="Transparent" BorderThickness="0"
@@ -789,7 +815,7 @@
                 </ScrollViewer>
 
                 <!-- ===== ADD BUTTON ===== -->
-                <Border Grid.Row="3" Padding="14,12,14,16"
+                <Border Grid.Row="2" Padding="14,12,14,16"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
                     <Button Command="{Binding OpenAddCompanyDialogCommand}" 
                             Height="46" Cursor="Hand"

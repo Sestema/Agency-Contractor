@@ -60,6 +60,16 @@ namespace Win11DesktopApp.Views
             }
         }
 
+        private void ExpenseField_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter || sender is not TextBox textBox)
+                return;
+
+            textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            Keyboard.ClearFocus();
+            e.Handled = true;
+        }
+
         private void CommitGridEdits_BeforeAction(object sender, MouseButtonEventArgs e)
         {
             CommitPendingGridEdits();
