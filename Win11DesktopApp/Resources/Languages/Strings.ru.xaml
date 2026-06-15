@@ -356,6 +356,7 @@
     <sys:String x:Key="ThemeGlass">Стекло</sys:String>
     <sys:String x:Key="ThemeGlassDark">Тёмн. стекло</sys:String>
     <sys:String x:Key="ThemeVantaDark">Vanta</sys:String>
+    <sys:String x:Key="ThemeAgencyTeal">Agency Teal</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Фирмы</sys:String>
@@ -720,6 +721,7 @@
     <sys:String x:Key="DetSalaryEmptyMsg">Когда сотрудника отметят как выплаченного, информация появится здесь.</sys:String>
     <sys:String x:Key="DetGenTitle">Выбор шаблона для генерации</sys:String>
     <sys:String x:Key="DetGenDesc">Выберите шаблон. Документ будет сгенерирован с заполненными данными сотрудника и сохранен в его папку.</sys:String>
+    <sys:String x:Key="DetGenBtnTooltip">Сгенерировать документ из этого шаблона</sys:String>
     <sys:String x:Key="DetArchiveTitle">Переместить в архив</sys:String>
     <sys:String x:Key="DetArchiveDesc">Сотрудник будет перемещен в архив. Его папка и данные будут сохранены.</sys:String>
     <sys:String x:Key="DetArchiveDateLabel">Дата окончания сотрудничества (дд.мм.гггг):</sys:String>
@@ -731,6 +733,12 @@
 
     <!-- MainPage -->
     <sys:String x:Key="MainSelectCompany">Выберите фирму для работы</sys:String>
+    <sys:String x:Key="MainCompanySearchPlaceholder">Поиск по названию или коду ICO</sys:String>
+    <sys:String x:Key="MainCompanySortTitle">Сортировка</sys:String>
+    <sys:String x:Key="MainCompanySortDefault">Порядок по умолчанию</sys:String>
+    <sys:String x:Key="MainCompanySortName">По алфавиту</sys:String>
+    <sys:String x:Key="MainCompanySortAgency">По агентству</sys:String>
+    <sys:String x:Key="MainCompanySortEmployees">По количеству сотрудников</sys:String>
     <sys:String x:Key="MainSelected">Выбрано: </sys:String>
     <sys:String x:Key="MainTooltipEdit">Редактировать фирму</sys:String>
     <sys:String x:Key="MainTooltipDblClick">Двойной клик — редактировать</sys:String>

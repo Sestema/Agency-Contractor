@@ -2366,7 +2366,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="6" 
-                                            Padding="12,8" Margin="0,0,0,6" Cursor="Hand"
+                                            Padding="12,8" Margin="0,0,0,6"
                                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -2386,15 +2386,25 @@
                                                 <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
                                                            TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
-                                            <Button Grid.Column="2" 
+                                            <Button Grid.Column="2"
+                                                    Style="{StaticResource FilledActionButton}"
+                                                    MinWidth="118"
+                                                    Padding="12,7"
+                                                    FontWeight="SemiBold"
                                                     Command="{Binding DataContext.GenerateFromTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Padding="10,5" FontWeight="SemiBold"
-                                                    Background="{DynamicResource AccentBrush}" Foreground="White" 
-                                                    BorderThickness="0" VerticalAlignment="Center" Cursor="Hand">
+                                                    IsEnabled="{Binding DataContext.IsGenerating, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InverseBool}}">
+                                                <Button.ToolTip>
+                                                    <StackPanel MaxWidth="280">
+                                                        <TextBlock Text="{DynamicResource DetGenBtnTooltip}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                        <TextBlock Text="{Binding Name}" Margin="0,4,0,0"
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                   TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Button.ToolTip>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS12}"/>
+                                                    <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS12}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                         </Grid>

@@ -558,6 +558,7 @@ namespace Win11DesktopApp.Services
                 StartDate = source.StartDate,
                 EndDate = source.EndDate,
                 ContractType = source.ContractType,
+                Gender = source.Gender,
                 PhotoPath = source.PhotoPath,
                 HasPhoto = source.HasPhoto,
                 HasPassport = source.HasPassport,
@@ -1003,6 +1004,37 @@ namespace Win11DesktopApp.Services
             encoder.Save(stream);
         }
 
+        private static string NormalizeGender(string? gender)
+        {
+            return string.Equals(gender, "female", StringComparison.OrdinalIgnoreCase) ? "female" : "male";
+        }
+
+        private static string ReadGenderFromEmployeeFolder(string? employeeFolder)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return "male";
+
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            if (!File.Exists(jsonPath))
+                return "male";
+
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
+                if (doc.RootElement.TryGetProperty("Gender", out var element)
+                    || doc.RootElement.TryGetProperty("gender", out element))
+                {
+                    return NormalizeGender(element.GetString());
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.ReadGenderFromEmployeeFolder", ex.Message);
+            }
+
+            return "male";
+        }
+
         private EmployeeSummary BuildSummary(string firmName, string employeeFolder, EmployeeData data)
         {
             var photoPath = ResolvePhotoPath(employeeFolder, data);
@@ -1021,6 +1053,7 @@ namespace Win11DesktopApp.Services
                 StartDate = data.StartDate,
                 EndDate = data.EndDate,
                 ContractType = data.ContractType,
+                Gender = NormalizeGender(data.Gender),
                 PhotoPath = File.Exists(photoPath) ? photoPath : string.Empty,
                 HasPhoto = File.Exists(photoPath),
                 HasPassport = !string.IsNullOrEmpty(data.Files.Passport),
@@ -1062,6 +1095,7 @@ namespace Win11DesktopApp.Services
                 StartDate = row.StartDate,
                 EndDate = row.EndDate,
                 ContractType = row.ContractType,
+                Gender = ReadGenderFromEmployeeFolder(employeeFolder),
                 PhotoPath = hasPhoto ? photoPath : string.Empty,
                 HasPhoto = hasPhoto,
                 HasPassport = row.HasPassport,

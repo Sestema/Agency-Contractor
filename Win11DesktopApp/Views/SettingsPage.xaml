@@ -1333,6 +1333,97 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
+
+                        <!-- Agency Teal theme preview -->
+                        <Button Command="{Binding ChangeThemeCommand}" CommandParameter="AgencyTeal"
+                                Margin="0,10,10,0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="OuterBd" CornerRadius="10" BorderThickness="2.5"
+                                            BorderBrush="Transparent" Padding="3"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                        </Border.RenderTransform>
+                                        <Border x:Name="InnerBd" CornerRadius="8" Width="136" Height="90" ClipToBounds="True">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#FF060A10" Offset="0"/>
+                                                    <GradientStop Color="#FF0B121A" Offset="0.55"/>
+                                                    <GradientStop Color="#FF0E1620" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="28"/>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="22"/>
+                                                </Grid.RowDefinitions>
+                                                <Border Grid.Row="0" Background="#99102732" BorderBrush="#332CA9A4" BorderThickness="0,0,0,1">
+                                                    <StackPanel Orientation="Horizontal" Margin="8,0" VerticalAlignment="Center">
+                                                        <Ellipse Width="6" Height="6" Fill="#FF6B7A" Margin="0,0,3,0"/>
+                                                        <Ellipse Width="6" Height="6" Fill="#FFB454" Margin="0,0,3,0"/>
+                                                        <Ellipse Width="6" Height="6" Fill="#35E27B"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel Grid.Row="1" Margin="8,6,8,0">
+                                                    <Border CornerRadius="2" Height="4" Width="58" HorizontalAlignment="Left" Margin="0,0,0,4">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                <GradientStop Color="#00C9FF" Offset="0"/>
+                                                                <GradientStop Color="#2CA9A4" Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                    </Border>
+                                                    <Border Background="#4DA8B0C0" CornerRadius="2" Height="4" Width="42" HorizontalAlignment="Left" Margin="0,0,0,5"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Background="#332CA9A4" CornerRadius="4" Width="30" Height="18" BorderBrush="#552CA9A4" BorderThickness="1" Margin="0,0,4,0"/>
+                                                        <Border Background="#3314B8A6" CornerRadius="4" Width="30" Height="18" BorderBrush="#5514B8A6" BorderThickness="1"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <Border Grid.Row="2" CornerRadius="0,0,8,8">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                            <GradientStop Color="#00C9FF" Offset="0"/>
+                                                            <GradientStop Color="#2CA9A4" Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                    <TextBlock Text="{DynamicResource ThemeAgencyTeal}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentTheme}" Value="AgencyTeal">
+                                            <Setter TargetName="OuterBd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.03" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.03" Duration="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                            <Trigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
+                                                        <DoubleAnimation Storyboard.TargetName="OuterBd" Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.ExitActions>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
                     </UniformGrid>
 
                     <!-- Accent color picker -->

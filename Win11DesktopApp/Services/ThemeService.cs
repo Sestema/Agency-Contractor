@@ -10,7 +10,7 @@ namespace Win11DesktopApp.Services
     public class ThemeService
     {
         private static readonly string[] GlassThemes = { "Glass", "GlassDark" };
-        private static readonly string[] DarkThemes = { "Dark2", "DarkWord", "GlassDark", "VantaDark" };
+        private static readonly string[] DarkThemes = { "Dark2", "DarkWord", "GlassDark", "VantaDark", "AgencyTeal" };
         private readonly AppSettingsService _appSettingsService;
 
         /// <summary>
@@ -53,6 +53,11 @@ namespace Win11DesktopApp.Services
             }
 
             Application.Current.Resources.MergedDictionaries.Add(newDict);
+
+            if (string.Equals(themeName, "AgencyTeal", StringComparison.OrdinalIgnoreCase))
+                AgencyTealBackgroundBrushes.ApplyToResources();
+            else
+                AgencyTealBackgroundBrushes.ClearOverrides();
 
             ApplyBackdrop(Application.Current.MainWindow, themeName);
 
@@ -147,7 +152,8 @@ namespace Win11DesktopApp.Services
             // with the desktop wallpaper and kill the sepia character, so we opt out.
             bool isSolidCharacterTheme =
                 string.Equals(themeName, "Custom", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(themeName, "VantaDark", StringComparison.OrdinalIgnoreCase);
+                || string.Equals(themeName, "VantaDark", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(themeName, "AgencyTeal", StringComparison.OrdinalIgnoreCase);
 
             if (isGlass)
             {

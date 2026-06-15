@@ -356,6 +356,7 @@
     <sys:String x:Key="ThemeGlass">Glass</sys:String>
     <sys:String x:Key="ThemeGlassDark">Dark Glass</sys:String>
     <sys:String x:Key="ThemeVantaDark">Vanta</sys:String>
+    <sys:String x:Key="ThemeAgencyTeal">Agency Teal</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Companies</sys:String>
@@ -723,6 +724,7 @@
     <sys:String x:Key="DetSalaryEmptyMsg">When an employee is marked as paid, the information will appear here.</sys:String>
     <sys:String x:Key="DetGenTitle">Select template for generation</sys:String>
     <sys:String x:Key="DetGenDesc">Select a template. The document will be generated with filled employee data and saved to their folder.</sys:String>
+    <sys:String x:Key="DetGenBtnTooltip">Generate document from this template</sys:String>
     <sys:String x:Key="DetArchiveTitle">Move to archive</sys:String>
     <sys:String x:Key="DetArchiveDesc">The employee will be moved to the archive. Their folder and data will be preserved.</sys:String>
     <sys:String x:Key="DetArchiveDateLabel">End of cooperation date (dd.mm.yyyy):</sys:String>
@@ -734,6 +736,12 @@
 
     <!-- MainPage -->
     <sys:String x:Key="MainSelectCompany">Select a company to work with</sys:String>
+    <sys:String x:Key="MainCompanySearchPlaceholder">Search by name or company ID</sys:String>
+    <sys:String x:Key="MainCompanySortTitle">Sort</sys:String>
+    <sys:String x:Key="MainCompanySortDefault">Default order</sys:String>
+    <sys:String x:Key="MainCompanySortName">Alphabetical</sys:String>
+    <sys:String x:Key="MainCompanySortAgency">By agency</sys:String>
+    <sys:String x:Key="MainCompanySortEmployees">By employee count</sys:String>
     <sys:String x:Key="MainSelected">Selected: </sys:String>
     <sys:String x:Key="MainTooltipEdit">Edit company</sys:String>
     <sys:String x:Key="MainTooltipDblClick">Double click to edit</sys:String>

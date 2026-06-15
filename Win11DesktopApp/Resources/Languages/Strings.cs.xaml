@@ -427,6 +427,7 @@
     <sys:String x:Key="ThemeGlass">Sklo</sys:String>
     <sys:String x:Key="ThemeGlassDark">Tmavé sklo</sys:String>
     <sys:String x:Key="ThemeVantaDark">Vanta</sys:String>
+    <sys:String x:Key="ThemeAgencyTeal">Agency Teal</sys:String>
 
     <!-- New Strings -->
     <sys:String x:Key="DrawerTitle">Firmy</sys:String>
@@ -737,6 +738,7 @@
     <sys:String x:Key="DetSalaryEmptyMsg">Když bude zaměstnanec označen jako vyplacený, informace se zobrazí zde.</sys:String>
     <sys:String x:Key="DetGenTitle">Výběr šablony pro generaci</sys:String>
     <sys:String x:Key="DetGenDesc">Vyberte šablonu. Dokument bude generován s vyplněnými údaji zaměstnance a uložen do jeho složky.</sys:String>
+    <sys:String x:Key="DetGenBtnTooltip">Generovat dokument z této šablony</sys:String>
     <sys:String x:Key="DetArchiveTitle">Přesunout do archivu</sys:String>
     <sys:String x:Key="DetArchiveDesc">Zaměstnanec bude přesunut do archivu. Jeho složka a údaje budou zachovány.</sys:String>
     <sys:String x:Key="DetArchiveDateLabel">Datum ukončení spolupráce (dd.mm.rrrr):</sys:String>
@@ -748,6 +750,12 @@
 
     <!-- MainPage -->
     <sys:String x:Key="MainSelectCompany">Vyberte firmu pro práci</sys:String>
+    <sys:String x:Key="MainCompanySearchPlaceholder">Hledat podle názvu nebo IČO</sys:String>
+    <sys:String x:Key="MainCompanySortTitle">Řazení</sys:String>
+    <sys:String x:Key="MainCompanySortDefault">Výchozí pořadí</sys:String>
+    <sys:String x:Key="MainCompanySortName">Abecedně</sys:String>
+    <sys:String x:Key="MainCompanySortAgency">Podle agentury</sys:String>
+    <sys:String x:Key="MainCompanySortEmployees">Podle počtu zaměstnanců</sys:String>
     <sys:String x:Key="MainSelected">Vybráno: </sys:String>
     <sys:String x:Key="MainTooltipEdit">Upravit firmu</sys:String>
     <sys:String x:Key="MainTooltipDblClick">Dvojklik — upravit</sys:String>

@@ -81,7 +81,6 @@ namespace Win11DesktopApp.Converters
     {
         private static readonly Dictionary<string, (Color fg, Color bg)> StatusColors = new()
         {
-            { StatusHelper.Active, (Color.FromRgb(0x2E, 0x7D, 0x32), Color.FromRgb(0xE8, 0xF5, 0xE9)) },
             { StatusHelper.OnLeave, (Color.FromRgb(0xF9, 0xA8, 0x25), Color.FromRgb(0xFF, 0xF8, 0xE1)) },
             { StatusHelper.Dismissed, (Color.FromRgb(0x75, 0x75, 0x75), Color.FromRgb(0xF5, 0xF5, 0xF5)) },
             { StatusHelper.AwaitingDocs, (Color.FromRgb(0xEF, 0x6C, 0x00), Color.FromRgb(0xFF, 0xF3, 0xE0)) },
@@ -91,6 +90,14 @@ namespace Win11DesktopApp.Converters
         {
             var status = StatusHelper.Normalize(value?.ToString());
             bool isBg = parameter?.ToString() == "Background";
+
+            if (status == StatusHelper.Active)
+            {
+                return FindThemeBrush(
+                    isBg ? "AccentLightBrush" : "AccentBrush",
+                    isBg ? Color.FromRgb(0xE8, 0xF5, 0xE9) : Color.FromRgb(0x2E, 0x7D, 0x32));
+            }
+
             if (StatusColors.TryGetValue(status, out var c))
                 return new SolidColorBrush(isBg ? c.bg : c.fg);
             return new SolidColorBrush(isBg ? Color.FromRgb(0xF0, 0xF0, 0xF0) : Color.FromRgb(0x66, 0x66, 0x66));
@@ -98,6 +105,12 @@ namespace Win11DesktopApp.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => Binding.DoNothing;
+
+        private static Brush FindThemeBrush(string resourceKey, Color fallback)
+        {
+            return Application.Current?.TryFindResource(resourceKey) as Brush
+                ?? new SolidColorBrush(fallback);
+        }
     }
 
     /// <summary>
@@ -132,7 +145,7 @@ namespace Win11DesktopApp.Converters
                 return FindThemeBrush(isBg ? c.bgKey : c.fgKey, isBg ? c.bgFallback : c.fgFallback);
 
             return FindThemeBrush(
-                isBg ? "SuccessLightBrush" : "SuccessBrush",
+                isBg ? "AccentLightBrush" : "AccentBrush",
                 isBg ? Color.FromRgb(0xE8, 0xF5, 0xE9) : Color.FromRgb(0x2E, 0x7D, 0x32));
         }
 
@@ -262,6 +275,28 @@ namespace Win11DesktopApp.Converters
             {
                 return new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
             }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
+
+    /// <summary>
+    /// Male → blue ring (InfoBrush), female → green ring (SuccessBrush).
+    /// </summary>
+    public class GenderRingBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var gender = value?.ToString() ?? "male";
+            if (string.Equals(gender, "female", StringComparison.OrdinalIgnoreCase))
+            {
+                return Application.Current?.TryFindResource("SuccessBrush") as Brush
+                    ?? new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
+            }
+
+            return Application.Current?.TryFindResource("InfoBrush") as Brush
+                ?? new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

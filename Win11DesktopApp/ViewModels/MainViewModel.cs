@@ -17,6 +17,14 @@ using System.Globalization;
 
 namespace Win11DesktopApp.ViewModels
 {
+    public enum CompanySortMode
+    {
+        Default,
+        Name,
+        Agency,
+        EmployeeCount
+    }
+
     public class SearchResultItem
     {
         public string Category { get; set; } = "";
@@ -75,6 +83,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand NavigateToSearchResultCommand { get; }
         public ICommand ClearSearchCommand { get; }
         public ICommand AISearchCommand { get; }
+        public ICommand SetCompanySortCommand { get; }
+        public ICommand ToggleCompanySortMenuCommand { get; }
 
         private ObservableCollection<MenuCardItem> _menuCards = new();
         public ObservableCollection<MenuCardItem> MenuCards
@@ -241,17 +251,77 @@ namespace Win11DesktopApp.ViewModels
         private ObservableCollection<EmployerCompany> _visibleCompanies = new();
         public ObservableCollection<EmployerCompany> VisibleCompanies => _visibleCompanies;
 
+        private string _companySearchQuery = string.Empty;
+        public string CompanySearchQuery
+        {
+            get => _companySearchQuery;
+            set
+            {
+                if (SetProperty(ref _companySearchQuery, value))
+                    RefreshVisibleCompanies();
+            }
+        }
+
+        private CompanySortMode _companySortMode = CompanySortMode.Default;
+        public CompanySortMode CompanySortMode
+        {
+            get => _companySortMode;
+            set
+            {
+                if (SetProperty(ref _companySortMode, value))
+                    RefreshVisibleCompanies();
+            }
+        }
+
+        private bool _isCompanySortMenuOpen;
+        public bool IsCompanySortMenuOpen
+        {
+            get => _isCompanySortMenuOpen;
+            set => SetProperty(ref _isCompanySortMenuOpen, value);
+        }
+
         private void RefreshVisibleCompanies()
         {
             _visibleCompanies.Clear();
             var cs = _companyService;
             if (cs == null) return;
-            foreach (var c in cs.Companies)
-                if (cs.IsCompanyVisible(c) && PolicyService.CanAccessCompany(c))
-                    _visibleCompanies.Add(c);
+
+            IEnumerable<EmployerCompany> companies = cs.Companies
+                .Where(c => cs.IsCompanyVisible(c) && PolicyService.CanAccessCompany(c));
+
+            var query = CompanySearchQuery?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(query))
+            {
+                companies = companies.Where(c =>
+                    (!string.IsNullOrEmpty(c.Name) && c.Name.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(c.ICO) && c.ICO.Contains(query, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            companies = ApplyCompanySort(companies);
+
+            foreach (var company in companies)
+                _visibleCompanies.Add(company);
+
+            VisibleCompaniesCount = _visibleCompanies.Count;
 
             if (SelectedCompany != null && !_visibleCompanies.Contains(SelectedCompany))
                 SelectedCompany = _visibleCompanies.FirstOrDefault();
+        }
+
+        private IEnumerable<EmployerCompany> ApplyCompanySort(IEnumerable<EmployerCompany> companies)
+        {
+            return CompanySortMode switch
+            {
+                CompanySortMode.Name => companies
+                    .OrderBy(c => c.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase),
+                CompanySortMode.Agency => companies
+                    .OrderBy(c => c.Agency?.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(c => c.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase),
+                CompanySortMode.EmployeeCount => companies
+                    .OrderByDescending(c => _employeeService.GetEmployeesForFirm(c.Name).Count)
+                    .ThenBy(c => c.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase),
+                _ => companies
+            };
         }
 
         public EmployerCompany? SelectedCompany
@@ -349,13 +419,33 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
                     return;
-                if (o is EmployerCompany c && PolicyService.CanAccessCompany(c) && PolicyService.RequireCanEditCompany(c, "Змінити порядок фірм")) _companyService.MoveCompanyUp(c);
+                if (o is EmployerCompany c && PolicyService.CanAccessCompany(c) && PolicyService.RequireCanEditCompany(c, "Змінити порядок фірм"))
+                {
+                    _companyService.MoveCompanyUp(c);
+                    RefreshVisibleCompanies();
+                }
             });
             MoveCompanyDownCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
                     return;
-                if (o is EmployerCompany c && PolicyService.CanAccessCompany(c) && PolicyService.RequireCanEditCompany(c, "Змінити порядок фірм")) _companyService.MoveCompanyDown(c);
+                if (o is EmployerCompany c && PolicyService.CanAccessCompany(c) && PolicyService.RequireCanEditCompany(c, "Змінити порядок фірм"))
+                {
+                    _companyService.MoveCompanyDown(c);
+                    RefreshVisibleCompanies();
+                }
+            });
+
+            ToggleCompanySortMenuCommand = new RelayCommand(_ => IsCompanySortMenuOpen = !IsCompanySortMenuOpen);
+            SetCompanySortCommand = new RelayCommand(o =>
+            {
+                if (o is not string sortKey)
+                    return;
+
+                if (Enum.TryParse<CompanySortMode>(sortKey, ignoreCase: true, out var mode))
+                    CompanySortMode = mode;
+
+                IsCompanySortMenuOpen = false;
             });
 
             CloseAddCompanyDialogCommand = new RelayCommand(o => IsAddCompanyDialogOpen = false);

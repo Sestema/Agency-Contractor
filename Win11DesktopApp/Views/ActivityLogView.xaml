@@ -11,7 +11,15 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource PageBackgroundBrush}">
+    <Grid>
+        <Border Background="{DynamicResource PageBackgroundBrush}"
+                CacheMode="BitmapCache"
+                RenderOptions.CachingHint="Cache"
+                IsHitTestVisible="False"/>
+        <Grid UseLayoutRounding="True"
+              SnapsToDevicePixels="True"
+              TextOptions.TextFormattingMode="Display"
+              TextOptions.TextRenderingMode="ClearType">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -284,7 +292,7 @@
                         <GroupStyle>
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource PageBackgroundBrush}" Padding="16,10,16,6">
+                                    <Border Background="{DynamicResource SurfaceBrush}" Padding="16,10,16,6">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets"
                                                        FontSize="{DynamicResource FS12}"
@@ -555,6 +563,7 @@
                     </DataTemplate>
                 </ContentControl.Resources>
             </ContentControl>
+        </Grid>
         </Grid>
     </Grid>
 </UserControl>

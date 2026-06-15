@@ -16,9 +16,36 @@
         <conv:HexToBrushConverter x:Key="HexToBrush"/>
         <conv:IconKeyToGeometryConverter x:Key="IconKeyToGeometry"/>
         <conv:ResourceKeyConverter x:Key="ResKey"/>
+
+        <Style x:Key="CompanySortMenuBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     
-    <Grid Background="{DynamicResource PageBackgroundBrush}" ClipToBounds="True">
+    <Grid ClipToBounds="True">
+        <Border Background="{DynamicResource PageBackgroundBrush}"
+                CacheMode="BitmapCache"
+                RenderOptions.CachingHint="Cache"
+                IsHitTestVisible="False"/>
         <!-- Main Content -->
         <Grid>
             <!-- Top Bar -->
@@ -586,6 +613,7 @@
             <Grid Margin="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -665,8 +693,181 @@
                     </Grid>
                 </Border>
 
+                <!-- ===== SEARCH + SORT ===== -->
+                <Grid Grid.Row="1" Margin="14,10,14,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Style="{StaticResource ToolbarSearchContainer}"
+                            CornerRadius="10"
+                            Height="38"
+                            Margin="0,0,8,0">
+                        <Grid Margin="10,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="&#xE721;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="{DynamicResource FS12}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"/>
+                            <TextBox Grid.Column="1"
+                                     VerticalAlignment="Center"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     Foreground="{DynamicResource ForegroundBrush}"
+                                     CaretBrush="{DynamicResource ForegroundBrush}"
+                                     FontSize="{DynamicResource FS12}"
+                                     Text="{Binding CompanySearchQuery, UpdateSourceTrigger=PropertyChanged}">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Tag" Value="{DynamicResource MainCompanySearchPlaceholder}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="TextBox">
+                                                    <Grid>
+                                                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{TemplateBinding Tag}"
+                                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   IsHitTestVisible="False"
+                                                                   Visibility="Collapsed"
+                                                                   x:Name="placeholder"/>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="Text" Value="">
+                                                            <Setter TargetName="placeholder" Property="Visibility" Value="Visible"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Column="1">
+                        <Button x:Name="CompanySortButton"
+                                Command="{Binding ToggleCompanySortMenuCommand}"
+                                Width="38" Height="38"
+                                Cursor="Hand"
+                                ToolTip="{DynamicResource MainCompanySortTitle}"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                BorderThickness="1">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="SortBtnBd"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="10">
+                                        <TextBlock Text="&#xE71C;"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="{DynamicResource FS13}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="SortBtnBd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                            <Setter TargetName="SortBtnBd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <Popup PlacementTarget="{Binding ElementName=CompanySortButton}"
+                               Placement="Bottom"
+                               HorizontalOffset="-8"
+                               StaysOpen="False"
+                               IsOpen="{Binding IsCompanySortMenuOpen, Mode=TwoWay}"
+                               AllowsTransparency="True"
+                               PopupAnimation="Fade">
+                            <Border CornerRadius="10" Padding="6"
+                                    Background="{DynamicResource CardBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="1"
+                                    MinWidth="220">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="14" ShadowDepth="2" Direction="270"
+                                                      Color="#000000" Opacity="0.14"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource MainCompanySortTitle}"
+                                               FontSize="{DynamicResource FS10}"
+                                               Foreground="{DynamicResource MutedForegroundBrush}"
+                                               Margin="8,2,8,6"/>
+                                    <Button Command="{Binding SetCompanySortCommand}" CommandParameter="Default" Margin="0,0,0,2">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource CompanySortMenuBtn}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CompanySortMode}" Value="Default">
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="{DynamicResource MainCompanySortDefault}" FontSize="{DynamicResource FS11}"/>
+                                    </Button>
+                                    <Button Command="{Binding SetCompanySortCommand}" CommandParameter="Name" Margin="0,0,0,2">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource CompanySortMenuBtn}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CompanySortMode}" Value="Name">
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="{DynamicResource MainCompanySortName}" FontSize="{DynamicResource FS11}"/>
+                                    </Button>
+                                    <Button Command="{Binding SetCompanySortCommand}" CommandParameter="Agency" Margin="0,0,0,2">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource CompanySortMenuBtn}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CompanySortMode}" Value="Agency">
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="{DynamicResource MainCompanySortAgency}" FontSize="{DynamicResource FS11}"/>
+                                    </Button>
+                                    <Button Command="{Binding SetCompanySortCommand}" CommandParameter="EmployeeCount">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource CompanySortMenuBtn}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CompanySortMode}" Value="EmployeeCount">
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="{DynamicResource MainCompanySortEmployees}" FontSize="{DynamicResource FS11}"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </Grid>
+
                 <!-- ===== COMPANY LIST ===== -->
-                <ScrollViewer x:Name="CompanyScrollViewer" Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="6,4,6,0">
+                <ScrollViewer x:Name="CompanyScrollViewer" Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4,6,0">
                     <ListBox ItemsSource="{Binding VisibleCompanies}" 
                              SelectedItem="{Binding SelectedCompany}"
                              Background="Transparent" BorderThickness="0"
@@ -815,7 +1016,7 @@
                 </ScrollViewer>
 
                 <!-- ===== ADD BUTTON ===== -->
-                <Border Grid.Row="2" Padding="14,12,14,16"
+                <Border Grid.Row="3" Padding="14,12,14,16"
                         BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
                     <Button Command="{Binding OpenAddCompanyDialogCommand}" 
                             Height="46" Cursor="Hand"
