@@ -24,6 +24,8 @@ namespace Win11DesktopApp.EmployeeModels
         public bool HasPhoto { get; set; }
         public DateTime? ParsedStartDate { get; set; }
         public DateTime? ParsedEndDate { get; set; }
+        /// <summary>When the employee was moved to archive (from archive log or folder date).</summary>
+        public string ArchivedOn { get; set; } = string.Empty;
     }
 
     /// <summary>

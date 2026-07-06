@@ -779,6 +779,10 @@ namespace Win11DesktopApp.ViewModels
             var archiveLog = TryLoadArchiveLog();
             var archivedEmployees = _employeeService.GetArchivedEmployees();
             var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
+            // Past firms of currently-archived employees carry a valid archive folder (full
+            // employee.json), so previous-firm rows show complete data instead of an end-date-only
+            // stub built from the stale archive log path.
+            activeFirmHistory.AddRange(_employeeService.GetArchivedEmployeeFirmHistory());
             var employeesCache = new Dictionary<string, List<EmployeeSummary>>(StringComparer.OrdinalIgnoreCase);
 
             List<EmployeeSummary> GetEmployeesCached(string firmName)
@@ -846,6 +850,10 @@ namespace Win11DesktopApp.ViewModels
             var visibleArchiveLog = GetVisibleArchiveLogEntries(archiveLog);
             var archivedEmployees = _employeeService.GetArchivedEmployees();
             var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
+            // Past firms of currently-archived employees carry a valid archive folder (full
+            // employee.json), so previous-firm rows show complete data instead of an end-date-only
+            // stub built from the stale archive log path.
+            activeFirmHistory.AddRange(_employeeService.GetArchivedEmployeeFirmHistory());
             var employeesCache = new Dictionary<string, List<EmployeeSummary>>(StringComparer.OrdinalIgnoreCase);
 
             List<EmployeeSummary> GetEmployeesCached(string firmName)

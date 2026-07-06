@@ -116,11 +116,40 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _searchQuery, value))
                 {
+                    OnPropertyChanged(nameof(HasActiveFilters));
                     _searchDebounce.Stop();
                     _searchDebounce.Start();
                 }
             }
         }
+
+        private string _allFirmsLabel = string.Empty;
+
+        private ObservableCollection<string> _firmOptions = new();
+        public ObservableCollection<string> FirmOptions
+        {
+            get => _firmOptions;
+            set => SetProperty(ref _firmOptions, value);
+        }
+
+        private string _selectedFirm = string.Empty;
+        public string SelectedFirm
+        {
+            get => _selectedFirm;
+            set
+            {
+                if (SetProperty(ref _selectedFirm, value))
+                {
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    RefreshArchiveView();
+                }
+            }
+        }
+
+        public bool HasActiveFilters =>
+            !string.IsNullOrWhiteSpace(_searchQuery)
+            || _statFilter != "all"
+            || (!string.IsNullOrEmpty(_selectedFirm) && _selectedFirm != _allFirmsLabel);
 
         public string SortField
         {
@@ -158,9 +187,17 @@ namespace Win11DesktopApp.ViewModels
             {
                 var clamped = Math.Clamp(value, 0.75, 1.35);
                 if (SetProperty(ref _zoomLevel, clamped))
+                {
+                    OnPropertyChanged(nameof(ArchiveTileWidth));
+                    OnPropertyChanged(nameof(ArchiveListMaxWidth));
                     SaveArchiveDisplaySettings();
+                }
             }
         }
+
+        public double ArchiveTileWidth => Math.Round(256 * ZoomLevel, 0);
+
+        public double ArchiveListMaxWidth => Math.Round(1140 * ZoomLevel, 0);
 
         public string StatFilter
         {
@@ -168,7 +205,10 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _statFilter, value))
+                {
+                    OnPropertyChanged(nameof(HasActiveFilters));
                     RefreshArchiveView();
+                }
             }
         }
 
@@ -349,8 +389,11 @@ namespace Win11DesktopApp.ViewModels
                 var changed = false;
                 changed |= SetProperty(ref _searchQuery, string.Empty, nameof(SearchQuery));
                 changed |= SetProperty(ref _statFilter, "all", nameof(StatFilter));
+                if (!string.IsNullOrEmpty(_allFirmsLabel) && _selectedFirm != _allFirmsLabel)
+                    changed |= SetProperty(ref _selectedFirm, _allFirmsLabel, nameof(SelectedFirm));
                 if (changed)
                 {
+                    OnPropertyChanged(nameof(HasActiveFilters));
                     _searchDebounce.Stop();
                     RefreshArchiveView();
                 }
@@ -431,6 +474,7 @@ namespace Win11DesktopApp.ViewModels
                 FilteredCount = _archivedEmployeesSource.Count;
                 HasFilteredResults = FilteredCount > 0;
                 RefreshStats();
+                RebuildFirmOptions();
 
                 // Step 2: apply sort + filtered count via ICollectionView. These
                 // can throw under edge cases (broken comparer, bad item, WPF
@@ -488,6 +532,12 @@ namespace Win11DesktopApp.ViewModels
                         break;
                 }
 
+                if (!string.IsNullOrEmpty(_selectedFirm) && _selectedFirm != _allFirmsLabel
+                    && !string.Equals(archived.FirmName, _selectedFirm, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
                 var query = _searchQuery?.Trim() ?? string.Empty;
                 if (!string.IsNullOrEmpty(query))
                 {
@@ -520,6 +570,32 @@ namespace Win11DesktopApp.ViewModels
                 && e.ParsedEndDate.Value.Month == DateTime.Today.Month
                 && e.ParsedEndDate.Value.Year == DateTime.Today.Year);
             WithoutPhotoCount = _archivedEmployeesSource.Count(e => !e.HasPhoto);
+        }
+
+        private void RebuildFirmOptions()
+        {
+            _allFirmsLabel = Res("ProbAllFirms");
+            if (string.IsNullOrEmpty(_allFirmsLabel))
+                _allFirmsLabel = "Усі фірми";
+
+            var firms = _archivedEmployeesSource
+                .Select(e => e.FirmName)
+                .Where(f => !string.IsNullOrWhiteSpace(f))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(f => f, StringComparer.CurrentCulture)
+                .ToList();
+
+            var options = new ObservableCollection<string> { _allFirmsLabel };
+            foreach (var f in firms)
+                options.Add(f);
+            FirmOptions = options;
+
+            if (string.IsNullOrEmpty(_selectedFirm) || !options.Contains(_selectedFirm))
+            {
+                _selectedFirm = _allFirmsLabel;
+                OnPropertyChanged(nameof(SelectedFirm));
+                OnPropertyChanged(nameof(HasActiveFilters));
+            }
         }
 
         private void RefreshFilteredCount()

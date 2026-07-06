@@ -17,6 +17,15 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
         <local:InverseBooleanConverter x:Key="InverseBool"/>
+
+        <Style x:Key="FinanceMoneyPillText" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="MinWidth" Value="54"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource PageBackgroundBrush}">
@@ -252,77 +261,87 @@
             </Grid>
 
             <!-- ===== SUMMARY CARDS ===== -->
-            <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" 
-                    Padding="12,8" Margin="0,0,0,10"
+            <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
+                    Padding="8,7" Margin="0,0,0,9"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                 <UniformGrid Rows="1" Columns="5">
 
-                    <StackPanel HorizontalAlignment="Center" MinWidth="110">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <TextBlock Text="{DynamicResource FinStatEmployees}" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="9" Padding="8,4" Margin="3,0">
+                        <StackPanel HorizontalAlignment="Center" MinWidth="110">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1" Opacity="0.78">
+                                <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="{DynamicResource FinStatEmployees}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding TotalEmployees}" FontSize="{DynamicResource FS20}" FontWeight="Bold"
+                                       Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding TotalEmployees}" FontSize="{DynamicResource FS22}" FontWeight="Bold"
-                                   Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    </Border>
 
-                    <StackPanel HorizontalAlignment="Center" MinWidth="110">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <TextBlock Text="&#xE823;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <TextBlock Text="{DynamicResource FinStatHours}" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="9" Padding="8,4" Margin="3,0">
+                        <StackPanel HorizontalAlignment="Center" MinWidth="110">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1" Opacity="0.78">
+                                <TextBlock Text="&#xE823;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="{DynamicResource FinStatHours}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding TotalHours, StringFormat={}{0:N1}}" FontSize="{DynamicResource FS20}" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding TotalHours, StringFormat={}{0:N1}}" FontSize="{DynamicResource FS22}" FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    </Border>
 
-                    <StackPanel HorizontalAlignment="Center" MinWidth="130">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <TextBlock Text="&#xE8CB;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <TextBlock Text="{DynamicResource FinStatGross}" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="9" Padding="8,4" Margin="3,0">
+                        <StackPanel HorizontalAlignment="Center" MinWidth="130">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1" Opacity="0.78">
+                                <TextBlock Text="&#xE8CB;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="{DynamicResource FinStatGross}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                            <TextBlock FontSize="{DynamicResource FS20}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center">
+                                <Run Text="{Binding TotalGross, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                            </TextBlock>
                         </StackPanel>
-                        <TextBlock FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center">
-                            <Run Text="{Binding TotalGross, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
-                        </TextBlock>
-                    </StackPanel>
+                    </Border>
 
-                    <StackPanel HorizontalAlignment="Center" MinWidth="130">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <TextBlock Text="{DynamicResource FinStatNet}" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="9" Padding="8,4" Margin="3,0">
+                        <StackPanel HorizontalAlignment="Center" MinWidth="130">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1" Opacity="0.78">
+                                <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="{DynamicResource FinStatNet}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                            <TextBlock FontSize="{DynamicResource FS20}" FontWeight="Bold" HorizontalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsNetNegative}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                                <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                            </TextBlock>
                         </StackPanel>
-                        <TextBlock FontSize="{DynamicResource FS22}" FontWeight="Bold" HorizontalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsNetNegative}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                            <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
-                        </TextBlock>
-                    </StackPanel>
+                    </Border>
 
-                    <StackPanel HorizontalAlignment="Center" MinWidth="110">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <TextBlock Text="{DynamicResource FinStatPaid}" FontSize="11" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="9" Padding="8,4" Margin="3,0">
+                        <StackPanel HorizontalAlignment="Center" MinWidth="110">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,1" Opacity="0.78">
+                                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="{DynamicResource FinStatPaid}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding PaidDisplay}" FontSize="{DynamicResource FS20}" FontWeight="Bold" HorizontalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AllPaid}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
-                        <TextBlock Text="{Binding PaidDisplay}" FontSize="{DynamicResource FS22}" FontWeight="Bold" HorizontalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AllPaid}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
+                    </Border>
                 </UniformGrid>
             </Border>
 
@@ -348,13 +367,13 @@
                               BeginningEdit="SalaryGrid_BeginningEdit"
                               CanUserResizeColumns="True" CanUserSortColumns="True"
                               SelectionMode="Single" SelectionUnit="FullRow"
-                              HeadersVisibility="Column"                               GridLinesVisibility="All"
+                              HeadersVisibility="Column" GridLinesVisibility="All"
                               Background="Transparent" BorderThickness="0"
-                              RowBackground="Transparent" AlternatingRowBackground="#14000000"
+                              RowBackground="Transparent" AlternatingRowBackground="{DynamicResource CardHoverBrush}"
                               Foreground="{DynamicResource ForegroundBrush}"
                               HorizontalGridLinesBrush="{DynamicResource CardBorderBrush}"
-                              VerticalGridLinesBrush="{DynamicResource CardBorderBrush}"
-                              ColumnHeaderHeight="36" RowHeight="32"
+                              VerticalGridLinesBrush="{DynamicResource FinGridVerticalLineBrush}"
+                              ColumnHeaderHeight="42" RowHeight="34"
                               FontSize="{DynamicResource FS12}"
                               FrozenColumnCount="2"
                               VirtualizingPanel.IsVirtualizing="True"
@@ -375,25 +394,45 @@
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="{x:Type GroupItem}">
-                                                    <StackPanel>
-                                                        <Border Padding="12,7" Margin="0,14,0,3" CornerRadius="8,8,0,0"
-                                                                Background="{DynamicResource SuccessBrush}"
-                                                                BorderBrush="#12000000" BorderThickness="1">
-                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                                <TextBlock Text="&#xE731;" FontFamily="Segoe MDL2 Assets" FontSize="13"
-                                                                           Foreground="White" Opacity="0.92" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="{DynamicResource FS13}"
-                                                                           Foreground="White" VerticalAlignment="Center"/>
-                                                                <Border Background="{DynamicResource GlassInnerHighlightBrush}" Opacity="0.28" CornerRadius="9" Padding="8,2" Margin="10,0,0,0">
-                                                                    <TextBlock Foreground="White" FontSize="11" FontWeight="SemiBold"
-                                                                               VerticalAlignment="Center">
-                                                                        <Run Text="{Binding ItemCount, Mode=OneWay}"/>
-                                                                    </TextBlock>
-                                                                </Border>
-                                                            </StackPanel>
-                                                        </Border>
-                                                        <ItemsPresenter/>
-                                                    </StackPanel>
+                                                    <Border Margin="0,16,0,0" CornerRadius="12" SnapsToDevicePixels="True" ClipToBounds="True"
+                                                            BorderBrush="{DynamicResource FinGroupHeaderBorderBrush}" BorderThickness="1"
+                                                            Background="{DynamicResource CardBackgroundBrush}">
+                                                        <StackPanel>
+                                                            <Border Padding="10,8" CornerRadius="11,11,0,0"
+                                                                    Background="{DynamicResource FinGroupHeaderBackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource FinGroupHeaderBorderBrush}"
+                                                                    BorderThickness="0,0,0,1">
+                                                                <StackPanel Orientation="Horizontal"
+                                                                            VerticalAlignment="Center"
+                                                                            HorizontalAlignment="Center">
+                                                                    <Border Width="22" Height="22" CornerRadius="11"
+                                                                            Background="{DynamicResource FinGroupHeaderIconBackgroundBrush}"
+                                                                            Margin="0,0,8,0" Opacity="0.85">
+                                                                        <TextBlock Text="&#xE731;" FontFamily="Segoe MDL2 Assets"
+                                                                                   FontSize="{DynamicResource FS10}"
+                                                                                   Foreground="{DynamicResource FinGroupHeaderIconForegroundBrush}"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <TextBlock Text="{Binding Name}"
+                                                                               FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
+                                                                               Foreground="{DynamicResource FinGroupHeaderForegroundBrush}"
+                                                                               VerticalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               MaxWidth="480"/>
+                                                                    <Border Background="{DynamicResource FinGroupHeaderCountBackgroundBrush}"
+                                                                            CornerRadius="10" Padding="8,2" Margin="10,0,0,0">
+                                                                        <TextBlock Foreground="{DynamicResource FinGroupHeaderCountForegroundBrush}"
+                                                                                   FontSize="{DynamicResource FS11}"
+                                                                                   FontWeight="SemiBold" VerticalAlignment="Center">
+                                                                            <Run Text="{Binding ItemCount, Mode=OneWay}"/>
+                                                                        </TextBlock>
+                                                                    </Border>
+                                                                </StackPanel>
+                                                            </Border>
+                                                            <ItemsPresenter/>
+                                                        </StackPanel>
+                                                    </Border>
                                                 </ControlTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -404,11 +443,11 @@
 
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="White"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Background" Value="{DynamicResource FinGridHeaderBackgroundBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource FinGridHeaderForegroundBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
-                                <Setter Property="Padding" Value="8,5"/>
+                                <Setter Property="Padding" Value="10,7"/>
                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
@@ -418,29 +457,63 @@
                                                     <RowDefinition Height="*"/>
                                                     <RowDefinition Height="1"/>
                                                 </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <!-- Left gripper -->
-                                                <Thumb x:Name="PART_LeftHeaderGripper" Grid.RowSpan="2" Grid.Column="0"
-                                                       HorizontalAlignment="Left" Width="2" Cursor="SizeWE"
-                                                       Background="Transparent"/>
                                                 <!-- Header content -->
-                                                <Border Grid.Column="1"
+                                                <Border x:Name="HeaderSurface"
                                                         Background="{TemplateBinding Background}"
-                                                        Padding="{TemplateBinding Padding}">
+                                                        Padding="{TemplateBinding Padding}"
+                                                        CornerRadius="0"
+                                                        Margin="0">
                                                     <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                                       VerticalAlignment="Center"
                                                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                                 </Border>
-                                                <!-- Right gripper — thin dark separator line -->
-                                                <Thumb x:Name="PART_RightHeaderGripper" Grid.RowSpan="2" Grid.Column="2"
-                                                       HorizontalAlignment="Right" Width="1" Cursor="SizeWE"
-                                                       Background="#3D5AFE"/>
-                                                <Border Grid.Row="1" Grid.ColumnSpan="3" Background="#40FFFFFF"/>
+                                                <!-- Transparent resize zones are layered over the header, not placed between columns. -->
+                                                <Thumb x:Name="PART_LeftHeaderGripper" Grid.RowSpan="2"
+                                                       HorizontalAlignment="Left" Width="4" Cursor="SizeWE"
+                                                       Background="Transparent">
+                                                    <Thumb.Template>
+                                                        <ControlTemplate TargetType="{x:Type Thumb}">
+                                                            <Grid Background="Transparent"/>
+                                                        </ControlTemplate>
+                                                    </Thumb.Template>
+                                                </Thumb>
+                                                <!-- Wide resize hit area with a soft visual divider. -->
+                                                <Thumb x:Name="PART_RightHeaderGripper" Grid.RowSpan="2"
+                                                       HorizontalAlignment="Right" Width="8" Cursor="SizeWE"
+                                                       Background="Transparent">
+                                                    <Thumb.Template>
+                                                        <ControlTemplate TargetType="{x:Type Thumb}">
+                                                            <Grid Background="Transparent">
+                                                                <Border x:Name="ResizeLine"
+                                                                        Width="1"
+                                                                        Height="16"
+                                                                        HorizontalAlignment="Right"
+                                                                        VerticalAlignment="Center"
+                                                                        Background="{DynamicResource FinGridHeaderForegroundBrush}"
+                                                                        Opacity="0.10"/>
+                                                            </Grid>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="ResizeLine" Property="Opacity" Value="0.28"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Thumb.Template>
+                                                </Thumb>
+                                                <Border x:Name="HeaderUnderline" Grid.Row="1" Grid.ColumnSpan="3"
+                                                        Background="{DynamicResource FinGridHeaderSeparatorBrush}"
+                                                        Opacity="0.30"/>
                                             </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="SortDirection" Value="Ascending">
+                                                    <Setter TargetName="HeaderUnderline" Property="Background" Value="{DynamicResource FinGridHeaderSortAccentBrush}"/>
+                                                    <Setter TargetName="HeaderUnderline" Property="Height" Value="2"/>
+                                                </Trigger>
+                                                <Trigger Property="SortDirection" Value="Descending">
+                                                    <Setter TargetName="HeaderUnderline" Property="Background" Value="{DynamicResource FinGridHeaderSortAccentBrush}"/>
+                                                    <Setter TargetName="HeaderUnderline" Property="Height" Value="2"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -585,6 +658,17 @@
                                         </Style.Triggers>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
+                                <DataGridTextColumn.EditingElementStyle>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="TextAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                    </Style>
+                                </DataGridTextColumn.EditingElementStyle>
                             </DataGridTextColumn>
 
                             <!-- Rate (FIXED) -->
@@ -609,31 +693,44 @@
                                         </Style.Triggers>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
+                                <DataGridTextColumn.EditingElementStyle>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="TextAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+                                    </Style>
+                                </DataGridTextColumn.EditingElementStyle>
                             </DataGridTextColumn>
 
                             <!-- Gross/Suma (FIXED) -->
-                            <DataGridTextColumn Binding="{Binding GrossSalary, StringFormat={}{0:N0}}" IsReadOnly="True" Width="90">
-                                <DataGridTextColumn.HeaderTemplate>
+                            <DataGridTemplateColumn IsReadOnly="True" Width="90" SortMemberPath="GrossSalary">
+                                <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColGross}"/>
                                     </DataTemplate>
-                                </DataGridTextColumn.HeaderTemplate>
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                        <Setter Property="FontWeight" Value="Bold"/>
-                                        <Style.Triggers>
+                                </DataGridTemplateColumn.HeaderTemplate>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="GrossPill" CornerRadius="8" Padding="0" HorizontalAlignment="Center"
+                                                Background="Transparent">
+                                            <TextBlock Text="{Binding GrossSalary, StringFormat={}{0:N0}}"
+                                                       Style="{StaticResource FinanceMoneyPillText}"
+                                                       Foreground="{DynamicResource FinGrossForegroundBrush}"
+                                                       Opacity="0.82"/>
+                                        </Border>
+                                        <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding GrossSalary}" Value="0">
-                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
-                                                <Setter Property="FontWeight" Value="Normal"/>
-                                                <Setter Property="Opacity" Value="0.5"/>
+                                                <Setter TargetName="GrossPill" Property="Background" Value="Transparent"/>
+                                                <Setter TargetName="GrossPill" Property="Opacity" Value="0.55"/>
                                             </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
                             <!-- Advance (FIXED) - click to see details popup -->
                             <DataGridTemplateColumn Width="85" IsReadOnly="True" SortMemberPath="Advance">
@@ -644,36 +741,45 @@
                                 </DataGridTemplateColumn.HeaderTemplate>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                Padding="4,2"
-                                                MouseLeftButtonDown="AdvanceCell_Click" Tag="{Binding}">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Cursor" Value="Hand"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding CanEditSalary}" Value="False">
-                                                            <Setter Property="Cursor" Value="Arrow"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock Text="{Binding Advance, StringFormat={}{0:N0}}" 
-                                                       VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Grid>
+                                            <Border Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Padding="4,2"
+                                                    MouseLeftButtonDown="AdvanceCell_Click" Tag="{Binding}">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Cursor" Value="Hand"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Advance}" Value="0">
-                                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
-                                                                <Setter Property="FontWeight" Value="Normal"/>
-                                                                <Setter Property="Opacity" Value="0.5"/>
+                                                            <DataTrigger Binding="{Binding CanEditSalary}" Value="False">
+                                                                <Setter Property="Cursor" Value="Arrow"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Border>
+                                                </Border.Style>
+                                                <Border x:Name="AdvancePill" CornerRadius="8" Background="{DynamicResource FinAdvanceBackgroundBrush}">
+                                                    <TextBlock Text="{Binding Advance, StringFormat={}{0:N0}}"
+                                                               VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource FinanceMoneyPillText}">
+                                                                <Setter Property="Foreground" Value="{DynamicResource FinAdvanceForegroundBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Advance}" Value="0">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                                        <Setter Property="FontWeight" Value="Normal"/>
+                                                                        <Setter Property="Opacity" Value="0.5"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </Border>
+                                        </Grid>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Advance}" Value="0">
+                                                <Setter TargetName="AdvancePill" Property="Background" Value="Transparent"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -681,34 +787,37 @@
                             <!-- DYNAMIC COLUMNS INSERTED HERE BY CODE-BEHIND (index 5+) -->
 
                             <!-- Net Pay (FIXED - always last-1) -->
-                            <DataGridTextColumn x:Name="NetColumn" Binding="{Binding NetSalary, StringFormat={}{0:N0}}" IsReadOnly="True" Width="95">
-                                <DataGridTextColumn.HeaderTemplate>
+                            <DataGridTemplateColumn x:Name="NetColumn" IsReadOnly="True" Width="95" SortMemberPath="NetSalary">
+                                <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColNet}"/>
                                     </DataTemplate>
-                                </DataGridTextColumn.HeaderTemplate>
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
-                                        <Setter Property="FontWeight" Value="Bold"/>
-                                        <Style.Triggers>
+                                </DataGridTemplateColumn.HeaderTemplate>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="NetPill" CornerRadius="8" HorizontalAlignment="Center"
+                                                Background="Transparent">
+                                            <TextBlock Text="{Binding NetSalary, StringFormat={}{0:N0}}"
+                                                       Style="{StaticResource FinanceMoneyPillText}"
+                                                       Foreground="{DynamicResource FinNetForegroundBrush}"
+                                                       FontWeight="SemiBold"
+                                                       Opacity="0.9"/>
+                                        </Border>
+                                        <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding NetSalary}" Value="0">
-                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
-                                                <Setter Property="FontWeight" Value="Normal"/>
-                                                <Setter Property="Opacity" Value="0.5"/>
+                                                <Setter TargetName="NetPill" Property="Background" Value="Transparent"/>
+                                                <Setter TargetName="NetPill" Property="Opacity" Value="0.55"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding NetSalary, Converter={x:Static local:NegativeCheckConverter.Instance}}" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                <Setter TargetName="NetPill" Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
                                             </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
                             <!-- Paid checkbox -->
-                            <DataGridTemplateColumn Width="50" SortMemberPath="IsPaid">
+                            <DataGridTemplateColumn Width="96" SortMemberPath="IsPaid">
                                 <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="✓" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -716,32 +825,50 @@
                                 </DataGridTemplateColumn.HeaderTemplate>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="PaidCellBadge"
-                                                Background="Transparent"
-                                                BorderBrush="Transparent"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="4,2"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center">
-                                            <CheckBox IsChecked="{Binding IsPaid, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
-                                                      IsEnabled="{Binding CanEditSalary}"
-                                                      HorizontalAlignment="Center"
-                                                      VerticalAlignment="Center"
-                                                      Cursor="Hand"
-                                                      Width="16"
-                                                      Height="16">
-                                                <CheckBox.LayoutTransform>
-                                                    <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
-                                                </CheckBox.LayoutTransform>
-                                            </CheckBox>
-                                        </Border>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding IsPaid}" Value="True">
-                                                <Setter TargetName="PaidCellBadge" Property="Background" Value="#1534A853"/>
-                                                <Setter TargetName="PaidCellBadge" Property="BorderBrush" Value="#3034A853"/>
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
+                                        <CheckBox IsChecked="{Binding IsPaid, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  IsEnabled="{Binding CanEditSalary}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Cursor="Hand">
+                                            <CheckBox.Template>
+                                                <ControlTemplate TargetType="CheckBox">
+                                                    <Border x:Name="PaidPill"
+                                                            CornerRadius="10"
+                                                            Padding="8,3"
+                                                            MinWidth="76"
+                                                            Background="{DynamicResource FinUnpaidBackgroundBrush}"
+                                                            BorderBrush="{DynamicResource CardBorderBrush}"
+                                                            BorderThickness="1">
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                            <TextBlock x:Name="PaidIcon" Text="○" FontSize="{DynamicResource FS10}"
+                                                                       Foreground="{DynamicResource FinUnpaidForegroundBrush}"
+                                                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                            <TextBlock x:Name="PaidText" Text="{DynamicResource FinStatusUnpaid}"
+                                                                       FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource FinUnpaidForegroundBrush}"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsChecked" Value="True">
+                                                            <Setter TargetName="PaidPill" Property="Background" Value="{DynamicResource FinPaidBackgroundBrush}"/>
+                                                            <Setter TargetName="PaidPill" Property="BorderBrush" Value="{DynamicResource FinPaidBackgroundBrush}"/>
+                                                            <Setter TargetName="PaidIcon" Property="Text" Value="✓"/>
+                                                            <Setter TargetName="PaidIcon" Property="Foreground" Value="{DynamicResource FinPaidForegroundBrush}"/>
+                                                            <Setter TargetName="PaidText" Property="Text" Value="{DynamicResource FinColPaid}"/>
+                                                            <Setter TargetName="PaidText" Property="Foreground" Value="{DynamicResource FinPaidForegroundBrush}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="PaidPill" Property="Opacity" Value="0.86"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="PaidPill" Property="Opacity" Value="0.55"/>
+                                                            <Setter Property="Cursor" Value="Arrow"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </CheckBox.Template>
+                                        </CheckBox>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

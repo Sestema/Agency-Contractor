@@ -1,27 +1,23 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace Win11DesktopApp.Converters
 {
     /// <summary>
-    /// Thumbnail variant of <see cref="ImagePathConverter"/>. Decodes the source
-    /// image at the requested pixel size via <see cref="BitmapImage.DecodePixelWidth"/>
-    /// so lists and tiles do not hold full-resolution bitmaps in memory.
-    ///
-    /// Pass the desired pixel width through <c>ConverterParameter</c>. Sensible
-    /// defaults are 96 (list circle) or 256 (tile). The cache is keyed by both
-    /// path and decode size, so the same file can coexist as multiple thumbnail
-    /// sizes without trampling each other.
-    ///
-    /// IMPORTANT: This converter is intentionally separate from
-    /// <see cref="ImagePathConverter"/>. Anywhere a full-resolution frame is
-    /// still required (document preview, photo cropping, employee details hero
-    /// image) must keep using <c>ImagePathConverter</c>.
+    /// Thumbnail variant of <see cref="ImagePathConverter"/>. Decodes only the
+    /// requested pixel width via <see cref="BitmapImage.DecodePixelWidth"/> so
+    /// lists and tiles do not hold full-resolution bitmaps in memory.
     /// </summary>
     public class ThumbnailPathConverter : IValueConverter
     {
@@ -36,65 +32,7 @@ namespace Win11DesktopApp.Converters
                 return null;
 
             var decodeWidth = ResolveDecodeWidth(parameter);
-
-            try
-            {
-                var lastWrite = File.GetLastWriteTimeUtc(path);
-                var cacheKey = (path, decodeWidth);
-
-                if (_cache.TryGetValue(cacheKey, out var cached) && cached.lastWrite == lastWrite)
-                    return cached.image;
-
-                for (int attempt = 0; attempt < 3; attempt++)
-                {
-                    try
-                    {
-                        using var stream = new FileStream(
-                            path,
-                            FileMode.Open,
-                            FileAccess.Read,
-                            FileShare.ReadWrite | FileShare.Delete);
-
-                        // Mirror the decode pattern from ImagePathConverter (which
-                        // is known to work reliably) and then downscale via
-                        // TransformedBitmap to keep only a thumbnail-sized bitmap
-                        // alive in the cache. Using BitmapImage + StreamSource +
-                        // DecodePixelWidth was unreliable: with the stream being
-                        // disposed right after EndInit, WPF could end up with a
-                        // frozen but empty BitmapImage, which rendered nothing.
-                        var decoder = BitmapDecoder.Create(stream,
-                            BitmapCreateOptions.IgnoreImageCache,
-                            BitmapCacheOption.OnLoad);
-                        var frame = decoder.Frames[0];
-
-                        BitmapSource result;
-                        if (frame.PixelWidth > decodeWidth && frame.PixelWidth > 0)
-                        {
-                            var scale = (double)decodeWidth / frame.PixelWidth;
-                            var scaled = new TransformedBitmap(frame, new ScaleTransform(scale, scale));
-                            scaled.Freeze();
-                            result = scaled;
-                        }
-                        else
-                        {
-                            frame.Freeze();
-                            result = frame;
-                        }
-
-                        _cache[cacheKey] = (result, lastWrite);
-                        return result;
-                    }
-                    catch when (attempt < 2)
-                    {
-                    }
-                }
-
-                return null;
-            }
-            catch
-            {
-                return null;
-            }
+            return TryLoadIntoCache(path, decodeWidth);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -115,6 +53,84 @@ namespace Win11DesktopApp.Converters
             else
             {
                 _cache.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Warms the thumbnail cache on a background dispatcher priority so UI
+        /// bindings hit cached bitmaps instead of decoding during layout.
+        /// </summary>
+        public static async Task PreloadAsync(
+            IEnumerable<string?> paths,
+            int decodeWidth = DefaultDecodeWidth,
+            CancellationToken cancellationToken = default)
+        {
+            var uniquePaths = paths
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(path => File.Exists(path))
+                .ToList();
+
+            if (uniquePaths.Count == 0)
+                return;
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null)
+                return;
+
+            const int batchSize = 12;
+            for (var index = 0; index < uniquePaths.Count; index += batchSize)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var batch = uniquePaths.Skip(index).Take(batchSize).ToList();
+                await dispatcher.InvokeAsync(() =>
+                {
+                    foreach (var path in batch)
+                        TryLoadIntoCache(path, decodeWidth);
+                }, DispatcherPriority.Background);
+
+                await Task.Yield();
+            }
+        }
+
+        private static BitmapSource? TryLoadIntoCache(string path, int decodeWidth)
+        {
+            try
+            {
+                var lastWrite = File.GetLastWriteTimeUtc(path);
+                var cacheKey = (path, decodeWidth);
+
+                if (_cache.TryGetValue(cacheKey, out var cached) && cached.lastWrite == lastWrite)
+                    return cached.image;
+
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    try
+                    {
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.UriSource = new Uri(Path.GetFullPath(path), UriKind.Absolute);
+                        bitmap.DecodePixelWidth = decodeWidth;
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                        bitmap.EndInit();
+                        bitmap.Freeze();
+
+                        _cache[cacheKey] = (bitmap, lastWrite);
+                        return bitmap;
+                    }
+                    catch when (attempt < 2)
+                    {
+                    }
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
 

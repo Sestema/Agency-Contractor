@@ -41,6 +41,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand FilterAllCommand { get; }
         public ICommand FilterExpiredCommand { get; }
         public ICommand FilterWarningCommand { get; }
+        public ICommand ClearFiltersCommand { get; }
 
         private List<EmployeeProblemGroup> _allGroups = new();
 
@@ -161,6 +162,61 @@ namespace Win11DesktopApp.ViewModels
         public bool IsFilterExpired => ActiveFilter == "Expired";
         public bool IsFilterWarning => ActiveFilter == "Warning";
 
+        private string _allFirmsLabel = "";
+
+        private ObservableCollection<string> _firmOptions = new();
+        public ObservableCollection<string> FirmOptions
+        {
+            get => _firmOptions;
+            set => SetProperty(ref _firmOptions, value);
+        }
+
+        private string _selectedFirm = "";
+        public string SelectedFirm
+        {
+            get => _selectedFirm;
+            set
+            {
+                if (SetProperty(ref _selectedFirm, value))
+                {
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    ApplyFilter();
+                }
+            }
+        }
+
+        private string _searchQuery = "";
+        public string SearchQuery
+        {
+            get => _searchQuery;
+            set
+            {
+                if (SetProperty(ref _searchQuery, value))
+                {
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    ApplyFilter();
+                }
+            }
+        }
+
+        public bool HasActiveFilters =>
+            !string.IsNullOrWhiteSpace(_searchQuery)
+            || (!string.IsNullOrEmpty(_selectedFirm) && _selectedFirm != _allFirmsLabel);
+
+        private bool _isAllClear;
+        public bool IsAllClear
+        {
+            get => _isAllClear;
+            set => SetProperty(ref _isAllClear, value);
+        }
+
+        private bool _isFilteredEmpty;
+        public bool IsFilteredEmpty
+        {
+            get => _isFilteredEmpty;
+            set => SetProperty(ref _isFilteredEmpty, value);
+        }
+
         public string Title => Res("ProbTitle") ?? "Problems — all companies";
 
         private static new string? Res(string key)
@@ -265,6 +321,16 @@ namespace Win11DesktopApp.ViewModels
             FilterAllCommand = new RelayCommand(o => ActiveFilter = "All");
             FilterExpiredCommand = new RelayCommand(o => ActiveFilter = "Expired");
             FilterWarningCommand = new RelayCommand(o => ActiveFilter = "Warning");
+            ClearFiltersCommand = new RelayCommand(o =>
+            {
+                _searchQuery = "";
+                OnPropertyChanged(nameof(SearchQuery));
+                _selectedFirm = _allFirmsLabel;
+                OnPropertyChanged(nameof(SelectedFirm));
+                OnPropertyChanged(nameof(HasActiveFilters));
+                ActiveFilter = "All";
+                ApplyFilter();
+            });
 
             IgnoreProblemCommand = new RelayCommand(o =>
             {
@@ -465,6 +531,7 @@ namespace Win11DesktopApp.ViewModels
                         return;
 
                     _allGroups = snapshot.Groups;
+                    RebuildFirmOptions();
                     IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(snapshot.IgnoredProblems);
                     TotalProblems = snapshot.ActiveProblemCount;
                     TotalPeople = snapshot.GroupCount;
@@ -493,13 +560,54 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private void RebuildFirmOptions()
+        {
+            _allFirmsLabel = Res("ProbAllFirms") ?? "All companies";
+
+            var firms = _allGroups
+                .Select(g => g.FirmName)
+                .Where(f => !string.IsNullOrWhiteSpace(f))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(f => f, StringComparer.CurrentCulture)
+                .ToList();
+
+            var options = new ObservableCollection<string> { _allFirmsLabel };
+            foreach (var f in firms)
+                options.Add(f);
+            FirmOptions = options;
+
+            if (string.IsNullOrEmpty(_selectedFirm) || !options.Contains(_selectedFirm))
+            {
+                _selectedFirm = _allFirmsLabel;
+                OnPropertyChanged(nameof(SelectedFirm));
+                OnPropertyChanged(nameof(HasActiveFilters));
+            }
+        }
+
         private void ApplyFilter()
         {
+            var query = (_searchQuery ?? string.Empty).Trim();
+            var hasQuery = query.Length > 0;
+            var firmActive = !string.IsNullOrEmpty(_selectedFirm) && _selectedFirm != _allFirmsLabel;
+
+            IEnumerable<EmployeeProblemGroup> baseGroups = _allGroups;
+
+            if (firmActive)
+                baseGroups = baseGroups.Where(g => string.Equals(g.FirmName, _selectedFirm, StringComparison.Ordinal));
+
+            if (hasQuery)
+            {
+                baseGroups = baseGroups.Where(g =>
+                    (g.EmployeeName?.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                    || (g.FirmName?.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                    || g.Issues.Any(i => i.DocumentTypeDisplay?.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0));
+            }
+
             IEnumerable<EmployeeProblemGroup> filtered;
 
             if (_activeFilter == "Expired")
             {
-                filtered = _allGroups
+                filtered = baseGroups
                     .Select(g =>
                     {
                         var expiredIssues = g.Issues
@@ -519,7 +627,7 @@ namespace Win11DesktopApp.ViewModels
             }
             else if (_activeFilter == "Warning")
             {
-                filtered = _allGroups
+                filtered = baseGroups
                     .Select(g =>
                     {
                         var warningIssues = g.Issues
@@ -539,7 +647,7 @@ namespace Win11DesktopApp.ViewModels
             }
             else
             {
-                filtered = _allGroups;
+                filtered = baseGroups;
             }
 
             var list = filtered.ToList();
@@ -547,6 +655,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 ProblemGroups = new ObservableCollection<EmployeeProblemGroup>(list!);
                 HasProblems = list.Count > 0;
+                IsAllClear = _allGroups.Count == 0;
+                IsFilteredEmpty = _allGroups.Count > 0 && list.Count == 0;
             });
         }
 

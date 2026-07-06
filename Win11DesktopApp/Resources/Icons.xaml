@@ -52,4 +52,36 @@
 
     <!-- News -->
     <Geometry x:Key="IconNews">M4,4H20C21.1,4 22,4.9 22,6V18C22,19.1 21.1,20 20,20H4C2.9,20 2,19.1 2,18V6C2,4.9 2.9,4 4,4ZM5,7V17H19V7H5ZM7,9H12V11H7V9ZM13,9H17V11H13V9ZM7,12H17V13.5H7V12ZM7,14.5H17V16H7V14.5Z</Geometry>
+
+    <!-- ===== Employee document icons (outline style, 24x24) ===== -->
+    <!-- Passport: ID card with person + lines -->
+    <Geometry x:Key="IconDocPassport">M4,5 H20 A1,1 0 0 1 21,6 V18 A1,1 0 0 1 20,19 H4 A1,1 0 0 1 3,18 V6 A1,1 0 0 1 4,5 Z M8.5,9 A1.5,1.5 0 1 1 8.49,9 Z M6,16 C6,14 7.3,13 8.5,13 C9.7,13 11,14 11,16 M14,10 H18 M14,13.5 H18</Geometry>
+
+    <!-- Visa: passport book with stamp -->
+    <Geometry x:Key="IconDocVisa">M6,3 H16 A1,1 0 0 1 17,4 V20 A1,1 0 0 1 16,21 H6 A1,1 0 0 1 5,20 V4 A1,1 0 0 1 6,3 Z M8,3 V21 M13,9 A2,2 0 1 1 12.99,9 Z M11,15 H15</Geometry>
+
+    <!-- Insurance: shield with checkmark -->
+    <Geometry x:Key="IconDocInsurance">M12,3 L19,6 V11 C19,16 16,19 12,21 C8,19 5,16 5,11 V6 Z M9,12 L11,14 L15,10</Geometry>
+
+    <!-- Work permit: briefcase/badge with checkmark -->
+    <Geometry x:Key="IconDocWorkPermit">M4,8 H20 V18 A1,1 0 0 1 19,19 H5 A1,1 0 0 1 4,18 Z M9,8 V6 A1,1 0 0 1 10,5 H14 A1,1 0 0 1 15,6 V8 M9,13 L11,15 L15,11</Geometry>
+
+    <!-- ===== Weather icons (filled style, 24x24) ===== -->
+    <!-- Clear / sun -->
+    <Geometry x:Key="IconWeatherSun">M12,7 A5,5 0 1 0 12.01,7 Z M12,1 L12,3 M12,21 L12,23 M4.22,4.22 L5.64,5.64 M18.36,18.36 L19.78,19.78 M1,12 L3,12 M21,12 L23,12 M4.22,19.78 L5.64,18.36 M18.36,5.64 L19.78,4.22</Geometry>
+
+    <!-- Partly cloudy / cloud -->
+    <Geometry x:Key="IconWeatherCloud">M7,18 A4,4 0 0 1 7,10 A5,5 0 0 1 16.5,10.5 A3.5,3.5 0 0 1 16.5,18 Z</Geometry>
+
+    <!-- Rain: cloud with drops -->
+    <Geometry x:Key="IconWeatherRain">M7,14 A4,4 0 0 1 7,6 A5,5 0 0 1 16.5,6.5 A3.5,3.5 0 0 1 16.5,14 Z M8,17 L7,20 M12,17 L11,20 M16,17 L15,20</Geometry>
+
+    <!-- Snow: cloud with flakes -->
+    <Geometry x:Key="IconWeatherSnow">M7,14 A4,4 0 0 1 7,6 A5,5 0 0 1 16.5,6.5 A3.5,3.5 0 0 1 16.5,14 Z M8,18 L8,18.01 M12,18 L12,18.01 M16,18 L16,18.01 M10,20 L10,20.01 M14,20 L14,20.01</Geometry>
+
+    <!-- Fog: cloud with lines -->
+    <Geometry x:Key="IconWeatherFog">M7,12 A4,4 0 0 1 7,4 A5,5 0 0 1 16.5,4.5 A3.5,3.5 0 0 1 16.5,12 Z M5,16 H19 M7,19 H17</Geometry>
+
+    <!-- Storm: cloud with lightning bolt -->
+    <Geometry x:Key="IconWeatherStorm">M7,13 A4,4 0 0 1 7,5 A5,5 0 0 1 16.5,5.5 A3.5,3.5 0 0 1 16.5,13 Z M12,14 L9,19 H12 L11,23 L15,17 H12 Z</Geometry>
 </ResourceDictionary>

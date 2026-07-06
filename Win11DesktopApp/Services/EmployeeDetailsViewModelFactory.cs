@@ -52,7 +52,8 @@ namespace Win11DesktopApp.Services
             EmployeeService? employeeService = null,
             bool isReadOnlyMode = false,
             string? employeeId = null,
-            IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null)
+            IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null,
+            System.DateTime? financeContextMonth = null)
         {
             return new EmployeeDetailsViewModel(
                 firmName,
@@ -71,7 +72,8 @@ namespace Win11DesktopApp.Services
                 _tagCatalogService,
                 _aiWindowFactory,
                 _appStatisticsService,
-                bulkUpdateTargets);
+                bulkUpdateTargets,
+                financeContextMonth);
         }
     }
 }

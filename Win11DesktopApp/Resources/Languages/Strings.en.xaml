@@ -531,6 +531,8 @@
     <sys:String x:Key="MsgEmployeesLoadError">Failed to load employees.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Loading employees...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">No employees found.</sys:String>
+    <sys:String x:Key="EmpClearFilters">Clear filters</sys:String>
+    <sys:String x:Key="EmpTileSizeTooltip">Card size (x1–x6)</sys:String>
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Select</sys:String>
@@ -553,6 +555,11 @@
     <sys:String x:Key="EmpBadgeVisa">Visa</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Insurance</sys:String>
     <sys:String x:Key="EmpBadgeWorkPermit">Permit</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitFull">Work permit</sys:String>
+    <sys:String x:Key="EmpBadgePassportShort">Pass</sys:String>
+    <sys:String x:Key="EmpBadgeVisaShort">Visa</sys:String>
+    <sys:String x:Key="EmpBadgeInsuranceShort">Ins.</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitShort">Permit</sys:String>
     <sys:String x:Key="EmpBtnOpen">Open</sys:String>
     <sys:String x:Key="EmpBtnEdit">Edit</sys:String>
     <sys:String x:Key="EmpBtnFolder">Folder</sys:String>
@@ -750,6 +757,12 @@
     <sys:String x:Key="MainGreetingMorning">Good morning</sys:String>
     <sys:String x:Key="MainGreetingAfternoon">Good afternoon</sys:String>
     <sys:String x:Key="MainGreetingEvening">Good evening</sys:String>
+    <sys:String x:Key="WeatherClear">Clear</sys:String>
+    <sys:String x:Key="WeatherCloudy">Cloudy</sys:String>
+    <sys:String x:Key="WeatherFog">Fog</sys:String>
+    <sys:String x:Key="WeatherRain">Rain</sys:String>
+    <sys:String x:Key="WeatherSnow">Snow</sys:String>
+    <sys:String x:Key="WeatherStorm">Storm</sys:String>
     <sys:String x:Key="MainActiveCompanyTitle">Active company</sys:String>
     <sys:String x:Key="MainChangeCompany">Change company</sys:String>
     <sys:String x:Key="MainEditCompanyShort">Edit</sys:String>
@@ -807,12 +820,19 @@
     <sys:String x:Key="ProbDaysExpired">expired {0} days ago</sys:String>
     <sys:String x:Key="ProbDaysToday">expires today</sys:String>
     <sys:String x:Key="ProbDaysLeft">in {0} days</sys:String>
+    <sys:String x:Key="ProbAllFirms">All companies</sys:String>
+    <sys:String x:Key="ProbSearchPlaceholder">Search by name or document…</sys:String>
+    <sys:String x:Key="ProbNoMatches">Nothing found</sys:String>
+    <sys:String x:Key="ProbNoMatchesDesc">Try adjusting the search or filter.</sys:String>
+    <sys:String x:Key="ProbClearFilters">Clear filters</sys:String>
 
     <!-- ArchiveView -->
     <sys:String x:Key="ArchiveTitle">Employee archive</sys:String>
     <sys:String x:Key="ArchiveSearch">Search in archive</sys:String>
     <sys:String x:Key="ArchiveStarted">Started: </sys:String>
     <sys:String x:Key="ArchiveEnded">Ended: </sys:String>
+    <sys:String x:Key="ArchiveArchivedOn">Archived: </sys:String>
+    <sys:String x:Key="ArchiveDateFormatHint">Format: dd.mm.yyyy</sys:String>
     <sys:String x:Key="ArchiveRestore">Restore</sys:String>
     <sys:String x:Key="ArchiveViewProfile">Profile</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Open folder</sys:String>
@@ -1584,6 +1604,7 @@
     <sys:String x:Key="FinBtnMarkAllPaid">✓ Mark All Paid</sys:String>
     <sys:String x:Key="FinBtnCreateMonth">Next month</sys:String>
     <sys:String x:Key="FinColPaid">Paid</sys:String>
+    <sys:String x:Key="FinStatusUnpaid">Unpaid</sys:String>
     <sys:String x:Key="FinFirmBreakdown">By Firm</sys:String>
     <sys:String x:Key="FinAdvanceTitle">Add advance</sys:String>
     <sys:String x:Key="FinAdvanceNote">Note</sys:String>
@@ -1636,6 +1657,8 @@
     <sys:String x:Key="FinExportSelectDesc">Select firms to export</sys:String>
     <sys:String x:Key="FinExportSelectAll">Select all</sys:String>
     <sys:String x:Key="FinExportClearAll">Clear selection</sys:String>
+    <sys:String x:Key="FinExportSearchHint">Search agency or firm…</sys:String>
+    <sys:String x:Key="FinExportNoAgency">No agency</sys:String>
     <sys:String x:Key="FinExportFirmsCount">Firms</sys:String>
     <sys:String x:Key="FinExportSelectedCount">Selected</sys:String>
     <sys:String x:Key="FinExportRowsCount">Rows</sys:String>
@@ -1723,6 +1746,7 @@
     <sys:String x:Key="MsgWizUnsavedClose">You have unsaved data. Close without saving?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Cancel</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Enter company name.</sys:String>
+    <sys:String x:Key="MsgCompanyNameExists">A company with this name already exists. Choose a different name.</sys:String>
     <sys:String x:Key="MsgUnsupportedFormat">Unsupported file format.</sys:String>
 
     <!-- Expiry warning badges -->
@@ -1857,6 +1881,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="ExportColInsExp">Insurance exp.</sys:String>
     <sys:String x:Key="ExportColContractType">Contract type</sys:String>
     <sys:String x:Key="ExportColStartDate">Start date</sys:String>
+    <sys:String x:Key="EmpCardContacts">Contacts</sys:String>
     <sys:String x:Key="ExportColStatus">Status</sys:String>
     <sys:String x:Key="MsgExportError">Export error: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Selected employees: {0}</sys:String>

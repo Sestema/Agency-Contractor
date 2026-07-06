@@ -64,7 +64,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Loaded += (_, _) =>
         {
             var settings = _appSettingsService.Settings;
-            _interfaceSizeMultiplier = SettingsViewModel.GetInterfaceSizeMultiplier(settings.InterfaceSize ?? "Medium");
+            InterfaceSizeMultiplier = SettingsViewModel.GetInterfaceSizeMultiplier(settings.InterfaceSize ?? "Medium");
             SettingsViewModel.ApplyTextSize(settings.TextSize ?? "Medium");
             RestoreWindowBounds(settings);
             UpdateMaximizedVisuals();
@@ -206,9 +206,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        RecalculateScale();
-    }
+        => RecalculateScale();
 
     private void RecalculateScale()
     {

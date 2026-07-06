@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using Win11DesktopApp.Controls;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -18,6 +17,17 @@ namespace Win11DesktopApp.Views
         {
             InitializeComponent();
             PreviewMouseLeftButtonDown += EmployeeView_PreviewMouseLeftButtonDown;
+            PreviewKeyDown += EmployeesView_PreviewKeyDown;
+        }
+
+        private void EmployeesView_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                EmployeeSearchBox.Focus();
+                EmployeeSearchBox.SelectAll();
+                e.Handled = true;
+            }
         }
 
         private void DataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -27,6 +37,12 @@ namespace Win11DesktopApp.Views
             {
                 vm.OpenEmployeeCommand.Execute(emp);
             }
+        }
+
+        private void TilesItemsControl_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (DataContext is EmployeesViewModel vm && e.NewSize.Width > 0)
+                vm.TilesAvailableWidth = e.NewSize.Width;
         }
 
         private void EmployeesScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -85,35 +101,6 @@ namespace Win11DesktopApp.Views
             }
         }
 
-        private void EmployeeTileCard_MouseEnter(object sender, MouseEventArgs e)
-        {
-            if (sender is DependencyObject root)
-                SetTileCardMarquees(root, start: true);
-        }
-
-        private void EmployeeTileCard_MouseLeave(object sender, MouseEventArgs e)
-        {
-            if (sender is DependencyObject root)
-                SetTileCardMarquees(root, start: false);
-        }
-
-        private static void SetTileCardMarquees(DependencyObject root, bool start)
-        {
-            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-            {
-                var child = VisualTreeHelper.GetChild(root, i);
-                if (child is MarqueeTextBlock marquee)
-                {
-                    if (start)
-                        marquee.StartMarquee();
-                    else
-                        marquee.StopMarquee();
-                }
-
-                SetTileCardMarquees(child, start);
-            }
-        }
-
         private void EmployeeCardMoreButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn)
@@ -125,6 +112,20 @@ namespace Win11DesktopApp.Views
         private void EmployeeCardOpenFolder_Click(object sender, RoutedEventArgs e)
         {
             ExecuteEmployeeCardAction(vm => vm.OpenEmployeeFolderCommand);
+            e.Handled = true;
+        }
+
+        private void EmployeeDocumentButton_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element
+                && element.DataContext is EmployeeModels.EmployeeSummary employee
+                && element.Tag is string documentType
+                && DataContext is EmployeesViewModel vm
+                && vm.OpenEmployeeDocumentCommand.CanExecute(Tuple.Create(employee, documentType)))
+            {
+                vm.OpenEmployeeDocumentCommand.Execute(Tuple.Create(employee, documentType));
+            }
+
             e.Handled = true;
         }
 

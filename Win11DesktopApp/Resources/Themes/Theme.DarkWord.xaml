@@ -43,6 +43,76 @@
     <SolidColorBrush x:Key="SuccessChipBorderBrush" Color="#335C3B"/>
     <SolidColorBrush x:Key="SuccessChipForegroundBrush" Color="#3FB950"/>
     <SolidColorBrush x:Key="MutedDescriptionBrush" Color="#A39E92"/>
+    <SolidColorBrush x:Key="EmpCompanyPillBackgroundBrush" Color="#26382F"/>
+    <SolidColorBrush x:Key="EmpCompanyPillBorderBrush" Color="#3D6143"/>
+    <SolidColorBrush x:Key="EmpCompanyPillForegroundBrush" Color="#EDE9E1"/>
+    <SolidColorBrush x:Key="EmpCompanyPillAvatarBackgroundBrush" Color="#3FB950"/>
+    <SolidColorBrush x:Key="EmpCompanyPillAvatarForegroundBrush" Color="#102014"/>
+    <SolidColorBrush x:Key="EmpCompanyPillCheckBrush" Color="#8ADB95"/>
+
+    <LinearGradientBrush x:Key="EmployeeTileCardBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#37332E" Offset="0"/>
+        <GradientStop Color="#312E2A" Offset="0.56"/>
+        <GradientStop Color="#292723" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="EmployeeTileCardBorderBrush" Color="#4B463F"/>
+    <SolidColorBrush x:Key="EmployeeTileTextPrimaryBrush" Color="#EFEAE1"/>
+    <SolidColorBrush x:Key="EmployeeTileTextSecondaryBrush" Color="#B5AEA2"/>
+    <SolidColorBrush x:Key="EmployeeTileTextMutedBrush" Color="#918A80"/>
+    <SolidColorBrush x:Key="EmployeeTileInfoPanelBrush" Color="#292723"/>
+    <SolidColorBrush x:Key="EmployeeTileInfoPanelBorderBrush" Color="#454139"/>
+    <SolidColorBrush x:Key="EmployeeTileDocsPanelBrush" Color="#272520"/>
+    <SolidColorBrush x:Key="EmployeeTileDocsPanelBorderBrush" Color="#423D36"/>
+    <SolidColorBrush x:Key="EmployeeTileAvatarBackgroundBrush" Color="#2A2825"/>
+    <LinearGradientBrush x:Key="EmployeeTileAvatarBorderBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#6A6358" Offset="0"/>
+        <GradientStop Color="#454139" Offset="0.52"/>
+        <GradientStop Color="#2A2825" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="EmployeeTileStatusOutlineBrush" Color="#2A2825"/>
+    <RadialGradientBrush x:Key="EmployeeTileDecorBlueBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.55" RadiusY="0.55">
+        <GradientStop Color="#26364A" Offset="0"/>
+        <GradientStop Color="#0026364A" Offset="1"/>
+    </RadialGradientBrush>
+    <RadialGradientBrush x:Key="EmployeeTileDecorGreenBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.58" RadiusY="0.58">
+        <GradientStop Color="#263B2A" Offset="0"/>
+        <GradientStop Color="#00263B2A" Offset="1"/>
+    </RadialGradientBrush>
+    <SolidColorBrush x:Key="EmployeeDocErrorBackgroundBrush" Color="#342220"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorCardBorderBrush" Color="#6E3A34"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorTileBrush" Color="#452A27"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorForegroundBrush" Color="#F0A09A"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningBackgroundBrush" Color="#322A18"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningCardBorderBrush" Color="#5B4B1D"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningTileBrush" Color="#3C321D"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningForegroundBrush" Color="#E6C76A"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessBackgroundBrush" Color="#1F3023"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessCardBorderBrush" Color="#335C3B"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessTileBrush" Color="#263B29"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessForegroundBrush" Color="#8ADB95"/>
+
+    <SolidColorBrush x:Key="FinGridHeaderBackgroundBrush" Color="#34302B"/>
+    <SolidColorBrush x:Key="FinGridHeaderForegroundBrush" Color="#EDE9E1"/>
+    <SolidColorBrush x:Key="FinGridHeaderSeparatorBrush" Color="#544E45"/>
+    <SolidColorBrush x:Key="FinGridVerticalLineBrush" Color="#3F3B34"/>
+    <SolidColorBrush x:Key="FinGridHeaderSortAccentBrush" Color="#7BB6F0"/>
+    <SolidColorBrush x:Key="FinGroupHeaderBackgroundBrush" Color="#263528"/>
+    <SolidColorBrush x:Key="FinGroupHeaderBorderBrush" Color="#3D6143"/>
+    <SolidColorBrush x:Key="FinGroupHeaderForegroundBrush" Color="#BDEBC5"/>
+    <SolidColorBrush x:Key="FinGroupHeaderIconBackgroundBrush" Color="#1C2E20"/>
+    <SolidColorBrush x:Key="FinGroupHeaderIconForegroundBrush" Color="#3FB950"/>
+    <SolidColorBrush x:Key="FinGroupHeaderCountBackgroundBrush" Color="#3B3833"/>
+    <SolidColorBrush x:Key="FinGroupHeaderCountForegroundBrush" Color="#EDE9E1"/>
+    <SolidColorBrush x:Key="FinGrossBackgroundBrush" Color="#1C2E20"/>
+    <SolidColorBrush x:Key="FinGrossForegroundBrush" Color="#8ADB95"/>
+    <SolidColorBrush x:Key="FinAdvanceBackgroundBrush" Color="#302916"/>
+    <SolidColorBrush x:Key="FinAdvanceForegroundBrush" Color="#F2CC60"/>
+    <SolidColorBrush x:Key="FinNetBackgroundBrush" Color="#1F3044"/>
+    <SolidColorBrush x:Key="FinNetForegroundBrush" Color="#8BC5F7"/>
+    <SolidColorBrush x:Key="FinPaidBackgroundBrush" Color="#3FB950"/>
+    <SolidColorBrush x:Key="FinPaidForegroundBrush" Color="#102014"/>
+    <SolidColorBrush x:Key="FinUnpaidBackgroundBrush" Color="#3B3833"/>
+    <SolidColorBrush x:Key="FinUnpaidForegroundBrush" Color="#A39E92"/>
 
     <LinearGradientBrush x:Key="BrandPrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#6F7BF7" Offset="0"/>

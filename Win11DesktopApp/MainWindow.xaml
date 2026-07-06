@@ -16,6 +16,7 @@
         Icon="pack://application:,,,/Resources/app_icon.ico"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         TextElement.FontFamily="{StaticResource AppFontFamily}"
         TextElement.Foreground="{DynamicResource ForegroundBrush}"
         TextOptions.TextFormattingMode="Ideal"

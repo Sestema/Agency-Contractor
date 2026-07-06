@@ -14,6 +14,7 @@ using Microsoft.Win32;
 using ClosedXML.Excel;
 using Win11DesktopApp.Models;
 using EmployeeModels = Win11DesktopApp.EmployeeModels;
+using Win11DesktopApp.Converters;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.Views;
 
@@ -89,12 +90,17 @@ namespace Win11DesktopApp.ViewModels
         private string _lastStatus = string.Empty;
         private int _loadGeneration;
         private CancellationTokenSource? _batchAICts;
+        private CancellationTokenSource? _thumbnailPreloadCts;
 
         private ObservableCollection<EmployeeModels.EmployeeSummary> _employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
         public ObservableCollection<EmployeeModels.EmployeeSummary> Employees
         {
             get => _employees;
-            set => SetProperty(ref _employees, value);
+            set
+            {
+                if (SetProperty(ref _employees, value))
+                    NotifyActiveViewEmployeesChanged();
+            }
         }
 
         private bool _hasEmployees;
@@ -133,10 +139,14 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (SetProperty(ref _searchQuery, value))
                 {
+                    OnPropertyChanged(nameof(HasActiveFilters));
                     ApplyFilter();
                 }
             }
         }
+
+        public bool HasActiveFilters =>
+            !string.IsNullOrEmpty(_searchQuery) || _statFilter != "all";
 
         private bool _isError;
         public bool IsError
@@ -179,7 +189,10 @@ namespace Win11DesktopApp.ViewModels
             set
             {
                 if (SetProperty(ref _statFilter, value))
+                {
+                    OnPropertyChanged(nameof(HasActiveFilters));
                     ApplyFilter();
+                }
             }
         }
 
@@ -353,6 +366,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ConfirmDeleteCommand { get; }
         public ICommand CancelDeleteCommand { get; }
         public ICommand OpenEmployeeFolderCommand { get; }
+        public ICommand OpenEmployeeDocumentCommand { get; }
         public ICommand ExportToExcelCommand { get; }
         public ICommand ToggleSelectionModeCommand { get; }
         public ICommand SelectAllCommand { get; }
@@ -371,6 +385,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand SortByCommand { get; }
         public ICommand SetViewModeCommand { get; }
         public ICommand FilterByStatCommand { get; }
+        public ICommand ClearFiltersCommand { get; }
 
         private string _viewMode;
         public string ViewMode
@@ -386,6 +401,11 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(IsIconsView));
                     _appSettingsService.Settings.EmployeeViewMode = value;
                     _appSettingsService.SaveSettings();
+
+                    NotifyActiveViewEmployeesChanged();
+
+                    if (Employees.Count > 0)
+                        ScheduleThumbnailPreload(Employees.ToList());
                 }
             }
         }
@@ -395,18 +415,99 @@ namespace Win11DesktopApp.ViewModels
         public bool IsTilesView => ViewMode == "Tiles";
         public bool IsIconsView => ViewMode == "Icons";
 
-        private double _zoomLevel;
+        public IEnumerable<EmployeeModels.EmployeeSummary>? EmployeesForTable =>
+            IsTableView ? Employees : null;
+
+        public IEnumerable<EmployeeModels.EmployeeSummary>? EmployeesForList =>
+            IsListView ? Employees : null;
+
+        public IEnumerable<EmployeeModels.EmployeeSummary>? EmployeesForTiles =>
+            IsTilesView ? Employees : null;
+
+        public IEnumerable<EmployeeModels.EmployeeSummary>? EmployeesForIcons =>
+            IsIconsView ? Employees : null;
+
+        private void NotifyActiveViewEmployeesChanged()
+        {
+            OnPropertyChanged(nameof(EmployeesForTable));
+            OnPropertyChanged(nameof(EmployeesForList));
+            OnPropertyChanged(nameof(EmployeesForTiles));
+            OnPropertyChanged(nameof(EmployeesForIcons));
+        }
+
+        private double _zoomLevel = 1.0;
         public double ZoomLevel
         {
             get => _zoomLevel;
+            private set => SetProperty(ref _zoomLevel, value);
+        }
+
+        private int _tileSizeStep = 4;
+        public int TileSizeStep
+        {
+            get => _tileSizeStep;
             set
             {
-                if (SetProperty(ref _zoomLevel, value))
+                var clamped = Math.Max(1, Math.Min(6, value));
+                if (SetProperty(ref _tileSizeStep, clamped))
                 {
-                    _appSettingsService.Settings.EmployeeZoomLevel = value;
+                    _appSettingsService.Settings.EmployeeTileSizeStep = clamped;
                     _appSettingsService.SaveSettings();
+                    RecalculateTileLayout();
                 }
             }
+        }
+
+        private double _tilesAvailableWidth;
+        public double TilesAvailableWidth
+        {
+            get => _tilesAvailableWidth;
+            set
+            {
+                if (Math.Abs(_tilesAvailableWidth - value) < 0.5)
+                    return;
+                _tilesAvailableWidth = value;
+                RecalculateTileLayout();
+            }
+        }
+
+        private double _tileCardWidth = 390.0;
+        public double TileCardWidth
+        {
+            get => _tileCardWidth;
+            private set => SetProperty(ref _tileCardWidth, value);
+        }
+
+        private const double TileBaseCardWidth = 390.0;
+        private const double TileBaseHorizontalMargin = 14.0; // card margin '6,14,8,8' => 6 + 8 horizontally
+        private const double TileMinCardWidth = 280.0;
+        private const double TileMinZoom = 0.6;
+
+        private void RecalculateTileLayout()
+        {
+            var available = _tilesAvailableWidth;
+            if (available < 100)
+            {
+                TileCardWidth = TileBaseCardWidth;
+                ZoomLevel = 1.0;
+                return;
+            }
+
+            // Step x1..x6 maps to column count: x1 = smallest cards (8 columns), x6 = largest (3 columns).
+            var columns = 9 - _tileSizeStep;
+
+            // Card margin scales with zoom (zoom = width / base), so solve slot = width + margin * zoom.
+            double CardWidthFor(int cols) =>
+                (available / cols) * TileBaseCardWidth / (TileBaseCardWidth + TileBaseHorizontalMargin);
+
+            // Only shrink column count when cards would be too narrow — never bump for max zoom,
+            // so x6 always stays at 3 columns even on ultrawide screens.
+            while (columns > 1 && CardWidthFor(columns) < TileMinCardWidth)
+                columns--;
+
+            var width = Math.Max(160.0, Math.Floor(CardWidthFor(columns)) - 1);
+            TileCardWidth = width;
+            ZoomLevel = Math.Max(TileMinZoom, width / TileBaseCardWidth);
         }
 
         private bool _isAddEmployeeDialogOpen;
@@ -494,7 +595,7 @@ namespace Win11DesktopApp.ViewModels
             _sortField = _appSettingsService.Settings.EmployeeSortField ?? "Name";
             _sortAscending = _appSettingsService.Settings.EmployeeSortAscending;
             _viewMode = _showAllCompanies ? "Tiles" : _appSettingsService.Settings.EmployeeViewMode ?? "List";
-            _zoomLevel = _appSettingsService.Settings.EmployeeZoomLevel;
+            _tileSizeStep = Math.Max(1, Math.Min(6, _appSettingsService.Settings.EmployeeTileSizeStep));
             IsCompanySelected = _company != null;
 
             GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
@@ -542,6 +643,14 @@ namespace Win11DesktopApp.ViewModels
                     catch (Exception ex) { LoggingService.LogWarning("EmployeesViewModel.OpenFolder", ex.Message); }
                 }
             }, o => o is EmployeeModels.EmployeeSummary);
+
+            OpenEmployeeDocumentCommand = new RelayCommand(
+                o =>
+                {
+                    if (o is Tuple<EmployeeModels.EmployeeSummary, string> request)
+                        OpenEmployeeDocument(request.Item1, request.Item2);
+                },
+                o => o is Tuple<EmployeeModels.EmployeeSummary, string>);
 
             ExportToExcelCommand = new RelayCommand(o => ExportToExcel(), o => _allEmployees.Count > 0);
 
@@ -614,6 +723,11 @@ namespace Win11DesktopApp.ViewModels
 
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             FilterByStatCommand = new RelayCommand(o => StatFilter = o as string ?? "all");
+            ClearFiltersCommand = new RelayCommand(o =>
+            {
+                SearchQuery = string.Empty;
+                StatFilter = "all";
+            });
 
             _ = LoadEmployeesAsync();
         }
@@ -789,6 +903,7 @@ namespace Win11DesktopApp.ViewModels
 
             Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>(list);
             UpdateFilteredState(list.Count, SearchQuery?.Trim() ?? string.Empty);
+            ScheduleThumbnailPreload(list);
         }
 
         private async Task ApplyFilterInBatchesAsync(int generation)
@@ -818,6 +933,47 @@ namespace Win11DesktopApp.ViewModels
 
                 await Dispatcher.Yield(DispatcherPriority.Background);
             }
+
+            if (generation == _loadGeneration)
+            {
+                NotifyActiveViewEmployeesChanged();
+                ScheduleThumbnailPreload(list);
+            }
+        }
+
+        private void ScheduleThumbnailPreload(IReadOnlyList<EmployeeModels.EmployeeSummary> employees)
+        {
+            _thumbnailPreloadCts?.Cancel();
+            _thumbnailPreloadCts?.Dispose();
+            _thumbnailPreloadCts = new CancellationTokenSource();
+            var token = _thumbnailPreloadCts.Token;
+
+            var decodeWidth = ViewMode switch
+            {
+                "Icons" => 160,
+                "List" => 96,
+                "Tiles" => 192,
+                _ => 128
+            };
+
+            var paths = employees
+                .Where(employee => employee.HasPhoto && !string.IsNullOrWhiteSpace(employee.PhotoPath))
+                .Select(employee => employee.PhotoPath);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ThumbnailPathConverter.PreloadAsync(paths, decodeWidth, token);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("EmployeesViewModel.ScheduleThumbnailPreload", ex.Message);
+                }
+            }, token);
         }
 
         private List<EmployeeModels.EmployeeSummary> BuildFilteredEmployees()
@@ -1021,6 +1177,40 @@ namespace Win11DesktopApp.ViewModels
                 return PolicyService.RequireCanEditCompany(company, "Редагувати працівника");
 
             return PolicyService.CanEditEmployer(null, firmName, null);
+        }
+
+        private void OpenEmployeeDocument(EmployeeModels.EmployeeSummary? employee, string documentType)
+        {
+            if (employee == null || string.IsNullOrWhiteSpace(employee.EmployeeFolder))
+                return;
+
+            if (!CanAccessEmployee(employee))
+                return;
+
+            try
+            {
+                var data = _employeeService.LoadEmployeeData(employee.EmployeeFolder);
+                if (data == null)
+                    return;
+
+                var document = GetBatchDocumentInfo(employee.EmployeeFolder, data, documentType);
+                if (string.IsNullOrWhiteSpace(document.FilePath) || !File.Exists(document.FilePath))
+                {
+                    ToastService.Instance.Warning($"{document.Name}: файл не знайдено");
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = document.FilePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeesViewModel.OpenEmployeeDocument", ex.Message);
+                ToastService.Instance.Warning($"Не вдалося відкрити документ: {ex.Message}");
+            }
         }
 
         private EmployerCompany? FindCompanyByName(string firmName)

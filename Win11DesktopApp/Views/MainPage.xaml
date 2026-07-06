@@ -49,7 +49,7 @@
         <!-- Main Content -->
         <Grid>
             <!-- Top Bar -->
-            <Grid VerticalAlignment="Top" Height="60" Margin="24,4,24,0">
+            <Grid VerticalAlignment="Top" Height="{DynamicResource UiTopBarH}" Margin="24,4,24,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -61,20 +61,20 @@
                         Style="{StaticResource ToolbarIconButton}" Margin="0,0,10,0">
                     <Path Data="{StaticResource IconHamburger}" 
                           Fill="{DynamicResource ForegroundBrush}"
-                          Stretch="Uniform" Width="20" Height="20"/>
+                          Stretch="Uniform" Width="{DynamicResource UiIconMd}" Height="{DynamicResource UiIconMd}"/>
                 </Button>
 
                 <!-- Center: Search Box -->
-                <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="420">
+                <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="{DynamicResource UiSearchW}">
                     <Border Style="{StaticResource ToolbarSearchContainer}" CornerRadius="20" Padding="6,0"
-                            Height="38" Effect="{DynamicResource CardShadow}">
+                            Height="{DynamicResource UiControlH}" Effect="{DynamicResource CardShadow}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                            <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiGlyphMd}"
                                        Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="10,0,6,0"/>
                             <TextBox Grid.Column="1" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                      VerticalAlignment="Center" BorderThickness="0" Background="Transparent"
@@ -122,7 +122,7 @@
                            HorizontalOffset="0" VerticalOffset="2">
                         <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                Width="420" MaxHeight="400" Padding="4">
+                                Width="{DynamicResource UiSearchW}" MaxHeight="400" Padding="4">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.18"/>
                             </Border.Effect>
@@ -192,14 +192,14 @@
                                 Command="{Binding ToggleNotificationsCommand}"
                                 Style="{StaticResource ToolbarIconButton}"
                                 ToolTip="{DynamicResource NotificationsTitle}">
-                            <Grid Width="24" Height="24">
+                            <Grid Width="{DynamicResource UiAvatarSm}" Height="{DynamicResource UiAvatarSm}">
                                 <TextBlock Text="&#xEA8F;"
                                            FontFamily="Segoe MDL2 Assets"
-                                           FontSize="19"
+                                           FontSize="{DynamicResource UiNotifIcon}"
                                            Foreground="{DynamicResource ForegroundBrush}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
-                                <Ellipse Width="9" Height="9"
+                                <Ellipse Width="{DynamicResource UiNotifBadge}" Height="{DynamicResource UiNotifBadge}"
                                          Fill="{DynamicResource ErrorBrush}"
                                          Stroke="{DynamicResource ContentBackgroundBrush}"
                                          StrokeThickness="1.2"
@@ -373,7 +373,7 @@
                             Style="{StaticResource ToolbarIconButton}">
                         <Path Data="{StaticResource IconSettings}"
                               Fill="{DynamicResource ForegroundBrush}"
-                              Stretch="Uniform" Width="20" Height="20"/>
+                              Stretch="Uniform" Width="{DynamicResource UiIconMd}" Height="{DynamicResource UiIconMd}"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -397,11 +397,12 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0"
-                                    Width="34"
-                                    Height="34"
+                                    Width="{DynamicResource UiAvatarMd}"
+                                    Height="{DynamicResource UiAvatarMd}"
                                     CornerRadius="11"
                                     Background="{Binding SelectedCompanyDisplayName, Converter={StaticResource NameToColor}}"
                                     Margin="0,0,10,0"
@@ -444,7 +445,7 @@
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="&#xE7BA;"
                                                        FontFamily="Segoe MDL2 Assets"
-                                                       FontSize="11"
+                                                       FontSize="{DynamicResource UiGlyphSm}"
                                                        Margin="0,0,6,0"
                                                        Foreground="{DynamicResource WarningBrush}"
                                                        VerticalAlignment="Center"/>
@@ -462,7 +463,7 @@
                                     </Border>
                                     <TextBlock Text="&#xE716;"
                                                FontFamily="Segoe MDL2 Assets"
-                                               FontSize="11"
+                                               FontSize="{DynamicResource UiGlyphSm}"
                                                Margin="0,0,6,0"
                                                Foreground="{DynamicResource SecondaryForegroundBrush}"
                                                VerticalAlignment="Center"/>
@@ -479,34 +480,98 @@
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel Grid.Column="3"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center"
-                                        Margin="12,0,12,0">
-                                <Button Command="{Binding EditCompanyCommand}"
-                                        Style="{StaticResource HeaderGhostButton}"
-                                        Padding="6,4"
-                                        ToolTip="{DynamicResource MainTooltipEdit}"
-                                        Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="&#xE70F;"
-                                               FontFamily="Segoe MDL2 Assets"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource ForegroundBrush}"/>
-                                </Button>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="4" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CurrentTimeText}"
-                                           HorizontalAlignment="Right"
-                                           FontSize="{DynamicResource FS18}"
-                                           FontWeight="SemiBold"
+                            <Button Grid.Column="3"
+                                    Command="{Binding EditCompanyCommand}"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    Padding="6,4"
+                                    VerticalAlignment="Center"
+                                    Margin="10,0,10,0"
+                                    ToolTip="{DynamicResource MainTooltipEdit}"
+                                    Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="&#xE70F;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="{DynamicResource UiGlyphSm}"
                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{Binding CurrentDateText}"
-                                           HorizontalAlignment="Right"
-                                           Margin="0,1,0,0"
-                                           FontSize="{DynamicResource FS11}"
-                                           Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                            </StackPanel>
+                            </Button>
+
+                            <!-- Weather widget: hidden until data loads / when offline -->
+                            <Border Grid.Column="4"
+                                    VerticalAlignment="Center"
+                                    Padding="10,5"
+                                    CornerRadius="12"
+                                    Margin="0,0,10,0"
+                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="1"
+                                    ToolTip="{Binding WeatherCity}"
+                                    Visibility="{Binding HasWeather, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{Binding WeatherIconKey, Converter={StaticResource IconKeyToGeometry}}"
+                                          Width="22" Height="22"
+                                          Stretch="Uniform"
+                                          Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          Stroke="{DynamicResource AccentBrush}"
+                                          StrokeThickness="1.6"
+                                          StrokeLineJoin="Round"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          Fill="Transparent"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding WeatherTempText}"
+                                                   FontSize="{DynamicResource FS16}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                        <TextBlock Text="{Binding WeatherDescription}"
+                                                   Margin="0,1,0,0"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Time-of-day widget: matches the stats pill for a consistent look -->
+                            <Border Grid.Column="5"
+                                    VerticalAlignment="Center"
+                                    Padding="12,5"
+                                    CornerRadius="12"
+                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    BorderThickness="1"
+                                    MaxWidth="340">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="9"
+                                            Background="{DynamicResource AccentLightBrush}"
+                                            Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding GreetingGlyph}"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="{DynamicResource FS14}"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding GreetingText}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding CurrentDateText}"
+                                                   Margin="0,1,0,0"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Border Width="1" Height="26" Margin="12,0"
+                                            Background="{DynamicResource CardBorderBrush}"/>
+                                    <TextBlock Text="{Binding CurrentTimeText}"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FS18}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </Border>
 

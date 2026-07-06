@@ -596,7 +596,7 @@ namespace Win11DesktopApp.Views
             _pdfPreviewTempFolder = null;
         }
 
-        private void CleanupSessionTemp()
+        public void CleanupSessionTemp()
         {
             CleanupPdfPagePreviews();
             if (!string.IsNullOrWhiteSpace(_sessionTempFolder) && Directory.Exists(_sessionTempFolder))
@@ -615,6 +615,12 @@ namespace Win11DesktopApp.Views
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(_selectedFilePath) || !File.Exists(_selectedFilePath))
+            {
+                MessageBox.Show(Res("MsgUploadFirst"), Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             foreach (var (key, (box, _)) in _fields)
             {
                 NewValues[key] = box.Text.Trim();
@@ -632,7 +638,8 @@ namespace Win11DesktopApp.Views
 
         protected override void OnClosed(EventArgs e)
         {
-            CleanupSessionTemp();
+            if (!Saved)
+                CleanupSessionTemp();
             base.OnClosed(e);
         }
     }

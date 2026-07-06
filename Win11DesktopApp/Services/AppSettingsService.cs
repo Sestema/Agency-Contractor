@@ -81,11 +81,13 @@ namespace Win11DesktopApp.Services
             public List<string> HiddenTags { get; set; } = new List<string>();
             public List<string> HiddenCompanyIds { get; set; } = new List<string>();
             public string SelectedCompanyId { get; set; } = string.Empty;
+            public string CompanySortMode { get; set; } = "Default";
             public string AppVersion { get; set; } = CurrentAppVersion;
             public string EmployeeSortField { get; set; } = "Name";
             public bool EmployeeSortAscending { get; set; } = true;
             public string EmployeeViewMode { get; set; } = "List";
             public double EmployeeZoomLevel { get; set; } = 1.0;
+            public int EmployeeTileSizeStep { get; set; } = 4;
             public string ArchiveSortField { get; set; } = "EndDate";
             public bool ArchiveSortAscending { get; set; } = false;
             public string ArchiveViewMode { get; set; } = "List";
@@ -429,6 +431,7 @@ namespace Win11DesktopApp.Services
             Settings.ExportFirmSelectWindowWidth = SafeDouble(Settings.ExportFirmSelectWindowWidth);
             Settings.ExportFirmSelectWindowHeight = SafeDouble(Settings.ExportFirmSelectWindowHeight);
             Settings.EmployeeZoomLevel = SafeDouble(Settings.EmployeeZoomLevel, 1.0);
+            Settings.EmployeeTileSizeStep = Math.Min(6, Math.Max(1, Settings.EmployeeTileSizeStep));
             Settings.ArchiveZoomLevel = SafeDouble(Settings.ArchiveZoomLevel, 1.0);
             Settings.CandidateZoomLevel = SafeDouble(Settings.CandidateZoomLevel, 1.0);
             Settings.SalarySidebarTopRatio = SafeDouble(Settings.SalarySidebarTopRatio, 2.0);

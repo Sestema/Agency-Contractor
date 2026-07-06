@@ -8,6 +8,10 @@
         ResizeMode="CanResize"
         Background="{DynamicResource WindowBackgroundBrush}">
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -140,68 +144,202 @@
             </StackPanel>
         </Border>
 
-        <!-- Firm list -->
+        <!-- Firm list grouped by agency -->
         <Border Grid.Row="3" Style="{StaticResource DialogSectionCard}" Padding="10">
-            <ScrollViewer Style="{StaticResource ThinScroll}">
-                <ItemsControl x:Name="FirmList">
-                    <ItemsControl.ItemContainerStyle>
-                        <Style TargetType="ContentPresenter">
-                            <Setter Property="Margin" Value="0,0,0,8"/>
-                        </Style>
-                    </ItemsControl.ItemContainerStyle>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="12,10">
-                                <Border.Style>
-                                    <Style TargetType="Border" BasedOn="{StaticResource DialogPreviewSurface}">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-                                        <Setter Property="BorderThickness" Value="1"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+            <DockPanel>
+                <!-- Search -->
+                <Grid DockPanel.Dock="Top" Margin="2,2,2,10">
+                    <TextBox x:Name="SearchBox"
+                             TextChanged="SearchBox_TextChanged"
+                             Padding="32,7,10,7"
+                             FontSize="{DynamicResource FS13}"
+                             VerticalContentAlignment="Center"/>
+                    <TextBlock Text="&#xE721;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="11,0,0,0"
+                               IsHitTestVisible="False"/>
+                    <TextBlock x:Name="SearchPlaceholder"
+                               Text="{DynamicResource FinExportSearchHint}"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="34,0,0,0"
+                               IsHitTestVisible="False"/>
+                </Grid>
 
-                                    <CheckBox Grid.Column="0"
-                                              IsChecked="{Binding IsSelected}"
-                                              FontSize="{DynamicResource FS13}"
-                                              Foreground="{DynamicResource ForegroundBrush}"
-                                              Cursor="Hand"
-                                              VerticalAlignment="Center"
-                                              Margin="0,0,12,0"/>
+                <ScrollViewer Style="{StaticResource ThinScroll}">
+                    <ItemsControl x:Name="GroupList">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Margin" Value="0,0,0,8"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}"
+                                        Padding="0">
+                                    <Border.Style>
+                                        <Style TargetType="Border" BasedOn="{StaticResource DialogPreviewSurface}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <!-- Agency header -->
+                                        <Grid Margin="10,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding FirmName}"
-                                                   FontSize="{DynamicResource FS13}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                      IsThreeState="True"
+                                                      Click="GroupCheck_Click"
+                                                      Cursor="Hand"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,8,0"/>
+
+                                            <Button Grid.Column="1"
+                                                    Click="ToggleGroup_Click"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="4"
+                                                    Cursor="Hand"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,6,0">
+                                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="&#xE76C;"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                                    <Setter Property="Text" Value="&#xE70D;"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Button>
+
+                                            <StackPanel Grid.Column="2"
+                                                        Orientation="Horizontal"
+                                                        VerticalAlignment="Center"
+                                                        Cursor="Hand"
+                                                        Background="Transparent"
+                                                        MouseLeftButtonUp="ToggleGroup_Click">
+                                                <TextBlock Text="&#xE716;"
+                                                           FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding AgencyName}"
+                                                           FontSize="{DynamicResource FS13}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock FontSize="{DynamicResource FS11}"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="8,0,0,0">
+                                                    <Run Text="("/><Run Text="{Binding SelectedFirmCount, Mode=OneWay}"/><Run Text="/"/><Run Text="{Binding FirmCount, Mode=OneWay}"/><Run Text=")"/>
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <Border Grid.Column="3"
+                                                    Background="{DynamicResource SuccessLightBrush}"
+                                                    CornerRadius="999"
+                                                    Padding="10,4"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock FontSize="{DynamicResource FS11}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource SuccessBrush}">
+                                                    <Run Text="{Binding EmployeeCount, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Firms -->
+                                        <ItemsControl ItemsSource="{Binding Firms}"
+                                                      Margin="34,0,10,8"
+                                                      Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Margin" Value="0,0,0,6"/>
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="10,8"
+                                                            Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border" BasedOn="{StaticResource DialogPreviewSurface}">
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                                <Setter Property="BorderThickness" Value="1"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <CheckBox Grid.Column="0"
+                                                                      IsChecked="{Binding IsSelected}"
+                                                                      FontSize="{DynamicResource FS13}"
+                                                                      Foreground="{DynamicResource ForegroundBrush}"
+                                                                      Cursor="Hand"
+                                                                      VerticalAlignment="Center"
+                                                                      Margin="0,0,12,0"/>
+
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding FirmName}"
+                                                                       FontSize="{DynamicResource FS13}"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       VerticalAlignment="Center"/>
+
+                                                            <Border Grid.Column="2"
+                                                                    Background="{DynamicResource SuccessLightBrush}"
+                                                                    CornerRadius="999"
+                                                                    Padding="10,4"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock FontSize="{DynamicResource FS11}"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource SuccessBrush}">
+                                                                    <Run Text="{Binding EmployeeCount}"/>
+                                                                </TextBlock>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
-
-                                    <Border Grid.Column="2"
-                                            Background="{DynamicResource SuccessLightBrush}"
-                                            CornerRadius="999"
-                                            Padding="10,4"
-                                            VerticalAlignment="Center">
-                                        <TextBlock FontSize="{DynamicResource FS11}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource SuccessBrush}">
-                                            <Run Text="{Binding EmployeeCount}"/>
-                                        </TextBlock>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
 
         <!-- Buttons -->

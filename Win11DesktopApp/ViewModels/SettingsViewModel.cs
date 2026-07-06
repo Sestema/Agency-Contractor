@@ -3997,17 +3997,22 @@ namespace Win11DesktopApp.ViewModels
 
         private void ApplyInterfaceSize(string size)
         {
-            if (Application.Current.MainWindow is MainWindow mw)
+            if (Application.Current?.MainWindow is MainWindow mw)
                 mw.InterfaceSizeMultiplier = GetInterfaceSizeMultiplier(size);
         }
 
         public static void ApplyTextSize(string size)
         {
+            if (Application.Current == null)
+                return;
+
             double mult = GetTextSizeMultiplier(size);
             foreach (int baseSize in FontSizeKeys)
-            {
                 Application.Current.Resources[$"FS{baseSize}"] = Math.Round(baseSize * mult, 1);
-            }
+
+            // Employee tile widens with the text multiplier so long names fit on the
+            // same number of lines as at Medium instead of wrapping/clipping.
+            Application.Current.Resources["UiEmployeeTileW"] = Math.Round(470 * mult, 0);
         }
 
         private string DetectCurrentTheme()

@@ -531,6 +531,8 @@
     <sys:String x:Key="MsgEmployeesLoadError">Ошибка загрузки сотрудников.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Загрузка сотрудников...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">Сотрудники не найдены.</sys:String>
+    <sys:String x:Key="EmpClearFilters">Сбросить фильтры</sys:String>
+    <sys:String x:Key="EmpTileSizeTooltip">Размер карточек (х1–х6)</sys:String>
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Выбрать</sys:String>
@@ -553,6 +555,11 @@
     <sys:String x:Key="EmpBadgeVisa">Виза</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Страховка</sys:String>
     <sys:String x:Key="EmpBadgeWorkPermit">Разрешение</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitFull">Разрешение на работу</sys:String>
+    <sys:String x:Key="EmpBadgePassportShort">Пас</sys:String>
+    <sys:String x:Key="EmpBadgeVisaShort">Виза</sys:String>
+    <sys:String x:Key="EmpBadgeInsuranceShort">Страх</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitShort">Разр.</sys:String>
     <sys:String x:Key="EmpBtnOpen">Открыть</sys:String>
     <sys:String x:Key="EmpBtnEdit">Редактировать</sys:String>
     <sys:String x:Key="EmpBtnFolder">Папка</sys:String>
@@ -747,6 +754,12 @@
     <sys:String x:Key="MainGreetingMorning">Доброе утро</sys:String>
     <sys:String x:Key="MainGreetingAfternoon">Добрый день</sys:String>
     <sys:String x:Key="MainGreetingEvening">Добрый вечер</sys:String>
+    <sys:String x:Key="WeatherClear">Ясно</sys:String>
+    <sys:String x:Key="WeatherCloudy">Облачно</sys:String>
+    <sys:String x:Key="WeatherFog">Туман</sys:String>
+    <sys:String x:Key="WeatherRain">Дождь</sys:String>
+    <sys:String x:Key="WeatherSnow">Снег</sys:String>
+    <sys:String x:Key="WeatherStorm">Гроза</sys:String>
     <sys:String x:Key="MainActiveCompanyTitle">Активная фирма</sys:String>
     <sys:String x:Key="MainChangeCompany">Сменить фирму</sys:String>
     <sys:String x:Key="MainEditCompanyShort">Редактировать</sys:String>
@@ -804,12 +817,19 @@
     <sys:String x:Key="ProbDaysExpired">просрочено {0} дн.</sys:String>
     <sys:String x:Key="ProbDaysToday">истекает сегодня</sys:String>
     <sys:String x:Key="ProbDaysLeft">через {0} дн.</sys:String>
+    <sys:String x:Key="ProbAllFirms">Все фирмы</sys:String>
+    <sys:String x:Key="ProbSearchPlaceholder">Поиск по имени или документу…</sys:String>
+    <sys:String x:Key="ProbNoMatches">Ничего не найдено</sys:String>
+    <sys:String x:Key="ProbNoMatchesDesc">Попробуйте изменить поиск или фильтр.</sys:String>
+    <sys:String x:Key="ProbClearFilters">Сбросить фильтры</sys:String>
 
     <!-- ArchiveView -->
     <sys:String x:Key="ArchiveTitle">Архив сотрудников</sys:String>
     <sys:String x:Key="ArchiveSearch">Поиск в архиве</sys:String>
     <sys:String x:Key="ArchiveStarted">Начал: </sys:String>
     <sys:String x:Key="ArchiveEnded">Закончил: </sys:String>
+    <sys:String x:Key="ArchiveArchivedOn">В архиве: </sys:String>
+    <sys:String x:Key="ArchiveDateFormatHint">Формат: дд.мм.гггг</sys:String>
     <sys:String x:Key="ArchiveRestore">Восстановить</sys:String>
     <sys:String x:Key="ArchiveViewProfile">Профиль</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Открыть папку</sys:String>
@@ -1581,6 +1601,7 @@
     <sys:String x:Key="FinBtnMarkAllPaid">✓ Выплатить всем</sys:String>
     <sys:String x:Key="FinBtnCreateMonth">Следующий месяц</sys:String>
     <sys:String x:Key="FinColPaid">Выплачено</sys:String>
+    <sys:String x:Key="FinStatusUnpaid">Не выплачено</sys:String>
     <sys:String x:Key="FinFirmBreakdown">По фирмам</sys:String>
     <sys:String x:Key="FinAdvanceTitle">Добавить аванс</sys:String>
     <sys:String x:Key="FinAdvanceNote">Примечание</sys:String>
@@ -1633,6 +1654,8 @@
     <sys:String x:Key="FinExportSelectDesc">Выберите фирмы для экспорта</sys:String>
     <sys:String x:Key="FinExportSelectAll">Выбрать все</sys:String>
     <sys:String x:Key="FinExportClearAll">Очистить выбор</sys:String>
+    <sys:String x:Key="FinExportSearchHint">Поиск агентства или фирмы…</sys:String>
+    <sys:String x:Key="FinExportNoAgency">Без агентства</sys:String>
     <sys:String x:Key="FinExportFirmsCount">Фирмы</sys:String>
     <sys:String x:Key="FinExportSelectedCount">Выбрано</sys:String>
     <sys:String x:Key="FinExportRowsCount">Строки</sys:String>
@@ -1720,6 +1743,7 @@
     <sys:String x:Key="MsgWizUnsavedClose">Есть несохранённые данные. Закрыть без сохранения?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Отмена</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Укажите название фирмы.</sys:String>
+    <sys:String x:Key="MsgCompanyNameExists">Фирма с таким названием уже существует. Выберите другое название.</sys:String>
     <sys:String x:Key="MsgUnsupportedFormat">Неподдерживаемый формат файла.</sys:String>
 
     <!-- Expiry warning badges -->
@@ -1854,6 +1878,7 @@
     <sys:String x:Key="ExportColInsExp">Страховка до</sys:String>
     <sys:String x:Key="ExportColContractType">Тип контракта</sys:String>
     <sys:String x:Key="ExportColStartDate">Дата начала</sys:String>
+    <sys:String x:Key="EmpCardContacts">Контакты</sys:String>
     <sys:String x:Key="ExportColStatus">Статус</sys:String>
     <sys:String x:Key="MsgExportError">Ошибка экспорта: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Выбрано сотрудников: {0}</sys:String>

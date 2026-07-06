@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Markup;
 using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Fonts;
+using Win11DesktopApp.DependencyInjection;
 using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
@@ -141,6 +142,9 @@ namespace Win11DesktopApp
             try
             {
                 startupIntegrityService = InitializeCoreServices();
+#if DEBUG
+                Diagnostics.BindingErrorTraceListener.Enable();
+#endif
                 LogStartupPhase("startup_begin");
                 startupIntegrityService.IncludeFinanceStartupState(FinanceService);
                 RunBackgroundWarmupTasks();
@@ -749,176 +753,8 @@ namespace Win11DesktopApp
         private static ServiceProvider BuildServiceProvider()
         {
             var services = new ServiceCollection();
-            ConfigureServices(services);
+            services.AddApplicationServices();
             return services.BuildServiceProvider();
-        }
-
-        private static void ConfigureServices(IServiceCollection services)
-        {
-            services.AddSingleton(sp => new NavigationService(sp));
-            services.AddSingleton<ThemeService>();
-            services.AddSingleton<LanguageService>();
-            services.AddSingleton(_ => new AppSettingsService(suppressStartupNotifications: true));
-            services.AddSingleton<AccessStatusService>();
-            services.AddSingleton(sp => new FolderService(sp.GetRequiredService<AppSettingsService>()));
-            services.AddSingleton(sp => new CoreDbService(sp.GetRequiredService<FolderService>()));
-            services.AddSingleton(sp => new SalaryDbService(sp.GetRequiredService<FolderService>()));
-            services.AddSingleton(sp => new LocalDbService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<SalaryDbService>()));
-            services.AddSingleton(sp => new EmployeeIndexDbService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<AppSettingsService>()));
-            services.AddSingleton(sp => new AppDataStorageFactory(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<CoreDbService>(),
-                sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<SalaryDbService>()));
-            services.AddSingleton(sp => new PersistenceService(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<AppDataStorageFactory>().CreateCoreDatabaseStorage()));
-            services.AddSingleton(sp => new StartupIntegrityService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<PersistenceService>()));
-            services.AddSingleton<TagCatalogService>();
-            services.AddSingleton<AppNotificationService>();
-            services.AddSingleton(sp => new SyncEventService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<CurrentProfileService>(),
-                sp.GetRequiredService<AppNotificationService>(),
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<AppDataStorageFactory>()));
-            services.AddSingleton<PostgresConnectionTestService>();
-            services.AddSingleton(sp => new PostgresMigrationService(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<CoreDbService>(),
-                sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<SalaryDbService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<AppStatisticsService>()));
-            services.AddSingleton<PostgresResetService>();
-            services.AddSingleton<PostgresNetworkAccessService>();
-            services.AddSingleton(sp => new PostgresToSqliteBackupService(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<CoreDbService>(),
-                sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<SalaryDbService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<AppStatisticsService>(),
-                sp.GetRequiredService<AppDataStorageFactory>()));
-            services.AddSingleton(sp => new DailySqliteBackupService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<AppDataStorageFactory>(),
-                sp.GetRequiredService<PostgresToSqliteBackupService>()));
-            services.AddSingleton(sp => new CompanyService(
-                sp.GetRequiredService<TagCatalogService>(),
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<PersistenceService>(),
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<SyncEventService>()));
-            services.AddSingleton(sp => new TemplateService(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<TagCatalogService>()));
-            services.AddSingleton<StarterTemplateCatalogService>();
-            services.AddSingleton(sp => new AdminMirrorSyncService(
-                sp.GetRequiredService<CompanyService>()));
-            services.AddSingleton<ImageEnhancementService>();
-            services.AddSingleton<IScannerService, CompositeScannerService>();
-            services.AddSingleton<IScanDocumentAssemblyService, ScanDocumentAssemblyService>();
-            services.AddSingleton(sp => new EmployeeService(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<TagCatalogService>(),
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<CurrentProfileService>(),
-                sp.GetRequiredService<AdminMirrorSyncService>(),
-                companyService: sp.GetRequiredService<CompanyService>(),
-                storageFactory: sp.GetRequiredService<AppDataStorageFactory>()));
-            services.AddSingleton(sp => new RecentlyDeletedService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<EmployeeService>(),
-                sp.GetRequiredService<CurrentProfileService>(),
-                sp.GetRequiredService<FinanceService>(),
-                sp.GetRequiredService<ActivityLogService>(),
-                sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<AppDataStorageFactory>()));
-            services.AddSingleton(sp => new FinanceService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<SalaryDbService>(),
-                sp.GetRequiredService<LocalDbService>(),
-                sp.GetRequiredService<CompanyService>(),
-                sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<SharedOperationLockService>(),
-                suppressStartupNotifications: true,
-                storageFactory: sp.GetRequiredService<AppDataStorageFactory>()));
-            services.AddSingleton(sp => new InvoiceStorageService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<AppSettingsService>()));
-            services.AddSingleton(sp => new AresLookupService(sp.GetRequiredService<InvoiceStorageService>()));
-            services.AddSingleton<InvoiceQrPaymentService>();
-            services.AddSingleton(sp => new InvoicePdfRenderService(
-                sp.GetRequiredService<InvoiceStorageService>(),
-                sp.GetRequiredService<InvoiceQrPaymentService>()));
-            services.AddSingleton(sp => new ActivityLogService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<AppDataStorageFactory>().CreateActivityLogStorage(),
-                sp.GetRequiredService<CurrentProfileService>()));
-            services.AddSingleton<AppUpdateNotificationService>();
-            services.AddSingleton(sp => new AppStatisticsService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<AppDataStorageFactory>()));
-            services.AddSingleton(sp => new CandidateService(sp.GetRequiredService<FolderService>()));
-            services.AddSingleton<ChatPersistenceService>();
-            services.AddSingleton<GeminiApiService>();
-            services.AddSingleton<NewsService>();
-            services.AddSingleton<EmployeeDetailsViewModelFactory>();
-            services.AddSingleton<AddEmployeeWizardViewModelFactory>();
-            services.AddSingleton<AddCompanyViewModelFactory>();
-            services.AddSingleton<CandidateViewModelFactory>();
-            services.AddSingleton<TemplateViewModelFactory>();
-            services.AddSingleton<InvoiceViewModelFactory>();
-            services.AddSingleton<MainModuleViewModelFactory>();
-            services.AddSingleton<FinanceModuleViewModelFactory>();
-            services.AddSingleton<AiWindowFactory>();
-            services.AddSingleton<ProfileDialogFactory>();
-            services.AddSingleton<StartupDialogFactory>();
-            services.AddSingleton<BusinessUserAuthService>();
-            services.AddSingleton<BusinessUserDirectoryService>();
-            services.AddSingleton<WorkspaceSessionService>();
-            services.AddSingleton<BusinessUserSessionService>();
-            services.AddSingleton<UnifiedLoginService>();
-            services.AddSingleton<ProfileAuthService>();
-            services.AddSingleton(sp => new ProfileSessionService(sp.GetRequiredService<AppSettingsService>()));
-            services.AddSingleton<DocumentGenerationService>();
-            services.AddSingleton<DocumentLocalizationService>();
-            services.AddSingleton<ReportColumnLayoutService>();
-            services.AddSingleton<CurrentProfileService>();
-            services.AddSingleton<GeminiApiKeyConfigurationService>();
-            services.AddSingleton<TelegramPairingService>();
-            services.AddSingleton<TelegramBotService>();
-            services.AddSingleton<KeepAwakeService>();
-            services.AddSingleton<WebPanelHostService>();
-            services.AddSingleton<SharedOperationLockService>();
-            services.AddSingleton(sp => new ConnectedClientsService(
-                sp.GetRequiredService<AppSettingsService>(),
-                sp.GetRequiredService<AppDataStorageFactory>(),
-                sp.GetRequiredService<CurrentProfileService>()));
-            services.AddTransient<MainViewModel>();
-            services.AddTransient<MainWindowViewModel>();
-            services.AddTransient<SettingsViewModel>();
-            services.AddTransient<DashboardViewModel>();
-            services.AddTransient<ReportViewModel>();
-            services.AddTransient<ActivityLogViewModel>();
-            services.AddTransient<FinanceTablesViewModel>();
-            services.AddTransient<CandidatesViewModel>();
-            services.AddTransient<NewsViewModel>();
         }
 
         private static void InitializeStartupServices()
@@ -1215,6 +1051,11 @@ namespace Win11DesktopApp
 
         private static void ApplyEffectiveGeminiApiKey(ClientAccessState accessState, RemotePolicy? policy)
         {
+            // During shutdown the DI container is disposed and nulled; a late heartbeat
+            // callback must not touch App.Services (would throw "Service provider is not initialized").
+            if (_serviceProvider == null)
+                return;
+
             if (policy?.DisableAI == true || PolicyService.IsAIDisabled)
             {
                 GeminiApiService.SetApiKey(null);

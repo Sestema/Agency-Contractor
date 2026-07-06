@@ -400,7 +400,40 @@ namespace Win11DesktopApp.ViewModels
             ClearSearchCommand = new RelayCommand(o => SearchText = string.Empty);
 
             RefreshActiveFields();
-            _ = LoadReportAsync();
+            _ = InitializeSelectedMonthAndLoadAsync();
+        }
+
+        // On first open, avoid landing on a calendar month that has never been created yet
+        // (e.g. the 1st of a new month). Instead, default to the most recent month that already
+        // exists in storage, so the new month only gets created when the user explicitly presses
+        // "+" (CreateNextMonthCommand) rather than being silently pre-populated on load.
+        private async Task InitializeSelectedMonthAndLoadAsync()
+        {
+            try
+            {
+                var months = await Task.Run(() => _financeService.GetAvailableSalaryMonths());
+                if (months.Count > 0 && !months.Any(m => m.year == _selectedYear && m.month == _selectedMonth))
+                {
+                    var latest = months
+                        .OrderByDescending(m => m.year)
+                        .ThenByDescending(m => m.month)
+                        .First();
+
+                    if (new DateTime(latest.year, latest.month, 1) < new DateTime(_selectedYear, _selectedMonth, 1))
+                    {
+                        _selectedYear = latest.year;
+                        _selectedMonth = latest.month;
+                        OnPropertyChanged(nameof(SelectedYear));
+                        OnPropertyChanged(nameof(SelectedMonth));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.InitializeSelectedMonthAndLoadAsync", ex);
+            }
+
+            await LoadReportAsync();
         }
 
         public void RefreshActiveFields()
@@ -550,6 +583,21 @@ namespace Win11DesktopApp.ViewModels
 
         private static bool EmployeeWorkedInMonth(EmployeeSummary emp, int year, int month) =>
             WorkedInMonth(emp.StartDate, emp.EndDate, year, month);
+
+        // A saved salary row is considered to carry real data (and must not be silently discarded)
+        // if it has hours, a rate, an advance, a saved net, any custom field value, or a note.
+        private static bool SavedSalaryEntryHasData(SalaryEntry entry)
+        {
+            if (entry == null) return false;
+            if (entry.HoursWorked != 0m) return true;
+            if (entry.HourlyRate != 0m) return true;
+            if (entry.Advance != 0m) return true;
+            if (entry.SavedNetSalary != 0m) return true;
+            if (entry.IsPaid) return true;
+            if (!string.IsNullOrWhiteSpace(entry.Note)) return true;
+            if (entry.CustomValues != null && entry.CustomValues.Values.Any(v => v != 0m)) return true;
+            return false;
+        }
 
         private static bool ArchivedWorkedInMonth(ArchivedEmployeeSummary arc, int year, int month) =>
             WorkedInMonth(arc.StartDate, arc.EndDate, year, month);
@@ -971,6 +1019,9 @@ namespace Win11DesktopApp.ViewModels
 
             var firmHistorySw = Stopwatch.StartNew();
             allHistory.AddRange(_employeeService.GetActiveEmployeeFirmHistory());
+            // Past firms of currently-archived employees (archived → restored to another firm →
+            // archived again). Without this their earlier firm/month vanishes from salary.
+            allHistory.AddRange(_employeeService.GetArchivedEmployeeFirmHistory());
             timing.FirmHistoryMs = firmHistorySw.ElapsedMilliseconds;
             timing.HistoryEntriesCount = allHistory.Count;
 
@@ -1042,6 +1093,21 @@ namespace Win11DesktopApp.ViewModels
                 if (!employmentByKey.TryGetValue(key, out var employmentPeriods)
                     || !WorkedInAnyEmploymentPeriod(employmentPeriods, year, month))
                 {
+                    // No matching employment period was found for this saved row. Historically the
+                    // row was dropped and the month re-saved without it — which permanently deleted
+                    // real salary data (e.g. when a previous firm's period was not visible). Only
+                    // discard genuinely empty orphan rows; preserve any row that carries real data.
+                    if (SavedSalaryEntryHasData(entry))
+                    {
+                        if (existingKeys.Contains(key))
+                            continue;
+                        entry.FieldDefinitions = fieldList;
+                        entry.RecalcNet();
+                        entries.Add(entry);
+                        existingKeys.Add(key);
+                        continue;
+                    }
+
                     needResave = true;
                     continue;
                 }
@@ -2463,10 +2529,20 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            var agencyByFirm = _companyService.Companies
+                .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.First().Agency?.Name ?? string.Empty,
+                    StringComparer.OrdinalIgnoreCase);
+
             var firmData = Entries
                 .GroupBy(e => e.FirmName)
                 .OrderBy(g => g.Key)
-                .Select(g => (firmName: g.Key, count: g.Count()))
+                .Select(g => (
+                    firmName: g.Key,
+                    count: g.Count(),
+                    agencyName: agencyByFirm.TryGetValue(g.Key, out var agency) ? agency : string.Empty))
                 .ToList();
 
             var selectDialog = new Views.ExportFirmSelectWindow(firmData, _appSettingsService);
@@ -3232,7 +3308,11 @@ namespace Win11DesktopApp.ViewModels
 
             if (EmployeeDetailsVm != null)
                 EmployeeDetailsVm.RequestClose -= OnSalaryDetailsClose;
-            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(entry.FirmName, resolvedFolder, _employeeService);
+            EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(
+                entry.FirmName,
+                resolvedFolder,
+                _employeeService,
+                financeContextMonth: new DateTime(_selectedYear, _selectedMonth, 1));
             EmployeeDetailsVm.RequestClose += OnSalaryDetailsClose;
             IsEmployeeDetailsOpen = true;
         }

@@ -548,6 +548,8 @@
     <sys:String x:Key="MsgEmployeesLoadError">Chyba při načítání zaměstnanců.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Načítání zaměstnanců...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">Zaměstnanci nebyli nalezeni.</sys:String>
+    <sys:String x:Key="EmpClearFilters">Zrušit filtry</sys:String>
+    <sys:String x:Key="EmpTileSizeTooltip">Velikost karet (x1–x6)</sys:String>
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Vybrat</sys:String>
@@ -570,6 +572,11 @@
     <sys:String x:Key="EmpBadgeVisa">Vízum</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Pojištění</sys:String>
     <sys:String x:Key="EmpBadgeWorkPermit">Povolení</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitFull">Povolení k práci</sys:String>
+    <sys:String x:Key="EmpBadgePassportShort">Pas</sys:String>
+    <sys:String x:Key="EmpBadgeVisaShort">Víz</sys:String>
+    <sys:String x:Key="EmpBadgeInsuranceShort">Poj.</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitShort">Pov.</sys:String>
     <sys:String x:Key="EmpBtnOpen">Otevřít</sys:String>
     <sys:String x:Key="EmpBtnEdit">Upravit</sys:String>
     <sys:String x:Key="EmpBtnFolder">Složka</sys:String>
@@ -764,6 +771,12 @@
     <sys:String x:Key="MainGreetingMorning">Dobré ráno</sys:String>
     <sys:String x:Key="MainGreetingAfternoon">Dobré odpoledne</sys:String>
     <sys:String x:Key="MainGreetingEvening">Dobrý večer</sys:String>
+    <sys:String x:Key="WeatherClear">Jasno</sys:String>
+    <sys:String x:Key="WeatherCloudy">Oblačno</sys:String>
+    <sys:String x:Key="WeatherFog">Mlha</sys:String>
+    <sys:String x:Key="WeatherRain">Déšť</sys:String>
+    <sys:String x:Key="WeatherSnow">Sníh</sys:String>
+    <sys:String x:Key="WeatherStorm">Bouřka</sys:String>
     <sys:String x:Key="MainActiveCompanyTitle">Aktivní firma</sys:String>
     <sys:String x:Key="MainChangeCompany">Změnit firmu</sys:String>
     <sys:String x:Key="MainEditCompanyShort">Upravit</sys:String>
@@ -821,12 +834,19 @@
     <sys:String x:Key="ProbDaysExpired">prošlo {0} dní</sys:String>
     <sys:String x:Key="ProbDaysToday">vyprší dnes</sys:String>
     <sys:String x:Key="ProbDaysLeft">za {0} dní</sys:String>
+    <sys:String x:Key="ProbAllFirms">Všechny firmy</sys:String>
+    <sys:String x:Key="ProbSearchPlaceholder">Hledat podle jména nebo dokladu…</sys:String>
+    <sys:String x:Key="ProbNoMatches">Nic nenalezeno</sys:String>
+    <sys:String x:Key="ProbNoMatchesDesc">Zkuste upravit hledání nebo filtr.</sys:String>
+    <sys:String x:Key="ProbClearFilters">Zrušit filtry</sys:String>
 
     <!-- ArchiveView -->
     <sys:String x:Key="ArchiveTitle">Archiv zaměstnanců</sys:String>
     <sys:String x:Key="ArchiveSearch">Hledat v archivu</sys:String>
     <sys:String x:Key="ArchiveStarted">Nástup: </sys:String>
     <sys:String x:Key="ArchiveEnded">Ukončil: </sys:String>
+    <sys:String x:Key="ArchiveArchivedOn">V archivu: </sys:String>
+    <sys:String x:Key="ArchiveDateFormatHint">Formát: dd.mm.rrrr</sys:String>
     <sys:String x:Key="ArchiveRestore">Obnovit</sys:String>
     <sys:String x:Key="ArchiveViewProfile">Profil</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Otevřít složku</sys:String>
@@ -1598,6 +1618,7 @@
     <sys:String x:Key="FinBtnMarkAllPaid">✓ Vyplatit vše</sys:String>
     <sys:String x:Key="FinBtnCreateMonth">Další měsíc</sys:String>
     <sys:String x:Key="FinColPaid">Vyplaceno</sys:String>
+    <sys:String x:Key="FinStatusUnpaid">Nevyplaceno</sys:String>
     <sys:String x:Key="FinFirmBreakdown">Přehled firem</sys:String>
     <sys:String x:Key="FinAdvanceTitle">Přidat zálohu</sys:String>
     <sys:String x:Key="FinAdvanceNote">Poznámka</sys:String>
@@ -1650,6 +1671,8 @@
     <sys:String x:Key="FinExportSelectDesc">Vyberte firmy pro export</sys:String>
     <sys:String x:Key="FinExportSelectAll">Vybrat vše</sys:String>
     <sys:String x:Key="FinExportClearAll">Vymazat výběr</sys:String>
+    <sys:String x:Key="FinExportSearchHint">Hledat agenturu nebo firmu…</sys:String>
+    <sys:String x:Key="FinExportNoAgency">Bez agentury</sys:String>
     <sys:String x:Key="FinExportFirmsCount">Firmy</sys:String>
     <sys:String x:Key="FinExportSelectedCount">Vybráno</sys:String>
     <sys:String x:Key="FinExportRowsCount">Řádky</sys:String>
@@ -1737,6 +1760,7 @@
     <sys:String x:Key="MsgWizUnsavedClose">Máte neuložená data. Zavřít bez uložení?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Zrušit</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Zadejte název firmy.</sys:String>
+    <sys:String x:Key="MsgCompanyNameExists">Firma s tímto názvem již existuje. Zvolte jiný název.</sys:String>
     <sys:String x:Key="MsgUnsupportedFormat">Nepodporovaný formát souboru.</sys:String>
 
     <!-- Expiry warning badges -->
@@ -1871,6 +1895,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="ExportColInsExp">Pojištění do</sys:String>
     <sys:String x:Key="ExportColContractType">Typ smlouvy</sys:String>
     <sys:String x:Key="ExportColStartDate">Datum nástupu</sys:String>
+    <sys:String x:Key="EmpCardContacts">Kontakty</sys:String>
     <sys:String x:Key="ExportColStatus">Stav</sys:String>
     <sys:String x:Key="MsgExportError">Chyba exportu: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Vybráno zaměstnanců: {0}</sys:String>

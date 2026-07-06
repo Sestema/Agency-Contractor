@@ -60,16 +60,82 @@ namespace Win11DesktopApp.ViewModels
         private readonly string _employeeFolder;
         private readonly string _expectedEmployeeId;
         private readonly string _firmName;
+        private readonly DateTime? _financeContextMonth;
         private readonly IReadOnlyList<EmployeeBulkUpdateTarget> _bulkUpdateTargets;
         private bool _profileUnavailable;
         private bool _profileUnavailableNotified;
         private bool _profileCloseScheduled;
+
+        private const string WorkPermitDocumentSuffix = "Povolení k práci";
 
         public event Action? RequestClose;
         public event Action? DataChanged;
 
         public EmployeeData Data { get; private set; }
         public string EmployeeFolderPath => _employeeFolder;
+
+        // End date of employment in the firm this card was opened from (finance/employees context).
+        // Pulled from FirmHistory so that, after archiving, the card shows the firm-specific end
+        // date under the start date (e.g. firm A → its end date, firm B → its end date).
+        private string _firmEndDate = string.Empty;
+        public string FirmEndDate => _firmEndDate;
+
+        public bool HasFirmEndDate => !string.IsNullOrWhiteSpace(_firmEndDate);
+
+        private void RecomputeFirmEndDate()
+        {
+            _firmEndDate = ResolveFirmEndDateCore();
+            OnPropertyChanged(nameof(FirmEndDate));
+            OnPropertyChanged(nameof(HasFirmEndDate));
+        }
+
+        private string ResolveFirmEndDateCore()
+        {
+            var history = Data?.FirmHistory;
+            if (history == null || history.Count == 0 || string.IsNullOrWhiteSpace(_firmName))
+                return string.Empty;
+
+            // Still actively working in this firm: any closed FirmHistory record for it belongs
+            // to a PREVIOUS stint (e.g. re-hired into the same firm), so its end date is stale —
+            // don't show an end date for an ongoing employment.
+            if (Data != null && !Data.IsArchived)
+            {
+                var currentFirm = _employeeService.GetCurrentFirmName(_employeeFolder);
+                if (string.Equals(currentFirm, _firmName, StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+            }
+
+            var firmEntries = history
+                .Where(fh => string.Equals(fh.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
+                             && !string.IsNullOrWhiteSpace(fh.EndDate))
+                .ToList();
+            if (firmEntries.Count == 0)
+                return string.Empty;
+
+            // Opened from a specific finance month: prefer the stint that actually covers that
+            // month (handles multiple stints in the same firm). Fall back to the latest below.
+            if (_financeContextMonth.HasValue)
+            {
+                var monthStart = new DateTime(_financeContextMonth.Value.Year, _financeContextMonth.Value.Month, 1);
+                var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+                var covering = firmEntries
+                    .Where(fh =>
+                    {
+                        var start = DateParsingHelper.TryParseDate(fh.StartDate) ?? DateTime.MinValue;
+                        var end = DateParsingHelper.TryParseDate(fh.EndDate) ?? DateTime.MaxValue;
+                        return start <= monthEnd && end >= monthStart;
+                    })
+                    .OrderBy(fh => DateParsingHelper.TryParseDate(fh.EndDate) ?? DateTime.MinValue)
+                    .LastOrDefault();
+                if (covering != null)
+                    return covering.EndDate;
+            }
+
+            return firmEntries
+                .OrderBy(fh => DateParsingHelper.TryParseDate(fh.EndDate) ?? DateTime.MinValue)
+                .Last()
+                .EndDate;
+        }
 
         public bool HasBankAccountData
         {
@@ -691,56 +757,6 @@ namespace Win11DesktopApp.ViewModels
         public ICommand UnhideCustomDocCommand { get; private set; } = null!;
         public ICommand ToggleHiddenDocsSectionCommand { get; private set; } = null!;
 
-        // ---- Renew Work Permit dialog ----
-        private bool _isRenewWpDialogOpen;
-        public bool IsRenewWpDialogOpen
-        {
-            get => _isRenewWpDialogOpen;
-            set => SetProperty(ref _isRenewWpDialogOpen, value);
-        }
-
-        private string _renewWpFilePath = string.Empty;
-        public string RenewWpFilePath
-        {
-            get => _renewWpFilePath;
-            set => SetProperty(ref _renewWpFilePath, value);
-        }
-
-        private string _renewWpNumber = string.Empty;
-        public string RenewWpNumber
-        {
-            get => _renewWpNumber;
-            set => SetProperty(ref _renewWpNumber, value);
-        }
-
-        private string _renewWpType = string.Empty;
-        public string RenewWpType
-        {
-            get => _renewWpType;
-            set => SetProperty(ref _renewWpType, value);
-        }
-
-        private string _renewWpIssueDate = string.Empty;
-        public string RenewWpIssueDate
-        {
-            get => _renewWpIssueDate;
-            set => SetProperty(ref _renewWpIssueDate, value);
-        }
-
-        private string _renewWpExpiry = string.Empty;
-        public string RenewWpExpiry
-        {
-            get => _renewWpExpiry;
-            set => SetProperty(ref _renewWpExpiry, value);
-        }
-
-        private string _renewWpAuthority = string.Empty;
-        public string RenewWpAuthority
-        {
-            get => _renewWpAuthority;
-            set => SetProperty(ref _renewWpAuthority, value);
-        }
-
         public string FullName => $"{Data.FirstName} {Data.LastName}";
 
         // ---- Generate Document ----
@@ -862,6 +878,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ReplacePassportCommand { get; }
         public ICommand ReplaceVisaCommand { get; }
         public ICommand ReplaceInsuranceCommand { get; }
+        public ICommand ReplaceWorkPermitCommand { get; }
         public ICommand ReplacePhotoCommand { get; }
         public ICommand OpenPassportCommand { get; }
         public ICommand OpenVisaCommand { get; }
@@ -877,9 +894,6 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CancelExtendCommand { get; }
         public ICommand OpenWorkPermitCommand { get; }
         public ICommand RetryPreviewCommand { get; }
-        public ICommand RenewWorkPermitCommand { get; }
-        public ICommand ConfirmRenewWpCommand { get; }
-        public ICommand CancelRenewWpCommand { get; }
         public ICommand ArchiveEmployeeCommand { get; }
         public ICommand ConfirmArchiveCommand { get; }
         public ICommand CancelArchiveCommand { get; }
@@ -1286,6 +1300,7 @@ namespace Win11DesktopApp.ViewModels
         public string PassportExpiryWarning => GetExpiryWarning(Data.PassportExpiry);
         public string VisaExpiryWarning => GetExpiryWarning(Data.VisaExpiry);
         public string InsuranceExpiryWarning => GetExpiryWarning(Data.InsuranceExpiry);
+        public string WorkPermitExpiryWarning => GetExpiryWarning(Data.WorkPermitExpiry);
 
         private string GetExpiryWarning(string dateStr)
         {
@@ -1321,9 +1336,11 @@ namespace Win11DesktopApp.ViewModels
             TagCatalogService? tagCatalogService = null,
             AiWindowFactory? aiWindowFactory = null,
             AppStatisticsService? appStatisticsService = null,
-            IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null)
+            IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null,
+            DateTime? financeContextMonth = null)
         {
             _firmName = firmName;
+            _financeContextMonth = financeContextMonth;
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
             _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
@@ -1348,6 +1365,7 @@ namespace Win11DesktopApp.ViewModels
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
+            RecomputeFirmEndDate();
             NormalizeInsuranceCompanyFields();
             NormalizeEducationFields();
             NormalizeDocumentProfileFields();
@@ -1393,6 +1411,7 @@ namespace Win11DesktopApp.ViewModels
             ReplacePassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport"), _ => !IsReadOnlyMode);
             ReplaceVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync(UsesPassportPage2SecondaryDocument ? "passport_page2" : "visa"), _ => !IsReadOnlyMode);
             ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"), _ => !IsReadOnlyMode);
+            ReplaceWorkPermitCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("work_permit"), _ => !IsReadOnlyMode);
             ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"), _ => !IsReadOnlyMode);
 
             OpenPassportCommand = new RelayCommand(o => OpenFile(PassportFilePath), o => HasPassport);
@@ -1431,9 +1450,6 @@ namespace Win11DesktopApp.ViewModels
             CancelExtendCommand = new RelayCommand(o => IsExtendDialogOpen = false, _ => !IsReadOnlyMode);
 
             OpenWorkPermitCommand = new RelayCommand(o => OpenFile(WorkPermitFilePath), o => HasWorkPermit);
-            RenewWorkPermitCommand = new RelayCommand(o => StartRenewWorkPermit(), o => IsWorkPermitType && !IsReadOnlyMode);
-            ConfirmRenewWpCommand = new AsyncRelayCommand(_ => ConfirmRenewWorkPermitAsync(), _ => !IsReadOnlyMode);
-            CancelRenewWpCommand = new RelayCommand(o => IsRenewWpDialogOpen = false, _ => !IsReadOnlyMode);
 
             ArchiveEmployeeCommand = new RelayCommand(o =>
             {
@@ -1911,6 +1927,7 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(InsuranceCompanyFullDisplay));
                 OnPropertyChanged(nameof(Data));
                 OnPropertyChanged(nameof(FullName));
+                RecomputeFirmEndDate();
                 NotifyBankAccountStateChanged();
                 NotifyRodneCisloStateChanged();
                 TryAutofillBankName(Data.BankAccountNumber);
@@ -1927,33 +1944,47 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
                 if (type == "photo")
                 {
+                    SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
                     await ReplacePhotoSimple();
                     return;
                 }
 
                 var window = _aiWindowFactory.CreateReplaceDocumentWindow(type, Data);
                 window.Owner = Application.Current?.MainWindow;
-                if (window.ShowDialog() != true || !window.Saved) return;
-                var tempFile = window.ResultFilePath;
-                SaveReplacedDocumentFile(type, tempFile);
-                CleanupTempFile(tempFile);
-                var changes = ApplyNewFieldValues(window.NewValues);
-                if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
-                {
-                    StatusMessage = Res("MsgProfileSaveFail");
+                if (window.ShowDialog() != true || !window.Saved)
                     return;
-                }
-                await LogDocumentReplacement(type, changes);
 
-                OnPropertyChanged(nameof(Data));
-                OnPropertyChanged(nameof(FullName));
-                RefreshDocuments();
-                RefreshExpiryWarnings();
-                InvalidateDetailCaches();
-                DataChanged?.Invoke();
+                SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
+                var tempFile = window.ResultFilePath;
+                try
+                {
+                    if (!SaveReplacedDocumentFile(type, tempFile))
+                    {
+                        StatusMessage = Res("MsgFileNotFound");
+                        return;
+                    }
+
+                    var changes = ApplyNewFieldValues(window.NewValues);
+                    if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+                    {
+                        StatusMessage = Res("MsgProfileSaveFail");
+                        return;
+                    }
+                    await LogDocumentReplacement(type, changes);
+
+                    OnPropertyChanged(nameof(Data));
+                    OnPropertyChanged(nameof(FullName));
+                    RefreshDocuments();
+                    RefreshExpiryWarnings();
+                    InvalidateDetailCaches();
+                    DataChanged?.Invoke();
+                }
+                finally
+                {
+                    window.CleanupSessionTemp();
+                }
             }
             catch (Exception ex)
             {
@@ -1965,9 +1996,14 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void SaveReplacedDocumentFile(string type, string? filePath)
+        private bool SaveReplacedDocumentFile(string type, string? filePath)
         {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                    $"Skipped {type}: uploaded file not found at '{filePath ?? "(null)"}'.");
+                return false;
+            }
 
             var suffix = type switch
             {
@@ -1975,7 +2011,7 @@ namespace Win11DesktopApp.ViewModels
                 "visa" => "Viza",
                 "passport_page2" => "PassPage2",
                 "insurance" => string.IsNullOrWhiteSpace(Data.InsuranceCompanyShort) ? "Insurance" : Data.InsuranceCompanyShort,
-                "work_permit" => "WorkPermit",
+                "work_permit" => WorkPermitDocumentSuffix,
                 _ => type
             };
 
@@ -1986,6 +2022,13 @@ namespace Win11DesktopApp.ViewModels
                 filePath, _employeeFolder,
                 $"{Data.FirstName} {Data.LastName} - {suffix}");
 
+            if (string.IsNullOrWhiteSpace(saved))
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                    $"Failed to save {type} from '{filePath}'.");
+                return false;
+            }
+
             switch (type)
             {
                 case "passport": Data.Files.Passport = saved; break;
@@ -1994,6 +2037,10 @@ namespace Win11DesktopApp.ViewModels
                 case "insurance": Data.Files.Insurance = saved; break;
                 case "work_permit": Data.Files.WorkPermit = saved; break;
             }
+
+            LoggingService.LogInfo("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                $"Saved {type} → {saved}");
+            return true;
         }
 
         private static void CleanupTempFile(string? path)
@@ -2034,13 +2081,16 @@ namespace Win11DesktopApp.ViewModels
                     _             => null
                 };
 
-                if (string.IsNullOrEmpty(currentRelativePath)) return;
+                if (string.IsNullOrEmpty(currentRelativePath) && type != "work_permit")
+                    return;
 
-                // Build the full path of the old file (could be in employee root or CustomDocs)
-                var oldFullPath = Path.Combine(_employeeFolder, currentRelativePath);
-                if (!File.Exists(oldFullPath))
-                    oldFullPath = Path.Combine(_employeeFolder, "CustomDocs", currentRelativePath);
-                if (!File.Exists(oldFullPath)) return;
+                var oldFullPath = ResolveOldDocumentFullPath(type, currentRelativePath);
+                if (string.IsNullOrEmpty(oldFullPath) || !File.Exists(oldFullPath))
+                {
+                    LoggingService.LogWarning("EmployeeDetailsViewModel.ArchiveOldDocument",
+                        $"No existing {type} file to archive in '{_employeeFolder}' (json path: '{currentRelativePath ?? ""}').");
+                    return;
+                }
 
                 // Build archive filename: "Ruslan Polishchuk - Pass_31.03.2026.jpg"
                 var ext = Path.GetExtension(oldFullPath);
@@ -2081,6 +2131,56 @@ namespace Win11DesktopApp.ViewModels
                 LoggingService.LogWarning("EmployeeDetailsViewModel.ArchiveOldDocument",
                     $"Could not archive old {type}: {ex.Message}");
             }
+        }
+
+        private string? ResolveOldDocumentFullPath(string type, string? currentRelativePath)
+        {
+            if (!string.IsNullOrWhiteSpace(currentRelativePath))
+            {
+                var rootPath = Path.Combine(_employeeFolder, currentRelativePath);
+                if (File.Exists(rootPath))
+                    return rootPath;
+
+                var customDocsPath = Path.Combine(_employeeFolder, "CustomDocs", currentRelativePath);
+                if (File.Exists(customDocsPath))
+                    return customDocsPath;
+            }
+
+            if (!string.Equals(type, "work_permit", StringComparison.OrdinalIgnoreCase)
+                || !Directory.Exists(_employeeFolder))
+            {
+                return null;
+            }
+
+            var fullNameLower = $"{Data.FirstName} {Data.LastName}".Trim().ToLowerInvariant();
+            if (fullNameLower.Length == 0)
+                return null;
+
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(_employeeFolder))
+                {
+                    var fileName = Path.GetFileName(file);
+                    var lower = fileName.ToLowerInvariant();
+                    if (!lower.StartsWith(fullNameLower, StringComparison.Ordinal))
+                        continue;
+
+                    if (lower.Contains("- povolen")
+                        || lower.Contains("work permit")
+                        || lower.Contains("workpermit")
+                        || lower.Contains("- workpermit"))
+                    {
+                        return file;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.ResolveOldDocumentFullPath",
+                    $"Work permit scan failed in '{_employeeFolder}': {ex.Message}");
+            }
+
+            return null;
         }
 
         private List<string> ApplyNewFieldValues(Dictionary<string, string> newValues)
@@ -2258,7 +2358,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadCompanyPositions error: {ex.Message}");
+                LoggingService.LogError("EmployeeDetailsViewModel.LoadCompanyPositions", ex);
             }
         }
 
@@ -2306,7 +2406,7 @@ namespace Win11DesktopApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadCompanyAddresses error: {ex.Message}");
+                LoggingService.LogError("EmployeeDetailsViewModel.LoadCompanyAddresses", ex);
             }
         }
 
@@ -2924,89 +3024,6 @@ namespace Win11DesktopApp.ViewModels
             PassportPage2PreviewState = DocPreviewState.Empty;
             InsurancePreviewState = DocPreviewState.Empty;
             WorkPermitPreviewState = DocPreviewState.Empty;
-        }
-
-        private void StartRenewWorkPermit()
-        {
-            _ = ReplaceDocumentAsync("work_permit");
-        }
-
-        private async Task ConfirmRenewWorkPermitAsync()
-        {
-            if (!PolicyService.EnsureWriteAllowed("Оновити дозвіл на роботу"))
-                return;
-
-            if (string.IsNullOrWhiteSpace(RenewWpFilePath) || !File.Exists(RenewWpFilePath))
-            {
-                StatusMessage = Res("MsgFileNotFound");
-                return;
-            }
-
-            try
-            {
-                SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
-                var ext = Path.GetExtension(RenewWpFilePath);
-                var destName = $"{Data.FirstName} {Data.LastName} - Povolení k práci{ext}";
-                var destPath = Path.Combine(_employeeFolder, destName);
-
-                if (!string.IsNullOrEmpty(Data.Files.WorkPermit))
-                {
-                    var oldPath = Path.Combine(_employeeFolder, Data.Files.WorkPermit);
-                    if (File.Exists(oldPath))
-                    {
-                        try { SafeFileService.DeleteFile(oldPath); } catch (Exception ex) { LoggingService.LogWarning("EmployeeDetailsViewModel", $"Failed to delete old file: {ex.Message}"); }
-                    }
-                }
-
-                SafeFileService.CopyFile(RenewWpFilePath, destPath);
-                Data.Files.WorkPermit = destName;
-
-                var oldNumber = Data.WorkPermitNumber;
-                var oldExpiry = Data.WorkPermitExpiry;
-
-                Data.WorkPermitNumber = RenewWpNumber;
-                Data.WorkPermitType = RenewWpType;
-                Data.WorkPermitIssueDate = RenewWpIssueDate;
-                Data.WorkPermitExpiry = RenewWpExpiry;
-                Data.WorkPermitAuthority = RenewWpAuthority;
-
-                if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
-                {
-                    StatusMessage = Res("MsgProfileSaveFail");
-                    return;
-                }
-
-                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
-                {
-                    EventType = "DocumentUpdated",
-                    Timestamp = DateTime.Now,
-                    Action = Res("HistoryActionRenewWp"),
-                    Field = "WorkPermit",
-                    OldValue = $"{oldNumber}, до {oldExpiry}",
-                    NewValue = $"{RenewWpNumber}, до {RenewWpExpiry}",
-                    Description = string.Format(Res("HistoryDescRenewWp"), oldNumber, RenewWpNumber, oldExpiry, RenewWpExpiry)
-                });
-
-                _activityLogService.Log("WorkPermitRenewed", "Document", _firmName, FullName,
-                    $"{FullName}: дозвіл на роботу оновлено {oldNumber} → {RenewWpNumber}",
-                    $"{oldNumber}, до {oldExpiry}", $"{RenewWpNumber}, до {RenewWpExpiry}",
-                    employeeFolder: _employeeFolder);
-
-                OnPropertyChanged(nameof(Data));
-                RefreshDocuments();
-                IsRenewWpDialogOpen = false;
-                StatusMessage = Res("MsgWorkPermitUpdated");
-                InvalidateDetailCaches();
-                DataChanged?.Invoke();
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = string.Format(Res("MsgErrorFmt"), ex.Message);
-            }
-            finally
-            {
-                SetBusyState(false);
-            }
         }
 
         private async Task RunAIValidationAsync()

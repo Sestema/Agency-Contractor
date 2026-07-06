@@ -233,6 +233,29 @@ namespace Win11DesktopApp.Converters
             => Binding.DoNothing;
     }
 
+    /// <summary>
+    /// Maps an internal document-type key (Passport/Visa/Insurance/Work permit)
+    /// to its vector geometry from Icons.xaml. Unknown / custom docs get a generic document icon.
+    /// </summary>
+    public class DocTypeToGeometryConverter : IValueConverter
+    {
+        public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var key = value as string switch
+            {
+                "Паспорт" => "IconDocPassport",
+                "Віза" => "IconDocVisa",
+                "Страховка" => "IconDocInsurance",
+                "Дозвіл на роботу" => "IconDocWorkPermit",
+                _ => "IconInvoices"
+            };
+            return Application.Current?.TryFindResource(key) as Geometry;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
+
     public class ResourceKeyConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

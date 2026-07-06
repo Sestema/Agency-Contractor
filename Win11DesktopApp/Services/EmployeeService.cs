@@ -553,6 +553,8 @@ namespace Win11DesktopApp.Services
             return new EmployeeSummary
             {
                 UniqueId = source.UniqueId,
+                FirstName = source.FirstName,
+                LastName = source.LastName,
                 FullName = source.FullName,
                 PositionTitle = source.PositionTitle,
                 StartDate = source.StartDate,
@@ -715,7 +717,7 @@ namespace Win11DesktopApp.Services
                     changed = true;
                 }
                 if (string.IsNullOrEmpty(data.Files.WorkPermit)
-                    && (nameLower.Contains("- povolen") || nameLower.Contains("work permit") || nameLower.Contains("workpermit")))
+                    && (nameLower.Contains("- povolen") || nameLower.Contains("work permit") || nameLower.Contains("workpermit") || nameLower.Contains("- workpermit")))
                 {
                     data.Files.WorkPermit = name;
                     changed = true;
@@ -1048,7 +1050,9 @@ namespace Win11DesktopApp.Services
             return new EmployeeSummary
             {
                 UniqueId = data.UniqueId,
-                FullName = $"{data.FirstName} {data.LastName}",
+                FirstName = (data.FirstName ?? string.Empty).Trim(),
+                LastName = (data.LastName ?? string.Empty).Trim(),
+                FullName = $"{data.FirstName} {data.LastName}".Trim(),
                 PositionTitle = data.PositionTag,
                 StartDate = data.StartDate,
                 EndDate = data.EndDate,
@@ -1090,6 +1094,8 @@ namespace Win11DesktopApp.Services
             return new EmployeeSummary
             {
                 UniqueId = row.UniqueId,
+                FirstName = row.FirstName,
+                LastName = row.LastName,
                 FullName = row.FullName,
                 PositionTitle = row.PositionTitle,
                 StartDate = row.StartDate,
@@ -1756,9 +1762,11 @@ namespace Win11DesktopApp.Services
                     var rows = _employeeIndexDbService.GetArchivedEmployeeRows();
                     if (rows.Count > 0)
                     {
-                        return rows
+                        var indexed = rows
                             .Select(BuildArchivedSummaryFromIndexRow)
                             .ToList();
+                        EnrichArchivedSummariesWithArchiveDates(indexed);
+                        return indexed;
                     }
 
                     if (!HasAnyEmployeeFolders(archiveFolder))
@@ -1774,7 +1782,80 @@ namespace Win11DesktopApp.Services
                 }
             }
 
-            return GetArchivedEmployeesFromFiles(archiveFolder);
+            var fromFiles = GetArchivedEmployeesFromFiles(archiveFolder);
+            EnrichArchivedSummariesWithArchiveDates(fromFiles);
+            return fromFiles;
+        }
+
+        private void EnrichArchivedSummariesWithArchiveDates(List<ArchivedEmployeeSummary> summaries)
+        {
+            if (summaries.Count == 0)
+                return;
+
+            var latestByFolder = new Dictionary<string, (string Timestamp, string Display)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in LoadArchiveLog())
+            {
+                if (!string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
+                    || entry.IsReverted
+                    || string.IsNullOrWhiteSpace(entry.EmployeeFolder))
+                {
+                    continue;
+                }
+
+                var display = TryFormatArchiveLogTimestamp(entry.Timestamp)
+                    ?? TryFormatArchiveLogTimestamp(entry.Date);
+                if (string.IsNullOrEmpty(display))
+                    continue;
+
+                var timestampKey = string.IsNullOrWhiteSpace(entry.Timestamp) ? entry.Date : entry.Timestamp;
+                if (!latestByFolder.TryGetValue(entry.EmployeeFolder, out var current)
+                    || string.Compare(timestampKey, current.Timestamp, StringComparison.Ordinal) > 0)
+                {
+                    latestByFolder[entry.EmployeeFolder] = (timestampKey, display);
+                }
+            }
+
+            foreach (var summary in summaries)
+            {
+                if (string.IsNullOrWhiteSpace(summary.EmployeeFolder))
+                    continue;
+
+                if (latestByFolder.TryGetValue(summary.EmployeeFolder, out var archived))
+                {
+                    summary.ArchivedOn = archived.Display;
+                    continue;
+                }
+
+                try
+                {
+                    if (Directory.Exists(summary.EmployeeFolder))
+                        summary.ArchivedOn = Directory.GetLastWriteTime(summary.EmployeeFolder).ToString("dd.MM.yyyy");
+                }
+                catch
+                {
+                    // Best-effort metadata only.
+                }
+            }
+        }
+
+        private static string? TryFormatArchiveLogTimestamp(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            if (DateTime.TryParseExact(value.Trim(), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var exact))
+            {
+                return exact.ToString("dd.MM.yyyy");
+            }
+
+            if (DateTime.TryParseExact(value.Trim(), "dd.MM.yyyy", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var dotted))
+            {
+                return dotted.ToString("dd.MM.yyyy");
+            }
+
+            return DateParsingHelper.TryParseDate(value)?.ToString("dd.MM.yyyy");
         }
 
         public List<ArchivedEmployeeSummary> GetActiveEmployeeFirmHistory()
@@ -1828,6 +1909,62 @@ namespace Win11DesktopApp.Services
                     }
                     catch (Exception ex) { LoggingService.LogError("EmployeeService.GetActiveEmployeeFirmHistory", ex); }
                 }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Expands every <see cref="EmployeeData.FirmHistory"/> period of ARCHIVED employees into
+        /// individual <see cref="ArchivedEmployeeSummary"/> rows. <see cref="GetArchivedEmployees"/>
+        /// only surfaces the last firm, so without this the previous firm of an employee who was
+        /// archived → restored to another firm → archived again becomes invisible to finance
+        /// (salary for the earlier firm/month disappears). Mirrors
+        /// <see cref="GetActiveEmployeeFirmHistory"/> but scans the archive folder.
+        /// </summary>
+        public List<ArchivedEmployeeSummary> GetArchivedEmployeeFirmHistory()
+        {
+            var result = new List<ArchivedEmployeeSummary>();
+            var archiveFolder = _folderService.GetArchiveFolder();
+            if (string.IsNullOrEmpty(archiveFolder) || !Directory.Exists(archiveFolder))
+                return result;
+
+            foreach (var folder in Directory.GetDirectories(archiveFolder))
+            {
+                var jsonPath = Path.Combine(folder, "employee.json");
+                if (!File.Exists(jsonPath)) continue;
+                try
+                {
+                    var data = ReadJson<EmployeeData>(jsonPath);
+                    if (data == null || data.FirmHistory == null || data.FirmHistory.Count == 0) continue;
+
+                    var fullName = $"{data.FirstName} {data.LastName}";
+                    var photo = ResolvePhotoPath(folder, data);
+                    var hasPhoto = !string.IsNullOrEmpty(photo);
+                    var deduplicated = data.FirmHistory
+                        .Where(fh => !string.IsNullOrWhiteSpace(fh.FirmName))
+                        .GroupBy(fh => $"{fh.FirmName}|{fh.StartDate}")
+                        .Select(g => g.Last())
+                        .ToList();
+
+                    foreach (var fh in deduplicated)
+                    {
+                        result.Add(new ArchivedEmployeeSummary
+                        {
+                            UniqueId = data.UniqueId,
+                            FullName = fullName,
+                            PositionTitle = data.PositionTag,
+                            FirmName = fh.FirmName,
+                            StartDate = fh.StartDate,
+                            EndDate = fh.EndDate,
+                            EmployeeFolder = folder,
+                            PhotoPath = photo,
+                            HasPhoto = hasPhoto,
+                            ParsedStartDate = DateParsingHelper.TryParseDate(fh.StartDate),
+                            ParsedEndDate = DateParsingHelper.TryParseDate(fh.EndDate)
+                        });
+                    }
+                }
+                catch (Exception ex) { LoggingService.LogError("EmployeeService.GetArchivedEmployeeFirmHistory", ex); }
             }
             return result;
         }
@@ -2682,6 +2819,13 @@ namespace Win11DesktopApp.Services
                 yield return (folder, string.IsNullOrWhiteSpace(firmName) ? "archive" : firmName);
             }
         }
+
+        /// <summary>
+        /// Resolves the firm an employee currently belongs to: the archived-from firm for
+        /// archived employees, otherwise the firm whose employees folder contains their folder.
+        /// Used by the details card to tell an ongoing stint (no end date) from a finished one.
+        /// </summary>
+        public string GetCurrentFirmName(string employeeFolder) => ResolveFirmNameForHistory(employeeFolder);
 
         private string ResolveFirmNameForHistory(string employeeFolder)
         {

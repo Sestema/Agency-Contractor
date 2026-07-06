@@ -7,9 +7,9 @@
     <SolidColorBrush x:Key="MutedForegroundBrush" Color="#8F7E63"/>
     <SolidColorBrush x:Key="TertiaryForegroundBrush" Color="#A89575"/>
     <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F2E6CE"/>
-    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFF7E3"/>
-    <SolidColorBrush x:Key="CardHoverBrush" Color="#FFF0CE"/>
-    <SolidColorBrush x:Key="CardBorderBrush" Color="#D9C6A3"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFCF2"/>
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#FFF2D6"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#CBB68C"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#E8D8B5"/>
     <SolidColorBrush x:Key="DividerBrush" Color="#D9C6A3"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#66000000"/>
@@ -43,6 +43,76 @@
     <SolidColorBrush x:Key="SuccessChipBorderBrush" Color="#D7E4C7"/>
     <SolidColorBrush x:Key="SuccessChipForegroundBrush" Color="#6B8F3C"/>
     <SolidColorBrush x:Key="MutedDescriptionBrush" Color="#8B8275"/>
+    <SolidColorBrush x:Key="EmpCompanyPillBackgroundBrush" Color="#EFF7F5"/>
+    <SolidColorBrush x:Key="EmpCompanyPillBorderBrush" Color="#C7DFD9"/>
+    <SolidColorBrush x:Key="EmpCompanyPillForegroundBrush" Color="#3D2E1F"/>
+    <SolidColorBrush x:Key="EmpCompanyPillAvatarBackgroundBrush" Color="#4A8F7F"/>
+    <SolidColorBrush x:Key="EmpCompanyPillAvatarForegroundBrush" Color="#FFFDF5"/>
+    <SolidColorBrush x:Key="EmpCompanyPillCheckBrush" Color="#4A8F7F"/>
+
+    <LinearGradientBrush x:Key="EmployeeTileCardBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFF9EA" Offset="0"/>
+        <GradientStop Color="#FFF5DE" Offset="0.54"/>
+        <GradientStop Color="#F7EBD0" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="EmployeeTileCardBorderBrush" Color="#DDCBA9"/>
+    <SolidColorBrush x:Key="EmployeeTileTextPrimaryBrush" Color="#3B2F1E"/>
+    <SolidColorBrush x:Key="EmployeeTileTextSecondaryBrush" Color="#6D5E45"/>
+    <SolidColorBrush x:Key="EmployeeTileTextMutedBrush" Color="#8F7E63"/>
+    <SolidColorBrush x:Key="EmployeeTileInfoPanelBrush" Color="#FFF7E6"/>
+    <SolidColorBrush x:Key="EmployeeTileInfoPanelBorderBrush" Color="#E5D4B4"/>
+    <SolidColorBrush x:Key="EmployeeTileDocsPanelBrush" Color="#F8EFD9"/>
+    <SolidColorBrush x:Key="EmployeeTileDocsPanelBorderBrush" Color="#E2D1AF"/>
+    <SolidColorBrush x:Key="EmployeeTileAvatarBackgroundBrush" Color="#FFFDF5"/>
+    <LinearGradientBrush x:Key="EmployeeTileAvatarBorderBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFDF5" Offset="0"/>
+        <GradientStop Color="#E4D2B1" Offset="0.5"/>
+        <GradientStop Color="#CDB894" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="EmployeeTileStatusOutlineBrush" Color="#FFF9EA"/>
+    <RadialGradientBrush x:Key="EmployeeTileDecorBlueBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.55" RadiusY="0.55">
+        <GradientStop Color="#EAF6F1" Offset="0"/>
+        <GradientStop Color="#00EAF6F1" Offset="1"/>
+    </RadialGradientBrush>
+    <RadialGradientBrush x:Key="EmployeeTileDecorGreenBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.58" RadiusY="0.58">
+        <GradientStop Color="#F0F5E8" Offset="0"/>
+        <GradientStop Color="#00F0F5E8" Offset="1"/>
+    </RadialGradientBrush>
+    <SolidColorBrush x:Key="EmployeeDocErrorBackgroundBrush" Color="#FFF8F5"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorCardBorderBrush" Color="#E9CFC8"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorTileBrush" Color="#F9E8E4"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorForegroundBrush" Color="#A14A3A"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningBackgroundBrush" Color="#FFF9EF"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningCardBorderBrush" Color="#E8D6B9"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningTileBrush" Color="#F7EBD4"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningForegroundBrush" Color="#9A642C"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessBackgroundBrush" Color="#F8FBF2"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessCardBorderBrush" Color="#D7E4C7"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessTileBrush" Color="#E3EED8"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessForegroundBrush" Color="#5F8338"/>
+
+    <SolidColorBrush x:Key="FinGridHeaderBackgroundBrush" Color="#7A5633"/>
+    <SolidColorBrush x:Key="FinGridHeaderForegroundBrush" Color="#FFF7E3"/>
+    <SolidColorBrush x:Key="FinGridHeaderSeparatorBrush" Color="#A88558"/>
+    <SolidColorBrush x:Key="FinGridVerticalLineBrush" Color="#D8C59E"/>
+    <SolidColorBrush x:Key="FinGridHeaderSortAccentBrush" Color="#FFD39A"/>
+    <SolidColorBrush x:Key="FinGroupHeaderBackgroundBrush" Color="#F3EAD4"/>
+    <SolidColorBrush x:Key="FinGroupHeaderBorderBrush" Color="#D2C19C"/>
+    <SolidColorBrush x:Key="FinGroupHeaderForegroundBrush" Color="#5D6B30"/>
+    <SolidColorBrush x:Key="FinGroupHeaderIconBackgroundBrush" Color="#E6EDD8"/>
+    <SolidColorBrush x:Key="FinGroupHeaderIconForegroundBrush" Color="#6B8F3C"/>
+    <SolidColorBrush x:Key="FinGroupHeaderCountBackgroundBrush" Color="#FFF7E3"/>
+    <SolidColorBrush x:Key="FinGroupHeaderCountForegroundBrush" Color="#5D6B30"/>
+    <SolidColorBrush x:Key="FinGrossBackgroundBrush" Color="#F0F5E8"/>
+    <SolidColorBrush x:Key="FinGrossForegroundBrush" Color="#5D7F34"/>
+    <SolidColorBrush x:Key="FinAdvanceBackgroundBrush" Color="#FFF5EB"/>
+    <SolidColorBrush x:Key="FinAdvanceForegroundBrush" Color="#B06A2E"/>
+    <SolidColorBrush x:Key="FinNetBackgroundBrush" Color="#EFF7F5"/>
+    <SolidColorBrush x:Key="FinNetForegroundBrush" Color="#3C7A6D"/>
+    <SolidColorBrush x:Key="FinPaidBackgroundBrush" Color="#6B8F3C"/>
+    <SolidColorBrush x:Key="FinPaidForegroundBrush" Color="#FFFDF5"/>
+    <SolidColorBrush x:Key="FinUnpaidBackgroundBrush" Color="#FFF0CE"/>
+    <SolidColorBrush x:Key="FinUnpaidForegroundBrush" Color="#8F7E63"/>
 
     <LinearGradientBrush x:Key="BrandPrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#A78BFA" Offset="0"/>
@@ -101,7 +171,7 @@
         <GradientStop Color="#00FFFFFF" Offset="1"/>
     </RadialGradientBrush>
 
-    <DropShadowEffect x:Key="CardShadow" BlurRadius="16" ShadowDepth="2" Direction="270" Color="#5C4530" Opacity="0.12"/>
+    <DropShadowEffect x:Key="CardShadow" BlurRadius="16" ShadowDepth="2" Direction="270" Color="#5C4530" Opacity="0.18"/>
     <DropShadowEffect x:Key="CardShadowHover" BlurRadius="26" ShadowDepth="6" Direction="270" Color="#5C4530" Opacity="0.18"/>
     <DropShadowEffect x:Key="DialogShadow" BlurRadius="42" ShadowDepth="12" Direction="270" Color="#5C4530" Opacity="0.26"/>
 </ResourceDictionary>

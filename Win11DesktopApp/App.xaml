@@ -73,6 +73,30 @@
             <system:Double x:Key="FS32">32</system:Double>
             <system:Double x:Key="FS42">42</system:Double>
 
+            <!-- Scalable UI size tokens (updated by ApplyUIFontScale via interface multiplier) -->
+            <system:Double x:Key="UiIconSm">16</system:Double>
+            <system:Double x:Key="UiIconMd">20</system:Double>
+            <system:Double x:Key="UiIconLg">28</system:Double>
+            <system:Double x:Key="UiGlyphSm">11</system:Double>
+            <system:Double x:Key="UiGlyphMd">14</system:Double>
+            <system:Double x:Key="UiAvatarSm">32</system:Double>
+            <system:Double x:Key="UiAvatarMd">34</system:Double>
+            <system:Double x:Key="UiAvatarLg">42</system:Double>
+            <system:Double x:Key="UiToolbarBtn">40</system:Double>
+            <system:Double x:Key="UiControlH">38</system:Double>
+            <system:Double x:Key="UiButtonMinH">36</system:Double>
+            <system:Double x:Key="UiSearchW">420</system:Double>
+            <system:Double x:Key="UiTopBarH">60</system:Double>
+            <system:Double x:Key="UiMenuCardW">160</system:Double>
+            <system:Double x:Key="UiMenuCardH">170</system:Double>
+            <system:Double x:Key="UiMenuCardIcon">58</system:Double>
+            <system:Double x:Key="UiMenuCardIconInner">27</system:Double>
+            <system:Double x:Key="UiBadgeH">24</system:Double>
+            <system:Double x:Key="UiCardGap">10</system:Double>
+            <system:Double x:Key="UiEmployeeTileW">470</system:Double>
+            <system:Double x:Key="UiNotifIcon">19</system:Double>
+            <system:Double x:Key="UiNotifBadge">9</system:Double>
+
             <!-- ===== Win11 Focus Visual (keyboard focus ring) ===== -->
             <Style x:Key="Win11FocusVisual">
                 <Setter Property="Control.Template">
@@ -114,7 +138,7 @@
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
                 <Setter Property="FontSize" Value="{DynamicResource FS13}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="MinHeight" Value="36"/>
+                <Setter Property="MinHeight" Value="{DynamicResource UiButtonMinH}"/>
                 <Setter Property="Padding" Value="{StaticResource ControlPadding}"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -1364,8 +1388,8 @@
             </Style>
 
             <Style x:Key="ToolbarIconButton" TargetType="Button">
-                <Setter Property="Width" Value="40"/>
-                <Setter Property="Height" Value="40"/>
+                <Setter Property="Width" Value="{DynamicResource UiToolbarBtn}"/>
+                <Setter Property="Height" Value="{DynamicResource UiToolbarBtn}"/>
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
@@ -1692,11 +1716,33 @@
                 <Setter Property="Foreground" Value="White"/>
             </Style>
 
+            <Style x:Key="PageHeaderTitleStrip" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="10"/>
+                <Setter Property="Padding" Value="10,4,12,4"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+            </Style>
+
             <Style x:Key="PageHeaderTitleText" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
                 <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            </Style>
+
+            <Style x:Key="PageHeaderTitleTextEmployees" TargetType="TextBlock" BasedOn="{StaticResource PageHeaderTitleText}">
+                <Setter Property="FontSize" Value="{DynamicResource FS13}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             </Style>
 
             <Style x:Key="SectionHeaderIconBadge" TargetType="Border" BasedOn="{StaticResource SoftIconBadge}">

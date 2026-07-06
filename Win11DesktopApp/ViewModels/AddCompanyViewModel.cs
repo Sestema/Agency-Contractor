@@ -224,6 +224,23 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            // Firm names are the identity key across the app (folders, employee FirmName,
+            // index, salary, tags). Two firms with the same name share one employee folder
+            // and show duplicated employees, so names must be unique. In edit mode the
+            // company being edited is excluded from the check.
+            var newName = Employer.Name.Trim();
+            bool duplicateName = _companyService.Companies.Any(c =>
+                (!IsEditMode || _originalCompany == null || c.Id != _originalCompany.Id) &&
+                string.Equals(c.Name?.Trim(), newName, StringComparison.OrdinalIgnoreCase));
+            if (duplicateName)
+            {
+                MessageBox.Show(
+                    Application.Current?.TryFindResource("MsgCompanyNameExists") as string ?? "A company with this name already exists.",
+                    Application.Current?.TryFindResource("TitleError") as string ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             if (IsEditMode && _originalCompany != null)
             {
                 // Apply changes from the working copy to the original

@@ -733,10 +733,13 @@ namespace Win11DesktopApp.Services
             if (archived == null)
                 return null;
 
+            var (archivedFirstName, archivedLastName) = EmployeeSummary.SplitFullName(archived.FullName);
             return new EmployeeSummary
             {
                 UniqueId = archived.UniqueId,
                 FullName = archived.FullName,
+                FirstName = archivedFirstName,
+                LastName = archivedLastName,
                 FirmName = archived.FirmName,
                 PositionTitle = archived.PositionTitle,
                 StartDate = archived.StartDate,

@@ -67,6 +67,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly MainModuleViewModelFactory _mainModuleViewModelFactory;
         private readonly AddCompanyViewModelFactory _addCompanyViewModelFactory;
         private readonly AppNotificationService _notificationService;
+        private readonly WeatherService _weatherService;
         private readonly DispatcherTimer _clockTimer;
 
         public ICommand GoToSettingsCommand { get; }
@@ -112,6 +113,48 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _greetingText;
             set => SetProperty(ref _greetingText, value);
+        }
+
+        private string _greetingGlyph = "\uE706";
+        public string GreetingGlyph
+        {
+            get => _greetingGlyph;
+            set => SetProperty(ref _greetingGlyph, value);
+        }
+
+        private bool _hasWeather;
+        public bool HasWeather
+        {
+            get => _hasWeather;
+            set => SetProperty(ref _hasWeather, value);
+        }
+
+        private string _weatherTempText = string.Empty;
+        public string WeatherTempText
+        {
+            get => _weatherTempText;
+            set => SetProperty(ref _weatherTempText, value);
+        }
+
+        private string _weatherDescription = string.Empty;
+        public string WeatherDescription
+        {
+            get => _weatherDescription;
+            set => SetProperty(ref _weatherDescription, value);
+        }
+
+        private string _weatherIconKey = "IconWeatherCloud";
+        public string WeatherIconKey
+        {
+            get => _weatherIconKey;
+            set => SetProperty(ref _weatherIconKey, value);
+        }
+
+        private string _weatherCity = string.Empty;
+        public string WeatherCity
+        {
+            get => _weatherCity;
+            set => SetProperty(ref _weatherCity, value);
         }
 
         private string _currentDateText = string.Empty;
@@ -352,7 +395,8 @@ namespace Win11DesktopApp.ViewModels
             InvoiceViewModelFactory invoiceViewModelFactory,
             MainModuleViewModelFactory mainModuleViewModelFactory,
             AddCompanyViewModelFactory addCompanyViewModelFactory,
-            AppNotificationService notificationService)
+            AppNotificationService notificationService,
+            WeatherService weatherService)
         {
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
@@ -365,6 +409,7 @@ namespace Win11DesktopApp.ViewModels
             _mainModuleViewModelFactory = mainModuleViewModelFactory ?? throw new ArgumentNullException(nameof(mainModuleViewModelFactory));
             _addCompanyViewModelFactory = addCompanyViewModelFactory ?? throw new ArgumentNullException(nameof(addCompanyViewModelFactory));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
 
             GoToSettingsCommand = new RelayCommand(o => _navigationService.NavigateTo<SettingsViewModel>());
             ToggleNotificationsCommand = new RelayCommand(o => ToggleNotifications());
@@ -372,6 +417,10 @@ namespace Win11DesktopApp.ViewModels
             ClearNotificationsCommand = new RelayCommand(o => _notificationService.ClearAll());
             ButtonCommand = new RelayCommand(o => { });
             ToggleDrawerCommand = new RelayCommand(o => IsDrawerOpen = !IsDrawerOpen);
+
+            if (Enum.TryParse<CompanySortMode>(
+                    _appSettingsService.Settings.CompanySortMode, ignoreCase: true, out var savedCompanySortMode))
+                _companySortMode = savedCompanySortMode;
 
             RefreshVisibleCompanies();
             _companyService.VisibilityChanged += OnVisibilityChanged;
@@ -385,6 +434,8 @@ namespace Win11DesktopApp.ViewModels
             _clockTimer.Tick += (_, _) => RefreshClock();
             RefreshClock();
             _clockTimer.Start();
+
+            _ = LoadWeatherAsync();
 
             OpenAddCompanyDialogCommand = new RelayCommand(o =>
             {
@@ -443,7 +494,11 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 if (Enum.TryParse<CompanySortMode>(sortKey, ignoreCase: true, out var mode))
+                {
                     CompanySortMode = mode;
+                    _appSettingsService.Settings.CompanySortMode = mode.ToString();
+                    _appSettingsService.SaveSettings();
+                }
 
                 IsCompanySortMenuOpen = false;
             });
@@ -606,8 +661,15 @@ namespace Win11DesktopApp.ViewModels
 
         private async void SaveCardOrder()
         {
-            _appSettingsService.Settings.MenuCardOrder = MenuCards.Select(c => c.Id).ToList();
-            await _appSettingsService.SaveSettingsImmediate();
+            try
+            {
+                _appSettingsService.Settings.MenuCardOrder = MenuCards.Select(c => c.Id).ToList();
+                await _appSettingsService.SaveSettingsImmediate();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("MainViewModel.SaveCardOrder", ex);
+            }
         }
 
         private void CleanupAddCompanyVm()
@@ -665,6 +727,7 @@ namespace Win11DesktopApp.ViewModels
         {
             var now = DateTime.Now;
             GreetingText = GetGreeting(now);
+            GreetingGlyph = GetGreetingGlyph(now);
             CurrentTimeText = now.ToString("HH:mm", CultureInfo.InvariantCulture);
             CurrentDateText = now.ToString("dddd, dd.MM.yyyy", GetAppCulture());
         }
@@ -699,6 +762,31 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private async Task LoadWeatherAsync()
+        {
+            try
+            {
+                var info = await _weatherService.GetWeatherAsync().ConfigureAwait(true);
+                if (info == null)
+                {
+                    HasWeather = false;
+                    return;
+                }
+
+                WeatherTempText = string.Format(
+                    CultureInfo.InvariantCulture, "{0:0}°", info.TemperatureC);
+                WeatherDescription = Res(info.DescriptionKey);
+                WeatherIconKey = info.IconKey;
+                WeatherCity = info.City;
+                HasWeather = true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("MainViewModel.LoadWeatherAsync", ex.Message);
+                HasWeather = false;
+            }
+        }
+
         private string GetGreeting(DateTime now)
         {
             if (now.Hour < 12)
@@ -706,6 +794,16 @@ namespace Win11DesktopApp.ViewModels
             if (now.Hour < 18)
                 return Res("MainGreetingAfternoon");
             return Res("MainGreetingEvening");
+        }
+
+        private static string GetGreetingGlyph(DateTime now)
+        {
+            // Segoe MDL2 Assets: sunny by day, moon in the evening/night.
+            if (now.Hour < 6 || now.Hour >= 21)
+                return "\uE708"; // Quiet hours / moon
+            if (now.Hour < 18)
+                return "\uE706"; // Brightness / sun
+            return "\uE708";
         }
 
         private CultureInfo GetAppCulture()

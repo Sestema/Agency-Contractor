@@ -200,6 +200,16 @@ namespace Win11DesktopApp.Services
 
         public async Task AddCompanyAsync(EmployerCompany employer, AgencyCompany agency)
         {
+            // Safety net against duplicate firm names (also enforced in the UI). Firm name
+            // is the identity key for folders/employees, so a duplicate would make two
+            // records share one employee folder. Skip instead of creating a conflict.
+            if (_companies.Any(c => string.Equals(c.Name?.Trim(), employer.Name?.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                LoggingService.LogWarning("CompanyService.AddCompanyAsync",
+                    $"Skipped adding duplicate company name: '{employer.Name}'.");
+                return;
+            }
+
             employer.Agency = agency;
             _companies.Add(employer);
             _tagCatalogService.AddTagsForCompany(employer, agency);

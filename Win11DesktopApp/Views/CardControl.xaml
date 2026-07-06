@@ -21,7 +21,7 @@
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="15"
-                            Width="160" Height="170"
+                            Width="{DynamicResource UiMenuCardW}" Height="{DynamicResource UiMenuCardH}"
                             RenderTransformOrigin="0.5,0.5"
                             SnapsToDevicePixels="True">
                         <Border.RenderTransform>
@@ -43,7 +43,7 @@
 
                                 <!-- Gradient icon circle -->
                                 <Border x:Name="IconCircle" Grid.Row="0"
-                                        Width="58" Height="58" CornerRadius="16"
+                                        Width="{DynamicResource UiMenuCardIcon}" Height="{DynamicResource UiMenuCardIcon}" CornerRadius="16"
                                         HorizontalAlignment="Center" Margin="0,6,0,0"
                                         RenderTransformOrigin="0.5,0.5"
                                         Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
@@ -56,7 +56,7 @@
                                     <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           Fill="White"
                                           Stretch="Uniform"
-                                          Width="27" Height="27"
+                                          Width="{DynamicResource UiMenuCardIconInner}" Height="{DynamicResource UiMenuCardIconInner}"
                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
 
@@ -265,7 +265,7 @@
         </Button>
 
         <!-- Badge -->
-        <Border CornerRadius="12" Background="{DynamicResource ErrorBrush}" MinWidth="24" Height="24" 
+        <Border CornerRadius="12" Background="{DynamicResource ErrorBrush}" MinWidth="{DynamicResource UiBadgeH}" Height="{DynamicResource UiBadgeH}" 
                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0"
                 Padding="6,0" IsHitTestVisible="False"
                 Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">

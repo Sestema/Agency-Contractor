@@ -548,6 +548,8 @@
     <sys:String x:Key="MsgEmployeesLoadError">Помилка завантаження працівників.</sys:String>
     <sys:String x:Key="MsgEmployeesLoading">Завантаження працівників...</sys:String>
     <sys:String x:Key="MsgEmployeesSearchEmpty">Працівників не знайдено.</sys:String>
+    <sys:String x:Key="EmpClearFilters">Скинути фільтри</sys:String>
+    <sys:String x:Key="EmpTileSizeTooltip">Розмір карток (х1–х6)</sys:String>
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Обрати</sys:String>
@@ -570,6 +572,11 @@
     <sys:String x:Key="EmpBadgeVisa">Віза</sys:String>
     <sys:String x:Key="EmpBadgeInsurance">Страховка</sys:String>
     <sys:String x:Key="EmpBadgeWorkPermit">Дозвіл</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitFull">Дозвіл на роботу</sys:String>
+    <sys:String x:Key="EmpBadgePassportShort">Пас</sys:String>
+    <sys:String x:Key="EmpBadgeVisaShort">Віза</sys:String>
+    <sys:String x:Key="EmpBadgeInsuranceShort">Страх</sys:String>
+    <sys:String x:Key="EmpBadgeWorkPermitShort">Дозвіл</sys:String>
     <sys:String x:Key="EmpBtnOpen">Відкрити</sys:String>
     <sys:String x:Key="EmpBtnEdit">Редагувати</sys:String>
     <sys:String x:Key="EmpBtnFolder">Папка</sys:String>
@@ -766,6 +773,12 @@
     <sys:String x:Key="MainGreetingMorning">Доброго ранку</sys:String>
     <sys:String x:Key="MainGreetingAfternoon">Добрий день</sys:String>
     <sys:String x:Key="MainGreetingEvening">Добрий вечір</sys:String>
+    <sys:String x:Key="WeatherClear">Ясно</sys:String>
+    <sys:String x:Key="WeatherCloudy">Хмарно</sys:String>
+    <sys:String x:Key="WeatherFog">Туман</sys:String>
+    <sys:String x:Key="WeatherRain">Дощ</sys:String>
+    <sys:String x:Key="WeatherSnow">Сніг</sys:String>
+    <sys:String x:Key="WeatherStorm">Гроза</sys:String>
     <sys:String x:Key="MainActiveCompanyTitle">Активна фірма</sys:String>
     <sys:String x:Key="MainChangeCompany">Змінити фірму</sys:String>
     <sys:String x:Key="MainEditCompanyShort">Редагувати</sys:String>
@@ -823,12 +836,19 @@
     <sys:String x:Key="ProbDaysExpired">прострочено {0} дн.</sys:String>
     <sys:String x:Key="ProbDaysToday">закінчується сьогодні</sys:String>
     <sys:String x:Key="ProbDaysLeft">через {0} дн.</sys:String>
+    <sys:String x:Key="ProbAllFirms">Усі фірми</sys:String>
+    <sys:String x:Key="ProbSearchPlaceholder">Пошук за іменем або документом…</sys:String>
+    <sys:String x:Key="ProbNoMatches">Нічого не знайдено</sys:String>
+    <sys:String x:Key="ProbNoMatchesDesc">Спробуйте змінити пошук або фільтр.</sys:String>
+    <sys:String x:Key="ProbClearFilters">Скинути фільтри</sys:String>
 
     <!-- ArchiveView -->
     <sys:String x:Key="ArchiveTitle">Архів працівників</sys:String>
     <sys:String x:Key="ArchiveSearch">Пошук в архіві</sys:String>
     <sys:String x:Key="ArchiveStarted">Наступив: </sys:String>
     <sys:String x:Key="ArchiveEnded">Закінчив: </sys:String>
+    <sys:String x:Key="ArchiveArchivedOn">В архіві: </sys:String>
+    <sys:String x:Key="ArchiveDateFormatHint">Формат: дд.мм.рррр</sys:String>
     <sys:String x:Key="ArchiveRestore">Повернути</sys:String>
     <sys:String x:Key="ArchiveViewProfile">Профіль</sys:String>
     <sys:String x:Key="ArchiveOpenFolder">Відкрити папку</sys:String>
@@ -1602,6 +1622,7 @@
     <sys:String x:Key="FinBtnMarkAllPaid">✓ Виплачені всі</sys:String>
     <sys:String x:Key="FinBtnCreateMonth">Наступний місяць</sys:String>
     <sys:String x:Key="FinColPaid">Виплачено</sys:String>
+    <sys:String x:Key="FinStatusUnpaid">Не виплачено</sys:String>
     <sys:String x:Key="FinFirmBreakdown">По фірмах</sys:String>
     <sys:String x:Key="FinAdvanceTitle">Додати аванс</sys:String>
     <sys:String x:Key="FinAdvanceNote">Примітка</sys:String>
@@ -1654,6 +1675,8 @@
     <sys:String x:Key="FinExportSelectDesc">Оберіть фірми для експорту</sys:String>
     <sys:String x:Key="FinExportSelectAll">Вибрати всі</sys:String>
     <sys:String x:Key="FinExportClearAll">Очистити вибір</sys:String>
+    <sys:String x:Key="FinExportSearchHint">Пошук агенції або фірми…</sys:String>
+    <sys:String x:Key="FinExportNoAgency">Без агенції</sys:String>
     <sys:String x:Key="FinExportFirmsCount">Фірми</sys:String>
     <sys:String x:Key="FinExportSelectedCount">Вибрано</sys:String>
     <sys:String x:Key="FinExportRowsCount">Рядки</sys:String>
@@ -1741,6 +1764,7 @@
     <sys:String x:Key="MsgWizUnsavedClose">Є незбережені дані. Закрити без збереження?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Скасувати</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Вкажіть назву фірми.</sys:String>
+    <sys:String x:Key="MsgCompanyNameExists">Фірма з такою назвою вже існує. Виберіть іншу назву.</sys:String>
     <sys:String x:Key="MsgUnsupportedFormat">Непідтримуваний формат файлу.</sys:String>
 
     <!-- Expiry warning badges -->
@@ -1873,6 +1897,7 @@
     <sys:String x:Key="ExportColInsExp">Страховка до</sys:String>
     <sys:String x:Key="ExportColContractType">Тип контракту</sys:String>
     <sys:String x:Key="ExportColStartDate">Дата початку</sys:String>
+    <sys:String x:Key="EmpCardContacts">Контакти</sys:String>
     <sys:String x:Key="ExportColStatus">Статус</sys:String>
     <sys:String x:Key="MsgExportError">Помилка експорту: {0}</sys:String>
     <sys:String x:Key="MsgSelectedCount">Обрано працівників: {0}</sys:String>

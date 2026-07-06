@@ -110,6 +110,8 @@ namespace Win11DesktopApp.EmployeeModels
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public string UniqueId { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string PositionTitle { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;
@@ -136,6 +138,10 @@ namespace Win11DesktopApp.EmployeeModels
         public string Status { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+
+        public bool HasContacts =>
+            !string.IsNullOrWhiteSpace(Phone);
+
         public string BankAccountNumber { get; set; } = string.Empty;
         public string BankName { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = "visa";
@@ -146,6 +152,11 @@ namespace Win11DesktopApp.EmployeeModels
         {
             get
             {
+                var first = (FirstName ?? string.Empty).Trim();
+                var last = (LastName ?? string.Empty).Trim();
+                if (first.Length > 0 && last.Length > 0)
+                    return string.Concat(char.ToUpperInvariant(first[0]), char.ToUpperInvariant(last[0]));
+
                 var name = (FullName ?? string.Empty).Trim();
                 if (name.Length == 0)
                     return "?";
@@ -156,6 +167,19 @@ namespace Win11DesktopApp.EmployeeModels
 
                 return char.ToUpperInvariant(parts[0][0]).ToString();
             }
+        }
+
+        public static (string FirstName, string LastName) SplitFullName(string? fullName)
+        {
+            var trimmed = (fullName ?? string.Empty).Trim();
+            if (trimmed.Length == 0)
+                return (string.Empty, string.Empty);
+
+            var spaceIndex = trimmed.IndexOf(' ');
+            if (spaceIndex < 0)
+                return (trimmed, string.Empty);
+
+            return (trimmed[..spaceIndex], trimmed[(spaceIndex + 1)..].Trim());
         }
 
         public bool IsSelected

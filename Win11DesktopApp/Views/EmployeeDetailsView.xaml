@@ -20,6 +20,7 @@
         <conv:ExpiryWarningToBgConverter x:Key="ExpiryWarnBg"/>
         <conv:ExpiryWarningToVisConverter x:Key="ExpiryWarnVis"/>
         <conv:ExpiryWarningToTextConverter x:Key="ExpiryWarnText"/>
+        <conv:ExpiryWarningToBorderBrushConverter x:Key="ExpiryWarnBorder"/>
         <conv:HexToBrushConverter x:Key="HexToBrush"/>
         <conv:StringNullOrEmptyToVisibilityConverter x:Key="StringToVis"/>
         <conv:InverseStringNullOrEmptyToVisibilityConverter x:Key="InverseStringToVis"/>
@@ -435,17 +436,33 @@
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                                            ToolTip="{DynamicResource DetFieldStartDate}"
                                             Visibility="{Binding Data.StartDate, Converter={StaticResource StringToVis}}">
                                     <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
                                                Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding Data.StartDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource DetFieldStartDate}" FontSize="{DynamicResource FS10}"
+                                               Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="8,1,0,0"/>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                                            ToolTip="{DynamicResource ReportColEndDateFull}"
+                                            Visibility="{Binding FirmEndDate, Converter={StaticResource StringToVis}}">
+                                    <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
+                                               Foreground="{DynamicResource ErrorBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding FirmEndDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource ReportColEndDateFull}" FontSize="{DynamicResource FS10}"
+                                               Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="8,1,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                                            ToolTip="{DynamicResource DetFieldSignDate}"
                                             Visibility="{Binding Data.ContractSignDate, Converter={StaticResource StringToVis}}">
                                     <TextBlock Text="&#xE8D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
                                                Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding Data.ContractSignDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
+                                    <TextBlock Text="{DynamicResource DetFieldSignDate}" FontSize="{DynamicResource FS10}"
+                                               Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="8,1,0,0"/>
                                 </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -473,26 +490,22 @@
                                 </Button>
 
                                 <!-- AI Validate button -->
-                                <Button Command="{Binding AIValidateCommand}" Padding="12,9" Cursor="Hand" Margin="0,8,0,0"
-                                        Background="{DynamicResource PurpleLightBrush}"
-                                        BorderBrush="{DynamicResource PurpleBrush}" BorderThickness="1"
-                                        Foreground="{DynamicResource PurpleBrush}" HorizontalContentAlignment="Center"
+                                <Button Command="{Binding AIValidateCommand}" Margin="0,8,0,0"
                                         Style="{StaticResource SidebarSecondaryButton}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource PurpleBrush}"/>
                                         <TextBlock Text="{DynamicResource AIValidateBtn}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
 
 
                                 <!-- Export PDF button -->
-                                <Button Command="{Binding ExportProfilePdfCommand}" Padding="12,9" Cursor="Hand" Margin="0,8,0,0"
-                                        Background="{DynamicResource AccentLightBrush}" 
-                                        BorderBrush="{DynamicResource AccentDarkBrush}" BorderThickness="1"
-                                        Foreground="{DynamicResource AccentDarkBrush}" HorizontalContentAlignment="Center"
+                                <Button Command="{Binding ExportProfilePdfCommand}" Margin="0,8,0,0"
                                         Style="{StaticResource SidebarSecondaryButton}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xEA00;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="&#xEA00;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
                                         <TextBlock Text="{DynamicResource DetBtnExportPdf}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
@@ -649,7 +662,9 @@
                                     <TextBlock Text="{DynamicResource DetDocsTitle}" Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0,0,0,14"/>
                                     <primitives:UniformGrid Columns="2" Margin="0,0,0,4">
                                         <!-- Passport -->
-                                        <Border Style="{StaticResource DetailsDocumentCard}">
+                                        <Border Style="{StaticResource DetailsDocumentCard}"
+                                                BorderThickness="1.5"
+                                                BorderBrush="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnBorder}}">
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
                                                     <StackPanel Orientation="Horizontal">
@@ -714,6 +729,8 @@
 
                                         <!-- Secondary document / ID-card second side -->
                                         <Border Style="{StaticResource DetailsDocumentCard}"
+                                                BorderThickness="1.5"
+                                                BorderBrush="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnBorder}}"
                                                 Visibility="{Binding HasSecondaryDocument, Converter={StaticResource BoolToVis}}">
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
@@ -786,7 +803,8 @@
                                         </Border>
 
                                         <!-- Insurance (hidden for passport_only) -->
-                                        <Border>
+                                        <Border BorderThickness="1.5"
+                                                BorderBrush="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnBorder}}">
                                             <Border.Style>
                                                 <Style TargetType="Border" BasedOn="{StaticResource DetailsDocumentCard}">
                                                     <Style.Triggers>
@@ -867,7 +885,8 @@
                                         </Border>
 
                                         <!-- Work Permit (only for work_permit type) -->
-                                        <Border>
+                                        <Border BorderThickness="1.5"
+                                                BorderBrush="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnBorder}}">
                                             <Border.Style>
                                                 <Style TargetType="Border" BasedOn="{StaticResource DetailsDocumentCard}">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -886,6 +905,13 @@
                                                         <TextBlock Text="{DynamicResource DetDocWorkPermit}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
+                                                    <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
+                                                            Background="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                            Visibility="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                                        <TextBlock Text="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
+                                                                   FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
+                                                                   Foreground="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
+                                                    </Border>
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
@@ -916,17 +942,17 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" Style="{StaticResource DocCardBtn}" Command="{Binding OpenWorkPermitCommand}" Margin="0,0,6,0">
+                                                    <Button Grid.Column="0" Style="{StaticResource DocCardBtn}" Command="{Binding ReplaceWorkPermitCommand}" Margin="0,0,6,0"
+                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{DynamicResource DetBtnReplace}" FontSize="{DynamicResource FS11}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Grid.Column="1" Style="{StaticResource DocCardBtn}" Command="{Binding OpenWorkPermitCommand}" Margin="0,0,6,0">
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Text="{DynamicResource DetBtnOpenFile}" FontSize="{DynamicResource FS11}"/>
-                                                        </StackPanel>
-                                                    </Button>
-                                                    <Button Grid.Column="1" Style="{StaticResource DocCardBtn}" Command="{Binding RenewWorkPermitCommand}" Margin="0,0,6,0"
-                                                            Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{DynamicResource DetBtnRenewPermit}" FontSize="{DynamicResource FS11}"/>
                                                         </StackPanel>
                                                     </Button>
                                                 </Grid>
@@ -2494,67 +2520,6 @@
                             <TextBlock Text="{DynamicResource DetBtnCancel}" FontSize="{DynamicResource FS13}"/>
                         </Button>
                         <Button Command="{Binding ConfirmExtendCommand}" Padding="16,8"
-                                Background="{DynamicResource AccentBrush}" Foreground="White" 
-                                BorderThickness="0" FontWeight="SemiBold" Cursor="Hand">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource DetBtnSave}" FontSize="{DynamicResource FS13}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- ===== Renew Work Permit Dialog Overlay ===== -->
-        <Grid Visibility="{Binding IsRenewWpDialogOpen, Converter={StaticResource BoolToVis}}">
-            <Border Background="{DynamicResource OverlayBrush}">
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding CancelRenewWpCommand}"/>
-                </Border.InputBindings>
-            </Border>
-            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" 
-                    Width="420" Padding="24"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
-                </Border.Effect>
-                <StackPanel>
-                    <TextBlock Text="&#xE8A1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS28}" 
-                               HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-                    <TextBlock Text="{DynamicResource DetRenewWpTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
-                               TextAlignment="Center" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding RenewWpFilePath}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
-                               TextTrimming="CharacterEllipsis" TextAlignment="Center" Margin="0,0,0,16"/>
-
-                    <TextBlock Text="{DynamicResource DetFieldWpNumber}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RenewWpNumber, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="10,8" FontSize="{DynamicResource FS14}" Margin="0,0,0,10"/>
-
-                    <TextBlock Text="{DynamicResource DetFieldWpType}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RenewWpType, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="10,8" FontSize="{DynamicResource FS14}" Margin="0,0,0,10"/>
-
-                    <TextBlock Text="{DynamicResource DetFieldWpIssueDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RenewWpIssueDate, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="10,8" FontSize="{DynamicResource FS14}" Margin="0,0,0,10"/>
-
-                    <TextBlock Text="{DynamicResource DetFieldExpiry}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RenewWpExpiry, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="10,8" FontSize="{DynamicResource FS14}" Margin="0,0,0,10"/>
-
-                    <TextBlock Text="{DynamicResource DetFieldWpAuthority}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding RenewWpAuthority, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="10,8" FontSize="{DynamicResource FS14}" Margin="0,0,0,16"/>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Command="{Binding CancelRenewWpCommand}" Padding="16,8" Margin="0,0,8,0"
-                                Background="{DynamicResource ContentBackgroundBrush}" 
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
-                            <TextBlock Text="{DynamicResource DetBtnCancel}" FontSize="{DynamicResource FS13}"/>
-                        </Button>
-                        <Button Command="{Binding ConfirmRenewWpCommand}" Padding="16,8"
                                 Background="{DynamicResource AccentBrush}" Foreground="White" 
                                 BorderThickness="0" FontWeight="SemiBold" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
