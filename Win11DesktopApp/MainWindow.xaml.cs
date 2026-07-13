@@ -208,6 +208,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
         => RecalculateScale();
 
+    // Snapping the scale to a coarse grid (instead of a continuously-changing ratio tied to
+    // window pixels) keeps ClearType-hinted text glyphs landing on the same fractional pixel
+    // offset across resizes, which noticeably reduces the "soft"/blurry look of small text
+    // under the global LayoutTransform in MainWindow.xaml (PageHost.LayoutTransform).
+    // Five-percent steps keep common results (1.00, 1.25, 1.50) aligned much
+    // better than values such as 1.26, which soften small ClearType glyphs.
+    private const double ScaleSnapStep = 0.05;
+
     private void RecalculateScale()
     {
         double scaleX = ActualWidth / BaseWidth;
@@ -215,6 +223,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         double raw = Math.Min(scaleX, scaleY);
         double damped = 1.0 + (raw - 1.0) * 0.55;
         double autoScale = Math.Clamp(damped, 0.85, 1.55);
-        ScaleFactor = Math.Clamp(autoScale * _interfaceSizeMultiplier, 0.55, 2.0);
+        double target = Math.Clamp(autoScale * _interfaceSizeMultiplier, 0.55, 2.0);
+        ScaleFactor = Math.Round(target / ScaleSnapStep) * ScaleSnapStep;
     }
 }

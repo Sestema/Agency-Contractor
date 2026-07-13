@@ -132,7 +132,28 @@ namespace Win11DesktopApp.EmployeeModels
             set { _isChecked = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsChecked))); }
         }
 
+        private bool _isVisible = true;
+        public bool IsVisible
+        {
+            get => _isVisible;
+            set { _isVisible = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsVisible))); }
+        }
+
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    }
+
+    /// <summary>
+    /// One row in the monthly movement details overlay (dashboard + report).
+    /// </summary>
+    public class MonthlyMovementItem
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string FirmName { get; set; } = string.Empty;
+        public string DateText { get; set; } = string.Empty;
+        public string UniqueId { get; set; } = string.Empty;
+        public string EmployeeFolder { get; set; } = string.Empty;
+        public string StatusText { get; set; } = string.Empty;
+        public string StatusColor { get; set; } = "#4CAF50";
     }
 
     /// <summary>
@@ -228,6 +249,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string FullName { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;
         public string EmployeeFolder { get; set; } = string.Empty;
+        public string EmployeeTypeCode { get; set; } = string.Empty;
         public string EmployeeType { get; set; } = string.Empty;
         public string DocumentType { get; set; } = string.Empty;
         public string PassportNumber { get; set; } = string.Empty;

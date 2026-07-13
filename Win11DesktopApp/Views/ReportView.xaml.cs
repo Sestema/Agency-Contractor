@@ -7,7 +7,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Threading;
-using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Services;
@@ -23,12 +23,150 @@ namespace Win11DesktopApp.Views
         private readonly DispatcherTimer _widthSyncDebounceTimer = new() { Interval = System.TimeSpan.FromMilliseconds(220) };
         private DataGrid? _pendingWidthSyncGrid;
 
+        private bool _syncingEmployersCheck;
+        private bool _syncingAgenciesCheck;
+        private ReportViewModel? _reportVm;
+
         public ReportView()
         {
             InitializeComponent();
             Language = XmlLanguage.GetLanguage(Thread.CurrentThread.CurrentUICulture.IetfLanguageTag);
             _widthSyncDebounceTimer.Tick += WidthSyncDebounceTimer_Tick;
             Loaded += ReportView_Loaded;
+            DataContextChanged += ReportView_DataContextChanged;
+        }
+
+        private void ReportView_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (_reportVm != null)
+                _reportVm.PropertyChanged -= ReportVm_PropertyChanged;
+
+            _reportVm = e.NewValue as ReportViewModel;
+            if (_reportVm != null)
+            {
+                _reportVm.PropertyChanged += ReportVm_PropertyChanged;
+                SyncAllEmployersCheckState();
+                SyncAllAgenciesCheckState();
+            }
+        }
+
+        private void ReportVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ReportViewModel.AllCompaniesSelected))
+                SyncAllEmployersCheckState();
+            else if (e.PropertyName == nameof(ReportViewModel.AllAgenciesSelected))
+                SyncAllAgenciesCheckState();
+        }
+
+        private void AllEmployersCheck_Click(object sender, RoutedEventArgs e)
+        {
+            if (_syncingEmployersCheck || _reportVm == null) return;
+
+            var visible = _reportVm.CompanyFilters.Where(f => f.IsVisible).ToList();
+            if (visible.Count == 0) return;
+
+            var allChecked = visible.All(f => f.IsChecked);
+            _reportVm.SetAllCompaniesSelection(!allChecked);
+        }
+
+        private void AllAgenciesCheck_Click(object sender, RoutedEventArgs e)
+        {
+            if (_syncingAgenciesCheck || _reportVm == null) return;
+
+            var visible = _reportVm.AgencyFilters.Where(f => f.IsVisible).ToList();
+            if (visible.Count == 0) return;
+
+            var allChecked = visible.All(f => f.IsChecked);
+            _reportVm.SetAllAgenciesSelection(!allChecked);
+        }
+
+        private void SyncAllEmployersCheckState()
+        {
+            if (AllEmployersCheck == null || _reportVm == null) return;
+
+            _syncingEmployersCheck = true;
+            try
+            {
+                AllEmployersCheck.IsChecked = _reportVm.AllCompaniesSelected;
+            }
+            finally
+            {
+                _syncingEmployersCheck = false;
+            }
+        }
+
+        private void SyncAllAgenciesCheckState()
+        {
+            if (AllAgenciesCheck == null || _reportVm == null) return;
+
+            _syncingAgenciesCheck = true;
+            try
+            {
+                AllAgenciesCheck.IsChecked = _reportVm.AllAgenciesSelected;
+            }
+            finally
+            {
+                _syncingAgenciesCheck = false;
+            }
+        }
+
+        private void FilterScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (FilterScrollViewer == null) return;
+
+            var inner = FindInnerScrollViewer(e.OriginalSource as DependencyObject, FilterScrollViewer);
+            if (inner != null && inner.ScrollableHeight > 0)
+            {
+                var delta = -e.Delta;
+                var newOffset = inner.VerticalOffset + delta;
+
+                if (newOffset >= 0 && newOffset <= inner.ScrollableHeight)
+                {
+                    inner.ScrollToVerticalOffset(newOffset);
+                    e.Handled = true;
+                    return;
+                }
+
+                if (newOffset < 0)
+                {
+                    inner.ScrollToVerticalOffset(0);
+                    FilterScrollViewer.ScrollToVerticalOffset(FilterScrollViewer.VerticalOffset + newOffset);
+                    e.Handled = true;
+                    return;
+                }
+
+                var overflow = newOffset - inner.ScrollableHeight;
+                inner.ScrollToVerticalOffset(inner.ScrollableHeight);
+                FilterScrollViewer.ScrollToVerticalOffset(FilterScrollViewer.VerticalOffset + overflow);
+                e.Handled = true;
+                return;
+            }
+
+            FilterScrollViewer.ScrollToVerticalOffset(FilterScrollViewer.VerticalOffset - e.Delta);
+            e.Handled = true;
+        }
+
+        private static ScrollViewer? FindInnerScrollViewer(DependencyObject? source, ScrollViewer outer)
+        {
+            while (source != null)
+            {
+                if (source is ScrollViewer sv && sv != outer)
+                    return sv;
+                source = GetParentObject(source);
+            }
+
+            return null;
+        }
+
+        private static DependencyObject? GetParentObject(DependencyObject? child)
+        {
+            if (child == null)
+                return null;
+
+            if (child is Visual)
+                return VisualTreeHelper.GetParent(child);
+
+            return LogicalTreeHelper.GetParent(child);
         }
 
         private void ReportView_Loaded(object sender, RoutedEventArgs e)

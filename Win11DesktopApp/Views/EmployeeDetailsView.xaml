@@ -2324,7 +2324,7 @@
                 </Border.InputBindings>
             </Border>
             <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" 
-                    Width="500" MaxHeight="500"
+                    Width="520" MaxHeight="500"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     Padding="24">
                 <Border.Effect>
@@ -2387,7 +2387,8 @@
                     <TextBlock Grid.Row="1" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,10" FontSize="{DynamicResource FS12}"
                                Text="{DynamicResource DetGenDesc}"/>
 
-                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="300">
+                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="300"
+                                  VerticalScrollBarVisibility="Hidden">
                         <ItemsControl ItemsSource="{Binding AvailableTemplates}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -2400,22 +2401,25 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="6" 
-                                                    Background="{DynamicResource AccentLightBrush}" Margin="0,0,12,0">
+                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" 
+                                                    Background="{DynamicResource AccentLightBrush}" Margin="0,0,10,0">
                                                 <TextBlock Text="{Binding Format}" VerticalAlignment="Center" 
-                                                           HorizontalAlignment="Center" FontWeight="Bold" FontSize="{DynamicResource FS11}"
+                                                           HorizontalAlignment="Center" FontWeight="Bold" FontSize="{DynamicResource FS10}"
                                                            Foreground="{DynamicResource AccentBrush}"/>
                                             </Border>
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}"
-                                                           Foreground="{DynamicResource ForegroundBrush}"/>
-                                                <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
-                                                           TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{DynamicResource FS11}"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                                           ToolTip="{Binding Name}"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" 
+                                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                                           ToolTip="{Binding Description}"/>
                                             </StackPanel>
                                             <Button Grid.Column="2"
                                                     Style="{StaticResource FilledActionButton}"
-                                                    MinWidth="118"
-                                                    Padding="12,7"
+                                                    MinWidth="96"
+                                                    Padding="9,5"
                                                     FontWeight="SemiBold"
                                                     Command="{Binding DataContext.GenerateFromTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
@@ -2429,8 +2433,8 @@
                                                     </StackPanel>
                                                 </Button.ToolTip>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS12}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource EmpGenerate}" FontSize="{DynamicResource FS11}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                         </Grid>

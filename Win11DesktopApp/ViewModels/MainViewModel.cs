@@ -171,6 +171,13 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _currentTimeText, value);
         }
 
+        private string _currentTimeZoneText = string.Empty;
+        public string CurrentTimeZoneText
+        {
+            get => _currentTimeZoneText;
+            set => SetProperty(ref _currentTimeZoneText, value);
+        }
+
         private int _visibleCompaniesCount;
         public int VisibleCompaniesCount
         {
@@ -730,6 +737,12 @@ namespace Win11DesktopApp.ViewModels
             GreetingGlyph = GetGreetingGlyph(now);
             CurrentTimeText = now.ToString("HH:mm", CultureInfo.InvariantCulture);
             CurrentDateText = now.ToString("dddd, dd.MM.yyyy", GetAppCulture());
+            var utcOffset = TimeZoneInfo.Local.GetUtcOffset(now);
+            var offsetSign = utcOffset >= TimeSpan.Zero ? "+" : "-";
+            var offsetHours = Math.Abs(utcOffset.Hours);
+            CurrentTimeZoneText = utcOffset.Minutes == 0
+                ? $"UTC {offsetSign}{offsetHours}"
+                : $"UTC {offsetSign}{utcOffset.Hours}:{Math.Abs(utcOffset.Minutes):00}";
         }
 
         private void RefreshOverviewStats()

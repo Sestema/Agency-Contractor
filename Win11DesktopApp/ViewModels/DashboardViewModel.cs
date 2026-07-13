@@ -52,17 +52,6 @@ namespace Win11DesktopApp.ViewModels
         public bool HasExpenses => TotalExpenses != 0;
     }
 
-    public class MonthlyMovementItem
-    {
-        public string FullName { get; set; } = "";
-        public string FirmName { get; set; } = "";
-        public string DateText { get; set; } = "";
-        public string UniqueId { get; set; } = "";
-        public string EmployeeFolder { get; set; } = "";
-        public string StatusText { get; set; } = "";
-        public string StatusColor { get; set; } = "#4CAF50";
-    }
-
     public class DashboardViewModel : ViewModelBase
     {
         private readonly NavigationService _navigationService;

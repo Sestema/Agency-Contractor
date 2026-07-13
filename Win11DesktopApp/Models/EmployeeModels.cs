@@ -115,6 +115,12 @@ namespace Win11DesktopApp.EmployeeModels
         public string FullName { get; set; } = string.Empty;
         public string PositionTitle { get; set; } = string.Empty;
         public string StartDate { get; set; } = string.Empty;
+        /// <summary>
+        /// Pre-parsed <see cref="StartDate"/>, computed once when the summary is built (see
+        /// EmployeeService.BuildSummary/BuildSummaryFromIndexRow) so sorting/stats don't need to
+        /// re-parse the raw date string on every call.
+        /// </summary>
+        public DateTime? ParsedStartDate { get; set; }
         public string EndDate { get; set; } = string.Empty;
         public string ContractType { get; set; } = string.Empty;
         public string Gender { get; set; } = "male";

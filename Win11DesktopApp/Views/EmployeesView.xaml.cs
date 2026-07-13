@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -12,12 +13,46 @@ namespace Win11DesktopApp.Views
         private const string EmployeeCardMoreMenuTag = "EmployeeCardMoreMenu";
         private Popup? _openEmployeeCardPopup;
         private bool _suppressNextTileCardOpen;
+        private readonly DispatcherTimer _companyDropdownCloseTimer;
 
         public EmployeesView()
         {
             InitializeComponent();
             PreviewMouseLeftButtonDown += EmployeeView_PreviewMouseLeftButtonDown;
             PreviewKeyDown += EmployeesView_PreviewKeyDown;
+
+            // Grace period so the dropdown survives the mouse crossing the small
+            // gap between the company pill and the popup card below it.
+            _companyDropdownCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+            _companyDropdownCloseTimer.Tick += (_, _) =>
+            {
+                _companyDropdownCloseTimer.Stop();
+                if (DataContext is EmployeesViewModel vm)
+                    vm.IsCompanyDropdownOpen = false;
+            };
+        }
+
+        private void CompanyPill_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _companyDropdownCloseTimer.Stop();
+            if (DataContext is EmployeesViewModel vm && vm.ToggleCompanyDropdownCommand.CanExecute(null))
+                vm.ToggleCompanyDropdownCommand.Execute(null);
+
+            e.Handled = true;
+        }
+
+        private void CompanyDropdown_MouseEnter(object sender, MouseEventArgs e)
+        {
+            _companyDropdownCloseTimer.Stop();
+        }
+
+        private void CompanyDropdown_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (DataContext is EmployeesViewModel vm && vm.IsCompanyDropdownOpen)
+            {
+                _companyDropdownCloseTimer.Stop();
+                _companyDropdownCloseTimer.Start();
+            }
         }
 
         private void EmployeesView_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -43,6 +78,12 @@ namespace Win11DesktopApp.Views
         {
             if (DataContext is EmployeesViewModel vm && e.NewSize.Width > 0)
                 vm.TilesAvailableWidth = e.NewSize.Width;
+        }
+
+        private void IconsItemsControl_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (DataContext is EmployeesViewModel vm && e.NewSize.Width > 0)
+                vm.IconsAvailableWidth = e.NewSize.Width;
         }
 
         private void EmployeesScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -133,6 +174,28 @@ namespace Win11DesktopApp.Views
         {
             ExecuteEmployeeCardAction(vm => vm.DeleteEmployeeCommand);
             e.Handled = true;
+        }
+
+        private void EmployeeCardContextOpenFolder_Click(object sender, RoutedEventArgs e)
+        {
+            ExecuteEmployeeCardContextAction(sender, vm => vm.OpenEmployeeFolderCommand);
+        }
+
+        private void EmployeeCardContextDelete_Click(object sender, RoutedEventArgs e)
+        {
+            ExecuteEmployeeCardContextAction(sender, vm => vm.DeleteEmployeeCommand);
+        }
+
+        private void ExecuteEmployeeCardContextAction(object sender, System.Func<EmployeesViewModel, ICommand> commandSelector)
+        {
+            if (sender is not MenuItem menuItem
+                || menuItem.DataContext is not EmployeeModels.EmployeeSummary employee
+                || DataContext is not EmployeesViewModel vm)
+                return;
+
+            var command = commandSelector(vm);
+            if (command.CanExecute(employee))
+                command.Execute(employee);
         }
 
         private void ExecuteEmployeeCardAction(System.Func<EmployeesViewModel, ICommand> commandSelector)

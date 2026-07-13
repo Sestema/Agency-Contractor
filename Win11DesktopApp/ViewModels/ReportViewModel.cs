@@ -76,9 +76,15 @@ namespace Win11DesktopApp.ViewModels
 
         public ICommand GoBackCommand { get; }
         public ICommand GenerateReportCommand { get; }
+        public ICommand ApplyFiltersCommand { get; }
         public ICommand ExportToExcelCommand { get; }
         public ICommand ToggleAllCompaniesCommand { get; }
         public ICommand ToggleAllAgenciesCommand { get; }
+        public ICommand ClearCompanySearchCommand { get; }
+        public ICommand ClearAgencySearchCommand { get; }
+        public ICommand ShowAllCompaniesCommand { get; }
+        public ICommand ShowAllAgenciesCommand { get; }
+        public ICommand ToggleFilterPanelCommand { get; }
         public ICommand SwitchToSummaryCommand { get; }
         public ICommand SwitchToEmployeesCommand { get; }
         public ICommand ShowExportDialogCommand { get; }
@@ -95,6 +101,14 @@ namespace Win11DesktopApp.ViewModels
             set { if (SetProperty(ref _isSummaryView, value)) OnPropertyChanged(nameof(IsEmployeesView)); }
         }
         public bool IsEmployeesView => !IsSummaryView;
+
+        // ===== Filter panel visibility =====
+        private bool _isFilterPanelVisible = true;
+        public bool IsFilterPanelVisible
+        {
+            get => _isFilterPanelVisible;
+            set => SetProperty(ref _isFilterPanelVisible, value);
+        }
 
         // ===== Export Dialog =====
         public ObservableCollection<ExportSheetOption> ExportSheets { get; } = new();
@@ -135,67 +149,128 @@ namespace Win11DesktopApp.ViewModels
 
         // ===== Firm Filters =====
         public ObservableCollection<CompanyFilter> CompanyFilters { get; } = new();
+        private bool _syncingSelectAllCompanies;
 
-        private bool _allCompaniesSelected = true;
-        public bool AllCompaniesSelected
+        private bool? _allCompaniesSelected = true;
+        public bool? AllCompaniesSelected => _allCompaniesSelected;
+
+        public void SetAllCompaniesSelection(bool isChecked)
         {
-            get => _allCompaniesSelected;
-            set
+            if (_syncingSelectAllCompanies) return;
+
+            _syncingSelectAllCompanies = true;
+            try
             {
-                if (SetProperty(ref _allCompaniesSelected, value))
-                {
-                    foreach (var f in CompanyFilters) f.IsChecked = value;
-                }
+                _allCompaniesSelected = isChecked;
+                OnPropertyChanged(nameof(AllCompaniesSelected));
+                foreach (var f in CompanyFilters.Where(f => f.IsVisible))
+                    f.IsChecked = isChecked;
+            }
+            finally
+            {
+                _syncingSelectAllCompanies = false;
             }
         }
+
+        private bool _companyListExpanded;
+        public bool CompanyListExpanded
+        {
+            get => _companyListExpanded;
+            set => SetProperty(ref _companyListExpanded, value);
+        }
+
+        private string _companySearchText = string.Empty;
+        public string CompanySearchText
+        {
+            get => _companySearchText;
+            set
+            {
+                if (SetProperty(ref _companySearchText, value))
+                    ApplyCompanySearch();
+            }
+        }
+
+        public int CompanyTotalCount => CompanyFilters.Count;
+        public int CompanyVisibleCount => CompanyFilters.Count(f => f.IsVisible);
+        public bool CompanyHasHidden => CompanyVisibleCount < CompanyTotalCount;
+        public bool CompanyHasItems => CompanyTotalCount > 0;
 
         // ===== Agency Filters =====
         public ObservableCollection<CompanyFilter> AgencyFilters { get; } = new();
+        private bool _syncingSelectAllAgencies;
 
-        private bool _allAgenciesSelected = true;
-        public bool AllAgenciesSelected
+        private bool? _allAgenciesSelected = true;
+        public bool? AllAgenciesSelected => _allAgenciesSelected;
+
+        public void SetAllAgenciesSelection(bool isChecked)
         {
-            get => _allAgenciesSelected;
-            set
+            if (_syncingSelectAllAgencies) return;
+
+            _syncingSelectAllAgencies = true;
+            try
             {
-                if (SetProperty(ref _allAgenciesSelected, value))
-                {
-                    foreach (var f in AgencyFilters) f.IsChecked = value;
-                }
+                _allAgenciesSelected = isChecked;
+                OnPropertyChanged(nameof(AllAgenciesSelected));
+                foreach (var f in AgencyFilters.Where(f => f.IsVisible))
+                    f.IsChecked = isChecked;
+            }
+            finally
+            {
+                _syncingSelectAllAgencies = false;
             }
         }
+
+        private bool _agencyListExpanded;
+        public bool AgencyListExpanded
+        {
+            get => _agencyListExpanded;
+            set => SetProperty(ref _agencyListExpanded, value);
+        }
+
+        private string _agencySearchText = string.Empty;
+        public string AgencySearchText
+        {
+            get => _agencySearchText;
+            set
+            {
+                if (SetProperty(ref _agencySearchText, value))
+                    ApplyAgencySearch();
+            }
+        }
+
+        public int AgencyTotalCount => AgencyFilters.Count;
+        public int AgencyVisibleCount => AgencyFilters.Count(f => f.IsVisible);
+        public bool AgencyHasHidden => AgencyVisibleCount < AgencyTotalCount;
+        public bool AgencyHasItems => AgencyTotalCount > 0;
 
         // ===== Date Filters =====
         private DateTime _dateFrom;
         public DateTime DateFrom
         {
             get => _dateFrom;
-            set
-            {
-                if (SetProperty(ref _dateFrom, value))
-                {
-                    _appSettingsService.Settings.ReportDateFrom = value.ToString("yyyy-MM-dd");
-                    _appSettingsService.SaveSettings();
-
-                    _ = RefreshReportAsync(reloadFilters: true);
-                }
-            }
+            set => SetProperty(ref _dateFrom, value);
         }
 
         private DateTime _dateTo;
         public DateTime DateTo
         {
             get => _dateTo;
-            set
-            {
-                if (SetProperty(ref _dateTo, value))
-                {
-                    _appSettingsService.Settings.ReportDateTo = value.ToString("yyyy-MM-dd");
-                    _appSettingsService.SaveSettings();
+            set => SetProperty(ref _dateTo, value);
+        }
 
-                    _ = RefreshReportAsync(reloadFilters: true);
-                }
-            }
+        // Draft dates — used by DatePickers; applied to report only on «Показати»
+        private DateTime _draftDateFrom;
+        public DateTime DraftDateFrom
+        {
+            get => _draftDateFrom;
+            set => SetProperty(ref _draftDateFrom, value);
+        }
+
+        private DateTime _draftDateTo;
+        public DateTime DraftDateTo
+        {
+            get => _draftDateTo;
+            set => SetProperty(ref _draftDateTo, value);
         }
 
         // ===== Summary stats =====
@@ -228,10 +303,264 @@ namespace Win11DesktopApp.ViewModels
         public int SummaryActive { get => _summaryActive; set => SetProperty(ref _summaryActive, value); }
 
         private int _summaryPassportOnly;
-        public int SummaryPassportOnly { get => _summaryPassportOnly; set => SetProperty(ref _summaryPassportOnly, value); }
+        public int SummaryPassportOnly
+        {
+            get => _summaryPassportOnly;
+            set
+            {
+                if (SetProperty(ref _summaryPassportOnly, value))
+                    OnPropertyChanged(nameof(HasPassportOnlyIssues));
+            }
+        }
 
         private int _summaryArchived;
         public int SummaryArchived { get => _summaryArchived; set => SetProperty(ref _summaryArchived, value); }
+
+        // ===== Metric card extras =====
+        private int _expiredDocsCount;
+        public int ExpiredDocsCount { get => _expiredDocsCount; set => SetProperty(ref _expiredDocsCount, value); }
+
+        private int _expiringDocsCount;
+        public int ExpiringDocsCount { get => _expiringDocsCount; set => SetProperty(ref _expiringDocsCount, value); }
+
+        private int _documentIssuesCount;
+        public int DocumentIssuesCount
+        {
+            get => _documentIssuesCount;
+            set
+            {
+                if (SetProperty(ref _documentIssuesCount, value))
+                    OnPropertyChanged(nameof(HasDocumentIssues));
+            }
+        }
+
+        private int _netChange;
+        public int NetChange
+        {
+            get => _netChange;
+            set
+            {
+                if (SetProperty(ref _netChange, value))
+                {
+                    OnPropertyChanged(nameof(NetChangeText));
+                    OnPropertyChanged(nameof(IsNetChangePositive));
+                    OnPropertyChanged(nameof(IsNetChangeNegative));
+                }
+            }
+        }
+
+        public string NetChangeText => _netChange > 0 ? $"+{_netChange}" : _netChange.ToString();
+
+        public bool IsNetChangePositive => _netChange > 0;
+
+        public bool IsNetChangeNegative => _netChange < 0;
+
+        public bool HasPassportOnlyIssues => SummaryPassportOnly > 0;
+
+        public bool HasDocumentIssues => _documentIssuesCount > 0;
+
+        private int _reportFirmCount;
+        public int ReportFirmCount { get => _reportFirmCount; set => SetProperty(ref _reportFirmCount, value); }
+
+        private int _reportAgencyCount;
+        public int ReportAgencyCount { get => _reportAgencyCount; set => SetProperty(ref _reportAgencyCount, value); }
+
+        private string _reportPeriodLabel = string.Empty;
+        public string ReportPeriodLabel { get => _reportPeriodLabel; set => SetProperty(ref _reportPeriodLabel, value); }
+
+        private string _totalEmployeesSubtitle = string.Empty;
+        public string TotalEmployeesSubtitle { get => _totalEmployeesSubtitle; set => SetProperty(ref _totalEmployeesSubtitle, value); }
+
+        private string _activeEmployeesSubtitle = string.Empty;
+        public string ActiveEmployeesSubtitle { get => _activeEmployeesSubtitle; set => SetProperty(ref _activeEmployeesSubtitle, value); }
+
+        private string _movementSubtitle = string.Empty;
+        public string MovementSubtitle { get => _movementSubtitle; set => SetProperty(ref _movementSubtitle, value); }
+
+        private string _passportOnlySubtitle = string.Empty;
+        public string PassportOnlySubtitle { get => _passportOnlySubtitle; set => SetProperty(ref _passportOnlySubtitle, value); }
+
+        private string _documentsSubtitle = string.Empty;
+        public string DocumentsSubtitle { get => _documentsSubtitle; set => SetProperty(ref _documentsSubtitle, value); }
+
+        private string _agenciesSubtitle = string.Empty;
+        public string AgenciesSubtitle { get => _agenciesSubtitle; set => SetProperty(ref _agenciesSubtitle, value); }
+
+        // ===== Movement details overlay (shared UI with Dashboard) =====
+        private bool _isMonthlyMovementDetailsOpen;
+        public bool IsMonthlyMovementDetailsOpen
+        {
+            get => _isMonthlyMovementDetailsOpen;
+            set => SetProperty(ref _isMonthlyMovementDetailsOpen, value);
+        }
+
+        public bool ShowMovementPeriodSettings => false;
+
+        public bool IsMovementPeriodMenuOpen
+        {
+            get => false;
+            set { }
+        }
+
+        public bool IsMovementPeriod1 => false;
+        public bool IsMovementPeriod2 => false;
+        public bool IsMovementPeriod3 => false;
+
+        private string _movementDialogTitle = string.Empty;
+        public string MovementDialogTitle
+        {
+            get => _movementDialogTitle;
+            private set => SetProperty(ref _movementDialogTitle, value);
+        }
+
+        private string _movementPeriodHint = string.Empty;
+        public string MovementPeriodHint
+        {
+            get => _movementPeriodHint;
+            private set => SetProperty(ref _movementPeriodHint, value);
+        }
+
+        public string MonthlyMovementSummaryText => $"+{NewInPeriod} / -{EndedInPeriod}";
+
+        private string _movementAddedColumnTitle = string.Empty;
+        public string MovementAddedColumnTitle
+        {
+            get => _movementAddedColumnTitle;
+            private set => SetProperty(ref _movementAddedColumnTitle, value);
+        }
+
+        private string _movementArchivedColumnTitle = string.Empty;
+        public string MovementArchivedColumnTitle
+        {
+            get => _movementArchivedColumnTitle;
+            private set => SetProperty(ref _movementArchivedColumnTitle, value);
+        }
+
+        private string _movementAddedEmptyText = string.Empty;
+        public string MovementAddedEmptyText
+        {
+            get => _movementAddedEmptyText;
+            private set => SetProperty(ref _movementAddedEmptyText, value);
+        }
+
+        private string _movementArchivedEmptyText = string.Empty;
+        public string MovementArchivedEmptyText
+        {
+            get => _movementArchivedEmptyText;
+            private set => SetProperty(ref _movementArchivedEmptyText, value);
+        }
+
+        public int MonthlyEmployeesAddedCount => NewInPeriod;
+        public int MonthlyEmployeesArchivedCount => EndedInPeriod;
+
+        private ObservableCollection<MonthlyMovementItem> _monthlyAddedEmployees = new();
+        public ObservableCollection<MonthlyMovementItem> MonthlyAddedEmployees
+        {
+            get => _monthlyAddedEmployees;
+            private set => SetProperty(ref _monthlyAddedEmployees, value);
+        }
+
+        private ObservableCollection<MonthlyMovementItem> _monthlyArchivedEmployees = new();
+        public ObservableCollection<MonthlyMovementItem> MonthlyArchivedEmployees
+        {
+            get => _monthlyArchivedEmployees;
+            private set => SetProperty(ref _monthlyArchivedEmployees, value);
+        }
+
+        public ICommand OpenMovementDetailsCommand { get; }
+        public ICommand CloseMonthlyMovementDetailsCommand { get; }
+        public ICommand OpenMovementEmployeeDetailCommand { get; }
+        public ICommand ToggleMovementPeriodMenuCommand { get; }
+        public ICommand SetMovementMonthCountCommand { get; }
+
+        // ===== Passport-only details overlay =====
+        private bool _isPassportOnlyDetailsOpen;
+        public bool IsPassportOnlyDetailsOpen
+        {
+            get => _isPassportOnlyDetailsOpen;
+            set => SetProperty(ref _isPassportOnlyDetailsOpen, value);
+        }
+
+        private string _passportOnlyDialogTitle = string.Empty;
+        public string PassportOnlyDialogTitle
+        {
+            get => _passportOnlyDialogTitle;
+            private set => SetProperty(ref _passportOnlyDialogTitle, value);
+        }
+
+        private string _passportOnlyPeriodHint = string.Empty;
+        public string PassportOnlyPeriodHint
+        {
+            get => _passportOnlyPeriodHint;
+            private set => SetProperty(ref _passportOnlyPeriodHint, value);
+        }
+
+        private string _passportOnlySummaryText = string.Empty;
+        public string PassportOnlySummaryText
+        {
+            get => _passportOnlySummaryText;
+            private set => SetProperty(ref _passportOnlySummaryText, value);
+        }
+
+        private string _passportOnlyActiveColumnTitle = string.Empty;
+        public string PassportOnlyActiveColumnTitle
+        {
+            get => _passportOnlyActiveColumnTitle;
+            private set => SetProperty(ref _passportOnlyActiveColumnTitle, value);
+        }
+
+        private string _passportOnlyEndedColumnTitle = string.Empty;
+        public string PassportOnlyEndedColumnTitle
+        {
+            get => _passportOnlyEndedColumnTitle;
+            private set => SetProperty(ref _passportOnlyEndedColumnTitle, value);
+        }
+
+        private string _passportOnlyActiveEmptyText = string.Empty;
+        public string PassportOnlyActiveEmptyText
+        {
+            get => _passportOnlyActiveEmptyText;
+            private set => SetProperty(ref _passportOnlyActiveEmptyText, value);
+        }
+
+        private string _passportOnlyEndedEmptyText = string.Empty;
+        public string PassportOnlyEndedEmptyText
+        {
+            get => _passportOnlyEndedEmptyText;
+            private set => SetProperty(ref _passportOnlyEndedEmptyText, value);
+        }
+
+        private int _passportOnlyActiveCount;
+        public int PassportOnlyActiveCount
+        {
+            get => _passportOnlyActiveCount;
+            private set => SetProperty(ref _passportOnlyActiveCount, value);
+        }
+
+        private int _passportOnlyEndedCount;
+        public int PassportOnlyEndedCount
+        {
+            get => _passportOnlyEndedCount;
+            private set => SetProperty(ref _passportOnlyEndedCount, value);
+        }
+
+        private ObservableCollection<MonthlyMovementItem> _passportOnlyActiveEmployees = new();
+        public ObservableCollection<MonthlyMovementItem> PassportOnlyActiveEmployees
+        {
+            get => _passportOnlyActiveEmployees;
+            private set => SetProperty(ref _passportOnlyActiveEmployees, value);
+        }
+
+        private ObservableCollection<MonthlyMovementItem> _passportOnlyEndedEmployees = new();
+        public ObservableCollection<MonthlyMovementItem> PassportOnlyEndedEmployees
+        {
+            get => _passportOnlyEndedEmployees;
+            private set => SetProperty(ref _passportOnlyEndedEmployees, value);
+        }
+
+        public ICommand OpenPassportOnlyDetailsCommand { get; }
+        public ICommand ClosePassportOnlyDetailsCommand { get; }
+        public ICommand OpenPassportOnlyEmployeeDetailCommand { get; }
 
         // ===== Report tables =====
         private ObservableCollection<FirmReportRow> _firmDetails = new();
@@ -308,18 +637,52 @@ namespace Win11DesktopApp.ViewModels
             var s = _appSettingsService.Settings;
             _dateFrom = DateTime.TryParse(s.ReportDateFrom, out var df) ? df : DateTime.Today.AddMonths(-1);
             _dateTo = DateTime.TryParse(s.ReportDateTo, out var dt) ? dt : DateTime.Today;
+            _draftDateFrom = _dateFrom;
+            _draftDateTo = _dateTo;
 
             GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             GenerateReportCommand = new RelayCommand(async o => await GenerateReportAsync());
+            ApplyFiltersCommand = new RelayCommand(async o => await ApplyFiltersAsync());
             ExportToExcelCommand = new RelayCommand(o => ExportToExcel(), o => HasData);
-            ToggleAllCompaniesCommand = new RelayCommand(o => AllCompaniesSelected = !AllCompaniesSelected);
-            ToggleAllAgenciesCommand = new RelayCommand(o => AllAgenciesSelected = !AllAgenciesSelected);
+            ToggleAllCompaniesCommand = new RelayCommand(o =>
+            {
+                var visible = CompanyFilters.Where(f => f.IsVisible).ToList();
+                var allChecked = visible.Count > 0 && visible.All(f => f.IsChecked);
+                SetAllCompaniesSelection(!allChecked);
+            });
+            ToggleAllAgenciesCommand = new RelayCommand(o =>
+            {
+                var visible = AgencyFilters.Where(f => f.IsVisible).ToList();
+                var allChecked = visible.Count > 0 && visible.All(f => f.IsChecked);
+                SetAllAgenciesSelection(!allChecked);
+            });
+            ClearCompanySearchCommand = new RelayCommand(o => CompanySearchText = string.Empty);
+            ClearAgencySearchCommand = new RelayCommand(o => AgencySearchText = string.Empty);
+            ShowAllCompaniesCommand = new RelayCommand(o => ToggleCompanyList());
+            ShowAllAgenciesCommand = new RelayCommand(o => ToggleAgencyList());
+            ToggleFilterPanelCommand = new RelayCommand(o => IsFilterPanelVisible = !IsFilterPanelVisible);
             SwitchToSummaryCommand = new RelayCommand(o => IsSummaryView = true);
             SwitchToEmployeesCommand = new RelayCommand(o => IsSummaryView = false);
             ShowExportDialogCommand = new RelayCommand(o => OpenExportDialog(), o => HasData);
             ConfirmExportCommand = new RelayCommand(o => { IsExportDialogOpen = false; if (ExportAsXlsx) ExportToExcel(); else ExportToPdf(); });
             CancelExportCommand = new RelayCommand(o => IsExportDialogOpen = false);
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as EmployeeReportRow));
+            OpenMovementDetailsCommand = new RelayCommand(_ => OpenMovementDetails(), _ => HasData);
+            CloseMonthlyMovementDetailsCommand = new RelayCommand(_ => IsMonthlyMovementDetailsOpen = false);
+            OpenMovementEmployeeDetailCommand = new RelayCommand(o =>
+            {
+                if (o is MonthlyMovementItem item)
+                    OpenEmployeeFromMovement(item);
+            });
+            ToggleMovementPeriodMenuCommand = new RelayCommand(_ => { });
+            SetMovementMonthCountCommand = new RelayCommand(_ => { });
+            OpenPassportOnlyDetailsCommand = new RelayCommand(_ => OpenPassportOnlyDetails(), _ => HasData && SummaryPassportOnly > 0);
+            ClosePassportOnlyDetailsCommand = new RelayCommand(_ => IsPassportOnlyDetailsOpen = false);
+            OpenPassportOnlyEmployeeDetailCommand = new RelayCommand(o =>
+            {
+                if (o is MonthlyMovementItem item)
+                    OpenEmployeeFromMovement(item);
+            });
 
             InitExportSheets();
             _ = RefreshReportAsync(reloadFilters: true);
@@ -667,32 +1030,138 @@ namespace Win11DesktopApp.ViewModels
             CompanyFilters.Clear();
             foreach (var filter in result.CompanyFilters)
             {
-                CompanyFilters.Add(new CompanyFilter
-                {
-                    CompanyName = filter.Name,
-                    IsChecked = filter.IsChecked
-                });
+                var cf = new CompanyFilter { CompanyName = filter.Name, IsChecked = filter.IsChecked };
+                cf.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(CompanyFilter.IsChecked) && !_syncingSelectAllCompanies) UpdateAllCompaniesState(); };
+                CompanyFilters.Add(cf);
             }
 
             AgencyFilters.Clear();
             foreach (var filter in result.AgencyFilters)
             {
-                AgencyFilters.Add(new CompanyFilter
-                {
-                    CompanyName = filter.Name,
-                    IsChecked = filter.IsChecked
-                });
+                var af = new CompanyFilter { CompanyName = filter.Name, IsChecked = filter.IsChecked };
+                af.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(CompanyFilter.IsChecked) && !_syncingSelectAllAgencies) UpdateAllAgenciesState(); };
+                AgencyFilters.Add(af);
             }
 
-            _allCompaniesSelected = result.AllCompaniesSelected;
-            _allAgenciesSelected = result.AllAgenciesSelected;
-            OnPropertyChanged(nameof(AllCompaniesSelected));
-            OnPropertyChanged(nameof(AllAgenciesSelected));
+            // Re-apply any active search so IsVisible stays consistent after reload
+            ApplyCompanySearch();
+            ApplyAgencySearch();
+
+            OnPropertyChanged(nameof(CompanyTotalCount));
+            OnPropertyChanged(nameof(AgencyTotalCount));
+            OnPropertyChanged(nameof(CompanyVisibleCount));
+            OnPropertyChanged(nameof(AgencyVisibleCount));
+            OnPropertyChanged(nameof(CompanyHasHidden));
+            OnPropertyChanged(nameof(AgencyHasHidden));
+            OnPropertyChanged(nameof(CompanyHasItems));
+            OnPropertyChanged(nameof(AgencyHasItems));
         }
 
         private async Task GenerateReportAsync()
         {
             await RefreshReportAsync(reloadFilters: false);
+        }
+
+        private async Task ApplyFiltersAsync()
+        {
+            _dateFrom = _draftDateFrom;
+            _dateTo = _draftDateTo;
+            _appSettingsService.Settings.ReportDateFrom = _dateFrom.ToString("yyyy-MM-dd");
+            _appSettingsService.Settings.ReportDateTo = _dateTo.ToString("yyyy-MM-dd");
+            _appSettingsService.SaveSettings();
+            await RefreshReportAsync(reloadFilters: true);
+        }
+
+        private void ToggleCompanyList()
+        {
+            CompanySearchText = string.Empty;
+            CompanyListExpanded = !CompanyListExpanded;
+        }
+
+        private void ToggleAgencyList()
+        {
+            AgencySearchText = string.Empty;
+            AgencyListExpanded = !AgencyListExpanded;
+        }
+
+        private void ApplyCompanySearch()
+        {
+            var q = _companySearchText.Trim();
+            if (!string.IsNullOrEmpty(q))
+                CompanyListExpanded = false;
+
+            foreach (var f in CompanyFilters)
+                f.IsVisible = string.IsNullOrEmpty(q) || f.CompanyName.Contains(q, StringComparison.OrdinalIgnoreCase);
+            UpdateAllCompaniesState();
+            OnPropertyChanged(nameof(CompanyVisibleCount));
+            OnPropertyChanged(nameof(CompanyTotalCount));
+            OnPropertyChanged(nameof(CompanyHasHidden));
+        }
+
+        private void ApplyAgencySearch()
+        {
+            var q = _agencySearchText.Trim();
+            if (!string.IsNullOrEmpty(q))
+                AgencyListExpanded = false;
+
+            foreach (var f in AgencyFilters)
+                f.IsVisible = string.IsNullOrEmpty(q) || f.CompanyName.Contains(q, StringComparison.OrdinalIgnoreCase);
+            UpdateAllAgenciesState();
+            OnPropertyChanged(nameof(AgencyVisibleCount));
+            OnPropertyChanged(nameof(AgencyTotalCount));
+            OnPropertyChanged(nameof(AgencyHasHidden));
+        }
+
+        private void UpdateAllCompaniesState()
+        {
+            if (_syncingSelectAllCompanies) return;
+
+            var visible = CompanyFilters.Where(f => f.IsVisible).ToList();
+            bool? newState;
+            if (visible.Count == 0)
+                newState = false;
+            else
+            {
+                int checkedCount = visible.Count(f => f.IsChecked);
+                newState = checkedCount == 0 ? false : checkedCount == visible.Count ? true : (bool?)null;
+            }
+
+            _syncingSelectAllCompanies = true;
+            try
+            {
+                _allCompaniesSelected = newState;
+                OnPropertyChanged(nameof(AllCompaniesSelected));
+            }
+            finally
+            {
+                _syncingSelectAllCompanies = false;
+            }
+        }
+
+        private void UpdateAllAgenciesState()
+        {
+            if (_syncingSelectAllAgencies) return;
+
+            var visible = AgencyFilters.Where(f => f.IsVisible).ToList();
+            bool? newState;
+            if (visible.Count == 0)
+                newState = false;
+            else
+            {
+                int checkedCount = visible.Count(f => f.IsChecked);
+                newState = checkedCount == 0 ? false : checkedCount == visible.Count ? true : (bool?)null;
+            }
+
+            _syncingSelectAllAgencies = true;
+            try
+            {
+                _allAgenciesSelected = newState;
+                OnPropertyChanged(nameof(AllAgenciesSelected));
+            }
+            finally
+            {
+                _syncingSelectAllAgencies = false;
+            }
         }
 
         private async Task RefreshReportAsync(bool reloadFilters)
@@ -931,7 +1400,7 @@ namespace Win11DesktopApp.ViewModels
                         return sd != null && sd.Value.Date >= dateFrom.Date && sd.Value.Date <= dateTo.Date;
                     });
 
-                    int firmPassportOnly = filtered.Count(x => string.Equals(x.Summary.EmployeeType, "passport_only", StringComparison.OrdinalIgnoreCase));
+                    var firmRowsIndex = allEmployees.Count;
 
                     var company = companies.FirstOrDefault(c => string.Equals(c.Name, firmName, StringComparison.OrdinalIgnoreCase));
                     var agencyName = company?.Agency?.Name?.Trim() ?? string.Empty;
@@ -948,8 +1417,10 @@ namespace Win11DesktopApp.ViewModels
                     allEmployees.AddRange(archivedForFirm);
 
                     int firmArchivedCount = archivedForFirm.Count;
-                    firmPassportOnly += archivedForFirm.Count(a =>
-                        string.Equals(a.EmployeeType, GetDocTypeDisplay("passport_only", typeDisplayMap), StringComparison.OrdinalIgnoreCase));
+                    var firmRows = allEmployees.GetRange(firmRowsIndex, allEmployees.Count - firmRowsIndex);
+                    var (passportOnlyActive, passportOnlyEnded) = CountPassportOnlyForOverlay(
+                        firmRows, dateFrom, dateTo);
+                    int firmPassportOnly = passportOnlyActive + passportOnlyEnded;
 
                     int firmTotal = filtered.Count + firmArchivedCount;
 
@@ -1061,11 +1532,297 @@ namespace Win11DesktopApp.ViewModels
             SummaryPassportOnly = result.FirmDetails.Sum(f => f.PassportOnlyCount);
             SummaryArchived = result.FirmDetails.Sum(f => f.ArchivedEmployees);
 
+            UpdateMetricCards(result, dateFrom, dateTo);
+
             BuildArchiveChart(result.VisibleArchiveLog, dateFrom, dateTo);
             FilterEmployees();
 
             HasData = result.TotalEmployees > 0 || result.EndedInPeriod > 0;
             StatusMessage = string.Format(GetString("ReportStatusFmt"), result.EffectiveFirms.Count, result.TotalEmployees, result.NewInPeriod, result.EndedInPeriod);
+        }
+
+        private void UpdateMetricCards(ReportComputationResult result, DateTime dateFrom, DateTime dateTo)
+        {
+            ReportPeriodLabel = string.Format(
+                GetString("ReportMetricPeriodFmt"),
+                dateFrom.ToString("dd.MM.yyyy"),
+                dateTo.ToString("dd.MM.yyyy"));
+
+            ReportFirmCount = result.FirmDetails.Count;
+            ReportAgencyCount = result.AgencyDetails.Count;
+            NetChange = result.NewInPeriod - result.EndedInPeriod;
+
+            TotalEmployeesSubtitle = string.Format(GetString("ReportMetricFirmsFmt"), ReportFirmCount);
+
+            var activePercent = result.TotalEmployees > 0
+                ? (int)Math.Round(100.0 * result.ActiveEmployees / result.TotalEmployees)
+                : 0;
+            ActiveEmployeesSubtitle = string.Format(GetString("ReportMetricActivePercentFmt"), activePercent);
+
+            MovementSubtitle = string.Format(
+                GetString("ReportMetricMovementFmt"),
+                result.NewInPeriod,
+                result.EndedInPeriod);
+
+            PassportOnlySubtitle = GetString("ReportMetricPassportOnlyHint");
+
+            ComputeDocumentStats(result.AllEmployees, out var expired, out var expiring);
+            ExpiredDocsCount = expired;
+            ExpiringDocsCount = expiring;
+            DocumentIssuesCount = expired + expiring;
+            DocumentsSubtitle = string.Format(GetString("ReportMetricDocsFmt"), expired, expiring);
+
+            AgenciesSubtitle = string.Format(GetString("ReportMetricAgenciesFmt"), ReportFirmCount);
+            UpdateMovementOverlayTexts();
+        }
+
+        private void UpdateMovementOverlayTexts()
+        {
+            MovementDialogTitle = GetString("ReportMetricMovementTitle");
+            MovementPeriodHint = ReportPeriodLabel;
+            MovementAddedColumnTitle = GetString("ReportNewInPeriod");
+            MovementArchivedColumnTitle = GetString("ReportDismissedInPeriod");
+            MovementAddedEmptyText = GetString("DashMovementAddedEmptyPeriod");
+            MovementArchivedEmptyText = GetString("DashMovementArchivedEmptyPeriod");
+        }
+
+        private void OpenMovementDetails()
+        {
+            BuildMovementLists();
+            UpdateMovementOverlayTexts();
+            OnPropertyChanged(nameof(MonthlyMovementSummaryText));
+            OnPropertyChanged(nameof(MonthlyEmployeesAddedCount));
+            OnPropertyChanged(nameof(MonthlyEmployeesArchivedCount));
+            IsMonthlyMovementDetailsOpen = true;
+        }
+
+        private void BuildMovementLists()
+        {
+            var dateFrom = DateFrom.Date;
+            var dateTo = DateTo.Date;
+            var added = new List<MonthlyMovementItem>();
+            var ended = new List<MonthlyMovementItem>();
+
+            foreach (var employee in _allEmployees)
+            {
+                var startDt = DateParsingHelper.TryParseDate(employee.StartDate);
+                if (!employee.IsArchived
+                    && startDt != null
+                    && startDt.Value.Date >= dateFrom
+                    && startDt.Value.Date <= dateTo)
+                {
+                    added.Add(CreateMovementItem(
+                        employee.FullName,
+                        employee.FirmName,
+                        employee.StartDate,
+                        employee.EmployeeFolder,
+                        GetString("DashMovementStatusAdded"),
+                        "#4CAF50"));
+                }
+
+                var endDt = DateParsingHelper.TryParseDate(employee.EndDate);
+                if (endDt != null
+                    && endDt.Value.Date >= dateFrom
+                    && endDt.Value.Date <= dateTo)
+                {
+                    ended.Add(CreateMovementItem(
+                        employee.FullName,
+                        employee.FirmName,
+                        employee.EndDate,
+                        employee.EmployeeFolder,
+                        GetString("DashMovementStatusArchived"),
+                        "#E53935"));
+                }
+            }
+
+            added = added
+                .OrderBy(x => x.DateText, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            ended = ended
+                .OrderBy(x => x.DateText, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(added);
+            MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(ended);
+        }
+
+        private static MonthlyMovementItem CreateMovementItem(
+            string fullName,
+            string firmName,
+            string dateText,
+            string employeeFolder,
+            string statusText,
+            string statusColor)
+        {
+            return new MonthlyMovementItem
+            {
+                FullName = fullName,
+                FirmName = firmName,
+                DateText = dateText,
+                EmployeeFolder = employeeFolder,
+                StatusText = statusText,
+                StatusColor = statusColor
+            };
+        }
+
+        private void OpenEmployeeFromMovement(MonthlyMovementItem item)
+        {
+            if (string.IsNullOrWhiteSpace(item.EmployeeFolder))
+                return;
+
+            var row = _allEmployees.FirstOrDefault(e =>
+                string.Equals(e.EmployeeFolder, item.EmployeeFolder, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.FirmName, item.FirmName, StringComparison.OrdinalIgnoreCase));
+
+            row ??= new EmployeeReportRow
+            {
+                FullName = item.FullName,
+                FirmName = item.FirmName,
+                EmployeeFolder = item.EmployeeFolder
+            };
+
+            IsMonthlyMovementDetailsOpen = false;
+            IsPassportOnlyDetailsOpen = false;
+            OpenEmployee(row);
+        }
+
+        private void OpenPassportOnlyDetails()
+        {
+            BuildPassportOnlyLists();
+            UpdatePassportOnlyOverlayTexts();
+            IsPassportOnlyDetailsOpen = true;
+        }
+
+        private void UpdatePassportOnlyOverlayTexts()
+        {
+            PassportOnlyDialogTitle = GetString("ReportColNoPermit");
+            PassportOnlyPeriodHint = ReportPeriodLabel;
+            PassportOnlyActiveColumnTitle = GetString("ReportPassportOnlyActiveTitle");
+            PassportOnlyEndedColumnTitle = GetString("ReportDismissedInPeriod");
+            PassportOnlyActiveEmptyText = GetString("ReportPassportOnlyActiveEmpty");
+            PassportOnlyEndedEmptyText = GetString("ReportPassportOnlyEndedEmpty");
+            PassportOnlySummaryText = string.Format(
+                GetString("ReportPassportOnlySummaryFmt"),
+                PassportOnlyActiveCount,
+                PassportOnlyEndedCount);
+        }
+
+        private void BuildPassportOnlyLists()
+        {
+            var dateFrom = DateFrom.Date;
+            var dateTo = DateTo.Date;
+            var active = new List<MonthlyMovementItem>();
+            var ended = new List<MonthlyMovementItem>();
+
+            foreach (var employee in _allEmployees)
+            {
+                if (!IsPassportOnlyEmployee(employee))
+                    continue;
+
+                var endDt = DateParsingHelper.TryParseDate(employee.EndDate);
+                var endedInPeriod = endDt != null
+                    && endDt.Value.Date >= dateFrom
+                    && endDt.Value.Date <= dateTo;
+
+                if (endedInPeriod)
+                {
+                    ended.Add(CreatePassportOnlyItem(employee, includeEndDate: true));
+                    continue;
+                }
+
+                if (!employee.IsArchived)
+                    active.Add(CreatePassportOnlyItem(employee, includeEndDate: false));
+            }
+
+            active = active
+                .OrderBy(x => x.FirmName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            ended = ended
+                .OrderBy(x => x.FirmName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            PassportOnlyActiveEmployees = new ObservableCollection<MonthlyMovementItem>(active);
+            PassportOnlyEndedEmployees = new ObservableCollection<MonthlyMovementItem>(ended);
+            PassportOnlyActiveCount = active.Count;
+            PassportOnlyEndedCount = ended.Count;
+        }
+
+        private static bool IsPassportOnlyEmployee(EmployeeReportRow employee) =>
+            string.Equals(employee.EmployeeTypeCode, "passport_only", StringComparison.OrdinalIgnoreCase);
+
+        private static (int active, int ended) CountPassportOnlyForOverlay(
+            IEnumerable<EmployeeReportRow> employees,
+            DateTime dateFrom,
+            DateTime dateTo)
+        {
+            int active = 0;
+            int ended = 0;
+
+            foreach (var employee in employees)
+            {
+                if (!IsPassportOnlyEmployee(employee))
+                    continue;
+
+                var endDt = DateParsingHelper.TryParseDate(employee.EndDate);
+                var endedInPeriod = endDt != null
+                    && endDt.Value.Date >= dateFrom
+                    && endDt.Value.Date <= dateTo;
+
+                if (endedInPeriod)
+                    ended++;
+                else if (!employee.IsArchived)
+                    active++;
+            }
+
+            return (active, ended);
+        }
+
+        private MonthlyMovementItem CreatePassportOnlyItem(EmployeeReportRow employee, bool includeEndDate)
+        {
+            var startText = string.IsNullOrWhiteSpace(employee.StartDate)
+                ? "—"
+                : employee.StartDate;
+            var detail = string.Format(GetString("ReportPassportOnlyDetailFmt"), employee.FirmName, startText);
+
+            if (includeEndDate && !string.IsNullOrWhiteSpace(employee.EndDate))
+            {
+                detail += string.Format(
+                    GetString("ReportPassportOnlyEndedDetailFmt"),
+                    employee.EndDate);
+            }
+
+            return new MonthlyMovementItem
+            {
+                FullName = employee.FullName,
+                FirmName = employee.FirmName,
+                DateText = detail,
+                EmployeeFolder = employee.EmployeeFolder,
+                StatusText = includeEndDate
+                    ? GetString("DashMovementStatusArchived")
+                    : GetString("ReportPassportOnlyActiveStatus"),
+                StatusColor = includeEndDate ? "#E53935" : "#FF9800"
+            };
+        }
+
+        private static void ComputeDocumentStats(IEnumerable<EmployeeReportRow> employees, out int expired, out int expiring)
+        {
+            expired = 0;
+            expiring = 0;
+
+            foreach (var employee in employees.Where(e => !e.IsArchived))
+            {
+                foreach (var status in new[] { employee.PassportExpiryStatus, employee.VisaExpiryStatus, employee.InsuranceExpiryStatus })
+                {
+                    if (status == "expired")
+                        expired++;
+                    else if (status == "warning")
+                        expiring++;
+                }
+            }
         }
 
         private List<ArchiveLogEntry> TryLoadArchiveLog()
@@ -1447,6 +2204,7 @@ namespace Win11DesktopApp.ViewModels
                 FullName = fullName,
                 FirmName = firmName,
                 EmployeeFolder = employeeFolder,
+                EmployeeTypeCode = data.EmployeeType ?? "visa",
                 EmployeeType = !string.IsNullOrEmpty(data.WorkPermitName)
                     ? data.WorkPermitName
                     : GetDocTypeDisplay(data.EmployeeType ?? "visa", typeDisplayMap),
@@ -1492,6 +2250,7 @@ namespace Win11DesktopApp.ViewModels
                 FullName = employee.FullName,
                 FirmName = firmName,
                 EmployeeFolder = employee.EmployeeFolder,
+                EmployeeTypeCode = employee.EmployeeType ?? "visa",
                 EmployeeType = !string.IsNullOrEmpty(employee.WorkPermitName)
                     ? employee.WorkPermitName
                     : GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
@@ -1523,6 +2282,7 @@ namespace Win11DesktopApp.ViewModels
                     var data = SafeFileService.ReadJson<EmployeeData>(jsonPath);
                     if (data != null)
                     {
+                        row.EmployeeTypeCode = data.EmployeeType ?? employee.EmployeeType ?? "visa";
                         row.DocumentType = GetDocTypeDisplay(data.EmployeeType ?? employee.EmployeeType ?? "visa", typeDisplayMap);
                         row.PassportNumber = data.PassportNumber ?? employee.PassportNumber ?? string.Empty;
                         row.VisaNumber = data.VisaNumber ?? employee.VisaNumber ?? string.Empty;

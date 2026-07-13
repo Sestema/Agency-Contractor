@@ -49,6 +49,10 @@
     <SolidColorBrush x:Key="EmpCompanyPillAvatarBackgroundBrush" Color="#0EA5E9"/>
     <SolidColorBrush x:Key="EmpCompanyPillAvatarForegroundBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="EmpCompanyPillCheckBrush" Color="#00838F"/>
+    <LinearGradientBrush x:Key="EmpIconCardBannerBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#DBEAFE" Offset="0"/>
+        <GradientStop Color="#00DBEAFE" Offset="1"/>
+    </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="EmployeeTileCardBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FFFFFF" Offset="0"/>

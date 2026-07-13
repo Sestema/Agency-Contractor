@@ -310,4 +310,27 @@ namespace Win11DesktopApp.Converters
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
+
+    /// <summary>
+    /// Maps a "Table"/"List"/"Tiles"/"Icons" view-mode string to a pixel offset
+    /// (index * segment width) used to position the sliding pill in a segmented
+    /// view-mode switcher. Unlike an animation-clock-held RenderTransform, this is
+    /// a plain data-bound value: it can never get "lost" if the visual tree around
+    /// it is rebuilt, because WPF simply re-evaluates the binding.
+    /// </summary>
+    public class ViewModeToPillOffsetConverter : IValueConverter
+    {
+        private static readonly string[] Order = { "Table", "List", "Tiles", "Icons" };
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var mode = value as string ?? string.Empty;
+            var segmentWidth = ZoomDoubleConverter.ToDoublePublic(parameter, 32.0);
+            var index = Array.IndexOf(Order, mode);
+            return index < 0 ? 0.0 : index * segmentWidth;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
 }
