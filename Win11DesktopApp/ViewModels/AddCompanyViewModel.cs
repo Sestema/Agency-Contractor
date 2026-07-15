@@ -265,7 +265,8 @@ namespace Win11DesktopApp.ViewModels
                 _originalCompany.Agency.ICO = Agency.ICO;
                 _originalCompany.Agency.FullAddress = Agency.FullAddress;
 
-                await _companyService.UpdateCompanyAsync(_originalCompany, _originalCompanyName);
+                if (!await _companyService.UpdateCompanyAsync(_originalCompany, _originalCompanyName))
+                    return;
             }
             else
             {

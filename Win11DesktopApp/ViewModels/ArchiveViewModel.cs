@@ -414,15 +414,23 @@ namespace Win11DesktopApp.ViewModels
             EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(emp.FirmName, emp.EmployeeFolder, _employeeService, employeeId: emp.UniqueId);
             EmployeeDetailsVm.IsArchiveMode = true;
             EmployeeDetailsVm.RequestClose += OnDetailsClose;
+            EmployeeDetailsVm.DataChanged += OnDetailsDataChanged;
             IsEmployeeDetailsOpen = true;
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
 
+        // Fires after e.g. the employee is deleted from the Archive profile (moved to Recently
+        // Deleted), so the archive list drops the removed row instead of showing it as stale.
+        private void OnDetailsDataChanged() => _ = LoadArchiveAsync();
+
         private void CleanupDetailsVm()
         {
             if (EmployeeDetailsVm != null)
+            {
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
+                EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+            }
         }
 
         private void OnSelectedCompanyChanged()

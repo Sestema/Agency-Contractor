@@ -83,6 +83,7 @@ namespace Win11DesktopApp.Views
         private bool _cascading;
 
         public HashSet<string> SelectedFirms { get; private set; } = new();
+        public bool ExportAsPdf { get; private set; }
 
         public ExportFirmSelectWindow(List<(string firmName, int count, string agencyName)> firms, AppSettingsService appSettingsService)
         {
@@ -218,7 +219,11 @@ namespace Win11DesktopApp.Views
                 : Visibility.Collapsed;
         }
 
-        private void Export_Click(object sender, RoutedEventArgs e)
+        private void ExportExcel_Click(object sender, RoutedEventArgs e) => ConfirmExport(exportAsPdf: false);
+
+        private void ExportPdf_Click(object sender, RoutedEventArgs e) => ConfirmExport(exportAsPdf: true);
+
+        private void ConfirmExport(bool exportAsPdf)
         {
             SelectedFirms = _allItems.Where(i => i.IsSelected).Select(i => i.FirmName).ToHashSet();
 
@@ -230,6 +235,7 @@ namespace Win11DesktopApp.Views
                 return;
             }
 
+            ExportAsPdf = exportAsPdf;
             DialogResult = true;
             Close();
         }
@@ -319,7 +325,8 @@ namespace Win11DesktopApp.Views
                 SelectedFirmsText == null ||
                 SelectedRowsText == null ||
                 SelectionHintText == null ||
-                ExportButton == null ||
+                ExportExcelButton == null ||
+                ExportPdfButton == null ||
                 SelectAllBox == null)
             {
                 return;
@@ -339,7 +346,8 @@ namespace Win11DesktopApp.Views
                 selectedFirms,
                 totalFirms);
 
-            ExportButton.IsEnabled = selectedFirms > 0;
+            ExportExcelButton.IsEnabled = selectedFirms > 0;
+            ExportPdfButton.IsEnabled = selectedFirms > 0;
 
             _syncingSelectAllState = true;
             try

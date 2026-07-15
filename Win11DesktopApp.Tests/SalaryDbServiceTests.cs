@@ -491,6 +491,270 @@ INSERT INTO salary_entries (
             Assert.False(entry.CustomValues.ContainsKey("sqlite-id"));
         }
 
+        [Fact]
+        public void RenameFirmReferences_ShouldKeepPaidHistory_AndRenameCurrentPendingRows()
+        {
+            var oldFolder = Path.Combine(_testRootPath, "Firm A");
+            var newFolder = Path.Combine(_testRootPath, "Firm B");
+            _salaryDbService.ReplaceMonthData(
+                2026,
+                5,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-paid",
+                        EmployeeFolder = Path.Combine(oldFolder, "Employees", "Paid"),
+                        FirmName = "Firm A",
+                        FullName = "Paid Employee",
+                        HoursWorked = 160m,
+                        SavedNetSalary = 16000m,
+                        Status = "paid"
+                    }
+                },
+                new List<FirmExpense>
+                {
+                    new() { Id = "old-expense", FirmName = "Firm A", Year = 2026, Month = 5, Amount = 100m }
+                });
+            _salaryDbService.ReplaceMonthData(
+                2026,
+                6,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-pending",
+                        EmployeeFolder = Path.Combine(oldFolder, "Employees", "Pending"),
+                        FirmName = "Firm A",
+                        FullName = "Pending Employee",
+                        HoursWorked = 80m,
+                        SavedNetSalary = 8000m,
+                        Status = "pending"
+                    },
+                    new()
+                    {
+                        EmployeeId = "emp-paid-current",
+                        EmployeeFolder = Path.Combine(oldFolder, "Employees", "PaidCurrent"),
+                        FirmName = "Firm A",
+                        FullName = "Paid Current Employee",
+                        HoursWorked = 120m,
+                        SavedNetSalary = 12000m,
+                        Status = "paid"
+                    }
+                },
+                new List<FirmExpense>
+                {
+                    new() { Id = "new-expense", FirmName = "Firm A", Year = 2026, Month = 6, Amount = 200m }
+                });
+
+            var result = _salaryDbService.RenameFirmReferences(
+                "Firm A",
+                "Firm B",
+                2026,
+                6,
+                oldFolder,
+                newFolder);
+
+            var (mayEntries, mayExpenses) = _salaryDbService.LoadMonthPayments(2026, 5);
+            var historical = Assert.Single(mayEntries);
+            Assert.Equal("Firm A", historical.FirmName);
+            Assert.StartsWith(newFolder, historical.EmployeeFolder, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("Firm A", Assert.Single(mayExpenses).FirmName);
+
+            var (juneEntries, juneExpenses) = _salaryDbService.LoadMonthPayments(2026, 6);
+            Assert.Contains(juneEntries, entry =>
+                entry.EmployeeId == "emp-pending"
+                && entry.FirmName == "Firm B"
+                && entry.HoursWorked == 80m
+                && entry.EmployeeFolder.StartsWith(newFolder, StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(juneEntries, entry =>
+                entry.EmployeeId == "emp-paid-current"
+                && entry.FirmName == "Firm A"
+                && entry.HoursWorked == 120m
+                && entry.EmployeeFolder.StartsWith(newFolder, StringComparison.OrdinalIgnoreCase));
+            Assert.Equal("Firm B", Assert.Single(juneExpenses).FirmName);
+            Assert.Equal(2, result.DatabasesUpdated);
+            Assert.Equal(1, result.EntriesRenamed);
+            Assert.Equal(3, result.EntryPathsUpdated);
+            Assert.False(string.IsNullOrWhiteSpace(result.BackupFolderPath));
+        }
+
+        [Fact]
+        public void RenameFirmReferences_ShouldRemoveEmptyNewNameDuplicate()
+        {
+            var oldFolder = Path.Combine(_testRootPath, "Firm A");
+            var newFolder = Path.Combine(_testRootPath, "Firm B");
+            _salaryDbService.ReplaceMonthData(
+                2026,
+                6,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-1",
+                        EmployeeFolder = Path.Combine(oldFolder, "Employees", "One"),
+                        FirmName = "Firm A",
+                        FullName = "Employee One",
+                        HoursWorked = 100m,
+                        SavedNetSalary = 10000m,
+                        Status = "pending"
+                    },
+                    new()
+                    {
+                        EmployeeId = "emp-1",
+                        EmployeeFolder = Path.Combine(newFolder, "Employees", "One"),
+                        FirmName = "Firm B",
+                        FullName = "Employee One",
+                        HourlyRate = 100m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var result = _salaryDbService.RenameFirmReferences(
+                "Firm A",
+                "Firm B",
+                2026,
+                6,
+                oldFolder,
+                newFolder);
+
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 6);
+            var entry = Assert.Single(entries);
+            Assert.Equal("Firm B", entry.FirmName);
+            Assert.Equal(100m, entry.HoursWorked);
+            Assert.Equal(10000m, entry.SavedNetSalary);
+            Assert.Equal(1, result.EmptyDuplicatesRemoved);
+        }
+
+        [Fact]
+        public void RenameFirmReferences_ShouldRejectTwoNonEmptyRows_AndRestoreDatabase()
+        {
+            var oldFolder = Path.Combine(_testRootPath, "Firm A");
+            var newFolder = Path.Combine(_testRootPath, "Firm B");
+            _salaryDbService.ReplaceMonthData(
+                2026,
+                6,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-1",
+                        EmployeeFolder = Path.Combine(oldFolder, "Employees", "One"),
+                        FirmName = "Firm A",
+                        FullName = "Employee One",
+                        HoursWorked = 100m,
+                        SavedNetSalary = 10000m,
+                        Status = "pending"
+                    },
+                    new()
+                    {
+                        EmployeeId = "emp-1",
+                        EmployeeFolder = Path.Combine(newFolder, "Employees", "One"),
+                        FirmName = "Firm B",
+                        FullName = "Employee One",
+                        HoursWorked = 20m,
+                        SavedNetSalary = 2000m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                _salaryDbService.RenameFirmReferences(
+                    "Firm A",
+                    "Firm B",
+                    2026,
+                    6,
+                    oldFolder,
+                    newFolder));
+
+            Assert.Contains("два непорожні", exception.Message, StringComparison.OrdinalIgnoreCase);
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 6);
+            Assert.Equal(2, entries.Count);
+            Assert.Contains(entries, entry => entry.FirmName == "Firm A" && entry.HoursWorked == 100m);
+            Assert.Contains(entries, entry => entry.FirmName == "Firm B" && entry.HoursWorked == 20m);
+        }
+
+        [Fact]
+        public void DiscoverAndRepair_ShouldRecoverOrphanFirmNameAfterFolderRename()
+        {
+            var oldFolder = Path.Combine(_testRootPath, "Firm A");
+            var newFolder = Path.Combine(_testRootPath, "Firm B");
+            _salaryDbService.ReplaceMonthData(
+                2026,
+                4,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-orphan",
+                        EmployeeFolder = Path.Combine(oldFolder, "Employees", "Halyna"),
+                        FirmName = "Firm A",
+                        FullName = "Halyna Sylymonka",
+                        HoursWorked = 260m,
+                        SavedNetSalary = 41600m,
+                        Status = "paid"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var discoveredBefore = _salaryDbService.DiscoverFirmNamesForCompanyFolder(newFolder);
+            Assert.Empty(discoveredBefore);
+
+            var repaired = _salaryDbService.RepairEmployeeFolderPrefixes(oldFolder, newFolder);
+            Assert.Equal(1, repaired);
+
+            var discoveredAfter = _salaryDbService.DiscoverFirmNamesForCompanyFolder(newFolder);
+            Assert.Contains("Firm A", discoveredAfter);
+
+            var (entries, _) = _salaryDbService.LoadMonthPayments(2026, 4);
+            var entry = Assert.Single(entries);
+            Assert.Equal("Firm A", entry.FirmName);
+            Assert.Equal(260m, entry.HoursWorked);
+            Assert.StartsWith(newFolder, entry.EmployeeFolder, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void DiscoverFirmNamesForCompanyFolderPrefixes_ShouldFindAliasOnCurrentFolderPath()
+        {
+            var currentFolder = Path.Combine(_testRootPath, "Holz_Schiller_s.r.o.");
+            var historicalFolder = Path.Combine(_testRootPath, "Holz_Schiller_s.r.o._(Klatovy)");
+            _salaryDbService.ReplaceMonthData(
+                2026,
+                5,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-domanskyi",
+                        EmployeeFolder = Path.Combine(currentFolder, "Employees", "Ihor Domanskyi"),
+                        FirmName = "Holz Schiller s.r.o. (Klatovy)",
+                        FullName = "Ihor Domanskyi",
+                        HoursWorked = 135m,
+                        SavedNetSalary = 4505m,
+                        Status = "paid"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var discovered = _salaryDbService.DiscoverFirmNamesForCompanyFolderPrefixes(
+                new[] { currentFolder, historicalFolder });
+
+            Assert.Contains("Holz Schiller s.r.o. (Klatovy)", discovered);
+        }
+
+        [Fact]
+        public void TryExtractCompanyFolderFromEmployeePath_ShouldReturnCompanyRoot()
+        {
+            var companyFolder = Path.Combine(_testRootPath, "Holz_Schiller_s.r.o.");
+            var employeeFolder = Path.Combine(companyFolder, "Employees", "Ihor Domanskyi");
+
+            var extracted = SalaryDbService.TryExtractCompanyFolderFromEmployeePath(employeeFolder);
+
+            Assert.Equal(companyFolder, extracted);
+        }
+
         public void Dispose()
         {
             try { Directory.Delete(_testRootPath, true); } catch { }

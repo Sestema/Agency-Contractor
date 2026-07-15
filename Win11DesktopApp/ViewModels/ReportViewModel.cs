@@ -27,7 +27,7 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class ReportViewModel : ViewModelBase
+    public class ReportViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly EmployeeService _employeeService;
@@ -2414,6 +2414,19 @@ namespace Win11DesktopApp.ViewModels
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                 EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
             }
+        }
+
+        public void Cleanup()
+        {
+            CleanupDetailsVm();
+
+            var refreshCts = Interlocked.Exchange(ref _refreshCts, null);
+            refreshCts?.Cancel();
+            refreshCts?.Dispose();
+
+            var searchCts = Interlocked.Exchange(ref _searchCts, null);
+            searchCts?.Cancel();
+            searchCts?.Dispose();
         }
 
         private void OnDetailsClose()

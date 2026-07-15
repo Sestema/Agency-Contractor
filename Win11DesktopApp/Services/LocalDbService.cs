@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Win11DesktopApp.EmployeeModels;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -92,6 +94,159 @@ namespace Win11DesktopApp.Services
             }
 
             return connection;
+        }
+
+        public int RenameCurrentFirmReferences(
+            string oldName,
+            string newName,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName))
+                return 0;
+
+            EnsureInitialized();
+            if (!IsAvailable || !File.Exists(DatabasePath))
+                return 0;
+
+            var backupFolder = Path.Combine(
+                _folderService.GetBackupsFolder(),
+                "FirmRenames",
+                $"{DateTime.UtcNow:yyyyMMdd-HHmmssfff}-local-db");
+            Directory.CreateDirectory(backupFolder);
+            var backupPath = Path.Combine(backupFolder, Path.GetFileName(DatabasePath));
+
+            using var connection = OpenConnection();
+            using (var backupConnection = new SqliteConnection($"Data Source={backupPath};Pooling=False"))
+            {
+                backupConnection.Open();
+                connection.BackupDatabase(backupConnection);
+            }
+
+            using var transaction = connection.BeginTransaction();
+            var updated = 0;
+            updated += RenameTextColumn(
+                connection,
+                transaction,
+                "custom_salary_fields",
+                "firm_name",
+                oldName,
+                newName);
+            updated += RenameTextColumn(
+                connection,
+                transaction,
+                "advances",
+                "company_id",
+                oldName,
+                newName);
+            updated += RenameTextColumn(
+                connection,
+                transaction,
+                "accommodations",
+                "company_id",
+                oldName,
+                newName);
+
+            var oldRelative = Path.GetRelativePath(_folderService.RootPath, oldCompanyFolder);
+            var newRelative = Path.GetRelativePath(_folderService.RootPath, newCompanyFolder);
+            foreach (var table in new[]
+                     {
+                         "salary_history",
+                         "advances",
+                         "activity_log",
+                         "archive_log",
+                         "employee_history",
+                         "accommodations"
+                     })
+            {
+                updated += RenamePathColumn(
+                    connection,
+                    transaction,
+                    table,
+                    "employee_folder",
+                    oldCompanyFolder,
+                    newCompanyFolder,
+                    oldRelative,
+                    newRelative);
+            }
+
+            transaction.Commit();
+            return updated;
+        }
+
+        private static int RenameTextColumn(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            string table,
+            string column,
+            string oldValue,
+            string newValue)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $@"
+UPDATE {table}
+SET {column} = @newValue
+WHERE lower({column}) = lower(@oldValue);";
+            command.Parameters.AddWithValue("@oldValue", oldValue);
+            command.Parameters.AddWithValue("@newValue", newValue);
+            return command.ExecuteNonQuery();
+        }
+
+        private static int RenamePathColumn(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            string table,
+            string column,
+            string oldAbsolute,
+            string newAbsolute,
+            string oldRelative,
+            string newRelative)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            // Exact prefix + path-separator-boundary match instead of LIKE '<prefix>%'.
+            // Company folder names commonly contain '_' (spaces become underscores), and SQL
+            // LIKE treats a bare '_' as a "match any single character" wildcard, so a
+            // LIKE-based prefix match can silently match a completely unrelated folder. It also
+            // requires a real '\' boundary right after the prefix, so "...\Foo" no longer
+            // matches "...\FooBar\...".
+            command.CommandText = $@"
+UPDATE {table}
+SET {column} = CASE
+    WHEN lower(replace({column}, '/', '\')) = lower(@oldAbsolute)
+      OR (
+           length(replace({column}, '/', '\')) > length(@oldAbsolute)
+           AND lower(substr(replace({column}, '/', '\'), 1, length(@oldAbsolute))) = lower(@oldAbsolute)
+           AND substr(replace({column}, '/', '\'), length(@oldAbsolute) + 1, 1) = '\'
+         )
+    THEN @newAbsolute || substr(replace({column}, '/', '\'), length(@oldAbsolute) + 1)
+    WHEN lower(replace({column}, '/', '\')) = lower(@oldRelative)
+      OR (
+           length(replace({column}, '/', '\')) > length(@oldRelative)
+           AND lower(substr(replace({column}, '/', '\'), 1, length(@oldRelative))) = lower(@oldRelative)
+           AND substr(replace({column}, '/', '\'), length(@oldRelative) + 1, 1) = '\'
+         )
+    THEN @newRelative || substr(replace({column}, '/', '\'), length(@oldRelative) + 1)
+    ELSE {column}
+END
+WHERE lower(replace({column}, '/', '\')) = lower(@oldAbsolute)
+   OR (
+        length(replace({column}, '/', '\')) > length(@oldAbsolute)
+        AND lower(substr(replace({column}, '/', '\'), 1, length(@oldAbsolute))) = lower(@oldAbsolute)
+        AND substr(replace({column}, '/', '\'), length(@oldAbsolute) + 1, 1) = '\'
+      )
+   OR lower(replace({column}, '/', '\')) = lower(@oldRelative)
+   OR (
+        length(replace({column}, '/', '\')) > length(@oldRelative)
+        AND lower(substr(replace({column}, '/', '\'), 1, length(@oldRelative))) = lower(@oldRelative)
+        AND substr(replace({column}, '/', '\'), length(@oldRelative) + 1, 1) = '\'
+      );";
+            command.Parameters.AddWithValue("@oldAbsolute", oldAbsolute.Replace('/', '\\').TrimEnd('\\'));
+            command.Parameters.AddWithValue("@newAbsolute", newAbsolute.Replace('/', '\\').TrimEnd('\\'));
+            command.Parameters.AddWithValue("@oldRelative", oldRelative.Replace('/', '\\').TrimEnd('\\'));
+            command.Parameters.AddWithValue("@newRelative", newRelative.Replace('/', '\\').TrimEnd('\\'));
+            return command.ExecuteNonQuery();
         }
 
         public void InsertActivityLog(ActivityLogEntry entry)
@@ -873,6 +1028,69 @@ ORDER BY year DESC, month DESC, datetime(paid_at) DESC, id DESC;";
             }
 
             return result;
+        }
+
+        public IReadOnlyList<string> DiscoverDistinctFirmNamesForCompanyFolderPrefixes(
+            IReadOnlyCollection<string> companyFolderPrefixes)
+        {
+            EnsureInitialized();
+            if (!IsAvailable || companyFolderPrefixes == null || companyFolderPrefixes.Count == 0)
+                return Array.Empty<string>();
+
+            var normalizedPrefixes = companyFolderPrefixes
+                .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+                .Select(prefix => prefix.Replace('/', '\\').TrimEnd('\\'))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (normalizedPrefixes.Count == 0)
+                return Array.Empty<string>();
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT firm_name, employee_folder
+FROM salary_history;";
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var firmName = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                var employeeFolder = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                if (string.IsNullOrWhiteSpace(firmName))
+                    continue;
+
+                if (SalaryHistoryFolderBelongsToCompanyPrefixes(employeeFolder, normalizedPrefixes))
+                    names.Add(firmName);
+            }
+
+            return names.ToList();
+        }
+
+        private static bool SalaryHistoryFolderBelongsToCompanyPrefixes(
+            string employeeFolder,
+            IReadOnlyCollection<string> normalizedCompanyFolderPrefixes)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder) || normalizedCompanyFolderPrefixes.Count == 0)
+                return false;
+
+            var normalizedEmployeeFolder = employeeFolder.Replace('/', '\\').TrimEnd('\\');
+            foreach (var prefix in normalizedCompanyFolderPrefixes)
+            {
+                if (normalizedEmployeeFolder.StartsWith(prefix + "\\", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(normalizedEmployeeFolder, prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            var companyFolder = SalaryDbService.TryExtractCompanyFolderFromEmployeePath(employeeFolder);
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return false;
+
+            var normalizedCompanyFolder = companyFolder.Replace('/', '\\').TrimEnd('\\');
+            return normalizedCompanyFolderPrefixes.Any(prefix =>
+                string.Equals(normalizedCompanyFolder, prefix, StringComparison.OrdinalIgnoreCase));
         }
 
         public int RemoveDuplicateSalaryHistoryRecords()

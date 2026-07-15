@@ -57,6 +57,13 @@ namespace Win11DesktopApp.ViewModels
         private readonly TagCatalogService _tagCatalogService;
         private readonly AppStatisticsService _appStatisticsService;
         private readonly AiWindowFactory _aiWindowFactory;
+        // Only needed for DeleteEmployeeCommand (Archive mode "delete employee" action, see
+        // ConfirmDeleteEmployeeAsync). Optional/nullable so older call sites and tests that don't
+        // wire these up (e.g. read-only viewers) keep working; the command itself no-ops safely
+        // if any of them is missing.
+        private readonly CurrentProfileService? _currentProfileService;
+        private readonly ProfileAuthService? _profileAuthService;
+        private readonly RecentlyDeletedService? _recentlyDeletedService;
         private readonly string _employeeFolder;
         private readonly string _expectedEmployeeId;
         private readonly string _firmName;
@@ -897,6 +904,9 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ArchiveEmployeeCommand { get; }
         public ICommand ConfirmArchiveCommand { get; }
         public ICommand CancelArchiveCommand { get; }
+        public ICommand DeleteEmployeeCommand { get; }
+        public ICommand ConfirmDeleteEmployeeCommand { get; }
+        public ICommand CancelDeleteEmployeeCommand { get; }
         public ICommand ShowHistoryCommand { get; }
         public ICommand DeleteHistoryEntryCommand { get; }
 
@@ -1028,6 +1038,22 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _archiveStatus;
             set => SetProperty(ref _archiveStatus, value);
+        }
+
+        // Delete dialog (Archive mode only - permanently removes the employee from the Archive by
+        // moving them to Recently Deleted, same logic as EmployeesViewModel.DeleteEmployeeCommand)
+        private bool _isDeleteEmployeeDialogOpen;
+        public bool IsDeleteEmployeeDialogOpen
+        {
+            get => _isDeleteEmployeeDialogOpen;
+            set => SetProperty(ref _isDeleteEmployeeDialogOpen, value);
+        }
+
+        private string _deleteEmployeeStatus = string.Empty;
+        public string DeleteEmployeeStatus
+        {
+            get => _deleteEmployeeStatus;
+            set => SetProperty(ref _deleteEmployeeStatus, value);
         }
 
         // Available statuses for ComboBox
@@ -1337,9 +1363,15 @@ namespace Win11DesktopApp.ViewModels
             AiWindowFactory? aiWindowFactory = null,
             AppStatisticsService? appStatisticsService = null,
             IReadOnlyList<EmployeeBulkUpdateTarget>? bulkUpdateTargets = null,
-            DateTime? financeContextMonth = null)
+            DateTime? financeContextMonth = null,
+            CurrentProfileService? currentProfileService = null,
+            ProfileAuthService? profileAuthService = null,
+            RecentlyDeletedService? recentlyDeletedService = null)
         {
             _firmName = firmName;
+            _currentProfileService = currentProfileService;
+            _profileAuthService = profileAuthService;
+            _recentlyDeletedService = recentlyDeletedService;
             _financeContextMonth = financeContextMonth;
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
             _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
@@ -1459,6 +1491,14 @@ namespace Win11DesktopApp.ViewModels
             }, _ => !IsReadOnlyMode);
             ConfirmArchiveCommand = new AsyncRelayCommand(_ => ConfirmArchiveAsync(), _ => !IsReadOnlyMode);
             CancelArchiveCommand = new RelayCommand(o => IsArchiveDialogOpen = false, _ => !IsReadOnlyMode);
+
+            DeleteEmployeeCommand = new RelayCommand(o =>
+            {
+                DeleteEmployeeStatus = string.Empty;
+                IsDeleteEmployeeDialogOpen = true;
+            }, _ => IsArchiveMode && !IsReadOnlyMode);
+            ConfirmDeleteEmployeeCommand = new AsyncRelayCommand(_ => ConfirmDeleteEmployeeAsync(), _ => IsArchiveMode && !IsReadOnlyMode);
+            CancelDeleteEmployeeCommand = new RelayCommand(o => IsDeleteEmployeeDialogOpen = false, _ => IsArchiveMode && !IsReadOnlyMode);
             DeleteHistoryEntryCommand = new AsyncRelayCommand(
                 async o =>
                 {
@@ -1727,6 +1767,103 @@ namespace Win11DesktopApp.ViewModels
             catch (Exception ex)
             {
                 ArchiveStatus = string.Format(Res("MsgErrorFmt"), ex.Message);
+            }
+            finally
+            {
+                SetBusyState(false);
+            }
+        }
+
+        /// <summary>
+        /// Permanently removes the employee from the Archive by moving them to Recently Deleted.
+        /// Mirrors EmployeesViewModel.ConfirmDeleteAsync (password confirmation + RecentlyDeletedService
+        /// + activity log) so archived employees can be deleted with the exact same logic/safety as
+        /// active employees in the "Працівник" tab.
+        /// </summary>
+        private async Task ConfirmDeleteEmployeeAsync()
+        {
+            if (!PolicyService.EnsureWriteAllowed("Видалити працівника"))
+                return;
+
+            if (_currentProfileService == null || _profileAuthService == null || _recentlyDeletedService == null)
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.ConfirmDeleteEmployeeAsync",
+                    "Delete dependencies were not provided to this view model instance.");
+                DeleteEmployeeStatus = string.Format(Res("MsgDeleteError"), Res("ConfirmPasswordNoProfile"));
+                return;
+            }
+
+            var currentProfile = _currentProfileService.CurrentProfile;
+            if (currentProfile == null || string.IsNullOrWhiteSpace(currentProfile.ClientId))
+            {
+                MessageBox.Show(
+                    Res("ConfirmPasswordNoProfile"),
+                    Res("ConfirmPasswordTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var passwordDialog = new ConfirmPasswordWindow
+            {
+                Owner = Application.Current?.MainWindow
+            };
+
+            var confirmed = passwordDialog.ShowDialog() == true && passwordDialog.IsConfirmed;
+            if (!confirmed)
+                return;
+
+            try
+            {
+                SetBusyState(true, Res("DetBtnDeleteEmployee"));
+
+                var authResult = await _profileAuthService.AuthenticateAsync(currentProfile.ClientId, passwordDialog.EnteredPassword);
+                if (!authResult.Success)
+                {
+                    MessageBox.Show(
+                        Res("ConfirmPasswordFailed"),
+                        Res("ConfirmPasswordTitle"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                var summary = new EmployeeSummary
+                {
+                    UniqueId = Data.UniqueId,
+                    FullName = FullName,
+                    FirmName = _firmName,
+                    PositionTitle = Data.PositionTag,
+                    EmployeeFolder = _employeeFolder
+                };
+
+                var recycleResult = _recentlyDeletedService.MoveEmployeeToRecentlyDeleted(summary);
+                if (!recycleResult.Success)
+                {
+                    MessageBox.Show(
+                        string.Format(Res("RecentlyDeletedMoveFailed"), recycleResult.Message),
+                        Res("TitleError"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                _activityLogService.Log(
+                    "EmployeeMovedToRecentlyDeleted",
+                    "Employee",
+                    _firmName,
+                    summary.FullName,
+                    string.Format(Res("RecentlyDeletedActionMovedDescription"), summary.FullName),
+                    employeeFolder: recycleResult.Item?.DeletedEmployeeFolder ?? string.Empty);
+
+                IsDeleteEmployeeDialogOpen = false;
+                ToastService.Instance.Success(string.Format(Res("RecentlyDeletedMoveSuccess"), summary.FullName));
+                DataChanged?.Invoke();
+                RaiseRequestClose();
+            }
+            catch (Exception ex)
+            {
+                DeleteEmployeeStatus = string.Format(Res("MsgErrorFmt"), ex.Message);
             }
             finally
             {

@@ -257,6 +257,15 @@
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
+
+                    <!-- Display settings (name order, hours format) -->
+                    <Button Command="{Binding ToggleNameOrderSettingsCommand}"
+                            Style="{StaticResource ToolbarInlineIconButton}"
+                            ToolTip="{DynamicResource FinDisplaySettingsTitle}"
+                            Margin="6,0,0,0">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"/>
+                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -573,7 +582,7 @@
 
                         <DataGrid.Columns>
                             <!-- Name (FIXED, clickable) -->
-                            <DataGridTemplateColumn IsReadOnly="True" Width="220" SortMemberPath="FullName">
+                            <DataGridTemplateColumn IsReadOnly="True" Width="220" SortMemberPath="DisplayName">
                                 <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColName}"/>
@@ -608,7 +617,7 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
-                                                <TextBlock Text="{Binding FullName}"
+                                                <TextBlock Text="{Binding DisplayName}"
                                                            VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis">
                                                     <TextBlock.Style>
@@ -637,7 +646,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- Hours (FIXED) -->
-                            <DataGridTextColumn Binding="{Binding HoursWorked, StringFormat={}{0:N1}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="70">
+                            <DataGridTextColumn Binding="{Binding HoursDisplayText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="70">
                                 <DataGridTextColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColHours}"/>
@@ -1455,6 +1464,68 @@
                 </StackPanel>
             </Border>
         </Popup>
+
+        <!-- ===== DISPLAY SETTINGS DIALOG ===== -->
+        <Grid Visibility="{Binding IsNameOrderSettingsOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CloseNameOrderSettingsCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                    MinWidth="380" MaxWidth="420" Padding="20,18"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.25"/>
+                </Border.Effect>
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{DynamicResource FinDisplaySettingsTitle}"
+                                   FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding CloseNameOrderSettingsCommand}"
+                                Style="{StaticResource HeaderGhostButton}" Width="34" Height="34">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Name order -->
+                    <TextBlock Text="{DynamicResource FinNameOrderConfig}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
+                    <RadioButton GroupName="SalaryNameOrderDialog" Content="{DynamicResource FinNameOrderFirstLast}"
+                                 IsChecked="{Binding SalaryNameOrderLastFirst, Converter={StaticResource InverseBool}}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <TextBlock Text="{DynamicResource FinNameOrderFirstLastExample}" FontSize="{DynamicResource FS10}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="20,1,0,5"/>
+                    <RadioButton GroupName="SalaryNameOrderDialog" Content="{DynamicResource FinNameOrderLastFirst}"
+                                 IsChecked="{Binding SalaryNameOrderLastFirst}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <TextBlock Text="{DynamicResource FinNameOrderLastFirstExample}" FontSize="{DynamicResource FS10}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="20,1,0,0"/>
+
+                    <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,13,0,11"/>
+
+                    <!-- Hours format -->
+                    <TextBlock Text="{DynamicResource FinHoursFormatConfig}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
+                    <RadioButton GroupName="SalaryHoursFormatDialog" Content="{DynamicResource FinHoursRounded}"
+                                 IsChecked="{Binding HoursCustomPrecision, Converter={StaticResource InverseBool}}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <TextBlock Text="{DynamicResource FinHoursRoundedDesc}" FontSize="{DynamicResource FS10}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="20,1,0,5"/>
+                    <RadioButton GroupName="SalaryHoursFormatDialog" Content="{DynamicResource FinHoursCustom}"
+                                 IsChecked="{Binding HoursCustomPrecision}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <TextBlock Text="{DynamicResource FinHoursCustomDesc}" FontSize="{DynamicResource FS10}"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="20,1,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- ===== ADVANCE DIALOG ===== -->
         <Grid Visibility="{Binding IsAdvanceDialogOpen, Converter={StaticResource BoolToVis}}">

@@ -288,17 +288,26 @@ LIMIT 1;";
             using var indexLock = AcquireIndexWriteLock(TimeSpan.FromSeconds(15), "rename-firm");
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
+            // Exact prefix + path-separator-boundary match instead of LIKE '<prefix>%' - see the
+            // comment on SalaryDbService.RepairEmployeeFolderPrefixes for why a bare '_' in a
+            // folder name makes LIKE-based prefix matching unsafe.
             command.CommandText = @"
 UPDATE employee_index
 SET firm_name = @newName,
     employee_folder = CASE
         WHEN @oldPortableFolder <> '' AND lower(employee_folder) = lower(@oldPortableFolder)
             THEN @newPortableFolder
-        WHEN @oldPortableFolder <> '' AND lower(employee_folder) LIKE lower(@oldPortableFolderLike)
+        WHEN @oldPortableFolder <> ''
+            AND length(employee_folder) > length(@oldPortableFolder)
+            AND lower(substr(employee_folder, 1, length(@oldPortableFolder))) = lower(@oldPortableFolder)
+            AND substr(employee_folder, length(@oldPortableFolder) + 1, 1) IN ('\', '/')
             THEN @newPortableFolder || substr(employee_folder, length(@oldPortableFolder) + 1)
         WHEN @oldAbsoluteFolder <> '' AND lower(employee_folder) = lower(@oldAbsoluteFolder)
             THEN @newAbsoluteFolder
-        WHEN @oldAbsoluteFolder <> '' AND lower(employee_folder) LIKE lower(@oldAbsoluteFolderLike)
+        WHEN @oldAbsoluteFolder <> ''
+            AND length(employee_folder) > length(@oldAbsoluteFolder)
+            AND lower(substr(employee_folder, 1, length(@oldAbsoluteFolder))) = lower(@oldAbsoluteFolder)
+            AND substr(employee_folder, length(@oldAbsoluteFolder) + 1, 1) IN ('\', '/')
             THEN @newAbsoluteFolder || substr(employee_folder, length(@oldAbsoluteFolder) + 1)
         ELSE employee_folder
     END
@@ -307,10 +316,8 @@ WHERE lower(firm_name) = lower(@oldName);";
             command.Parameters.AddWithValue("@newName", newName);
             command.Parameters.AddWithValue("@oldPortableFolder", oldPortableFolder);
             command.Parameters.AddWithValue("@newPortableFolder", newPortableFolder);
-            command.Parameters.AddWithValue("@oldPortableFolderLike", BuildChildPathLike(oldPortableFolder));
             command.Parameters.AddWithValue("@oldAbsoluteFolder", oldAbsoluteFolder);
             command.Parameters.AddWithValue("@newAbsoluteFolder", newAbsoluteFolder);
-            command.Parameters.AddWithValue("@oldAbsoluteFolderLike", BuildChildPathLike(oldAbsoluteFolder));
             return command.ExecuteNonQuery();
         }
 
@@ -825,12 +832,5 @@ ON CONFLICT(unique_id) DO UPDATE SET
                 : path + Path.DirectorySeparatorChar;
         }
 
-        private static string BuildChildPathLike(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return string.Empty;
-
-            return EnsureTrailingSeparator(path) + "%";
-        }
     }
 }

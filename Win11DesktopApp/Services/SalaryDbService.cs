@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -504,6 +505,334 @@ WHERE lower(firm_name) = lower(@firmName)
             MarkMonthDbIndexDirty();
         }
 
+        public FirmFinanceRenameResult RenameFirmReferences(
+            string oldName,
+            string newName,
+            int effectiveYear,
+            int effectiveMonth,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(oldName)
+                || string.IsNullOrWhiteSpace(newName)
+                || effectiveYear <= 0
+                || effectiveMonth is < 1 or > 12)
+            {
+                return new FirmFinanceRenameResult();
+            }
+
+            var monthDatabases = EnumerateMonthDatabases().ToList();
+            if (monthDatabases.Count == 0)
+                return new FirmFinanceRenameResult();
+
+            var backupFolder = Path.Combine(
+                _folderService.GetBackupsFolder(),
+                "FirmRenames",
+                $"{DateTime.UtcNow:yyyyMMdd-HHmmssfff}-{SanitizeBackupName(oldName)}-to-{SanitizeBackupName(newName)}");
+            var backups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var databasesUpdated = 0;
+            var entriesRenamed = 0;
+            var entryPathsUpdated = 0;
+            var expensesRenamed = 0;
+            var emptyDuplicatesRemoved = 0;
+
+            try
+            {
+                foreach (var monthDb in monthDatabases)
+                {
+                    using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                    if (!MonthContainsFirmReferences(connection, oldName, oldCompanyFolder, newCompanyFolder))
+                        continue;
+
+                    Directory.CreateDirectory(backupFolder);
+                    var backupPath = Path.Combine(backupFolder, Path.GetFileName(monthDb.path));
+                    using (var backupConnection = new SqliteConnection($"Data Source={backupPath};Pooling=False"))
+                    {
+                        backupConnection.Open();
+                        connection.BackupDatabase(backupConnection);
+                    }
+                    backups[monthDb.path] = backupPath;
+
+                    var before = CaptureRenameValidationSnapshot(connection);
+                    var removedInCurrentDatabase = 0;
+                    using var transaction = connection.BeginTransaction();
+                    var rows = LoadFirmRenameRows(
+                        connection,
+                        transaction,
+                        oldName,
+                        newName,
+                        oldCompanyFolder,
+                        newCompanyFolder);
+
+                    foreach (var row in rows)
+                    {
+                        var targetFolder = RemapCompanyFolder(row.EmployeeFolder, oldCompanyFolder, newCompanyFolder);
+                        var shouldUseNewName = string.Equals(row.FirmName, oldName, StringComparison.OrdinalIgnoreCase)
+                                               && CompareYearMonth(monthDb.year, monthDb.month, effectiveYear, effectiveMonth) >= 0
+                                               && !string.Equals(row.Status, "paid", StringComparison.OrdinalIgnoreCase);
+                        var targetFirmName = shouldUseNewName ? newName : row.FirmName;
+                        var collision = FindRenameCollision(
+                            connection,
+                            transaction,
+                            row.Id,
+                            targetFirmName,
+                            row.EmployeeId,
+                            targetFolder);
+
+                        if (collision != null)
+                        {
+                            if (row.HasMeaningfulData && collision.HasMeaningfulData)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Перейменування зупинено: для {row.FullName} знайдено два непорожні зарплатні рядки за {monthDb.month:D2}.{monthDb.year:D4}.");
+                            }
+
+                            if (!row.HasMeaningfulData && collision.HasMeaningfulData)
+                            {
+                                DeleteSalaryEntryById(connection, transaction, row.Id);
+                                emptyDuplicatesRemoved++;
+                                removedInCurrentDatabase++;
+                                continue;
+                            }
+
+                            DeleteSalaryEntryById(connection, transaction, collision.Id);
+                            emptyDuplicatesRemoved++;
+                            removedInCurrentDatabase++;
+                        }
+
+                        UpdateFirmRenameRow(
+                            connection,
+                            transaction,
+                            row.Id,
+                            targetFirmName,
+                            targetFolder);
+
+                        if (!string.Equals(row.EmployeeFolder, targetFolder, StringComparison.Ordinal))
+                            entryPathsUpdated++;
+                        if (!string.Equals(row.FirmName, targetFirmName, StringComparison.Ordinal))
+                            entriesRenamed++;
+                    }
+
+                    if (CompareYearMonth(monthDb.year, monthDb.month, effectiveYear, effectiveMonth) >= 0)
+                    {
+                        using var expenseCommand = connection.CreateCommand();
+                        expenseCommand.Transaction = transaction;
+                        expenseCommand.CommandText = @"
+UPDATE salary_expenses
+SET firm_name = @newName
+WHERE lower(firm_name) = lower(@oldName);";
+                        expenseCommand.Parameters.AddWithValue("@oldName", oldName);
+                        expenseCommand.Parameters.AddWithValue("@newName", newName);
+                        expensesRenamed += expenseCommand.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+
+                    var after = CaptureRenameValidationSnapshot(connection);
+                    if (after.EntryCount != before.EntryCount - removedInCurrentDatabase
+                        || after.ExpenseCount != before.ExpenseCount
+                        || after.HoursTotal != before.HoursTotal
+                        || after.NetTotal != before.NetTotal
+                        || after.ExpenseTotal != before.ExpenseTotal)
+                    {
+                        throw new InvalidOperationException(
+                            $"Перевірка зарплат після перейменування не пройшла для {monthDb.month:D2}.{monthDb.year:D4}.");
+                    }
+
+                    databasesUpdated++;
+                }
+            }
+            catch
+            {
+                RestoreFirmRenameBackups(backups);
+                throw;
+            }
+
+            MarkMonthDbIndexDirty();
+            return new FirmFinanceRenameResult
+            {
+                DatabasesUpdated = databasesUpdated,
+                EntriesRenamed = entriesRenamed,
+                EntryPathsUpdated = entryPathsUpdated,
+                ExpensesRenamed = expensesRenamed,
+                EmptyDuplicatesRemoved = emptyDuplicatesRemoved,
+                BackupFolderPath = backups.Count > 0 ? backupFolder : string.Empty
+            };
+        }
+
+        public IReadOnlyList<string> DiscoverFirmNamesForCompanyFolder(string companyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return Array.Empty<string>();
+
+            return DiscoverFirmNamesForCompanyFolderPrefixes(new[] { companyFolder });
+        }
+
+        public IReadOnlyList<string> DiscoverFirmNamesForCompanyFolderPrefixes(IReadOnlyCollection<string> companyFolderPrefixes)
+        {
+            if (companyFolderPrefixes == null || companyFolderPrefixes.Count == 0)
+                return Array.Empty<string>();
+
+            var normalizedPrefixes = companyFolderPrefixes
+                .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+                .Select(NormalizeFolderPrefix)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (normalizedPrefixes.Count == 0)
+                return Array.Empty<string>();
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+SELECT firm_name, employee_folder
+FROM salary_entries;";
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    var firmName = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                    var employeeFolder = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                    if (string.IsNullOrWhiteSpace(firmName))
+                        continue;
+
+                    if (EmployeeFolderBelongsToCompanyPrefixes(employeeFolder, normalizedPrefixes))
+                        names.Add(firmName);
+                }
+            }
+
+            return names.ToList();
+        }
+
+        internal static string? TryExtractCompanyFolderFromEmployeePath(string employeeFolder)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
+            var normalized = employeeFolder.Replace('/', '\\');
+            foreach (var employeesFolderName in FolderNames.AllEmployeesFolderNames)
+            {
+                var marker = "\\" + employeesFolderName + "\\";
+                var index = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (index > 0)
+                    return normalized[..index];
+            }
+
+            return null;
+        }
+
+        private static bool EmployeeFolderBelongsToCompanyPrefixes(
+            string employeeFolder,
+            IReadOnlyCollection<string> normalizedCompanyFolderPrefixes)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder) || normalizedCompanyFolderPrefixes.Count == 0)
+                return false;
+
+            var normalizedEmployeeFolder = NormalizeFolderPrefix(employeeFolder);
+            foreach (var prefix in normalizedCompanyFolderPrefixes)
+            {
+                if (normalizedEmployeeFolder.StartsWith(prefix + "\\", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(normalizedEmployeeFolder, prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            var companyFolder = TryExtractCompanyFolderFromEmployeePath(employeeFolder);
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return false;
+
+            var normalizedCompanyFolder = NormalizeFolderPrefix(companyFolder);
+            return normalizedCompanyFolderPrefixes.Any(prefix =>
+                string.Equals(normalizedCompanyFolder, prefix, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public IReadOnlyList<string> DiscoverAllDistinctFirmNames()
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT DISTINCT firm_name FROM salary_entries;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        var name = reader.GetString(0);
+                        if (!string.IsNullOrWhiteSpace(name))
+                            names.Add(name);
+                    }
+                }
+            }
+
+            return names.ToList();
+        }
+
+        public int RepairEmployeeFolderPrefixes(string oldCompanyFolder, string newCompanyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(oldCompanyFolder)
+                || string.IsNullOrWhiteSpace(newCompanyFolder)
+                || string.Equals(oldCompanyFolder, newCompanyFolder, StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            var updated = 0;
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                using var transaction = connection.BeginTransaction();
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                // Note: this deliberately uses an exact prefix comparison (=/substr) instead of
+                // LIKE '<oldFolder>%'. Company folder names commonly contain '_' (spaces are
+                // replaced with underscores), and SQL LIKE treats a bare '_' as a "match any one
+                // character" wildcard - so a LIKE-based prefix match can silently match a
+                // completely unrelated folder whose path merely has the same length/shape. It
+                // also requires a real path-separator boundary after the prefix, so e.g. "...\Foo"
+                // no longer matches "...\FooBar\...".
+                command.CommandText = @"
+UPDATE salary_entries
+SET employee_folder = @newFolder || substr(replace(ifnull(employee_folder, ''), '/', '\'), length(@oldFolder) + 1)
+WHERE lower(replace(ifnull(employee_folder, ''), '/', '\')) = lower(@oldFolder)
+   OR (
+        length(replace(ifnull(employee_folder, ''), '/', '\')) > length(@oldFolder)
+        AND lower(substr(replace(ifnull(employee_folder, ''), '/', '\'), 1, length(@oldFolder))) = lower(@oldFolder)
+        AND substr(replace(ifnull(employee_folder, ''), '/', '\'), length(@oldFolder) + 1, 1) = '\'
+      );";
+                command.Parameters.AddWithValue("@oldFolder", NormalizeFolderPrefix(oldCompanyFolder));
+                command.Parameters.AddWithValue("@newFolder", NormalizeFolderPrefix(newCompanyFolder).TrimEnd('\\'));
+                updated += command.ExecuteNonQuery();
+                transaction.Commit();
+            }
+
+            if (updated > 0)
+                MarkMonthDbIndexDirty();
+
+            return updated;
+        }
+
+        private static string NormalizeFolderPrefix(string folder)
+            => folder.Replace('/', '\\').TrimEnd('\\');
+
+        private static bool RowBelongsToCompanyFolder(
+            string employeeFolder,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            var companyFolder = TryExtractCompanyFolderFromEmployeePath(employeeFolder);
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return false;
+
+            var normalizedCompanyFolder = NormalizeFolderPrefix(companyFolder);
+            return string.Equals(normalizedCompanyFolder, NormalizeFolderPrefix(oldCompanyFolder), StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(normalizedCompanyFolder, NormalizeFolderPrefix(newCompanyFolder), StringComparison.OrdinalIgnoreCase);
+        }
+
         public void UpsertFirmExpense(int year, int month, FirmExpense expense)
         {
             using var connection = OpenMonthConnection(year, month);
@@ -864,6 +1193,304 @@ ON CONFLICT(id) DO UPDATE SET
             command.Parameters.AddWithValue("@name", expense.Name ?? string.Empty);
             command.Parameters.AddWithValue("@amount", ToInvariant(expense.Amount));
             command.ExecuteNonQuery();
+        }
+
+        private static int CompareYearMonth(int yearA, int monthA, int yearB, int monthB)
+            => yearA != yearB ? yearA.CompareTo(yearB) : monthA.CompareTo(monthB);
+
+        private bool MonthContainsFirmReferences(
+            SqliteConnection connection,
+            string oldName,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT employee_folder, firm_name
+FROM salary_entries
+UNION ALL
+SELECT '', firm_name
+FROM salary_expenses;";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var employeeFolder = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                var firmName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                if (string.Equals(firmName, oldName, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(
+                        employeeFolder,
+                        RemapCompanyFolder(employeeFolder, oldCompanyFolder, newCompanyFolder),
+                        StringComparison.Ordinal)
+                    || RowBelongsToCompanyFolder(employeeFolder, oldCompanyFolder, newCompanyFolder))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private List<FirmRenameSalaryRow> LoadFirmRenameRows(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            string oldName,
+            string newName,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            var rows = new List<FirmRenameSalaryRow>();
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+SELECT id, employee_id, employee_folder, full_name, firm_name,
+       hours_worked, hourly_rate, advance, saved_net_salary, status, note, custom_values
+FROM salary_entries
+ORDER BY id;";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var row = ReadFirmRenameSalaryRow(reader);
+                if (string.Equals(row.FirmName, oldName, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(
+                        row.EmployeeFolder,
+                        RemapCompanyFolder(row.EmployeeFolder, oldCompanyFolder, newCompanyFolder),
+                        StringComparison.Ordinal)
+                    || (RowBelongsToCompanyFolder(row.EmployeeFolder, oldCompanyFolder, newCompanyFolder)
+                        && !string.Equals(row.FirmName, newName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    rows.Add(row);
+                }
+            }
+            return rows;
+        }
+
+        private static FirmRenameSalaryRow? FindRenameCollision(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            long sourceId,
+            string targetFirmName,
+            string employeeId,
+            string employeeFolder)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+SELECT id, employee_id, employee_folder, full_name, firm_name,
+       hours_worked, hourly_rate, advance, saved_net_salary, status, note, custom_values
+FROM salary_entries
+WHERE id <> @sourceId
+  AND lower(firm_name) = lower(@firmName)
+  AND (
+        (@employeeId <> '' AND ifnull(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+        OR lower(ifnull(employee_folder, '')) = lower(@employeeFolder)
+      )
+ORDER BY ifnull(updated_at, '') DESC, id DESC
+LIMIT 1;";
+            command.Parameters.AddWithValue("@sourceId", sourceId);
+            command.Parameters.AddWithValue("@firmName", targetFirmName);
+            command.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("@employeeFolder", employeeFolder ?? string.Empty);
+            using var reader = command.ExecuteReader();
+            return reader.Read() ? ReadFirmRenameSalaryRow(reader) : null;
+        }
+
+        private static FirmRenameSalaryRow ReadFirmRenameSalaryRow(SqliteDataReader reader)
+        {
+            return new FirmRenameSalaryRow
+            {
+                Id = reader.GetInt64(0),
+                EmployeeId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                EmployeeFolder = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                FullName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                FirmName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                HoursWorked = reader.IsDBNull(5) ? 0m : ParseDecimal(reader.GetString(5)),
+                HourlyRate = reader.IsDBNull(6) ? 0m : ParseDecimal(reader.GetString(6)),
+                Advance = reader.IsDBNull(7) ? 0m : ParseDecimal(reader.GetString(7)),
+                SavedNetSalary = reader.IsDBNull(8) ? 0m : ParseDecimal(reader.GetString(8)),
+                Status = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+                Note = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
+                CustomValuesJson = reader.IsDBNull(11) ? "{}" : reader.GetString(11)
+            };
+        }
+
+        private static void DeleteSalaryEntryById(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            long id)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "DELETE FROM salary_entries WHERE id = @id;";
+            command.Parameters.AddWithValue("@id", id);
+            command.ExecuteNonQuery();
+        }
+
+        private static void UpdateFirmRenameRow(
+            SqliteConnection connection,
+            SqliteTransaction transaction,
+            long id,
+            string firmName,
+            string employeeFolder)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+UPDATE salary_entries
+SET firm_name = @firmName,
+    employee_folder = @employeeFolder
+WHERE id = @id;";
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.AddWithValue("@firmName", firmName);
+            command.Parameters.AddWithValue("@employeeFolder", employeeFolder ?? string.Empty);
+            command.ExecuteNonQuery();
+        }
+
+        private string RemapCompanyFolder(string value, string oldCompanyFolder, string newCompanyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(value)
+                || string.IsNullOrWhiteSpace(oldCompanyFolder)
+                || string.IsNullOrWhiteSpace(newCompanyFolder))
+            {
+                return value ?? string.Empty;
+            }
+
+            var candidates = new List<(string oldPrefix, string newPrefix)>
+            {
+                (oldCompanyFolder, newCompanyFolder)
+            };
+
+            if (!string.IsNullOrWhiteSpace(_folderService.RootPath))
+            {
+                candidates.Add((
+                    Path.GetRelativePath(_folderService.RootPath, oldCompanyFolder),
+                    Path.GetRelativePath(_folderService.RootPath, newCompanyFolder)));
+            }
+
+            foreach (var candidate in candidates)
+            {
+                if (TryReplacePathPrefix(value, candidate.oldPrefix, candidate.newPrefix, out var remapped))
+                    return remapped;
+            }
+
+            return value;
+        }
+
+        private static bool TryReplacePathPrefix(string value, string oldPrefix, string newPrefix, out string remapped)
+        {
+            remapped = value;
+            var normalizedValue = value.Replace('/', '\\').TrimEnd('\\');
+            var normalizedOld = oldPrefix.Replace('/', '\\').TrimEnd('\\');
+            var normalizedNew = newPrefix.Replace('/', '\\').TrimEnd('\\');
+            if (!normalizedValue.Equals(normalizedOld, StringComparison.OrdinalIgnoreCase)
+                && !normalizedValue.StartsWith(normalizedOld + "\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            remapped = normalizedNew + normalizedValue[normalizedOld.Length..];
+            return true;
+        }
+
+        private static FirmRenameValidationSnapshot CaptureRenameValidationSnapshot(SqliteConnection connection)
+        {
+            var snapshot = new FirmRenameValidationSnapshot();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT hours_worked, saved_net_salary FROM salary_entries;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    snapshot.EntryCount++;
+                    snapshot.HoursTotal += reader.IsDBNull(0) ? 0m : ParseDecimal(reader.GetString(0));
+                    snapshot.NetTotal += reader.IsDBNull(1) ? 0m : ParseDecimal(reader.GetString(1));
+                }
+            }
+
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT amount FROM salary_expenses;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    snapshot.ExpenseCount++;
+                    snapshot.ExpenseTotal += reader.IsDBNull(0) ? 0m : ParseDecimal(reader.GetString(0));
+                }
+            }
+
+            return snapshot;
+        }
+
+        private static void RestoreFirmRenameBackups(IReadOnlyDictionary<string, string> backups)
+        {
+            foreach (var pair in backups)
+            {
+                try
+                {
+                    TryDeleteFile(pair.Key + "-wal");
+                    TryDeleteFile(pair.Key + "-shm");
+                    File.Copy(pair.Value, pair.Key, overwrite: true);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("SalaryDbService.RestoreFirmRenameBackup", ex);
+                }
+            }
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch
+            {
+                // The main restore will report a useful error if a sidecar still blocks replacement.
+            }
+        }
+
+        private static string SanitizeBackupName(string value)
+        {
+            foreach (var invalid in Path.GetInvalidFileNameChars())
+                value = value.Replace(invalid, '_');
+            return string.IsNullOrWhiteSpace(value) ? "firm" : value.Trim();
+        }
+
+        private sealed class FirmRenameSalaryRow
+        {
+            public long Id { get; init; }
+            public string EmployeeId { get; init; } = string.Empty;
+            public string EmployeeFolder { get; init; } = string.Empty;
+            public string FullName { get; init; } = string.Empty;
+            public string FirmName { get; init; } = string.Empty;
+            public decimal HoursWorked { get; init; }
+            public decimal HourlyRate { get; init; }
+            public decimal Advance { get; init; }
+            public decimal SavedNetSalary { get; init; }
+            public string Status { get; init; } = string.Empty;
+            public string Note { get; init; } = string.Empty;
+            public string CustomValuesJson { get; init; } = "{}";
+
+            public bool HasMeaningfulData =>
+                HoursWorked != 0m
+                || Advance != 0m
+                || SavedNetSalary != 0m
+                || string.Equals(Status, "paid", StringComparison.OrdinalIgnoreCase)
+                || !string.IsNullOrWhiteSpace(Note)
+                || (!string.IsNullOrWhiteSpace(CustomValuesJson)
+                    && !string.Equals(CustomValuesJson.Trim(), "{}", StringComparison.Ordinal));
+        }
+
+        private sealed class FirmRenameValidationSnapshot
+        {
+            public int EntryCount { get; set; }
+            public int ExpenseCount { get; set; }
+            public decimal HoursTotal { get; set; }
+            public decimal NetTotal { get; set; }
+            public decimal ExpenseTotal { get; set; }
         }
 
         private static SalaryEntry ReadSalaryEntry(SqliteDataReader reader)

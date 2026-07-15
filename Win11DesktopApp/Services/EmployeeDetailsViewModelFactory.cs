@@ -17,6 +17,9 @@ namespace Win11DesktopApp.Services
         private readonly TagCatalogService _tagCatalogService;
         private readonly AiWindowFactory _aiWindowFactory;
         private readonly AppStatisticsService _appStatisticsService;
+        private readonly CurrentProfileService _currentProfileService;
+        private readonly ProfileAuthService _profileAuthService;
+        private readonly RecentlyDeletedService _recentlyDeletedService;
 
         public EmployeeDetailsViewModelFactory(
             EmployeeService employeeService,
@@ -30,7 +33,10 @@ namespace Win11DesktopApp.Services
             DocumentGenerationService documentGenerationService,
             TagCatalogService tagCatalogService,
             AiWindowFactory aiWindowFactory,
-            AppStatisticsService appStatisticsService)
+            AppStatisticsService appStatisticsService,
+            CurrentProfileService currentProfileService,
+            ProfileAuthService profileAuthService,
+            RecentlyDeletedService recentlyDeletedService)
         {
             _employeeService = employeeService;
             _geminiApiService = geminiApiService;
@@ -44,6 +50,9 @@ namespace Win11DesktopApp.Services
             _tagCatalogService = tagCatalogService;
             _aiWindowFactory = aiWindowFactory;
             _appStatisticsService = appStatisticsService;
+            _currentProfileService = currentProfileService;
+            _profileAuthService = profileAuthService;
+            _recentlyDeletedService = recentlyDeletedService;
         }
 
         public EmployeeDetailsViewModel Create(
@@ -73,7 +82,10 @@ namespace Win11DesktopApp.Services
                 _aiWindowFactory,
                 _appStatisticsService,
                 bulkUpdateTargets,
-                financeContextMonth);
+                financeContextMonth,
+                _currentProfileService,
+                _profileAuthService,
+                _recentlyDeletedService);
         }
     }
 }

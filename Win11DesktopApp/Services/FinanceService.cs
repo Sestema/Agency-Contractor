@@ -39,7 +39,8 @@ namespace Win11DesktopApp.Services
             EmployeeIndexDbService? employeeIndexDbService = null,
             SharedOperationLockService? sharedOperationLockService = null,
             bool suppressStartupNotifications = false,
-            AppDataStorageFactory? storageFactory = null)
+            AppDataStorageFactory? storageFactory = null,
+            FirmFinanceRenameService? firmFinanceRenameService = null)
         {
             _folderService = folderService ?? throw new InvalidOperationException("FolderService is not initialized.");
             _suppressStartupNotifications = suppressStartupNotifications;
@@ -81,6 +82,8 @@ namespace Win11DesktopApp.Services
                 sharedOperationLockService);
             CustomFieldsService = new FinanceCustomFieldsService(customFieldsStorage);
             ReportsService = new FinanceReportsService(reportsStorage);
+            if (firmFinanceRenameService != null)
+                firmFinanceRenameService.FirmRenamed += () => MonthPaymentsService.InvalidatePaymentsCache();
         }
 
         private static T? ReadJson<T>(string path)

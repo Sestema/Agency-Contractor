@@ -22,6 +22,7 @@ namespace Win11DesktopApp.Services
         private readonly FolderService _folderService;
         private readonly EmployeeIndexDbService? _employeeIndexDbService;
         private readonly SyncEventService? _syncEventService;
+        private readonly FirmFinanceRenameService? _firmFinanceRenameService;
         private AdminMirrorSyncService? _adminMirrorSyncService;
         private EmployerCompany? _selectedCompany;
 
@@ -123,7 +124,8 @@ namespace Win11DesktopApp.Services
 
         public CompanyService(TagCatalogService tagCatalogService, AppSettingsService appSettingsService,
             PersistenceService persistenceService, FolderService folderService, EmployeeIndexDbService? employeeIndexDbService = null,
-            SyncEventService? syncEventService = null)
+            SyncEventService? syncEventService = null,
+            FirmFinanceRenameService? firmFinanceRenameService = null)
         {
             _tagCatalogService = tagCatalogService;
             _appSettingsService = appSettingsService;
@@ -131,12 +133,59 @@ namespace Win11DesktopApp.Services
             _folderService = folderService;
             _employeeIndexDbService = employeeIndexDbService;
             _syncEventService = syncEventService;
+            _firmFinanceRenameService = firmFinanceRenameService;
             if (_syncEventService != null)
                 _syncEventService.SyncEventReceived += OnSyncEventReceived;
 
             LoadCompanies();
             MigrateLegacyHiddenCompanies();
             ApplySavedSelection();
+            CleanupAutoAdoptedNameHistoryAliases();
+        }
+
+        /// <summary>
+        /// Versions 0.1.87-0.1.89 auto-adopted firm names discovered in salary storage into
+        /// company.NameHistory on every startup. On real data this merged unrelated companies:
+        /// employees "jumped" between firms, hours disappeared and whole firms turned red.
+        /// Those auto-added aliases are always OPEN periods (ToYear=0, ToMonth=0) whose name
+        /// differs from the current company name. Genuine rename history recorded by
+        /// RecordCompanyNameChange always CLOSES the old-name period (ToYear/ToMonth set) and
+        /// only keeps an open period for the company's current name, so removing foreign open
+        /// periods never touches real rename history. Runs on every load (idempotent) because
+        /// a polluted companies file can still arrive from another PC via sync.
+        /// </summary>
+        private void CleanupAutoAdoptedNameHistoryAliases()
+        {
+            var changed = false;
+            foreach (var company in _companies)
+            {
+                if (company.NameHistory == null || company.NameHistory.Count == 0)
+                    continue;
+
+                var removed = company.NameHistory.RemoveAll(period =>
+                    period.ToYear == 0
+                    && period.ToMonth == 0
+                    && !string.Equals(period.Name, company.Name, StringComparison.OrdinalIgnoreCase));
+                if (removed <= 0)
+                    continue;
+
+                changed = true;
+                LoggingService.LogInfo(
+                    "CompanyService.CleanupNameHistory",
+                    $"Removed {removed} auto-adopted alias(es) from '{company.Name}' name history.");
+            }
+
+            if (changed)
+            {
+                try
+                {
+                    _persistenceService.SaveCompanies(_companies);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("CompanyService.CleanupNameHistory.Save", ex.Message);
+                }
+            }
         }
 
         internal void InitializeAdminMirrorSyncService(AdminMirrorSyncService adminMirrorSyncService)
@@ -221,21 +270,66 @@ namespace Win11DesktopApp.Services
             VisibilityChanged?.Invoke();
         }
 
-        public async Task UpdateCompanyAsync(EmployerCompany company, string oldName)
+        public async Task<bool> UpdateCompanyAsync(EmployerCompany company, string oldName)
         {
+            var newName = company.Name;
+            var effectiveMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var previousHistory = (company.NameHistory ?? new List<CompanyNamePeriod>())
+                .Select(period => new CompanyNamePeriod
+                {
+                    Name = period.Name,
+                    FromYear = period.FromYear,
+                    FromMonth = period.FromMonth,
+                    ToYear = period.ToYear,
+                    ToMonth = period.ToMonth
+                })
+                .ToList();
+            var folderRenamed = false;
+            var indexRenamed = false;
+            var financeRenamed = false;
+
             try
             {
                 company.LastModified = DateTime.Now;
 
-                if (!string.IsNullOrEmpty(oldName) && oldName != company.Name)
+                if (!string.IsNullOrEmpty(oldName) && oldName != newName)
                 {
-                    _folderService.RenameCompanyFolder(oldName, company.Name);
-                    var updatedRows = _employeeIndexDbService?.RenameFirmReferences(oldName, company.Name) ?? 0;
+                    folderRenamed = _folderService.RenameCompanyFolder(oldName, newName);
+                    if (!folderRenamed)
+                    {
+                        throw new InvalidOperationException(
+                            $"Не вдалося перейменувати папку фірми з '{oldName}' на '{newName}'. Дані не змінено.");
+                    }
+
+                    var updatedRows = _employeeIndexDbService?.RenameFirmReferences(oldName, newName) ?? 0;
+                    indexRenamed = true;
                     LoggingService.LogInfo("CompanyService.UpdateCompany",
-                        $"Updated {updatedRows} employee index row(s) after company rename from '{oldName}' to '{company.Name}'.");
+                        $"Updated {updatedRows} employee index row(s) after company rename from '{oldName}' to '{newName}'.");
+
+                    if (_firmFinanceRenameService != null)
+                    {
+                        var financeResult = _firmFinanceRenameService.Rename(
+                            company,
+                            oldName,
+                            newName,
+                            effectiveMonth.Year,
+                            effectiveMonth.Month);
+                        financeRenamed = true;
+                        LoggingService.LogInfo(
+                            "CompanyService.UpdateCompany",
+                            $"Finance rename {oldName} -> {newName}: databases={financeResult.DatabasesUpdated}, " +
+                            $"entries={financeResult.EntriesRenamed}, paths={financeResult.EntryPathsUpdated}, " +
+                            $"expenses={financeResult.ExpensesRenamed}, emptyDuplicates={financeResult.EmptyDuplicatesRemoved}, " +
+                            $"backup='{financeResult.BackupFolderPath}'.");
+                    }
+
+                    RecordCompanyNameChange(company, oldName, newName, effectiveMonth);
+                    SyncCompanySalaryAliases(company);
                 }
 
-                _folderService.EnsureCompanyStructure(company.Name);
+                _folderService.EnsureCompanyStructure(newName);
+
+                await _persistenceService.SaveCompaniesAsync(_companies);
 
                 _tagCatalogService.RemoveTagsForCompany(oldName);
                 if (company.Agency != null && !string.IsNullOrEmpty(company.Agency.Name))
@@ -243,18 +337,119 @@ namespace Win11DesktopApp.Services
                 else
                     _tagCatalogService.AddTagsForEmployerOnly(company);
 
-                await _persistenceService.SaveCompaniesAsync(_companies);
                 _adminMirrorSyncService?.EnqueueEmployerUpsert(company);
-                _syncEventService?.PublishCompanyChanged("updated", company.Name);
-                LoggingService.LogInfo("CompanyService", $"Company updated: {company.Name} (was: {oldName})");
+                _syncEventService?.PublishCompanyChanged("updated", newName);
+                LoggingService.LogInfo("CompanyService", $"Company updated: {newName} (was: {oldName})");
                 SelectedCompanyChanged?.Invoke(_selectedCompany);
                 VisibilityChanged?.Invoke();
+                return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"CompanyService.UpdateCompany error: {ex.Message}");
+                if (!string.IsNullOrWhiteSpace(oldName)
+                    && !string.Equals(oldName, newName, StringComparison.Ordinal))
+                {
+                    try
+                    {
+                        if (financeRenamed && _firmFinanceRenameService != null)
+                        {
+                            _firmFinanceRenameService.Rename(
+                                company,
+                                newName,
+                                oldName,
+                                effectiveMonth.Year,
+                                effectiveMonth.Month);
+                        }
+
+                        if (indexRenamed)
+                            _employeeIndexDbService?.RenameFirmReferences(newName, oldName);
+
+                        if (folderRenamed)
+                            _folderService.RenameCompanyFolder(newName, oldName);
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        LoggingService.LogError("CompanyService.UpdateCompany.Rollback", rollbackEx);
+                    }
+                }
+
+                company.Name = oldName;
+                company.NameHistory = previousHistory;
+                LoggingService.LogError("CompanyService.UpdateCompany", ex);
                 MessageBox.Show(string.Format(Res("MsgCompanySaveError"), ex.Message), Res("TitleError"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
+        }
+
+        private void SyncCompanySalaryAliases(EmployerCompany company)
+        {
+            if (_firmFinanceRenameService == null)
+                return;
+
+            try
+            {
+                var otherNames = _companies
+                    .Where(existing => !ReferenceEquals(existing, company))
+                    .Select(existing => existing.Name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name)
+                                   && !string.Equals(name, company.Name, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var repair = _firmFinanceRenameService.RepairCompanySalaryLinks(company, otherNames);
+                if (repair.EntryPathsUpdated == 0)
+                    return;
+
+                LoggingService.LogInfo(
+                    "CompanyService.SyncSalaryAliases",
+                    $"Synced salary folder paths for '{company.Name}': pathsUpdated={repair.EntryPathsUpdated}.");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning(
+                    "CompanyService.SyncSalaryAliases",
+                    $"Could not sync salary aliases for '{company.Name}': {ex.Message}");
+            }
+        }
+
+        private static void RecordCompanyNameChange(
+            EmployerCompany company,
+            string oldName,
+            string newName,
+            DateTime effectiveMonth)
+        {
+            company.NameHistory ??= new List<CompanyNamePeriod>();
+            var previousMonth = effectiveMonth.AddMonths(-1);
+            var activePeriod = company.NameHistory.LastOrDefault(period =>
+                period.ToYear == 0
+                && period.ToMonth == 0
+                && string.Equals(period.Name, oldName, StringComparison.OrdinalIgnoreCase));
+
+            if (activePeriod == null)
+            {
+                company.NameHistory.Add(new CompanyNamePeriod
+                {
+                    Name = oldName,
+                    FromYear = company.CreatedAt.Year,
+                    FromMonth = company.CreatedAt.Month,
+                    ToYear = previousMonth.Year,
+                    ToMonth = previousMonth.Month
+                });
+            }
+            else
+            {
+                activePeriod.ToYear = previousMonth.Year;
+                activePeriod.ToMonth = previousMonth.Month;
+            }
+
+            company.NameHistory.RemoveAll(period =>
+                period.FromYear == effectiveMonth.Year
+                && period.FromMonth == effectiveMonth.Month
+                && string.Equals(period.Name, newName, StringComparison.OrdinalIgnoreCase));
+            company.NameHistory.Add(new CompanyNamePeriod
+            {
+                Name = newName,
+                FromYear = effectiveMonth.Year,
+                FromMonth = effectiveMonth.Month
+            });
         }
 
         public async Task<bool> DeleteCompanyAsync(EmployerCompany company)

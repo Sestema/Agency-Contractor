@@ -523,6 +523,20 @@
                                     </StackPanel>
                                 </Button>
 
+                                <!-- Delete employee button (Archive mode only) -->
+                                <Button Command="{Binding DeleteEmployeeCommand}" Padding="12,9" Cursor="Hand" Margin="0,8,0,0"
+                                        Visibility="{Binding IsArchiveMode, Converter={StaticResource BoolToVis}}"
+                                        ToolTip="{DynamicResource EmpTooltipDelete}"
+                                        Background="{DynamicResource ErrorLightBrush}" 
+                                        BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                                        Foreground="{DynamicResource ErrorBrush}" HorizontalContentAlignment="Center"
+                                        Style="{StaticResource SidebarSecondaryButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource DetBtnDeleteEmployee}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+
                                 <Border Style="{StaticResource DialogPreviewSurface}" Padding="12" Margin="0,12,0,0">
                                     <StackPanel>
                                         <!-- Status -->
@@ -2488,6 +2502,49 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="{DynamicResource DetBtnArchive}" FontSize="{DynamicResource FS13}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ===== Delete Employee Dialog Overlay (Archive mode only) ===== -->
+        <Grid Visibility="{Binding IsDeleteEmployeeDialogOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CancelDeleteEmployeeCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" 
+                    Width="420" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS32}" 
+                               HorizontalAlignment="Center" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,10"/>
+                    <TextBlock Text="{DynamicResource MsgDeleteEmployee}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold" 
+                               TextAlignment="Center" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding FullName}" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="{DynamicResource FS13}"
+                               TextAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="{DynamicResource DetDeleteEmployeeDesc}" TextAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="{DynamicResource FS12}" Margin="0,0,0,16"/>
+                    <TextBlock Text="{Binding DeleteEmployeeStatus}" Foreground="{DynamicResource ErrorBrush}" FontSize="{DynamicResource FS12}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Command="{Binding CancelDeleteEmployeeCommand}" Padding="16,8" Margin="0,0,8,0"
+                                Background="{DynamicResource ContentBackgroundBrush}" 
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                Foreground="{DynamicResource ForegroundBrush}" Cursor="Hand">
+                            <TextBlock Text="{DynamicResource DetBtnCancel}" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Command="{Binding ConfirmDeleteEmployeeCommand}" Padding="16,8"
+                                Background="{DynamicResource ErrorBrush}" Foreground="White" 
+                                BorderThickness="0" FontWeight="SemiBold" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource BtnDelete}" FontSize="{DynamicResource FS13}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

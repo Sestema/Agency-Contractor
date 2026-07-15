@@ -580,6 +580,7 @@
     <sys:String x:Key="DetBtnExportPdf">Export profile PDF</sys:String>
     <sys:String x:Key="DetProfileCompletion">Completion: </sys:String>
     <sys:String x:Key="DetBtnArchive">To archive</sys:String>
+    <sys:String x:Key="DetBtnDeleteEmployee">Delete</sys:String>
     <sys:String x:Key="DetLabelStatus">Status</sys:String>
     <sys:String x:Key="DetTabDocs">Documents</sys:String>
     <sys:String x:Key="DetTabProfile">Profile</sys:String>
@@ -737,6 +738,7 @@
     <sys:String x:Key="DetGenBtnTooltip">Generate document from this template</sys:String>
     <sys:String x:Key="DetArchiveTitle">Move to archive</sys:String>
     <sys:String x:Key="DetArchiveDesc">The employee will be moved to the archive. Their folder and data will be preserved.</sys:String>
+    <sys:String x:Key="DetDeleteEmployeeDesc">The employee will be moved to Recently Deleted. Nothing is lost — you can restore them from there.</sys:String>
     <sys:String x:Key="DetArchiveDateLabel">End of cooperation date (dd.mm.yyyy):</sys:String>
     <sys:String x:Key="DetExtendDateLabel">New expiry date (dd.mm.yyyy):</sys:String>
     <sys:String x:Key="DetTooltipClose">Close</sys:String>
@@ -1662,6 +1664,17 @@
     <sys:String x:Key="FinFilterAll">All firms</sys:String>
     <sys:String x:Key="FinStatGrandTotal">Grand Total</sys:String>
     <sys:String x:Key="FinStatsConfig">Extra statistics</sys:String>
+    <sys:String x:Key="FinDisplaySettingsTitle">Display settings</sys:String>
+    <sys:String x:Key="FinNameOrderConfig">Name order</sys:String>
+    <sys:String x:Key="FinNameOrderFirstLast">First Last</sys:String>
+    <sys:String x:Key="FinNameOrderFirstLastExample">Example: Ivan Petrenko</sys:String>
+    <sys:String x:Key="FinNameOrderLastFirst">Last First</sys:String>
+    <sys:String x:Key="FinNameOrderLastFirstExample">Example: Petrenko Ivan</sys:String>
+    <sys:String x:Key="FinHoursFormatConfig">Hours format</sys:String>
+    <sys:String x:Key="FinHoursRounded">Rounded (1 decimal)</sys:String>
+    <sys:String x:Key="FinHoursRoundedDesc">Hours are shown and saved rounded to 1 decimal place, e.g. 8.5.</sys:String>
+    <sys:String x:Key="FinHoursCustom">Custom precision</sys:String>
+    <sys:String x:Key="FinHoursCustomDesc">You can enter any number of decimal places, e.g. 213.23 — no rounding applied.</sys:String>
     <sys:String x:Key="FinStatRemaining">Remaining to pay</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Surcharges (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Deductions (−)</sys:String>
@@ -1679,8 +1692,8 @@
     <sys:String x:Key="FinBtnAddField">Add</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Edit Column</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Delete column '{0}'?</sys:String>
-    <sys:String x:Key="FinExportSelectTitle">Export to Excel</sys:String>
-    <sys:String x:Key="FinExportSelectDesc">Select firms to export</sys:String>
+    <sys:String x:Key="FinExportSelectTitle">Export</sys:String>
+    <sys:String x:Key="FinExportSelectDesc">Select firms and export format</sys:String>
     <sys:String x:Key="FinExportSelectAll">Select all</sys:String>
     <sys:String x:Key="FinExportClearAll">Clear selection</sys:String>
     <sys:String x:Key="FinExportSearchHint">Search agency or firm…</sys:String>
@@ -1690,6 +1703,9 @@
     <sys:String x:Key="FinExportRowsCount">Rows</sys:String>
     <sys:String x:Key="FinExportSelectionHint">Selected {0} of {1}</sys:String>
     <sys:String x:Key="FinExportBtn">Export</sys:String>
+    <sys:String x:Key="FinExportBtnExcel">Excel</sys:String>
+    <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
+    <sys:String x:Key="FinSalaryExportedPdf">Exported PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Select at least one firm</sys:String>
     <sys:String x:Key="BtnDone">Done</sys:String>
 

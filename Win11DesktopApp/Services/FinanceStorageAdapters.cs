@@ -6,6 +6,21 @@ using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
+    public sealed class FirmFinanceRenameResult
+    {
+        public int DatabasesUpdated { get; init; }
+        public int EntriesRenamed { get; init; }
+        public int EntryPathsUpdated { get; init; }
+        public int ExpensesRenamed { get; init; }
+        public int EmptyDuplicatesRemoved { get; init; }
+        public string BackupFolderPath { get; init; } = string.Empty;
+    }
+
+    public sealed class FirmSalaryRepairResult
+    {
+        public int EntryPathsUpdated { get; init; }
+    }
+
     public interface IFinanceMonthPaymentsStorage
     {
         bool MonthDbExists(int year, int month);
@@ -26,6 +41,17 @@ namespace Win11DesktopApp.Services
             string? employeeId,
             string firmName,
             string beforeMonthKey);
+        FirmFinanceRenameResult RenameFirmReferences(
+            string oldName,
+            string newName,
+            int effectiveYear,
+            int effectiveMonth,
+            string oldCompanyFolder,
+            string newCompanyFolder);
+        IReadOnlyList<string> DiscoverFirmNamesForCompanyFolder(string companyFolder);
+        IReadOnlyList<string> DiscoverFirmNamesForCompanyFolderPrefixes(IReadOnlyCollection<string> companyFolderPrefixes);
+        IReadOnlyList<string> DiscoverAllDistinctFirmNames();
+        int RepairEmployeeFolderPrefixes(string oldCompanyFolder, string newCompanyFolder);
     }
 
     public interface IFinanceAdvancesStorage
@@ -153,6 +179,33 @@ namespace Win11DesktopApp.Services
             string firmName,
             string beforeMonthKey)
             => _salaryDbService.GetSavedPaymentsForEmployee(employeeFolder, employeeId, firmName, beforeMonthKey);
+
+        public FirmFinanceRenameResult RenameFirmReferences(
+            string oldName,
+            string newName,
+            int effectiveYear,
+            int effectiveMonth,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+            => _salaryDbService.RenameFirmReferences(
+                oldName,
+                newName,
+                effectiveYear,
+                effectiveMonth,
+                oldCompanyFolder,
+                newCompanyFolder);
+
+        public IReadOnlyList<string> DiscoverFirmNamesForCompanyFolder(string companyFolder)
+            => _salaryDbService.DiscoverFirmNamesForCompanyFolder(companyFolder);
+
+        public IReadOnlyList<string> DiscoverFirmNamesForCompanyFolderPrefixes(IReadOnlyCollection<string> companyFolderPrefixes)
+            => _salaryDbService.DiscoverFirmNamesForCompanyFolderPrefixes(companyFolderPrefixes);
+
+        public IReadOnlyList<string> DiscoverAllDistinctFirmNames()
+            => _salaryDbService.DiscoverAllDistinctFirmNames();
+
+        public int RepairEmployeeFolderPrefixes(string oldCompanyFolder, string newCompanyFolder)
+            => _salaryDbService.RepairEmployeeFolderPrefixes(oldCompanyFolder, newCompanyFolder);
     }
 
     public sealed class SqliteFinanceAdvancesStorage : IFinanceAdvancesStorage

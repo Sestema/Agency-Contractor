@@ -11,6 +11,7 @@ namespace Win11DesktopApp.Models
         public DateTime LastModified { get; set; } = DateTime.Now;
         public int HiddenFromYear { get; set; }
         public int HiddenFromMonth { get; set; }
+        public List<CompanyNamePeriod> NameHistory { get; set; } = new();
 
         private string _name = string.Empty;
         public string Name
@@ -62,6 +63,15 @@ namespace Win11DesktopApp.Models
 
         // Tags dictionary (Key: FieldName, Value: Tag)
         public Dictionary<string, string> Tags { get; set; } = new();
+    }
+
+    public class CompanyNamePeriod
+    {
+        public string Name { get; set; } = string.Empty;
+        public int FromYear { get; set; }
+        public int FromMonth { get; set; }
+        public int ToYear { get; set; }
+        public int ToMonth { get; set; }
     }
 
     public class WorkAddress : ViewModelBase

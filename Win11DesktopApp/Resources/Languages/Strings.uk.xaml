@@ -597,6 +597,7 @@
     <sys:String x:Key="DetBtnExportPdf">Експорт анкети PDF</sys:String>
     <sys:String x:Key="DetProfileCompletion">Заповнення: </sys:String>
     <sys:String x:Key="DetBtnArchive">В архів</sys:String>
+    <sys:String x:Key="DetBtnDeleteEmployee">Видалити</sys:String>
     <sys:String x:Key="DetLabelStatus">Статус</sys:String>
     <sys:String x:Key="DetTabDocs">Документи</sys:String>
     <sys:String x:Key="DetTabProfile">Анкета</sys:String>
@@ -753,6 +754,7 @@
     <sys:String x:Key="DetGenBtnTooltip">Згенерувати документ з цього шаблону</sys:String>
     <sys:String x:Key="DetArchiveTitle">Перемістити в архів</sys:String>
     <sys:String x:Key="DetArchiveDesc">Працівника буде переміщено в архів. Його папка та дані будуть збережені.</sys:String>
+    <sys:String x:Key="DetDeleteEmployeeDesc">Працівника буде переміщено у "Недавно видалені". Дані не зникнуть безслідно — їх можна відновити звідти.</sys:String>
     <sys:String x:Key="DetArchiveDateLabel">Дата закінчення співпраці (дд.мм.рррр):</sys:String>
     <sys:String x:Key="DetExtendDateLabel">Нова дата закінчення (дд.мм.рррр):</sys:String>
     <sys:String x:Key="DetTooltipClose">Закрити</sys:String>
@@ -1680,6 +1682,17 @@
     <sys:String x:Key="FinFilterAll">Всі фірми</sys:String>
     <sys:String x:Key="FinStatGrandTotal">Загальна Виплата</sys:String>
     <sys:String x:Key="FinStatsConfig">Додаткова статистика</sys:String>
+    <sys:String x:Key="FinDisplaySettingsTitle">Налаштування відображення</sys:String>
+    <sys:String x:Key="FinNameOrderConfig">Порядок імені</sys:String>
+    <sys:String x:Key="FinNameOrderFirstLast">Ім'я Прізвище</sys:String>
+    <sys:String x:Key="FinNameOrderFirstLastExample">Наприклад: Іван Петренко</sys:String>
+    <sys:String x:Key="FinNameOrderLastFirst">Прізвище Ім'я</sys:String>
+    <sys:String x:Key="FinNameOrderLastFirstExample">Наприклад: Петренко Іван</sys:String>
+    <sys:String x:Key="FinHoursFormatConfig">Формат годин</sys:String>
+    <sys:String x:Key="FinHoursRounded">Округлено (1 знак)</sys:String>
+    <sys:String x:Key="FinHoursRoundedDesc">Години показуються і зберігаються з округленням до 1 знака після коми, наприклад 8,5.</sys:String>
+    <sys:String x:Key="FinHoursCustom">Довільна точність</sys:String>
+    <sys:String x:Key="FinHoursCustomDesc">Можна вводити будь-яку кількість знаків після коми, наприклад 213,23 — без округлення.</sys:String>
     <sys:String x:Key="FinStatRemaining">Залишилось виплатити</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Доплатки (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Знято (−)</sys:String>
@@ -1697,8 +1710,8 @@
     <sys:String x:Key="FinBtnAddField">Додати</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Редагувати стовпець</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Видалити стовпець '{0}'?</sys:String>
-    <sys:String x:Key="FinExportSelectTitle">Експорт в Excel</sys:String>
-    <sys:String x:Key="FinExportSelectDesc">Оберіть фірми для експорту</sys:String>
+    <sys:String x:Key="FinExportSelectTitle">Експорт</sys:String>
+    <sys:String x:Key="FinExportSelectDesc">Оберіть фірми та формат експорту</sys:String>
     <sys:String x:Key="FinExportSelectAll">Вибрати всі</sys:String>
     <sys:String x:Key="FinExportClearAll">Очистити вибір</sys:String>
     <sys:String x:Key="FinExportSearchHint">Пошук агенції або фірми…</sys:String>
@@ -1708,6 +1721,9 @@
     <sys:String x:Key="FinExportRowsCount">Рядки</sys:String>
     <sys:String x:Key="FinExportSelectionHint">Вибрано {0} з {1}</sys:String>
     <sys:String x:Key="FinExportBtn">Експортувати</sys:String>
+    <sys:String x:Key="FinExportBtnExcel">Excel</sys:String>
+    <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
+    <sys:String x:Key="FinSalaryExportedPdf">Експортовано PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Оберіть хоча б одну фірму</sys:String>
     <sys:String x:Key="BtnDone">Готово</sys:String>
 

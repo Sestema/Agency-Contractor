@@ -548,29 +548,64 @@ namespace Win11DesktopApp.Services
         /// <summary>
         /// Renames a company folder when the company name changes.
         /// </summary>
-        public void RenameCompanyFolder(string oldName, string newName)
+        public bool RenameCompanyFolder(string oldName, string newName)
         {
             if (string.IsNullOrEmpty(RootPath) || string.IsNullOrEmpty(oldName) || string.IsNullOrEmpty(newName))
-                return;
+                return false;
 
             try
             {
                 var oldFolder = Path.Combine(RootPath, NormalizeFolderName(oldName));
                 var newFolder = Path.Combine(RootPath, NormalizeFolderName(newName));
 
-                if (Directory.Exists(oldFolder) && !Directory.Exists(newFolder))
+                if (string.Equals(oldFolder, newFolder, StringComparison.Ordinal))
+                    return Directory.Exists(oldFolder);
+
+                if (!Directory.Exists(oldFolder))
                 {
+                    LoggingService.LogWarning(
+                        "FolderService.RenameCompanyFolder",
+                        $"Source company folder does not exist: {oldFolder}");
+                    return false;
+                }
+
+                if (string.Equals(oldFolder, newFolder, StringComparison.OrdinalIgnoreCase))
+                {
+                    var temporaryFolder = oldFolder + $".rename-{Guid.NewGuid():N}";
+                    Directory.Move(oldFolder, temporaryFolder);
+                    try
+                    {
+                        Directory.Move(temporaryFolder, newFolder);
+                    }
+                    catch
+                    {
+                        if (Directory.Exists(temporaryFolder) && !Directory.Exists(oldFolder))
+                            Directory.Move(temporaryFolder, oldFolder);
+                        throw;
+                    }
+                }
+                else
+                {
+                    if (Directory.Exists(newFolder))
+                    {
+                        LoggingService.LogWarning(
+                            "FolderService.RenameCompanyFolder",
+                            $"Target company folder already exists: {newFolder}");
+                        return false;
+                    }
+
                     Directory.Move(oldFolder, newFolder);
-                    Debug.WriteLine($"FolderService.RenameCompanyFolder: {oldFolder} -> {newFolder}");
                 }
-                else if (!Directory.Exists(oldFolder))
-                {
-                    Debug.WriteLine($"FolderService.RenameCompanyFolder: old folder not found, creating new structure.");
-                }
+
+                LoggingService.LogInfo(
+                    "FolderService.RenameCompanyFolder",
+                    $"Renamed company folder: {oldFolder} -> {newFolder}");
+                return Directory.Exists(newFolder) && !Directory.Exists(oldFolder);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"FolderService.RenameCompanyFolder error: {ex.Message}");
+                LoggingService.LogError("FolderService.RenameCompanyFolder", ex);
+                return false;
             }
         }
 

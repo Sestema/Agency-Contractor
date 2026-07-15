@@ -72,7 +72,7 @@ namespace Win11DesktopApp.Services
             {
                 var column = 1;
                 worksheet.Cell(row, column++).Value = entry.FirmName;
-                worksheet.Cell(row, column++).Value = entry.FullName;
+                worksheet.Cell(row, column++).Value = entry.DisplayName;
                 worksheet.Cell(row, column).Value = entry.HoursWorked;
                 worksheet.Cell(row, column++).Style.NumberFormat.Format = "#,##0.00";
                 worksheet.Cell(row, column).Value = entry.HourlyRate;

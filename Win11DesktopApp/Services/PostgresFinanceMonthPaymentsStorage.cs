@@ -306,6 +306,330 @@ WHERE (source_year::text || '-' || lpad(source_month::text, 2, '0')) < @beforeMo
                 : new Dictionary<string, (decimal netSalary, bool paid)>(StringComparer.OrdinalIgnoreCase);
         }
 
+        public FirmFinanceRenameResult RenameFirmReferences(
+            string oldName,
+            string newName,
+            int effectiveYear,
+            int effectiveMonth,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(oldName)
+                || string.IsNullOrWhiteSpace(newName)
+                || effectiveYear <= 0
+                || effectiveMonth is < 1 or > 12)
+            {
+                return new FirmFinanceRenameResult();
+            }
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+
+            using (var conflictCommand = connection.CreateCommand())
+            {
+                conflictCommand.Transaction = transaction;
+                conflictCommand.CommandText = @"
+SELECT old_row.full_name, old_row.source_year, old_row.source_month
+FROM salary.salary_entries old_row
+JOIN salary.salary_entries new_row
+  ON new_row.source_year = old_row.source_year
+ AND new_row.source_month = old_row.source_month
+ AND lower(new_row.firm_name) = lower(@newName)
+ AND (
+      (COALESCE(old_row.employee_id, '') <> ''
+       AND lower(COALESCE(new_row.employee_id, '')) = lower(old_row.employee_id))
+      OR lower(COALESCE(new_row.employee_folder, '')) =
+         lower(CASE
+           WHEN lower(COALESCE(old_row.employee_folder, '')) = lower(@oldFolder)
+             OR (
+                  length(COALESCE(old_row.employee_folder, '')) > length(@oldFolder)
+                  AND lower(substr(COALESCE(old_row.employee_folder, ''), 1, length(@oldFolder))) = lower(@oldFolder)
+                  AND substr(COALESCE(old_row.employee_folder, ''), length(@oldFolder) + 1, 1) = '\'
+                )
+           THEN @newFolder || substr(old_row.employee_folder, length(@oldFolder) + 1)
+           ELSE old_row.employee_folder
+         END)
+     )
+WHERE lower(old_row.firm_name) = lower(@oldName)
+  AND (old_row.source_year > @effectiveYear
+       OR (old_row.source_year = @effectiveYear AND old_row.source_month >= @effectiveMonth))
+  AND lower(COALESCE(old_row.status, '')) <> 'paid'
+LIMIT 1;";
+                AddFirmRenameParameters(
+                    conflictCommand,
+                    oldName,
+                    newName,
+                    effectiveYear,
+                    effectiveMonth,
+                    oldCompanyFolder,
+                    newCompanyFolder);
+                using var reader = conflictCommand.ExecuteReader();
+                if (reader.Read())
+                {
+                    throw new InvalidOperationException(
+                        $"Перейменування зупинено: для {reader.GetString(0)} вже існує рядок під новою назвою за {reader.GetInt32(2):D2}.{reader.GetInt32(1):D4}.");
+                }
+            }
+
+            int entriesRenamed;
+            int pathsUpdated;
+            using (var countCommand = connection.CreateCommand())
+            {
+                countCommand.Transaction = transaction;
+                countCommand.CommandText = @"
+SELECT
+  (SELECT COUNT(*)
+   FROM salary.salary_entries
+   WHERE lower(firm_name) = lower(@oldName)
+     AND (source_year > @effectiveYear
+          OR (source_year = @effectiveYear AND source_month >= @effectiveMonth))
+     AND lower(COALESCE(status, '')) <> 'paid'),
+  (SELECT COUNT(*)
+   FROM salary.salary_entries
+   WHERE lower(COALESCE(employee_folder, '')) = lower(@oldFolder)
+      OR (
+           length(COALESCE(employee_folder, '')) > length(@oldFolder)
+           AND lower(substr(COALESCE(employee_folder, ''), 1, length(@oldFolder))) = lower(@oldFolder)
+           AND substr(COALESCE(employee_folder, ''), length(@oldFolder) + 1, 1) = '\'
+         ));";
+                AddFirmRenameParameters(
+                    countCommand,
+                    oldName,
+                    newName,
+                    effectiveYear,
+                    effectiveMonth,
+                    oldCompanyFolder,
+                    newCompanyFolder);
+                using var reader = countCommand.ExecuteReader();
+                reader.Read();
+                entriesRenamed = Convert.ToInt32(reader.GetInt64(0), CultureInfo.InvariantCulture);
+                pathsUpdated = Convert.ToInt32(reader.GetInt64(1), CultureInfo.InvariantCulture);
+            }
+
+            using (var updateEntries = connection.CreateCommand())
+            {
+                updateEntries.Transaction = transaction;
+                updateEntries.CommandText = @"
+UPDATE salary.salary_entries
+SET firm_name = CASE
+      WHEN (source_year > @effectiveYear
+            OR (source_year = @effectiveYear AND source_month >= @effectiveMonth))
+       AND lower(COALESCE(status, '')) <> 'paid'
+      THEN @newName
+      ELSE firm_name
+    END
+WHERE lower(firm_name) = lower(@oldName);";
+                AddFirmRenameParameters(
+                    updateEntries,
+                    oldName,
+                    newName,
+                    effectiveYear,
+                    effectiveMonth,
+                    oldCompanyFolder,
+                    newCompanyFolder);
+                updateEntries.ExecuteNonQuery();
+            }
+
+            using (var updatePaths = connection.CreateCommand())
+            {
+                updatePaths.Transaction = transaction;
+                // See the comment on RepairEmployeeFolderPrefixes below: this is an exact
+                // prefix + path-separator-boundary match, not a LIKE wildcard match. Folder
+                // names routinely contain '_' (space -> underscore) and Postgres additionally
+                // treats '\' as its LIKE escape character by default, so a naive
+                // "LIKE @oldFolder || '%'" both over-matches unrelated folders (via '_'
+                // wildcards) and under-matches real Windows paths (via '\' escaping).
+                updatePaths.CommandText = @"
+UPDATE salary.salary_entries
+SET employee_folder = @newFolder || substr(employee_folder, length(@oldFolder) + 1)
+WHERE lower(COALESCE(employee_folder, '')) = lower(@oldFolder)
+   OR (
+        length(COALESCE(employee_folder, '')) > length(@oldFolder)
+        AND lower(substr(COALESCE(employee_folder, ''), 1, length(@oldFolder))) = lower(@oldFolder)
+        AND substr(COALESCE(employee_folder, ''), length(@oldFolder) + 1, 1) = '\'
+      );";
+                AddFirmRenameParameters(
+                    updatePaths,
+                    oldName,
+                    newName,
+                    effectiveYear,
+                    effectiveMonth,
+                    oldCompanyFolder,
+                    newCompanyFolder);
+                updatePaths.ExecuteNonQuery();
+            }
+
+            int expensesRenamed;
+            using (var updateExpenses = connection.CreateCommand())
+            {
+                updateExpenses.Transaction = transaction;
+                updateExpenses.CommandText = @"
+UPDATE salary.salary_expenses
+SET firm_name = @newName
+WHERE lower(firm_name) = lower(@oldName)
+  AND (source_year > @effectiveYear
+       OR (source_year = @effectiveYear AND source_month >= @effectiveMonth));";
+                AddFirmRenameParameters(
+                    updateExpenses,
+                    oldName,
+                    newName,
+                    effectiveYear,
+                    effectiveMonth,
+                    oldCompanyFolder,
+                    newCompanyFolder);
+                expensesRenamed = updateExpenses.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            return new FirmFinanceRenameResult
+            {
+                EntriesRenamed = entriesRenamed,
+                EntryPathsUpdated = pathsUpdated,
+                ExpensesRenamed = expensesRenamed
+            };
+        }
+
+        public IReadOnlyList<string> DiscoverFirmNamesForCompanyFolder(string companyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return Array.Empty<string>();
+
+            return DiscoverFirmNamesForCompanyFolderPrefixes(new[] { companyFolder });
+        }
+
+        public IReadOnlyList<string> DiscoverFirmNamesForCompanyFolderPrefixes(IReadOnlyCollection<string> companyFolderPrefixes)
+        {
+            if (companyFolderPrefixes == null || companyFolderPrefixes.Count == 0)
+                return Array.Empty<string>();
+
+            var normalizedPrefixes = companyFolderPrefixes
+                .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+                .Select(prefix => prefix.TrimEnd('\\', '/'))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (normalizedPrefixes.Count == 0)
+                return Array.Empty<string>();
+
+            EnsureInitialized();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT firm_name, employee_folder
+FROM salary.salary_entries;";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var firmName = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                var employeeFolder = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                if (string.IsNullOrWhiteSpace(firmName))
+                    continue;
+
+                if (PostgresEmployeeFolderBelongsToCompanyPrefixes(employeeFolder, normalizedPrefixes))
+                    names.Add(firmName);
+            }
+
+            return names.ToList();
+        }
+
+        private static bool PostgresEmployeeFolderBelongsToCompanyPrefixes(
+            string employeeFolder,
+            IReadOnlyCollection<string> normalizedCompanyFolderPrefixes)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder) || normalizedCompanyFolderPrefixes.Count == 0)
+                return false;
+
+            var normalizedEmployeeFolder = employeeFolder.Replace('/', '\\').TrimEnd('\\');
+            foreach (var prefix in normalizedCompanyFolderPrefixes)
+            {
+                if (normalizedEmployeeFolder.StartsWith(prefix + "\\", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(normalizedEmployeeFolder, prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            var companyFolder = SalaryDbService.TryExtractCompanyFolderFromEmployeePath(employeeFolder);
+            if (string.IsNullOrWhiteSpace(companyFolder))
+                return false;
+
+            var normalizedCompanyFolder = companyFolder.Replace('/', '\\').TrimEnd('\\');
+            return normalizedCompanyFolderPrefixes.Any(prefix =>
+                string.Equals(normalizedCompanyFolder, prefix, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public IReadOnlyList<string> DiscoverAllDistinctFirmNames()
+        {
+            EnsureInitialized();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT DISTINCT firm_name FROM salary.salary_entries;";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (!reader.IsDBNull(0))
+                {
+                    var name = reader.GetString(0);
+                    if (!string.IsNullOrWhiteSpace(name))
+                        names.Add(name);
+                }
+            }
+
+            return names.ToList();
+        }
+
+        public int RepairEmployeeFolderPrefixes(string oldCompanyFolder, string newCompanyFolder)
+        {
+            if (string.IsNullOrWhiteSpace(oldCompanyFolder)
+                || string.IsNullOrWhiteSpace(newCompanyFolder)
+                || string.Equals(oldCompanyFolder, newCompanyFolder, StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            // Exact prefix + path-separator-boundary match (not LIKE) - see the comment in
+            // RenameFirmReferences above for why a LIKE-based match here is unsafe.
+            command.CommandText = @"
+UPDATE salary.salary_entries
+SET employee_folder = @newFolder || substr(employee_folder, length(@oldFolder) + 1)
+WHERE lower(COALESCE(employee_folder, '')) = lower(@oldFolder)
+   OR (
+        length(COALESCE(employee_folder, '')) > length(@oldFolder)
+        AND lower(substr(COALESCE(employee_folder, ''), 1, length(@oldFolder))) = lower(@oldFolder)
+        AND substr(COALESCE(employee_folder, ''), length(@oldFolder) + 1, 1) = '\'
+      );";
+            command.Parameters.AddWithValue("oldFolder", oldCompanyFolder.TrimEnd('\\', '/'));
+            command.Parameters.AddWithValue("newFolder", newCompanyFolder.TrimEnd('\\', '/'));
+            var updated = command.ExecuteNonQuery();
+            transaction.Commit();
+            return updated;
+        }
+
+        private static void AddFirmRenameParameters(
+            NpgsqlCommand command,
+            string oldName,
+            string newName,
+            int effectiveYear,
+            int effectiveMonth,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            command.Parameters.AddWithValue("oldName", oldName);
+            command.Parameters.AddWithValue("newName", newName);
+            command.Parameters.AddWithValue("effectiveYear", effectiveYear);
+            command.Parameters.AddWithValue("effectiveMonth", effectiveMonth);
+            command.Parameters.AddWithValue("oldFolder", oldCompanyFolder ?? string.Empty);
+            command.Parameters.AddWithValue("newFolder", newCompanyFolder ?? string.Empty);
+        }
+
         private void EnsureInitialized()
         {
             if (_isInitialized)

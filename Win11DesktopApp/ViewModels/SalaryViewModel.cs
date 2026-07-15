@@ -105,6 +105,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CreateNextMonthCommand { get; }
         public ICommand OpenEmployeeCommand { get; }
         public ICommand ToggleStatsSettingsCommand { get; }
+        public ICommand ToggleNameOrderSettingsCommand { get; }
+        public ICommand CloseNameOrderSettingsCommand { get; }
         public ICommand ClearSearchCommand { get; }
 
         private bool _nextMonthExists;
@@ -257,6 +259,37 @@ namespace Win11DesktopApp.ViewModels
         private bool _isStatsSettingsOpen;
         public bool IsStatsSettingsOpen { get => _isStatsSettingsOpen; set => SetProperty(ref _isStatsSettingsOpen, value); }
 
+        public bool SalaryNameOrderLastFirst
+        {
+            get => _appSettingsService.Settings.SalaryNameOrderLastFirst;
+            set
+            {
+                _appSettingsService.Settings.SalaryNameOrderLastFirst = value;
+                _appSettingsService.SaveSettings();
+                SalaryEntry.ShowLastNameFirst = value;
+                foreach (var entry in Entries)
+                    entry.NotifyDisplayNameChanged();
+                OnPropertyChanged(nameof(SalaryNameOrderLastFirst));
+            }
+        }
+
+        private bool _isNameOrderSettingsOpen;
+        public bool IsNameOrderSettingsOpen { get => _isNameOrderSettingsOpen; set => SetProperty(ref _isNameOrderSettingsOpen, value); }
+
+        public bool HoursCustomPrecision
+        {
+            get => _appSettingsService.Settings.SalaryHoursCustomPrecision;
+            set
+            {
+                _appSettingsService.Settings.SalaryHoursCustomPrecision = value;
+                _appSettingsService.SaveSettings();
+                SalaryEntry.UseCustomHoursFormat = value;
+                foreach (var entry in Entries)
+                    entry.NotifyHoursFormatChanged();
+                OnPropertyChanged(nameof(HoursCustomPrecision));
+            }
+        }
+
         private bool _isAdvanceDialogOpen;
         public bool IsAdvanceDialogOpen { get => _isAdvanceDialogOpen; set => SetProperty(ref _isAdvanceDialogOpen, value); }
 
@@ -397,8 +430,12 @@ namespace Win11DesktopApp.ViewModels
             CreateNextMonthCommand = new AsyncRelayCommand(async o => await CreateNextMonthAsync(), _ => CanEditAnyVisibleSalary);
             OpenEmployeeCommand = new RelayCommand(o => OpenEmployee(o as SalaryEntry));
             ToggleStatsSettingsCommand = new RelayCommand(o => IsStatsSettingsOpen = !IsStatsSettingsOpen);
+            ToggleNameOrderSettingsCommand = new RelayCommand(o => IsNameOrderSettingsOpen = true);
+            CloseNameOrderSettingsCommand = new RelayCommand(o => IsNameOrderSettingsOpen = false);
             ClearSearchCommand = new RelayCommand(o => SearchText = string.Empty);
 
+            SalaryEntry.ShowLastNameFirst = _appSettingsService.Settings.SalaryNameOrderLastFirst;
+            SalaryEntry.UseCustomHoursFormat = _appSettingsService.Settings.SalaryHoursCustomPrecision;
             RefreshActiveFields();
             _ = InitializeSelectedMonthAndLoadAsync();
         }
@@ -669,7 +706,8 @@ namespace Win11DesktopApp.ViewModels
             foreach (var company in companies)
             {
                 var employees = _employeeService.GetEmployeesForFirm(company.Name).ToList();
-                snapshot.EmployeesByFirm[company.Name] = employees;
+                foreach (var firmName in GetKnownCompanyNames(company))
+                    snapshot.EmployeesByFirm[firmName] = employees;
 
                 foreach (var employee in employees)
                 {
@@ -696,7 +734,7 @@ namespace Win11DesktopApp.ViewModels
         private HashSet<string> GetAccessibleFirmNames(int year, int month)
         {
             return GetVisibleAccessibleCompanies(year, month)
-                .Select(company => company.Name)
+                .SelectMany(GetKnownCompanyNames)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
@@ -704,7 +742,89 @@ namespace Win11DesktopApp.ViewModels
         private EmployerCompany? FindCompanyByName(string firmName)
         {
             return _companyService.Companies.FirstOrDefault(company =>
-                string.Equals(company.Name, firmName, StringComparison.OrdinalIgnoreCase));
+                GetKnownCompanyNames(company).Any(name =>
+                    string.Equals(name, firmName, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static IEnumerable<string> GetKnownCompanyNames(EmployerCompany company)
+        {
+            if (!string.IsNullOrWhiteSpace(company.Name))
+                yield return company.Name;
+
+            foreach (var period in company.NameHistory ?? new List<CompanyNamePeriod>())
+            {
+                if (!string.IsNullOrWhiteSpace(period.Name))
+                    yield return period.Name;
+            }
+        }
+
+        private static string ResolveCanonicalFirmName(string firmName, IReadOnlyList<EmployerCompany> companies)
+        {
+            if (string.IsNullOrWhiteSpace(firmName))
+                return firmName;
+
+            foreach (var company in companies)
+            {
+                foreach (var knownName in GetKnownCompanyNames(company))
+                {
+                    if (string.Equals(knownName, firmName, StringComparison.OrdinalIgnoreCase))
+                        return company.Name;
+                }
+            }
+
+            return firmName;
+        }
+
+        private static bool HasExistingSalaryEntryForCompanyEmployee(
+            string? employeeId,
+            string? employeeFolder,
+            EmployerCompany company,
+            ISet<string> existingKeys)
+        {
+            foreach (var firmName in GetKnownCompanyNames(company))
+            {
+                if (existingKeys.Contains(BuildEmployeeFirmKey(employeeId, employeeFolder, firmName)))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetHourlyRateFromEntriesForCompany(
+            IReadOnlyList<SalaryEntry> sourceEntries,
+            string? employeeId,
+            string employeeFolder,
+            EmployerCompany company,
+            out decimal hourlyRate)
+        {
+            foreach (var firmName in GetKnownCompanyNames(company))
+            {
+                if (TryGetHourlyRateFromEntries(sourceEntries, employeeId, employeeFolder, firmName, out hourlyRate))
+                    return true;
+            }
+
+            hourlyRate = 0;
+            return false;
+        }
+
+        private static bool TryGetInheritedNoteForCompanyEmployee(
+            IReadOnlyDictionary<string, string> prevNotes,
+            string? employeeId,
+            string? employeeFolder,
+            EmployerCompany company,
+            out string note)
+        {
+            foreach (var firmName in GetKnownCompanyNames(company))
+            {
+                if (prevNotes.TryGetValue(BuildEmployeeFirmKey(employeeId, employeeFolder, firmName), out note)
+                    && !string.IsNullOrEmpty(note))
+                {
+                    return true;
+                }
+            }
+
+            note = string.Empty;
+            return false;
         }
 
         private bool CanEditSalaryFirm(string firmName, string actionName)
@@ -1006,7 +1126,7 @@ namespace Win11DesktopApp.ViewModels
             var entries = new List<SalaryEntry>();
             var existingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var allowedFirmNames = companies
-                .Select(company => company.Name)
+                .SelectMany(GetKnownCompanyNames)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             bool needResave = false;
@@ -1029,11 +1149,17 @@ namespace Win11DesktopApp.ViewModels
             var periodMapSw = Stopwatch.StartNew();
             var employmentByKey = new Dictionary<string, List<(string StartDate, string EndDate)>>(StringComparer.OrdinalIgnoreCase);
             foreach (var company in companies)
-                foreach (var emp in GetEmployeesForFirmSnapshot(company.Name, employeesSnapshot))
+            {
+                var employees = GetEmployeesForFirmSnapshot(company.Name, employeesSnapshot);
+                foreach (var firmName in GetKnownCompanyNames(company))
                 {
-                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
-                    AddEmploymentPeriod(employmentByKey, key, emp.StartDate, emp.EndDate);
+                    foreach (var emp in employees)
+                    {
+                        var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, firmName);
+                        AddEmploymentPeriod(employmentByKey, key, emp.StartDate, emp.EndDate);
+                    }
                 }
+            }
 
             foreach (var arc in allHistory)
             {
@@ -1089,6 +1215,13 @@ namespace Win11DesktopApp.ViewModels
                 timing.CanonicalizeResolveMs += resolveSw.ElapsedMilliseconds;
                 if (resolved != entry.EmployeeFolder) { entry.EmployeeFolder = resolved; needResave = true; }
 
+                var canonicalFirmName = ResolveCanonicalFirmName(entry.FirmName, companies);
+                if (!string.Equals(entry.FirmName, canonicalFirmName, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.FirmName = canonicalFirmName;
+                    needResave = true;
+                }
+
                 var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
                 if (!employmentByKey.TryGetValue(key, out var employmentPeriods)
                     || !WorkedInAnyEmploymentPeriod(employmentPeriods, year, month))
@@ -1138,17 +1271,18 @@ namespace Win11DesktopApp.ViewModels
                     if (emp.Status != "Active") continue;
                     if (!EmployeeWorkedInMonth(emp, year, month)) continue;
 
-                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
-                    if (existingKeys.Contains(key)) continue;
+                    if (HasExistingSalaryEntryForCompanyEmployee(emp.UniqueId, emp.EmployeeFolder, company, existingKeys))
+                        continue;
 
-                    prevNotes.TryGetValue(key, out var inheritedNote);
+                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
+                    TryGetInheritedNoteForCompanyEmployee(prevNotes, emp.UniqueId, emp.EmployeeFolder, company, out var inheritedNote);
                     var entry = new SalaryEntry
                     {
                         EmployeeId    = emp.UniqueId,
                         EmployeeFolder = emp.EmployeeFolder,
                         FullName      = emp.FullName,
                         FirmName      = company.Name,
-                        HourlyRate    = TryGetHourlyRateFromEntries(prevEntries, emp.UniqueId, emp.EmployeeFolder, company.Name, out var previousRate)
+                        HourlyRate    = TryGetHourlyRateFromEntriesForCompany(prevEntries, emp.UniqueId, emp.EmployeeFolder, company, out var previousRate)
                             ? previousRate
                             : GetDefaultRate(emp.EmployeeFolder),
                         HoursWorked   = 0,
@@ -1167,14 +1301,22 @@ namespace Win11DesktopApp.ViewModels
             foreach (var arc in allHistory)
             {
                 if (!ArchivedWorkedInMonth(arc, year, month)) continue;
-                var firmName = arc.FirmName;
-                if (string.IsNullOrEmpty(firmName)) continue;
-                if (!allowedFirmNames.Contains(firmName)) continue;
+                if (string.IsNullOrEmpty(arc.FirmName)) continue;
+                if (!allowedFirmNames.Contains(arc.FirmName)) continue;
+
+                var firmName = ResolveCanonicalFirmName(arc.FirmName, companies);
                 var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
 
-                prevNotes.TryGetValue(key, out var inheritedNote);
-                var historyRecord = TryGetSalaryHistoryRecord(arc.EmployeeFolder, arc.UniqueId, firmName, year, month);
+                prevNotes.TryGetValue(BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, arc.FirmName), out var inheritedNote);
+                if (string.IsNullOrEmpty(inheritedNote))
+                    prevNotes.TryGetValue(key, out inheritedNote);
+
+                var historyCompany = FindCompanyByName(firmName);
+                var historyRecord = TryGetSalaryHistoryRecord(arc.EmployeeFolder, arc.UniqueId, arc.FirmName, year, month)
+                    ?? (historyCompany == null || string.Equals(arc.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
+                        ? null
+                        : TryGetSalaryHistoryRecord(arc.EmployeeFolder, arc.UniqueId, firmName, year, month));
                 var entry = historyRecord != null
                     ? CreateSalaryEntryFromHistory(historyRecord, arc.UniqueId, arc.EmployeeFolder, arc.FullName, firmName, fieldList)
                     : new SalaryEntry
@@ -1183,9 +1325,12 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeFolder = arc.EmployeeFolder,
                         FullName       = arc.FullName,
                         FirmName       = firmName,
-                        HourlyRate     = TryGetHourlyRateFromEntries(prevEntries, arc.UniqueId, arc.EmployeeFolder, firmName, out var previousRate)
+                        HourlyRate     = historyCompany != null
+                            && TryGetHourlyRateFromEntriesForCompany(prevEntries, arc.UniqueId, arc.EmployeeFolder, historyCompany, out var previousRate)
                             ? previousRate
-                            : GetDefaultRate(arc.EmployeeFolder),
+                            : TryGetHourlyRateFromEntries(prevEntries, arc.UniqueId, arc.EmployeeFolder, arc.FirmName, out previousRate)
+                                ? previousRate
+                                : GetDefaultRate(arc.EmployeeFolder),
                         HoursWorked    = 0,
                         Note           = inheritedNote ?? string.Empty,
                         FieldDefinitions = fieldList
@@ -1498,7 +1643,7 @@ namespace Win11DesktopApp.ViewModels
             var nextMonthEnd = new DateTime(_selectedYear, _selectedMonth, 1).AddMonths(1).AddDays(-1);
             var companiesCreate = GetVisibleAccessibleCompanies(_selectedYear, _selectedMonth);
             var allowedFirmNames = companiesCreate
-                .Select(company => company.Name)
+                .SelectMany(GetKnownCompanyNames)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (companiesCreate != null)
@@ -1511,10 +1656,11 @@ namespace Win11DesktopApp.ViewModels
                     if (!EmployeeWorkedInMonth(emp, _selectedYear, _selectedMonth))
                         continue;
 
-                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
-                    if (existingKeys.Contains(key)) continue;
+                    if (HasExistingSalaryEntryForCompanyEmployee(emp.UniqueId, emp.EmployeeFolder, company, existingKeys))
+                        continue;
 
-                    prevNotes.TryGetValue(key, out var inheritedNote);
+                    var key = BuildEmployeeFirmKey(emp.UniqueId, emp.EmployeeFolder, company.Name);
+                    TryGetInheritedNoteForCompanyEmployee(prevNotes, emp.UniqueId, emp.EmployeeFolder, company, out var inheritedNote);
 
                     var entry = new SalaryEntry
                     {
@@ -1522,7 +1668,7 @@ namespace Win11DesktopApp.ViewModels
                         EmployeeFolder = emp.EmployeeFolder,
                         FullName = emp.FullName,
                         FirmName = company.Name,
-                        HourlyRate = TryGetHourlyRateFromEntries(previousEntries, emp.UniqueId, emp.EmployeeFolder, company.Name, out var prevRate)
+                        HourlyRate = TryGetHourlyRateFromEntriesForCompany(previousEntries, emp.UniqueId, emp.EmployeeFolder, company, out var prevRate)
                             ? prevRate
                             : GetDefaultRate(emp.EmployeeFolder),
                         HoursWorked = 0,
@@ -1548,24 +1694,30 @@ namespace Win11DesktopApp.ViewModels
                 if (!ArchivedWorkedInMonth(arc, _selectedYear, _selectedMonth))
                     continue;
 
-                var firmName = arc.FirmName;
+                var firmName = ResolveCanonicalFirmName(arc.FirmName, companiesCreate);
                 if (string.IsNullOrEmpty(firmName)) continue;
-                if (!allowedFirmNames.Contains(firmName)) continue;
+                if (!allowedFirmNames.Contains(arc.FirmName)) continue;
 
                     var key = BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, firmName);
                 if (existingKeys.Contains(key)) continue;
 
-                prevNotes.TryGetValue(key, out var inheritedNote);
+                prevNotes.TryGetValue(BuildEmployeeFirmKey(arc.UniqueId, arc.EmployeeFolder, arc.FirmName), out var inheritedNote);
+                if (string.IsNullOrEmpty(inheritedNote))
+                    prevNotes.TryGetValue(key, out inheritedNote);
 
+                var historyCompany = FindCompanyByName(firmName);
                 var entry = new SalaryEntry
                 {
                         EmployeeId = arc.UniqueId,
                     EmployeeFolder = arc.EmployeeFolder,
                     FullName = arc.FullName,
                     FirmName = firmName,
-                    HourlyRate = TryGetHourlyRateFromEntries(previousEntries, arc.UniqueId, arc.EmployeeFolder, firmName, out var prevArcRate)
+                    HourlyRate = historyCompany != null
+                        && TryGetHourlyRateFromEntriesForCompany(previousEntries, arc.UniqueId, arc.EmployeeFolder, historyCompany, out var prevArcRate)
                         ? prevArcRate
-                        : GetDefaultRate(arc.EmployeeFolder),
+                        : TryGetHourlyRateFromEntries(previousEntries, arc.UniqueId, arc.EmployeeFolder, arc.FirmName, out prevArcRate)
+                            ? prevArcRate
+                            : GetDefaultRate(arc.EmployeeFolder),
                     HoursWorked = 0,
                     Note = inheritedNote ?? string.Empty,
                     FieldDefinitions = fieldList
@@ -1911,6 +2063,17 @@ namespace Win11DesktopApp.ViewModels
 
         private void OnSyncEventReceived(object? sender, SyncEventReceivedEventArgs e)
         {
+            if (string.Equals(e.Record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
+            {
+                _financeService.MonthPaymentsService.InvalidatePaymentsCache();
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher != null)
+                {
+                    _ = dispatcher.InvokeAsync(async () => await LoadReportAsync());
+                }
+                return;
+            }
+
             if (!string.Equals(e.Record.Type, "SalaryChanged", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(e.Record.Type, "SalaryEntryChanged", StringComparison.OrdinalIgnoreCase))
                 return;
@@ -2554,6 +2717,14 @@ namespace Win11DesktopApp.ViewModels
 
             if (exportEntries.Count == 0) return;
 
+            if (selectDialog.ExportAsPdf)
+                ExportSelectedFirmsToPdf(selectedFirms, exportEntries);
+            else
+                ExportSelectedFirmsToExcel(selectedFirms, exportEntries);
+        }
+
+        private void ExportSelectedFirmsToExcel(HashSet<string> selectedFirms, List<SalaryEntry> exportEntries)
+        {
             var dlg = new SaveFileDialog
             {
                 Filter = "Excel (*.xlsx)|*.xlsx",
@@ -2611,6 +2782,65 @@ namespace Win11DesktopApp.ViewModels
                 ToastService.Instance.Error(StatusMessage);
             }
         }
+
+        private void ExportSelectedFirmsToPdf(HashSet<string> selectedFirms, List<SalaryEntry> exportEntries)
+        {
+            var dlg = new SaveFileDialog
+            {
+                Filter = "PDF (*.pdf)|*.pdf",
+                FileName = $"Salary_{_selectedYear}-{_selectedMonth:D2}.pdf"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var fields = ActiveCustomFields.ToList();
+                var expenses = _financeService.GetFirmExpensesForFirms(_selectedYear, _selectedMonth, selectedFirms);
+                var labels = BuildSalaryPdfExportLabels();
+
+                SalaryPdfExportService.GenerateToFile(
+                    dlg.FileName,
+                    _selectedYear,
+                    _selectedMonth,
+                    exportEntries,
+                    fields,
+                    expenses,
+                    labels);
+
+                StatusMessage = L("FinSalaryExportedPdf") is string pdfMsg && pdfMsg.Length > 0
+                    ? pdfMsg
+                    : "Exported PDF!";
+                ToastService.Instance.Success(StatusMessage);
+                _activityLogService.Log("ExportPdf", "Export", "", "",
+                    $"Експортовано виплату {MonthDisplay} → PDF",
+                    details: BuildSalaryExportDetails(selectedFirms, exportEntries, fields, dlg.FileName));
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Export error: {ex.Message}";
+                ToastService.Instance.Error(StatusMessage);
+            }
+        }
+
+        private SalaryPdfExportLabels BuildSalaryPdfExportLabels()
+            => new()
+            {
+                ColFirm = DocL("FinColFirm") ?? "Firm",
+                ColName = DocL("FinColName") ?? "Name",
+                ColHours = DocL("FinColHours") ?? "Hours",
+                ColRate = DocL("FinColRate") ?? "Rate",
+                ColGross = DocL("FinColGross") ?? "Gross",
+                ColAdvance = DocL("FinColAdvance") ?? "Advance",
+                ColNet = DocL("FinColNet") ?? "Net Pay",
+                ColNote = DocL("FinColNote") ?? "Note",
+                ColPaid = DocL("FinColPaid") ?? "Paid",
+                ColAmount = DocL("FinColAmount") ?? "Amount",
+                FirmExpenses = DocL("FinFirmExpenses") ?? "Firm Expenses",
+                ExpenseTotal = DocL("FinExpenseTotal") ?? "Total expenses",
+                GrandTotal = DocL("FinStatGrandTotal") ?? "Grand Total",
+                FirmBreakdown = DocL("FinFirmBreakdown") ?? "By Firm",
+                PaidYes = "✓"
+            };
 
         private int ExcelWriteTitle(IXLWorksheet ws, int totalCols)
         {
@@ -2702,7 +2932,7 @@ namespace Win11DesktopApp.ViewModels
                     ws.Cell(row, col).Style.Font.FontSize = 12;
                     col++;
 
-                    ws.Cell(row, col).Value = entry.FullName;
+                    ws.Cell(row, col).Value = entry.DisplayName;
                     ws.Cell(row, col).Style.Font.Bold = true;
                     if (entry.GrossSalary > 0)
                         ws.Cell(row, col).Style.Fill.BackgroundColor = lightGreen;

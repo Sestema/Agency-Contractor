@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 
@@ -82,18 +83,89 @@ namespace Win11DesktopApp.Models
 
     public class SalaryEntry : INotifyPropertyChanged
     {
+        // Global, app-wide display preference for how DisplayName formats FullName (last-first vs
+        // first-last). This intentionally does NOT touch FullName itself, because FullName is used
+        // as an identity/matching/sorting key in many places (search, dictionaries, activity log,
+        // advance dialogs, DB storage) - only the separate DisplayName property below is affected.
+        public static bool ShowLastNameFirst { get; set; }
+
+        // Global, app-wide display/edit preference for HoursWorked: when false (default), hours are
+        // shown/edited rounded to 1 decimal place (legacy behavior). When true, HoursDisplayText shows
+        // and accepts the exact stored value with any number of decimal places, without rounding.
+        public static bool UseCustomHoursFormat { get; set; }
+
         public string EmployeeId { get; set; } = string.Empty;
         public string EmployeeFolder { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string FirmName { get; set; } = string.Empty;
         public string UpdatedAt { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Purely presentational version of <see cref="FullName"/> that reorders the first/last
+        /// name parts according to <see cref="ShowLastNameFirst"/>. Splits on the first space only
+        /// (same convention as <see cref="EmployeeSummary.SplitFullName"/>), so names with more than
+        /// two words keep everything after the first word together as the "second" part.
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayName
+        {
+            get
+            {
+                if (!ShowLastNameFirst)
+                    return FullName;
+
+                var trimmed = (FullName ?? string.Empty).Trim();
+                var spaceIndex = trimmed.IndexOf(' ');
+                if (spaceIndex <= 0 || spaceIndex >= trimmed.Length - 1)
+                    return FullName;
+
+                var firstPart = trimmed[..spaceIndex];
+                var secondPart = trimmed[(spaceIndex + 1)..].Trim();
+                return $"{secondPart} {firstPart}";
+            }
+        }
+
+        /// <summary>Call after <see cref="ShowLastNameFirst"/> changes to refresh bound UI.</summary>
+        public void NotifyDisplayNameChanged() => OnPropertyChanged(nameof(DisplayName));
+
         private decimal _hoursWorked;
         public decimal HoursWorked
         {
             get => _hoursWorked;
-            set { _hoursWorked = value; OnPropertyChanged(nameof(HoursWorked)); OnPropertyChanged(nameof(GrossSalary)); RecalcNet(); }
+            set
+            {
+                _hoursWorked = value;
+                OnPropertyChanged(nameof(HoursWorked));
+                OnPropertyChanged(nameof(HoursDisplayText));
+                OnPropertyChanged(nameof(GrossSalary));
+                RecalcNet();
+            }
         }
+
+        /// <summary>
+        /// Editable text representation of <see cref="HoursWorked"/> whose formatting/parsing depends
+        /// on <see cref="UseCustomHoursFormat"/>: rounded to 1 decimal in the default mode (legacy
+        /// behavior), or exact/arbitrary precision in the custom mode. Accepts both ',' and '.' as the
+        /// decimal separator on input regardless of mode.
+        /// </summary>
+        [JsonIgnore]
+        public string HoursDisplayText
+        {
+            get => UseCustomHoursFormat
+                ? _hoursWorked.ToString("0.####################", CultureInfo.CurrentCulture)
+                : _hoursWorked.ToString("N1", CultureInfo.CurrentCulture);
+            set
+            {
+                var text = (value ?? string.Empty).Trim().Replace(',', '.');
+                if (!decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                    return;
+
+                HoursWorked = UseCustomHoursFormat ? parsed : Math.Round(parsed, 1);
+            }
+        }
+
+        /// <summary>Call after <see cref="UseCustomHoursFormat"/> changes to refresh bound UI.</summary>
+        public void NotifyHoursFormatChanged() => OnPropertyChanged(nameof(HoursDisplayText));
 
         private decimal _hourlyRate;
         public decimal HourlyRate

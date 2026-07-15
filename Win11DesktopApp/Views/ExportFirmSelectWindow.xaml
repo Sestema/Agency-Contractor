@@ -343,30 +343,67 @@
         </Border>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Click="Cancel_Click" Margin="0,0,8,0" Style="{StaticResource HeaderGhostButton}">
+        <Grid Grid.Row="4" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Click="Cancel_Click"
+                    Style="{StaticResource HeaderGhostButton}"
+                    HorizontalAlignment="Stretch"
+                    Padding="12,10">
                 <TextBlock Text="{DynamicResource BtnCancel}"
                            FontSize="{DynamicResource FS13}"
-                           Foreground="{DynamicResource ForegroundBrush}"/>
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           HorizontalAlignment="Center"/>
             </Button>
 
-            <Button x:Name="ExportButton"
-                    Click="Export_Click"
+            <Button Grid.Column="2"
+                    x:Name="ExportExcelButton"
+                    Click="ExportExcel_Click"
                     Background="{DynamicResource SuccessBrush}"
-                    Style="{StaticResource FilledActionButton}">
-                <StackPanel Orientation="Horizontal">
+                    Style="{StaticResource FilledActionButton}"
+                    HorizontalAlignment="Stretch"
+                    Padding="12,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <TextBlock Text="&#xE80A;"
                                FontFamily="Segoe MDL2 Assets"
                                FontSize="{DynamicResource FS12}"
                                Foreground="White"
                                VerticalAlignment="Center"
                                Margin="0,0,6,0"/>
-                    <TextBlock Text="{DynamicResource FinExportBtn}"
+                    <TextBlock Text="{DynamicResource FinExportBtnExcel}"
                                FontSize="{DynamicResource FS13}"
                                FontWeight="SemiBold"
                                Foreground="White"/>
                 </StackPanel>
             </Button>
-        </StackPanel>
+
+            <Button Grid.Column="4"
+                    x:Name="ExportPdfButton"
+                    Click="ExportPdf_Click"
+                    Background="#C62828"
+                    Style="{StaticResource FilledActionButton}"
+                    HorizontalAlignment="Stretch"
+                    Padding="12,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="&#xEA90;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0"/>
+                    <TextBlock Text="{DynamicResource FinExportBtnPdf}"
+                               FontSize="{DynamicResource FS13}"
+                               FontWeight="SemiBold"
+                               Foreground="White"/>
+                </StackPanel>
+            </Button>
+        </Grid>
     </Grid>
 </Window>

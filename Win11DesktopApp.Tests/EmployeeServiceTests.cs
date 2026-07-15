@@ -83,7 +83,10 @@ namespace Win11DesktopApp.Tests
                 _documentGenerationService,
                 _tagCatalogService,
                 _aiWindowFactory,
-                _appStatisticsService);
+                _appStatisticsService,
+                _currentProfileService,
+                _profileAuthService,
+                _recentlyDeletedService);
         }
 
         [Fact]

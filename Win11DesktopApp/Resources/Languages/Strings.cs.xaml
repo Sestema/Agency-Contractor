@@ -597,6 +597,7 @@
     <sys:String x:Key="DetBtnExportPdf">Export profilu PDF</sys:String>
     <sys:String x:Key="DetProfileCompletion">Vyplnění: </sys:String>
     <sys:String x:Key="DetBtnArchive">Do archivu</sys:String>
+    <sys:String x:Key="DetBtnDeleteEmployee">Smazat</sys:String>
     <sys:String x:Key="DetLabelStatus">Stav</sys:String>
     <sys:String x:Key="DetTabDocs">Dokumenty</sys:String>
     <sys:String x:Key="DetTabProfile">Dotazník</sys:String>
@@ -751,6 +752,7 @@
     <sys:String x:Key="DetGenBtnTooltip">Generovat dokument z této šablony</sys:String>
     <sys:String x:Key="DetArchiveTitle">Přesunout do archivu</sys:String>
     <sys:String x:Key="DetArchiveDesc">Zaměstnanec bude přesunut do archivu. Jeho složka a údaje budou zachovány.</sys:String>
+    <sys:String x:Key="DetDeleteEmployeeDesc">Zaměstnanec bude přesunut do "Nedávno smazané". Nic se neztratí — odtud ho lze obnovit.</sys:String>
     <sys:String x:Key="DetArchiveDateLabel">Datum ukončení spolupráce (dd.mm.rrrr):</sys:String>
     <sys:String x:Key="DetExtendDateLabel">Nové datum expirace (dd.mm.rrrr):</sys:String>
     <sys:String x:Key="DetTooltipClose">Zavřít</sys:String>
@@ -1676,6 +1678,17 @@
     <sys:String x:Key="FinFilterAll">Všechny firmy</sys:String>
     <sys:String x:Key="FinStatGrandTotal">Celková Výplata</sys:String>
     <sys:String x:Key="FinStatsConfig">Další statistiky</sys:String>
+    <sys:String x:Key="FinDisplaySettingsTitle">Nastavení zobrazení</sys:String>
+    <sys:String x:Key="FinNameOrderConfig">Pořadí jména</sys:String>
+    <sys:String x:Key="FinNameOrderFirstLast">Jméno Příjmení</sys:String>
+    <sys:String x:Key="FinNameOrderFirstLastExample">Například: Ivan Petrenko</sys:String>
+    <sys:String x:Key="FinNameOrderLastFirst">Příjmení Jméno</sys:String>
+    <sys:String x:Key="FinNameOrderLastFirstExample">Například: Petrenko Ivan</sys:String>
+    <sys:String x:Key="FinHoursFormatConfig">Formát hodin</sys:String>
+    <sys:String x:Key="FinHoursRounded">Zaokrouhleno (1 des. místo)</sys:String>
+    <sys:String x:Key="FinHoursRoundedDesc">Hodiny se zobrazují a ukládají zaokrouhlené na 1 desetinné místo, např. 8,5.</sys:String>
+    <sys:String x:Key="FinHoursCustom">Vlastní přesnost</sys:String>
+    <sys:String x:Key="FinHoursCustomDesc">Můžete zadat libovolný počet desetinných míst, např. 213,23 — bez zaokrouhlení.</sys:String>
     <sys:String x:Key="FinStatRemaining">Zbývá vyplatit</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Příplatky (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Srážky (−)</sys:String>
@@ -1693,8 +1706,8 @@
     <sys:String x:Key="FinBtnAddField">Přidat</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Upravit sloupec</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Opravdu chcete smazat sloupec '{0}'?</sys:String>
-    <sys:String x:Key="FinExportSelectTitle">Export do Excelu</sys:String>
-    <sys:String x:Key="FinExportSelectDesc">Vyberte firmy pro export</sys:String>
+    <sys:String x:Key="FinExportSelectTitle">Export</sys:String>
+    <sys:String x:Key="FinExportSelectDesc">Vyberte firmy a formát exportu</sys:String>
     <sys:String x:Key="FinExportSelectAll">Vybrat vše</sys:String>
     <sys:String x:Key="FinExportClearAll">Vymazat výběr</sys:String>
     <sys:String x:Key="FinExportSearchHint">Hledat agenturu nebo firmu…</sys:String>
@@ -1704,6 +1717,9 @@
     <sys:String x:Key="FinExportRowsCount">Řádky</sys:String>
     <sys:String x:Key="FinExportSelectionHint">Vybráno {0} z {1}</sys:String>
     <sys:String x:Key="FinExportBtn">Exportovat</sys:String>
+    <sys:String x:Key="FinExportBtnExcel">Excel</sys:String>
+    <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
+    <sys:String x:Key="FinSalaryExportedPdf">Exportováno PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Vyberte alespoň jednu firmu</sys:String>
     <sys:String x:Key="BtnDone">Hotovo</sys:String>
 

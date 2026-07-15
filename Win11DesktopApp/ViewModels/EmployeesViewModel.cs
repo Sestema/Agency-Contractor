@@ -34,7 +34,7 @@ namespace Win11DesktopApp.ViewModels
         public string Name => Company.Name;
     }
 
-    public partial class EmployeesViewModel : ViewModelBase
+    public partial class EmployeesViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly EmployeeService _employeeService;
@@ -1558,6 +1558,22 @@ namespace Win11DesktopApp.ViewModels
             {
                 cell.Style.Font.FontColor = XLColor.OrangeRed;
             }
+        }
+
+        public void Cleanup()
+        {
+            _searchDebounceTimer.Stop();
+
+            CleanupDetailsVm();
+            CleanupAddEmployeeVm();
+
+            var batchAiCts = Interlocked.Exchange(ref _batchAICts, null);
+            batchAiCts?.Cancel();
+            batchAiCts?.Dispose();
+
+            var thumbnailPreloadCts = Interlocked.Exchange(ref _thumbnailPreloadCts, null);
+            thumbnailPreloadCts?.Cancel();
+            thumbnailPreloadCts?.Dispose();
         }
 
     }

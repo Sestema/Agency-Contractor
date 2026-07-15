@@ -7,13 +7,19 @@ namespace Win11DesktopApp.DependencyInjection
     {
         public static IServiceCollection AddDomain(this IServiceCollection services)
         {
+            services.AddSingleton(sp => new FirmFinanceRenameService(
+                sp.GetRequiredService<AppDataStorageFactory>(),
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<LocalDbService>(),
+                sp.GetRequiredService<SharedOperationLockService>()));
             services.AddSingleton(sp => new CompanyService(
                 sp.GetRequiredService<TagCatalogService>(),
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<PersistenceService>(),
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<EmployeeIndexDbService>(),
-                sp.GetRequiredService<SyncEventService>()));
+                sp.GetRequiredService<SyncEventService>(),
+                sp.GetRequiredService<FirmFinanceRenameService>()));
             services.AddSingleton(sp => new TemplateService(
                 sp.GetRequiredService<AppSettingsService>(),
                 sp.GetRequiredService<FolderService>(),
@@ -48,7 +54,8 @@ namespace Win11DesktopApp.DependencyInjection
                 sp.GetRequiredService<EmployeeIndexDbService>(),
                 sp.GetRequiredService<SharedOperationLockService>(),
                 suppressStartupNotifications: true,
-                storageFactory: sp.GetRequiredService<AppDataStorageFactory>()));
+                storageFactory: sp.GetRequiredService<AppDataStorageFactory>(),
+                firmFinanceRenameService: sp.GetRequiredService<FirmFinanceRenameService>()));
             services.AddSingleton(sp => new ActivityLogService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<AppDataStorageFactory>().CreateActivityLogStorage(),

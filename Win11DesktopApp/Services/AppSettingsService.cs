@@ -109,6 +109,8 @@ namespace Win11DesktopApp.Services
             public bool ShowStatAdvances { get; set; } = false;
             public bool ShowStatCustomAdd { get; set; } = false;
             public bool ShowStatCustomSub { get; set; } = false;
+            public bool SalaryNameOrderLastFirst { get; set; } = false;
+            public bool SalaryHoursCustomPrecision { get; set; } = false;
             public string InterfaceSize { get; set; } = "Medium";
             public string TextSize { get; set; } = "Medium";
             public string DocumentLanguage { get; set; } = "";

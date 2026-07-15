@@ -52,7 +52,7 @@ namespace Win11DesktopApp.ViewModels
         public bool HasExpenses => TotalExpenses != 0;
     }
 
-    public class DashboardViewModel : ViewModelBase
+    public class DashboardViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly CompanyService _companyService;
@@ -709,6 +709,13 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                 cts.Dispose();
             }
+        }
+
+        public void Cleanup()
+        {
+            var loadCts = Interlocked.Exchange(ref _loadCts, null);
+            loadCts?.Cancel();
+            loadCts?.Dispose();
         }
 
         private DashboardData GatherDashboardData()
