@@ -161,6 +161,7 @@ namespace Win11DesktopApp.Services
             public string CachedAccessSource { get; set; } = string.Empty;
             public string CachedAccessPlan { get; set; } = string.Empty;
             public string LegacyLicenseMigratedAtUtc { get; set; } = string.Empty;
+            public string CachedMachineId { get; set; } = string.Empty;
             public bool WebPanelEnabled { get; set; } = false;
             public int WebPanelPort { get; set; } = 47831;
             public string WebPanelBindAddress { get; set; } = "127.0.0.1";

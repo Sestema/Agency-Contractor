@@ -4,6 +4,7 @@ using System.Management;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Win32;
 
 namespace Win11DesktopApp.Services
 {
@@ -274,6 +275,18 @@ namespace Win11DesktopApp.Services
             if (_cachedMachineId != null)
                 return _cachedMachineId;
 
+            // If we already established a machine_id on this PC before, always reuse it.
+            // This protects against transient environment issues (e.g. System.Management/WMI
+            // becoming unavailable after an app update) changing the identity used for
+            // licensing and profile lookups, which would otherwise look like a "new PC" to
+            // the server and trigger an unwanted account-creation prompt.
+            var persisted = _appSettingsService?.Settings.CachedMachineId;
+            if (!string.IsNullOrWhiteSpace(persisted))
+            {
+                _cachedMachineId = persisted;
+                return _cachedMachineId;
+            }
+
             try
             {
                 var sb = new StringBuilder();
@@ -339,20 +352,67 @@ namespace Win11DesktopApp.Services
 
                 if (sb.Length == 0)
                 {
-                    sb.Append(Environment.MachineName);
-                    sb.Append("-fallback-v2");
+                    // WMI (System.Management) was unavailable or returned nothing.
+                    // Prefer the Windows installation's own stable GUID over the
+                    // machine name, since it doesn't require WMI and rarely changes.
+                    var machineGuid = TryGetRegistryMachineGuid();
+                    if (!string.IsNullOrEmpty(machineGuid))
+                    {
+                        sb.Append(machineGuid);
+                    }
+                    else
+                    {
+                        sb.Append(Environment.MachineName);
+                        sb.Append("-fallback-v2");
+                    }
                 }
 
                 using var sha = SHA256.Create();
                 var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
                 _cachedMachineId = Convert.ToBase64String(hash).Substring(0, 16);
+                PersistMachineId(_cachedMachineId);
                 return _cachedMachineId;
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("LicenseService.GetMachineId", $"Fatal fallback: {ex.Message}");
                 _cachedMachineId = Environment.MachineName + "-fallback";
+                PersistMachineId(_cachedMachineId);
                 return _cachedMachineId;
+            }
+        }
+
+        private static string? TryGetRegistryMachineGuid()
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography");
+                var guid = key?.GetValue("MachineGuid") as string;
+                return string.IsNullOrWhiteSpace(guid) ? null : guid.Trim();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("LicenseService.GetMachineId", $"Registry MachineGuid read failed: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static void PersistMachineId(string machineId)
+        {
+            try
+            {
+                if (_appSettingsService == null || string.IsNullOrWhiteSpace(machineId))
+                    return;
+
+                if (string.Equals(_appSettingsService.Settings.CachedMachineId, machineId, StringComparison.Ordinal))
+                    return;
+
+                _appSettingsService.Settings.CachedMachineId = machineId;
+                _appSettingsService.SaveSettings();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("LicenseService.PersistMachineId", ex.Message);
             }
         }
 
