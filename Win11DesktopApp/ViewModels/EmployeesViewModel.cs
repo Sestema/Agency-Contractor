@@ -1074,7 +1074,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 "Icons" => 200,
                 "List" => 96,
-                "Tiles" => 512,
+                "Tiles" => 200,
                 _ => 128
             };
 

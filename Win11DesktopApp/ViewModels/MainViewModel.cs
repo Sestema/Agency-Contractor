@@ -330,16 +330,119 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isCompanySortMenuOpen, value);
         }
 
-        private void RefreshVisibleCompanies()
+        // Employee counts per firm, used only for CompanySortMode.EmployeeCount.
+        // Populated in the background so sorting never has to hit the DB/disk on the UI thread.
+        private readonly Dictionary<string, int> _companyEmployeeCounts = new(StringComparer.OrdinalIgnoreCase);
+        private CancellationTokenSource? _visibleCompaniesCts;
+
+        // Used once, synchronously, right in the constructor - before the View binds to
+        // VisibleCompanies/SelectedCompany. If this were async (like the regular refresh below),
+        // the freshly-created ListBox would briefly see an empty ItemsSource, fail to match the
+        // already-selected company for its two-way SelectedItem binding, and push null back into
+        // SelectedCompany - wiping out the user's selection every time MainViewModel is recreated
+        // (e.g. every time you navigate back from another module, since it's registered AddTransient).
+        private void RefreshVisibleCompaniesSync()
         {
-            _visibleCompanies.Clear();
             var cs = _companyService;
             if (cs == null) return;
 
-            IEnumerable<EmployerCompany> companies = cs.Companies
+            _visibleCompaniesCts?.Cancel();
+
+            var companiesSnapshot = cs.Companies.ToList();
+            var query = CompanySearchQuery?.Trim() ?? string.Empty;
+            Dictionary<string, int> countsSnapshot;
+            lock (_companyEmployeeCounts)
+                countsSnapshot = new Dictionary<string, int>(_companyEmployeeCounts, StringComparer.OrdinalIgnoreCase);
+
+            var ordered = ComputeVisibleCompanies(companiesSnapshot, cs, query, CompanySortMode, countsSnapshot);
+
+            // Capture the selection BEFORE mutating the collection: if the ListBox is already
+            // bound (live), Clear() can momentarily push a null SelectedItem back through the
+            // two-way binding, wiping SelectedCompany before we get to check it below.
+            var previouslySelected = SelectedCompany;
+
+            _visibleCompanies.Clear();
+            foreach (var company in ordered)
+                _visibleCompanies.Add(company);
+
+            VisibleCompaniesCount = _visibleCompanies.Count;
+
+            RestoreSelection(previouslySelected);
+        }
+
+        // Regular refresh path (search typing, sort change, visibility change, etc.) - computed off
+        // the UI thread so it never blocks on a slow per-firm DB lookup while the View is already live.
+        private void RefreshVisibleCompanies()
+        {
+            var cs = _companyService;
+            if (cs == null) return;
+
+            _visibleCompaniesCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _visibleCompaniesCts = cts;
+            var token = cts.Token;
+
+            var companiesSnapshot = cs.Companies.ToList();
+            var query = CompanySearchQuery?.Trim() ?? string.Empty;
+            var sortMode = CompanySortMode;
+            Dictionary<string, int> countsSnapshot;
+            lock (_companyEmployeeCounts)
+                countsSnapshot = new Dictionary<string, int>(_companyEmployeeCounts, StringComparer.OrdinalIgnoreCase);
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var ordered = ComputeVisibleCompanies(companiesSnapshot, cs, query, sortMode, countsSnapshot);
+
+                    if (token.IsCancellationRequested) return;
+
+                    _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
+                    {
+                        if (token.IsCancellationRequested) return;
+
+                        // Same reasoning as in RefreshVisibleCompaniesSync: capture before Clear(),
+                        // since the live ListBox's two-way SelectedItem binding can null out
+                        // SelectedCompany the instant the collection is cleared.
+                        var previouslySelected = SelectedCompany;
+
+                        _visibleCompanies.Clear();
+                        foreach (var company in ordered)
+                            _visibleCompanies.Add(company);
+
+                        VisibleCompaniesCount = _visibleCompanies.Count;
+
+                        RestoreSelection(previouslySelected);
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("MainViewModel.RefreshVisibleCompanies", ex);
+                }
+            }, token);
+        }
+
+        // Re-asserts the selection after VisibleCompanies has been repopulated. Always writes
+        // through the setter (even if it looks unchanged) so it overwrites any null the
+        // ListBox's two-way SelectedItem binding may have pushed in during Clear().
+        private void RestoreSelection(EmployerCompany? previouslySelected)
+        {
+            if (previouslySelected == null)
+                return;
+
+            if (_visibleCompanies.Contains(previouslySelected))
+                SelectedCompany = previouslySelected;
+            else
+                SelectedCompany = _visibleCompanies.FirstOrDefault();
+        }
+
+        private List<EmployerCompany> ComputeVisibleCompanies(
+            List<EmployerCompany> companiesSnapshot, CompanyService cs, string query,
+            CompanySortMode sortMode, Dictionary<string, int> employeeCounts)
+        {
+            IEnumerable<EmployerCompany> companies = companiesSnapshot
                 .Where(c => cs.IsCompanyVisible(c) && PolicyService.CanAccessCompany(c));
 
-            var query = CompanySearchQuery?.Trim() ?? string.Empty;
             if (!string.IsNullOrEmpty(query))
             {
                 companies = companies.Where(c =>
@@ -347,20 +450,13 @@ namespace Win11DesktopApp.ViewModels
                     (!string.IsNullOrEmpty(c.ICO) && c.ICO.Contains(query, StringComparison.OrdinalIgnoreCase)));
             }
 
-            companies = ApplyCompanySort(companies);
-
-            foreach (var company in companies)
-                _visibleCompanies.Add(company);
-
-            VisibleCompaniesCount = _visibleCompanies.Count;
-
-            if (SelectedCompany != null && !_visibleCompanies.Contains(SelectedCompany))
-                SelectedCompany = _visibleCompanies.FirstOrDefault();
+            return ApplyCompanySort(companies, sortMode, employeeCounts).ToList();
         }
 
-        private IEnumerable<EmployerCompany> ApplyCompanySort(IEnumerable<EmployerCompany> companies)
+        private IEnumerable<EmployerCompany> ApplyCompanySort(
+            IEnumerable<EmployerCompany> companies, CompanySortMode sortMode, Dictionary<string, int> employeeCounts)
         {
-            return CompanySortMode switch
+            return sortMode switch
             {
                 CompanySortMode.Name => companies
                     .OrderBy(c => c.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase),
@@ -368,10 +464,52 @@ namespace Win11DesktopApp.ViewModels
                     .OrderBy(c => c.Agency?.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(c => c.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase),
                 CompanySortMode.EmployeeCount => companies
-                    .OrderByDescending(c => _employeeService.GetEmployeesForFirm(c.Name).Count)
+                    .OrderByDescending(c => employeeCounts.TryGetValue(c.Name ?? string.Empty, out var count) ? count : 0)
                     .ThenBy(c => c.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase),
                 _ => companies
             };
+        }
+
+        // Recomputes per-firm employee counts off the UI thread, then re-sorts if needed.
+        private async void RefreshCompanyEmployeeCountsAsync()
+        {
+            try
+            {
+                var companiesSnapshot = _companyService.Companies.ToList();
+                var counts = await Task.Run(() =>
+                {
+                    var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var company in companiesSnapshot)
+                    {
+                        if (string.IsNullOrWhiteSpace(company.Name)) continue;
+                        try
+                        {
+                            dict[company.Name] = _employeeService.GetEmployeesForFirm(company.Name).Count;
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogError("MainViewModel.RefreshCompanyEmployeeCountsAsync", ex);
+                        }
+                    }
+                    return dict;
+                });
+
+                lock (_companyEmployeeCounts)
+                {
+                    foreach (var kv in counts)
+                        _companyEmployeeCounts[kv.Key] = kv.Value;
+                }
+
+                _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
+                {
+                    if (CompanySortMode == CompanySortMode.EmployeeCount)
+                        RefreshVisibleCompanies();
+                }));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("MainViewModel.RefreshCompanyEmployeeCountsAsync", ex);
+            }
         }
 
         public EmployerCompany? SelectedCompany
@@ -423,13 +561,20 @@ namespace Win11DesktopApp.ViewModels
             MarkNotificationsReadCommand = new RelayCommand(o => _notificationService.MarkAllRead());
             ClearNotificationsCommand = new RelayCommand(o => _notificationService.ClearAll());
             ButtonCommand = new RelayCommand(o => { });
-            ToggleDrawerCommand = new RelayCommand(o => IsDrawerOpen = !IsDrawerOpen);
+            ToggleDrawerCommand = new RelayCommand(o =>
+            {
+                var opening = !IsDrawerOpen;
+                IsDrawerOpen = opening;
+                if (opening)
+                    RefreshCompanyEmployeeCountsAsync();
+            });
 
             if (Enum.TryParse<CompanySortMode>(
                     _appSettingsService.Settings.CompanySortMode, ignoreCase: true, out var savedCompanySortMode))
                 _companySortMode = savedCompanySortMode;
 
-            RefreshVisibleCompanies();
+            RefreshVisibleCompaniesSync();
+            RefreshCompanyEmployeeCountsAsync();
             _companyService.VisibilityChanged += OnVisibilityChanged;
 
             BuildMenuCards();
@@ -438,7 +583,12 @@ namespace Win11DesktopApp.ViewModels
             {
                 Interval = TimeSpan.FromSeconds(30)
             };
-            _clockTimer.Tick += (_, _) => RefreshClock();
+            _clockTimer.Tick += (_, _) =>
+            {
+                RefreshClock();
+                if (IsDrawerOpen && CompanySortMode == CompanySortMode.EmployeeCount)
+                    RefreshCompanyEmployeeCountsAsync();
+            };
             RefreshClock();
             _clockTimer.Start();
 
@@ -505,6 +655,9 @@ namespace Win11DesktopApp.ViewModels
                     CompanySortMode = mode;
                     _appSettingsService.Settings.CompanySortMode = mode.ToString();
                     _appSettingsService.SaveSettings();
+
+                    if (mode == CompanySortMode.EmployeeCount)
+                        RefreshCompanyEmployeeCountsAsync();
                 }
 
                 IsCompanySortMenuOpen = false;
@@ -576,6 +729,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 RefreshVisibleCompanies();
                 RefreshOverviewStats();
+                RefreshCompanyEmployeeCountsAsync();
             }));
         }
 
@@ -587,6 +741,10 @@ namespace Win11DesktopApp.ViewModels
             _searchDebounce?.Dispose();
             _searchCts?.Cancel();
             _searchCts?.Dispose();
+            _visibleCompaniesCts?.Cancel();
+            _visibleCompaniesCts?.Dispose();
+            _overviewStatsCts?.Cancel();
+            _overviewStatsCts?.Dispose();
             _clockTimer.Stop();
         }
 
@@ -745,29 +903,65 @@ namespace Win11DesktopApp.ViewModels
                 : $"UTC {offsetSign}{utcOffset.Hours}:{Math.Abs(utcOffset.Minutes):00}";
         }
 
+        private CancellationTokenSource? _overviewStatsCts;
+
+        // Employee/template/problem counts for the selected company used to be computed
+        // synchronously here - GetEmployeesForFirm + CountProblemsForCompany can hit the DB/disk
+        // per employee, which blocked the UI thread every time this ran (on load, on company
+        // switch, on visibility change). Now the counts are computed on a background thread and
+        // marshalled back; the header text/name updates immediately, counts fill in right after.
         private void RefreshOverviewStats()
         {
             try
             {
                 VisibleCompaniesCount = _visibleCompanies.Count;
 
-                if (SelectedCompany == null)
+                OnPropertyChanged(nameof(SelectedCompanyDisplayName));
+                OnPropertyChanged(nameof(SelectedCompanyIcoText));
+                OnPropertyChanged(nameof(SelectedCompanyAgencyText));
+
+                _overviewStatsCts?.Cancel();
+                var company = SelectedCompany;
+
+                if (company == null)
                 {
                     SelectedCompanyEmployeesCount = 0;
                     SelectedCompanyTemplatesCount = 0;
                     SelectedCompanyProblemsCount = 0;
-                }
-                else
-                {
-                    SelectedCompanyEmployeesCount = _employeeService.GetEmployeesForFirm(SelectedCompany.Name).Count;
-                    SelectedCompanyTemplatesCount = _templateService.GetTemplates(SelectedCompany.Name).Count;
-                    SelectedCompanyProblemsCount = ProblemsViewModel.CountProblemsForCompany(SelectedCompany, _employeeService);
+                    OnPropertyChanged(nameof(SelectedCompanySummaryText));
+                    return;
                 }
 
-                OnPropertyChanged(nameof(SelectedCompanyDisplayName));
-                OnPropertyChanged(nameof(SelectedCompanyIcoText));
-                OnPropertyChanged(nameof(SelectedCompanyAgencyText));
-                OnPropertyChanged(nameof(SelectedCompanySummaryText));
+                var cts = new CancellationTokenSource();
+                _overviewStatsCts = cts;
+                var token = cts.Token;
+
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        var employeesCount = _employeeService.GetEmployeesForFirm(company.Name).Count;
+                        var templatesCount = _templateService.GetTemplates(company.Name).Count;
+                        var problemsCount = ProblemsViewModel.CountProblemsForCompany(company, _employeeService);
+
+                        if (token.IsCancellationRequested) return;
+
+                        _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
+                        {
+                            if (token.IsCancellationRequested || !ReferenceEquals(SelectedCompany, company))
+                                return;
+
+                            SelectedCompanyEmployeesCount = employeesCount;
+                            SelectedCompanyTemplatesCount = templatesCount;
+                            SelectedCompanyProblemsCount = problemsCount;
+                            OnPropertyChanged(nameof(SelectedCompanySummaryText));
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError("MainViewModel.RefreshOverviewStats", ex);
+                    }
+                }, token);
             }
             catch (Exception ex)
             {

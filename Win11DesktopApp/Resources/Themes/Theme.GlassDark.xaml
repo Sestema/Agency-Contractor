@@ -68,6 +68,13 @@
     <SolidColorBrush x:Key="SuccessChipBackgroundBrush" Color="#2417201B"/>
     <SolidColorBrush x:Key="SuccessChipBorderBrush" Color="#4A385444"/>
     <SolidColorBrush x:Key="SuccessChipForegroundBrush" Color="#8CD99E"/>
+    <SolidColorBrush x:Key="WeatherCardBackgroundBrush" Color="#40111B25"/>
+    <SolidColorBrush x:Key="WeatherCardBorderBrush" Color="#4D405064"/>
+    <SolidColorBrush x:Key="WeatherCardIconBrush" Color="#9FC7DD"/>
+    <SolidColorBrush x:Key="GreetingCardBackgroundBrush" Color="#4017201B"/>
+    <SolidColorBrush x:Key="GreetingCardBorderBrush" Color="#4A385444"/>
+    <SolidColorBrush x:Key="GreetingCardIconBackgroundBrush" Color="#40202820"/>
+    <SolidColorBrush x:Key="GreetingCardIconForegroundBrush" Color="#8CD99E"/>
     <SolidColorBrush x:Key="MutedDescriptionBrush" Color="#8A94A2"/>
     <SolidColorBrush x:Key="EmpCompanyPillBackgroundBrush" Color="#78111B25"/>
     <SolidColorBrush x:Key="EmpCompanyPillBorderBrush" Color="#4D405064"/>

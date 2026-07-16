@@ -24,15 +24,17 @@
                             Width="{DynamicResource UiMenuCardW}" Height="{DynamicResource UiMenuCardH}"
                             RenderTransformOrigin="0.5,0.5"
                             SnapsToDevicePixels="True">
+                        <!-- No DropShadowEffect here: this control is instantiated once per
+                             dashboard tile (a dozen+ on screen at once), and the shadow used to
+                             also animate on every hover/press - a major source of lag on
+                             weak/integrated GPUs. Hover/press feedback is still conveyed via the
+                             scale/translate lift below, which is cheap to render. -->
                         <Border.RenderTransform>
                             <TransformGroup>
                                 <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
                                 <TranslateTransform x:Name="CardTranslate" Y="0"/>
                             </TransformGroup>
                         </Border.RenderTransform>
-                        <Border.Effect>
-                            <DropShadowEffect x:Name="CardShadow" BlurRadius="18" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.22"/>
-                        </Border.Effect>
                         <Grid>
                             <Grid Margin="16">
                                 <Grid.RowDefinitions>
@@ -47,9 +49,6 @@
                                         HorizontalAlignment="Center" Margin="0,6,0,0"
                                         RenderTransformOrigin="0.5,0.5"
                                         Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="22" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.26"/>
-                                    </Border.Effect>
                                     <Border.RenderTransform>
                                         <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
                                     </Border.RenderTransform>
@@ -141,19 +140,6 @@
                                                      Storyboard.TargetProperty="ScaleY"
                                                      To="1.018" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
-                                    <!-- Deeper shadow -->
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="BlurRadius"
-                                                     To="28" Duration="0:0:0.20"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="ShadowDepth"
-                                                     To="6" Duration="0:0:0.20"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="Opacity"
-                                                     To="0.28" Duration="0:0:0.20"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <!-- Icon breathes -->
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleX"
@@ -183,18 +169,6 @@
                                                      Storyboard.TargetProperty="ScaleY"
                                                      To="1" Duration="0:0:0.3"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="BlurRadius"
-                                                     To="18" Duration="0:0:0.3"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="ShadowDepth"
-                                                     To="3" Duration="0:0:0.3"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="Opacity"
-                                                     To="0.16" Duration="0:0:0.3"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleX"
                                                      To="1" Duration="0:0:0.3"
@@ -220,12 +194,6 @@
                                     <DoubleAnimation Storyboard.TargetName="CardTranslate"
                                                      Storyboard.TargetProperty="Y"
                                                      To="0" Duration="0:0:0.1"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="BlurRadius"
-                                                     To="6" Duration="0:0:0.1"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="ShadowDepth"
-                                                     To="1" Duration="0:0:0.1"/>
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger>
@@ -246,12 +214,6 @@
                                                      Storyboard.TargetProperty="Y"
                                                      To="-3" Duration="0:0:0.18"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="BlurRadius"
-                                                     To="18" Duration="0:0:0.18"/>
-                                    <DoubleAnimation Storyboard.TargetName="CardShadow"
-                                                     Storyboard.TargetProperty="ShadowDepth"
-                                                     To="4" Duration="0:0:0.18"/>
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger>

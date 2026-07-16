@@ -490,9 +490,6 @@
                                                 <TranslateTransform Y="0"/>
                                             </TransformGroup>
                                         </Grid.RenderTransform>
-                                        <Border CornerRadius="14"
-                                                Background="{DynamicResource CardBackgroundBrush}"
-                                                Effect="{DynamicResource CardShadow}"/>
                                         <Border Background="{DynamicResource CardBackgroundBrush}"
                                                 CornerRadius="14"
                                                 Padding="16,15"
@@ -697,9 +694,6 @@
                                                 <TranslateTransform Y="0"/>
                                             </TransformGroup>
                                         </Grid.RenderTransform>
-                                        <Border CornerRadius="14"
-                                                Background="{DynamicResource CardBackgroundBrush}"
-                                                Effect="{DynamicResource CardShadow}"/>
                                         <Border Background="{DynamicResource CardBackgroundBrush}"
                                                 CornerRadius="14"
                                                 Padding="13"

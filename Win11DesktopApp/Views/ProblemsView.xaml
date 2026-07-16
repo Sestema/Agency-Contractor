@@ -366,16 +366,14 @@
                                     TextOptions.TextFormattingMode="Display"
                                     TextOptions.TextRenderingMode="ClearType"
                                     MouseLeftButtonDown="EmployeeCard_MouseLeftButtonDown"
-                                    h:StaggerAnimation.Enable="True">
+                                    h:StaggerAnimation.Enable="True"
+                                    Effect="{x:Null}">
                                 <Border.RenderTransform>
                                     <TransformGroup>
                                         <ScaleTransform ScaleX="1" ScaleY="1"/>
                                         <TranslateTransform Y="0"/>
                                     </TransformGroup>
                                 </Border.RenderTransform>
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.06"/>
-                                </Border.Effect>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="5"/>

@@ -1850,7 +1850,7 @@
                                                                                    RadiusY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=26}"/>
                                                             </Border.Clip>
                                                             <Grid>
-                                                                <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=512}"
+                                                                <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=200}"
                                                                        Stretch="UniformToFill"
                                                                        RenderOptions.BitmapScalingMode="HighQuality"
                                                                        SnapsToDevicePixels="True"
@@ -2584,15 +2584,16 @@
                                                 TextOptions.TextRenderingMode="ClearType"
                                                 ContextMenu="{StaticResource EmployeeCardContextMenu}"
                                                 MouseLeftButtonUp="EmployeeTileCard_MouseLeftButtonUp">
+                                            <!-- No DropShadowEffect here: with many employee cards in this view, a
+                                                 per-card blur (plus an animated one on hover) forces software
+                                                 rendering and is a major source of lag on weak/integrated GPUs.
+                                                 The gradient border below still gives each card definition. -->
                                             <Border.RenderTransform>
                                                 <TransformGroup>
                                                     <ScaleTransform ScaleX="1" ScaleY="1"/>
                                                     <TranslateTransform Y="0"/>
                                                 </TransformGroup>
                                             </Border.RenderTransform>
-                                            <Border.Effect>
-                                                <DropShadowEffect BlurRadius="10" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.10"/>
-                                            </Border.Effect>
                                             <Border.BorderBrush>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                                     <GradientStop Color="#8022C55E" Offset="0"/>
@@ -2997,12 +2998,6 @@
                                                             </DoubleAnimation>
                                                             <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
                                                                              To="1" Duration="0:0:0.2"/>
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                                             To="20" Duration="0:0:0.2"/>
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                                             To="6" Duration="0:0:0.2"/>
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                                             To="0.22" Duration="0:0:0.2"/>
                                                         </Storyboard>
                                                     </BeginStoryboard>
                                                 </EventTrigger>
@@ -3021,12 +3016,6 @@
                                                                              To="0" Duration="0:0:0.25">
                                                                 <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                             </DoubleAnimation>
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                                             To="6" Duration="0:0:0.25"/>
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                                             To="2" Duration="0:0:0.25"/>
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                                             To="0.08" Duration="0:0:0.25"/>
                                                         </Storyboard>
                                                     </BeginStoryboard>
                                                 </EventTrigger>
