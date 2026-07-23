@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -16,7 +17,7 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class ArchiveViewModel : ViewModelBase
+    public class ArchiveViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly EmployeeService _employeeService;
@@ -25,13 +26,20 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private readonly ActivityLogService _activityLogService;
         private readonly AppNotificationService _notificationService;
+        private const int ArchivePageSize = 40;
+
         private readonly ObservableCollection<ArchivedEmployeeSummary> _archivedEmployeesSource = new();
+        private readonly ObservableCollection<ArchivedEmployeeSummary> _visibleArchived = new();
         private readonly ICollectionView _archivedEmployeesView;
         private readonly DispatcherTimer _searchDebounce;
+        private int _loadArchiveVersion;
+        private int _displayLimit = ArchivePageSize;
+        private int _displayedCount;
         private string? _pendingEmployeeFolder;
         private string _sortField = "EndDate";
         private bool _sortAscending;
         private string _viewMode = "List";
+        private int _tileSizeStep = 4;
         private double _zoomLevel = 1.0;
         private string _statFilter = "all";
         private int _totalArchivedCount;
@@ -49,6 +57,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand SetViewModeCommand { get; }
         public ICommand FilterByStatCommand { get; }
         public ICommand ClearFilterCommand { get; }
+        public ICommand ShowMoreCommand { get; }
 
         // --- List ---
         public ObservableCollection<ArchivedEmployeeSummary> ArchivedEmployees => _archivedEmployeesSource;
@@ -80,7 +89,39 @@ namespace Win11DesktopApp.ViewModels
         public int FilteredCount
         {
             get => _filteredCount;
-            private set => SetProperty(ref _filteredCount, value);
+            private set
+            {
+                if (SetProperty(ref _filteredCount, value))
+                    NotifyPaginationProperties();
+            }
+        }
+
+        public int DisplayedCount
+        {
+            get => _displayedCount;
+            private set => SetProperty(ref _displayedCount, value);
+        }
+
+        public bool HasMoreToShow =>
+            (IsTilesView || IsIconsView) && DisplayedCount < FilteredCount;
+
+        public int ResultsPrimaryCount =>
+            IsTilesView || IsIconsView ? DisplayedCount : FilteredCount;
+
+        public int ResultsSecondaryCount =>
+            IsTilesView || IsIconsView ? FilteredCount : TotalArchivedCount;
+
+        public string ShowMoreLabel
+        {
+            get
+            {
+                var remaining = Math.Max(0, FilteredCount - DisplayedCount);
+                var next = Math.Min(ArchivePageSize, remaining);
+                var fmt = Res("ArchiveShowMoreFmt");
+                if (string.IsNullOrEmpty(fmt))
+                    fmt = "Показати ще ({0})";
+                return string.Format(fmt, next);
+            }
         }
 
         private bool _isLoading;
@@ -141,6 +182,7 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _selectedFirm, value))
                 {
                     OnPropertyChanged(nameof(HasActiveFilters));
+                    ResetDisplayLimit();
                     RefreshArchiveView();
                 }
             }
@@ -172,6 +214,18 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(IsListView));
                     OnPropertyChanged(nameof(IsTilesView));
+                    OnPropertyChanged(nameof(IsIconsView));
+                    if (IsTilesView || IsIconsView)
+                    {
+                        ResetDisplayLimit();
+                        RebuildVisibleSliceIfNeeded();
+                    }
+                    NotifyActiveViewEmployeesChanged();
+                    NotifyPaginationProperties();
+                    if (IsTilesView && _tilesAvailableWidth > 100)
+                        RecalculateTileLayout();
+                    if (IsIconsView && _iconsAvailableWidth > 100)
+                        RecalculateIconsLayout();
                     SaveArchiveDisplaySettings();
                 }
             }
@@ -179,25 +233,140 @@ namespace Win11DesktopApp.ViewModels
 
         public bool IsListView => ViewMode == "List";
         public bool IsTilesView => ViewMode == "Tiles";
+        public bool IsIconsView => ViewMode == "Icons";
 
-        public double ZoomLevel
+        public IEnumerable<ArchivedEmployeeSummary>? ArchivedForList =>
+            IsListView ? _archivedEmployeesSource : null;
+
+        public IEnumerable<ArchivedEmployeeSummary>? ArchivedForTiles =>
+            IsTilesView ? _visibleArchived : null;
+
+        public IEnumerable<ArchivedEmployeeSummary>? ArchivedForIcons =>
+            IsIconsView ? _visibleArchived : null;
+
+        private void NotifyActiveViewEmployeesChanged()
         {
-            get => _zoomLevel;
+            OnPropertyChanged(nameof(ArchivedForList));
+            OnPropertyChanged(nameof(ArchivedForTiles));
+            OnPropertyChanged(nameof(ArchivedForIcons));
+        }
+
+        public int TileSizeStep
+        {
+            get => _tileSizeStep;
             set
             {
-                var clamped = Math.Clamp(value, 0.75, 1.35);
-                if (SetProperty(ref _zoomLevel, clamped))
+                var clamped = Math.Max(1, Math.Min(6, value));
+                if (SetProperty(ref _tileSizeStep, clamped))
                 {
-                    OnPropertyChanged(nameof(ArchiveTileWidth));
-                    OnPropertyChanged(nameof(ArchiveListMaxWidth));
+                    _appSettingsService.Settings.ArchiveTileSizeStep = clamped;
+                    _appSettingsService.SaveSettings();
+                    RecalculateTileLayout();
+                    RecalculateIconsLayout();
                     SaveArchiveDisplaySettings();
                 }
             }
         }
 
-        public double ArchiveTileWidth => Math.Round(256 * ZoomLevel, 0);
+        public double ZoomLevel
+        {
+            get => _zoomLevel;
+            private set => SetProperty(ref _zoomLevel, value);
+        }
 
-        public double ArchiveListMaxWidth => Math.Round(1140 * ZoomLevel, 0);
+        private double _tilesAvailableWidth;
+        public double TilesAvailableWidth
+        {
+            get => _tilesAvailableWidth;
+            set
+            {
+                if (Math.Abs(_tilesAvailableWidth - value) < 0.5)
+                    return;
+                _tilesAvailableWidth = value;
+                RecalculateTileLayout();
+            }
+        }
+
+        private double _tileCardWidth = TileBaseCardWidth;
+        public double TileCardWidth
+        {
+            get => _tileCardWidth;
+            private set => SetProperty(ref _tileCardWidth, value);
+        }
+
+        private const double TileBaseCardWidth = 390.0;
+        private const double TileBaseHorizontalMargin = 14.0;
+        private const double TileMinCardWidth = 280.0;
+        private const double TileMinZoom = 0.6;
+
+        private void RecalculateTileLayout()
+        {
+            var available = _tilesAvailableWidth;
+            if (available < 100)
+            {
+                TileCardWidth = TileBaseCardWidth;
+                ZoomLevel = 1.0;
+                return;
+            }
+
+            var columns = 9 - _tileSizeStep;
+
+            double CardWidthFor(int cols) =>
+                (available / cols) * TileBaseCardWidth / (TileBaseCardWidth + TileBaseHorizontalMargin);
+
+            while (columns > 1 && CardWidthFor(columns) < TileMinCardWidth)
+                columns--;
+
+            var width = Math.Max(160.0, Math.Floor(CardWidthFor(columns)) - 1);
+            TileCardWidth = width;
+            ZoomLevel = Math.Max(TileMinZoom, width / TileBaseCardWidth);
+        }
+
+        private double _iconsAvailableWidth;
+        public double IconsAvailableWidth
+        {
+            get => _iconsAvailableWidth;
+            set
+            {
+                if (Math.Abs(_iconsAvailableWidth - value) < 0.5)
+                    return;
+                _iconsAvailableWidth = value;
+                RecalculateIconsLayout();
+            }
+        }
+
+        private double _iconCardWidth = IconBaseCardWidth;
+        public double IconCardWidth
+        {
+            get => _iconCardWidth;
+            private set => SetProperty(ref _iconCardWidth, value);
+        }
+
+        private const double IconBaseCardWidth = 240.0;
+        private const double IconBaseHorizontalMargin = 12.0;
+        private const double IconMinCardWidth = 200.0;
+
+        private void RecalculateIconsLayout()
+        {
+            var available = _iconsAvailableWidth;
+            if (available < 100)
+            {
+                IconCardWidth = IconBaseCardWidth;
+                return;
+            }
+
+            var columns = 12 - _tileSizeStep;
+
+            double CardWidthFor(int cols) =>
+                (available / cols) * IconBaseCardWidth / (IconBaseCardWidth + IconBaseHorizontalMargin);
+
+            while (columns > 1 && CardWidthFor(columns) < IconMinCardWidth)
+                columns--;
+
+            IconCardWidth = Math.Max(IconMinCardWidth, Math.Floor(CardWidthFor(columns)) - 1);
+        }
+
+        public double ArchiveListMaxWidth => 1140;
 
         public string StatFilter
         {
@@ -207,6 +376,7 @@ namespace Win11DesktopApp.ViewModels
                 if (SetProperty(ref _statFilter, value))
                 {
                     OnPropertyChanged(nameof(HasActiveFilters));
+                    ResetDisplayLimit();
                     RefreshArchiveView();
                 }
             }
@@ -227,7 +397,8 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _employeeToRestore, value);
         }
 
-        public ObservableCollection<EmployerCompany> AvailableCompanies => _companyService.Companies;
+        private readonly ObservableCollection<EmployerCompany> _availableCompanies = new();
+        public ObservableCollection<EmployerCompany> AvailableCompanies => _availableCompanies;
 
         private EmployerCompany? _selectedCompany;
         public EmployerCompany? SelectedCompany
@@ -325,15 +496,18 @@ namespace Win11DesktopApp.ViewModels
             _sortField = _appSettingsService.Settings.ArchiveSortField ?? "EndDate";
             _sortAscending = _appSettingsService.Settings.ArchiveSortAscending;
             _viewMode = _appSettingsService.Settings.ArchiveViewMode ?? "List";
-            _zoomLevel = _appSettingsService.Settings.ArchiveZoomLevel;
+            _tileSizeStep = Math.Clamp(_appSettingsService.Settings.ArchiveTileSizeStep, 1, 6);
+            if (_appSettingsService.Settings.ArchiveTileSizeStep < 1)
+            {
+                var legacyZoom = _appSettingsService.Settings.ArchiveZoomLevel;
+                _tileSizeStep = legacyZoom <= 0.9 ? 2 : legacyZoom >= 1.2 ? 5 : 4;
+            }
             _archivedEmployeesView = CollectionViewSource.GetDefaultView(_archivedEmployeesSource);
             _archivedEmployeesView.Filter = FilterArchived;
             _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-            _searchDebounce.Tick += (_, _) =>
-            {
-                _searchDebounce.Stop();
-                RefreshArchiveView();
-            };
+            _searchDebounce.Tick += OnSearchDebounceTick;
+            RefreshAvailableCompanies();
+            _companyService.VisibilityChanged += OnCompanyVisibilityChanged;
 
             GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
 
@@ -357,6 +531,7 @@ namespace Win11DesktopApp.ViewModels
                     NewStartDate = DateTime.Today.ToString("dd.MM.yyyy");
                     NewContractSignDate = DateTime.Today.ToString("dd.MM.yyyy");
                     RestoreStatus = string.Empty;
+                    RefreshAvailableCompanies();
                     SelectedCompany = AvailableCompanies.FirstOrDefault();
                     IsRestoreDialogOpen = true;
                 }
@@ -378,9 +553,10 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 SaveArchiveDisplaySettings();
+                ResetDisplayLimit();
                 ApplySort();
-                RefreshFilteredCount();
-                HasFilteredResults = FilteredCount > 0;
+                RebuildAfterViewRefresh();
+                NotifyPaginationProperties();
             });
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             FilterByStatCommand = new RelayCommand(o => StatFilter = o as string ?? "all");
@@ -395,8 +571,19 @@ namespace Win11DesktopApp.ViewModels
                 {
                     OnPropertyChanged(nameof(HasActiveFilters));
                     _searchDebounce.Stop();
+                    ResetDisplayLimit();
                     RefreshArchiveView();
                 }
+            });
+
+            ShowMoreCommand = new RelayCommand(_ =>
+            {
+                if (!HasMoreToShow)
+                    return;
+
+                _displayLimit += ArchivePageSize;
+                RebuildVisibleSliceIfNeeded();
+                NotifyPaginationProperties();
             });
 
             ViewEmployeeCommand = new RelayCommand(o =>
@@ -420,9 +607,145 @@ namespace Win11DesktopApp.ViewModels
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
 
-        // Fires after e.g. the employee is deleted from the Archive profile (moved to Recently
-        // Deleted), so the archive list drops the removed row instead of showing it as stale.
-        private void OnDetailsDataChanged() => _ = LoadArchiveAsync();
+        // Archive profile cannot edit the questionnaire. DataChanged here is mainly
+        // "moved to Recently Deleted" — remove that one row instead of reloading everyone.
+        private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e)
+        {
+            try
+            {
+                var folder = !string.IsNullOrWhiteSpace(e.EmployeeFolder)
+                    ? e.EmployeeFolder
+                    : EmployeeDetailsVm?.EmployeeFolderPath;
+                var uniqueId = !string.IsNullOrWhiteSpace(e.UniqueId)
+                    ? e.UniqueId
+                    : EmployeeDetailsVm?.Data?.UniqueId;
+
+                if (TryRemoveArchivedEmployee(folder, uniqueId))
+                {
+                    LoggingService.LogInfo(
+                        "ArchiveViewModel.OnDetailsDataChanged",
+                        $"Removed single archive row without full reload. folder={folder}; id={uniqueId}.");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ArchiveViewModel.OnDetailsDataChanged", ex.Message);
+            }
+
+            _ = LoadArchiveAsync();
+        }
+
+        private bool TryRemoveArchivedEmployee(string? employeeFolder, string? uniqueId)
+        {
+            ArchivedEmployeeSummary? match = null;
+
+            if (!string.IsNullOrWhiteSpace(uniqueId))
+            {
+                match = _archivedEmployeesSource.FirstOrDefault(e =>
+                    !string.IsNullOrWhiteSpace(e.UniqueId)
+                    && string.Equals(e.UniqueId, uniqueId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (match == null && !string.IsNullOrWhiteSpace(employeeFolder))
+            {
+                match = _archivedEmployeesSource.FirstOrDefault(e =>
+                    !string.IsNullOrWhiteSpace(e.EmployeeFolder)
+                    && string.Equals(e.EmployeeFolder, employeeFolder, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (match == null)
+                return false;
+
+            _archivedEmployeesSource.Remove(match);
+
+            var visibleIdx = -1;
+            for (var i = 0; i < _visibleArchived.Count; i++)
+            {
+                if (ReferenceEquals(_visibleArchived[i], match))
+                {
+                    visibleIdx = i;
+                    break;
+                }
+            }
+            if (visibleIdx >= 0)
+                _visibleArchived.RemoveAt(visibleIdx);
+
+            HasArchivedData = _archivedEmployeesSource.Count > 0;
+            RefreshStats();
+            RebuildFirmOptions();
+
+            try
+            {
+                // Recount + refill first page in one pass (keeps tiles/icons filled after delete).
+                RebuildAfterViewRefresh();
+            }
+            catch (Exception viewEx)
+            {
+                LoggingService.LogWarning("ArchiveViewModel.TryRemoveArchivedEmployee.View", viewEx.Message);
+                HasFilteredResults = _archivedEmployeesSource.Count > 0;
+                FilteredCount = _archivedEmployeesSource.Count;
+                RebuildVisibleSliceIfNeeded();
+            }
+
+            NotifyPaginationProperties();
+            NotifyActiveViewEmployeesChanged();
+            return true;
+        }
+
+        public void Cleanup()
+        {
+            LoggingService.LogInfo("ArchiveViewModel.Cleanup", "Stopped search timer and cleared details.");
+            Interlocked.Increment(ref _loadArchiveVersion);
+            _companyService.VisibilityChanged -= OnCompanyVisibilityChanged;
+            _searchDebounce.Stop();
+            _searchDebounce.Tick -= OnSearchDebounceTick;
+
+            CleanupDetailsVm();
+            EmployeeDetailsVm = null;
+            IsEmployeeDetailsOpen = false;
+        }
+
+        private void OnCompanyVisibilityChanged()
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                RefreshAvailableCompanies();
+                return;
+            }
+
+            _ = dispatcher.BeginInvoke((Action)RefreshAvailableCompanies);
+        }
+
+        private void RefreshAvailableCompanies()
+        {
+            var previouslySelectedId = SelectedCompany?.Id;
+            _availableCompanies.Clear();
+            foreach (var company in _companyService.VisibleCompanies)
+                _availableCompanies.Add(company);
+
+            if (previouslySelectedId is Guid id)
+            {
+                var stillVisible = _availableCompanies.FirstOrDefault(c => c.Id == id);
+                if (stillVisible != null)
+                {
+                    if (!ReferenceEquals(SelectedCompany, stillVisible))
+                        SelectedCompany = stillVisible;
+                    return;
+                }
+            }
+
+            if (SelectedCompany != null && !_availableCompanies.Contains(SelectedCompany))
+                SelectedCompany = _availableCompanies.FirstOrDefault();
+        }
+
+        private void OnSearchDebounceTick(object? sender, EventArgs e)
+        {
+            _searchDebounce.Stop();
+            ResetDisplayLimit();
+            RefreshArchiveView();
+        }
 
         private void CleanupDetailsVm()
         {
@@ -430,6 +753,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                 EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                EmployeeDetailsVm.Cleanup();
             }
         }
 
@@ -453,10 +777,13 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task LoadArchiveAsync()
         {
+            var loadVersion = Interlocked.Increment(ref _loadArchiveVersion);
             IsLoading = true;
             try
             {
                 var loaded = await Task.Run(() => _employeeService.GetArchivedEmployees());
+                if (loadVersion != Volatile.Read(ref _loadArchiveVersion))
+                    return;
 
                 // Bulk-populate the source. We intentionally do NOT wrap this in
                 // _archivedEmployeesView.DeferRefresh(): DeferRefresh is designed
@@ -477,37 +804,42 @@ namespace Win11DesktopApp.ViewModels
                 // Step 1: commit BASE state first so the UI always shows archived
                 // data, even if the optional view pipeline (sort / filtered count)
                 // throws below. FilteredCount is pre-seeded from source as a safe
-                // fallback in case RefreshFilteredCount() is skipped on error.
+                // fallback in case RebuildAfterViewRefresh() is skipped on error.
                 HasArchivedData = _archivedEmployeesSource.Count > 0;
                 FilteredCount = _archivedEmployeesSource.Count;
                 HasFilteredResults = FilteredCount > 0;
                 RefreshStats();
                 RebuildFirmOptions();
 
-                // Step 2: apply sort + filtered count via ICollectionView. These
-                // can throw under edge cases (broken comparer, bad item, WPF
+                // Step 2: apply sort + single-pass count/visible slice via ICollectionView.
+                // These can throw under edge cases (broken comparer, bad item, WPF
                 // quirks around CustomSort). If anything fails, the base state
-                // from Step 1 stays, so the archive tab stays usable.
+                // from Step 1 stays, and we still try to fill the visible page.
+                ResetDisplayLimit();
                 try
                 {
                     ApplySort();
-                    RefreshFilteredCount();
-                    HasFilteredResults = FilteredCount > 0;
+                    RebuildAfterViewRefresh();
                 }
                 catch (Exception viewEx)
                 {
                     LoggingService.LogError("ArchiveViewModel.LoadArchive.ViewPipeline", viewEx);
+                    RebuildVisibleSliceIfNeeded();
                 }
 
                 TryOpenPendingEmployee();
+                NotifyActiveViewEmployeesChanged();
+                NotifyPaginationProperties();
             }
             catch (Exception ex)
             {
-                LoggingService.LogError("ArchiveViewModel.LoadArchive", ex);
+                if (loadVersion == Volatile.Read(ref _loadArchiveVersion))
+                    LoggingService.LogError("ArchiveViewModel.LoadArchive", ex);
             }
             finally
             {
-                IsLoading = false;
+                if (loadVersion == Volatile.Read(ref _loadArchiveVersion))
+                    IsLoading = false;
             }
         }
 
@@ -567,8 +899,64 @@ namespace Win11DesktopApp.ViewModels
         private void RefreshArchiveView()
         {
             _archivedEmployeesView.Refresh();
-            RefreshFilteredCount();
-            HasFilteredResults = FilteredCount > 0;
+            RebuildAfterViewRefresh();
+            NotifyPaginationProperties();
+        }
+
+        private void ResetDisplayLimit() => _displayLimit = ArchivePageSize;
+
+        // After Refresh/ApplySort: count filtered items and fill first tiles/icons page in one pass.
+        private void RebuildAfterViewRefresh()
+        {
+            var count = 0;
+            var takeVisible = IsTilesView || IsIconsView;
+            if (takeVisible)
+                _visibleArchived.Clear();
+
+            foreach (var item in _archivedEmployeesView)
+            {
+                if (item is not ArchivedEmployeeSummary archived)
+                    continue;
+
+                count++;
+                if (takeVisible && _visibleArchived.Count < _displayLimit)
+                    _visibleArchived.Add(archived);
+            }
+
+            FilteredCount = count;
+            HasFilteredResults = count > 0;
+            if (takeVisible)
+                DisplayedCount = _visibleArchived.Count;
+        }
+
+        private void RebuildVisibleSliceIfNeeded()
+        {
+            if (!IsTilesView && !IsIconsView)
+                return;
+
+            _visibleArchived.Clear();
+            var taken = 0;
+            foreach (var item in _archivedEmployeesView)
+            {
+                if (taken >= _displayLimit)
+                    break;
+
+                if (item is ArchivedEmployeeSummary archived)
+                {
+                    _visibleArchived.Add(archived);
+                    taken++;
+                }
+            }
+
+            DisplayedCount = taken;
+        }
+
+        private void NotifyPaginationProperties()
+        {
+            OnPropertyChanged(nameof(HasMoreToShow));
+            OnPropertyChanged(nameof(ShowMoreLabel));
+            OnPropertyChanged(nameof(ResultsPrimaryCount));
+            OnPropertyChanged(nameof(ResultsSecondaryCount));
         }
 
         private void RefreshStats()
@@ -606,11 +994,6 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void RefreshFilteredCount()
-        {
-            FilteredCount = _archivedEmployeesView.Cast<object>().Count();
-        }
-
         private void ApplySort()
         {
             if (_archivedEmployeesView is ListCollectionView listCollectionView)
@@ -625,6 +1008,7 @@ namespace Win11DesktopApp.ViewModels
             _appSettingsService.Settings.ArchiveSortField = SortField;
             _appSettingsService.Settings.ArchiveSortAscending = SortAscending;
             _appSettingsService.Settings.ArchiveViewMode = ViewMode;
+            _appSettingsService.Settings.ArchiveTileSizeStep = TileSizeStep;
             _appSettingsService.Settings.ArchiveZoomLevel = ZoomLevel;
             _appSettingsService.SaveSettings();
         }
@@ -659,6 +1043,17 @@ namespace Win11DesktopApp.ViewModels
             if (SelectedCompany == null)
             {
                 RestoreStatus = Res("MsgSelectFirmRestore");
+                return;
+            }
+
+            if (!_companyService.IsCompanyVisible(SelectedCompany))
+            {
+                RestoreStatus = Res("MsgRestoreFirmHidden");
+                if (string.IsNullOrEmpty(RestoreStatus))
+                    RestoreStatus = "This firm is hidden. Choose a visible firm.";
+                RefreshAvailableCompanies();
+                if (SelectedCompany == null || !_companyService.IsCompanyVisible(SelectedCompany))
+                    SelectedCompany = AvailableCompanies.FirstOrDefault();
                 return;
             }
 

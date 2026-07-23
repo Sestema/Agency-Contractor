@@ -166,14 +166,14 @@ public sealed class DailySqliteBackupService
         try
         {
             var filesCopied = CopySqliteFiles(context.SqliteFolder, context.TempBackup, cancellationToken);
-            File.WriteAllText(
+            SafeFileService.WriteTextAtomic(
                 Path.Combine(context.TempBackup, "_backup_info.txt"),
                 $"CreatedAtUtc={DateTime.UtcNow:O}{Environment.NewLine}Source={context.SqliteFolder}{Environment.NewLine}ExportedFromPostgres={exportedFromPostgres}{Environment.NewLine}FilesCopied={filesCopied}{Environment.NewLine}");
 
             if (Directory.Exists(context.TodayBackup))
                 TryDeleteBackupDirectory(context.TodayBackup);
 
-            Directory.Move(context.TempBackup, context.TodayBackup);
+            RetryHelper.Execute(() => Directory.Move(context.TempBackup, context.TodayBackup), maxRetries: 3);
 
             return new DailySqliteBackupResult
             {

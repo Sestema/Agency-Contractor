@@ -35,10 +35,10 @@ namespace Win11DesktopApp.Views
 
         private void OnClosing(object? sender, CancelEventArgs e)
         {
-            if (_viewModel.IsScanning)
+            if (_viewModel.IsScanning || _viewModel.IsBusy)
             {
                 e.Cancel = true;
-                _viewModel.NotifyScanCloseBlocked();
+                _viewModel.NotifyCloseBlocked();
                 return;
             }
 

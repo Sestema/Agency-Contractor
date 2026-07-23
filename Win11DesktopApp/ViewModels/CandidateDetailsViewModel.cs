@@ -141,7 +141,16 @@ namespace Win11DesktopApp.ViewModels
 
         private void Save()
         {
-            _service.SaveData(_folder, Data);
+            if (!_service.SaveData(_folder, Data))
+            {
+                MessageBox.Show(
+                    Application.Current?.TryFindResource("MsgSaveFail") as string ?? "Failed to save.",
+                    Application.Current?.TryFindResource("TitleError") as string ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
             _activityLogService.Log("CandidateUpdated", "Candidate", "",
                 FullName, $"Оновлено кандидата: {FullName}");
             RequestClose?.Invoke();

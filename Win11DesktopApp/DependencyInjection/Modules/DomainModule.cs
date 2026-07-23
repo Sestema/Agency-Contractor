@@ -10,7 +10,6 @@ namespace Win11DesktopApp.DependencyInjection
             services.AddSingleton(sp => new FirmFinanceRenameService(
                 sp.GetRequiredService<AppDataStorageFactory>(),
                 sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<LocalDbService>(),
                 sp.GetRequiredService<SharedOperationLockService>()));
             services.AddSingleton(sp => new CompanyService(
                 sp.GetRequiredService<TagCatalogService>(),
@@ -56,6 +55,7 @@ namespace Win11DesktopApp.DependencyInjection
                 suppressStartupNotifications: true,
                 storageFactory: sp.GetRequiredService<AppDataStorageFactory>(),
                 firmFinanceRenameService: sp.GetRequiredService<FirmFinanceRenameService>()));
+            services.AddSingleton<SalaryMonthDisplayService>();
             services.AddSingleton(sp => new ActivityLogService(
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<AppDataStorageFactory>().CreateActivityLogStorage(),

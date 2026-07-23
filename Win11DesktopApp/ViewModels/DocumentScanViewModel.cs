@@ -542,11 +542,16 @@ namespace Win11DesktopApp.ViewModels
             _lifetimeCts.Cancel();
         }
 
-        public void NotifyScanCloseBlocked()
+        public void NotifyCloseBlocked()
         {
             ErrorMessage = string.Empty;
-            StatusMessage = Res("ScanCloseBlocked");
+            StatusMessage = IsBusy
+                ? Res("ScanExportCloseBlocked")
+                : Res("ScanCloseBlocked");
         }
+
+        // Kept for any callers that still use the scan-specific name.
+        public void NotifyScanCloseBlocked() => NotifyCloseBlocked();
 
         public void Cleanup()
         {

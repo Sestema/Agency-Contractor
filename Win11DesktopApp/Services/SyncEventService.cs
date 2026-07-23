@@ -105,9 +105,20 @@ public sealed class SyncEventService
 
     public void Stop()
     {
+        Task? worker;
         lock (_gate)
         {
             _cts?.Cancel();
+            worker = _worker;
+        }
+
+        try
+        {
+            worker?.Wait(TimeSpan.FromSeconds(2));
+        }
+        catch (Exception ex)
+        {
+            LoggingService.LogWarning("SyncEventService.Stop", ex.Message);
         }
     }
 
@@ -454,12 +465,21 @@ public sealed class SyncEventService
                 HandleEvent(record);
                 MarkRead(record.Id);
             }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is JsonException)
+            catch (JsonException ex)
             {
                 LoggingService.LogWarning("SyncEventService.ProcessIncomingEvents",
                     $"{Path.GetFileName(path)}: {ex.Message}");
+                // Corrupt payload will not become valid — mark read so we do not retry forever.
                 if (record != null && !string.IsNullOrWhiteSpace(record.Id))
                     MarkRead(record.Id);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                LoggingService.LogWarning("SyncEventService.ProcessIncomingEvents",
+                    $"{Path.GetFileName(path)}: {ex.Message}");
+                // Temporary OneDrive/file lock — allow the next poll to retry this event.
+                if (record != null && !string.IsNullOrWhiteSpace(record.Id))
+                    ForgetProcessed(record.Id);
             }
         }
     }
@@ -475,6 +495,14 @@ public sealed class SyncEventService
             if (_processedIds.Count > 1000)
                 _processedIds.Remove(_processedIds.First());
             return true;
+        }
+    }
+
+    private void ForgetProcessed(string id)
+    {
+        lock (_processedIds)
+        {
+            _processedIds.Remove(id);
         }
     }
 

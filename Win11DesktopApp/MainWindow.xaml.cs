@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Shell;
@@ -177,15 +178,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Called during Closing. Updates window bounds AND synchronously flushes
-    /// any pending debounced settings writes (e.g. DataGrid column widths edited
-    /// moments before the user hit the close button) so they actually land on
-    /// disk before the process exits.
+    /// Called during Closing. Updates window bounds AND flushes any pending debounced
+    /// settings writes (e.g. DataGrid column widths) with a hard timeout so a slow disk
+    /// or lock contention cannot hang the UI / prevent shutdown.
     /// </summary>
     private void SaveWindowBoundsAndFlushSettings()
     {
+        var sw = Stopwatch.StartNew();
         try
         {
+            LoggingService.LogInfo("MainWindow.SaveWindowBounds", "begin");
+
             var settings = _appSettingsService.Settings;
             settings.WindowMaximized = WindowState == WindowState.Maximized;
             if (WindowState == WindowState.Normal)
@@ -196,12 +199,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 settings.WindowHeight = Height;
             }
 
-            // Block until the write completes so we don't lose data to process shutdown.
-            _appSettingsService.SaveSettingsImmediate().GetAwaiter().GetResult();
+            var ok = _appSettingsService.SaveSettingsForShutdown(TimeSpan.FromSeconds(3));
+            LoggingService.LogInfo(
+                "MainWindow.SaveWindowBounds",
+                $"end ms={sw.ElapsedMilliseconds}; ok={ok}.");
         }
         catch (Exception ex)
         {
             LoggingService.LogError("MainWindow.SaveWindowBoundsAndFlushSettings", ex);
+            LoggingService.LogInfo(
+                "MainWindow.SaveWindowBounds",
+                $"end ms={sw.ElapsedMilliseconds}; ok=false (exception).");
         }
     }
 

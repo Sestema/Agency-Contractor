@@ -154,6 +154,53 @@ namespace Win11DesktopApp.EmployeeModels
         public string WorkPermitName { get; set; } = string.Empty;
         public string WorkPermitExpiry { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Copy display fields from <paramref name="source"/> and notify bindings in-place
+        /// (avoids replacing the list item / full firm reload after a single-profile save).
+        /// </summary>
+        public void ApplyFrom(EmployeeSummary source)
+        {
+            if (source == null)
+                return;
+
+            UniqueId = source.UniqueId;
+            FirstName = source.FirstName;
+            LastName = source.LastName;
+            FullName = source.FullName;
+            PositionTitle = source.PositionTitle;
+            StartDate = source.StartDate;
+            ParsedStartDate = source.ParsedStartDate;
+            EndDate = source.EndDate;
+            ContractType = source.ContractType;
+            Gender = source.Gender;
+            PhotoPath = source.PhotoPath;
+            HasPhoto = source.HasPhoto;
+            HasPassport = source.HasPassport;
+            HasVisa = source.HasVisa;
+            HasInsurance = source.HasInsurance;
+            PassportNumber = source.PassportNumber;
+            VisaNumber = source.VisaNumber;
+            InsuranceNumber = source.InsuranceNumber;
+            EmployeeFolder = source.EmployeeFolder;
+            FirmName = source.FirmName;
+            PassportExpiry = source.PassportExpiry;
+            VisaExpiry = source.VisaExpiry;
+            InsuranceExpiry = source.InsuranceExpiry;
+            PassportSeverity = source.PassportSeverity;
+            VisaSeverity = source.VisaSeverity;
+            InsuranceSeverity = source.InsuranceSeverity;
+            WorkPermitSeverity = source.WorkPermitSeverity;
+            Status = source.Status;
+            Phone = source.Phone;
+            Email = source.Email;
+            BankAccountNumber = source.BankAccountNumber;
+            BankName = source.BankName;
+            EmployeeType = source.EmployeeType;
+            WorkPermitName = source.WorkPermitName;
+            WorkPermitExpiry = source.WorkPermitExpiry;
+            OnPropertyChanged(string.Empty);
+        }
+
         public string Initials
         {
             get
@@ -205,6 +252,18 @@ namespace Win11DesktopApp.EmployeeModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+    }
+
+    /// <summary>
+    /// Raised when employee details save/archive/delete so list screens can patch one row
+    /// or do a full reload when the set of employees changed.
+    /// </summary>
+    public sealed class EmployeeDataChangedEventArgs : EventArgs
+    {
+        public bool RequiresListReload { get; init; }
+        public string FirmName { get; init; } = string.Empty;
+        public string EmployeeFolder { get; init; } = string.Empty;
+        public string UniqueId { get; init; } = string.Empty;
     }
 
     public class EmployeeDocumentTemp

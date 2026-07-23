@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -39,13 +41,13 @@ namespace Win11DesktopApp.Services
         public List<FirmExpense> GetFirmExpenses(int year, int month, string firmName)
         {
             return LoadFirmExpensesForMonth(year, month)
-                .Where(e => e.FirmName == firmName)
+                .Where(e => string.Equals(e.FirmName, firmName, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
         public List<FirmExpense> GetFirmExpensesForFirms(int year, int month, IEnumerable<string> firmNames)
         {
-            var set = new HashSet<string>(firmNames);
+            var set = new HashSet<string>(firmNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             return LoadFirmExpensesForMonth(year, month)
                 .Where(e => set.Contains(e.FirmName))
                 .ToList();
@@ -65,6 +67,29 @@ namespace Win11DesktopApp.Services
                 return;
             }
 
+            PersistFirmExpenseAdd(expense);
+        }
+
+        public async Task AddFirmExpenseAsync(FirmExpense expense, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrEmpty(expense.Id))
+                expense.Id = Guid.NewGuid().ToString();
+
+            EnsureSalaryDbConfigured();
+            using var salaryLock = await TryAcquireSalaryWriteLockAsync(expense.Year, expense.Month, expense.FirmName, cancellationToken)
+                .ConfigureAwait(false);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                _setSalaryConflictMessage(BuildSalaryLockMessage(expense.Year, expense.Month, expense.FirmName));
+                LoggingService.LogWarning("FinanceMonthPaymentsService.AddFirmExpense", BuildSalaryLockMessage(expense.Year, expense.Month, expense.FirmName));
+                return;
+            }
+
+            PersistFirmExpenseAdd(expense);
+        }
+
+        private void PersistFirmExpenseAdd(FirmExpense expense)
+        {
             _monthPaymentsStorage!.UpsertFirmExpense(expense.Year, expense.Month, CloneFirmExpense(expense));
             InvalidatePaymentsCache(expense.Year, expense.Month);
             _clearSalarySaveState();
@@ -81,6 +106,26 @@ namespace Win11DesktopApp.Services
                 return;
             }
 
+            PersistFirmExpenseUpdate(updated);
+        }
+
+        public async Task UpdateFirmExpenseAsync(FirmExpense updated, CancellationToken cancellationToken = default)
+        {
+            EnsureSalaryDbConfigured();
+            using var salaryLock = await TryAcquireSalaryWriteLockAsync(updated.Year, updated.Month, updated.FirmName, cancellationToken)
+                .ConfigureAwait(false);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                _setSalaryConflictMessage(BuildSalaryLockMessage(updated.Year, updated.Month, updated.FirmName));
+                LoggingService.LogWarning("FinanceMonthPaymentsService.UpdateFirmExpense", BuildSalaryLockMessage(updated.Year, updated.Month, updated.FirmName));
+                return;
+            }
+
+            PersistFirmExpenseUpdate(updated);
+        }
+
+        private void PersistFirmExpenseUpdate(FirmExpense updated)
+        {
             _monthPaymentsStorage!.UpsertFirmExpense(updated.Year, updated.Month, CloneFirmExpense(updated));
             InvalidatePaymentsCache(updated.Year, updated.Month);
             _clearSalarySaveState();
@@ -114,6 +159,28 @@ namespace Win11DesktopApp.Services
                 return;
             }
 
+            PersistFirmExpenseRemove(expenseId, year, month);
+        }
+
+        public async Task RemoveFirmExpenseAsync(string expenseId, int year, int month, CancellationToken cancellationToken = default)
+        {
+            EnsureSalaryDbConfigured();
+            var monthExpenses = LoadFirmExpensesForMonth(year, month);
+            var firmName = monthExpenses.FirstOrDefault(expense => expense.Id == expenseId)?.FirmName ?? string.Empty;
+            using var salaryLock = await TryAcquireSalaryWriteLockAsync(year, month, firmName, cancellationToken)
+                .ConfigureAwait(false);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                _setSalaryConflictMessage(BuildSalaryLockMessage(year, month, firmName));
+                LoggingService.LogWarning("FinanceMonthPaymentsService.RemoveFirmExpense", BuildSalaryLockMessage(year, month, firmName));
+                return;
+            }
+
+            PersistFirmExpenseRemove(expenseId, year, month);
+        }
+
+        private void PersistFirmExpenseRemove(string expenseId, int year, int month)
+        {
             if (_monthPaymentsStorage!.DeleteFirmExpense(year, month, expenseId))
             {
                 InvalidatePaymentsCache(year, month);
@@ -126,15 +193,19 @@ namespace Win11DesktopApp.Services
             EnsureSalaryDbConfigured();
             if (string.IsNullOrWhiteSpace(firmNameFilter))
             {
-                var monthResult = TryLoadAllFirmPayments(year, month);
-                if (!monthResult.success)
+                // Expenses-only write: never reload/rewrite salary_entries from cache
+                // (that could overwrite newer multi-PC salary edits).
+                using var salaryLock = TryAcquireSalaryWriteLock(year, month);
+                if (_sharedOperationLockService != null && salaryLock == null)
                 {
-                    LoggingService.LogWarning("FinanceMonthPaymentsService.SaveFirmExpenses", monthResult.errorMessage);
+                    _setSalaryConflictMessage(BuildSalaryLockMessage(year, month));
+                    LoggingService.LogWarning("FinanceMonthPaymentsService.SaveFirmExpenses", BuildSalaryLockMessage(year, month));
                     return;
                 }
 
-                var monthEntries = monthResult.entries;
-                SaveAllFirmPayments(year, month, monthEntries, CloneFirmExpenses(expenses));
+                _monthPaymentsStorage!.ReplaceAllFirmExpenses(year, month, CloneFirmExpenses(expenses));
+                InvalidatePaymentsCache(year, month);
+                _clearSalarySaveState();
             }
             else
             {
@@ -147,7 +218,7 @@ namespace Win11DesktopApp.Services
                 }
 
                 var filteredExpenses = CloneFirmExpenses(expenses)
-                    .Where(expense => string.Equals(expense.FirmName, firmNameFilter, StringComparison.Ordinal))
+                    .Where(expense => string.Equals(expense.FirmName, firmNameFilter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
                 _monthPaymentsStorage!.ReplaceFirmExpensesForFirm(year, month, firmNameFilter, filteredExpenses);
                 InvalidatePaymentsCache(year, month);
@@ -156,6 +227,40 @@ namespace Win11DesktopApp.Services
         }
 
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
+        {
+            using var salaryLock = TryAcquireSalaryWriteLock(year, month);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                var message = BuildSalaryLockMessage(year, month);
+                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveAllFirmPayments.Lock", message);
+                _setSalaryConflictMessage(message);
+                return false;
+            }
+
+            return SaveAllFirmPaymentsCore(year, month, allEntries, allExpenses);
+        }
+
+        public async Task<bool> SaveAllFirmPaymentsAsync(
+            int year,
+            int month,
+            List<SalaryEntry> allEntries,
+            List<FirmExpense> allExpenses,
+            CancellationToken cancellationToken = default)
+        {
+            using var salaryLock = await TryAcquireSalaryWriteLockAsync(year, month, null, cancellationToken)
+                .ConfigureAwait(false);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                var message = BuildSalaryLockMessage(year, month);
+                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveAllFirmPayments.Lock", message);
+                _setSalaryConflictMessage(message);
+                return false;
+            }
+
+            return SaveAllFirmPaymentsCore(year, month, allEntries, allExpenses);
+        }
+
+        private bool SaveAllFirmPaymentsCore(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
         {
             _clearLastSaveRecoveryPath();
 
@@ -168,18 +273,12 @@ namespace Win11DesktopApp.Services
                 return false;
             }
 
-            using var salaryLock = TryAcquireSalaryWriteLock(year, month);
-            if (_sharedOperationLockService != null && salaryLock == null)
-            {
-                var message = BuildSalaryLockMessage(year, month);
-                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveAllFirmPayments.Lock", message);
-                _setSalaryConflictMessage(message);
-                return false;
-            }
-
             try
             {
-                _monthPaymentsStorage.SaveMonthPayments(year, month, CloneSalaryEntries(allEntries), CloneFirmExpenses(allExpenses));
+                // Pass live entry instances (not clones) so InsertSalaryEntry can write the new
+                // UpdatedAt back onto the UI/model rows. Cloning left the grid with stale
+                // UpdatedAt and the next upsert failed EnsureSalaryEntryNotStale.
+                _monthPaymentsStorage.SaveMonthPayments(year, month, allEntries, CloneFirmExpenses(allExpenses));
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("Multiple salary DB files found", StringComparison.Ordinal))
             {
@@ -200,6 +299,12 @@ namespace Win11DesktopApp.Services
         }
 
         public bool UpsertSalaryEntries(int year, int month, List<SalaryEntry> entries)
+            => UpsertSalaryEntriesCore(year, month, entries);
+
+        public Task<bool> UpsertSalaryEntriesAsync(int year, int month, List<SalaryEntry> entries, CancellationToken cancellationToken = default)
+            => Task.Run(() => UpsertSalaryEntriesCore(year, month, entries), cancellationToken);
+
+        private bool UpsertSalaryEntriesCore(int year, int month, List<SalaryEntry> entries)
         {
             _clearLastSaveRecoveryPath();
 
@@ -238,6 +343,41 @@ namespace Win11DesktopApp.Services
 
         public bool SaveFirmPayments(int year, int month, string firmName, List<SalaryEntry> entries, List<FirmExpense> expenses)
         {
+            using var salaryLock = TryAcquireSalaryWriteLock(year, month, firmName);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                var message = BuildSalaryLockMessage(year, month, firmName);
+                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveFirmPayments.Lock", message);
+                _setSalaryConflictMessage(message);
+                return false;
+            }
+
+            return SaveFirmPaymentsCore(year, month, firmName, entries, expenses);
+        }
+
+        public async Task<bool> SaveFirmPaymentsAsync(
+            int year,
+            int month,
+            string firmName,
+            List<SalaryEntry> entries,
+            List<FirmExpense> expenses,
+            CancellationToken cancellationToken = default)
+        {
+            using var salaryLock = await TryAcquireSalaryWriteLockAsync(year, month, firmName, cancellationToken)
+                .ConfigureAwait(false);
+            if (_sharedOperationLockService != null && salaryLock == null)
+            {
+                var message = BuildSalaryLockMessage(year, month, firmName);
+                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveFirmPayments.Lock", message);
+                _setSalaryConflictMessage(message);
+                return false;
+            }
+
+            return SaveFirmPaymentsCore(year, month, firmName, entries, expenses);
+        }
+
+        private bool SaveFirmPaymentsCore(int year, int month, string firmName, List<SalaryEntry> entries, List<FirmExpense> expenses)
+        {
             _clearLastSaveRecoveryPath();
 
             if (string.IsNullOrEmpty(_folderService.RootPath))
@@ -249,18 +389,10 @@ namespace Win11DesktopApp.Services
                 return false;
             }
 
-            using var salaryLock = TryAcquireSalaryWriteLock(year, month, firmName);
-            if (_sharedOperationLockService != null && salaryLock == null)
-            {
-                var message = BuildSalaryLockMessage(year, month, firmName);
-                LoggingService.LogWarning("FinanceMonthPaymentsService.SaveFirmPayments.Lock", message);
-                _setSalaryConflictMessage(message);
-                return false;
-            }
-
             try
             {
-                var filteredEntries = CloneSalaryEntries(entries)
+                // Keep the caller's entry instances so UpdatedAt is written back after save.
+                var filteredEntries = entries
                     .Where(entry => string.Equals(entry.FirmName, firmName, StringComparison.OrdinalIgnoreCase))
                     .ToList();
                 var filteredExpenses = CloneFirmExpenses(expenses)
@@ -419,6 +551,21 @@ namespace Win11DesktopApp.Services
         private IDisposable? TryAcquireSalaryWriteLock(int year, int month, string? firmName = null)
             => _sharedOperationLockService?.TryAcquire(BuildSalaryLockName(year, month, firmName), TimeSpan.FromSeconds(15));
 
+        private Task<IDisposable?> TryAcquireSalaryWriteLockAsync(
+            int year,
+            int month,
+            string? firmName = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (_sharedOperationLockService == null)
+                return Task.FromResult<IDisposable?>(null);
+
+            return _sharedOperationLockService.TryAcquireAsync(
+                BuildSalaryLockName(year, month, firmName),
+                TimeSpan.FromSeconds(15),
+                cancellationToken);
+        }
+
         private static string BuildSalaryLockName(int year, int month, string? firmName = null)
             => string.IsNullOrWhiteSpace(firmName)
                 ? $"salary-{year:D4}-{month:D2}"
@@ -434,8 +581,14 @@ namespace Win11DesktopApp.Services
             EnsureSalaryDbConfigured();
             try
             {
+                lock (_paymentsCacheLock)
+                {
+                    if (_paymentsCache.TryGetValue((year, month), out var cached))
+                        return CloneFirmExpenses(cached.expenses);
+                }
+
                 if (_monthPaymentsStorage!.MonthDbExists(year, month))
-                    return LoadAllFirmPayments(year, month).expenses;
+                    return CloneFirmExpenses(_monthPaymentsStorage.LoadFirmExpensesOnly(year, month));
             }
             catch (Exception ex)
             {

@@ -100,6 +100,28 @@ ORDER BY firm_name, name;";
             return (entries, expenses);
         }
 
+        public List<FirmExpense> LoadFirmExpensesOnly(int year, int month)
+        {
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            var expenses = new List<FirmExpense>();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT id, firm_name, year, month, name, amount
+FROM salary.salary_expenses
+WHERE source_year = @year AND source_month = @month
+ORDER BY firm_name, name;";
+            command.Parameters.AddWithValue("year", year);
+            command.Parameters.AddWithValue("month", month);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                expenses.Add(ReadFirmExpense(reader));
+
+            return expenses;
+        }
+
         public void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
         {
             EnsureInitialized();
@@ -199,6 +221,29 @@ WHERE source_year = @year
                 deleteCommand.Parameters.AddWithValue("year", year);
                 deleteCommand.Parameters.AddWithValue("month", month);
                 deleteCommand.Parameters.AddWithValue("firmName", firmName ?? string.Empty);
+                deleteCommand.ExecuteNonQuery();
+            }
+
+            foreach (var expense in expenses ?? Array.Empty<FirmExpense>())
+                InsertSalaryExpense(connection, transaction, year, month, expense);
+
+            transaction.Commit();
+        }
+
+        public void ReplaceAllFirmExpenses(int year, int month, IReadOnlyList<FirmExpense> expenses)
+        {
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+
+            using (var deleteCommand = connection.CreateCommand())
+            {
+                deleteCommand.Transaction = transaction;
+                deleteCommand.CommandText = @"
+DELETE FROM salary.salary_expenses
+WHERE source_year = @year AND source_month = @month;";
+                deleteCommand.Parameters.AddWithValue("year", year);
+                deleteCommand.Parameters.AddWithValue("month", month);
                 deleteCommand.ExecuteNonQuery();
             }
 

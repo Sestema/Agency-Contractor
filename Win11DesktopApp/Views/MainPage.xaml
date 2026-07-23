@@ -1061,15 +1061,29 @@
                 </Grid>
 
                 <!-- ===== COMPANY LIST ===== -->
-                <ScrollViewer x:Name="CompanyScrollViewer" Grid.Row="2" Style="{StaticResource ThinScroll}" Padding="6,4,6,0">
-                    <ListBox ItemsSource="{Binding VisibleCompanies}" 
-                             SelectedItem="{Binding SelectedCompany}"
-                             Background="Transparent" BorderThickness="0"
-                             HorizontalContentAlignment="Stretch"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                             PreviewMouseWheel="CompanyList_PreviewMouseWheel"
-                             Margin="14,10,14,10">
+                <!-- Own scroll + virtualization: outer ScrollViewer would force all cards to materialize. -->
+                <ListBox x:Name="CompanyListBox"
+                         Grid.Row="2"
+                         ItemsSource="{Binding VisibleCompanies}"
+                         SelectedItem="{Binding SelectedCompany}"
+                         Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Stretch"
+                         Padding="6,4,6,0"
+                         Margin="14,10,14,10"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.CanContentScroll="True"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         VirtualizingPanel.ScrollUnit="Pixel">
+                    <ListBox.Resources>
+                        <Style TargetType="ScrollViewer" BasedOn="{StaticResource ThinScroll}"/>
+                    </ListBox.Resources>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <EventSetter Event="MouseDoubleClick" Handler="CompanyItem_DoubleClick"/>
@@ -1167,8 +1181,7 @@
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
-                    </ListBox>
-                </ScrollViewer>
+                </ListBox>
 
                 <!-- ===== ADD BUTTON ===== -->
                 <Border Grid.Row="3" Padding="14,12,14,16"

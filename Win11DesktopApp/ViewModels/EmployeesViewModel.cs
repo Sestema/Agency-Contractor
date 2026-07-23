@@ -637,11 +637,7 @@ namespace Win11DesktopApp.ViewModels
             if (_syncEventService != null)
                 _syncEventService.SyncEventReceived += OnSyncEventReceived;
             _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-            _searchDebounceTimer.Tick += (_, _) =>
-            {
-                _searchDebounceTimer.Stop();
-                ApplyFilter();
-            };
+            _searchDebounceTimer.Tick += OnSearchDebounceTick;
             _sortField = _appSettingsService.Settings.EmployeeSortField ?? "Name";
             _sortAscending = _appSettingsService.Settings.EmployeeSortAscending;
             _viewMode = _showAllCompanies ? "Tiles" : _appSettingsService.Settings.EmployeeViewMode ?? "List";
@@ -1168,6 +1164,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                 EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                EmployeeDetailsVm.Cleanup();
             }
         }
 
@@ -1185,7 +1182,109 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged() => _ = LoadEmployeesAsync();
+
+        private void OnDetailsDataChanged(EmployeeModels.EmployeeDataChangedEventArgs e)
+        {
+            if (e.RequiresListReload || string.IsNullOrWhiteSpace(e.EmployeeFolder))
+            {
+                _ = LoadEmployeesAsync();
+                return;
+            }
+
+            _ = PatchEmployeeInListAsync(e);
+        }
+
+        private async Task PatchEmployeeInListAsync(EmployeeModels.EmployeeDataChangedEventArgs e)
+        {
+            try
+            {
+                var firmName = !string.IsNullOrWhiteSpace(e.FirmName)
+                    ? e.FirmName
+                    : (_company?.Name ?? string.Empty);
+
+                var updated = await Task.Run(() =>
+                    _employeeService.TryBuildEmployeeSummary(firmName, e.EmployeeFolder));
+
+                if (updated == null)
+                {
+                    await LoadEmployeesAsync();
+                    return;
+                }
+
+                var applied = false;
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    applied = TryApplyEmployeeSummaryPatch(updated, e);
+                });
+
+                if (!applied)
+                    await LoadEmployeesAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeesViewModel.PatchEmployeeInListAsync", ex.Message);
+                await LoadEmployeesAsync();
+            }
+        }
+
+        private bool TryApplyEmployeeSummaryPatch(
+            EmployeeModels.EmployeeSummary updated,
+            EmployeeModels.EmployeeDataChangedEventArgs e)
+        {
+            var existing = FindEmployeeInList(e.EmployeeFolder, e.UniqueId);
+            if (existing == null)
+                return false;
+
+            var previousFullName = existing.FullName;
+            var previousStartDate = existing.StartDate;
+            var previousStatus = existing.Status;
+            var previousHadProblems = HasExpiringDocs(existing);
+            var wasSelected = existing.IsSelected;
+
+            existing.ApplyFrom(updated);
+            existing.IsSelected = wasSelected;
+
+            RefreshStats();
+
+            var query = SearchQuery?.Trim() ?? string.Empty;
+            var needsFilterRebuild =
+                !string.IsNullOrEmpty(query)
+                || !string.Equals(StatFilter, "all", StringComparison.OrdinalIgnoreCase)
+                || (string.Equals(SortField, "Name", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(previousFullName, existing.FullName, StringComparison.OrdinalIgnoreCase))
+                || (string.Equals(SortField, "StartDate", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(previousStartDate, existing.StartDate, StringComparison.Ordinal))
+                || (string.Equals(SortField, "Status", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(previousStatus, existing.Status, StringComparison.OrdinalIgnoreCase))
+                || (string.Equals(SortField, "Problems", StringComparison.OrdinalIgnoreCase)
+                    && previousHadProblems != HasExpiringDocs(existing));
+
+            if (needsFilterRebuild)
+                ApplyFilter();
+            else
+                NotifyActiveViewEmployeesChanged();
+
+            return true;
+        }
+
+        private EmployeeModels.EmployeeSummary? FindEmployeeInList(string? employeeFolder, string? uniqueId)
+        {
+            if (!string.IsNullOrWhiteSpace(employeeFolder))
+            {
+                var byFolder = _allEmployees.FirstOrDefault(emp =>
+                    string.Equals(emp.EmployeeFolder, employeeFolder, StringComparison.OrdinalIgnoreCase));
+                if (byFolder != null)
+                    return byFolder;
+            }
+
+            if (!string.IsNullOrWhiteSpace(uniqueId))
+            {
+                return _allEmployees.FirstOrDefault(emp =>
+                    string.Equals(emp.UniqueId, uniqueId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return null;
+        }
 
         private void OnSyncEventReceived(object? sender, SyncEventReceivedEventArgs e)
         {
@@ -1562,7 +1661,13 @@ namespace Win11DesktopApp.ViewModels
 
         public void Cleanup()
         {
+            LoggingService.LogInfo("EmployeesViewModel.Cleanup", "Unsubscribed sync and stopped search timer.");
+
+            if (_syncEventService != null)
+                _syncEventService.SyncEventReceived -= OnSyncEventReceived;
+
             _searchDebounceTimer.Stop();
+            _searchDebounceTimer.Tick -= OnSearchDebounceTick;
 
             CleanupDetailsVm();
             CleanupAddEmployeeVm();
@@ -1574,6 +1679,12 @@ namespace Win11DesktopApp.ViewModels
             var thumbnailPreloadCts = Interlocked.Exchange(ref _thumbnailPreloadCts, null);
             thumbnailPreloadCts?.Cancel();
             thumbnailPreloadCts?.Dispose();
+        }
+
+        private void OnSearchDebounceTick(object? sender, EventArgs e)
+        {
+            _searchDebounceTimer.Stop();
+            ApplyFilter();
         }
 
     }

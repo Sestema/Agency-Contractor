@@ -1,19 +1,26 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class CandidatesViewModel : ViewModelBase
+    public class CandidatesViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly CandidateService _service;
         private readonly AppSettingsService _appSettingsService;
         private readonly CandidateViewModelFactory _candidateViewModelFactory;
+        private readonly DispatcherTimer _searchDebounce;
+        private int _loadGeneration;
+        private List<CandidateSummary> _allCandidates = new();
 
         public ICommand GoBackCommand { get; }
         public ICommand AddCandidateCommand { get; }
@@ -60,14 +67,22 @@ namespace Win11DesktopApp.ViewModels
         public string SearchText
         {
             get => _searchText;
-            set { if (SetProperty(ref _searchText, value)) ApplyFilter(); }
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                    ScheduleFilterRefresh();
+            }
         }
 
         private string _selectedPosition = "";
         public string SelectedPosition
         {
             get => _selectedPosition;
-            set { if (SetProperty(ref _selectedPosition, value)) ApplyFilter(); }
+            set
+            {
+                if (SetProperty(ref _selectedPosition, value))
+                    ApplyFilter();
+            }
         }
 
         private int _totalCount;
@@ -75,6 +90,9 @@ namespace Win11DesktopApp.ViewModels
 
         private bool _hasCandidates;
         public bool HasCandidates { get => _hasCandidates; set => SetProperty(ref _hasCandidates, value); }
+
+        private bool _isLoading;
+        public bool IsLoading { get => _isLoading; set => SetProperty(ref _isLoading, value); }
 
         private bool _isAddDialogOpen;
         public bool IsAddDialogOpen
@@ -104,8 +122,6 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _detailsVm, value);
         }
 
-        private System.Collections.Generic.List<CandidateSummary> _allCandidates = new();
-
         public CandidatesViewModel(
             CandidateService? candidateService = null,
             AppSettingsService? appSettingsService = null,
@@ -119,6 +135,9 @@ namespace Win11DesktopApp.ViewModels
             _viewMode = _appSettingsService.Settings.CandidateViewMode;
             _zoomLevel = _appSettingsService.Settings.CandidateZoomLevel;
 
+            _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            _searchDebounce.Tick += OnSearchDebounceTick;
+
             GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             AddCandidateCommand = new RelayCommand(o =>
@@ -126,53 +145,110 @@ namespace Win11DesktopApp.ViewModels
                 if (!PolicyService.EnsureWriteAllowed("Додати кандидата"))
                     return;
 
+                CleanupAddCandidateVm();
                 AddCandidateVm = _candidateViewModelFactory.CreateAddCandidate();
-                AddCandidateVm.RequestClose += () =>
-                {
-                    IsAddDialogOpen = false;
-                    LoadCandidates();
-                };
+                AddCandidateVm.RequestClose += OnAddCandidateClose;
                 IsAddDialogOpen = true;
             });
             OpenCandidateCommand = new RelayCommand(o =>
             {
                 if (o is CandidateSummary summary)
                 {
+                    CleanupDetailsVm();
                     DetailsVm = _candidateViewModelFactory.CreateCandidateDetails(summary.CandidateFolder);
-                    DetailsVm.RequestClose += () =>
-                    {
-                        IsDetailsOpen = false;
-                        LoadCandidates();
-                    };
+                    DetailsVm.RequestClose += OnDetailsClose;
                     IsDetailsOpen = true;
                 }
             });
 
-            LoadCandidates();
+            _ = LoadCandidatesAsync();
         }
 
-        public void LoadCandidates()
+        public void LoadCandidates() => _ = LoadCandidatesAsync();
+
+        public void Cleanup()
         {
-            _allCandidates = _service.GetAll();
-            TotalCount = _allCandidates.Count;
+            LoggingService.LogInfo("CandidatesViewModel.Cleanup", "Invalidated load and cleared candidate dialogs.");
+            Interlocked.Increment(ref _loadGeneration);
+            _searchDebounce.Stop();
+            _searchDebounce.Tick -= OnSearchDebounceTick;
 
-            Positions.Clear();
-            Positions.Add("");
-            foreach (var p in _allCandidates
-                .Select(c => c.DesiredPosition)
-                .Where(p => !string.IsNullOrEmpty(p))
-                .Distinct().OrderBy(p => p))
+            CleanupAddCandidateVm();
+            AddCandidateVm = null;
+            IsAddDialogOpen = false;
+
+            CleanupDetailsVm();
+            DetailsVm = null;
+            IsDetailsOpen = false;
+        }
+
+        private async Task LoadCandidatesAsync()
+        {
+            var generation = Interlocked.Increment(ref _loadGeneration);
+            IsLoading = true;
+
+            try
             {
-                Positions.Add(p);
-            }
+                var snapshot = await Task.Run(() =>
+                {
+                    var all = _service.GetAll();
+                    var positions = all
+                        .Select(c => c.DesiredPosition)
+                        .Where(p => !string.IsNullOrEmpty(p))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(p => p, StringComparer.CurrentCultureIgnoreCase)
+                        .ToList();
+                    return (All: all, Positions: positions);
+                }).ConfigureAwait(true);
 
+                if (generation != Volatile.Read(ref _loadGeneration))
+                    return;
+
+                _allCandidates = snapshot.All;
+                TotalCount = _allCandidates.Count;
+
+                Positions.Clear();
+                Positions.Add("");
+                foreach (var position in snapshot.Positions)
+                    Positions.Add(position);
+
+                ApplyFilter();
+            }
+            catch (Exception ex)
+            {
+                if (generation == Volatile.Read(ref _loadGeneration))
+                    LoggingService.LogError("CandidatesViewModel.LoadCandidatesAsync", ex);
+            }
+            finally
+            {
+                if (generation == Volatile.Read(ref _loadGeneration))
+                    IsLoading = false;
+            }
+        }
+
+        private void ScheduleFilterRefresh()
+        {
+            _searchDebounce.Stop();
+            _searchDebounce.Start();
+        }
+
+        private void OnSearchDebounceTick(object? sender, EventArgs e)
+        {
+            _searchDebounce.Stop();
             ApplyFilter();
         }
 
         private void ApplyFilter()
         {
-            Candidates.Clear();
+            var filtered = BuildFilteredList();
+            ReplaceCandidates(filtered);
+            HasCandidates = Candidates.Count > 0;
+        }
+
+        private List<CandidateSummary> BuildFilteredList()
+        {
             var query = _searchText?.Trim() ?? string.Empty;
+            var result = new List<CandidateSummary>(_allCandidates.Count);
 
             foreach (var c in _allCandidates)
             {
@@ -188,10 +264,43 @@ namespace Win11DesktopApp.ViewModels
                         continue;
                 }
 
-                Candidates.Add(c);
+                result.Add(c);
             }
 
-            HasCandidates = Candidates.Count > 0;
+            return result;
+        }
+
+        private void ReplaceCandidates(List<CandidateSummary> items)
+        {
+            Candidates.Clear();
+            foreach (var item in items)
+                Candidates.Add(item);
+        }
+
+        private void OnAddCandidateClose()
+        {
+            IsAddDialogOpen = false;
+            CleanupAddCandidateVm();
+            LoadCandidates();
+        }
+
+        private void OnDetailsClose()
+        {
+            IsDetailsOpen = false;
+            CleanupDetailsVm();
+            LoadCandidates();
+        }
+
+        private void CleanupAddCandidateVm()
+        {
+            if (AddCandidateVm != null)
+                AddCandidateVm.RequestClose -= OnAddCandidateClose;
+        }
+
+        private void CleanupDetailsVm()
+        {
+            if (DetailsVm != null)
+                DetailsVm.RequestClose -= OnDetailsClose;
         }
     }
 }

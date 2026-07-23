@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Text.Json;
 using Win11DesktopApp.Models;
@@ -189,8 +190,14 @@ namespace Win11DesktopApp.Services
         public void AddFirmExpense(FirmExpense expense)
             => MonthPaymentsService.AddFirmExpense(expense);
 
+        public Task AddFirmExpenseAsync(FirmExpense expense, CancellationToken cancellationToken = default)
+            => MonthPaymentsService.AddFirmExpenseAsync(expense, cancellationToken);
+
         public void UpdateFirmExpense(FirmExpense updated)
             => MonthPaymentsService.UpdateFirmExpense(updated);
+
+        public Task UpdateFirmExpenseAsync(FirmExpense updated, CancellationToken cancellationToken = default)
+            => MonthPaymentsService.UpdateFirmExpenseAsync(updated, cancellationToken);
 
         public void RemoveFirmExpense(string expenseId)
             => MonthPaymentsService.RemoveFirmExpense(expenseId);
@@ -198,17 +205,40 @@ namespace Win11DesktopApp.Services
         public void RemoveFirmExpense(string expenseId, int year, int month)
             => MonthPaymentsService.RemoveFirmExpense(expenseId, year, month);
 
+        public Task RemoveFirmExpenseAsync(string expenseId, int year, int month, CancellationToken cancellationToken = default)
+            => MonthPaymentsService.RemoveFirmExpenseAsync(expenseId, year, month, cancellationToken);
+
         public void SaveFirmExpenses(List<FirmExpense> expenses, int year, int month, string? firmNameFilter = null)
             => MonthPaymentsService.SaveFirmExpenses(expenses, year, month, firmNameFilter);
 
         public bool SaveAllFirmPayments(int year, int month, List<SalaryEntry> allEntries, List<FirmExpense> allExpenses)
             => MonthPaymentsService.SaveAllFirmPayments(year, month, allEntries, allExpenses);
 
+        public Task<bool> SaveAllFirmPaymentsAsync(
+            int year,
+            int month,
+            List<SalaryEntry> allEntries,
+            List<FirmExpense> allExpenses,
+            CancellationToken cancellationToken = default)
+            => MonthPaymentsService.SaveAllFirmPaymentsAsync(year, month, allEntries, allExpenses, cancellationToken);
+
         public bool UpsertSalaryEntries(int year, int month, List<SalaryEntry> entries)
             => MonthPaymentsService.UpsertSalaryEntries(year, month, entries);
 
+        public Task<bool> UpsertSalaryEntriesAsync(int year, int month, List<SalaryEntry> entries, CancellationToken cancellationToken = default)
+            => MonthPaymentsService.UpsertSalaryEntriesAsync(year, month, entries, cancellationToken);
+
         public bool SaveFirmPayments(int year, int month, string firmName, List<SalaryEntry> entries, List<FirmExpense> expenses)
             => MonthPaymentsService.SaveFirmPayments(year, month, firmName, entries, expenses);
+
+        public Task<bool> SaveFirmPaymentsAsync(
+            int year,
+            int month,
+            string firmName,
+            List<SalaryEntry> entries,
+            List<FirmExpense> expenses,
+            CancellationToken cancellationToken = default)
+            => MonthPaymentsService.SaveFirmPaymentsAsync(year, month, firmName, entries, expenses, cancellationToken);
 
         public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadAllFirmPayments(int year, int month, bool forceReload = false)
             => MonthPaymentsService.LoadAllFirmPayments(year, month, forceReload);

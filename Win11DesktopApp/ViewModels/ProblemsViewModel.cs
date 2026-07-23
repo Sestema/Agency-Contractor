@@ -27,7 +27,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly ActivityLogService _activityLogService;
         private readonly DocumentLocalizationService _documentLocalizationService;
         private readonly Action _onProbDetailsClose;
-        private readonly Action _onProbDetailsChanged;
+        private readonly Action<EmployeeDataChangedEventArgs> _onProbDetailsChanged;
         private int _loadProblemsVersion;
         private CancellationTokenSource? _loadProblemsDebounceCts;
         private CancellationTokenSource? _loadProblemsCts;
@@ -299,7 +299,7 @@ namespace Win11DesktopApp.ViewModels
             _activityLogService = activityLogService ?? throw new InvalidOperationException("ActivityLogService is not initialized.");
             _documentLocalizationService = documentLocalizationService ?? throw new InvalidOperationException("DocumentLocalizationService is not initialized.");
             _onProbDetailsClose = () => IsEmployeeDetailsOpen = false;
-            _onProbDetailsChanged = () => LoadProblems();
+            _onProbDetailsChanged = _ => LoadProblems();
 
             GoBackCommand = new RelayCommand(o => _navigationService.NavigateTo<MainViewModel>());
             OpenEmployeeCommand = new RelayCommand(o =>
@@ -310,6 +310,7 @@ namespace Win11DesktopApp.ViewModels
                     {
                         EmployeeDetailsVm.RequestClose -= _onProbDetailsClose;
                         EmployeeDetailsVm.DataChanged -= _onProbDetailsChanged;
+                        EmployeeDetailsVm.Cleanup();
                     }
                     EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(group.FirmName, group.EmployeeFolder, employeeId: group.UniqueId);
                     EmployeeDetailsVm.RequestClose += _onProbDetailsClose;
@@ -796,6 +797,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 EmployeeDetailsVm.RequestClose -= _onProbDetailsClose;
                 EmployeeDetailsVm.DataChanged -= _onProbDetailsChanged;
+                EmployeeDetailsVm.Cleanup();
+                EmployeeDetailsVm = null;
             }
 
             var debounceCts = Interlocked.Exchange(ref _loadProblemsDebounceCts, null);

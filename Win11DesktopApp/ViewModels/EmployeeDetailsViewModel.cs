@@ -76,7 +76,7 @@ namespace Win11DesktopApp.ViewModels
         private const string WorkPermitDocumentSuffix = "Povolení k práci";
 
         public event Action? RequestClose;
-        public event Action? DataChanged;
+        public event Action<EmployeeDataChangedEventArgs>? DataChanged;
 
         public EmployeeData Data { get; private set; }
         public string EmployeeFolderPath => _employeeFolder;
@@ -631,6 +631,7 @@ namespace Win11DesktopApp.ViewModels
 
         private string? _pdfPreviewTempFolder;
         private CancellationTokenSource? _previewLoadCts;
+        private bool _isCleanedUp;
 
         public bool RequiresSecondaryDocument =>
             SelectedDocumentProfileOption?.RequiresVisa == true || SelectedDocumentProfileOption?.RequiresPassportPage2 == true;
@@ -1675,7 +1676,7 @@ namespace Win11DesktopApp.ViewModels
                     IsExtendDialogOpen = false;
                     OnPropertyChanged(nameof(Data));
                     InvalidateDetailCaches();
-                    DataChanged?.Invoke();
+                    RaiseDataChanged();
                     StatusMessage = string.Empty;
                 }
                 else
@@ -1756,7 +1757,7 @@ namespace Win11DesktopApp.ViewModels
 
                     IsArchiveDialogOpen = false;
                     InvalidateDetailCaches();
-                    DataChanged?.Invoke();
+                    RaiseDataChanged(requiresListReload: true);
                     RaiseRequestClose();
                 }
                 else
@@ -1858,7 +1859,7 @@ namespace Win11DesktopApp.ViewModels
 
                 IsDeleteEmployeeDialogOpen = false;
                 ToastService.Instance.Success(string.Format(Res("RecentlyDeletedMoveSuccess"), summary.FullName));
-                DataChanged?.Invoke();
+                RaiseDataChanged(requiresListReload: true);
                 RaiseRequestClose();
             }
             catch (Exception ex)
@@ -1890,18 +1891,19 @@ namespace Win11DesktopApp.ViewModels
 
                 if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
                 {
+                    var bulkUpdatedCount = 0;
                     if (oldData != null)
                     {
                         await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
                         LogProfileChanges(oldData, Data);
-                        await ApplyBulkProfileChangesAsync(oldData, Data);
+                        bulkUpdatedCount = await ApplyBulkProfileChangesAsync(oldData, Data);
                     }
 
                     IsEditMode = false;
                     OnPropertyChanged(nameof(IsGenderMale));
                     OnPropertyChanged(nameof(IsGenderFemale));
                     InvalidateDetailCaches();
-                    DataChanged?.Invoke();
+                    RaiseDataChanged(requiresListReload: bulkUpdatedCount > 0);
                 }
                 else
                 {
@@ -1926,7 +1928,7 @@ namespace Win11DesktopApp.ViewModels
             public Action<EmployeeData> Apply { get; init; } = _ => { };
         }
 
-        private async Task ApplyBulkProfileChangesAsync(EmployeeData oldData, EmployeeData newData)
+        private async Task<int> ApplyBulkProfileChangesAsync(EmployeeData oldData, EmployeeData newData)
         {
             var targets = _bulkUpdateTargets
                 .Where(target => !string.IsNullOrWhiteSpace(target.EmployeeFolder)
@@ -1936,11 +1938,11 @@ namespace Win11DesktopApp.ViewModels
                 .ToList();
 
             if (targets.Count == 0)
-                return;
+                return 0;
 
             var changes = BuildSafeBulkProfileChanges(oldData, newData);
             if (changes.Count == 0)
-                return;
+                return 0;
 
             var fields = string.Join(Environment.NewLine, changes.Select(change => $"• {change.Label}: {change.OldValue} → {change.NewValue}"));
             var message = $"Застосувати ці зміни до позначених працівників ({targets.Count})?{Environment.NewLine}{Environment.NewLine}{fields}";
@@ -1951,7 +1953,7 @@ namespace Win11DesktopApp.ViewModels
                 MessageBoxImage.Question);
 
             if (confirm != MessageBoxResult.Yes)
-                return;
+                return 0;
 
             var updated = 0;
             var skipped = 0;
@@ -1992,6 +1994,7 @@ namespace Win11DesktopApp.ViewModels
             StatusMessage = skipped == 0
                 ? $"Масово оновлено працівників: {updated}."
                 : $"Масово оновлено працівників: {updated}. Пропущено: {skipped}.";
+            return updated;
         }
 
         private List<BulkProfileFieldChange> BuildSafeBulkProfileChanges(EmployeeData oldData, EmployeeData newData)
@@ -2116,7 +2119,7 @@ namespace Win11DesktopApp.ViewModels
                     RefreshDocuments();
                     RefreshExpiryWarnings();
                     InvalidateDetailCaches();
-                    DataChanged?.Invoke();
+                    RaiseDataChanged();
                 }
                 finally
                 {
@@ -2385,7 +2388,7 @@ namespace Win11DesktopApp.ViewModels
                 });
                 RefreshDocuments();
                 InvalidateDetailCaches();
-                DataChanged?.Invoke();
+                RaiseDataChanged();
             }
             catch (Exception ex)
             {
@@ -2532,7 +2535,7 @@ namespace Win11DesktopApp.ViewModels
                                 await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
                                 LogProfileChanges(oldData, Data);
                                 InvalidateDetailCaches();
-                                DataChanged?.Invoke();
+                                RaiseDataChanged();
 
                                 if (TabIndex == 2)
                                     EnsureHistoryLoaded();
@@ -2613,6 +2616,9 @@ namespace Win11DesktopApp.ViewModels
 
         private void StartPdfPreviewLoading(string? docType = null)
         {
+            if (_isCleanedUp)
+                return;
+
             _previewLoadCts?.Cancel();
             _previewLoadCts?.Dispose();
             _previewLoadCts = new CancellationTokenSource();
@@ -2652,11 +2658,11 @@ namespace Win11DesktopApp.ViewModels
 
                         await dispatcher.InvokeAsync(() =>
                         {
-                            if (!token.IsCancellationRequested)
-                            {
-                                request.AssignPreview(previewPath);
-                                request.AssignState(string.IsNullOrWhiteSpace(previewPath) ? DocPreviewState.Error : DocPreviewState.Ready);
-                            }
+                            if (_isCleanedUp || token.IsCancellationRequested)
+                                return;
+
+                            request.AssignPreview(previewPath);
+                            request.AssignState(string.IsNullOrWhiteSpace(previewPath) ? DocPreviewState.Error : DocPreviewState.Ready);
                         });
                     }
                 }
@@ -2668,7 +2674,7 @@ namespace Win11DesktopApp.ViewModels
 
         private void RebuildSinglePreview(string docType)
         {
-            if (string.IsNullOrWhiteSpace(docType))
+            if (_isCleanedUp || string.IsNullOrWhiteSpace(docType))
                 return;
 
             switch (docType)
@@ -2730,11 +2736,46 @@ namespace Win11DesktopApp.ViewModels
             _pdfPreviewTempFolder = null;
         }
 
+        /// <summary>
+        /// Stops background PDF preview work and releases temp files.
+        /// Safe to call multiple times; parents must call this when discarding the profile VM
+        /// without going through <see cref="RaiseRequestClose"/>.
+        /// </summary>
+        public void Cleanup()
+        {
+            if (_isCleanedUp)
+                return;
+
+            _isCleanedUp = true;
+            CleanupPdfPreviews();
+            PassportPreviewPath = string.Empty;
+            VisaPreviewPath = string.Empty;
+            PassportPage2PreviewPath = string.Empty;
+            InsurancePreviewPath = string.Empty;
+            WorkPermitPreviewPath = string.Empty;
+            PassportPreviewState = DocPreviewState.Empty;
+            VisaPreviewState = DocPreviewState.Empty;
+            PassportPage2PreviewState = DocPreviewState.Empty;
+            InsurancePreviewState = DocPreviewState.Empty;
+            WorkPermitPreviewState = DocPreviewState.Empty;
+        }
+
         private void RaiseRequestClose()
         {
             SaveLayoutSettings();
-            CleanupPdfPreviews();
+            Cleanup();
             RequestClose?.Invoke();
+        }
+
+        private void RaiseDataChanged(bool requiresListReload = false)
+        {
+            DataChanged?.Invoke(new EmployeeDataChangedEventArgs
+            {
+                RequiresListReload = requiresListReload,
+                FirmName = _firmName ?? string.Empty,
+                EmployeeFolder = _employeeFolder ?? string.Empty,
+                UniqueId = Data?.UniqueId ?? string.Empty
+            });
         }
 
         public void SaveLayoutSettings()
@@ -4077,7 +4118,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             item.Message = Res("AIValidationAppliedMessage") ?? "Applied";
             OnPropertyChanged(nameof(Data));
             InvalidateDetailCaches();
-            DataChanged?.Invoke();
+            RaiseDataChanged();
             RaiseAIValidationCollectionsChanged();
         }
 
@@ -4259,7 +4300,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             IsAddCustomDocOpen = false;
             StatusMessage = Res("MsgSaved") ?? "Saved.";
             InvalidateDetailCaches();
-            DataChanged?.Invoke();
+            RaiseDataChanged();
         }
 
         private async Task DeleteCustomDocAsync(CustomSignedDocument doc)
@@ -4301,7 +4342,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
             CustomDocuments.Remove(doc);
             InvalidateDetailCaches();
-            DataChanged?.Invoke();
+            RaiseDataChanged();
         }
     }
 }

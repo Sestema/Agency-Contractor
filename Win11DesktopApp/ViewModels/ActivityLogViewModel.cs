@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 using ClosedXML.Excel;
 using Microsoft.Win32;
 using Win11DesktopApp.EmployeeModels;
@@ -24,7 +25,7 @@ namespace Win11DesktopApp.ViewModels
         public string Icon { get; set; } = "\uE7C3";
     }
 
-    public class ActivityLogViewModel : ViewModelBase
+    public class ActivityLogViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly ActivityLogService _logService;
@@ -60,6 +61,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ClearAllCommand { get; }
 
         private readonly BulkObservableCollection<ActivityLogEntry> _entries = new();
+        private readonly DispatcherTimer _searchDebounce;
         public ObservableCollection<ActivityLogEntry> Entries => _entries;
         public ICollectionView GroupedEntries { get; }
 
@@ -67,7 +69,11 @@ namespace Win11DesktopApp.ViewModels
         public string SearchText
         {
             get => _searchText;
-            set { if (SetProperty(ref _searchText, value)) ApplyFilter(); }
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                    ScheduleSearchFilter();
+            }
         }
 
         private string _selectedCategory = "";
@@ -143,6 +149,9 @@ namespace Win11DesktopApp.ViewModels
             _profileAuthService = profileAuthService ?? throw new InvalidOperationException("ProfileAuthService is not initialized.");
             _employeeDetailsViewModelFactory = employeeDetailsViewModelFactory ?? throw new InvalidOperationException("EmployeeDetailsViewModelFactory is not initialized.");
             _currentProfileService = currentProfileService ?? throw new InvalidOperationException("CurrentProfileService is not initialized.");
+
+            _searchDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            _searchDebounce.Tick += OnSearchDebounceTick;
 
             GroupedEntries = CollectionViewSource.GetDefaultView(Entries);
             GroupedEntries.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ActivityLogEntry.Timestamp),
@@ -236,11 +245,23 @@ namespace Win11DesktopApp.ViewModels
             {
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                 EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                EmployeeDetailsVm.Cleanup();
             }
         }
 
+        public void Cleanup()
+        {
+            LoggingService.LogInfo("ActivityLogViewModel.Cleanup", "Invalidated load and cleared details.");
+            _loadVersion++;
+            _searchDebounce.Stop();
+            _searchDebounce.Tick -= OnSearchDebounceTick;
+            CleanupDetailsVm();
+            EmployeeDetailsVm = null;
+            IsEmployeeDetailsOpen = false;
+        }
+
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged() => _ = LoadEntriesAsync();
+        private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e) => _ = LoadEntriesAsync();
 
         private (string folder, string firm)? ResolveEmployeeFolder(string firmName, string employeeName)
         {
@@ -280,6 +301,13 @@ namespace Win11DesktopApp.ViewModels
                 var snapshot = await Task.Run(() =>
                 {
                     var entries = _logService.GetAll();
+                    foreach (var entry in entries)
+                    {
+                        entry.ParsedTimestamp = DateTime.TryParse(entry.Timestamp, out var parsed)
+                            ? parsed
+                            : null;
+                    }
+
                     var undoableArchiveOperationIds = _employeeService.LoadArchiveLog()
                         .Where(entry =>
                             string.Equals(entry.Action, "Archived", StringComparison.OrdinalIgnoreCase)
@@ -334,6 +362,18 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private void ScheduleSearchFilter()
+        {
+            _searchDebounce.Stop();
+            _searchDebounce.Start();
+        }
+
+        private void OnSearchDebounceTick(object? sender, EventArgs e)
+        {
+            _searchDebounce.Stop();
+            ApplyFilter();
+        }
+
         private void ApplyFilter()
         {
             var query = _searchText?.Trim() ?? string.Empty;
@@ -351,10 +391,14 @@ namespace Win11DesktopApp.ViewModels
 
                 if (_dateFrom.HasValue || _dateTo.HasValue)
                 {
-                    if (DateTime.TryParse(entry.Timestamp, out var entryDate))
+                    if (entry.ParsedTimestamp is DateTime entryDate)
                     {
                         if (_dateFrom.HasValue && entryDate.Date < _dateFrom.Value.Date) continue;
                         if (_dateTo.HasValue && entryDate.Date > _dateTo.Value.Date) continue;
+                    }
+                    else
+                    {
+                        continue;
                     }
                 }
 
@@ -396,10 +440,12 @@ namespace Win11DesktopApp.ViewModels
             if (!undoableArchiveOperationIds.Contains(entry.RelatedOperationId))
                 return false;
 
-            if (!DateTime.TryParse(entry.Timestamp, out var ts))
+            var ts = entry.ParsedTimestamp
+                ?? (DateTime.TryParse(entry.Timestamp, out var parsed) ? parsed : (DateTime?)null);
+            if (ts == null)
                 return false;
 
-            return now - ts <= TimeSpan.FromHours(24);
+            return now - ts.Value <= TimeSpan.FromHours(24);
         }
 
         private async Task UndoArchiveAsync(object? parameter)

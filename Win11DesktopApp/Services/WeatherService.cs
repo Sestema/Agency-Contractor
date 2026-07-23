@@ -158,7 +158,7 @@ namespace Win11DesktopApp.Services
         {
             try
             {
-                File.WriteAllText(_cachePath, JsonSerializer.Serialize(info, _jsonOptions));
+                SafeFileService.WriteJsonAtomic(_cachePath, info, _jsonOptions);
             }
             catch (Exception ex)
             {

@@ -511,6 +511,18 @@ namespace Win11DesktopApp.Services
             if (!string.Equals(e.Record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
                 return;
 
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                ApplyCompanySyncReload();
+                return;
+            }
+
+            _ = dispatcher.InvokeAsync(ApplyCompanySyncReload);
+        }
+
+        private void ApplyCompanySyncReload()
+        {
             try
             {
                 _companies.Clear();

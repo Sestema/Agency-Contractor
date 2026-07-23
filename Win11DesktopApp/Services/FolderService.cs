@@ -572,15 +572,26 @@ namespace Win11DesktopApp.Services
                 if (string.Equals(oldFolder, newFolder, StringComparison.OrdinalIgnoreCase))
                 {
                     var temporaryFolder = oldFolder + $".rename-{Guid.NewGuid():N}";
-                    Directory.Move(oldFolder, temporaryFolder);
+                    MoveDirectoryWithRetry(oldFolder, temporaryFolder);
                     try
                     {
-                        Directory.Move(temporaryFolder, newFolder);
+                        MoveDirectoryWithRetry(temporaryFolder, newFolder);
                     }
                     catch
                     {
                         if (Directory.Exists(temporaryFolder) && !Directory.Exists(oldFolder))
-                            Directory.Move(temporaryFolder, oldFolder);
+                        {
+                            try
+                            {
+                                MoveDirectoryWithRetry(temporaryFolder, oldFolder);
+                            }
+                            catch (Exception rollbackEx)
+                            {
+                                LoggingService.LogWarning(
+                                    "FolderService.RenameCompanyFolder.Rollback",
+                                    rollbackEx.Message);
+                            }
+                        }
                         throw;
                     }
                 }
@@ -594,7 +605,7 @@ namespace Win11DesktopApp.Services
                         return false;
                     }
 
-                    Directory.Move(oldFolder, newFolder);
+                    MoveDirectoryWithRetry(oldFolder, newFolder);
                 }
 
                 LoggingService.LogInfo(
@@ -678,16 +689,38 @@ namespace Win11DesktopApp.Services
 
             try
             {
-                NormalizeAttributesRecursive(companyFolder);
-                Directory.Delete(companyFolder, true);
-                Debug.WriteLine($"FolderService.DeleteCompanyFolder: {companyFolder}");
+                RetryHelper.Execute(() =>
+                {
+                    NormalizeAttributesRecursive(companyFolder);
+                    Directory.Delete(companyFolder, true);
+                }, maxRetries: 3);
+
+                LoggingService.LogInfo("FolderService.DeleteCompanyFolder", companyFolder);
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"FolderService.DeleteCompanyFolder error: {ex.Message}");
+                LoggingService.LogWarning(
+                    "FolderService.DeleteCompanyFolder",
+                    $"{companyFolder}: {ex.Message}. Scheduling pending cleanup.");
+                try
+                {
+                    PendingCleanupService.EnqueueAsync(companyFolder, "delete-company-folder")
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                catch (Exception enqueueEx)
+                {
+                    LoggingService.LogWarning("FolderService.DeleteCompanyFolder.Enqueue", enqueueEx.Message);
+                }
+
                 return false;
             }
+        }
+
+        private static void MoveDirectoryWithRetry(string source, string destination)
+        {
+            RetryHelper.Execute(() => Directory.Move(source, destination), maxRetries: 3);
         }
 
         // ============ NORMALIZATION ============

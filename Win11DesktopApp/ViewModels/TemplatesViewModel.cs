@@ -11,7 +11,7 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class TemplatesViewModel : ViewModelBase
+    public class TemplatesViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
         private readonly TemplateService _templateService;
@@ -434,6 +434,16 @@ namespace Win11DesktopApp.ViewModels
         {
             if (AddTemplateVm != null)
                 AddTemplateVm.RequestClose -= OnAddTemplateClose;
+        }
+
+        public void Cleanup()
+        {
+            LoggingService.LogInfo("TemplatesViewModel.Cleanup", "Invalidated load and closed template dialogs.");
+            _loadGeneration++;
+            IsAddDialogOpen = false;
+            CleanupAddTemplateVm();
+            AddTemplateVm = null;
+            CloseCopyDialog();
         }
 
         private void CloseCopyDialog()

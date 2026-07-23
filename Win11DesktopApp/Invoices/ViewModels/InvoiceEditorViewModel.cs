@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Win11DesktopApp.Invoices.Models;
 using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Invoices.Views;
@@ -82,6 +84,8 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
     private bool _isLoaded;
     private bool _numberEditedByUser;
     private bool _suppressNumberEditedTracking;
+    private readonly DispatcherTimer _qrPreviewDebounce;
+    private string? _lastQrFingerprint;
 
     public InvoiceEditorViewModel(
         string documentId,
@@ -99,6 +103,9 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         _pdfRenderService = pdfRenderService ?? throw new InvalidOperationException("InvoicePdfRenderService is not initialized.");
         _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
         _invoiceViewModelFactory = invoiceViewModelFactory ?? throw new InvalidOperationException("InvoiceViewModelFactory is not initialized.");
+
+        _qrPreviewDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
+        _qrPreviewDebounce.Tick += OnQrPreviewDebounceTick;
 
         DocumentTypes = new ObservableCollection<InvoiceTypeOption>
         {
@@ -477,7 +484,16 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
     public string RoundingMode
     {
         get => _document.RoundingMode;
-        set => SetDocumentValue(_document.RoundingMode, value, static (doc, val) => doc.RoundingMode = val, nameof(RoundingMode));
+        set
+        {
+            if (string.Equals(_document.RoundingMode, value, StringComparison.Ordinal))
+                return;
+
+            _document.RoundingMode = value ?? "none";
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedRoundingMode));
+            RefreshTotals();
+        }
     }
 
     public string SelectedRoundingMode
@@ -485,11 +501,11 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         get => RoundingMode;
         set
         {
-            if (RoundingMode != value)
-            {
-                RoundingMode = value;
-                OnPropertyChanged();
-            }
+            if (string.Equals(RoundingMode, value, StringComparison.Ordinal))
+                return;
+
+            RoundingMode = value;
+            OnPropertyChanged();
         }
     }
 
@@ -1549,7 +1565,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
             OnPropertyChanged(nameof(Breadcrumb));
         }
         if (QrRelevantProperties.Contains(propertyName))
-            RefreshQrPreview();
+            ScheduleQrPreviewRefresh();
     }
 
     private void SetPartyValue(InvoiceParty party, Action<InvoiceParty> setter, string propertyName)
@@ -1563,7 +1579,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         OnPropertyChanged(propertyName);
         CommandManager.InvalidateRequerySuggested();
         if (QrRelevantProperties.Contains(propertyName))
-            RefreshQrPreview();
+            ScheduleQrPreviewRefresh();
     }
 
     private void TryUpdateInvoiceNumberSuggestion()
@@ -1646,6 +1662,9 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         try
         {
             var result = await _aresLookupService.LookupByIcoAsync(normalizedIco).ConfigureAwait(false);
+            if (!_isLoaded)
+                return;
+
             if (result == null)
             {
                 ToastService.Instance.Warning(string.Format(Res("InvoicesAresLookupNotFound"), normalizedIco));
@@ -1654,6 +1673,9 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
+                if (!_isLoaded)
+                    return;
+
                 _aresLookupService.ApplyToParty(targetParty, result);
                 OnPropertyChanged(selectionPropertyName);
                 refreshPartyProperties();
@@ -1662,16 +1684,19 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         }
         catch (HttpRequestException)
         {
-            ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
+            if (_isLoaded)
+                ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
         }
         catch (TaskCanceledException)
         {
-            ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
+            if (_isLoaded)
+                ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
         }
         catch (Exception ex)
         {
             ErrorHandler.Report("InvoiceEditorViewModel.LookupAresAsync", ex, ErrorSeverity.Error, showUser: false);
-            ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
+            if (_isLoaded)
+                ToastService.Instance.Error(Res("InvoicesAresLookupFailed"));
         }
     }
 
@@ -1802,7 +1827,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         OnPropertyChanged(nameof(CashReceiptTotalWithVatLabel));
         OnPropertyChanged(nameof(CashReceiptNonTaxableWithRoundingLabel));
         OnPropertyChanged(nameof(CashReceiptGrandTotalLabel));
-        RefreshQrPreview();
+        ScheduleQrPreviewRefresh();
     }
 
     private void RaiseSupplierProperties()
@@ -1826,7 +1851,7 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         OnPropertyChanged(nameof(SupplierBankSwift));
         OnPropertyChanged(nameof(SupplierBankName));
         OnPropertyChanged(nameof(SupplierLegacyAccountNumber));
-        RefreshQrPreview();
+        ScheduleQrPreviewRefresh();
     }
 
     private void RaiseCustomerProperties()
@@ -1848,13 +1873,59 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         OnPropertyChanged(nameof(CustomerDeliveryCountry));
     }
 
-    private void RefreshQrPreview()
+    private void ScheduleQrPreviewRefresh()
     {
+        if (!_isLoaded)
+            return;
+
+        _qrPreviewDebounce.Stop();
+        _qrPreviewDebounce.Start();
+    }
+
+    private void OnQrPreviewDebounceTick(object? sender, EventArgs e)
+    {
+        _qrPreviewDebounce.Stop();
+        if (!_isLoaded)
+            return;
+
+        RefreshQrPreviewNow();
+    }
+
+    private void RefreshQrPreviewNow()
+    {
+        var fingerprint = BuildQrFingerprint();
+        if (string.Equals(fingerprint, _lastQrFingerprint, StringComparison.Ordinal))
+        {
+            RaisePaymentPreviewProperties();
+            return;
+        }
+
         var preview = _qrPaymentService.CreatePreview(_document);
+        _lastQrFingerprint = fingerprint;
         QrPreviewStatusText = preview.Message;
         QrPreviewImage = preview.Image;
         OnPropertyChanged(nameof(HasQrPreview));
         RaisePaymentPreviewProperties();
+    }
+
+    private string BuildQrFingerprint()
+    {
+        return string.Join(
+            "|",
+            _document.ShowQrCode.ToString(),
+            _document.PaymentMethod ?? string.Empty,
+            _document.QrPaymentFormat ?? string.Empty,
+            _document.AmountToPay.ToString("0.####", CultureInfo.InvariantCulture),
+            _document.Currency ?? string.Empty,
+            _document.Number ?? string.Empty,
+            _document.VariableSymbol ?? string.Empty,
+            _document.ConstantSymbol ?? string.Empty,
+            _document.DueDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            _document.Supplier.BankIban ?? string.Empty,
+            _document.Supplier.LegacyAccountNumber ?? string.Empty,
+            _document.Supplier.BankSwift ?? string.Empty,
+            _document.Supplier.BankName ?? string.Empty,
+            _document.Supplier.Name ?? string.Empty);
     }
 
     private IEnumerable<InvoicePaymentPreviewRow> BuildPaymentPreviewRows()
@@ -1981,7 +2052,8 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
         RaiseSupplierProperties();
         RaiseCustomerProperties();
         RefreshTotals();
-        RefreshQrPreview();
+        _qrPreviewDebounce.Stop();
+        RefreshQrPreviewNow();
     }
 
     private static readonly HashSet<string> QrRelevantProperties =
@@ -2006,6 +2078,9 @@ public sealed class InvoiceEditorViewModel : ViewModelBase, ICleanable
 
     public void Cleanup()
     {
+        _isLoaded = false;
+        _qrPreviewDebounce.Stop();
+        _qrPreviewDebounce.Tick -= OnQrPreviewDebounceTick;
         Items.CollectionChanged -= OnItemsCollectionChanged;
         Tags.CollectionChanged -= OnTagsCollectionChanged;
         foreach (var item in Items)

@@ -134,6 +134,9 @@ namespace Win11DesktopApp.Models
             get => _hoursWorked;
             set
             {
+                if (_hoursWorked == value)
+                    return;
+
                 _hoursWorked = value;
                 OnPropertyChanged(nameof(HoursWorked));
                 OnPropertyChanged(nameof(HoursDisplayText));
@@ -171,7 +174,16 @@ namespace Win11DesktopApp.Models
         public decimal HourlyRate
         {
             get => _hourlyRate;
-            set { _hourlyRate = value; OnPropertyChanged(nameof(HourlyRate)); OnPropertyChanged(nameof(GrossSalary)); RecalcNet(); }
+            set
+            {
+                if (_hourlyRate == value)
+                    return;
+
+                _hourlyRate = value;
+                OnPropertyChanged(nameof(HourlyRate));
+                OnPropertyChanged(nameof(GrossSalary));
+                RecalcNet();
+            }
         }
 
         public decimal GrossSalary => Math.Round(HoursWorked * HourlyRate, 2);
@@ -180,7 +192,15 @@ namespace Win11DesktopApp.Models
         public decimal Advance
         {
             get => _advance;
-            set { _advance = value; OnPropertyChanged(nameof(Advance)); RecalcNet(); }
+            set
+            {
+                if (_advance == value)
+                    return;
+
+                _advance = value;
+                OnPropertyChanged(nameof(Advance));
+                RecalcNet();
+            }
         }
 
         [Obsolete("Use CustomValues")] public decimal Advances { get; set; }
@@ -196,6 +216,9 @@ namespace Win11DesktopApp.Models
             get => CustomValues.TryGetValue(fieldId, out var v) ? v : 0;
             set
             {
+                if (CustomValues.TryGetValue(fieldId, out var existing) && existing == value)
+                    return;
+
                 CustomValues[fieldId] = value;
                 OnPropertyChanged("Item[]");
                 RecalcNet();
@@ -244,14 +267,49 @@ namespace Win11DesktopApp.Models
         public string Status
         {
             get => _status;
-            set { _status = value; OnPropertyChanged(nameof(Status)); OnPropertyChanged(nameof(IsPaid)); }
+            set
+            {
+                var normalized = value ?? string.Empty;
+                if (string.Equals(_status, normalized, StringComparison.Ordinal))
+                    return;
+
+                _status = normalized;
+                OnPropertyChanged(nameof(Status));
+                OnPropertyChanged(nameof(IsPaid));
+            }
         }
 
         [JsonIgnore]
         public bool IsPaid
         {
             get => _status == "paid";
-            set { Status = value ? "paid" : "pending"; }
+            set
+            {
+                var next = value ? "paid" : "pending";
+                if (string.Equals(_status, next, StringComparison.Ordinal))
+                    return;
+                Status = next;
+            }
+        }
+
+        /// <summary>
+        /// True when the row carries real salary data and must not be treated as an empty orphan
+        /// (hours, rate, advance, saved net, paid flag, note, or custom values).
+        /// </summary>
+        [JsonIgnore]
+        public bool HasMeaningfulSalaryData
+        {
+            get
+            {
+                if (HoursWorked != 0m) return true;
+                if (HourlyRate != 0m) return true;
+                if (Advance != 0m) return true;
+                if (SavedNetSalary != 0m) return true;
+                if (IsPaid) return true;
+                if (!string.IsNullOrWhiteSpace(Note)) return true;
+                if (CustomValues != null && CustomValues.Values.Any(v => v != 0m)) return true;
+                return false;
+            }
         }
 
         private string _note = string.Empty;
@@ -367,17 +425,129 @@ namespace Win11DesktopApp.Models
         public string Address { get; set; } = string.Empty;
     }
 
-    public class FirmSalarySummary
+    public class FirmSalarySummary : INotifyPropertyChanged
     {
-        public string FirmName { get; set; } = string.Empty;
-        public decimal TotalGross { get; set; }
-        public decimal TotalNet { get; set; }
-        public decimal TotalHours { get; set; }
-        public decimal TotalAccommodation { get; set; }
-        public decimal TotalAdvances { get; set; }
-        public int EmployeeCount { get; set; }
-        public int PaidCount { get; set; }
-        public bool IsSelected { get; set; }
+        private string _firmName = string.Empty;
+        public string FirmName
+        {
+            get => _firmName;
+            set
+            {
+                if (string.Equals(_firmName, value, StringComparison.Ordinal))
+                    return;
+                _firmName = value ?? string.Empty;
+                OnPropertyChanged(nameof(FirmName));
+            }
+        }
+
+        private decimal _totalGross;
+        public decimal TotalGross
+        {
+            get => _totalGross;
+            set
+            {
+                if (_totalGross == value)
+                    return;
+                _totalGross = value;
+                OnPropertyChanged(nameof(TotalGross));
+            }
+        }
+
+        private decimal _totalNet;
+        public decimal TotalNet
+        {
+            get => _totalNet;
+            set
+            {
+                if (_totalNet == value)
+                    return;
+                _totalNet = value;
+                OnPropertyChanged(nameof(TotalNet));
+            }
+        }
+
+        private decimal _totalHours;
+        public decimal TotalHours
+        {
+            get => _totalHours;
+            set
+            {
+                if (_totalHours == value)
+                    return;
+                _totalHours = value;
+                OnPropertyChanged(nameof(TotalHours));
+            }
+        }
+
+        private decimal _totalAccommodation;
+        public decimal TotalAccommodation
+        {
+            get => _totalAccommodation;
+            set
+            {
+                if (_totalAccommodation == value)
+                    return;
+                _totalAccommodation = value;
+                OnPropertyChanged(nameof(TotalAccommodation));
+            }
+        }
+
+        private decimal _totalAdvances;
+        public decimal TotalAdvances
+        {
+            get => _totalAdvances;
+            set
+            {
+                if (_totalAdvances == value)
+                    return;
+                _totalAdvances = value;
+                OnPropertyChanged(nameof(TotalAdvances));
+            }
+        }
+
+        private int _employeeCount;
+        public int EmployeeCount
+        {
+            get => _employeeCount;
+            set
+            {
+                if (_employeeCount == value)
+                    return;
+                _employeeCount = value;
+                OnPropertyChanged(nameof(EmployeeCount));
+            }
+        }
+
+        private int _paidCount;
+        public int PaidCount
+        {
+            get => _paidCount;
+            set
+            {
+                if (_paidCount == value)
+                    return;
+                _paidCount = value;
+                OnPropertyChanged(nameof(PaidCount));
+            }
+        }
+
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected == value)
+                    return;
+                _isSelected = value;
+                OnPropertyChanged(nameof(IsSelected));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged(string propertyName)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     public class SalaryHistoryRecord

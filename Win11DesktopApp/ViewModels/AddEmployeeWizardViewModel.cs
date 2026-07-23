@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -767,6 +769,7 @@ namespace Win11DesktopApp.ViewModels
             _syncEventService = syncEventService ?? throw new InvalidOperationException("SyncEventService is not initialized.");
             _sharedOperationLockService = sharedOperationLockService;
             _tempFolder = _employeeService.CreateTempFolder();
+            Data.UniqueId = Guid.NewGuid().ToString();
 
             CompanyAddresses = company.Addresses;
             CompanyPositions = company.Positions;
@@ -1244,6 +1247,9 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            if (!ConfirmCreateDespiteDuplicates(Data.FirstName, Data.LastName, Data.PassportNumber))
+                return;
+
             using var addEmployeeLock = _sharedOperationLockService?.TryAcquire("add-employee", TimeSpan.FromSeconds(15));
             if (_sharedOperationLockService != null && addEmployeeLock == null)
             {
@@ -1253,6 +1259,9 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
+                if (string.IsNullOrWhiteSpace(Data.UniqueId))
+                    Data.UniqueId = Guid.NewGuid().ToString();
+
                 NormalizeInsuranceCompanyFields();
                 Data.WorkAddressTag = SelectedWorkAddress != null
                     ? $"{SelectedWorkAddress.Street} {SelectedWorkAddress.Number}, {SelectedWorkAddress.City} {SelectedWorkAddress.ZipCode}"
@@ -1300,6 +1309,77 @@ namespace Win11DesktopApp.ViewModels
                 ErrorHandler.Report("SaveEmployee", ex, ErrorSeverity.Error);
                 _employeeService.CleanupTempFolder(_tempFolder);
             }
+        }
+
+        private bool ConfirmCreateDespiteDuplicates(string firstName, string lastName, string? passportNumber)
+        {
+            IReadOnlyList<EmployeeModels.EmployeeDuplicateMatch> matches;
+            try
+            {
+                matches = _employeeService.FindPossibleDuplicates(firstName, lastName, passportNumber);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AddEmployeeWizard.DuplicateCheck", ex.Message);
+                return true;
+            }
+
+            if (matches == null || matches.Count == 0)
+                return true;
+
+            var hasPassportHit = matches.Any(m =>
+                m.Kind is EmployeeModels.EmployeeDuplicateMatchKind.Passport or EmployeeModels.EmployeeDuplicateMatchKind.NameAndPassport);
+            var introKey = hasPassportHit
+                ? "MsgEmployeeDuplicatePassport"
+                : "MsgEmployeeDuplicateName";
+            var intro = Res(introKey);
+            if (string.IsNullOrEmpty(intro))
+            {
+                intro = hasPassportHit
+                    ? "An employee with this passport (or matching name and passport) already exists. Create anyway?"
+                    : "An employee with the same first and last name already exists (possible namesake). Create anyway?";
+            }
+
+            var lineFmt = Res("MsgEmployeeDuplicateLine");
+            if (string.IsNullOrEmpty(lineFmt))
+                lineFmt = "• {0} — {1} ({2}){3}";
+
+            var statusActive = Res("MsgEmployeeDuplicateStatusActive");
+            if (string.IsNullOrEmpty(statusActive))
+                statusActive = "Active";
+            var statusArchived = Res("MsgEmployeeDuplicateStatusArchived");
+            if (string.IsNullOrEmpty(statusArchived))
+                statusArchived = "Archive";
+
+            var lines = new StringBuilder();
+            lines.AppendLine(intro);
+            lines.AppendLine();
+            foreach (var match in matches)
+            {
+                var status = match.IsArchived ? statusArchived : statusActive;
+                var passportPart = string.IsNullOrEmpty(match.MaskedPassport)
+                    ? string.Empty
+                    : $" [{match.MaskedPassport}]";
+                lines.AppendLine(string.Format(
+                    CultureInfo.CurrentCulture,
+                    lineFmt,
+                    match.FullName,
+                    string.IsNullOrWhiteSpace(match.FirmName) ? "—" : match.FirmName,
+                    status,
+                    passportPart));
+            }
+
+            var title = Res("TitleWarning");
+            if (string.IsNullOrEmpty(title))
+                title = "Warning";
+
+            var result = MessageBox.Show(
+                lines.ToString().TrimEnd(),
+                title,
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+            return result == MessageBoxResult.Yes;
         }
 
         private bool HasUnsavedData()

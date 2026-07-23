@@ -27,6 +27,7 @@ namespace Win11DesktopApp.Services
         private readonly EmployeeService _employeeService;
         private readonly TemplateService _templateService;
         private readonly FinanceService _financeService;
+        private readonly SalaryMonthDisplayService _salaryMonthDisplayService;
         private readonly AppStatisticsService _appStatisticsService;
         private readonly KeepAwakeService _keepAwakeService;
         private WebApplication? _app;
@@ -37,6 +38,7 @@ namespace Win11DesktopApp.Services
             EmployeeService employeeService,
             TemplateService templateService,
             FinanceService financeService,
+            SalaryMonthDisplayService salaryMonthDisplayService,
             AppStatisticsService appStatisticsService,
             KeepAwakeService keepAwakeService)
         {
@@ -45,6 +47,7 @@ namespace Win11DesktopApp.Services
             _employeeService = employeeService;
             _templateService = templateService;
             _financeService = financeService;
+            _salaryMonthDisplayService = salaryMonthDisplayService;
             _appStatisticsService = appStatisticsService;
             _keepAwakeService = keepAwakeService;
         }
@@ -546,9 +549,11 @@ namespace Win11DesktopApp.Services
             {
                 foreach (var (year, month) in _financeService.GetAvailableSalaryMonths().OrderByDescending(item => item.year).ThenByDescending(item => item.month))
                 {
-                    var (entries, expenses) = _financeService.LoadAllFirmPayments(year, month);
+                    var entries = _salaryMonthDisplayService.BuildDisplayedEntries(year, month);
                     if (entries.Count == 0)
                         continue;
+
+                    var (_, expenses) = _financeService.LoadAllFirmPayments(year, month);
 
                     decimal totalGross = 0;
                     decimal totalNet = 0;
@@ -567,8 +572,9 @@ namespace Win11DesktopApp.Services
                         }
                     }
 
+                    var totalEntries = entries.Count;
                     var totalExpenses = expenses.Sum(expense => expense.Amount);
-                    var isFullyPaid = paidEntries > 0 && paidEntries == entries.Count;
+                    var isFullyPaid = paidEntries > 0 && paidEntries == totalEntries;
                     var statusColor = isFullyPaid ? "#22c55e" : paidEntries > 0 ? "#f59e0b" : "#ef4444";
                     var paidRatio = totalNet > 0 ? Math.Min(1m, totalPaid / totalNet) : 0m;
                     grandGross += totalGross;
@@ -582,12 +588,12 @@ namespace Win11DesktopApp.Services
                         totalPaid,
                         totalExpenses,
                         grandTotal = totalNet + totalExpenses,
-                        totalEntries = entries.Count,
+                        totalEntries,
                         paidEntries,
                         paidRatio,
                         statusColor,
                         statusIcon = isFullyPaid ? "✓" : paidEntries > 0 ? "!" : "×",
-                        countText = $"{paidEntries}/{entries.Count} працівників"
+                        countText = $"{paidEntries}/{totalEntries} працівників"
                     });
                 }
 

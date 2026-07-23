@@ -2,13 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Npgsql;
 using Win11DesktopApp.EmployeeModels;
+using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
     public sealed class PostgresEmployeeIndexStorage
     {
+        private const int MaxDuplicateMatches = 8;
         private const string SelectColumns = @"
 unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
 start_date, end_date, contract_type, position_title, position_number, phone, email,
@@ -220,6 +223,41 @@ FROM app.employee_index
 WHERE is_archived = 1
 ORDER BY full_name, start_date;";
             return ReadRows(command);
+        }
+
+        public List<EmployeeDuplicateMatch> FindPossibleDuplicates(string firstName, string lastName, string? passportNumber)
+        {
+            EnsureInitialized();
+
+            var normalizedFirst = EmployeeIndexDbService.NormalizePersonName(firstName);
+            var normalizedLast = EmployeeIndexDbService.NormalizePersonName(lastName);
+            var normalizedPassport = EmployeeIndexDbService.NormalizePassport(passportNumber);
+            if (normalizedFirst.Length == 0 || normalizedLast.Length == 0)
+                return new List<EmployeeDuplicateMatch>();
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $@"
+SELECT {SelectColumns}
+FROM app.employee_index
+WHERE (
+        lower(trim(coalesce(first_name, ''))) = @firstName
+        AND lower(trim(coalesce(last_name, ''))) = @lastName
+      )
+   OR (
+        length(@passportNorm) > 0
+        AND length(trim(coalesce(passport_number, ''))) > 0
+        AND regexp_replace(upper(trim(passport_number)), '[\s\u00AD\u2013\u2014\u2212\-]+', '', 'g') = @passportNorm
+      );";
+            command.Parameters.AddWithValue("firstName", normalizedFirst);
+            command.Parameters.AddWithValue("lastName", normalizedLast);
+            command.Parameters.AddWithValue("passportNorm", normalizedPassport);
+            return EmployeeIndexDbService.BuildDuplicateMatches(
+                ReadRows(command),
+                normalizedFirst,
+                normalizedLast,
+                normalizedPassport,
+                MaxDuplicateMatches);
         }
 
         public EmployeeIndexRow? GetEmployeeRowByFolder(string employeeFolder)

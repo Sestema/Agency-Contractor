@@ -240,11 +240,23 @@ namespace Win11DesktopApp.Services
 
         private static void CleanupTempFile(string path)
         {
-            if (!File.Exists(path))
-                return;
+            try
+            {
+                if (!File.Exists(path))
+                    return;
 
-            PrepareFileForOverwrite(path);
-            File.Delete(path);
+                RetryHelper.Execute(() =>
+                {
+                    PrepareFileForOverwrite(path);
+                    File.Delete(path);
+                });
+            }
+            catch (Exception ex)
+            {
+                // Successful atomic replace must not become a failed save because OneDrive
+                // briefly locks the leftover .tmp. Log and leave the orphan for later cleanup.
+                LoggingService.LogWarning("SafeFileService.CleanupTempFile", $"{path}: {ex.Message}");
+            }
         }
 
         private static void PrepareFileForOverwrite(string path)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Windows;
 using Win11DesktopApp.ViewModels;
 
@@ -10,19 +11,10 @@ namespace Win11DesktopApp.EmployeeModels
 {
     /// <summary>
     /// Represents an archived employee summary for display in the Archive tab.
+    /// Inherits employee card fields so archive tiles can reuse the employees tile layout.
     /// </summary>
-    public class ArchivedEmployeeSummary
+    public class ArchivedEmployeeSummary : EmployeeSummary
     {
-        public string UniqueId { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string PositionTitle { get; set; } = string.Empty;
-        public string FirmName { get; set; } = string.Empty;
-        public string StartDate { get; set; } = string.Empty;
-        public string EndDate { get; set; } = string.Empty;
-        public string EmployeeFolder { get; set; } = string.Empty;
-        public string PhotoPath { get; set; } = string.Empty;
-        public bool HasPhoto { get; set; }
-        public DateTime? ParsedStartDate { get; set; }
         public DateTime? ParsedEndDate { get; set; }
         /// <summary>When the employee was moved to archive (from archive log or folder date).</summary>
         public string ArchivedOn { get; set; } = string.Empty;
@@ -207,6 +199,36 @@ namespace Win11DesktopApp.EmployeeModels
         public string? RevertedByOperationId { get; set; }
     }
 
+    public enum EmployeeDuplicateMatchKind
+    {
+        Name = 0,
+        Passport = 1,
+        NameAndPassport = 2
+    }
+
+    public sealed class EmployeeDuplicateMatch
+    {
+        public string UniqueId { get; init; } = string.Empty;
+        public string FullName { get; init; } = string.Empty;
+        public string FirmName { get; init; } = string.Empty;
+        public bool IsArchived { get; init; }
+        public string PassportNumber { get; init; } = string.Empty;
+        public EmployeeDuplicateMatchKind Kind { get; init; }
+
+        public string MaskedPassport
+        {
+            get
+            {
+                var raw = PassportNumber?.Trim() ?? string.Empty;
+                if (raw.Length == 0)
+                    return string.Empty;
+                if (raw.Length <= 4)
+                    return new string('•', raw.Length);
+                return new string('•', raw.Length - 4) + raw[^4..];
+            }
+        }
+    }
+
     public sealed class EmployeeIndexRow
     {
         public string UniqueId { get; set; } = string.Empty;
@@ -329,7 +351,11 @@ namespace Win11DesktopApp.EmployeeModels
         public string EntityId { get; set; } = string.Empty;
         public string OldValuesJson { get; set; } = string.Empty;
         public string NewValuesJson { get; set; } = string.Empty;
-        public string TimeDisplay => DateTime.TryParse(Timestamp, out var dt) ? dt.ToString("HH:mm") : Timestamp;
+        /// <summary>Cached parse of <see cref="Timestamp"/> for filtering; not persisted.</summary>
+        [JsonIgnore]
+        public DateTime? ParsedTimestamp { get; set; }
+        public string TimeDisplay => ParsedTimestamp?.ToString("HH:mm")
+            ?? (DateTime.TryParse(Timestamp, out var dt) ? dt.ToString("HH:mm") : Timestamp);
         public string DisplayDescription => ActivityLogTextLocalizer.LocalizeDescription(this);
         public string DisplayDetails => ActivityLogTextLocalizer.LocalizeDetails(Details);
     }

@@ -76,6 +76,35 @@ namespace Win11DesktopApp.Services
             return new SqliteFinanceAdvancesStorage(_localDbService);
         }
 
+        /// <summary>
+        /// Renames firm name/folder references in supporting finance tables
+        /// (advances, accommodations, custom fields, salary reports, history paths).
+        /// Month salary entries are handled separately by <see cref="CreateMonthPaymentsStorage"/>.
+        /// </summary>
+        public int RenameSupportingFirmReferences(
+            string oldName,
+            string newName,
+            string oldCompanyFolder,
+            string newCompanyFolder)
+        {
+            if (IsPostgresExplicitlyEnabled)
+            {
+                return PostgresAppFirmRename.Rename(
+                    _settingsService,
+                    _folderService,
+                    oldName,
+                    newName,
+                    oldCompanyFolder,
+                    newCompanyFolder);
+            }
+
+            return _localDbService.RenameCurrentFirmReferences(
+                oldName,
+                newName,
+                oldCompanyFolder,
+                newCompanyFolder);
+        }
+
         public IFinanceCustomFieldsStorage CreateCustomFieldsStorage()
         {
             if (IsPostgresExplicitlyEnabled)

@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Data.Sqlite;
 using Win11DesktopApp.EmployeeModels;
+using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
 {
@@ -24,6 +27,7 @@ namespace Win11DesktopApp.Services
     public sealed class EmployeeIndexDbService
     {
         private const int CurrentSchemaVersion = 1;
+        private const int MaxDuplicateMatches = 8;
         private static readonly TimeSpan IndexLockStaleAfter = TimeSpan.FromMinutes(3);
         private static readonly JsonSerializerOptions LockJsonOptions = new() { WriteIndented = false };
         private readonly FolderService _folderService;
@@ -236,6 +240,146 @@ FROM employee_index
 WHERE is_archived = 1
 ORDER BY full_name, start_date;";
             return ReadRows(command);
+        }
+
+        /// <summary>
+        /// Finds active/archived employees that match first+last name and/or passport.
+        /// Empty passport never counts as a passport match. Returns at most <see cref="MaxDuplicateMatches"/> rows.
+        /// </summary>
+        public List<EmployeeDuplicateMatch> FindPossibleDuplicates(string firstName, string lastName, string? passportNumber)
+        {
+            if (UsePostgresStorage)
+                return _postgresStorage!.FindPossibleDuplicates(firstName, lastName, passportNumber);
+
+            EnsureInitialized();
+            if (!IsAvailable)
+                return new List<EmployeeDuplicateMatch>();
+
+            var normalizedFirst = NormalizePersonName(firstName);
+            var normalizedLast = NormalizePersonName(lastName);
+            var normalizedPassport = NormalizePassport(passportNumber);
+            if (normalizedFirst.Length == 0 || normalizedLast.Length == 0)
+                return new List<EmployeeDuplicateMatch>();
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
+       start_date, end_date, contract_type, position_title, position_number, phone, email,
+       passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
+       work_permit_name, work_permit_expiry, bank_account_number, bank_name,
+       is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+FROM employee_index
+WHERE (
+        lower(trim(ifnull(first_name, ''))) = @firstName
+        AND lower(trim(ifnull(last_name, ''))) = @lastName
+      )
+   OR (
+        length(@passportNorm) > 0
+        AND length(trim(ifnull(passport_number, ''))) > 0
+        AND replace(replace(replace(replace(replace(upper(trim(passport_number)), ' ', ''), '-', ''), char(8211), ''), char(8212), ''), char(8722), '') = @passportNorm
+      );";
+            command.Parameters.AddWithValue("@firstName", normalizedFirst);
+            command.Parameters.AddWithValue("@lastName", normalizedLast);
+            command.Parameters.AddWithValue("@passportNorm", normalizedPassport);
+            return BuildDuplicateMatches(ReadRows(command), normalizedFirst, normalizedLast, normalizedPassport, MaxDuplicateMatches);
+        }
+
+        public static string NormalizePersonName(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var sb = new StringBuilder(value.Length);
+            var prevSpace = false;
+            foreach (var ch in value.Trim())
+            {
+                if (char.IsWhiteSpace(ch))
+                {
+                    if (!prevSpace)
+                    {
+                        sb.Append(' ');
+                        prevSpace = true;
+                    }
+                    continue;
+                }
+
+                sb.Append(ch);
+                prevSpace = false;
+            }
+
+            return sb.ToString().ToLowerInvariant();
+        }
+
+        public static string NormalizePassport(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var sb = new StringBuilder(value.Length);
+            foreach (var ch in value)
+            {
+                if (char.IsWhiteSpace(ch))
+                    continue;
+                // ASCII hyphen, en/em dash, minus, soft hyphen
+                if (ch is '-' or '\u2013' or '\u2014' or '\u2212' or '\u00AD')
+                    continue;
+                sb.Append(char.ToUpperInvariant(ch));
+            }
+
+            return sb.ToString();
+        }
+
+        internal static List<EmployeeDuplicateMatch> BuildDuplicateMatches(
+            IEnumerable<EmployeeIndexRow> rows,
+            string normalizedFirst,
+            string normalizedLast,
+            string normalizedPassport,
+            int maxResults)
+        {
+            var byKey = new Dictionary<string, EmployeeDuplicateMatch>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in rows)
+            {
+                var nameMatch = string.Equals(NormalizePersonName(row.FirstName), normalizedFirst, StringComparison.Ordinal)
+                    && string.Equals(NormalizePersonName(row.LastName), normalizedLast, StringComparison.Ordinal);
+                var passportMatch = normalizedPassport.Length > 0
+                    && string.Equals(NormalizePassport(row.PassportNumber), normalizedPassport, StringComparison.Ordinal);
+                if (!nameMatch && !passportMatch)
+                    continue;
+
+                var kind = nameMatch && passportMatch
+                    ? EmployeeDuplicateMatchKind.NameAndPassport
+                    : passportMatch
+                        ? EmployeeDuplicateMatchKind.Passport
+                        : EmployeeDuplicateMatchKind.Name;
+
+                var key = !string.IsNullOrWhiteSpace(row.UniqueId)
+                    ? row.UniqueId.Trim()
+                    : $"{row.EmployeeFolder}|{row.FirmName}";
+                if (byKey.TryGetValue(key, out var existing) && (int)existing.Kind >= (int)kind)
+                    continue;
+
+                byKey[key] = new EmployeeDuplicateMatch
+                {
+                    UniqueId = row.UniqueId ?? string.Empty,
+                    FullName = string.IsNullOrWhiteSpace(row.FullName)
+                        ? $"{row.FirstName} {row.LastName}".Trim()
+                        : row.FullName,
+                    FirmName = row.IsArchived && !string.IsNullOrWhiteSpace(row.ArchivedFromFirm)
+                        ? row.ArchivedFromFirm
+                        : (row.FirmName ?? string.Empty),
+                    IsArchived = row.IsArchived,
+                    PassportNumber = row.PassportNumber ?? string.Empty,
+                    Kind = kind
+                };
+            }
+
+            return byKey.Values
+                .OrderByDescending(m => (int)m.Kind)
+                .ThenBy(m => m.FullName, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(m => m.FirmName, StringComparer.CurrentCultureIgnoreCase)
+                .Take(maxResults)
+                .ToList();
         }
 
         public EmployeeIndexRow? GetEmployeeRowByFolder(string employeeFolder)

@@ -226,7 +226,10 @@ namespace Win11DesktopApp.ViewModels
         private void CleanupDetailsVm()
         {
             if (EmployeeDetailsVm != null)
+            {
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
+                EmployeeDetailsVm.Cleanup();
+            }
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;

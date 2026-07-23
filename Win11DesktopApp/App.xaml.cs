@@ -699,7 +699,11 @@ namespace Win11DesktopApp
                     "Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel.");
             }
 
-            RunBackgroundTask("StartupIntegrityService.BackgroundCheck", () => startupIntegrityService.RunBackgroundCheck(CompanyService.Companies), BackgroundTaskToken);
+            RunBackgroundTask("StartupIntegrityService.BackgroundCheck", () =>
+            {
+                startupIntegrityService.RunBackgroundCheck(CompanyService.Companies);
+                EmployeeService.RunSessionEmployeeIndexIntegrityCheck(CompanyService.Companies);
+            }, BackgroundTaskToken);
             RunBackgroundTask("App.UpdateNotificationCheck", AppUpdateNotificationService.CheckForAvailableUpdateAsync, BackgroundTaskToken);
             RunBackgroundTask("RecentlyDeletedService.PurgeExpired", () => RecentlyDeletedService.PurgeExpired(), BackgroundTaskToken);
             RunBackgroundTask("DailySqliteBackupService", async token =>
@@ -767,6 +771,22 @@ namespace Win11DesktopApp
             EmployeeService.InitializeFinanceService(FinanceService);
             CommandService.Initialize(AccessStatusService);
             SyncEventService.Start();
+            SyncEventService.SyncEventReceived += OnStartupSyncEventReceived;
+        }
+
+        private static void OnStartupSyncEventReceived(object? sender, SyncEventReceivedEventArgs e)
+        {
+            // Keep employee list cache from hiding new/removed profiles after inbound sync.
+            // Hot-path load uses a light folder-count index check; session deep check runs at startup.
+            if (string.Equals(e.Record.Type, "EmployeeCreated", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(e.Record.FirmName))
+                    EmployeeService.InvalidateEmployeesCache(e.Record.FirmName);
+                return;
+            }
+
+            if (string.Equals(e.Record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
+                EmployeeService.InvalidateEmployeesCache();
         }
 
         private static void RunBackgroundWarmupTasks()

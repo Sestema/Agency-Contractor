@@ -2413,6 +2413,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                 EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                EmployeeDetailsVm.Cleanup();
             }
         }
 
@@ -2440,7 +2441,7 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void OnDetailsDataChanged()
+        private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e)
         {
             _pendingDetailsRefresh = true;
         }

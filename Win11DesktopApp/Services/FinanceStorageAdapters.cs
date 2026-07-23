@@ -26,12 +26,17 @@ namespace Win11DesktopApp.Services
         bool MonthDbExists(int year, int month);
         IEnumerable<(int year, int month, string path)> EnumerateMonthDatabases();
         (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadMonthPayments(int year, int month);
+        List<FirmExpense> LoadFirmExpensesOnly(int year, int month);
         void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses);
         void UpsertSalaryEntries(int year, int month, IReadOnlyList<SalaryEntry> entries);
         void ReplaceFirmPaymentsForFirm(int year, int month, string firmName, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses);
         void UpsertFirmExpense(int year, int month, FirmExpense expense);
         bool DeleteFirmExpense(int year, int month, string expenseId);
         void ReplaceFirmExpensesForFirm(int year, int month, string firmName, IReadOnlyList<FirmExpense> expenses);
+        /// <summary>
+        /// Replaces all firm expenses for the month without touching salary entry rows.
+        /// </summary>
+        void ReplaceAllFirmExpenses(int year, int month, IReadOnlyList<FirmExpense> expenses);
         void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, string fromMonthKey, CancellationToken cancellationToken = default);
         Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>> GetSavedPaymentsForAllRequests(
             string beforeMonthKey,
@@ -136,6 +141,9 @@ namespace Win11DesktopApp.Services
         public (List<SalaryEntry> entries, List<FirmExpense> expenses) LoadMonthPayments(int year, int month)
             => _salaryDbService.LoadMonthPayments(year, month);
 
+        public List<FirmExpense> LoadFirmExpensesOnly(int year, int month)
+            => _salaryDbService.LoadFirmExpensesOnly(year, month);
+
         public void SaveMonthPayments(int year, int month, IReadOnlyList<SalaryEntry> entries, IReadOnlyList<FirmExpense> expenses)
             => _salaryDbService.SaveMonthPayments(year, month, entries, expenses);
 
@@ -164,6 +172,9 @@ namespace Win11DesktopApp.Services
 
         public void ReplaceFirmExpensesForFirm(int year, int month, string firmName, IReadOnlyList<FirmExpense> expenses)
             => _salaryDbService.ReplaceFirmExpensesForFirm(year, month, firmName, expenses);
+
+        public void ReplaceAllFirmExpenses(int year, int month, IReadOnlyList<FirmExpense> expenses)
+            => _salaryDbService.ReplaceAllFirmExpenses(year, month, expenses);
 
         public void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, string fromMonthKey, CancellationToken cancellationToken = default)
             => _salaryDbService.UpdateHourlyRateForward(employeeId, employeeFolder, firmName, newRate, fromMonthKey, cancellationToken);

@@ -92,6 +92,7 @@ namespace Win11DesktopApp.Services
             public bool ArchiveSortAscending { get; set; } = false;
             public string ArchiveViewMode { get; set; } = "List";
             public double ArchiveZoomLevel { get; set; } = 1.0;
+            public int ArchiveTileSizeStep { get; set; } = 4;
             public double CandidateZoomLevel { get; set; } = 1.0;
             public string CandidateViewMode { get; set; } = "List";
             public double SalarySidebarTopRatio { get; set; } = 2.0;
@@ -436,6 +437,7 @@ namespace Win11DesktopApp.Services
             Settings.EmployeeZoomLevel = SafeDouble(Settings.EmployeeZoomLevel, 1.0);
             Settings.EmployeeTileSizeStep = Math.Min(6, Math.Max(1, Settings.EmployeeTileSizeStep));
             Settings.ArchiveZoomLevel = SafeDouble(Settings.ArchiveZoomLevel, 1.0);
+            Settings.ArchiveTileSizeStep = Math.Min(6, Math.Max(1, Settings.ArchiveTileSizeStep));
             Settings.CandidateZoomLevel = SafeDouble(Settings.CandidateZoomLevel, 1.0);
             Settings.SalarySidebarTopRatio = SafeDouble(Settings.SalarySidebarTopRatio, 2.0);
             Settings.SalarySidebarWidth = SafeDouble(Settings.SalarySidebarWidth, 230.0);
@@ -493,18 +495,10 @@ namespace Win11DesktopApp.Services
 
         public async Task SaveSettingsImmediate()
         {
-            await _saveLock.WaitAsync();
+            await _saveLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                SanitizeSettings();
-
-                if (File.Exists(_settingsPath))
-                {
-                    var existingJson = SafeFileService.ReadAllText(_settingsPath, Encoding.UTF8);
-                    SafeFileService.WriteTextAtomic(_backupPath, existingJson, Encoding.UTF8);
-                }
-
-                SafeFileService.WriteJsonAtomic(_settingsPath, Settings, _jsonOptions, Encoding.UTF8);
+                WriteSettingsCore();
             }
             catch (Exception ex)
             {
@@ -514,6 +508,78 @@ namespace Win11DesktopApp.Services
             {
                 _saveLock.Release();
             }
+        }
+
+        /// <summary>
+        /// Flush settings during app shutdown without blocking the UI thread on async
+        /// continuations. Cancels any pending debounce, waits up to <paramref name="timeout"/>
+        /// for the save lock + write, then returns so Closing can finish even if disk is slow.
+        /// </summary>
+        public bool SaveSettingsForShutdown(TimeSpan timeout)
+        {
+            var oldTimer = Interlocked.Exchange(ref _debounceTimer, null);
+            oldTimer?.Dispose();
+
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                var task = Task.Run(() =>
+                {
+                    if (!_saveLock.Wait(timeout))
+                    {
+                        LoggingService.LogWarning(
+                            "AppSettingsService.SaveSettingsForShutdown",
+                            $"Could not acquire settings lock within {timeout.TotalSeconds:0.#}s.");
+                        return false;
+                    }
+
+                    try
+                    {
+                        WriteSettingsCore();
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogError("AppSettingsService.SaveSettingsForShutdown.Write", ex);
+                        return false;
+                    }
+                    finally
+                    {
+                        _saveLock.Release();
+                    }
+                });
+
+                if (!task.Wait(timeout))
+                {
+                    LoggingService.LogWarning(
+                        "AppSettingsService.SaveSettingsForShutdown",
+                        $"Timed out after {sw.ElapsedMilliseconds}ms. Closing will continue.");
+                    return false;
+                }
+
+                LoggingService.LogInfo(
+                    "AppSettingsService.SaveSettingsForShutdown",
+                    $"Completed in {sw.ElapsedMilliseconds}ms. ok={task.Result}.");
+                return task.Result;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("AppSettingsService.SaveSettingsForShutdown", ex);
+                return false;
+            }
+        }
+
+        private void WriteSettingsCore()
+        {
+            SanitizeSettings();
+
+            if (File.Exists(_settingsPath))
+            {
+                var existingJson = SafeFileService.ReadAllText(_settingsPath, Encoding.UTF8);
+                SafeFileService.WriteTextAtomic(_backupPath, existingJson, Encoding.UTF8);
+            }
+
+            SafeFileService.WriteJsonAtomic(_settingsPath, Settings, _jsonOptions, Encoding.UTF8);
         }
     }
 }

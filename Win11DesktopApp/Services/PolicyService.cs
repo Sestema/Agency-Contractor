@@ -65,20 +65,40 @@ namespace Win11DesktopApp.Services
             if (settings == null)
                 return;
 
-            settings.RemotePolicyVersion = CurrentPolicy.PolicyVersion ?? string.Empty;
+            var policyVersion = CurrentPolicy.PolicyVersion ?? string.Empty;
+            var adminMessage = CurrentPolicy.AdminMessage ?? string.Empty;
+            var updateChannel = string.IsNullOrWhiteSpace(CurrentPolicy.UpdateChannel) ? "stable" : CurrentPolicy.UpdateChannel;
+            var minimumSupportedVersion = CurrentPolicy.MinimumSupportedVersion ?? string.Empty;
+            var recommendedVersion = CurrentPolicy.RecommendedVersion ?? string.Empty;
+
+            var changed =
+                !string.Equals(settings.RemotePolicyVersion, policyVersion, StringComparison.Ordinal)
+                || settings.AdminReadOnlyMode != CurrentPolicy.ReadOnlyMode
+                || settings.AdminDisableAI != CurrentPolicy.DisableAI
+                || settings.AdminDisableExports != CurrentPolicy.DisableExports
+                || settings.AdminMaintenanceMode != CurrentPolicy.MaintenanceMode
+                || settings.AdminHideTemplates != CurrentPolicy.HideTemplates
+                || settings.AdminHideFinance != CurrentPolicy.HideFinance
+                || !string.Equals(settings.AdminMessage, adminMessage, StringComparison.Ordinal)
+                || !string.Equals(settings.AdminUpdateChannel, updateChannel, StringComparison.Ordinal)
+                || !string.Equals(settings.AdminMinimumSupportedVersion, minimumSupportedVersion, StringComparison.Ordinal)
+                || !string.Equals(settings.AdminRecommendedVersion, recommendedVersion, StringComparison.Ordinal)
+                || settings.AdminForceUpdate != CurrentPolicy.ForceUpdate;
+
+            settings.RemotePolicyVersion = policyVersion;
             settings.AdminReadOnlyMode = CurrentPolicy.ReadOnlyMode;
             settings.AdminDisableAI = CurrentPolicy.DisableAI;
             settings.AdminDisableExports = CurrentPolicy.DisableExports;
             settings.AdminMaintenanceMode = CurrentPolicy.MaintenanceMode;
             settings.AdminHideTemplates = CurrentPolicy.HideTemplates;
             settings.AdminHideFinance = CurrentPolicy.HideFinance;
-            settings.AdminMessage = CurrentPolicy.AdminMessage ?? string.Empty;
-            settings.AdminUpdateChannel = string.IsNullOrWhiteSpace(CurrentPolicy.UpdateChannel) ? "stable" : CurrentPolicy.UpdateChannel;
-            settings.AdminMinimumSupportedVersion = CurrentPolicy.MinimumSupportedVersion ?? string.Empty;
-            settings.AdminRecommendedVersion = CurrentPolicy.RecommendedVersion ?? string.Empty;
+            settings.AdminMessage = adminMessage;
+            settings.AdminUpdateChannel = updateChannel;
+            settings.AdminMinimumSupportedVersion = minimumSupportedVersion;
+            settings.AdminRecommendedVersion = recommendedVersion;
             settings.AdminForceUpdate = CurrentPolicy.ForceUpdate;
 
-            if (saveSettings && _appSettingsService != null)
+            if (changed && saveSettings && _appSettingsService != null)
                 await _appSettingsService.SaveSettingsImmediate();
         }
 

@@ -63,6 +63,7 @@ namespace Win11DesktopApp.Services
         private readonly object _employeeListCacheLock = new();
         private readonly Dictionary<string, EmployeeListCacheEntry> _employeeListCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, object> _employeeListLoadLocks = new(StringComparer.OrdinalIgnoreCase);
+        private int _sessionEmployeeIndexIntegrityRan;
 
         private sealed class EmployeeListCacheEntry
         {
@@ -326,6 +327,29 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public IReadOnlyList<EmployeeDuplicateMatch> FindPossibleDuplicates(string firstName, string lastName, string? passportNumber)
+        {
+            if (_employeeIndexDbService == null)
+            {
+                LoggingService.LogWarning(
+                    "EmployeeService.FindPossibleDuplicates",
+                    "Employee index is not configured; skipping duplicate check.");
+                return Array.Empty<EmployeeDuplicateMatch>();
+            }
+
+            try
+            {
+                return _employeeIndexDbService.FindPossibleDuplicates(firstName, lastName, passportNumber);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning(
+                    "EmployeeService.FindPossibleDuplicates",
+                    $"Duplicate check skipped because index is unavailable: {ex.Message}");
+                return Array.Empty<EmployeeDuplicateMatch>();
+            }
+        }
+
         public List<EmployeeSummary> GetEmployeesForFirm(string firmName)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -538,6 +562,9 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public void InvalidateEmployeesCache(string? firmName = null)
+            => InvalidateEmployeeListCache(firmName);
+
         private static string NormalizeFirmCacheKey(string? firmName)
         {
             return (firmName ?? string.Empty).Trim();
@@ -588,6 +615,22 @@ namespace Win11DesktopApp.Services
                 WorkPermitName = source.WorkPermitName,
                 WorkPermitExpiry = source.WorkPermitExpiry
             };
+        }
+
+        /// <summary>
+        /// Builds a fresh <see cref="EmployeeSummary"/> for one folder (after profile save)
+        /// so list screens can patch a single row without reloading the whole firm.
+        /// </summary>
+        public EmployeeSummary? TryBuildEmployeeSummary(string firmName, string employeeFolder)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
+            var data = LoadEmployeeData(employeeFolder);
+            if (data == null)
+                return null;
+
+            return BuildSummary(firmName ?? string.Empty, employeeFolder, data);
         }
 
         public EmployeeData? LoadEmployeeData(string employeeFolder)
@@ -1003,8 +1046,9 @@ namespace Win11DesktopApp.Services
         {
             var encoder = new JpegBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(source));
-            using var stream = File.Open(outputPath, FileMode.Create, FileAccess.Write);
-            encoder.Save(stream);
+            using var memory = new MemoryStream();
+            encoder.Save(memory);
+            SafeFileService.WriteBytesAtomic(outputPath, memory.ToArray());
         }
 
         private static string NormalizeGender(string? gender)
@@ -1090,70 +1134,107 @@ namespace Win11DesktopApp.Services
 
         private EmployeeSummary BuildSummaryFromIndexRow(EmployeeIndexRow row)
         {
-            var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
-            var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
-            var hasPhoto = !string.IsNullOrWhiteSpace(photoPath);
-            return new EmployeeSummary
-            {
-                UniqueId = row.UniqueId,
-                FirstName = row.FirstName,
-                LastName = row.LastName,
-                FullName = row.FullName,
-                PositionTitle = row.PositionTitle,
-                StartDate = row.StartDate,
-                ParsedStartDate = DateParsingHelper.TryParseDate(row.StartDate),
-                EndDate = row.EndDate,
-                ContractType = row.ContractType,
-                Gender = ReadGenderFromEmployeeFolder(employeeFolder),
-                PhotoPath = hasPhoto ? photoPath : string.Empty,
-                HasPhoto = hasPhoto,
-                HasPassport = row.HasPassport,
-                HasVisa = row.HasVisa,
-                HasInsurance = row.HasInsurance,
-                PassportNumber = row.PassportNumber,
-                VisaNumber = row.VisaNumber,
-                InsuranceNumber = row.InsuranceNumber,
-                PassportExpiry = row.PassportExpiry,
-                VisaExpiry = row.VisaExpiry,
-                InsuranceExpiry = row.InsuranceExpiry,
-                PassportSeverity = DateParsingHelper.GetSeverity(row.PassportExpiry),
-                VisaSeverity = DateParsingHelper.GetSeverity(row.VisaExpiry),
-                InsuranceSeverity = DateParsingHelper.GetSeverity(row.InsuranceExpiry),
-                WorkPermitSeverity = DateParsingHelper.GetSeverity(row.WorkPermitExpiry),
-                Status = StatusHelper.Normalize(row.Status),
-                Phone = row.Phone,
-                Email = row.Email,
-                BankAccountNumber = row.BankAccountNumber,
-                BankName = row.BankName,
-                EmployeeFolder = employeeFolder,
-                FirmName = row.FirmName,
-                EmployeeType = row.EmployeeType ?? "visa",
-                WorkPermitName = row.WorkPermitName ?? string.Empty,
-                WorkPermitExpiry = row.WorkPermitExpiry ?? string.Empty
-            };
+            var summary = new EmployeeSummary();
+            PopulateSummaryFromIndexRow(summary, row);
+            return summary;
         }
 
         private ArchivedEmployeeSummary BuildArchivedSummaryFromIndexRow(EmployeeIndexRow row)
         {
+            var summary = new ArchivedEmployeeSummary();
+            PopulateSummaryFromIndexRow(summary, row);
+            summary.ParsedEndDate = DateParsingHelper.TryParseDate(row.EndDate);
+            return summary;
+        }
+
+        private void PopulateSummaryFromIndexRow(EmployeeSummary summary, EmployeeIndexRow row)
+        {
             var employeeFolder = ResolveEmployeeFolderFromIndexRow(row);
             var photoPath = ResolvePhotoPathFromIndexRow(row, employeeFolder);
             var hasPhoto = !string.IsNullOrWhiteSpace(photoPath);
-            var parsedStartDate = DateParsingHelper.TryParseDate(row.StartDate);
-            var parsedEndDate = DateParsingHelper.TryParseDate(row.EndDate);
-            return new ArchivedEmployeeSummary
-            {
-                UniqueId = row.UniqueId,
-                FullName = row.FullName,
-                PositionTitle = row.PositionTitle,
-                FirmName = row.FirmName,
-                StartDate = row.StartDate,
-                EndDate = row.EndDate,
-                EmployeeFolder = employeeFolder,
-                PhotoPath = hasPhoto ? photoPath : string.Empty,
-                HasPhoto = hasPhoto,
-                ParsedStartDate = parsedStartDate,
-                ParsedEndDate = parsedEndDate
-            };
+            summary.UniqueId = row.UniqueId;
+            summary.FirstName = row.FirstName;
+            summary.LastName = row.LastName;
+            summary.FullName = row.FullName;
+            summary.PositionTitle = row.PositionTitle;
+            summary.StartDate = row.StartDate;
+            summary.ParsedStartDate = DateParsingHelper.TryParseDate(row.StartDate);
+            summary.EndDate = row.EndDate;
+            summary.ContractType = row.ContractType;
+            summary.Gender = ReadGenderFromEmployeeFolder(employeeFolder);
+            summary.PhotoPath = hasPhoto ? photoPath : string.Empty;
+            summary.HasPhoto = hasPhoto;
+            summary.HasPassport = row.HasPassport;
+            summary.HasVisa = row.HasVisa;
+            summary.HasInsurance = row.HasInsurance;
+            summary.PassportNumber = row.PassportNumber;
+            summary.VisaNumber = row.VisaNumber;
+            summary.InsuranceNumber = row.InsuranceNumber;
+            summary.PassportExpiry = row.PassportExpiry;
+            summary.VisaExpiry = row.VisaExpiry;
+            summary.InsuranceExpiry = row.InsuranceExpiry;
+            summary.PassportSeverity = DateParsingHelper.GetSeverity(row.PassportExpiry);
+            summary.VisaSeverity = DateParsingHelper.GetSeverity(row.VisaExpiry);
+            summary.InsuranceSeverity = DateParsingHelper.GetSeverity(row.InsuranceExpiry);
+            summary.WorkPermitSeverity = DateParsingHelper.GetSeverity(row.WorkPermitExpiry);
+            summary.Status = StatusHelper.Normalize(row.Status);
+            summary.Phone = row.Phone;
+            summary.Email = row.Email;
+            summary.BankAccountNumber = row.BankAccountNumber;
+            summary.BankName = row.BankName;
+            summary.EmployeeFolder = employeeFolder;
+            summary.FirmName = row.FirmName;
+            summary.EmployeeType = row.EmployeeType ?? "visa";
+            summary.WorkPermitName = row.WorkPermitName ?? string.Empty;
+            summary.WorkPermitExpiry = row.WorkPermitExpiry ?? string.Empty;
+        }
+
+        private void PopulateArchivedSummaryFromEmployeeData(
+            ArchivedEmployeeSummary summary,
+            EmployeeData data,
+            string employeeFolder,
+            string firmName,
+            string startDate,
+            string endDate,
+            string photoPath,
+            bool hasPhoto)
+        {
+            summary.UniqueId = data.UniqueId ?? string.Empty;
+            summary.FirstName = data.FirstName ?? string.Empty;
+            summary.LastName = data.LastName ?? string.Empty;
+            summary.FullName = $"{data.FirstName} {data.LastName}".Trim();
+            summary.PositionTitle = data.PositionTag ?? string.Empty;
+            summary.FirmName = firmName ?? string.Empty;
+            summary.StartDate = startDate ?? string.Empty;
+            summary.EndDate = endDate ?? string.Empty;
+            summary.ParsedStartDate = DateParsingHelper.TryParseDate(startDate);
+            summary.ParsedEndDate = DateParsingHelper.TryParseDate(endDate);
+            summary.EmployeeFolder = employeeFolder;
+            summary.PhotoPath = hasPhoto ? photoPath : string.Empty;
+            summary.HasPhoto = hasPhoto;
+            summary.ContractType = data.ContractType ?? string.Empty;
+            summary.Gender = data.Gender ?? "male";
+            summary.HasPassport = !string.IsNullOrWhiteSpace(data.PassportNumber);
+            summary.HasVisa = !string.IsNullOrWhiteSpace(data.VisaNumber);
+            summary.HasInsurance = !string.IsNullOrWhiteSpace(data.InsuranceNumber);
+            summary.PassportNumber = data.PassportNumber ?? string.Empty;
+            summary.VisaNumber = data.VisaNumber ?? string.Empty;
+            summary.InsuranceNumber = data.InsuranceNumber ?? string.Empty;
+            summary.PassportExpiry = data.PassportExpiry ?? string.Empty;
+            summary.VisaExpiry = data.VisaExpiry ?? string.Empty;
+            summary.InsuranceExpiry = data.InsuranceExpiry ?? string.Empty;
+            summary.PassportSeverity = DateParsingHelper.GetSeverity(data.PassportExpiry);
+            summary.VisaSeverity = DateParsingHelper.GetSeverity(data.VisaExpiry);
+            summary.InsuranceSeverity = DateParsingHelper.GetSeverity(data.InsuranceExpiry);
+            summary.WorkPermitSeverity = DateParsingHelper.GetSeverity(data.WorkPermitExpiry);
+            summary.Status = StatusHelper.Normalize(data.Status);
+            summary.Phone = data.Phone ?? string.Empty;
+            summary.Email = data.Email ?? string.Empty;
+            summary.BankAccountNumber = data.HasBankAccountData ? data.BankAccountNumber ?? string.Empty : string.Empty;
+            summary.BankName = data.HasBankAccountData ? data.BankName ?? string.Empty : string.Empty;
+            summary.EmployeeType = data.EmployeeType ?? "visa";
+            summary.WorkPermitName = data.WorkPermitName ?? string.Empty;
+            summary.WorkPermitExpiry = data.WorkPermitExpiry ?? string.Empty;
         }
 
         private string ResolveEmployeeFolderFromIndexRow(EmployeeIndexRow row)
@@ -1200,6 +1281,17 @@ namespace Win11DesktopApp.Services
         }
 
         private bool ShouldRebuildEmployeeIndexForFirm(IReadOnlyList<EmployeeIndexRow> rows, string employeesFolder, out string reason)
+            => ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, deepValidation: false, out reason);
+
+        /// <summary>
+        /// Light mode (hot path): compare index row count vs profile folders only — no per-row
+        /// employee.json reads. Deep mode: also check missing folders, timestamps, UniqueId.
+        /// </summary>
+        private bool ShouldRebuildEmployeeIndexForFirm(
+            IReadOnlyList<EmployeeIndexRow> rows,
+            string employeesFolder,
+            bool deepValidation,
+            out string reason)
         {
             reason = string.Empty;
             if (!Directory.Exists(employeesFolder))
@@ -1209,11 +1301,14 @@ namespace Win11DesktopApp.Services
                 .Where(folder => File.Exists(Path.Combine(folder, "employee.json")))
                 .ToList();
 
-            if (rows.Count < profileFolders.Count)
+            if (rows.Count != profileFolders.Count)
             {
                 reason = $"index has {rows.Count} row(s), but {profileFolders.Count} employee profile folder(s) exist";
                 return true;
             }
+
+            if (!deepValidation)
+                return false;
 
             foreach (var row in rows)
             {
@@ -1244,6 +1339,90 @@ namespace Win11DesktopApp.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Full employee-index vs disk validation once per app session (startup background).
+        /// Hot-path GetEmployeesForFirm only uses the light count check.
+        /// </summary>
+        public void RunSessionEmployeeIndexIntegrityCheck(IEnumerable<EmployerCompany>? companies)
+        {
+            if (Interlocked.Exchange(ref _sessionEmployeeIndexIntegrityRan, 1) != 0)
+                return;
+
+            if (_employeeIndexDbService == null)
+                return;
+
+            var stopwatch = Stopwatch.StartNew();
+            var companyList = companies?
+                .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+                .Select(c => c.Name!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+                ?? new List<string>();
+
+            int firmsChecked = 0;
+            int firmsRebuilt = 0;
+
+            try
+            {
+                foreach (var firmName in companyList)
+                {
+                    firmsChecked++;
+                    var employeesFolder = _folderService.GetEmployeesFolder(firmName);
+                    if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
+                        continue;
+
+                    try
+                    {
+                        var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+                        if (rows.Count == 0)
+                        {
+                            if (!HasAnyEmployeeFolders(employeesFolder))
+                                continue;
+
+                            TryRebuildEmployeeIndexForFirm(
+                                "EmployeeService.SessionIndexIntegrity",
+                                firmName,
+                                "index returned no rows while employee folders exist");
+                            firmsRebuilt++;
+                            continue;
+                        }
+
+                        if (ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, deepValidation: true, out var reason))
+                        {
+                            TryRebuildEmployeeIndexForFirm(
+                                "EmployeeService.SessionIndexIntegrity",
+                                firmName,
+                                reason);
+                            firmsRebuilt++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning(
+                            "EmployeeService.SessionIndexIntegrity",
+                            $"Firm '{firmName}': {ex.Message}");
+                    }
+                }
+
+                LoggingService.LogInfo(
+                    "EmployeeService.SessionIndexIntegrity",
+                    $"Completed in {stopwatch.ElapsedMilliseconds} ms. Firms={firmsChecked}, rebuilt={firmsRebuilt}.");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.SessionIndexIntegrity", ex);
+            }
+        }
+
+        /// <summary>
+        /// Allow another deep session check (e.g. after inbound sync). Safe to call often —
+        /// the next RunSessionEmployeeIndexIntegrityCheck will run at most once until then.
+        /// </summary>
+        public void RequestSessionEmployeeIndexIntegrityRecheck()
+        {
+            Interlocked.Exchange(ref _sessionEmployeeIndexIntegrityRan, 0);
         }
 
         private static bool IsEmployeeIndexRowOlderThanJson(EmployeeIndexRow row, string jsonPath, out string reason)
@@ -1353,7 +1532,6 @@ namespace Win11DesktopApp.Services
                     if (data == null)
                         continue;
 
-                    var fullName = $"{data.FirstName} {data.LastName}";
                     var photo = ResolvePhotoPath(folder, data);
                     var hasPhoto = !string.IsNullOrEmpty(photo);
 
@@ -1380,37 +1558,17 @@ namespace Win11DesktopApp.Services
                         }
 
                         var last = deduplicated.Last();
-                        result.Add(new ArchivedEmployeeSummary
-                        {
-                            UniqueId = data.UniqueId,
-                            FullName = fullName,
-                            PositionTitle = data.PositionTag,
-                            FirmName = last.FirmName,
-                            StartDate = last.StartDate,
-                            EndDate = last.EndDate,
-                            EmployeeFolder = folder,
-                            PhotoPath = photo,
-                            HasPhoto = hasPhoto,
-                            ParsedStartDate = DateParsingHelper.TryParseDate(last.StartDate),
-                            ParsedEndDate = DateParsingHelper.TryParseDate(last.EndDate)
-                        });
+                        var archived = new ArchivedEmployeeSummary();
+                        PopulateArchivedSummaryFromEmployeeData(
+                            archived, data, folder, last.FirmName, last.StartDate, last.EndDate, photo, hasPhoto);
+                        result.Add(archived);
                     }
                     else
                     {
-                        result.Add(new ArchivedEmployeeSummary
-                        {
-                            UniqueId = data.UniqueId,
-                            FullName = fullName,
-                            PositionTitle = data.PositionTag,
-                            FirmName = data.ArchivedFromFirm,
-                            StartDate = data.StartDate,
-                            EndDate = data.EndDate,
-                            EmployeeFolder = folder,
-                            PhotoPath = photo,
-                            HasPhoto = hasPhoto,
-                            ParsedStartDate = DateParsingHelper.TryParseDate(data.StartDate),
-                            ParsedEndDate = DateParsingHelper.TryParseDate(data.EndDate)
-                        });
+                        var archived = new ArchivedEmployeeSummary();
+                        PopulateArchivedSummaryFromEmployeeData(
+                            archived, data, folder, data.ArchivedFromFirm, data.StartDate, data.EndDate, photo, hasPhoto);
+                        result.Add(archived);
                     }
                 }
                 catch (Exception ex)

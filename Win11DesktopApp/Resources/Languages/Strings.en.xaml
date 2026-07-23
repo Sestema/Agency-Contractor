@@ -639,6 +639,7 @@
     <sys:String x:Key="ScanNoScanner">Scanner unavailable</sys:String>
     <sys:String x:Key="ScanWorking">Scanning...</sys:String>
     <sys:String x:Key="ScanCloseBlocked">Finish or cancel the Windows scan dialog before closing.</sys:String>
+    <sys:String x:Key="ScanExportCloseBlocked">Wait until the document finishes saving, then close the window.</sys:String>
     <sys:String x:Key="ScanPageAdded">Pages added: {0}</sys:String>
     <sys:String x:Key="ScanFailed">Could not scan page</sys:String>
     <sys:String x:Key="ScanImportTitle">Add pages from file</sys:String>
@@ -852,6 +853,7 @@
     <sys:String x:Key="ArchiveSortEndDate">End date</sys:String>
     <sys:String x:Key="ArchiveSortFirm">Company</sys:String>
     <sys:String x:Key="ArchiveResultsLabel">Showing</sys:String>
+    <sys:String x:Key="ArchiveShowMoreFmt">Show more ({0})</sys:String>
     <sys:String x:Key="ArchiveNoMatchesDesc">Try changing the search text or clearing the current filter.</sys:String>
     <sys:String x:Key="ArchiveClearFilter">Clear filter</sys:String>
     <sys:String x:Key="ArchiveFirm">Company</sys:String>
@@ -1645,7 +1647,10 @@
     <sys:String x:Key="FinDebtLabel">Debt:</sys:String>
     <sys:String x:Key="FinDebtFromMonth">Debt from {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Loaded</sys:String>
+    <sys:String x:Key="FinSalarySaving">Saving…</sys:String>
     <sys:String x:Key="FinSalarySaved">Saved!</sys:String>
+    <sys:String x:Key="FinSalaryAllAlreadyPaid">All visible employees are already marked as paid.</sys:String>
+    <sys:String x:Key="FinSalaryAllAlreadyUnpaid">All visible employees are already marked as unpaid.</sys:String>
     <sys:String x:Key="FinSalarySaveGenericError">Failed to save salary file. The file may be in use by another program.</sys:String>
     <sys:String x:Key="FinSalarySaveRecoveryCreated">Could not update the main file, but new data was saved to a recovery file.</sys:String>
     <sys:String x:Key="FinSalaryPostgresSaveBlockedLoading">PostgreSQL save was blocked while the month is still loading. Wait until the table finishes loading and save again.</sys:String>
@@ -1785,6 +1790,11 @@
     <sys:String x:Key="MsgHint">Hint</sys:String>
     <sys:String x:Key="MsgSaveEmployeeFail">Could not save employee.</sys:String>
     <sys:String x:Key="MsgFillRequiredFields">Please fill in the required fields (First Name, Last Name).</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicatePassport">An employee with this passport (or matching name and passport) already exists (active or archive). Create anyway?</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateName">An employee with the same first and last name already exists (possible namesake; active or archive). Create anyway?</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateLine">• {0} — {1} ({2}){3}</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateStatusActive">Active</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateStatusArchived">Archive</sys:String>
     <sys:String x:Key="MsgWizUnsavedClose">You have unsaved data. Close without saving?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Cancel</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Enter company name.</sys:String>
@@ -1932,6 +1942,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <!-- Archive restore -->
     <sys:String x:Key="MsgNoEmployeeSelected">No employee selected.</sys:String>
     <sys:String x:Key="MsgSelectFirmRestore">Select a company.</sys:String>
+    <sys:String x:Key="MsgRestoreFirmHidden">This company is hidden. Choose a visible company to restore to.</sys:String>
     <sys:String x:Key="MsgEnterStartDate">Enter start date.</sys:String>
     <sys:String x:Key="MsgRestoreError">Error during restoration.</sys:String>
     <sys:String x:Key="MsgRestoreSourceMissing">The archived employee folder or employee.json file was not found.</sys:String>

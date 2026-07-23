@@ -656,6 +656,7 @@
     <sys:String x:Key="ScanNoScanner">Skener není dostupný</sys:String>
     <sys:String x:Key="ScanWorking">Skenování...</sys:String>
     <sys:String x:Key="ScanCloseBlocked">Nejprve dokončete nebo zrušte skenování v okně Windows.</sys:String>
+    <sys:String x:Key="ScanExportCloseBlocked">Počkejte na dokončení uložení dokumentu a poté okno zavřete.</sys:String>
     <sys:String x:Key="ScanPageAdded">Přidáno stránek: {0}</sys:String>
     <sys:String x:Key="ScanFailed">Stránku se nepodařilo naskenovat</sys:String>
     <sys:String x:Key="ScanImportTitle">Přidat stránky ze souboru</sys:String>
@@ -866,6 +867,7 @@
     <sys:String x:Key="ArchiveSortEndDate">Datum ukončení</sys:String>
     <sys:String x:Key="ArchiveSortFirm">Firma</sys:String>
     <sys:String x:Key="ArchiveResultsLabel">Zobrazeno</sys:String>
+    <sys:String x:Key="ArchiveShowMoreFmt">Zobrazit další ({0})</sys:String>
     <sys:String x:Key="ArchiveNoMatchesDesc">Zkuste změnit vyhledávací dotaz nebo zrušit aktuální filtr.</sys:String>
     <sys:String x:Key="ArchiveClearFilter">Vymazat filtr</sys:String>
     <sys:String x:Key="ArchiveFirm">Firma</sys:String>
@@ -1659,7 +1661,10 @@
     <sys:String x:Key="FinDebtLabel">Dluh:</sys:String>
     <sys:String x:Key="FinDebtFromMonth">Dluh za {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Načteno</sys:String>
+    <sys:String x:Key="FinSalarySaving">Ukládání…</sys:String>
     <sys:String x:Key="FinSalarySaved">Uloženo!</sys:String>
+    <sys:String x:Key="FinSalaryAllAlreadyPaid">Všichni viditelní zaměstnanci jsou již označeni jako vyplacení.</sys:String>
+    <sys:String x:Key="FinSalaryAllAlreadyUnpaid">Všichni viditelní zaměstnanci jsou již bez označení výplaty.</sys:String>
     <sys:String x:Key="FinSalarySaveGenericError">Nepodařilo se uložit soubor mezd. Soubor může být používán jiným programem.</sys:String>
     <sys:String x:Key="FinSalarySaveRecoveryCreated">Hlavní soubor se nepodařilo aktualizovat, ale nová data byla uložena do recovery souboru.</sys:String>
     <sys:String x:Key="FinSalaryPostgresSaveBlockedLoading">Uložení do PostgreSQL bylo zastaveno, protože se měsíc ještě načítá. Počkejte na dokončení tabulky a uložte znovu.</sys:String>
@@ -1799,6 +1804,11 @@
     <sys:String x:Key="MsgHint">Nápověda</sys:String>
     <sys:String x:Key="MsgSaveEmployeeFail">Nepodařilo se uložit zaměstnance.</sys:String>
     <sys:String x:Key="MsgFillRequiredFields">Vyplňte povinná pole (Jméno, Příjmení).</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicatePassport">Zaměstnanec se stejným pasem (nebo jménem a pasem) už existuje (aktivní nebo archiv). Přesto vytvořit?</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateName">Zaměstnanec se stejným jménem a příjmením už existuje (možný jmenovec; aktivní nebo archiv). Přesto vytvořit?</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateLine">• {0} — {1} ({2}){3}</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateStatusActive">Aktivní</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateStatusArchived">Archiv</sys:String>
     <sys:String x:Key="MsgWizUnsavedClose">Máte neuložená data. Zavřít bez uložení?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Zrušit</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Zadejte název firmy.</sys:String>
@@ -1946,6 +1956,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <!-- Archive restore -->
     <sys:String x:Key="MsgNoEmployeeSelected">Nebyl vybrán zaměstnanec.</sys:String>
     <sys:String x:Key="MsgSelectFirmRestore">Vyberte firmu.</sys:String>
+    <sys:String x:Key="MsgRestoreFirmHidden">Tato firma je skrytá. Pro obnovení vyberte viditelnou firmu.</sys:String>
     <sys:String x:Key="MsgEnterStartDate">Zadejte datum nástupu.</sys:String>
     <sys:String x:Key="MsgRestoreError">Chyba při obnovení.</sys:String>
     <sys:String x:Key="MsgRestoreSourceMissing">Archivní složka zaměstnance nebo soubor employee.json nebyl nalezen.</sys:String>

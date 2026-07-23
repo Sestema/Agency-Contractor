@@ -224,9 +224,32 @@ public sealed class InvoiceDocument
         : Math.Round(TotalAmount * (DiscountPercent / 100m), 2);
 
     [JsonIgnore]
-    public decimal AmountToPay => IsCashReceiptDocument
-        ? Math.Round(TotalAmount, 2)
-        : Math.Max(0m, Math.Round(TotalAmount - DiscountAmount - AlreadyPaidAmount, 2));
+    public decimal AmountToPay
+    {
+        get
+        {
+            if (IsCashReceiptDocument)
+                return Math.Round(TotalAmount, 2);
+
+            var raw = Math.Max(0m, TotalAmount - DiscountAmount - AlreadyPaidAmount);
+            return ApplyStandardInvoiceRounding(raw, RoundingMode);
+        }
+    }
+
+    /// <summary>
+    /// Applies UI rounding modes for standard invoices: none (2 dp), whole (0 dp), half (nearest 0.5).
+    /// Cash receipts use a separate RoundingMode set (cash_5 / cash_up / cash_down).
+    /// </summary>
+    public static decimal ApplyStandardInvoiceRounding(decimal amount, string? mode)
+    {
+        var normalized = Math.Max(0m, amount);
+        return (mode ?? "none").Trim().ToLowerInvariant() switch
+        {
+            "whole" => Math.Round(normalized, 0, MidpointRounding.AwayFromZero),
+            "half" => Math.Round(normalized * 2m, 0, MidpointRounding.AwayFromZero) / 2m,
+            _ => Math.Round(normalized, 2, MidpointRounding.AwayFromZero)
+        };
+    }
 
     [JsonIgnore]
     public bool IsCashReceiptDocument => Type is InvoiceDocumentType.CashReceiptIncome or InvoiceDocumentType.CashReceiptExpense;

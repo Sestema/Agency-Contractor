@@ -28,6 +28,7 @@ namespace Win11DesktopApp.Views
         private readonly List<(DataGridColumn Column, EventHandler Handler)> _columnWidthSubscriptions = new();
         private DispatcherTimer? _saveWidthsTimer;
         private bool _suppressWidthSave;
+        private bool _columnRebuildQueued;
 
         public SalaryView()
         {
@@ -110,7 +111,7 @@ namespace Win11DesktopApp.Views
         {
             if (e.OldValue is SalaryViewModel oldVm)
             {
-                oldVm.CustomFieldsChanged -= RebuildDynamicColumns;
+                oldVm.CustomFieldsChanged -= ScheduleRebuildDynamicColumns;
                 oldVm.DataLoaded -= OnViewModelDataLoaded;
                 oldVm.PropertyChanged -= OnVmPropertyChanged;
                 foreach (var entry in oldVm.Entries)
@@ -120,7 +121,7 @@ namespace Win11DesktopApp.Views
 
             if (e.NewValue is SalaryViewModel vm)
             {
-                vm.CustomFieldsChanged += RebuildDynamicColumns;
+                vm.CustomFieldsChanged += ScheduleRebuildDynamicColumns;
                 vm.DataLoaded += OnViewModelDataLoaded;
                 vm.PropertyChanged += OnVmPropertyChanged;
                 RebuildDynamicColumns();
@@ -206,7 +207,64 @@ namespace Win11DesktopApp.Views
             {
                 e.Cancel = true;
                 Keyboard.ClearFocus();
+                return;
             }
+
+            vm.BeginSalaryEntryEdit(entry);
+        }
+
+        private void SalaryGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (DataContext is not SalaryViewModel vm)
+                return;
+
+            if (e.EditAction == DataGridEditAction.Cancel)
+            {
+                vm.EndSalaryEntryEdit(e.Row?.Item as SalaryEntry);
+                return;
+            }
+
+            // Keep editing lock until the row edit fully commits (PropertyChanged may lag).
+            // RowEditEnding clears the key.
+        }
+
+        private void SalaryGrid_RowEditEnding(object sender, DataGridRowEditEndingEventArgs e)
+        {
+            if (DataContext is not SalaryViewModel vm)
+                return;
+
+            var entry = e.Row?.Item as SalaryEntry;
+            if (e.EditAction == DataGridEditAction.Cancel)
+            {
+                vm.EndSalaryEntryEdit(entry);
+                return;
+            }
+
+            // RowEditEnding fires before the row commit finishes. Clear the editing lock
+            // only after bindings have committed cell values into the model (ContextIdle
+            // is later than Background, so sync flush cannot race the WPF commit).
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                if (DataContext is SalaryViewModel currentVm)
+                    currentVm.EndSalaryEntryEdit(entry);
+            }));
+        }
+
+        /// <summary>
+        /// Coalesce column rebuilds onto Loaded so we never mutate columns mid-Arrange
+        /// (WPF DataGridCellsPanel.ArrangeOverride IndexOutOfRange).
+        /// </summary>
+        private void ScheduleRebuildDynamicColumns()
+        {
+            if (_columnRebuildQueued)
+                return;
+
+            _columnRebuildQueued = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                _columnRebuildQueued = false;
+                RebuildDynamicColumns();
+            });
         }
 
         private void RebuildDynamicColumns()
@@ -215,6 +273,7 @@ namespace Win11DesktopApp.Views
 
             // Rebuilding columns invalidates subscriptions. Also suppress spurious
             // width-changed notifications from the remove/add churn below.
+            // Do not clear ItemsSource here — with grouping it leaves the grid half-empty.
             _suppressWidthSave = true;
             DetachColumnWidthListeners();
 
@@ -303,6 +362,9 @@ namespace Win11DesktopApp.Views
 
         private void SalaryGrid_Unloaded(object sender, RoutedEventArgs e)
         {
+            if (DataContext is SalaryViewModel vm)
+                vm.EndSalaryEntryEdit(null);
+
             DetachColumnWidthListeners();
             // Flush any pending debounced save.
             if (_saveWidthsTimer?.IsEnabled == true)

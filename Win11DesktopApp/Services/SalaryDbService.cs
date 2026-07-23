@@ -217,6 +217,26 @@ ORDER BY firm_name, name;";
             return (entries, expenses);
         }
 
+        public List<FirmExpense> LoadFirmExpensesOnly(int year, int month)
+        {
+            if (!MonthDbExists(year, month))
+                return new List<FirmExpense>();
+
+            using var connection = OpenMonthConnection(year, month);
+            var expenses = new List<FirmExpense>();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT id, firm_name, year, month, name, amount
+FROM salary_expenses
+ORDER BY firm_name, name;";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                expenses.Add(ReadFirmExpense(reader));
+
+            return expenses;
+        }
+
         public Dictionary<string, (decimal netSalary, bool paid)> GetSavedPaymentsForEmployee(
             string employeeFolder,
             string? employeeId,
@@ -868,6 +888,29 @@ WHERE lower(replace(ifnull(employee_folder, ''), '/', '\')) = lower(@oldFolder)
                 deleteCommand.Transaction = transaction;
                 deleteCommand.CommandText = "DELETE FROM salary_expenses WHERE lower(firm_name) = lower(@firmName);";
                 deleteCommand.Parameters.AddWithValue("@firmName", firmName ?? string.Empty);
+                deleteCommand.ExecuteNonQuery();
+            }
+
+            foreach (var expense in expenses ?? Array.Empty<FirmExpense>())
+                InsertSalaryExpense(connection, transaction, year, month, expense);
+
+            transaction.Commit();
+            MarkMonthDbIndexDirty();
+        }
+
+        /// <summary>
+        /// Replaces every expense row for the month. Does not read or write salary_entries,
+        /// so multi-PC salary edits cannot be overwritten by an expenses-only save.
+        /// </summary>
+        public void ReplaceAllFirmExpenses(int year, int month, IReadOnlyList<FirmExpense> expenses)
+        {
+            using var connection = OpenMonthConnection(year, month);
+            using var transaction = connection.BeginTransaction();
+
+            using (var deleteCommand = connection.CreateCommand())
+            {
+                deleteCommand.Transaction = transaction;
+                deleteCommand.CommandText = "DELETE FROM salary_expenses;";
                 deleteCommand.ExecuteNonQuery();
             }
 

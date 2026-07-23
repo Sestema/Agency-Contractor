@@ -342,10 +342,5 @@ namespace Win11DesktopApp.Views
             }
         }
 
-        private void CompanyList_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            e.Handled = true;
-            CompanyScrollViewer.ScrollToVerticalOffset(CompanyScrollViewer.VerticalOffset - e.Delta / 3.0);
-        }
     }
 }

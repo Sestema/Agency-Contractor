@@ -60,6 +60,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly TemplateService _templateService;
         private readonly FolderService _folderService;
         private readonly FinanceService _financeService;
+        private readonly SalaryMonthDisplayService _salaryMonthDisplayService;
         private readonly AppStatisticsService _appStatisticsService;
         private readonly GeminiApiService _geminiApiService;
         private readonly AppSettingsService _appSettingsService;
@@ -372,6 +373,7 @@ namespace Win11DesktopApp.ViewModels
             TemplateService templateService,
             FolderService folderService,
             FinanceService financeService,
+            SalaryMonthDisplayService salaryMonthDisplayService,
             AppStatisticsService appStatisticsService,
             GeminiApiService geminiApiService,
             AppSettingsService appSettingsService,
@@ -384,6 +386,7 @@ namespace Win11DesktopApp.ViewModels
             _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
             _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
             _financeService = financeService ?? throw new ArgumentNullException(nameof(financeService));
+            _salaryMonthDisplayService = salaryMonthDisplayService ?? throw new ArgumentNullException(nameof(salaryMonthDisplayService));
             _appStatisticsService = appStatisticsService ?? throw new ArgumentNullException(nameof(appStatisticsService));
             _geminiApiService = geminiApiService ?? throw new ArgumentNullException(nameof(geminiApiService));
             _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
@@ -413,6 +416,7 @@ namespace Win11DesktopApp.ViewModels
                     {
                         EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                         EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                        EmployeeDetailsVm.Cleanup();
                     }
                     EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(item.CompanyName, item.EmployeeFolder, employeeId: item.UniqueId);
                     EmployeeDetailsVm.RequestClose += OnDetailsClose;
@@ -446,6 +450,7 @@ namespace Win11DesktopApp.ViewModels
                     {
                         EmployeeDetailsVm.RequestClose -= OnDetailsClose;
                         EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                        EmployeeDetailsVm.Cleanup();
                     }
                     EmployeeDetailsVm = _employeeDetailsViewModelFactory.Create(item.FirmName, item.EmployeeFolder, employeeId: item.UniqueId);
                     EmployeeDetailsVm.RequestClose += OnDetailsClose;
@@ -616,7 +621,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged() => LoadDataAsync();
+        private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e) => LoadDataAsync();
 
         private string GetSlot(int index) => index switch { 0 => Slot0, 1 => Slot1, 2 => Slot2, _ => "" };
         private void SetSlot(int index, string value) { switch (index) { case 0: Slot0 = value; break; case 1: Slot1 = value; break; case 2: Slot2 = value; break; } }
@@ -716,6 +721,14 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             var loadCts = Interlocked.Exchange(ref _loadCts, null);
             loadCts?.Cancel();
             loadCts?.Dispose();
+
+            if (EmployeeDetailsVm != null)
+            {
+                EmployeeDetailsVm.RequestClose -= OnDetailsClose;
+                EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
+                EmployeeDetailsVm.Cleanup();
+                EmployeeDetailsVm = null;
+            }
         }
 
         private DashboardData GatherDashboardData()
@@ -858,8 +871,11 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
 
                 foreach (var (year, month) in availableMonths)
                 {
-                    var (entries, expenses) = _financeService.LoadAllFirmPayments(year, month);
+                    // Same employee set as Finance salary table (not raw month DB rows).
+                    var entries = _salaryMonthDisplayService.BuildDisplayedEntries(year, month);
                     if (entries.Count == 0) continue;
+
+                    var (_, expenses) = _financeService.LoadAllFirmPayments(year, month);
 
                     var mk = $"{year:D4}-{month:D2}";
                     var summary = new SalaryMonthSummary { MonthKey = mk, MonthLabel = FormatMonthLabel(year, month) };

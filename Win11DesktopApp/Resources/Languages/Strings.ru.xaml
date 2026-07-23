@@ -639,6 +639,7 @@
     <sys:String x:Key="ScanNoScanner">Сканер недоступен</sys:String>
     <sys:String x:Key="ScanWorking">Сканирование...</sys:String>
     <sys:String x:Key="ScanCloseBlocked">Сначала завершите или отмените сканирование в окне Windows.</sys:String>
+    <sys:String x:Key="ScanExportCloseBlocked">Подождите, пока документ сохранится, затем закройте окно.</sys:String>
     <sys:String x:Key="ScanPageAdded">Добавлено страниц: {0}</sys:String>
     <sys:String x:Key="ScanFailed">Не удалось отсканировать страницу</sys:String>
     <sys:String x:Key="ScanImportTitle">Добавить страницы из файла</sys:String>
@@ -849,6 +850,7 @@
     <sys:String x:Key="ArchiveSortEndDate">Дата завершения</sys:String>
     <sys:String x:Key="ArchiveSortFirm">Фирма</sys:String>
     <sys:String x:Key="ArchiveResultsLabel">Показано</sys:String>
+    <sys:String x:Key="ArchiveShowMoreFmt">Показать ещё ({0})</sys:String>
     <sys:String x:Key="ArchiveNoMatchesDesc">Попробуйте изменить поисковый запрос или сбросить текущий фильтр.</sys:String>
     <sys:String x:Key="ArchiveClearFilter">Сбросить фильтр</sys:String>
     <sys:String x:Key="ArchiveFirm">Фирма</sys:String>
@@ -1642,7 +1644,10 @@
     <sys:String x:Key="FinDebtLabel">Задолженность:</sys:String>
     <sys:String x:Key="FinDebtFromMonth">Долг за {0}:</sys:String>
     <sys:String x:Key="FinSalaryLoaded">Загружено</sys:String>
+    <sys:String x:Key="FinSalarySaving">Сохранение…</sys:String>
     <sys:String x:Key="FinSalarySaved">Сохранено!</sys:String>
+    <sys:String x:Key="FinSalaryAllAlreadyPaid">Все видимые сотрудники уже отмечены как выплаченные.</sys:String>
+    <sys:String x:Key="FinSalaryAllAlreadyUnpaid">Все видимые сотрудники уже без отметки выплаты.</sys:String>
     <sys:String x:Key="FinSalarySaveGenericError">Не удалось сохранить файл зарплаты. Файл может быть занят другой программой.</sys:String>
     <sys:String x:Key="FinSalarySaveRecoveryCreated">Основной файл не удалось обновить, но новые данные сохранены в recovery-файл.</sys:String>
     <sys:String x:Key="FinSalaryPostgresSaveBlockedLoading">Сохранение PostgreSQL остановлено, потому что месяц ещё загружается. Дождитесь таблицы и сохраните ещё раз.</sys:String>
@@ -1782,6 +1787,11 @@
     <sys:String x:Key="MsgHint">Подсказка</sys:String>
     <sys:String x:Key="MsgSaveEmployeeFail">Не удалось сохранить сотрудника.</sys:String>
     <sys:String x:Key="MsgFillRequiredFields">Заполните обязательные поля (Имя, Фамилия).</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicatePassport">Сотрудник с таким паспортом (или совпадением имени и паспорта) уже есть (активный или архив). Всё равно создать?</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateName">Сотрудник с такими именем и фамилией уже есть (возможный однофамилец; активный или архив). Всё равно создать?</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateLine">• {0} — {1} ({2}){3}</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateStatusActive">Активный</sys:String>
+    <sys:String x:Key="MsgEmployeeDuplicateStatusArchived">Архив</sys:String>
     <sys:String x:Key="MsgWizUnsavedClose">Есть несохранённые данные. Закрыть без сохранения?</sys:String>
     <sys:String x:Key="MsgWizUnsavedTitle">Отмена</sys:String>
     <sys:String x:Key="MsgEnterCompanyName">Укажите название фирмы.</sys:String>
@@ -1929,6 +1939,7 @@
     <!-- Archive restore -->
     <sys:String x:Key="MsgNoEmployeeSelected">Не выбран сотрудник.</sys:String>
     <sys:String x:Key="MsgSelectFirmRestore">Выберите фирму.</sys:String>
+    <sys:String x:Key="MsgRestoreFirmHidden">Эта фирма скрыта. Выберите видимую фирму для восстановления.</sys:String>
     <sys:String x:Key="MsgEnterStartDate">Укажите дату начала.</sys:String>
     <sys:String x:Key="MsgRestoreError">Ошибка при восстановлении.</sys:String>
     <sys:String x:Key="MsgRestoreSourceMissing">Архивная папка сотрудника или файл employee.json не найдены.</sys:String>

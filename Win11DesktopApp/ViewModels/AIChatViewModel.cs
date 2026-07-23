@@ -42,7 +42,7 @@ namespace Win11DesktopApp.ViewModels
         }
     }
 
-    public class AIChatViewModel : ViewModelBase
+    public class AIChatViewModel : ViewModelBase, ICleanable
     {
         private CancellationTokenSource? _cts;
         private readonly NavigationService _navigationService;
@@ -197,6 +197,7 @@ CRITICAL RULES:
 
             GoBackCommand = new RelayCommand(o =>
             {
+                CancelPendingAiRequest();
                 SaveCurrentSession();
                 _navigationService.NavigateTo<MainViewModel>();
             });
@@ -422,6 +423,8 @@ CRITICAL RULES:
 
             try
             {
+                _cts?.Cancel();
+                _cts?.Dispose();
                 _cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
                 var history = BuildConversationHistory();
@@ -436,6 +439,13 @@ CRITICAL RULES:
                         IsUser = false
                     });
                     SaveCurrentSession();
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    Messages.Remove(thinkingMsg);
                 });
             }
             catch (Exception ex)
@@ -457,6 +467,26 @@ CRITICAL RULES:
                 IsTyping = false;
                 _cts?.Dispose();
                 _cts = null;
+            }
+        }
+
+        public void Cleanup()
+        {
+            LoggingService.LogInfo("AIChatViewModel.Cleanup", "Cancelled pending AI request.");
+            CancelPendingAiRequest();
+            IsBusy = false;
+            IsTyping = false;
+        }
+
+        private void CancelPendingAiRequest()
+        {
+            try
+            {
+                _cts?.Cancel();
+            }
+            catch
+            {
+                // Ignore dispose/cancel races while SendMessage finally cleans up.
             }
         }
 

@@ -9,19 +9,16 @@ namespace Win11DesktopApp.Services
     {
         private readonly AppDataStorageFactory _storageFactory;
         private readonly FolderService _folderService;
-        private readonly LocalDbService _localDbService;
         private readonly SharedOperationLockService _sharedOperationLockService;
         public event Action? FirmRenamed;
 
         public FirmFinanceRenameService(
             AppDataStorageFactory storageFactory,
             FolderService folderService,
-            LocalDbService localDbService,
             SharedOperationLockService sharedOperationLockService)
         {
             _storageFactory = storageFactory ?? throw new ArgumentNullException(nameof(storageFactory));
             _folderService = folderService ?? throw new ArgumentNullException(nameof(folderService));
-            _localDbService = localDbService ?? throw new ArgumentNullException(nameof(localDbService));
             _sharedOperationLockService = sharedOperationLockService
                 ?? throw new ArgumentNullException(nameof(sharedOperationLockService));
         }
@@ -57,14 +54,14 @@ namespace Win11DesktopApp.Services
                 newFolder);
             try
             {
-                if (!_storageFactory.IsPostgresExplicitlyEnabled)
-                {
-                    _localDbService.RenameCurrentFirmReferences(
-                        oldName,
-                        newName,
-                        oldFolder,
-                        newFolder);
-                }
+                // SQLite: advances/accommodations/etc live in LocalDb.
+                // Postgres: salary.* was updated above; app.advances.company_id and related
+                // app.* firm refs must be renamed separately or advances vanish from calculations.
+                _storageFactory.RenameSupportingFirmReferences(
+                    oldName,
+                    newName,
+                    oldFolder,
+                    newFolder);
             }
             catch
             {
@@ -75,6 +72,11 @@ namespace Win11DesktopApp.Services
                         oldName,
                         effectiveYear,
                         effectiveMonth,
+                        newFolder,
+                        oldFolder);
+                    _storageFactory.RenameSupportingFirmReferences(
+                        newName,
+                        oldName,
                         newFolder,
                         oldFolder);
                 }

@@ -334,6 +334,7 @@ namespace Win11DesktopApp.ViewModels
         // Populated in the background so sorting never has to hit the DB/disk on the UI thread.
         private readonly Dictionary<string, int> _companyEmployeeCounts = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? _visibleCompaniesCts;
+        private CancellationTokenSource? _employeeCountsCts;
 
         // Used once, synchronously, right in the constructor - before the View binds to
         // VisibleCompanies/SelectedCompany. If this were async (like the regular refresh below),
@@ -471,8 +472,15 @@ namespace Win11DesktopApp.ViewModels
         }
 
         // Recomputes per-firm employee counts off the UI thread, then re-sorts if needed.
+        // Overlapping calls cancel the previous scan (fast drawer open + sort changes).
         private async void RefreshCompanyEmployeeCountsAsync()
         {
+            _employeeCountsCts?.Cancel();
+            _employeeCountsCts?.Dispose();
+            var cts = new CancellationTokenSource();
+            _employeeCountsCts = cts;
+            var token = cts.Token;
+
             try
             {
                 var companiesSnapshot = _companyService.Companies.ToList();
@@ -481,6 +489,7 @@ namespace Win11DesktopApp.ViewModels
                     var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                     foreach (var company in companiesSnapshot)
                     {
+                        token.ThrowIfCancellationRequested();
                         if (string.IsNullOrWhiteSpace(company.Name)) continue;
                         try
                         {
@@ -492,7 +501,10 @@ namespace Win11DesktopApp.ViewModels
                         }
                     }
                     return dict;
-                });
+                }, token).ConfigureAwait(true);
+
+                if (token.IsCancellationRequested)
+                    return;
 
                 lock (_companyEmployeeCounts)
                 {
@@ -502,9 +514,14 @@ namespace Win11DesktopApp.ViewModels
 
                 _ = Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
                 {
+                    if (token.IsCancellationRequested)
+                        return;
                     if (CompanySortMode == CompanySortMode.EmployeeCount)
                         RefreshVisibleCompanies();
                 }));
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch (Exception ex)
             {
@@ -565,7 +582,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 var opening = !IsDrawerOpen;
                 IsDrawerOpen = opening;
-                if (opening)
+                // Counts are only used for EmployeeCount sort — skip scan for Name/Agency/Default.
+                if (opening && CompanySortMode == CompanySortMode.EmployeeCount)
                     RefreshCompanyEmployeeCountsAsync();
             });
 
@@ -573,8 +591,9 @@ namespace Win11DesktopApp.ViewModels
                     _appSettingsService.Settings.CompanySortMode, ignoreCase: true, out var savedCompanySortMode))
                 _companySortMode = savedCompanySortMode;
 
+            // Do not scan all firms for employee counts here — counts are only needed for
+            // EmployeeCount sort (drawer open, sort change, clock tick, or visibility change).
             RefreshVisibleCompaniesSync();
-            RefreshCompanyEmployeeCountsAsync();
             _companyService.VisibilityChanged += OnVisibilityChanged;
 
             BuildMenuCards();
@@ -693,7 +712,12 @@ namespace Win11DesktopApp.ViewModels
             RefreshProblemsCount();
             RefreshOverviewStats();
             _notificationService.PropertyChanged += OnNotificationServicePropertyChanged;
-            Notifications.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNotifications));
+            Notifications.CollectionChanged += OnNotificationsCollectionChanged;
+        }
+
+        private void OnNotificationsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(HasNotifications));
         }
 
         private void ToggleNotifications()
@@ -729,7 +753,8 @@ namespace Win11DesktopApp.ViewModels
             {
                 RefreshVisibleCompanies();
                 RefreshOverviewStats();
-                RefreshCompanyEmployeeCountsAsync();
+                if (IsDrawerOpen && CompanySortMode == CompanySortMode.EmployeeCount)
+                    RefreshCompanyEmployeeCountsAsync();
             }));
         }
 
@@ -738,11 +763,14 @@ namespace Win11DesktopApp.ViewModels
             _companyService.SelectedCompanyChanged -= OnSelectedCompanyChanged;
             _companyService.VisibilityChanged -= OnVisibilityChanged;
             _notificationService.PropertyChanged -= OnNotificationServicePropertyChanged;
+            Notifications.CollectionChanged -= OnNotificationsCollectionChanged;
             _searchDebounce?.Dispose();
             _searchCts?.Cancel();
             _searchCts?.Dispose();
             _visibleCompaniesCts?.Cancel();
             _visibleCompaniesCts?.Dispose();
+            _employeeCountsCts?.Cancel();
+            _employeeCountsCts?.Dispose();
             _overviewStatsCts?.Cancel();
             _overviewStatsCts?.Dispose();
             _clockTimer.Stop();
