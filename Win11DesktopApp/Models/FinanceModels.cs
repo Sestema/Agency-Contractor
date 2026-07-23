@@ -170,6 +170,12 @@ namespace Win11DesktopApp.Models
         /// <summary>Call after <see cref="UseCustomHoursFormat"/> changes to refresh bound UI.</summary>
         public void NotifyHoursFormatChanged() => OnPropertyChanged(nameof(HoursDisplayText));
 
+        /// <summary>
+        /// Reserved CustomValues key for fixed monthly pay when <see cref="HourlyRate"/> is 0.
+        /// Not a user-defined custom field; ignored by FieldDefinitions-based UI/export.
+        /// </summary>
+        public const string ManualGrossCustomKey = "__manual_gross";
+
         private decimal _hourlyRate;
         public decimal HourlyRate
         {
@@ -180,13 +186,96 @@ namespace Win11DesktopApp.Models
                     return;
 
                 _hourlyRate = value;
+                if (_hourlyRate != 0m)
+                    ClearManualGross();
+
                 OnPropertyChanged(nameof(HourlyRate));
+                OnPropertyChanged(nameof(CanEditGrossSalary));
                 OnPropertyChanged(nameof(GrossSalary));
                 RecalcNet();
             }
         }
 
-        public decimal GrossSalary => Math.Round(HoursWorked * HourlyRate, 2);
+        /// <summary>
+        /// When rate &gt; 0: hours × rate. When rate is 0: optional manual fixed monthly gross
+        /// stored in <see cref="CustomValues"/> under <see cref="ManualGrossCustomKey"/>
+        /// (current month only — not copied when creating the next month).
+        /// </summary>
+        [JsonIgnore]
+        public decimal GrossSalary
+        {
+            get
+            {
+                if (_hourlyRate == 0m)
+                    return GetManualGross();
+
+                return Math.Round(_hoursWorked * _hourlyRate, 2);
+            }
+            set
+            {
+                if (_hourlyRate != 0m)
+                    return;
+
+                var rounded = Math.Round(value, 2);
+                if (GetManualGross() == rounded)
+                    return;
+
+                SetManualGross(rounded);
+                OnPropertyChanged(nameof(GrossSalary));
+                RecalcNet();
+            }
+        }
+
+        /// <summary>True when rate is 0 — grid may edit GrossSalary as fixed monthly pay.</summary>
+        [JsonIgnore]
+        public bool CanEditGrossSalary => _hourlyRate == 0m;
+
+        private decimal GetManualGross()
+        {
+            if (CustomValues != null
+                && CustomValues.TryGetValue(ManualGrossCustomKey, out var manual)
+                && manual != 0m)
+            {
+                return Math.Round(manual, 2);
+            }
+
+            return 0m;
+        }
+
+        private void SetManualGross(decimal value)
+        {
+            CustomValues ??= new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            if (value == 0m)
+            {
+                CustomValues.Remove(ManualGrossCustomKey);
+                return;
+            }
+
+            CustomValues[ManualGrossCustomKey] = value;
+        }
+
+        private void ClearManualGross()
+        {
+            if (CustomValues == null || CustomValues.Count == 0)
+                return;
+
+            if (CustomValues.Remove(ManualGrossCustomKey))
+                OnPropertyChanged("Item[]");
+        }
+
+        /// <summary>
+        /// Custom values safe to persist: drops manual gross when rate &gt; 0 so stale keys are not stored.
+        /// </summary>
+        public Dictionary<string, decimal> GetPersistedCustomValues()
+        {
+            var source = CustomValues ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            if (_hourlyRate == 0m || !source.ContainsKey(ManualGrossCustomKey))
+                return source;
+
+            var copy = new Dictionary<string, decimal>(source, StringComparer.OrdinalIgnoreCase);
+            copy.Remove(ManualGrossCustomKey);
+            return copy;
+        }
 
         private decimal _advance;
         public decimal Advance

@@ -522,6 +522,10 @@ namespace Win11DesktopApp.ViewModels
                     exportFolder,
                     new ScanExportOptions());
 
+                // Clear busy before close: OnClosing blocks while IsBusy,
+                // and RequestClose triggers Close() synchronously.
+                IsBusy = false;
+                StatusMessage = string.Empty;
                 RequestClose?.Invoke(true, resultPath);
             }
             catch (Exception ex)

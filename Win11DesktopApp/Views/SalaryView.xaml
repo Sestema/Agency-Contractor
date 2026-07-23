@@ -717,8 +717,8 @@
                                 </DataGridTextColumn.EditingElementStyle>
                             </DataGridTextColumn>
 
-                            <!-- Gross/Suma (FIXED) -->
-                            <DataGridTemplateColumn IsReadOnly="True" Width="90" SortMemberPath="GrossSalary">
+                            <!-- Gross/Suma (FIXED). Editable only when HourlyRate=0 (fixed monthly pay). -->
+                            <DataGridTemplateColumn x:Name="GrossColumn" Width="90" SortMemberPath="GrossSalary">
                                 <DataGridTemplateColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColGross}"/>
@@ -738,9 +738,29 @@
                                                 <Setter TargetName="GrossPill" Property="Background" Value="Transparent"/>
                                                 <Setter TargetName="GrossPill" Property="Opacity" Value="0.55"/>
                                             </DataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding CanEditGrossSalary}" Value="True"/>
+                                                    <Condition Binding="{Binding CanEditSalary}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter TargetName="GrossPill" Property="Opacity" Value="1"/>
+                                                <Setter TargetName="GrossPill" Property="Cursor" Value="IBeam"/>
+                                            </MultiDataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding GrossSalary, StringFormat={}{0:N0}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                 HorizontalContentAlignment="Center"
+                                                 VerticalContentAlignment="Center"
+                                                 TextAlignment="Center"
+                                                 Padding="0"
+                                                 BorderThickness="1"
+                                                 Background="{DynamicResource CardBackgroundBrush}"
+                                                 Foreground="{DynamicResource ForegroundBrush}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
                             </DataGridTemplateColumn>
 
                             <!-- Advance (FIXED) - click to see details popup -->
@@ -1454,11 +1474,13 @@
                     <Grid Margin="0,0,0,8">
                         <TextBlock x:Name="AdvancePopupTitle" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                        <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11"
-                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Center"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SecondaryForegroundBrush}" Cursor="Hand" Padding="2"
-                                Click="AdvancePopupClose_Click"/>
+                                Cursor="Hand" Padding="2"
+                                Click="AdvancePopupClose_Click">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        </Button>
                     </Grid>
                     <StackPanel x:Name="AdvancePopupList"/>
                     <TextBlock x:Name="AdvancePopupEmpty" Text="-" FontSize="{DynamicResource FS11}" 

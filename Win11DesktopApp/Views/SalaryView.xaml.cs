@@ -210,6 +210,15 @@ namespace Win11DesktopApp.Views
                 return;
             }
 
+            // Gross is editable only for fixed monthly pay (rate = 0).
+            if (e.Column is DataGridTemplateColumn { SortMemberPath: "GrossSalary" }
+                && !entry.CanEditGrossSalary)
+            {
+                e.Cancel = true;
+                Keyboard.ClearFocus();
+                return;
+            }
+
             vm.BeginSalaryEntryEdit(entry);
         }
 
@@ -717,12 +726,15 @@ namespace Win11DesktopApp.Views
                         var errorFg = Application.Current.TryFindResource("ErrorBrush") as Brush ?? new SolidColorBrush(Color.FromRgb(0xCC, 0x44, 0x44));
                         var deleteBtn = new Button
                         {
-                            Content = "\uE74D",
-                            FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                            FontSize = 11,
+                            Content = new TextBlock
+                            {
+                                Text = "\uE74D",
+                                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                                FontSize = 11,
+                                Foreground = errorFg
+                            },
                             Background = System.Windows.Media.Brushes.Transparent,
                             BorderThickness = new Thickness(0),
-                            Foreground = errorFg,
                             Cursor = Cursors.Hand,
                             Padding = new Thickness(2),
                             Tag = adv.Id,

@@ -851,7 +851,7 @@ INSERT INTO salary.salary_entries (
             command.Parameters.AddWithValue("status", entry.Status ?? string.Empty);
             command.Parameters.AddWithValue("note", entry.Note ?? string.Empty);
             command.Parameters.AddWithValue("colorTag", entry.ColorTag ?? string.Empty);
-            command.Parameters.AddWithValue("customValues", JsonSerializer.Serialize(entry.CustomValues ?? new Dictionary<string, decimal>()));
+            command.Parameters.AddWithValue("customValues", JsonSerializer.Serialize(entry.GetPersistedCustomValues()));
             command.Parameters.AddWithValue("updatedAt", updatedAt);
             command.ExecuteNonQuery();
             entry.UpdatedAt = updatedAt;
