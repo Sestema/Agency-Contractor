@@ -352,6 +352,7 @@ namespace Win11DesktopApp.ViewModels
                 string scannedPath;
                 if (SelectedDevice != null)
                 {
+                    StatusMessage = Res("ScanWorking");
                     scannedPath = await _scannerService.ScanToFileAsync(
                         BuildScanSettings(),
                         _sessionStore.SessionFolder,
@@ -359,6 +360,7 @@ namespace Win11DesktopApp.ViewModels
                 }
                 else
                 {
+                    StatusMessage = Res("ScanWorking");
                     scannedPath = await _scannerService.ScanViaDialogAsync(_sessionStore.SessionFolder, _lifetimeCts.Token);
                 }
 

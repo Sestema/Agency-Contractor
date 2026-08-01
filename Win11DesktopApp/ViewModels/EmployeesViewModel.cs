@@ -34,6 +34,36 @@ namespace Win11DesktopApp.ViewModels
         public string Name => Company.Name;
     }
 
+    /// <summary>One document line under an employee in the package dialog.</summary>
+    public sealed class DocumentPackageDocStatusItem
+    {
+        public string DocumentName { get; init; } = string.Empty;
+        public bool ShowPresence { get; init; }
+        public bool ShowScanned { get; init; }
+        public bool IsPresent { get; init; }
+        public bool IsScanned { get; init; }
+        public string PresenceLabel { get; init; } = string.Empty;
+        public string ScannedLabel { get; init; } = string.Empty;
+
+        public string PresenceIcon => IsPresent ? "✓" : "✗";
+        public string ScannedIcon => IsScanned ? "✓" : "✗";
+        public bool IsComplete =>
+            (!ShowPresence || IsPresent) && (!ShowScanned || IsScanned);
+    }
+
+    /// <summary>One employee row in the document-package completion dialog.</summary>
+    public sealed class DocumentPackageStatRow
+    {
+        public string DisplayName { get; init; } = string.Empty;
+        public string FirmName { get; init; } = string.Empty;
+        public string UniqueId { get; init; } = string.Empty;
+        public bool IsComplete { get; init; }
+        public string OkText { get; init; } = string.Empty;
+        public IReadOnlyList<DocumentPackageDocStatusItem> Documents { get; init; }
+            = Array.Empty<DocumentPackageDocStatusItem>();
+        public string EmployeeFolder { get; init; } = string.Empty;
+    }
+
     public partial class EmployeesViewModel : ViewModelBase, ICleanable
     {
         private readonly NavigationService _navigationService;
@@ -175,6 +205,46 @@ namespace Win11DesktopApp.ViewModels
 
         private int _newThisMonth;
         public int NewThisMonth { get => _newThisMonth; set => SetProperty(ref _newThisMonth, value); }
+
+        private int _documentPackagePercent;
+        public int DocumentPackagePercent
+        {
+            get => _documentPackagePercent;
+            set
+            {
+                if (SetProperty(ref _documentPackagePercent, value))
+                    OnPropertyChanged(nameof(DocumentPackagePercentText));
+            }
+        }
+
+        public string DocumentPackagePercentText => HasDocumentPackageStat
+            ? $"{DocumentPackagePercent}%"
+            : "—";
+
+        private bool _hasDocumentPackageStat;
+        public bool HasDocumentPackageStat
+        {
+            get => _hasDocumentPackageStat;
+            set
+            {
+                if (SetProperty(ref _hasDocumentPackageStat, value))
+                    OnPropertyChanged(nameof(DocumentPackagePercentText));
+            }
+        }
+
+        private bool _isDocumentPackageDialogOpen;
+        public bool IsDocumentPackageDialogOpen
+        {
+            get => _isDocumentPackageDialogOpen;
+            set => SetProperty(ref _isDocumentPackageDialogOpen, value);
+        }
+
+        private ObservableCollection<DocumentPackageStatRow> _documentPackageStatRows = new();
+        public ObservableCollection<DocumentPackageStatRow> DocumentPackageStatRows
+        {
+            get => _documentPackageStatRows;
+            set => SetProperty(ref _documentPackageStatRows, value);
+        }
 
         private string _statFilter = "all";
         public string StatFilter
@@ -382,6 +452,9 @@ namespace Win11DesktopApp.ViewModels
         public ICommand SetViewModeCommand { get; }
         public ICommand FilterByStatCommand { get; }
         public ICommand ClearFiltersCommand { get; }
+        public ICommand OpenDocumentPackageDialogCommand { get; }
+        public ICommand CloseDocumentPackageDialogCommand { get; }
+        public ICommand OpenDocumentPackageEmployeeCommand { get; }
 
         private string _viewMode;
         public string ViewMode
@@ -815,6 +888,11 @@ namespace Win11DesktopApp.ViewModels
                 SearchQuery = string.Empty;
                 StatFilter = "all";
             });
+            OpenDocumentPackageDialogCommand = new AsyncRelayCommand(_ => OpenDocumentPackageDialogAsync());
+            CloseDocumentPackageDialogCommand = new RelayCommand(_ => IsDocumentPackageDialogOpen = false);
+            OpenDocumentPackageEmployeeCommand = new RelayCommand(
+                o => OpenEmployeeFromDocumentPackage(o as DocumentPackageStatRow),
+                o => o is DocumentPackageStatRow);
 
             _ = LoadEmployeesAsync();
         }
@@ -1524,6 +1602,191 @@ namespace Win11DesktopApp.ViewModels
             TotalCount = _allEmployees.Count;
             ProblemsCount = _allEmployees.Count(e => HasExpiringDocs(e));
             NewThisMonth = _allEmployees.Count(e => IsThisMonth(e));
+            _ = RefreshDocumentPackageStatsAsync();
+        }
+
+        private async Task RefreshDocumentPackageStatsAsync()
+        {
+            var employeesSnapshot = _allEmployees.ToList();
+            var generation = _loadGeneration;
+
+            var result = await Task.Run(() => BuildDocumentPackageStats(employeesSnapshot));
+            if (generation != _loadGeneration)
+                return;
+
+            HasDocumentPackageStat = result.HasPackage;
+            DocumentPackagePercent = result.Percent;
+            DocumentPackageStatRows = new ObservableCollection<DocumentPackageStatRow>(result.Rows);
+        }
+
+        private async Task OpenDocumentPackageDialogAsync()
+        {
+            await RefreshDocumentPackageStatsAsync();
+            if (!HasDocumentPackageStat)
+                return;
+            IsDocumentPackageDialogOpen = true;
+        }
+
+        private void OpenEmployeeFromDocumentPackage(DocumentPackageStatRow? row)
+        {
+            if (row == null)
+                return;
+
+            var employee = _allEmployees.FirstOrDefault(e =>
+                (!string.IsNullOrWhiteSpace(row.UniqueId)
+                 && string.Equals(e.UniqueId, row.UniqueId, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(row.EmployeeFolder)
+                    && string.Equals(e.EmployeeFolder, row.EmployeeFolder, StringComparison.OrdinalIgnoreCase)));
+
+            if (employee == null)
+                return;
+
+            IsDocumentPackageDialogOpen = false;
+            OpenEmployee(employee);
+            if (EmployeeDetailsVm != null && EmployeeDetailsVm.HasDocumentPackage)
+                EmployeeDetailsVm.TabIndex = 4;
+        }
+
+        private (bool HasPackage, int Percent, List<DocumentPackageStatRow> Rows) BuildDocumentPackageStats(
+            IReadOnlyList<EmployeeModels.EmployeeSummary> employees)
+        {
+            var rows = new List<DocumentPackageStatRow>();
+            var totalRequired = 0;
+            var totalCompleted = 0;
+
+            var okText = GetString("EmpDocumentPackageStatusOk") ?? "Все ок";
+            var presenceLabel = GetString("EmpDocumentPackageMissingPresence")
+                ?? GetString("LabelTrackPresence")
+                ?? "наявність";
+            var scannedLabel = GetString("EmpDocumentPackageMissingScanned")
+                ?? GetString("LabelTrackScanned")
+                ?? "насканований";
+
+            foreach (var employee in employees)
+            {
+                var firmName = !string.IsNullOrWhiteSpace(employee.FirmName)
+                    ? employee.FirmName
+                    : (_company?.Name ?? string.Empty);
+                var templates = GetFirmDocumentPackageTemplates(firmName);
+                if (templates.Count == 0)
+                    continue;
+
+                EmployeeModels.EmployeeData? data = null;
+                if (!string.IsNullOrWhiteSpace(employee.EmployeeFolder))
+                    data = _employeeService.LoadEmployeeData(employee.EmployeeFolder);
+
+                var statuses = data?.RequiredDocumentStatuses ?? new List<EmployeeModels.RequiredDocumentStatus>();
+                var documents = new List<DocumentPackageDocStatusItem>();
+                var employeeRequired = 0;
+                var employeeCompleted = 0;
+
+                foreach (var template in templates)
+                {
+                    var templateId = template.Id ?? string.Empty;
+                    var status = statuses.FirstOrDefault(s =>
+                        string.Equals(s.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(s.TemplateId, templateId, StringComparison.OrdinalIgnoreCase));
+
+                    // Legacy rows without FirmName still count for the current firm.
+                    status ??= statuses.FirstOrDefault(s =>
+                        string.IsNullOrWhiteSpace(s.FirmName)
+                        && string.Equals(s.TemplateId, templateId, StringComparison.OrdinalIgnoreCase));
+
+                    var docName = string.IsNullOrWhiteSpace(template.Name)
+                        ? (status?.NameSnapshot ?? "?")
+                        : template.Name.Trim();
+
+                    var isPresent = status?.IsPresent == true;
+                    var isScanned = status?.IsScanned == true;
+
+                    if (template.TrackPresence)
+                    {
+                        employeeRequired++;
+                        totalRequired++;
+                        if (isPresent)
+                        {
+                            employeeCompleted++;
+                            totalCompleted++;
+                        }
+                    }
+
+                    if (template.TrackScanned)
+                    {
+                        employeeRequired++;
+                        totalRequired++;
+                        if (isScanned)
+                        {
+                            employeeCompleted++;
+                            totalCompleted++;
+                        }
+                    }
+
+                    if (!template.TrackPresence && !template.TrackScanned)
+                        continue;
+
+                    documents.Add(new DocumentPackageDocStatusItem
+                    {
+                        DocumentName = docName,
+                        ShowPresence = template.TrackPresence,
+                        ShowScanned = template.TrackScanned,
+                        IsPresent = isPresent,
+                        IsScanned = isScanned,
+                        PresenceLabel = presenceLabel,
+                        ScannedLabel = scannedLabel
+                    });
+                }
+
+                if (employeeRequired == 0 || documents.Count == 0)
+                    continue;
+
+                var isComplete = employeeCompleted == employeeRequired && documents.All(d => d.IsComplete);
+                rows.Add(new DocumentPackageStatRow
+                {
+                    DisplayName = FormatEmployeeDisplayName(employee),
+                    FirmName = firmName,
+                    UniqueId = employee.UniqueId ?? string.Empty,
+                    IsComplete = isComplete,
+                    OkText = okText,
+                    Documents = documents,
+                    EmployeeFolder = employee.EmployeeFolder ?? string.Empty
+                });
+            }
+
+            rows = rows
+                .OrderBy(r => r.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            if (totalRequired == 0)
+                return (false, 0, rows);
+
+            var percent = (int)Math.Round(100.0 * totalCompleted / totalRequired);
+            return (true, percent, rows);
+        }
+
+        private List<RequiredDocumentTemplate> GetFirmDocumentPackageTemplates(string firmName)
+        {
+            if (string.IsNullOrWhiteSpace(firmName))
+                return new List<RequiredDocumentTemplate>();
+
+            EmployerCompany? company = null;
+            if (_company != null && string.Equals(_company.Name, firmName, StringComparison.OrdinalIgnoreCase))
+                company = _company;
+            else
+                company = _companyService?.Companies.FirstOrDefault(c =>
+                    string.Equals(c.Name, firmName, StringComparison.OrdinalIgnoreCase));
+
+            return (company?.RequiredDocuments ?? new ObservableCollection<RequiredDocumentTemplate>())
+                .Where(t => !string.IsNullOrWhiteSpace(t.Name) && (t.TrackPresence || t.TrackScanned))
+                .ToList();
+        }
+
+        private static string FormatEmployeeDisplayName(EmployeeModels.EmployeeSummary employee)
+        {
+            var last = (employee.LastName ?? string.Empty).Trim();
+            var first = (employee.FirstName ?? string.Empty).Trim();
+            if (!string.IsNullOrEmpty(last) || !string.IsNullOrEmpty(first))
+                return $"{last} {first}".Trim();
+            return (employee.FullName ?? string.Empty).Trim();
         }
 
         private static bool HasExpiringDocs(EmployeeModels.EmployeeSummary emp)

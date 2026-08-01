@@ -364,6 +364,12 @@
     <sys:String x:Key="HeaderAddCompany">Add New Company</sys:String>
     <sys:String x:Key="TabEmployer">Employer Company</sys:String>
     <sys:String x:Key="TabAgency">Agency</sys:String>
+    <sys:String x:Key="TabDocumentPackage">Document package</sys:String>
+    <sys:String x:Key="DocumentPackageHint">Add document names and choose what will be tracked for employees of this firm.</sys:String>
+    <sys:String x:Key="LabelDocumentPackageName">Document name</sys:String>
+    <sys:String x:Key="LabelTrackPresence">Present</sys:String>
+    <sys:String x:Key="LabelTrackScanned">Scanned</sys:String>
+    <sys:String x:Key="BtnAddDocumentPackageItem">+ Add document</sys:String>
     <sys:String x:Key="LabelCompanyName">Company Name</sys:String>
     <sys:String x:Key="LabelICO">ICO</sys:String>
     <sys:String x:Key="LabelLegalAddress">Legal address</sys:String>
@@ -543,6 +549,15 @@
     <sys:String x:Key="EmpStatActive">Active</sys:String>
     <sys:String x:Key="EmpStatProblems">Doc. problems</sys:String>
     <sys:String x:Key="EmpStatNewMonth">New this month</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackage">Doc. package</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackageTooltip">Click to see document package completion per employee</sys:String>
+    <sys:String x:Key="EmpDocumentPackageDialogTitle">Document package</sys:String>
+    <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Checkbox completion for this firm’s document package</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColName">Last name First name</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColStatus">Status</sys:String>
+    <sys:String x:Key="EmpDocumentPackageStatusOk">All OK</sys:String>
+    <sys:String x:Key="EmpDocumentPackageMissingPresence">present</sys:String>
+    <sys:String x:Key="EmpDocumentPackageMissingScanned">scanned</sys:String>
     <sys:String x:Key="EmpSortLabel">Sort by:</sys:String>
     <sys:String x:Key="EmpSortName">Name</sys:String>
     <sys:String x:Key="EmpSortDate">Start date</sys:String>
@@ -728,6 +743,17 @@
     <sys:String x:Key="DetHistoryDeleteConfirm">Delete this employee history entry?</sys:String>
     <sys:String x:Key="DetHistoryDeleteSuccess">History entry deleted.</sys:String>
     <sys:String x:Key="DetTabSalary">Salary</sys:String>
+    <sys:String x:Key="DetTabDocumentPackage">Document package</sys:String>
+    <sys:String x:Key="DetDocumentPackageHint">You can edit the current firm’s package. History from previous firms is kept forever.</sys:String>
+    <sys:String x:Key="DetDocumentPackageProgress">Done: {0}/{1}</sys:String>
+    <sys:String x:Key="DetDocumentPackageCurrentFirm">Current firm: {0}</sys:String>
+    <sys:String x:Key="DetDocumentPackageHistoryHint">Read-only — data from a previous firm.</sys:String>
+    <sys:String x:Key="DetDocumentPackageRetiredSection">Previously in this firm’s package (no longer required)</sys:String>
+    <sys:String x:Key="DetDocumentPackageRetiredHint">This document was removed from the firm’s package. Statuses are kept for viewing only.</sys:String>
+    <sys:String x:Key="LabelDocumentPackageNote">Note</sys:String>
+    <sys:String x:Key="HistoryDescDocumentPackageNote">{0}: {1} — {2}: {3} → {4}</sys:String>
+    <sys:String x:Key="HistoryValueEmpty">(empty)</sys:String>
+    <sys:String x:Key="EmpDocumentPackageOpenEmployeeTooltip">Open employee profile on the Document package tab</sys:String>
     <sys:String x:Key="DetSalaryTitle">Payment History</sys:String>
     <sys:String x:Key="DetSalaryTotalNet">Total paid</sys:String>
     <sys:String x:Key="DetSalaryTotalHours">Total hours</sys:String>
@@ -1020,6 +1046,7 @@
     <!-- AddCompanyView tooltips -->
     <sys:String x:Key="CompanyTooltipDeleteAddr">Delete address</sys:String>
     <sys:String x:Key="CompanyTooltipDeletePos">Delete position</sys:String>
+    <sys:String x:Key="CompanyTooltipDeleteDocument">Delete document</sys:String>
     <sys:String x:Key="CompanyTooltipDeleteCompany">Delete company</sys:String>
 
     <!-- AddTemplateView -->
@@ -1809,7 +1836,7 @@
     <!-- Company dialog -->
     <sys:String x:Key="CompanyDialogTitleEdit">Edit Company</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Add New Company</sys:String>
-    <sys:String x:Key="CompanyDialogSubtitle">Company details, addresses, and positions</sys:String>
+    <sys:String x:Key="CompanyDialogSubtitle">Company details, addresses, positions, and document package</sys:String>
     <sys:String x:Key="MsgCompanyHasEmployees">This company has {0} employee(s). Delete the employees first, then delete the company.</sys:String>
     <sys:String x:Key="TitleWarning">Warning</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Are you sure you want to delete company "{0}"?
@@ -1896,6 +1923,14 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistoryDescDocReplace">Replaced document: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Document added</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Document deleted</sys:String>
+    <sys:String x:Key="HistoryActionDocumentPackage">Document package</sys:String>
+    <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>
+    <sys:String x:Key="HistoryValueYes">Yes</sys:String>
+    <sys:String x:Key="HistoryValueNo">No</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateAdded">Added to document package: {0} ({1})</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateRemoved">Removed from document package: {0}</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateChanged">Document package changed: {0} ({1}) → {2} ({3})</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageNoFlags">no flags</sys:String>
 
     <!-- Work permit renewal -->
     <sys:String x:Key="DetRenewWpSelectTitle">Select new work permit</sys:String>

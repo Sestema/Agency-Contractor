@@ -64,6 +64,8 @@ namespace Win11DesktopApp.Services
         private readonly Dictionary<string, EmployeeListCacheEntry> _employeeListCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, object> _employeeListLoadLocks = new(StringComparer.OrdinalIgnoreCase);
         private int _sessionEmployeeIndexIntegrityRan;
+        private readonly object _firmsLightIndexCheckedLock = new();
+        private readonly HashSet<string> _firmsLightIndexCheckedThisSession = new(StringComparer.OrdinalIgnoreCase);
 
         private sealed class EmployeeListCacheEntry
         {
@@ -382,11 +384,18 @@ namespace Win11DesktopApp.Services
                         var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                         if (rows.Count > 0)
                         {
-                            if (ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
+                            // 1c: light count vs folders at most once per firm per session.
+                            // 1b: on mismatch repair this firm only (never global DELETE ALL).
+                            if (TryConsumeLightIndexCheckForFirm(firmName)
+                                && ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
                             {
-                                rows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirm", firmName, reason);
+                                rows = TryRepairEmployeeIndexForFirm(
+                                    "EmployeeService.GetEmployeesForFirm",
+                                    firmName,
+                                    reason,
+                                    removeOrphans: false);
                                 if (rows.Count == 0)
-                                    throw new InvalidOperationException("Employee index rebuild returned no rows.");
+                                    throw new InvalidOperationException("Employee index firm repair returned no rows.");
                             }
 
                             var employees = rows
@@ -400,10 +409,14 @@ namespace Win11DesktopApp.Services
                         if (!HasAnyEmployeeFolders(employeesFolder))
                             return new List<EmployeeSummary>();
 
-                        var rebuiltRows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirm", firmName, "index returned no rows while employee folders exist");
-                        if (rebuiltRows.Count > 0)
+                        var repairedRows = TryRepairEmployeeIndexForFirm(
+                            "EmployeeService.GetEmployeesForFirm",
+                            firmName,
+                            "index returned no rows while employee folders exist",
+                            removeOrphans: false);
+                        if (repairedRows.Count > 0)
                         {
-                            var employees = rebuiltRows
+                            var employees = repairedRows
                                 .Select(BuildSummaryFromIndexRow)
                                 .ToList();
                             StoreEmployeesForFirmCache(firmName, employees);
@@ -446,11 +459,16 @@ namespace Win11DesktopApp.Services
                     var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                     if (rows.Count > 0)
                     {
-                        if (ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
+                        if (TryConsumeLightIndexCheckForFirm(firmName)
+                            && ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
                         {
-                            rows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirmWithStatus", firmName, reason);
+                            rows = TryRepairEmployeeIndexForFirm(
+                                "EmployeeService.GetEmployeesForFirmWithStatus",
+                                firmName,
+                                reason,
+                                removeOrphans: false);
                             if (rows.Count == 0)
-                                throw new InvalidOperationException("Employee index rebuild returned no rows.");
+                                throw new InvalidOperationException("Employee index firm repair returned no rows.");
                         }
 
                         var employees = rows.Select(BuildSummaryFromIndexRow).ToList();
@@ -461,10 +479,14 @@ namespace Win11DesktopApp.Services
                     if (!HasAnyEmployeeFolders(employeesFolder))
                         return (new List<EmployeeSummary>(), "NoEmployees");
 
-                        var rebuiltRows = TryRebuildEmployeeIndexForFirm("EmployeeService.GetEmployeesForFirmWithStatus", firmName, "index returned no rows while employee folders exist");
-                    if (rebuiltRows.Count > 0)
+                    var repairedRows = TryRepairEmployeeIndexForFirm(
+                        "EmployeeService.GetEmployeesForFirmWithStatus",
+                        firmName,
+                        "index returned no rows while employee folders exist",
+                        removeOrphans: false);
+                    if (repairedRows.Count > 0)
                     {
-                        var employees = rebuiltRows.Select(BuildSummaryFromIndexRow).ToList();
+                        var employees = repairedRows.Select(BuildSummaryFromIndexRow).ToList();
                         return (employees, "Ok");
                     }
                 }
@@ -1343,7 +1365,7 @@ namespace Win11DesktopApp.Services
 
         /// <summary>
         /// Full employee-index vs disk validation once per app session (startup background).
-        /// Hot-path GetEmployeesForFirm only uses the light count check.
+        /// Hot-path GetEmployeesForFirm uses a throttled light check and firm-local repair only.
         /// </summary>
         public void RunSessionEmployeeIndexIntegrityCheck(IEnumerable<EmployerCompany>? companies)
         {
@@ -1362,7 +1384,7 @@ namespace Win11DesktopApp.Services
                 ?? new List<string>();
 
             int firmsChecked = 0;
-            int firmsRebuilt = 0;
+            int firmsRepaired = 0;
 
             try
             {
@@ -1375,27 +1397,33 @@ namespace Win11DesktopApp.Services
 
                     try
                     {
+                        // Session integrity always may touch disk; mark light-check consumed so
+                        // subsequent list loads for this firm skip the hot-path count scan.
+                        TryConsumeLightIndexCheckForFirm(firmName);
+
                         var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
                         if (rows.Count == 0)
                         {
                             if (!HasAnyEmployeeFolders(employeesFolder))
                                 continue;
 
-                            TryRebuildEmployeeIndexForFirm(
+                            TryRepairEmployeeIndexForFirm(
                                 "EmployeeService.SessionIndexIntegrity",
                                 firmName,
-                                "index returned no rows while employee folders exist");
-                            firmsRebuilt++;
+                                "index returned no rows while employee folders exist",
+                                removeOrphans: true);
+                            firmsRepaired++;
                             continue;
                         }
 
                         if (ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, deepValidation: true, out var reason))
                         {
-                            TryRebuildEmployeeIndexForFirm(
+                            TryRepairEmployeeIndexForFirm(
                                 "EmployeeService.SessionIndexIntegrity",
                                 firmName,
-                                reason);
-                            firmsRebuilt++;
+                                reason,
+                                removeOrphans: true);
+                            firmsRepaired++;
                         }
                     }
                     catch (Exception ex)
@@ -1408,7 +1436,7 @@ namespace Win11DesktopApp.Services
 
                 LoggingService.LogInfo(
                     "EmployeeService.SessionIndexIntegrity",
-                    $"Completed in {stopwatch.ElapsedMilliseconds} ms. Firms={firmsChecked}, rebuilt={firmsRebuilt}.");
+                    $"Completed in {stopwatch.ElapsedMilliseconds} ms. Firms={firmsChecked}, repaired={firmsRepaired}.");
             }
             catch (Exception ex)
             {
@@ -1419,10 +1447,26 @@ namespace Win11DesktopApp.Services
         /// <summary>
         /// Allow another deep session check (e.g. after inbound sync). Safe to call often —
         /// the next RunSessionEmployeeIndexIntegrityCheck will run at most once until then.
+        /// Also re-enables per-firm light index checks on the list hot-path.
         /// </summary>
         public void RequestSessionEmployeeIndexIntegrityRecheck()
         {
             Interlocked.Exchange(ref _sessionEmployeeIndexIntegrityRan, 0);
+            lock (_firmsLightIndexCheckedLock)
+                _firmsLightIndexCheckedThisSession.Clear();
+        }
+
+        /// <summary>
+        /// Returns true the first time a firm is light-checked in this session (caller should run the check).
+        /// Subsequent calls for the same firm return false until RequestSessionEmployeeIndexIntegrityRecheck.
+        /// </summary>
+        private bool TryConsumeLightIndexCheckForFirm(string firmName)
+        {
+            if (string.IsNullOrWhiteSpace(firmName))
+                return false;
+
+            lock (_firmsLightIndexCheckedLock)
+                return _firmsLightIndexCheckedThisSession.Add(firmName);
         }
 
         private static bool IsEmployeeIndexRowOlderThanJson(EmployeeIndexRow row, string jsonPath, out string reason)
@@ -1455,26 +1499,119 @@ namespace Win11DesktopApp.Services
             return false;
         }
 
-        private List<EmployeeIndexRow> TryRebuildEmployeeIndexForFirm(string source, string firmName, string reason)
+        /// <summary>
+        /// Repairs employee_index for a single firm from its folders (Upsert; optional orphan delete).
+        /// Never runs a global DELETE FROM employee_index — safe for multi-PC / OneDrive.
+        /// Hot-path repairs should pass <paramref name="removeOrphans"/> = false so incomplete
+        /// OneDrive sync cannot drop index rows for folders not yet visible.
+        /// </summary>
+        private List<EmployeeIndexRow> TryRepairEmployeeIndexForFirm(
+            string source,
+            string firmName,
+            string reason,
+            bool removeOrphans)
         {
             if (_employeeIndexDbService == null)
                 return new List<EmployeeIndexRow>();
 
             LoggingService.LogWarning(source,
-                $"Employee index is stale for '{firmName}' ({reason}). Rebuilding employee index.");
+                $"Employee index is stale for '{firmName}' ({reason}). Repairing this firm only (no global rebuild, removeOrphans={removeOrphans}).");
 
-            var rebuild = RebuildEmployeeIndex();
-            if (!rebuild.IsSuccessful)
+            var employeesFolder = _folderService.GetEmployeesFolder(firmName);
+            if (string.IsNullOrWhiteSpace(employeesFolder) || !Directory.Exists(employeesFolder))
             {
                 LoggingService.LogWarning(source,
-                    $"Employee index rebuild failed for '{firmName}'. Falling back to file scan. {rebuild.Message}");
-                return new List<EmployeeIndexRow>();
+                    $"Firm repair skipped for '{firmName}': employees folder missing.");
+                return _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
             }
 
-            var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
-            LoggingService.LogInfo(source,
-                $"Employee index rebuild completed for '{firmName}'. Rows after rebuild: {rows.Count}.");
-            return rows;
+            try
+            {
+                var previousRows = removeOrphans
+                    ? _employeeIndexDbService.GetEmployeesForFirmRows(firmName)
+                    : null;
+                var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var repaired = new List<EmployeeIndexRow>();
+
+                foreach (var folder in Directory.GetDirectories(employeesFolder))
+                {
+                    var jsonPath = Path.Combine(folder, "employee.json");
+                    if (!File.Exists(jsonPath))
+                        continue;
+
+                    try
+                    {
+                        var data = ReadJson<EmployeeData>(jsonPath);
+                        if (data == null)
+                            continue;
+
+                        if (string.IsNullOrWhiteSpace(data.UniqueId))
+                        {
+                            data.UniqueId = Guid.NewGuid().ToString();
+                            try
+                            {
+                                WriteJsonAtomic(jsonPath, data);
+                            }
+                            catch (Exception persistEx)
+                            {
+                                LoggingService.LogWarning(source,
+                                    $"Could not persist generated UniqueId for '{folder}': {persistEx.Message}");
+                            }
+                        }
+
+                        var row = BuildEmployeeIndexRow(data, firmName, folder);
+                        if (string.IsNullOrWhiteSpace(row.UniqueId))
+                            continue;
+
+                        seenIds.Add(row.UniqueId);
+                        _employeeIndexDbService.UpsertEmployeeIndex(row);
+                        repaired.Add(row);
+                        _tagCatalogService.AddTagsForEmployee(firmName, data);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning(source, $"Firm repair skipped folder '{folder}': {ex.Message}");
+                    }
+                }
+
+                if (removeOrphans && previousRows != null)
+                {
+                    foreach (var old in previousRows)
+                    {
+                        if (string.IsNullOrWhiteSpace(old.UniqueId))
+                            continue;
+                        if (seenIds.Contains(old.UniqueId))
+                            continue;
+
+                        try
+                        {
+                            _employeeIndexDbService.DeleteEmployeeIndex(old.UniqueId);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogWarning(source,
+                                $"Could not delete orphan index row '{old.UniqueId}': {ex.Message}");
+                        }
+                    }
+                }
+
+                InvalidateEmployeeListCache(firmName);
+                TryConsumeLightIndexCheckForFirm(firmName);
+
+                // After upsert-only repair, prefer full firm rows from DB so pre-existing rows
+                // that were not visible on disk yet remain in the list.
+                var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+
+                LoggingService.LogInfo(source,
+                    $"Firm index repair completed for '{firmName}'. Rows after repair: {rows.Count} (upserted={repaired.Count}).");
+                return rows;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning(source,
+                    $"Employee index firm repair failed for '{firmName}'. Falling back to current index/file scan. {ex.Message}");
+                return _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+            }
         }
 
         private List<EmployeeSummary> GetEmployeesForFirmFromFiles(string firmName, string employeesFolder)

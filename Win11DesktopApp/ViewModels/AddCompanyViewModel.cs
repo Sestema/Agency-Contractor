@@ -53,6 +53,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand RemoveAddressCommand { get; }
         public ICommand AddPositionCommand { get; }
         public ICommand RemovePositionCommand { get; }
+        public ICommand AddRequiredDocumentCommand { get; }
+        public ICommand RemoveRequiredDocumentCommand { get; }
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand DeleteCompanyCommand { get; }
@@ -79,6 +81,7 @@ namespace Win11DesktopApp.ViewModels
 
             Employer.Addresses.Add(new WorkAddress());
             Employer.Positions.Add(new Position());
+            Employer.RequiredDocuments.Add(new RequiredDocumentTemplate());
 
             AddAddressCommand = new RelayCommand(o =>
             {
@@ -99,6 +102,15 @@ namespace Win11DesktopApp.ViewModels
                 if (o is Position pos && Employer.Positions.Count > 1)
                     Employer.Positions.Remove(pos);
             }, o => Employer.Positions.Count > 1);
+
+            AddRequiredDocumentCommand = new RelayCommand(_ =>
+                Employer.RequiredDocuments.Add(new RequiredDocumentTemplate()));
+
+            RemoveRequiredDocumentCommand = new RelayCommand(o =>
+            {
+                if (o is RequiredDocumentTemplate doc)
+                    Employer.RequiredDocuments.Remove(doc);
+            });
 
             SaveCommand = new AsyncRelayCommand(_ => SaveAsync());
             CancelCommand = new RelayCommand(o => RequestClose?.Invoke());
@@ -241,8 +253,12 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
+            NormalizeRequiredDocuments(Employer);
+
             if (IsEditMode && _originalCompany != null)
             {
+                var previousPackage = SnapshotRequiredDocuments(_originalCompany.RequiredDocuments);
+
                 // Apply changes from the working copy to the original
                 _originalCompany.Name = Employer.Name;
                 _originalCompany.ICO = Employer.ICO;
@@ -256,6 +272,10 @@ namespace Win11DesktopApp.ViewModels
                 foreach (var pos in Employer.Positions)
                     _originalCompany.Positions.Add(pos);
 
+                _originalCompany.RequiredDocuments.Clear();
+                foreach (var doc in Employer.RequiredDocuments)
+                    _originalCompany.RequiredDocuments.Add(doc);
+
                 _originalCompany.WeeklyWorkHours = Employer.WeeklyWorkHours;
                 _originalCompany.DailyWorkHours = Employer.DailyWorkHours;
                 _originalCompany.ShiftCount = Employer.ShiftCount;
@@ -267,6 +287,11 @@ namespace Win11DesktopApp.ViewModels
 
                 if (!await _companyService.UpdateCompanyAsync(_originalCompany, _originalCompanyName))
                     return;
+
+                LogDocumentPackageTemplateChanges(
+                    _originalCompany.Name,
+                    previousPackage,
+                    SnapshotRequiredDocuments(_originalCompany.RequiredDocuments));
             }
             else
             {
@@ -277,8 +302,116 @@ namespace Win11DesktopApp.ViewModels
                 {
                     ["firm_name"] = Employer.Name
                 });
+                LogDocumentPackageTemplateChanges(
+                    Employer.Name,
+                    Array.Empty<RequiredDocumentTemplateSnapshot>(),
+                    SnapshotRequiredDocuments(Employer.RequiredDocuments));
             }
             RequestClose?.Invoke();
+        }
+
+        private sealed record RequiredDocumentTemplateSnapshot(
+            string Id,
+            string Name,
+            bool TrackPresence,
+            bool TrackScanned);
+
+        private static List<RequiredDocumentTemplateSnapshot> SnapshotRequiredDocuments(
+            IEnumerable<RequiredDocumentTemplate>? documents)
+        {
+            return (documents ?? Enumerable.Empty<RequiredDocumentTemplate>())
+                .Where(doc => !string.IsNullOrWhiteSpace(doc.Name))
+                .Select(doc => new RequiredDocumentTemplateSnapshot(
+                    string.IsNullOrWhiteSpace(doc.Id) ? Guid.NewGuid().ToString() : doc.Id,
+                    doc.Name.Trim(),
+                    doc.TrackPresence,
+                    doc.TrackScanned))
+                .ToList();
+        }
+
+        private void LogDocumentPackageTemplateChanges(
+            string firmName,
+            IReadOnlyList<RequiredDocumentTemplateSnapshot> previous,
+            IReadOnlyList<RequiredDocumentTemplateSnapshot> current)
+        {
+            var previousById = previous.ToDictionary(d => d.Id, StringComparer.OrdinalIgnoreCase);
+            var currentById = current.ToDictionary(d => d.Id, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var added in current.Where(doc => !previousById.ContainsKey(doc.Id)))
+            {
+                var flags = FormatPackageFlags(added.TrackPresence, added.TrackScanned);
+                var description = string.Format(
+                    Res("ActivityDocumentPackageTemplateAdded") ?? "Додано в пакет документів: {0} ({1})",
+                    added.Name,
+                    flags);
+                _activityLogService.Log(
+                    "DocumentPackageTemplateAdded",
+                    "Company",
+                    firmName,
+                    string.Empty,
+                    description,
+                    newValue: added.Name,
+                    details: flags,
+                    entityType: "DocumentPackageTemplate",
+                    entityId: added.Id);
+            }
+
+            foreach (var removed in previous.Where(doc => !currentById.ContainsKey(doc.Id)))
+            {
+                var description = string.Format(
+                    Res("ActivityDocumentPackageTemplateRemoved") ?? "Видалено з пакету документів: {0}",
+                    removed.Name);
+                _activityLogService.Log(
+                    "DocumentPackageTemplateRemoved",
+                    "Company",
+                    firmName,
+                    string.Empty,
+                    description,
+                    oldValue: removed.Name,
+                    entityType: "DocumentPackageTemplate",
+                    entityId: removed.Id);
+            }
+
+            foreach (var updated in current)
+            {
+                if (!previousById.TryGetValue(updated.Id, out var before))
+                    continue;
+                if (string.Equals(before.Name, updated.Name, StringComparison.Ordinal)
+                    && before.TrackPresence == updated.TrackPresence
+                    && before.TrackScanned == updated.TrackScanned)
+                    continue;
+
+                var oldFlags = FormatPackageFlags(before.TrackPresence, before.TrackScanned);
+                var newFlags = FormatPackageFlags(updated.TrackPresence, updated.TrackScanned);
+                var description = string.Format(
+                    Res("ActivityDocumentPackageTemplateChanged") ?? "Змінено пакет документів: {0} ({1}) → {2} ({3})",
+                    before.Name,
+                    oldFlags,
+                    updated.Name,
+                    newFlags);
+                _activityLogService.Log(
+                    "DocumentPackageTemplateChanged",
+                    "Company",
+                    firmName,
+                    string.Empty,
+                    description,
+                    oldValue: $"{before.Name} ({oldFlags})",
+                    newValue: $"{updated.Name} ({newFlags})",
+                    entityType: "DocumentPackageTemplate",
+                    entityId: updated.Id);
+            }
+        }
+
+        private static string FormatPackageFlags(bool trackPresence, bool trackScanned)
+        {
+            var parts = new List<string>();
+            if (trackPresence)
+                parts.Add(Res("LabelTrackPresence") ?? "Наявність");
+            if (trackScanned)
+                parts.Add(Res("LabelTrackScanned") ?? "Насканований");
+            return parts.Count == 0
+                ? (Res("ActivityDocumentPackageNoFlags") ?? "без галочок")
+                : string.Join(", ", parts);
         }
 
         private async Task DeleteCompanyAsync()
@@ -362,7 +495,42 @@ namespace Win11DesktopApp.ViewModels
                 });
             }
 
+            clone.RequiredDocuments.Clear();
+            foreach (var doc in src.RequiredDocuments ?? Enumerable.Empty<RequiredDocumentTemplate>())
+            {
+                clone.RequiredDocuments.Add(new RequiredDocumentTemplate
+                {
+                    Id = string.IsNullOrWhiteSpace(doc.Id) ? Guid.NewGuid().ToString() : doc.Id,
+                    Name = doc.Name,
+                    TrackPresence = doc.TrackPresence,
+                    TrackScanned = doc.TrackScanned
+                });
+            }
+
             return clone;
+        }
+
+        /// <summary>
+        /// Drops blank rows and ensures each kept template has a stable Id.
+        /// </summary>
+        private static void NormalizeRequiredDocuments(EmployerCompany employer)
+        {
+            employer.RequiredDocuments ??= new ObservableCollection<RequiredDocumentTemplate>();
+
+            var kept = employer.RequiredDocuments
+                .Where(doc => !string.IsNullOrWhiteSpace(doc.Name))
+                .Select(doc =>
+                {
+                    doc.Name = doc.Name.Trim();
+                    if (string.IsNullOrWhiteSpace(doc.Id))
+                        doc.Id = Guid.NewGuid().ToString();
+                    return doc;
+                })
+                .ToList();
+
+            employer.RequiredDocuments.Clear();
+            foreach (var doc in kept)
+                employer.RequiredDocuments.Add(doc);
         }
 
         private static AgencyCompany CloneAgency(AgencyCompany? src)

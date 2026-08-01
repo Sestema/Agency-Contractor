@@ -435,6 +435,12 @@
     <sys:String x:Key="HeaderAddCompany">Přidání nové firmy</sys:String>
     <sys:String x:Key="TabEmployer">Zaměstnavatel</sys:String>
     <sys:String x:Key="TabAgency">Agentura</sys:String>
+    <sys:String x:Key="TabDocumentPackage">Balíček dokumentů</sys:String>
+    <sys:String x:Key="DocumentPackageHint">Přidejte názvy dokumentů a označte, co se bude sledovat u zaměstnanců této firmy.</sys:String>
+    <sys:String x:Key="LabelDocumentPackageName">Název dokumentu</sys:String>
+    <sys:String x:Key="LabelTrackPresence">Přítomnost</sys:String>
+    <sys:String x:Key="LabelTrackScanned">Naskenováno</sys:String>
+    <sys:String x:Key="BtnAddDocumentPackageItem">+ Přidat dokument</sys:String>
     <sys:String x:Key="LabelCompanyName">Název firmy</sys:String>
     <sys:String x:Key="LabelICO">IČO</sys:String>
     <sys:String x:Key="LabelLegalAddress">Právní adresa</sys:String>
@@ -560,6 +566,15 @@
     <sys:String x:Key="EmpStatActive">Aktivních</sys:String>
     <sys:String x:Key="EmpStatProblems">Problémy s dok.</sys:String>
     <sys:String x:Key="EmpStatNewMonth">Nových tento měs.</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackage">Balíček dok.</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackageTooltip">Klikněte pro přehled dokončení balíčku dokumentů u zaměstnanců</sys:String>
+    <sys:String x:Key="EmpDocumentPackageDialogTitle">Balíček dokumentů</sys:String>
+    <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Stav zaškrtnutí balíčku u zaměstnanců aktuální firmy</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColName">Příjmení Jméno</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColStatus">Stav</sys:String>
+    <sys:String x:Key="EmpDocumentPackageStatusOk">Vše v pořádku</sys:String>
+    <sys:String x:Key="EmpDocumentPackageMissingPresence">přítomnost</sys:String>
+    <sys:String x:Key="EmpDocumentPackageMissingScanned">naskenováno</sys:String>
     <sys:String x:Key="EmpSortLabel">Řadit:</sys:String>
     <sys:String x:Key="EmpSortName">Jméno</sys:String>
     <sys:String x:Key="EmpSortDate">Datum nástupu</sys:String>
@@ -742,6 +757,17 @@
     <sys:String x:Key="DetHistoryDeleteConfirm">Smazat tento záznam z historie zaměstnance?</sys:String>
     <sys:String x:Key="DetHistoryDeleteSuccess">Záznam historie byl smazán.</sys:String>
     <sys:String x:Key="DetTabSalary">Plat</sys:String>
+    <sys:String x:Key="DetTabDocumentPackage">Balíček dokumentů</sys:String>
+    <sys:String x:Key="DetDocumentPackageHint">Balíček aktuální firmy lze upravovat. Historie z předchozích firem se uchovává natrvalo.</sys:String>
+    <sys:String x:Key="DetDocumentPackageProgress">Hotovo: {0}/{1}</sys:String>
+    <sys:String x:Key="DetDocumentPackageCurrentFirm">Aktuální firma: {0}</sys:String>
+    <sys:String x:Key="DetDocumentPackageHistoryHint">Pouze pro čtení — data z předchozí firmy.</sys:String>
+    <sys:String x:Key="DetDocumentPackageRetiredSection">Dříve v balíčku této firmy (již nevyžadováno)</sys:String>
+    <sys:String x:Key="DetDocumentPackageRetiredHint">Dokument byl odebrán z balíčku firmy. Stavy jsou uloženy pouze pro prohlížení.</sys:String>
+    <sys:String x:Key="LabelDocumentPackageNote">Poznámka</sys:String>
+    <sys:String x:Key="HistoryDescDocumentPackageNote">{0}: {1} — {2}: {3} → {4}</sys:String>
+    <sys:String x:Key="HistoryValueEmpty">(prázdné)</sys:String>
+    <sys:String x:Key="EmpDocumentPackageOpenEmployeeTooltip">Otevřít profil zaměstnance na kartě „Balíček dokumentů“</sys:String>
     <sys:String x:Key="DetSalaryTitle">Historie plateb</sys:String>
     <sys:String x:Key="DetSalaryTotalNet">Celková výplata</sys:String>
     <sys:String x:Key="DetSalaryTotalHours">Celkové hodiny</sys:String>
@@ -1034,6 +1060,7 @@
     <!-- AddCompanyView tooltips -->
     <sys:String x:Key="CompanyTooltipDeleteAddr">Smazat adresu</sys:String>
     <sys:String x:Key="CompanyTooltipDeletePos">Smazat pozici</sys:String>
+    <sys:String x:Key="CompanyTooltipDeleteDocument">Smazat dokument</sys:String>
     <sys:String x:Key="CompanyTooltipDeleteCompany">Smazat firmu</sys:String>
 
     <!-- AddTemplateView -->
@@ -1823,7 +1850,7 @@
     <!-- Company dialog -->
     <sys:String x:Key="CompanyDialogTitleEdit">Upravit firmu</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Přidat novou firmu</sys:String>
-    <sys:String x:Key="CompanyDialogSubtitle">Základní údaje, adresy a pozice firmy</sys:String>
+    <sys:String x:Key="CompanyDialogSubtitle">Základní údaje, adresy, pozice a balíček dokumentů</sys:String>
     <sys:String x:Key="MsgCompanyHasEmployees">Tato firma má {0} zaměstnanc(ů). Nejprve smažte zaměstnance a potom firmu.</sys:String>
     <sys:String x:Key="TitleWarning">Upozornění</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Opravdu chcete smazat firmu "{0}"?
@@ -1910,6 +1937,14 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistoryDescDocReplace">Nahrazen dokument: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Dokument přidán</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Dokument smazán</sys:String>
+    <sys:String x:Key="HistoryActionDocumentPackage">Balíček dokumentů</sys:String>
+    <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>
+    <sys:String x:Key="HistoryValueYes">Ano</sys:String>
+    <sys:String x:Key="HistoryValueNo">Ne</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateAdded">Přidáno do balíčku dokumentů: {0} ({1})</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateRemoved">Odebráno z balíčku dokumentů: {0}</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateChanged">Změněn balíček dokumentů: {0} ({1}) → {2} ({3})</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageNoFlags">bez zatržení</sys:String>
 
     <!-- Work permit renewal -->
     <sys:String x:Key="DetRenewWpSelectTitle">Vyberte nové pracovní povolení</sys:String>

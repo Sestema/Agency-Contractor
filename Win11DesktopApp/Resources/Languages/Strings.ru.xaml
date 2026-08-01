@@ -364,6 +364,12 @@
     <sys:String x:Key="HeaderAddCompany">Добавление новой фирмы</sys:String>
     <sys:String x:Key="TabEmployer">Фирма работодателя</sys:String>
     <sys:String x:Key="TabAgency">Агентство</sys:String>
+    <sys:String x:Key="TabDocumentPackage">Пакет документов</sys:String>
+    <sys:String x:Key="DocumentPackageHint">Добавьте названия документов и отметьте, что будет отслеживаться у сотрудников этой фирмы.</sys:String>
+    <sys:String x:Key="LabelDocumentPackageName">Название документа</sys:String>
+    <sys:String x:Key="LabelTrackPresence">Наличие</sys:String>
+    <sys:String x:Key="LabelTrackScanned">Отсканирован</sys:String>
+    <sys:String x:Key="BtnAddDocumentPackageItem">+ Добавить документ</sys:String>
     <sys:String x:Key="LabelCompanyName">Название фирмы</sys:String>
     <sys:String x:Key="LabelICO">ICO</sys:String>
     <sys:String x:Key="LabelLegalAddress">Юридический адрес</sys:String>
@@ -543,6 +549,15 @@
     <sys:String x:Key="EmpStatActive">Активных</sys:String>
     <sys:String x:Key="EmpStatProblems">Проблемы с док.</sys:String>
     <sys:String x:Key="EmpStatNewMonth">Новых за мес.</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackage">Пакет док.</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackageTooltip">Нажмите, чтобы увидеть готовность пакета документов по сотрудникам</sys:String>
+    <sys:String x:Key="EmpDocumentPackageDialogTitle">Пакет документов</sys:String>
+    <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Готовность галочек пакета по сотрудникам текущей фирмы</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColName">Фамилия Имя</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColStatus">Статус</sys:String>
+    <sys:String x:Key="EmpDocumentPackageStatusOk">Все ок</sys:String>
+    <sys:String x:Key="EmpDocumentPackageMissingPresence">наличие</sys:String>
+    <sys:String x:Key="EmpDocumentPackageMissingScanned">отсканирован</sys:String>
     <sys:String x:Key="EmpSortLabel">Сортировать:</sys:String>
     <sys:String x:Key="EmpSortName">Имя</sys:String>
     <sys:String x:Key="EmpSortDate">Дата начала</sys:String>
@@ -725,6 +740,17 @@
     <sys:String x:Key="DetHistoryDeleteConfirm">Удалить эту запись из истории сотрудника?</sys:String>
     <sys:String x:Key="DetHistoryDeleteSuccess">Запись истории удалена.</sys:String>
     <sys:String x:Key="DetTabSalary">Зарплата</sys:String>
+    <sys:String x:Key="DetTabDocumentPackage">Пакет документов</sys:String>
+    <sys:String x:Key="DetDocumentPackageHint">Пакет текущей фирмы можно изменять. История с предыдущих фирм сохраняется навсегда.</sys:String>
+    <sys:String x:Key="DetDocumentPackageProgress">Готово: {0}/{1}</sys:String>
+    <sys:String x:Key="DetDocumentPackageCurrentFirm">Текущая фирма: {0}</sys:String>
+    <sys:String x:Key="DetDocumentPackageHistoryHint">Только просмотр — данные с предыдущей фирмы.</sys:String>
+    <sys:String x:Key="DetDocumentPackageRetiredSection">Ранее в пакете этой фирмы (больше не требуется)</sys:String>
+    <sys:String x:Key="DetDocumentPackageRetiredHint">Документ убрали из пакета фирмы. Статусы сохранены только для просмотра.</sys:String>
+    <sys:String x:Key="LabelDocumentPackageNote">Примечание</sys:String>
+    <sys:String x:Key="HistoryDescDocumentPackageNote">{0}: {1} — {2}: {3} → {4}</sys:String>
+    <sys:String x:Key="HistoryValueEmpty">(пусто)</sys:String>
+    <sys:String x:Key="EmpDocumentPackageOpenEmployeeTooltip">Открыть профиль сотрудника на вкладке «Пакет документов»</sys:String>
     <sys:String x:Key="DetSalaryTitle">История выплат</sys:String>
     <sys:String x:Key="DetSalaryTotalNet">Общая выплата</sys:String>
     <sys:String x:Key="DetSalaryTotalHours">Общие часы</sys:String>
@@ -1017,6 +1043,7 @@
     <!-- AddCompanyView tooltips -->
     <sys:String x:Key="CompanyTooltipDeleteAddr">Удалить адрес</sys:String>
     <sys:String x:Key="CompanyTooltipDeletePos">Удалить позицию</sys:String>
+    <sys:String x:Key="CompanyTooltipDeleteDocument">Удалить документ</sys:String>
     <sys:String x:Key="CompanyTooltipDeleteCompany">Удалить фирму</sys:String>
 
     <!-- AddTemplateView -->
@@ -1806,7 +1833,7 @@
     <!-- Company dialog -->
     <sys:String x:Key="CompanyDialogTitleEdit">Редактировать фирму</sys:String>
     <sys:String x:Key="CompanyDialogTitleAdd">Добавить новую фирму</sys:String>
-    <sys:String x:Key="CompanyDialogSubtitle">Основные данные, адреса и позиции компании</sys:String>
+    <sys:String x:Key="CompanyDialogSubtitle">Основные данные, адреса, позиции и пакет документов</sys:String>
     <sys:String x:Key="MsgCompanyHasEmployees">У этой фирмы {0} сотрудник(ов). Сначала удалите сотрудников, а затем фирму.</sys:String>
     <sys:String x:Key="TitleWarning">Внимание</sys:String>
     <sys:String x:Key="MsgConfirmDeleteCompany">Вы уверены, что хотите удалить фирму "{0}"?
@@ -1893,6 +1920,14 @@
     <sys:String x:Key="HistoryDescDocReplace">Заменён документ: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Документ добавлен</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Документ удалён</sys:String>
+    <sys:String x:Key="HistoryActionDocumentPackage">Пакет документов</sys:String>
+    <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>
+    <sys:String x:Key="HistoryValueYes">Да</sys:String>
+    <sys:String x:Key="HistoryValueNo">Нет</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateAdded">Добавлено в пакет документов: {0} ({1})</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateRemoved">Удалено из пакета документов: {0}</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageTemplateChanged">Изменён пакет документов: {0} ({1}) → {2} ({3})</sys:String>
+    <sys:String x:Key="ActivityDocumentPackageNoFlags">без галочек</sys:String>
 
     <!-- Work permit renewal -->
     <sys:String x:Key="DetRenewWpSelectTitle">Выберите новое разрешение на работу</sys:String>

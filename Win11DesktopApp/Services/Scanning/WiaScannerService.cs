@@ -38,10 +38,11 @@ namespace Win11DesktopApp.Services.Scanning
             if (!IsAvailable)
                 return Task.FromResult<IReadOnlyList<ScannerDeviceInfo>>(Array.Empty<ScannerDeviceInfo>());
 
-            return RunOnUiThread(GetDevicesInternal, cancellationToken);
+            // Device enumeration can block on network/eSCL devices — keep it off the UI thread.
+            return RunOnStaThreadAsync(GetDevicesInternal, cancellationToken);
         }
 
-        public Task<string> ScanToFileAsync(ScanSettings settings, string outputFolder, CancellationToken cancellationToken = default)
+        public async Task<string> ScanToFileAsync(ScanSettings settings, string outputFolder, CancellationToken cancellationToken = default)
         {
             if (!IsAvailable)
                 throw new InvalidOperationException("WIA scanner is not available on this system.");
@@ -50,7 +51,43 @@ namespace Win11DesktopApp.Services.Scanning
                 throw new ArgumentException("Output folder is required.", nameof(outputFolder));
 
             Directory.CreateDirectory(outputFolder);
-            return RunOnUiThread(() => ScanInternal(settings, outputFolder, cancellationToken), cancellationToken);
+
+            // Network eSCL devices frequently hang forever on silent item.Transfer.
+            // Prefer the Windows WIA dialog for those devices.
+            if (IsEsclDevice(settings.DeviceId))
+            {
+                LoggingService.LogInfo(
+                    "WiaScannerService.ScanToFileAsync",
+                    $"eSCL device detected ({settings.DeviceId}); using WIA CommonDialog.");
+                return await ScanViaDialogAsync(outputFolder, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Silent Transfer on the UI thread freezes the whole window (common with eSCL/network
+            // scanners). Run on a dedicated STA thread and fail with a timeout so the caller can
+            // fall back to the Windows WIA dialog.
+            LoggingService.LogInfo(
+                "WiaScannerService.ScanToFileAsync",
+                $"Starting silent scan. DeviceId={settings.DeviceId}; Dpi={settings.Dpi}; Color={settings.ColorMode}; Source={settings.Source}");
+
+            var scanTask = RunOnStaThreadAsync(
+                () => ScanInternal(settings, outputFolder, cancellationToken),
+                CancellationToken.None);
+
+            var timeoutTask = Task.Delay(SilentScanTimeout, cancellationToken);
+            var completed = await Task.WhenAny(scanTask, timeoutTask).ConfigureAwait(false);
+            if (completed != scanTask)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    throw new OperationCanceledException(cancellationToken);
+
+                LoggingService.LogWarning(
+                    "WiaScannerService.ScanToFileAsync",
+                    $"Silent scan timed out after {SilentScanTimeout.TotalSeconds:0}s. DeviceId={settings.DeviceId}");
+                throw new TimeoutException(
+                    $"Scanner did not respond within {SilentScanTimeout.TotalSeconds:0} seconds.");
+            }
+
+            return await scanTask.ConfigureAwait(false);
         }
 
         public Task<string> ScanViaDialogAsync(string outputFolder, CancellationToken cancellationToken = default)
@@ -59,6 +96,7 @@ namespace Win11DesktopApp.Services.Scanning
                 throw new InvalidOperationException("WIA scanner is not available on this system.");
 
             Directory.CreateDirectory(outputFolder);
+            // CommonDialog shows UI — must run on the WPF UI thread.
             return RunOnUiThread(() => ScanViaCommonDialog(outputFolder, cancellationToken), cancellationToken);
         }
 
@@ -69,6 +107,13 @@ namespace Win11DesktopApp.Services.Scanning
 
             return RunOnUiThread(PickDeviceViaCommonDialog, cancellationToken);
         }
+
+        private static readonly TimeSpan SilentScanTimeout = TimeSpan.FromSeconds(45);
+
+        private static bool IsEsclDevice(string? deviceId) =>
+            !string.IsNullOrWhiteSpace(deviceId)
+            && (deviceId.Contains("Escl", StringComparison.OrdinalIgnoreCase)
+                || deviceId.Contains("\\Escl\\", StringComparison.OrdinalIgnoreCase));
 
         private static void ThrowIfCancelled(CancellationToken cancellationToken)
         {
@@ -95,6 +140,42 @@ namespace Win11DesktopApp.Services.Scanning
                 ThrowIfCancelled(cancellationToken);
                 return action();
             }, DispatcherPriority.Normal).Task;
+        }
+
+        /// <summary>
+        /// Runs WIA COM work on a dedicated STA thread so the WPF UI message pump stays alive.
+        /// </summary>
+        private static Task<T> RunOnStaThreadAsync<T>(Func<T> action, CancellationToken cancellationToken)
+        {
+            ThrowIfCancelled(cancellationToken);
+
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    tcs.TrySetResult(action());
+                }
+                catch (OperationCanceledException oce)
+                {
+                    tcs.TrySetCanceled(oce.CancellationToken.IsCancellationRequested
+                        ? oce.CancellationToken
+                        : cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "WiaScannerSTA"
+            };
+
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            return tcs.Task;
         }
 
         private static IReadOnlyList<ScannerDeviceInfo> GetDevicesInternal()
@@ -374,10 +455,12 @@ namespace Win11DesktopApp.Services.Scanning
                 ThrowIfCancelled(cancellationToken);
                 manager = CreateDeviceManager();
                 var wiaDeviceId = UnwrapDeviceId(settings.DeviceId, "wia:");
+                LoggingService.LogInfo("WiaScannerService.ScanInternal", $"Resolving device '{wiaDeviceId}'.");
                 dynamic? deviceInfo = FindDeviceInfo(manager, wiaDeviceId);
                 if (deviceInfo == null)
                     throw new InvalidOperationException("No scanner device found.");
 
+                LoggingService.LogInfo("WiaScannerService.ScanInternal", "Connecting to WIA device...");
                 device = deviceInfo.Connect();
                 if (device == null)
                     throw new InvalidOperationException("Could not connect to the scanner.");
@@ -401,13 +484,16 @@ namespace Win11DesktopApp.Services.Scanning
                     TrySetItemProperty(item, WiaDocumentHandlingSelect, 2);
 
                 ThrowIfCancelled(cancellationToken);
+                LoggingService.LogInfo("WiaScannerService.ScanInternal", "Transfer starting...");
                 image = item.Transfer(WiaFormatJpeg);
                 if (image == null)
                     throw new InvalidOperationException("Scanner returned no image.");
 
+                LoggingService.LogInfo("WiaScannerService.ScanInternal", "Transfer completed, saving file...");
                 Directory.CreateDirectory(outputFolder);
                 var outputPath = Path.Combine(outputFolder, $"wia-{Guid.NewGuid():N}.jpg");
                 image.SaveFile(outputPath);
+                LoggingService.LogInfo("WiaScannerService.ScanInternal", $"Saved: {outputPath}");
                 return outputPath;
             }
             catch (Exception ex)

@@ -15,6 +15,22 @@ namespace Win11DesktopApp.EmployeeModels
         public bool IsHidden { get; set; } = false;
     }
 
+    /// <summary>
+    /// Per-employee status for a firm document-package template.
+    /// Kept forever per firm (FirmName + TemplateId) so archive/transfer never loses history.
+    /// </summary>
+    public class RequiredDocumentStatus
+    {
+        public string FirmName { get; set; } = string.Empty;
+        public string TemplateId { get; set; } = string.Empty;
+        public string NameSnapshot { get; set; } = string.Empty;
+        public bool TrackPresence { get; set; }
+        public bool TrackScanned { get; set; }
+        public bool IsPresent { get; set; }
+        public bool IsScanned { get; set; }
+        public string Note { get; set; } = string.Empty;
+    }
+
     public class EmployeeAddress
     {
         public string Street { get; set; } = string.Empty;
@@ -101,6 +117,7 @@ namespace Win11DesktopApp.EmployeeModels
         public EmployeeFiles Files { get; set; } = new EmployeeFiles();
         public Dictionary<string, string> IgnoredDocuments { get; set; } = new Dictionary<string, string>();
         public List<CustomSignedDocument> CustomDocuments { get; set; } = new List<CustomSignedDocument>();
+        public List<RequiredDocumentStatus> RequiredDocumentStatuses { get; set; } = new List<RequiredDocumentStatus>();
     }
 
     public class EmployeeSummary : INotifyPropertyChanged

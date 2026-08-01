@@ -57,12 +57,43 @@ namespace Win11DesktopApp.Models
 
         public ObservableCollection<WorkAddress> Addresses { get; set; } = new();
         public ObservableCollection<Position> Positions { get; set; } = new();
+        public ObservableCollection<RequiredDocumentTemplate> RequiredDocuments { get; set; } = new();
         
         // Agency data (stored together with employer)
         public AgencyCompany Agency { get; set; } = new();
 
         // Tags dictionary (Key: FieldName, Value: Tag)
         public Dictionary<string, string> Tags { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Firm-level document package item. Track* flags define which checkboxes
+    /// will later appear on employees of this firm only.
+    /// </summary>
+    public class RequiredDocumentTemplate : ViewModelBase
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        private string _name = string.Empty;
+        public string Name
+        {
+            get => _name;
+            set => SetProperty(ref _name, value);
+        }
+
+        private bool _trackPresence = true;
+        public bool TrackPresence
+        {
+            get => _trackPresence;
+            set => SetProperty(ref _trackPresence, value);
+        }
+
+        private bool _trackScanned;
+        public bool TrackScanned
+        {
+            get => _trackScanned;
+            set => SetProperty(ref _trackScanned, value);
+        }
     }
 
     public class CompanyNamePeriod

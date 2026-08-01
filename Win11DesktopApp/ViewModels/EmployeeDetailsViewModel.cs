@@ -40,6 +40,213 @@ namespace Win11DesktopApp.ViewModels
         public string FullName { get; init; } = string.Empty;
     }
 
+    public sealed class DocumentPackageCheckboxChange
+    {
+        public string DocumentName { get; init; } = string.Empty;
+        public string FieldKey { get; init; } = string.Empty; // presence | scanned
+        public bool OldValue { get; init; }
+        public bool NewValue { get; init; }
+    }
+
+    public sealed class DocumentPackageItemViewModel : ViewModelBase
+    {
+        private readonly RequiredDocumentStatus _status;
+        private readonly Action<DocumentPackageCheckboxChange>? _onChanged;
+        private readonly Action<string, string, string>? _onNoteChanged;
+
+        public DocumentPackageItemViewModel(
+            RequiredDocumentTemplate template,
+            RequiredDocumentStatus status,
+            Action<DocumentPackageCheckboxChange>? onChanged,
+            bool isReadOnly,
+            Action<string, string, string>? onNoteChanged = null)
+        {
+            Name = (template.Name ?? string.Empty).Trim();
+            ShowPresence = template.TrackPresence;
+            ShowScanned = template.TrackScanned;
+            IsReadOnly = isReadOnly;
+            _status = status;
+            _onChanged = onChanged;
+            _onNoteChanged = onNoteChanged;
+        }
+
+        public DocumentPackageItemViewModel(
+            RequiredDocumentStatus status,
+            bool isReadOnly)
+        {
+            Name = string.IsNullOrWhiteSpace(status.NameSnapshot)
+                ? (Res("LabelDocumentPackageName") ?? "Document")
+                : status.NameSnapshot.Trim();
+            ShowPresence = status.TrackPresence;
+            ShowScanned = status.TrackScanned;
+            IsReadOnly = isReadOnly;
+            _status = status;
+            _onChanged = null;
+            _onNoteChanged = null;
+        }
+
+        public string Name { get; }
+        public bool ShowPresence { get; }
+        public bool ShowScanned { get; }
+        public bool IsReadOnly { get; }
+        public bool CanEdit => !IsReadOnly;
+
+        public bool IsPresent
+        {
+            get => _status.IsPresent;
+            set
+            {
+                if (IsReadOnly || _status.IsPresent == value)
+                    return;
+                var oldValue = _status.IsPresent;
+                _status.IsPresent = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsComplete));
+                _onChanged?.Invoke(new DocumentPackageCheckboxChange
+                {
+                    DocumentName = Name,
+                    FieldKey = "presence",
+                    OldValue = oldValue,
+                    NewValue = value
+                });
+            }
+        }
+
+        public bool IsScanned
+        {
+            get => _status.IsScanned;
+            set
+            {
+                if (IsReadOnly || _status.IsScanned == value)
+                    return;
+                var oldValue = _status.IsScanned;
+                _status.IsScanned = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsComplete));
+                _onChanged?.Invoke(new DocumentPackageCheckboxChange
+                {
+                    DocumentName = Name,
+                    FieldKey = "scanned",
+                    OldValue = oldValue,
+                    NewValue = value
+                });
+            }
+        }
+
+        public string Note
+        {
+            get => _status.Note ?? string.Empty;
+            set
+            {
+                var trimmed = (value ?? string.Empty).Trim();
+                var previous = (_status.Note ?? string.Empty).Trim();
+                if (IsReadOnly || string.Equals(previous, trimmed, StringComparison.Ordinal))
+                    return;
+                _status.Note = trimmed;
+                OnPropertyChanged();
+                _onNoteChanged?.Invoke(Name, previous, trimmed);
+            }
+        }
+
+        public bool IsComplete
+        {
+            get
+            {
+                if (!ShowPresence && !ShowScanned)
+                    return false;
+                if (ShowPresence && !_status.IsPresent)
+                    return false;
+                if (ShowScanned && !_status.IsScanned)
+                    return false;
+                return true;
+            }
+        }
+    }
+
+    public sealed class DocumentPackageFirmSectionViewModel : ViewModelBase
+    {
+        public DocumentPackageFirmSectionViewModel(
+            string firmName,
+            bool isCurrent,
+            IEnumerable<DocumentPackageItemViewModel> items,
+            bool isRetired = false)
+        {
+            FirmName = firmName;
+            IsCurrent = isCurrent;
+            IsRetired = isRetired;
+            Items = new ObservableCollection<DocumentPackageItemViewModel>(items);
+        }
+
+        public string FirmName { get; }
+        public bool IsCurrent { get; }
+        public bool IsRetired { get; }
+        public bool ShowHistoryHint => !IsCurrent || IsRetired;
+        public ObservableCollection<DocumentPackageItemViewModel> Items { get; }
+
+        public int CompletedCount => Items.Count(item => item.IsComplete);
+        public int TotalCount => Items.Count;
+
+        public string ProgressText
+        {
+            get
+            {
+                var format = Res("DetDocumentPackageProgress");
+                if (string.IsNullOrWhiteSpace(format) || format == "DetDocumentPackageProgress")
+                    format = "Готово: {0}/{1}";
+                return string.Format(format, CompletedCount, TotalCount);
+            }
+        }
+
+        public string HeaderText
+        {
+            get
+            {
+                if (IsRetired)
+                {
+                    var retired = Res("DetDocumentPackageRetiredSection");
+                    if (string.IsNullOrWhiteSpace(retired) || retired == "DetDocumentPackageRetiredSection")
+                        retired = "Раніше в пакеті цієї фірми (більше не вимагається)";
+                    return retired;
+                }
+
+                if (IsCurrent)
+                {
+                    var format = Res("DetDocumentPackageCurrentFirm");
+                    if (string.IsNullOrWhiteSpace(format) || format == "DetDocumentPackageCurrentFirm")
+                        format = "Поточна фірма: {0}";
+                    return string.Format(format, FirmName);
+                }
+
+                return FirmName;
+            }
+        }
+
+        public string HintText
+        {
+            get
+            {
+                if (IsRetired)
+                {
+                    var hint = Res("DetDocumentPackageRetiredHint");
+                    if (string.IsNullOrWhiteSpace(hint) || hint == "DetDocumentPackageRetiredHint")
+                        hint = "Документ прибрали з пакету фірми. Статуси збережено тільки для перегляду.";
+                    return hint;
+                }
+
+                var historyHint = Res("DetDocumentPackageHistoryHint");
+                if (string.IsNullOrWhiteSpace(historyHint) || historyHint == "DetDocumentPackageHistoryHint")
+                    historyHint = "Тільки перегляд — дані з попередньої фірми.";
+                return historyHint;
+            }
+        }
+
+        public void NotifyProgressChanged()
+        {
+            OnPropertyChanged(nameof(CompletedCount));
+            OnPropertyChanged(nameof(ProgressText));
+        }
+    }
+
     public partial class EmployeeDetailsViewModel : ViewModelBase
     {
         private string DocRes(string key) =>
@@ -685,6 +892,50 @@ namespace Win11DesktopApp.ViewModels
             ? (IsEuIdCardEmployee ? "id_card_back" : "passport2")
             : "visa";
 
+        // ---- Firm document package (current + history by firm) ----
+        private ObservableCollection<DocumentPackageFirmSectionViewModel> _documentPackageSections = new();
+        public ObservableCollection<DocumentPackageFirmSectionViewModel> DocumentPackageSections
+        {
+            get => _documentPackageSections;
+            set
+            {
+                if (SetProperty(ref _documentPackageSections, value))
+                {
+                    OnPropertyChanged(nameof(HasDocumentPackage));
+                    OnPropertyChanged(nameof(HasPreviousDocumentPackageFirms));
+                    OnPropertyChanged(nameof(DocumentPackageProgressText));
+                    OnPropertyChanged(nameof(DocumentPackageCompletedCount));
+                    OnPropertyChanged(nameof(DocumentPackageTotalCount));
+                    OnPropertyChanged(nameof(CurrentDocumentPackageSection));
+                }
+            }
+        }
+
+        public DocumentPackageFirmSectionViewModel? CurrentDocumentPackageSection =>
+            DocumentPackageSections.FirstOrDefault(section => section.IsCurrent);
+
+        public bool HasDocumentPackage => DocumentPackageSections.Any(section => section.Items.Count > 0);
+
+        public bool HasPreviousDocumentPackageFirms =>
+            DocumentPackageSections.Any(section => !section.IsCurrent && section.Items.Count > 0);
+
+        public int DocumentPackageCompletedCount => CurrentDocumentPackageSection?.CompletedCount
+            ?? DocumentPackageSections.Sum(section => section.CompletedCount);
+
+        public int DocumentPackageTotalCount => CurrentDocumentPackageSection?.TotalCount
+            ?? DocumentPackageSections.Sum(section => section.TotalCount);
+
+        public string DocumentPackageProgressText
+        {
+            get
+            {
+                var format = Res("DetDocumentPackageProgress");
+                if (string.IsNullOrWhiteSpace(format) || format == "DetDocumentPackageProgress")
+                    format = "Готово: {0}/{1}";
+                return string.Format(format, DocumentPackageCompletedCount, DocumentPackageTotalCount);
+            }
+        }
+
         // ---- Custom Signed Documents ----
         private ObservableCollection<CustomSignedDocument> _customDocuments = new();
         public ObservableCollection<CustomSignedDocument> CustomDocuments
@@ -912,6 +1163,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand DeleteHistoryEntryCommand { get; }
 
         public ICommand ShowSalaryCommand { get; }
+        public ICommand ShowDocumentPackageCommand { get; }
 
         // Salary History
         private ObservableCollection<SalaryHistoryRecord> _salaryHistoryEntries = new();
@@ -1394,7 +1646,7 @@ namespace Win11DesktopApp.ViewModels
             _bulkUpdateTargets = bulkUpdateTargets ?? Array.Empty<EmployeeBulkUpdateTarget>();
 
             var settings = _appSettingsService.Settings;
-            _tabIndex = Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 3);
+            _tabIndex = Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 4);
 
             Data = LoadInitialEmployeeData();
             Data.Status = StatusHelper.Normalize(Data.Status);
@@ -1408,6 +1660,10 @@ namespace Win11DesktopApp.ViewModels
             RefreshDocuments();
             LoadCompanyPositions();
             LoadCompanyAddresses();
+            LoadDocumentPackage();
+
+            if (_tabIndex == 4 && !HasDocumentPackage)
+                _tabIndex = 0;
 
             if (_tabIndex == 2)
                 EnsureHistoryLoaded();
@@ -1427,6 +1683,12 @@ namespace Win11DesktopApp.ViewModels
             {
                 TabIndex = 3;
                 EnsureSalaryHistoryLoaded();
+            });
+            ShowDocumentPackageCommand = new RelayCommand(o =>
+            {
+                if (!HasDocumentPackage)
+                    return;
+                TabIndex = 4;
             });
             EditProfileCommand = new RelayCommand(o =>
             {
@@ -2462,6 +2724,340 @@ namespace Win11DesktopApp.ViewModels
             StartPdfPreviewLoading();
         }
 
+        private void LoadDocumentPackage()
+        {
+            try
+            {
+                Data.RequiredDocumentStatuses ??= new List<RequiredDocumentStatus>();
+                var statuses = Data.RequiredDocumentStatuses;
+                MigrateRequiredDocumentStatuses(statuses);
+
+                var company = _companyService.Companies.FirstOrDefault(c =>
+                    string.Equals(c.Name, _firmName, StringComparison.OrdinalIgnoreCase));
+                var templates = (company?.RequiredDocuments ?? new ObservableCollection<RequiredDocumentTemplate>())
+                    .Where(template => !string.IsNullOrWhiteSpace(template.Name))
+                    .ToList();
+
+                var sections = new List<DocumentPackageFirmSectionViewModel>();
+
+                // Current firm — editable rows from live templates; never drop other firms' statuses.
+                var currentIsReadOnly = IsReadOnlyMode || IsArchiveMode;
+                var activeTemplateIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (templates.Count > 0 && !string.IsNullOrWhiteSpace(_firmName))
+                {
+                    var currentItems = new List<DocumentPackageItemViewModel>();
+                    foreach (var template in templates)
+                    {
+                        var templateId = string.IsNullOrWhiteSpace(template.Id)
+                            ? Guid.NewGuid().ToString()
+                            : template.Id;
+                        activeTemplateIds.Add(templateId);
+
+                        var status = statuses.FirstOrDefault(s =>
+                            string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(s.TemplateId, templateId, StringComparison.OrdinalIgnoreCase));
+
+                        if (status == null)
+                        {
+                            status = new RequiredDocumentStatus
+                            {
+                                FirmName = _firmName,
+                                TemplateId = templateId,
+                                NameSnapshot = template.Name.Trim(),
+                                TrackPresence = template.TrackPresence,
+                                TrackScanned = template.TrackScanned,
+                                IsPresent = false,
+                                IsScanned = false,
+                                Note = string.Empty
+                            };
+                            statuses.Add(status);
+                        }
+                        else
+                        {
+                            status.FirmName = _firmName;
+                            status.NameSnapshot = template.Name.Trim();
+                            status.TrackPresence = template.TrackPresence;
+                            status.TrackScanned = template.TrackScanned;
+                        }
+
+                        currentItems.Add(new DocumentPackageItemViewModel(
+                            template,
+                            status,
+                            OnDocumentPackageCheckboxChanged,
+                            isReadOnly: currentIsReadOnly,
+                            onNoteChanged: OnDocumentPackageNoteChanged));
+                    }
+
+                    sections.Add(new DocumentPackageFirmSectionViewModel(_firmName, isCurrent: true, currentItems));
+                }
+
+                // Soft archive: statuses for this firm whose template was removed from the package.
+                if (!string.IsNullOrWhiteSpace(_firmName))
+                {
+                    var retiredStatuses = statuses
+                        .Where(s => string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
+                                    && !string.IsNullOrWhiteSpace(s.NameSnapshot)
+                                    && !activeTemplateIds.Contains(s.TemplateId ?? string.Empty))
+                        .ToList();
+                    if (retiredStatuses.Count > 0)
+                    {
+                        var retiredItems = retiredStatuses
+                            .Select(status => new DocumentPackageItemViewModel(status, isReadOnly: true))
+                            .ToList();
+                        sections.Add(new DocumentPackageFirmSectionViewModel(
+                            _firmName, isCurrent: false, retiredItems, isRetired: true));
+                    }
+                }
+
+                // Previous firms — read-only snapshot history, never deleted.
+                var historyFirmNames = statuses
+                    .Where(s => !string.IsNullOrWhiteSpace(s.FirmName)
+                                && !string.Equals(s.FirmName, _firmName, StringComparison.OrdinalIgnoreCase)
+                                && !string.IsNullOrWhiteSpace(s.NameSnapshot))
+                    .Select(s => s.FirmName.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList();
+
+                // Prefer FirmHistory order when available.
+                var historyOrder = (Data.FirmHistory ?? new List<FirmHistoryEntry>())
+                    .Select(entry => entry.FirmName?.Trim())
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (historyOrder.Count > 0)
+                {
+                    historyFirmNames = historyFirmNames
+                        .OrderBy(name =>
+                        {
+                            var index = historyOrder.FindIndex(h =>
+                                string.Equals(h, name, StringComparison.OrdinalIgnoreCase));
+                            return index >= 0 ? index : int.MaxValue;
+                        })
+                        .ThenBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+                        .ToList();
+                }
+
+                foreach (var firmName in historyFirmNames)
+                {
+                    var firmStatuses = statuses
+                        .Where(s => string.Equals(s.FirmName, firmName, StringComparison.OrdinalIgnoreCase)
+                                    && !string.IsNullOrWhiteSpace(s.NameSnapshot))
+                        .ToList();
+                    if (firmStatuses.Count == 0)
+                        continue;
+
+                    var historyItems = firmStatuses
+                        .Select(status => new DocumentPackageItemViewModel(status, isReadOnly: true))
+                        .ToList();
+                    sections.Add(new DocumentPackageFirmSectionViewModel(firmName, isCurrent: false, historyItems));
+                }
+
+                DocumentPackageSections = new ObservableCollection<DocumentPackageFirmSectionViewModel>(sections);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.LoadDocumentPackage", ex.Message);
+                DocumentPackageSections = new ObservableCollection<DocumentPackageFirmSectionViewModel>();
+            }
+        }
+
+        /// <summary>
+        /// Legacy statuses had no FirmName / Track* flags. Assign current firm and keep checkboxes visible.
+        /// Never removes existing rows.
+        /// </summary>
+        private void MigrateRequiredDocumentStatuses(List<RequiredDocumentStatus> statuses)
+        {
+            if (statuses.Count == 0)
+                return;
+
+            var company = _companyService.Companies.FirstOrDefault(c =>
+                string.Equals(c.Name, _firmName, StringComparison.OrdinalIgnoreCase));
+            var templates = company?.RequiredDocuments?.ToList()
+                ?? new List<RequiredDocumentTemplate>();
+
+            foreach (var status in statuses)
+            {
+                var wasLegacy = string.IsNullOrWhiteSpace(status.FirmName);
+                if (wasLegacy)
+                    status.FirmName = _firmName ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(status.TemplateId))
+                    status.TemplateId = Guid.NewGuid().ToString();
+
+                var template = templates.FirstOrDefault(t =>
+                    string.Equals(t.Id, status.TemplateId, StringComparison.OrdinalIgnoreCase));
+                if (template != null)
+                {
+                    if (string.IsNullOrWhiteSpace(status.NameSnapshot))
+                        status.NameSnapshot = template.Name.Trim();
+                    if (wasLegacy && !status.TrackPresence && !status.TrackScanned)
+                    {
+                        status.TrackPresence = template.TrackPresence;
+                        status.TrackScanned = template.TrackScanned;
+                    }
+                }
+                else if (!status.TrackPresence && !status.TrackScanned)
+                {
+                    // Preserve visibility of already checked legacy rows.
+                    status.TrackPresence = true;
+                    status.TrackScanned = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(status.NameSnapshot))
+                    status.NameSnapshot = Res("LabelDocumentPackageName") ?? "Document";
+            }
+        }
+
+        private void OnDocumentPackageCheckboxChanged(DocumentPackageCheckboxChange change)
+        {
+            CurrentDocumentPackageSection?.NotifyProgressChanged();
+            OnPropertyChanged(nameof(DocumentPackageProgressText));
+            OnPropertyChanged(nameof(DocumentPackageCompletedCount));
+
+            if (IsReadOnlyMode || IsArchiveMode)
+                return;
+            if (!PolicyService.EnsureWriteAllowed("Оновити пакет документів"))
+                return;
+            if (!CanEditCurrentFirm("Оновити пакет документів"))
+                return;
+
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
+            {
+                StatusMessage = Res("MsgProfileSaveFail");
+                return;
+            }
+
+            StatusMessage = Res("MsgSaved") ?? "Saved.";
+            _ = LogDocumentPackageCheckboxChangeAsync(change);
+        }
+
+        private void OnDocumentPackageNoteChanged(string documentName, string oldNote, string newNote)
+        {
+            if (IsReadOnlyMode || IsArchiveMode)
+                return;
+            if (!PolicyService.EnsureWriteAllowed("Оновити пакет документів"))
+                return;
+            if (!CanEditCurrentFirm("Оновити пакет документів"))
+                return;
+
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
+            {
+                StatusMessage = Res("MsgProfileSaveFail");
+                return;
+            }
+
+            StatusMessage = Res("MsgSaved") ?? "Saved.";
+            _ = LogDocumentPackageNoteChangeAsync(documentName, oldNote, newNote);
+        }
+
+        private async Task LogDocumentPackageNoteChangeAsync(string documentName, string oldNote, string newNote)
+        {
+            try
+            {
+                var action = Res("HistoryActionDocumentPackage") ?? "Пакет документів";
+                var noteLabel = Res("LabelDocumentPackageNote") ?? "Примітка";
+                var empty = Res("HistoryValueEmpty") ?? "(порожньо)";
+                var oldText = string.IsNullOrWhiteSpace(oldNote) ? empty : oldNote;
+                var newText = string.IsNullOrWhiteSpace(newNote) ? empty : newNote;
+                var description = string.Format(
+                    Res("HistoryDescDocumentPackageNote") ?? "{0}: {1} — {2}: {3} → {4}",
+                    action,
+                    documentName,
+                    noteLabel,
+                    oldText,
+                    newText);
+
+                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
+                {
+                    EventType = "DocumentPackageUpdated",
+                    Action = action,
+                    Field = $"{documentName} / {noteLabel}",
+                    OldValue = oldText,
+                    NewValue = newText,
+                    Description = description
+                });
+
+                if (_tabIndex == 2)
+                {
+                    _isHistoryLoaded = false;
+                    EnsureHistoryLoaded();
+                }
+
+                _activityLogService.Log(
+                    "DocumentPackageNoteChanged",
+                    "Document",
+                    _firmName,
+                    FullName,
+                    description,
+                    oldValue: oldText,
+                    newValue: newText,
+                    details: documentName,
+                    employeeFolder: _employeeFolder,
+                    entityType: "DocumentPackage",
+                    entityId: documentName);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.LogDocumentPackageNoteChange", ex.Message);
+            }
+        }
+
+        private async Task LogDocumentPackageCheckboxChangeAsync(DocumentPackageCheckboxChange change)
+        {
+            try
+            {
+                var fieldLabel = string.Equals(change.FieldKey, "scanned", StringComparison.OrdinalIgnoreCase)
+                    ? (Res("LabelTrackScanned") ?? "Насканований")
+                    : (Res("LabelTrackPresence") ?? "Наявність");
+                var yesText = Res("HistoryValueYes") ?? "Так";
+                var noText = Res("HistoryValueNo") ?? "Ні";
+                var oldText = change.OldValue ? yesText : noText;
+                var newText = change.NewValue ? yesText : noText;
+                var action = Res("HistoryActionDocumentPackage") ?? "Пакет документів";
+                var description = string.Format(
+                    Res("HistoryDescDocumentPackageCheckbox") ?? "{0}: {1} — {2}: {3} → {4}",
+                    action,
+                    change.DocumentName,
+                    fieldLabel,
+                    oldText,
+                    newText);
+
+                await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
+                {
+                    EventType = "DocumentPackageUpdated",
+                    Action = action,
+                    Field = $"{change.DocumentName} / {fieldLabel}",
+                    OldValue = oldText,
+                    NewValue = newText,
+                    Description = description
+                });
+
+                if (_tabIndex == 2)
+                {
+                    _isHistoryLoaded = false;
+                    EnsureHistoryLoaded();
+                }
+
+                _activityLogService.Log(
+                    "DocumentPackageCheckboxChanged",
+                    "Document",
+                    _firmName,
+                    FullName,
+                    description,
+                    oldValue: oldText,
+                    newValue: newText,
+                    details: $"{change.DocumentName}|{change.FieldKey}",
+                    employeeFolder: _employeeFolder,
+                    entityType: "DocumentPackage",
+                    entityId: change.DocumentName);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeDetailsViewModel.LogDocumentPackageCheckboxChange", ex.Message);
+            }
+        }
+
         private void LoadCompanyPositions()
         {
             try
@@ -2781,7 +3377,7 @@ namespace Win11DesktopApp.ViewModels
         public void SaveLayoutSettings()
         {
             var settingsService = _appSettingsService;
-            settingsService.Settings.EmployeeDetailsLastTabIndex = Math.Clamp(TabIndex, 0, 3);
+            settingsService.Settings.EmployeeDetailsLastTabIndex = Math.Clamp(TabIndex, 0, 4);
             settingsService.SaveSettings();
         }
 

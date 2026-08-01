@@ -4,7 +4,7 @@
 
 **Systém pro správu zaměstnanců, dokumentů, mezd a evidence pro personální agentury**
 
-**Poslední stabilní verze:** `0.1.96`  
+**Poslední stabilní verze:** `0.1.97`  
 **PostgreSQL multi-PC:** dostupné ve stabilním kanálu  
 **Stáhnout:** [GitHub Releases](https://github.com/Sestema/Agency-Contractor/releases/latest)
 

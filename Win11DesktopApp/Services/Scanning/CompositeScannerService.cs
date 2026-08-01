@@ -68,11 +68,18 @@ namespace Win11DesktopApp.Services.Scanning
                 catch (Exception ex)
                 {
                     lastError = ex;
-                    LoggingService.LogWarning("CompositeScannerService.ScanToFileAsync.WIA", ex.Message);
+                    LoggingService.LogWarning(
+                        "CompositeScannerService.ScanToFileAsync.WIA",
+                        ex is TimeoutException
+                            ? $"Silent WIA timed out; falling back to Windows dialog. {ex.Message}"
+                            : ex.Message);
                 }
 
                 try
                 {
+                    LoggingService.LogInfo(
+                        "CompositeScannerService.ScanToFileAsync",
+                        "Opening WIA CommonDialog fallback...");
                     return await _wia.ScanViaDialogAsync(outputFolder, cancellationToken);
                 }
                 catch (OperationCanceledException)

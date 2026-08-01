@@ -664,6 +664,29 @@
                                         </Style>
                                     </Button.Style>
                                 </Button>
+
+                                <Button Command="{Binding ShowDocumentPackageCommand}"
+                                        Margin="0,0,4,0"
+                                        Visibility="{Binding HasDocumentPackage, Converter={StaticResource BoolToVis}}">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource DetTabDocumentPackage}" FontSize="{DynamicResource FS13}"/>
+                                        </StackPanel>
+                                    </Button.Content>
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource TabBtn}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TabIndex}" Value="4">
+                                                    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                             </StackPanel>
                         </Border>
 
@@ -2296,6 +2319,148 @@
                                     </Border>
                                     </Grid>
                                 </Grid>
+
+                                <!-- ========== TAB 4: DOCUMENT PACKAGE ========== -->
+                                <ScrollViewer Style="{StaticResource ThinScroll}" Padding="20,16"
+                                              Visibility="{Binding TabIndex, Converter={StaticResource StepVis}, ConverterParameter=4}">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,10">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
+                                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{DynamicResource DetTabDocumentPackage}"
+                                                           Style="{StaticResource SectionHeader}" FontSize="{DynamicResource FS16}" Margin="0"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBlock Text="{DynamicResource DetDocumentPackageHint}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,0,0,14"/>
+
+                                        <ItemsControl ItemsSource="{Binding DocumentPackageSections}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource DetailsMiniCard}" Padding="14,12" Margin="0,0,0,12">
+                                                        <StackPanel>
+                                                            <Grid Margin="0,0,0,10">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding HeaderText}"
+                                                                           FontSize="{DynamicResource FS14}"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                                           TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center"/>
+                                                                <Border Grid.Column="1"
+                                                                        Background="{DynamicResource AccentLightBrush}"
+                                                                        BorderBrush="{DynamicResource AccentBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="8"
+                                                                        Padding="10,4"
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="10,0,0,0">
+                                                                    <TextBlock Text="{Binding ProgressText}"
+                                                                               FontSize="{DynamicResource FS12}"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource AccentDarkBrush}"/>
+                                                                </Border>
+                                                            </Grid>
+
+                                                            <TextBlock Text="{Binding HintText}"
+                                                                       FontSize="{DynamicResource FS11}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       TextWrapping="Wrap"
+                                                                       Margin="0,0,0,8"
+                                                                       Visibility="{Binding ShowHistoryHint, Converter={StaticResource BoolToVis}}"/>
+
+                                                            <Grid Margin="4,0,4,6">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="110"/>
+                                                                    <ColumnDefinition Width="130"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{DynamicResource LabelDocumentPackageName}"
+                                                                           Style="{StaticResource FieldLabel}" Margin="0"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{DynamicResource LabelTrackPresence}"
+                                                                           Style="{StaticResource FieldLabel}"
+                                                                           HorizontalAlignment="Center" Margin="0"/>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{DynamicResource LabelTrackScanned}"
+                                                                           Style="{StaticResource FieldLabel}"
+                                                                           HorizontalAlignment="Center" Margin="0"/>
+                                                            </Grid>
+
+                                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Border Background="{DynamicResource ContentBackgroundBrush}"
+                                                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                                BorderThickness="1"
+                                                                                CornerRadius="10"
+                                                                                Padding="12,10"
+                                                                                Margin="0,0,0,6">
+                                                                            <StackPanel>
+                                                                                <Grid>
+                                                                                    <Grid.ColumnDefinitions>
+                                                                                        <ColumnDefinition Width="*"/>
+                                                                                        <ColumnDefinition Width="110"/>
+                                                                                        <ColumnDefinition Width="130"/>
+                                                                                    </Grid.ColumnDefinitions>
+
+                                                                                    <TextBlock Text="{Binding Name}"
+                                                                                               FontSize="{DynamicResource FS13}"
+                                                                                               FontWeight="SemiBold"
+                                                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                                                               VerticalAlignment="Center"
+                                                                                               TextTrimming="CharacterEllipsis"
+                                                                                               Margin="0,0,10,0"/>
+
+                                                                                    <CheckBox Grid.Column="1"
+                                                                                              IsChecked="{Binding IsPresent, Mode=TwoWay}"
+                                                                                              Visibility="{Binding ShowPresence, Converter={StaticResource BoolToVis}}"
+                                                                                              IsEnabled="{Binding CanEdit}"
+                                                                                              HorizontalAlignment="Center"
+                                                                                              VerticalAlignment="Center"/>
+
+                                                                                    <CheckBox Grid.Column="2"
+                                                                                              IsChecked="{Binding IsScanned, Mode=TwoWay}"
+                                                                                              Visibility="{Binding ShowScanned, Converter={StaticResource BoolToVis}}"
+                                                                                              IsEnabled="{Binding CanEdit}"
+                                                                                              HorizontalAlignment="Center"
+                                                                                              VerticalAlignment="Center"/>
+                                                                                </Grid>
+
+                                                                                <TextBlock Text="{DynamicResource LabelDocumentPackageNote}"
+                                                                                           Style="{StaticResource FieldLabel}"
+                                                                                           Margin="0,10,0,4"/>
+                                                                                <TextBox Text="{Binding Note, UpdateSourceTrigger=LostFocus}"
+                                                                                         IsReadOnly="{Binding IsReadOnly}"
+                                                                                         TextWrapping="Wrap"
+                                                                                         AcceptsReturn="False"
+                                                                                         MinHeight="32"
+                                                                                         Padding="10,7"
+                                                                                         FontSize="{DynamicResource FS12}"
+                                                                                         Foreground="{DynamicResource ForegroundBrush}"
+                                                                                         Background="{DynamicResource ContentBackgroundBrush}"
+                                                                                         BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                                         BorderThickness="1"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </ScrollViewer>
                             </Grid>
                     </Grid>
                 </Grid>

@@ -500,6 +500,109 @@
                                 </Border>
                             </ScrollViewer>
                         </TabItem>
+
+                        <!-- Document package Tab -->
+                        <TabItem Header="{DynamicResource TabDocumentPackage}">
+                            <ScrollViewer Margin="0,18,0,0" Style="{StaticResource ThinScroll}">
+                                <Border Style="{StaticResource DialogSectionCard}" Padding="18,16">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
+                                                <TextBlock Text="&#xE8A5;"
+                                                           FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="{DynamicResource FS13}"
+                                                           Foreground="{DynamicResource AccentDarkBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="{DynamicResource TabDocumentPackage}" Style="{StaticResource CompanySectionTitle}"/>
+                                        </StackPanel>
+
+                                        <TextBlock Text="{DynamicResource DocumentPackageHint}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,0,0,14"/>
+
+                                        <Grid Margin="12,0,12,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="220"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{DynamicResource LabelDocumentPackageName}"
+                                                       Style="{StaticResource CompanyFieldLabel}"
+                                                       Margin="0"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{DynamicResource LabelTrackPresence}"
+                                                       Style="{StaticResource CompanyFieldLabel}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0"/>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{DynamicResource LabelTrackScanned}"
+                                                       Style="{StaticResource CompanyFieldLabel}"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0"/>
+                                        </Grid>
+
+                                        <ItemsControl ItemsSource="{Binding Employer.RequiredDocuments}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource DialogPreviewSurface}" Padding="12,8" Margin="0,0,0,6">
+                                                        <Grid VerticalAlignment="Center">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="220"/>
+                                                                <ColumnDefinition Width="110"/>
+                                                                <ColumnDefinition Width="130"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBox Grid.Column="0"
+                                                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Style="{StaticResource CompanyInputTextBox}"
+                                                                     Margin="0,0,10,0"
+                                                                     VerticalAlignment="Center"/>
+
+                                                            <CheckBox Grid.Column="1"
+                                                                      IsChecked="{Binding TrackPresence, Mode=TwoWay}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+
+                                                            <CheckBox Grid.Column="2"
+                                                                      IsChecked="{Binding TrackScanned, Mode=TwoWay}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+
+                                                            <Button Grid.Column="3"
+                                                                    Command="{Binding DataContext.RemoveRequiredDocumentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    VerticalAlignment="Center"
+                                                                    Width="30" Height="30"
+                                                                    Style="{StaticResource ToolbarInlineIconButton}"
+                                                                    Background="{DynamicResource ErrorLightBrush}"
+                                                                    BorderBrush="{DynamicResource ErrorLightBrush}"
+                                                                    ToolTip="{DynamicResource CompanyTooltipDeleteDocument}">
+                                                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Foreground="{DynamicResource ErrorBrush}"/>
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <Button Command="{Binding AddRequiredDocumentCommand}"
+                                                HorizontalAlignment="Left"
+                                                Style="{StaticResource DialogAccentSoftButton}">
+                                            <TextBlock Text="{DynamicResource BtnAddDocumentPackageItem}"
+                                                       FontSize="{DynamicResource FS13}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AccentDarkBrush}"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
+                        </TabItem>
                     </TabControl>
                     
                     <!-- Footer -->
