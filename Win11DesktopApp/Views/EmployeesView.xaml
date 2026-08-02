@@ -15,7 +15,6 @@
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
         <local:StatusColorConverter x:Key="StatusColor"/>
         <local:StatusBackgroundConverter x:Key="StatusBg"/>
-        <local:GenderRingBrushConverter x:Key="GenderRingBrush"/>
         <local:StringNullOrEmptyToVisibilityConverter x:Key="StrToVis"/>
         <local:InverseStringNullOrEmptyToVisibilityConverter x:Key="InverseStrToVis"/>
         <local:NameToColorConverter x:Key="NameToColor"/>
@@ -1406,11 +1405,9 @@
                 </Border>
 
                 <!-- ===== EMPLOYEE LIST ===== -->
-                <Grid Grid.Row="3" ClipToBounds="False">
-                    <ScrollViewer Style="{StaticResource ThinScroll}"
-                                  ClipToBounds="False"
-                                  PreviewMouseWheel="EmployeesScrollViewer_PreviewMouseWheel">
-                        <Grid Margin="4,6,4,4" ClipToBounds="False">
+                <!-- Bounded * row (no outer ScrollViewer) so Table/List virtualization can work.
+                     Tiles/Icons keep their own ScrollViewer around WrapPanel. All employees still load. -->
+                <Grid Grid.Row="3" Margin="4,6,4,4" ClipToBounds="False">
                             <!-- TABLE VIEW -->
                             <DataGrid ItemsSource="{Binding EmployeesForTable}" AutoGenerateColumns="False" IsReadOnly="True"
                                       CanUserSortColumns="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
@@ -1424,6 +1421,9 @@
                                       VirtualizingPanel.ScrollUnit="Pixel"
                                       ScrollViewer.CanContentScroll="True"
                                       ScrollViewer.IsDeferredScrollingEnabled="True"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      VerticalAlignment="Stretch"
                                       Visibility="{Binding IsTableView, Converter={StaticResource BoolToVis}}"
                                       MouseDoubleClick="DataGrid_MouseDoubleClick">
                                 <DataGrid.RowStyle>
@@ -1588,9 +1588,12 @@
                             <!-- LIST VIEW (original cards) -->
                             <ItemsControl ItemsSource="{Binding EmployeesForList}"
                                           ClipToBounds="False"
+                                          VerticalAlignment="Stretch"
+                                          HorizontalAlignment="Stretch"
                                           VirtualizingStackPanel.IsVirtualizing="True"
                                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                                           ScrollViewer.CanContentScroll="True"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                                           Visibility="{Binding IsListView, Converter={StaticResource BoolToVis}}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -1601,6 +1604,9 @@
                                     <ControlTemplate TargetType="ItemsControl">
                                         <ScrollViewer CanContentScroll="True"
                                                       Focusable="False"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      Style="{StaticResource ThinScroll}"
                                                       Padding="{TemplateBinding Padding}">
                                             <ItemsPresenter/>
                                         </ScrollViewer>
@@ -1810,10 +1816,14 @@
                             </ItemsControl>
 
                             <!-- TILES VIEW -->
+                            <ScrollViewer Style="{StaticResource ThinScroll}"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          ClipToBounds="False"
+                                          Visibility="{Binding IsTilesView, Converter={StaticResource BoolToVis}}">
                             <ItemsControl ItemsSource="{Binding EmployeesForTiles}"
                                           ClipToBounds="False"
-                                          SizeChanged="TilesItemsControl_SizeChanged"
-                                          Visibility="{Binding IsTilesView, Converter={StaticResource BoolToVis}}">
+                                          SizeChanged="TilesItemsControl_SizeChanged">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><WrapPanel ClipToBounds="False"/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
@@ -1872,25 +1882,26 @@
                                                               Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}"/>
                                                     <Grid Grid.Column="1"
                                                           Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=72}"
-                                                          Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=72}"
+                                                          Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=94}"
                                                           Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='0,0,12,0'}">
                                                         <Border Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=74}"
-                                                                Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=74}"
+                                                                Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=96}"
                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                 Background="{DynamicResource EmployeeTileAvatarBackgroundBrush}"
                                                                 BorderBrush="{DynamicResource EmployeeTileAvatarBorderBrush}"
                                                                 BorderThickness="2"
                                                                 Padding="0"
                                                                 SnapsToDevicePixels="True"
-                                                                CornerRadius="26">
+                                                                CornerRadius="18">
                                                             <Border.Clip>
-                                                                <RectangleGeometry Rect="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomRect}, ConverterParameter='0,0,74,74'}"
-                                                                                   RadiusX="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=26}"
-                                                                                   RadiusY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=26}"/>
+                                                                <RectangleGeometry Rect="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomRect}, ConverterParameter='0,0,74,96'}"
+                                                                                   RadiusX="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
+                                                                                   RadiusY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"/>
                                                             </Border.Clip>
                                                             <Grid>
                                                                 <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=200}"
                                                                        Stretch="UniformToFill"
+                                                                       VerticalAlignment="Center"
                                                                        RenderOptions.BitmapScalingMode="HighQuality"
                                                                        SnapsToDevicePixels="True"
                                                                        Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>
@@ -2604,12 +2615,17 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            </ScrollViewer>
 
                             <!-- ICONS VIEW -->
+                            <ScrollViewer Style="{StaticResource ThinScroll}"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          ClipToBounds="False"
+                                          Visibility="{Binding IsIconsView, Converter={StaticResource BoolToVis}}">
                             <ItemsControl ItemsSource="{Binding EmployeesForIcons}"
                                           ClipToBounds="False"
-                                          SizeChanged="IconsItemsControl_SizeChanged"
-                                          Visibility="{Binding IsIconsView, Converter={StaticResource BoolToVis}}">
+                                          SizeChanged="IconsItemsControl_SizeChanged">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><WrapPanel ClipToBounds="False"/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
@@ -3063,8 +3079,7 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </Grid>
-                    </ScrollViewer>
+                            </ScrollViewer>
 
                     <!-- Empty state -->
                     <Border Padding="28,24">

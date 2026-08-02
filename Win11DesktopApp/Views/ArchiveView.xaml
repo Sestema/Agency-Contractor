@@ -297,25 +297,26 @@
                                                     </Grid.ColumnDefinitions>
 <Grid Grid.Column="0"
                                                           Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=72}"
-                                                          Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=72}"
+                                                          Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=94}"
                                                           Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='0,0,12,0'}">
                                                         <Border Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=74}"
-                                                                Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=74}"
+                                                                Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=96}"
                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                 Background="{DynamicResource EmployeeTileAvatarBackgroundBrush}"
                                                                 BorderBrush="{DynamicResource EmployeeTileAvatarBorderBrush}"
                                                                 BorderThickness="2"
                                                                 Padding="0"
                                                                 SnapsToDevicePixels="True"
-                                                                CornerRadius="26">
+                                                                CornerRadius="18">
                                                             <Border.Clip>
-                                                                <RectangleGeometry Rect="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomRect}, ConverterParameter='0,0,74,74'}"
-                                                                                   RadiusX="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=26}"
-                                                                                   RadiusY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=26}"/>
+                                                                <RectangleGeometry Rect="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomRect}, ConverterParameter='0,0,74,96'}"
+                                                                                   RadiusX="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
+                                                                                   RadiusY="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"/>
                                                             </Border.Clip>
                                                             <Grid>
                                                                 <Image Source="{Binding PhotoPath, Converter={StaticResource ThumbnailPathConverter}, ConverterParameter=200}"
                                                                        Stretch="UniformToFill"
+                                                                       VerticalAlignment="Center"
                                                                        RenderOptions.BitmapScalingMode="HighQuality"
                                                                        SnapsToDevicePixels="True"
                                                                        Visibility="{Binding HasPhoto, Converter={StaticResource BoolToVis}}"/>

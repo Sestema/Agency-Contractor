@@ -303,26 +303,4 @@ namespace Win11DesktopApp.Converters
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => Binding.DoNothing;
     }
-
-    /// <summary>
-    /// Male → blue ring (InfoBrush), female → green ring (SuccessBrush).
-    /// </summary>
-    public class GenderRingBrushConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            var gender = value?.ToString() ?? "male";
-            if (string.Equals(gender, "female", StringComparison.OrdinalIgnoreCase))
-            {
-                return Application.Current?.TryFindResource("SuccessBrush") as Brush
-                    ?? new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
-            }
-
-            return Application.Current?.TryFindResource("InfoBrush") as Brush
-                ?? new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => Binding.DoNothing;
-    }
 }

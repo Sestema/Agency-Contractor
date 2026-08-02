@@ -12,6 +12,7 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using Win11DesktopApp.Converters;
 using Win11DesktopApp.EmployeeModels;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Win11DesktopApp.Views;
@@ -53,6 +54,10 @@ namespace Win11DesktopApp.ViewModels
         private readonly RequiredDocumentStatus _status;
         private readonly Action<DocumentPackageCheckboxChange>? _onChanged;
         private readonly Action<string, string, string>? _onNoteChanged;
+        private bool _isEditing;
+        private bool _originalIsPresent;
+        private bool _originalIsScanned;
+        private string _originalNote = string.Empty;
 
         public DocumentPackageItemViewModel(
             RequiredDocumentTemplate template,
@@ -89,7 +94,19 @@ namespace Win11DesktopApp.ViewModels
         public bool ShowPresence { get; }
         public bool ShowScanned { get; }
         public bool IsReadOnly { get; }
-        public bool CanEdit => !IsReadOnly;
+        public bool CanEdit => !IsReadOnly && IsEditing;
+        public bool IsEditing
+        {
+            get => _isEditing;
+            private set
+            {
+                if (SetProperty(ref _isEditing, value))
+                {
+                    OnPropertyChanged(nameof(CanEdit));
+                    OnPropertyChanged(nameof(ShowNotePreview));
+                }
+            }
+        }
 
         public bool IsPresent
         {
@@ -138,14 +155,97 @@ namespace Win11DesktopApp.ViewModels
             get => _status.Note ?? string.Empty;
             set
             {
-                var trimmed = (value ?? string.Empty).Trim();
-                var previous = (_status.Note ?? string.Empty).Trim();
-                if (IsReadOnly || string.Equals(previous, trimmed, StringComparison.Ordinal))
+                // Keep raw text while typing so spaces are preserved.
+                // Trim once on save via GetPendingNoteChange / CompleteEdit.
+                var next = value ?? string.Empty;
+                var previous = _status.Note ?? string.Empty;
+                if (IsReadOnly || string.Equals(previous, next, StringComparison.Ordinal))
                     return;
-                _status.Note = trimmed;
+                _status.Note = next;
                 OnPropertyChanged();
-                _onNoteChanged?.Invoke(Name, previous, trimmed);
+                OnPropertyChanged(nameof(HasNote));
+                OnPropertyChanged(nameof(ShowNotePreview));
+                _onNoteChanged?.Invoke(Name, previous, next);
             }
+        }
+
+        public bool HasNote => !string.IsNullOrWhiteSpace(Note);
+        public bool ShowNotePreview => HasNote && !IsEditing;
+
+        public void BeginEdit()
+        {
+            if (IsReadOnly || IsEditing)
+                return;
+
+            _originalIsPresent = IsPresent;
+            _originalIsScanned = IsScanned;
+            _originalNote = Note;
+            IsEditing = true;
+        }
+
+        public IReadOnlyList<DocumentPackageCheckboxChange> GetPendingCheckboxChanges()
+        {
+            var changes = new List<DocumentPackageCheckboxChange>();
+            if (ShowPresence && _originalIsPresent != IsPresent)
+            {
+                changes.Add(new DocumentPackageCheckboxChange
+                {
+                    DocumentName = Name,
+                    FieldKey = "presence",
+                    OldValue = _originalIsPresent,
+                    NewValue = IsPresent
+                });
+            }
+
+            if (ShowScanned && _originalIsScanned != IsScanned)
+            {
+                changes.Add(new DocumentPackageCheckboxChange
+                {
+                    DocumentName = Name,
+                    FieldKey = "scanned",
+                    OldValue = _originalIsScanned,
+                    NewValue = IsScanned
+                });
+            }
+
+            return changes;
+        }
+
+        public (string DocumentName, string OldNote, string NewNote)? GetPendingNoteChange()
+        {
+            var current = (Note ?? string.Empty).Trim();
+            var original = (_originalNote ?? string.Empty).Trim();
+            // Normalize whitespace only when committing the edit session.
+            if (!string.Equals(_status.Note ?? string.Empty, current, StringComparison.Ordinal))
+            {
+                _status.Note = current;
+                OnPropertyChanged(nameof(Note));
+                OnPropertyChanged(nameof(HasNote));
+                OnPropertyChanged(nameof(ShowNotePreview));
+            }
+
+            return string.Equals(original, current, StringComparison.Ordinal)
+                ? null
+                : (Name, original, current);
+        }
+
+        public void CompleteEdit() => IsEditing = false;
+
+        public void CancelEdit()
+        {
+            if (!IsEditing)
+                return;
+
+            _status.IsPresent = _originalIsPresent;
+            _status.IsScanned = _originalIsScanned;
+            _status.Note = _originalNote;
+            OnPropertyChanged(nameof(IsPresent));
+            OnPropertyChanged(nameof(IsScanned));
+            OnPropertyChanged(nameof(Note));
+            OnPropertyChanged(nameof(HasNote));
+            OnPropertyChanged(nameof(ShowNotePreview));
+            OnPropertyChanged(nameof(IsComplete));
+            IsEditing = false;
         }
 
         public bool IsComplete
@@ -181,6 +281,7 @@ namespace Win11DesktopApp.ViewModels
         public bool IsCurrent { get; }
         public bool IsRetired { get; }
         public bool ShowHistoryHint => !IsCurrent || IsRetired;
+        public bool CanEdit => IsCurrent && !IsRetired && Items.Any(item => !item.IsReadOnly);
         public ObservableCollection<DocumentPackageItemViewModel> Items { get; }
 
         public int CompletedCount => Items.Count(item => item.IsComplete);
@@ -443,7 +544,12 @@ namespace Win11DesktopApp.ViewModels
         public int TabIndex
         {
             get => _tabIndex;
-            set => SetProperty(ref _tabIndex, value);
+            set
+            {
+                if (_tabIndex == 4 && value != 4 && IsDocumentPackageEditing)
+                    CancelDocumentPackageEdit();
+                SetProperty(ref _tabIndex, value);
+            }
         }
 
         private bool _isEditMode;
@@ -458,6 +564,8 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(ShowRodneCisloField));
                     if (!value)
                         IsDocumentProfileEditorOpen = false;
+                    else
+                        SyncSelectedWorkAddressFromData(allowOrphan: true);
                 }
             }
         }
@@ -907,6 +1015,7 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(DocumentPackageCompletedCount));
                     OnPropertyChanged(nameof(DocumentPackageTotalCount));
                     OnPropertyChanged(nameof(CurrentDocumentPackageSection));
+                    OnPropertyChanged(nameof(CanEditDocumentPackage));
                 }
             }
         }
@@ -918,6 +1027,11 @@ namespace Win11DesktopApp.ViewModels
 
         public bool HasPreviousDocumentPackageFirms =>
             DocumentPackageSections.Any(section => !section.IsCurrent && section.Items.Count > 0);
+
+        public bool CanEditDocumentPackage =>
+            !IsReadOnlyMode
+            && !IsArchiveMode
+            && CurrentDocumentPackageSection != null;
 
         public int DocumentPackageCompletedCount => CurrentDocumentPackageSection?.CompletedCount
             ?? DocumentPackageSections.Sum(section => section.CompletedCount);
@@ -934,6 +1048,13 @@ namespace Win11DesktopApp.ViewModels
                     format = "Готово: {0}/{1}";
                 return string.Format(format, DocumentPackageCompletedCount, DocumentPackageTotalCount);
             }
+        }
+
+        private bool _isDocumentPackageEditing;
+        public bool IsDocumentPackageEditing
+        {
+            get => _isDocumentPackageEditing;
+            private set => SetProperty(ref _isDocumentPackageEditing, value);
         }
 
         // ---- Custom Signed Documents ----
@@ -1164,6 +1285,9 @@ namespace Win11DesktopApp.ViewModels
 
         public ICommand ShowSalaryCommand { get; }
         public ICommand ShowDocumentPackageCommand { get; }
+        public ICommand EditDocumentPackageCommand { get; }
+        public ICommand SaveDocumentPackageCommand { get; }
+        public ICommand CancelDocumentPackageEditCommand { get; }
 
         // Salary History
         private ObservableCollection<SalaryHistoryRecord> _salaryHistoryEntries = new();
@@ -1496,14 +1620,16 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private WorkAddress? _selectedWorkAddress;
+        private WorkAddress? _orphanWorkAddress;
+        private bool _isSyncingSelectedWorkAddress;
         public WorkAddress? SelectedWorkAddress
         {
             get => _selectedWorkAddress;
             set
             {
-                if (SetProperty(ref _selectedWorkAddress, value) && value != null)
+                if (SetProperty(ref _selectedWorkAddress, value) && value != null && !_isSyncingSelectedWorkAddress)
                 {
-                    Data.WorkAddressTag = FormatWorkAddress(value);
+                    Data.WorkAddressTag = WorkAddressHelper.Format(value);
                     OnPropertyChanged(nameof(Data));
                 }
             }
@@ -1690,6 +1816,9 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 TabIndex = 4;
             });
+            EditDocumentPackageCommand = new RelayCommand(_ => BeginDocumentPackageEdit());
+            SaveDocumentPackageCommand = new RelayCommand(_ => SaveDocumentPackageEdit());
+            CancelDocumentPackageEditCommand = new RelayCommand(_ => CancelDocumentPackageEdit());
             EditProfileCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Редагувати профіль працівника"))
@@ -2333,6 +2462,7 @@ namespace Win11DesktopApp.ViewModels
                 NotifyBankAccountStateChanged();
                 NotifyRodneCisloStateChanged();
                 TryAutofillBankName(Data.BankAccountNumber);
+                SyncSelectedWorkAddressFromData(allowOrphan: false);
             }
             IsEditMode = false;
             OnPropertyChanged(nameof(IsGenderMale));
@@ -2909,46 +3039,97 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void OnDocumentPackageCheckboxChanged(DocumentPackageCheckboxChange change)
+        private void BeginDocumentPackageEdit()
+        {
+            if (IsDocumentPackageEditing || CurrentDocumentPackageSection == null)
+                return;
+            if (IsReadOnlyMode || IsArchiveMode)
+                return;
+            if (!PolicyService.EnsureWriteAllowed("Редагувати пакет документів"))
+                return;
+            if (!CanEditCurrentFirm("Редагувати пакет документів"))
+                return;
+
+            foreach (var item in CurrentDocumentPackageSection.Items)
+                item.BeginEdit();
+
+            IsDocumentPackageEditing = true;
+        }
+
+        private void SaveDocumentPackageEdit()
+        {
+            if (!IsDocumentPackageEditing || CurrentDocumentPackageSection == null)
+                return;
+            if (IsReadOnlyMode || IsArchiveMode)
+                return;
+            if (!PolicyService.EnsureWriteAllowed("Зберегти пакет документів"))
+                return;
+            if (!CanEditCurrentFirm("Зберегти пакет документів"))
+                return;
+
+            var items = CurrentDocumentPackageSection.Items.ToList();
+            var checkboxChanges = items
+                .SelectMany(item => item.GetPendingCheckboxChanges())
+                .ToList();
+            var noteChanges = items
+                .Select(item => item.GetPendingNoteChange())
+                .Where(change => change.HasValue)
+                .Select(change => change!.Value)
+                .ToList();
+
+            if (checkboxChanges.Count > 0 || noteChanges.Count > 0)
+            {
+                if (!_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
+                {
+                    StatusMessage = Res("MsgProfileSaveFail");
+                    return;
+                }
+            }
+
+            foreach (var item in items)
+                item.CompleteEdit();
+            IsDocumentPackageEditing = false;
+            NotifyDocumentPackageProgressChanged();
+            StatusMessage = Res("MsgSaved") ?? "Saved.";
+
+            foreach (var change in checkboxChanges)
+                _ = LogDocumentPackageCheckboxChangeAsync(change);
+            foreach (var change in noteChanges)
+                _ = LogDocumentPackageNoteChangeAsync(change.DocumentName, change.OldNote, change.NewNote);
+        }
+
+        private void CancelDocumentPackageEdit()
+        {
+            if (!IsDocumentPackageEditing)
+                return;
+
+            if (CurrentDocumentPackageSection != null)
+            {
+                foreach (var item in CurrentDocumentPackageSection.Items)
+                    item.CancelEdit();
+            }
+
+            IsDocumentPackageEditing = false;
+            NotifyDocumentPackageProgressChanged();
+        }
+
+        private void NotifyDocumentPackageProgressChanged()
         {
             CurrentDocumentPackageSection?.NotifyProgressChanged();
             OnPropertyChanged(nameof(DocumentPackageProgressText));
             OnPropertyChanged(nameof(DocumentPackageCompletedCount));
+        }
 
-            if (IsReadOnlyMode || IsArchiveMode)
-                return;
-            if (!PolicyService.EnsureWriteAllowed("Оновити пакет документів"))
-                return;
-            if (!CanEditCurrentFirm("Оновити пакет документів"))
-                return;
-
-            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
-            {
-                StatusMessage = Res("MsgProfileSaveFail");
-                return;
-            }
-
-            StatusMessage = Res("MsgSaved") ?? "Saved.";
-            _ = LogDocumentPackageCheckboxChangeAsync(change);
+        private void OnDocumentPackageCheckboxChanged(DocumentPackageCheckboxChange change)
+        {
+            // Changes stay in memory while edit mode is active and are persisted together
+            // by SaveDocumentPackageCommand.
+            NotifyDocumentPackageProgressChanged();
         }
 
         private void OnDocumentPackageNoteChanged(string documentName, string oldNote, string newNote)
         {
-            if (IsReadOnlyMode || IsArchiveMode)
-                return;
-            if (!PolicyService.EnsureWriteAllowed("Оновити пакет документів"))
-                return;
-            if (!CanEditCurrentFirm("Оновити пакет документів"))
-                return;
-
-            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
-            {
-                StatusMessage = Res("MsgProfileSaveFail");
-                return;
-            }
-
-            StatusMessage = Res("MsgSaved") ?? "Saved.";
-            _ = LogDocumentPackageNoteChangeAsync(documentName, oldNote, newNote);
+            // Explicit Save persists and logs all note changes together.
         }
 
         private async Task LogDocumentPackageNoteChangeAsync(string documentName, string oldNote, string newNote)
@@ -3102,43 +3283,16 @@ namespace Win11DesktopApp.ViewModels
         {
             try
             {
-                var company = _companyService.Companies.FirstOrDefault(c => c.Name == _firmName);
+                var company = _companyService.Companies.FirstOrDefault(c =>
+                    string.Equals(c.Name, _firmName, StringComparison.OrdinalIgnoreCase));
                 if (company == null) return;
 
                 CompanyAddresses.Clear();
+                _orphanWorkAddress = null;
                 foreach (var address in company.Addresses)
                     CompanyAddresses.Add(address);
 
-                if (!string.IsNullOrWhiteSpace(Data.WorkAddressTag))
-                {
-                    var matchedAddress = CompanyAddresses.FirstOrDefault(address =>
-                        string.Equals(FormatWorkAddress(address), Data.WorkAddressTag, StringComparison.OrdinalIgnoreCase));
-
-                    if (matchedAddress != null)
-                    {
-                        var normalizedAddress = FormatWorkAddress(matchedAddress);
-                        var shouldResave = !string.Equals(Data.WorkAddressTag, normalizedAddress, StringComparison.OrdinalIgnoreCase);
-                        var oldData = shouldResave
-                            ? _employeeService.LoadEmployeeData(_employeeFolder)
-                            : null;
-
-                        SelectedWorkAddress = matchedAddress;
-
-                        if (shouldResave)
-                        {
-                            if (_employeeService.SaveEmployeeData(_employeeFolder, Data) && oldData != null)
-                            {
-                                await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
-                                LogProfileChanges(oldData, Data);
-                                InvalidateDetailCaches();
-                                RaiseDataChanged();
-
-                                if (TabIndex == 2)
-                                    EnsureHistoryLoaded();
-                            }
-                        }
-                    }
-                }
+                await SyncSelectedWorkAddressFromDataAsync(allowOrphan: true);
             }
             catch (Exception ex)
             {
@@ -3146,21 +3300,82 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private static string FormatWorkAddress(WorkAddress address)
+        private void SyncSelectedWorkAddressFromData(bool allowOrphan)
         {
-            var streetPart = string.Join(" ", new[] { address.Street, address.Number }
-                .Where(part => !string.IsNullOrWhiteSpace(part))
-                .Select(part => part.Trim()));
-
-            var cityPart = string.Join(" ", new[] { address.City, address.ZipCode }
-                .Where(part => !string.IsNullOrWhiteSpace(part))
-                .Select(part => part.Trim()));
-
-            if (!string.IsNullOrWhiteSpace(streetPart) && !string.IsNullOrWhiteSpace(cityPart))
-                return $"{streetPart}, {cityPart}";
-
-            return !string.IsNullOrWhiteSpace(streetPart) ? streetPart : cityPart;
+            _ = SyncSelectedWorkAddressFromDataAsync(allowOrphan);
         }
+
+        private async Task SyncSelectedWorkAddressFromDataAsync(bool allowOrphan)
+        {
+            try
+            {
+                if (_orphanWorkAddress != null)
+                {
+                    CompanyAddresses.Remove(_orphanWorkAddress);
+                    _orphanWorkAddress = null;
+                }
+
+                if (string.IsNullOrWhiteSpace(Data?.WorkAddressTag))
+                {
+                    _isSyncingSelectedWorkAddress = true;
+                    SelectedWorkAddress = null;
+                    _isSyncingSelectedWorkAddress = false;
+                    return;
+                }
+
+                var matchedAddress = WorkAddressHelper.FindMatch(CompanyAddresses, Data.WorkAddressTag);
+                if (matchedAddress == null && allowOrphan)
+                {
+                    _orphanWorkAddress = WorkAddressHelper.CreateOrphanFromTag(Data.WorkAddressTag);
+                    CompanyAddresses.Insert(0, _orphanWorkAddress);
+                    matchedAddress = _orphanWorkAddress;
+                }
+
+                if (matchedAddress == null)
+                {
+                    _isSyncingSelectedWorkAddress = true;
+                    SelectedWorkAddress = null;
+                    _isSyncingSelectedWorkAddress = false;
+                    return;
+                }
+
+                var isOrphan = ReferenceEquals(matchedAddress, _orphanWorkAddress);
+                var normalizedAddress = WorkAddressHelper.Format(matchedAddress);
+                var shouldResave = !isOrphan
+                    && !string.Equals(Data.WorkAddressTag, normalizedAddress, StringComparison.OrdinalIgnoreCase);
+                var oldData = shouldResave
+                    ? _employeeService.LoadEmployeeData(_employeeFolder)
+                    : null;
+
+                _isSyncingSelectedWorkAddress = true;
+                SelectedWorkAddress = matchedAddress;
+                _isSyncingSelectedWorkAddress = false;
+
+                if (shouldResave)
+                {
+                    Data.WorkAddressTag = normalizedAddress;
+                    OnPropertyChanged(nameof(Data));
+
+                    if (_employeeService.SaveEmployeeData(_employeeFolder, Data) && oldData != null)
+                    {
+                        await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+                        LogProfileChanges(oldData, Data);
+                        InvalidateDetailCaches();
+                        RaiseDataChanged();
+
+                        if (TabIndex == 2)
+                            EnsureHistoryLoaded();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _isSyncingSelectedWorkAddress = false;
+                LoggingService.LogError("EmployeeDetailsViewModel.SyncSelectedWorkAddressFromData", ex);
+            }
+        }
+
+        private static string FormatWorkAddress(WorkAddress address) => WorkAddressHelper.Format(address);
 
         private string BuildPath(string fileName)
         {

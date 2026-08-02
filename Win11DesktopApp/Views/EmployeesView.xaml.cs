@@ -86,15 +86,6 @@ namespace Win11DesktopApp.Views
                 vm.IconsAvailableWidth = e.NewSize.Width;
         }
 
-        private void EmployeesScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (sender is not ScrollViewer scrollViewer)
-                return;
-
-            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - e.Delta / 3.0);
-            e.Handled = true;
-        }
-
         private void EmployeeSelectionCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             if (DataContext is EmployeesViewModel vm)

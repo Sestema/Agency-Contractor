@@ -452,55 +452,74 @@ namespace Win11DesktopApp.Services
                 return (new List<EmployeeSummary>(), "EmployeesFolderMissing");
             }
 
-            if (_employeeIndexDbService != null)
+            // Same in-memory TTL cache as GetEmployeesForFirm (10s, invalidated on mutations).
+            if (TryGetCachedEmployeesForFirm(firmName, out var cachedEmployees))
+                return (cachedEmployees, "Ok");
+
+            var firmLoadLock = GetEmployeeListLoadLock(firmName);
+            lock (firmLoadLock)
             {
-                try
+                if (TryGetCachedEmployeesForFirm(firmName, out cachedEmployees))
+                    return (cachedEmployees, "Ok");
+
+                if (_employeeIndexDbService != null)
                 {
-                    var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
-                    if (rows.Count > 0)
+                    try
                     {
-                        if (TryConsumeLightIndexCheckForFirm(firmName)
-                            && ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
+                        var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+                        if (rows.Count > 0)
                         {
-                            rows = TryRepairEmployeeIndexForFirm(
-                                "EmployeeService.GetEmployeesForFirmWithStatus",
-                                firmName,
-                                reason,
-                                removeOrphans: false);
-                            if (rows.Count == 0)
-                                throw new InvalidOperationException("Employee index firm repair returned no rows.");
+                            if (TryConsumeLightIndexCheckForFirm(firmName)
+                                && ShouldRebuildEmployeeIndexForFirm(rows, employeesFolder, out var reason))
+                            {
+                                rows = TryRepairEmployeeIndexForFirm(
+                                    "EmployeeService.GetEmployeesForFirmWithStatus",
+                                    firmName,
+                                    reason,
+                                    removeOrphans: false);
+                                if (rows.Count == 0)
+                                    throw new InvalidOperationException("Employee index firm repair returned no rows.");
+                            }
+
+                            var employees = rows.Select(BuildSummaryFromIndexRow).ToList();
+                            LogSlowEmployeeIndexLoad("EmployeeService.GetEmployeesForFirmWithStatus", firmName, employees.Count, stopwatch.ElapsedMilliseconds);
+                            StoreEmployeesForFirmCache(firmName, employees);
+                            return (employees, "Ok");
                         }
 
-                        var employees = rows.Select(BuildSummaryFromIndexRow).ToList();
-                        LogSlowEmployeeIndexLoad("EmployeeService.GetEmployeesForFirmWithStatus", firmName, employees.Count, stopwatch.ElapsedMilliseconds);
-                        return (employees, "Ok");
+                        if (!HasAnyEmployeeFolders(employeesFolder))
+                            return (new List<EmployeeSummary>(), "NoEmployees");
+
+                        var repairedRows = TryRepairEmployeeIndexForFirm(
+                            "EmployeeService.GetEmployeesForFirmWithStatus",
+                            firmName,
+                            "index returned no rows while employee folders exist",
+                            removeOrphans: false);
+                        if (repairedRows.Count > 0)
+                        {
+                            var employees = repairedRows.Select(BuildSummaryFromIndexRow).ToList();
+                            StoreEmployeesForFirmCache(firmName, employees);
+                            return (employees, "Ok");
+                        }
                     }
-
-                    if (!HasAnyEmployeeFolders(employeesFolder))
-                        return (new List<EmployeeSummary>(), "NoEmployees");
-
-                    var repairedRows = TryRepairEmployeeIndexForFirm(
-                        "EmployeeService.GetEmployeesForFirmWithStatus",
-                        firmName,
-                        "index returned no rows while employee folders exist",
-                        removeOrphans: false);
-                    if (repairedRows.Count > 0)
+                    catch (Exception ex)
                     {
-                        var employees = repairedRows.Select(BuildSummaryFromIndexRow).ToList();
-                        return (employees, "Ok");
+                        LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
+                            $"Employee index read failed for '{firmName}', falling back to file scan. {ex.Message}");
                     }
                 }
-                catch (Exception ex)
-                {
-                    LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
-                        $"Employee index read failed for '{firmName}', falling back to file scan. {ex.Message}");
-                }
-            }
 
-            var fileScanResult = GetEmployeesForFirmWithStatusFromFiles(firmName, employeesFolder);
-            LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
-                $"Loaded {fileScanResult.Employees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. Employee index was not used. Status: {fileScanResult.Status}.");
-            return fileScanResult;
+                var fileScanResult = GetEmployeesForFirmWithStatusFromFiles(firmName, employeesFolder);
+                LoggingService.LogWarning("EmployeeService.GetEmployeesForFirmWithStatus",
+                    $"Loaded {fileScanResult.Employees.Count} employees for '{firmName}' by file scan in {stopwatch.ElapsedMilliseconds} ms. Employee index was not used. Status: {fileScanResult.Status}.");
+                if (string.Equals(fileScanResult.Status, "Ok", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(fileScanResult.Status, "NoEmployees", StringComparison.OrdinalIgnoreCase))
+                {
+                    StoreEmployeesForFirmCache(firmName, fileScanResult.Employees);
+                }
+
+                return fileScanResult;
+            }
         }
 
         private void LogSlowEmployeeIndexLoad(string module, string firmName, int count, long elapsedMs)
@@ -1078,32 +1097,6 @@ namespace Win11DesktopApp.Services
             return string.Equals(gender, "female", StringComparison.OrdinalIgnoreCase) ? "female" : "male";
         }
 
-        private static string ReadGenderFromEmployeeFolder(string? employeeFolder)
-        {
-            if (string.IsNullOrWhiteSpace(employeeFolder))
-                return "male";
-
-            var jsonPath = Path.Combine(employeeFolder, "employee.json");
-            if (!File.Exists(jsonPath))
-                return "male";
-
-            try
-            {
-                using var doc = JsonDocument.Parse(File.ReadAllText(jsonPath));
-                if (doc.RootElement.TryGetProperty("Gender", out var element)
-                    || doc.RootElement.TryGetProperty("gender", out element))
-                {
-                    return NormalizeGender(element.GetString());
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("EmployeeService.ReadGenderFromEmployeeFolder", ex.Message);
-            }
-
-            return "male";
-        }
-
         private EmployeeSummary BuildSummary(string firmName, string employeeFolder, EmployeeData data)
         {
             var photoPath = ResolvePhotoPath(employeeFolder, data);
@@ -1183,7 +1176,9 @@ namespace Win11DesktopApp.Services
             summary.ParsedStartDate = DateParsingHelper.TryParseDate(row.StartDate);
             summary.EndDate = row.EndDate;
             summary.ContractType = row.ContractType;
-            summary.Gender = ReadGenderFromEmployeeFolder(employeeFolder);
+            // List/index path must not touch employee.json. Gender for UI list is unused
+            // (no gender ring); profile/wizard still load it from the employee file.
+            summary.Gender = "male";
             summary.PhotoPath = hasPhoto ? photoPath : string.Empty;
             summary.HasPhoto = hasPhoto;
             summary.HasPassport = row.HasPassport;

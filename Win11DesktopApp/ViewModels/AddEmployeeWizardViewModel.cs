@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using EmployeeModels = Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Services;
@@ -1264,7 +1265,7 @@ namespace Win11DesktopApp.ViewModels
 
                 NormalizeInsuranceCompanyFields();
                 Data.WorkAddressTag = SelectedWorkAddress != null
-                    ? $"{SelectedWorkAddress.Street} {SelectedWorkAddress.Number}, {SelectedWorkAddress.City} {SelectedWorkAddress.ZipCode}"
+                    ? WorkAddressHelper.Format(SelectedWorkAddress)
                     : string.Empty;
                 Data.PositionTag = SelectedPosition?.Title ?? string.Empty;
                 Data.PositionNumber = SelectedPosition?.PositionNumber ?? string.Empty;
