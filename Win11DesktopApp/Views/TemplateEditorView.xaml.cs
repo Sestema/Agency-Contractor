@@ -79,6 +79,7 @@ namespace Win11DesktopApp.Views
                 _vm.RequestGetPlainText = GetPlainTextContent;
                 _vm.PropertyChanged += ViewModel_PropertyChanged;
                 LoadPreviewRtf(vm.SelectedStarterTemplateRtf);
+                ApplyWordLayoutMode(vm.IsWordLayoutMode);
             }
         }
 
@@ -118,6 +119,7 @@ namespace Win11DesktopApp.Views
                 SyncParagraphFormattingControls();
                 UpdateToolbarButtonStates();
                 LoadPreviewRtf(_vm?.SelectedStarterTemplateRtf);
+                ApplyWordLayoutMode(_vm?.IsWordLayoutMode == true);
                 Editor.Focus();
             }
             catch (Exception ex)
@@ -166,6 +168,9 @@ namespace Win11DesktopApp.Views
             if (e.PropertyName == nameof(TemplateEditorViewModel.SelectedStarterTemplateRtf))
                 LoadPreviewRtf(_vm?.SelectedStarterTemplateRtf);
 
+            if (e.PropertyName == nameof(TemplateEditorViewModel.IsWordLayoutMode))
+                ApplyWordLayoutMode(_vm?.IsWordLayoutMode == true);
+
             if (e.PropertyName is nameof(TemplateEditorViewModel.PagePreviewWidth)
                 or nameof(TemplateEditorViewModel.PagePreviewHeight)
                 or nameof(TemplateEditorViewModel.PagePadding)
@@ -178,6 +183,16 @@ namespace Win11DesktopApp.Views
                 UpdateRuler();
                 UpdateLayoutMenuState();
             }
+        }
+
+        private void ApplyWordLayoutMode(bool isWordLayoutMode)
+        {
+            if (Editor == null)
+                return;
+
+            // Soft Word mode: editor stays editable for text/tags; Word is only for layout polish.
+            Editor.IsReadOnly = false;
+            Editor.IsEnabled = true;
         }
 
         private void LoadPreviewRtf(string? rtfContent)

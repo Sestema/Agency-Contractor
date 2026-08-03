@@ -989,6 +989,22 @@
     <sys:String x:Key="EditorSearchTags">Search tags...</sys:String>
     <sys:String x:Key="EditorInsert">Ins.</sys:String>
     <sys:String x:Key="EditorCopyTag">Copy tag</sys:String>
+    <sys:String x:Key="EditorOpenInWord">Open in Word</sys:String>
+    <sys:String x:Key="EditorOpenInWordTooltip">Open template.docx in Microsoft Word for layout</sys:String>
+    <sys:String x:Key="EditorRefreshFromWord">Refresh from Word</sys:String>
+    <sys:String x:Key="EditorRefreshFromWordTooltip">After saving in Word — use this DOCX for generation</sys:String>
+    <sys:String x:Key="EditorWordLayoutActive">Generation uses Word layout. You can still edit here; after Save, open Word again and click Refresh from Word.</sys:String>
+    <sys:String x:Key="EditorWordOpenedHint">Opened in Word. After changes, save the file in Word (Ctrl+S).</sys:String>
+    <sys:String x:Key="EditorWordOpenedEditorHint">Opened in Word. Save in Word (Ctrl+S), then click Refresh from Word.</sys:String>
+    <sys:String x:Key="EditorWordSaveInWordFirst">First save the document in Word (Ctrl+S) to expand content, then click Refresh from Word.</sys:String>
+    <sys:String x:Key="EditorWordDocxMissing">template.docx was not found. Open the template in Word first.</sys:String>
+    <sys:String x:Key="EditorWordDocxNotReady">Template is in Word mode, but DOCX is not ready yet. Open in Word, save (Ctrl+S), then click Refresh from Word.</sys:String>
+    <sys:String x:Key="EditorWordRefreshOk">Word layout connected. Generation will use template.docx. The editor stays editable.</sys:String>
+    <sys:String x:Key="EditorWordClearedByEditorSave">Saved. Generation is back to the editor — for layout, open Word and click Refresh from Word.</sys:String>
+    <sys:String x:Key="EditorWordWillClearOnSave">Unsaved changes. After Save, generation will use the editor until you refresh from Word again.</sys:String>
+    <sys:String x:Key="EditorWordSaveDisabled">App save is disabled in Word mode — save the document in Word.</sys:String>
+    <sys:String x:Key="EditorWordInsertDisabled">Insert into the editor is disabled in Word mode. Copy the tag and paste it in Word.</sys:String>
+    <sys:String x:Key="EditorWordOpenFailedFmt">Could not open Word: {0}</sys:String>
 
     <!-- DOCX Upload -->
 

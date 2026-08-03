@@ -15,6 +15,24 @@ namespace Win11DesktopApp.Models
         public List<string> TagsUsed { get; set; } = new List<string>();
     }
 
+    public static class TemplateLayoutSource
+    {
+        public const string Editor = "editor";
+        public const string Word = "word";
+    }
+
+    public enum TemplateDocxSourceKind
+    {
+        NativeDocx,
+        Rtf,
+        None
+    }
+
+    public readonly record struct TemplateDocxGenerationSource(
+        TemplateDocxSourceKind Kind,
+        string Path,
+        string? ErrorResourceKey);
+
     public class TemplateMetadata
     {
         public string Name { get; set; } = string.Empty;
@@ -23,6 +41,10 @@ namespace Win11DesktopApp.Models
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<string> TagsUsed { get; set; } = new List<string>();
+        /// <summary>
+        /// "editor" = generate from content.rtf; "word" = generate from template.docx (native OOXML).
+        /// </summary>
+        public string LayoutSource { get; set; } = TemplateLayoutSource.Editor;
     }
 
     public class TemplateEditorLayoutSettings

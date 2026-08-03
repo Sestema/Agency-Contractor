@@ -563,16 +563,67 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
+        /// True when DOCX has real Word body content (paragraphs/tables) and no AltChunk.
+        /// AltChunk shells from GenerateDocxFromRtf are not expanded until Word saves the file.
+        /// </summary>
+        public static bool IsExpandedNativeDocx(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return false;
+
+            try
+            {
+                using var doc = WordprocessingDocument.Open(path, false);
+                var body = doc.MainDocumentPart?.Document?.Body;
+                if (body == null)
+                    return false;
+
+                if (body.Descendants<AltChunk>().Any())
+                    return false;
+
+                return body.Elements<Paragraph>().Any() || body.Descendants<Table>().Any();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("DocumentGenerationService.IsExpandedNativeDocx", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Opens a file in its default application.
         /// </summary>
         public static void OpenFile(string path)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-            Process.Start(new ProcessStartInfo
+            TryOpenFile(path, out _);
+        }
+
+        /// <summary>
+        /// Opens a file in its default application. Returns false when missing or no association.
+        /// </summary>
+        public static bool TryOpenFile(string path, out string? errorMessage)
+        {
+            errorMessage = null;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                FileName = path,
-                UseShellExecute = true
-            });
+                errorMessage = Res("MsgTemplateMissing");
+                return false;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = string.Format(Res("EditorWordOpenFailedFmt"), ex.Message);
+                return false;
+            }
         }
     }
 }

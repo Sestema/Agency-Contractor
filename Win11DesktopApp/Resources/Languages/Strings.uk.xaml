@@ -1007,6 +1007,22 @@
     <sys:String x:Key="EditorSearchTags">Пошук тегів...</sys:String>
     <sys:String x:Key="EditorInsert">Вст.</sys:String>
     <sys:String x:Key="EditorCopyTag">Копіювати тег</sys:String>
+    <sys:String x:Key="EditorOpenInWord">Відкрити в Word</sys:String>
+    <sys:String x:Key="EditorOpenInWordTooltip">Відкрити template.docx у Microsoft Word для верстки</sys:String>
+    <sys:String x:Key="EditorRefreshFromWord">Оновити з Word</sys:String>
+    <sys:String x:Key="EditorRefreshFromWordTooltip">Після збереження в Word — використовувати цей DOCX для генерації</sys:String>
+    <sys:String x:Key="EditorWordLayoutActive">Генерація з макетом Word. Редактор можна змінювати; після Зберегти знову відкрийте Word і натисніть «Оновити з Word».</sys:String>
+    <sys:String x:Key="EditorWordOpenedHint">Відкрито в Word. Після змін збережіть файл у Word (Ctrl+S).</sys:String>
+    <sys:String x:Key="EditorWordOpenedEditorHint">Відкрито в Word. Збережіть у Word (Ctrl+S), потім натисніть «Оновити з Word».</sys:String>
+    <sys:String x:Key="EditorWordSaveInWordFirst">Спочатку збережіть документ у Word (Ctrl+S), щоб розгорнути вміст, потім натисніть «Оновити з Word».</sys:String>
+    <sys:String x:Key="EditorWordDocxMissing">Файл template.docx не знайдено. Спочатку відкрийте шаблон у Word.</sys:String>
+    <sys:String x:Key="EditorWordDocxNotReady">Шаблон у режимі Word, але DOCX ще не готовий. Відкрийте в Word, збережіть (Ctrl+S) і натисніть «Оновити з Word».</sys:String>
+    <sys:String x:Key="EditorWordRefreshOk">Макет Word підключено. Генерація йтиме з template.docx. Редактор лишається доступним.</sys:String>
+    <sys:String x:Key="EditorWordClearedByEditorSave">Збережено. Генерація знову з редактора — для верстки відкрийте Word і натисніть «Оновити з Word».</sys:String>
+    <sys:String x:Key="EditorWordWillClearOnSave">Незбережені зміни. Після Зберегти генерація піде з редактора, доки знову не оновите з Word.</sys:String>
+    <sys:String x:Key="EditorWordSaveDisabled">У режимі Word збереження в застосунку вимкнено — зберігайте документ у Word.</sys:String>
+    <sys:String x:Key="EditorWordInsertDisabled">У режимі Word вставка в редактор вимкнена. Скопіюйте тег і вставте в Word.</sys:String>
+    <sys:String x:Key="EditorWordOpenFailedFmt">Не вдалося відкрити Word: {0}</sys:String>
 
     <!-- DOCX Upload -->
 

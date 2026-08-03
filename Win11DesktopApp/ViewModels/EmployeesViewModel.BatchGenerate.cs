@@ -98,11 +98,11 @@ namespace Win11DesktopApp.ViewModels
 
                         var templateFullPath = _templateService.GetTemplateFullPath(_company.Name, template.FilePath) ?? string.Empty;
                         var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
-                        var rtfPath = Path.Combine(templateFolder, "content.rtf");
+                        var docxSource = _templateService.ResolveDocxGenerationSource(templateFolder, templateFullPath);
                         bool hasTemplateFile = File.Exists(templateFullPath);
-                        bool hasRtfContent = File.Exists(rtfPath);
+                        bool hasDocxSource = docxSource.Kind != TemplateDocxSourceKind.None;
 
-                        if (!hasTemplateFile && !hasRtfContent)
+                        if (!hasTemplateFile && !hasDocxSource)
                         {
                             fail++;
                             resultLines.Add(string.Format(GetString("EmpGenErrorTemplateNotFoundFmt") ?? "[ПОМИЛКА] {0}: шаблон не знайдено", employeeName));
@@ -123,22 +123,24 @@ namespace Win11DesktopApp.ViewModels
                             return EnsureUniqueBatchOutputPath(Path.Combine(targetFolder, fileName));
                         }
 
-                        if (format == "DOCX" || hasRtfContent)
+                        if (format == "DOCX" || hasDocxSource)
                         {
-                            if (hasRtfContent)
+                            if (!hasDocxSource)
                             {
-                                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
-                                var outPath = BuildOutputPath(outName);
-                                _documentGenerationService.GenerateDocxFromRtf(rtfPath, outPath, tagValues);
-                                generatedFileName = Path.GetFileName(outPath);
+                                fail++;
+                                var err = GetString(docxSource.ErrorResourceKey ?? "EditorWordDocxNotReady")
+                                    ?? (docxSource.ErrorResourceKey ?? "EditorWordDocxNotReady");
+                                resultLines.Add($"[ПОМИЛКА] {employeeName}: {err}");
+                                continue;
                             }
-                            else if (hasTemplateFile)
-                            {
-                                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
-                                var outPath = BuildOutputPath(outName);
-                                _documentGenerationService.GenerateDocx(templateFullPath, outPath, tagValues);
-                                generatedFileName = Path.GetFileName(outPath);
-                            }
+
+                            var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
+                            var outPath = BuildOutputPath(outName);
+                            if (docxSource.Kind == TemplateDocxSourceKind.Rtf)
+                                _documentGenerationService.GenerateDocxFromRtf(docxSource.Path, outPath, tagValues);
+                            else
+                                _documentGenerationService.GenerateDocx(docxSource.Path, outPath, tagValues);
+                            generatedFileName = Path.GetFileName(outPath);
                         }
                         else if (format == "XLSX" && hasTemplateFile)
                         {

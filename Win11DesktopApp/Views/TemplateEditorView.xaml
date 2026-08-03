@@ -6,6 +6,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <Style x:Key="ToolbarBtn" TargetType="Button">
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="30"/>
@@ -1200,6 +1201,8 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" 
@@ -1208,14 +1211,30 @@
                        TextTrimming="CharacterEllipsis"
                        Margin="0,0,10,0"/>
 
-            <Button Grid.Column="1" Content="{DynamicResource BtnCancel}" 
+            <Button Grid.Column="1" Content="{DynamicResource EditorOpenInWord}"
+                    Command="{Binding OpenInWordCommand}"
+                    ToolTip="{DynamicResource EditorOpenInWordTooltip}"
+                    Padding="12,6" MinHeight="32" Margin="0,0,6,0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    Foreground="{DynamicResource ForegroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
+
+            <Button Grid.Column="2" Content="{DynamicResource EditorRefreshFromWord}"
+                    Command="{Binding RefreshFromWordCommand}"
+                    ToolTip="{DynamicResource EditorRefreshFromWordTooltip}"
+                    Padding="12,6" MinHeight="32" Margin="0,0,6,0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    Foreground="{DynamicResource ForegroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
+
+            <Button Grid.Column="3" Content="{DynamicResource BtnCancel}" 
                     Command="{Binding GoBackCommand}"
                     Padding="12,6" MinHeight="32" Margin="0,0,6,0"
                     Background="{DynamicResource CardBackgroundBrush}"
                     Foreground="{DynamicResource ForegroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"/>
 
-            <Button Grid.Column="2" Content="{DynamicResource DetBtnSave}" 
+            <Button Grid.Column="4" Content="{DynamicResource DetBtnSave}" 
                     Command="{Binding SaveCommand}"
                     Padding="12,6" MinHeight="32"
                     Style="{StaticResource FilledActionButton}"

@@ -3571,6 +3571,72 @@ namespace Win11DesktopApp.ViewModels
             WorkPermitPreviewState = DocPreviewState.Empty;
         }
 
+        /// <summary>
+        /// Esc: close overlays first, then cancel edit modes, then leave the profile.
+        /// </summary>
+        public bool TryHandleEscape()
+        {
+            if (IsBusy)
+                return true;
+
+            if (IsDeleteEmployeeDialogOpen)
+            {
+                IsDeleteEmployeeDialogOpen = false;
+                return true;
+            }
+
+            if (IsArchiveDialogOpen)
+            {
+                IsArchiveDialogOpen = false;
+                return true;
+            }
+
+            if (IsExtendDialogOpen)
+            {
+                IsExtendDialogOpen = false;
+                return true;
+            }
+
+            if (IsGenerateDialogOpen)
+            {
+                IsGenerateDialogOpen = false;
+                return true;
+            }
+
+            if (IsAIValidationOpen)
+            {
+                IsAIValidationOpen = false;
+                return true;
+            }
+
+            if (IsAddCustomDocOpen)
+            {
+                IsAddCustomDocOpen = false;
+                return true;
+            }
+
+            if (IsDocumentProfileEditorOpen)
+            {
+                IsDocumentProfileEditorOpen = false;
+                return true;
+            }
+
+            if (IsDocumentPackageEditing)
+            {
+                CancelDocumentPackageEdit();
+                return true;
+            }
+
+            if (IsEditMode)
+            {
+                CancelEdit();
+                return true;
+            }
+
+            RaiseRequestClose();
+            return true;
+        }
+
         private void RaiseRequestClose()
         {
             SaveLayoutSettings();

@@ -55,11 +55,11 @@ namespace Win11DesktopApp.ViewModels
                 var ext = Path.GetExtension(templateFullPath).ToLower();
                 var format = template.Format?.ToUpper() ?? ext.TrimStart('.').ToUpper();
 
-                var rtfPath = Path.Combine(templateFolder, "content.rtf");
+                var docxSource = _templateService.ResolveDocxGenerationSource(templateFolder, templateFullPath);
                 bool hasTemplateFile = File.Exists(templateFullPath);
-                bool hasRtfContent = File.Exists(rtfPath);
+                bool hasDocxSource = docxSource.Kind != TemplateDocxSourceKind.None;
 
-                if (!hasTemplateFile && !hasRtfContent)
+                if (!hasTemplateFile && !hasDocxSource)
                 {
                     GenerateStatusMessage = Res("MsgTemplateNotFound");
                     IsGenerating = false;
@@ -85,32 +85,32 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                if (format == "DOCX" || hasRtfContent)
+                if (format == "DOCX" || hasDocxSource)
                 {
+                    if (!hasDocxSource)
+                    {
+                        GenerateStatusMessage = Res(docxSource.ErrorResourceKey ?? "MsgTemplateNotFound");
+                        IsGenerating = false;
+                        return;
+                    }
+
                     var tagValues = _tagCatalogService.GetTagValueMapForEmployee(_firmName, Data) ?? new Dictionary<string, string>();
+                    var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.docx";
+                    var sanitized = SanitizeFileName(outputFileName);
+                    var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                    if (hasRtfContent)
+                    if (docxSource.Kind == TemplateDocxSourceKind.Rtf)
                     {
-                        var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.docx";
-                        var sanitized = SanitizeFileName(outputFileName);
-                        var outputPath = Path.Combine(_employeeFolder, sanitized);
-
-                        await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(rtfPath, outputPath, tagValues));
-                        GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
-                        wasGenerated = true;
-                        DocumentGenerationService.OpenFile(outputPath);
+                        await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(docxSource.Path, outputPath, tagValues));
                     }
-                    else if (hasTemplateFile)
+                    else
                     {
-                        var outputFileName = $"{Data.FirstName}_{Data.LastName} - {template.Name}.docx";
-                        var sanitized = SanitizeFileName(outputFileName);
-                        var outputPath = Path.Combine(_employeeFolder, sanitized);
-
-                        await Task.Run(() => _documentGenerationService.GenerateDocx(templateFullPath, outputPath, tagValues));
-                        GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
-                        wasGenerated = true;
-                        DocumentGenerationService.OpenFile(outputPath);
+                        await Task.Run(() => _documentGenerationService.GenerateDocx(docxSource.Path, outputPath, tagValues));
                     }
+
+                    GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
+                    wasGenerated = true;
+                    DocumentGenerationService.OpenFile(outputPath);
                 }
                 else if (format == "XLSX" && hasTemplateFile)
                 {

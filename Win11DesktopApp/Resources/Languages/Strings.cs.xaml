@@ -1003,6 +1003,22 @@
     <sys:String x:Key="EditorSearchTags">Hledat tagy...</sys:String>
     <sys:String x:Key="EditorInsert">Vl.</sys:String>
     <sys:String x:Key="EditorCopyTag">Kopírovat tag</sys:String>
+    <sys:String x:Key="EditorOpenInWord">Otevřít ve Wordu</sys:String>
+    <sys:String x:Key="EditorOpenInWordTooltip">Otevřít template.docx v Microsoft Word pro sazbu</sys:String>
+    <sys:String x:Key="EditorRefreshFromWord">Obnovit z Wordu</sys:String>
+    <sys:String x:Key="EditorRefreshFromWordTooltip">Po uložení ve Wordu — použít tento DOCX pro generování</sys:String>
+    <sys:String x:Key="EditorWordLayoutActive">Generování používá layout Word. Editor můžete měnit; po Uložit znovu otevřete Word a klikněte Obnovit z Wordu.</sys:String>
+    <sys:String x:Key="EditorWordOpenedHint">Otevřeno ve Wordu. Po změnách soubor ve Wordu uložte (Ctrl+S).</sys:String>
+    <sys:String x:Key="EditorWordOpenedEditorHint">Otevřeno ve Wordu. Uložte ve Wordu (Ctrl+S) a pak klikněte Obnovit z Wordu.</sys:String>
+    <sys:String x:Key="EditorWordSaveInWordFirst">Nejdřív uložte dokument ve Wordu (Ctrl+S), aby se obsah rozbalil, pak klikněte Obnovit z Wordu.</sys:String>
+    <sys:String x:Key="EditorWordDocxMissing">Soubor template.docx nebyl nalezen. Nejprve otevřete šablonu ve Wordu.</sys:String>
+    <sys:String x:Key="EditorWordDocxNotReady">Šablona je v režimu Word, ale DOCX ještě není připraven. Otevřete ve Wordu, uložte (Ctrl+S) a klikněte Obnovit z Wordu.</sys:String>
+    <sys:String x:Key="EditorWordRefreshOk">Layout Word připojen. Generování půjde z template.docx. Editor zůstává upravitelný.</sys:String>
+    <sys:String x:Key="EditorWordClearedByEditorSave">Uloženo. Generování je opět z editoru — pro sazbu otevřete Word a klikněte Obnovit z Wordu.</sys:String>
+    <sys:String x:Key="EditorWordWillClearOnSave">Neuložené změny. Po Uložit půjde generování z editoru, dokud znovu neobnovíte z Wordu.</sys:String>
+    <sys:String x:Key="EditorWordSaveDisabled">V režimu Word je ukládání v aplikaci vypnuté — ukládejte dokument ve Wordu.</sys:String>
+    <sys:String x:Key="EditorWordInsertDisabled">V režimu Word je vkládání do editoru vypnuté. Zkopírujte tag a vložte ve Wordu.</sys:String>
+    <sys:String x:Key="EditorWordOpenFailedFmt">Nepodařilo se otevřít Word: {0}</sys:String>
 
     <!-- DOCX Upload -->
 

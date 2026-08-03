@@ -28,6 +28,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly StarterTemplateCatalogService _starterTemplateCatalogService;
         private readonly AppSettingsService _appSettingsService;
         private readonly AiWindowFactory _aiWindowFactory;
+        private readonly DocumentGenerationService _documentGenerationService = new();
         private bool _templateUnavailable;
         private bool _templateUnavailableNotified;
         private bool _navigateBackScheduled;
@@ -73,6 +74,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand SaveCommand { get; }
         public ICommand InsertTagCommand { get; }
         public ICommand CopyTagCommand { get; }
+        public ICommand OpenInWordCommand { get; }
+        public ICommand RefreshFromWordCommand { get; }
         public ICommand AIInsertTagsCommand { get; private set; }
         public ICommand CloseAITagsCommand { get; private set; }
         public ICommand OpenStarterTemplatesCommand { get; }
@@ -143,11 +146,31 @@ namespace Win11DesktopApp.ViewModels
                     return Res("EditorLoading");
                 if (IsSaving)
                     return Res("EditorSaving");
+                if (IsWordLayoutMode)
+                    return Res("EditorWordLayoutActive");
                 if (IsDirty)
                     return Res("EditorUnsaved");
                 if (LastSavedAt.HasValue)
                     return ResF("EditorLastSavedFmt", LastSavedAt.Value.ToString("HH:mm"));
                 return Res("EditorReady");
+            }
+        }
+
+        private bool _isWordLayoutMode;
+        /// <summary>
+        /// Soft mode: generation prefers native template.docx, but the in-app editor stays fully editable.
+        /// Saving editor content clears this and returns generation to content.rtf until Refresh from Word.
+        /// </summary>
+        public bool IsWordLayoutMode
+        {
+            get => _isWordLayoutMode;
+            private set
+            {
+                if (SetProperty(ref _isWordLayoutMode, value))
+                {
+                    OnPropertyChanged(nameof(HeaderStatusText));
+                    CommandManager.InvalidateRequerySuggested();
+                }
             }
         }
 
@@ -348,11 +371,14 @@ namespace Win11DesktopApp.ViewModels
             InitializePageLayoutOptions();
             LoadPersistedPageLayout();
             EnsureTemplateSourceAvailable();
+            LoadLayoutSourceState();
 
             GoBackCommand = new RelayCommand(o => NavigateBack());
             SaveCommand = new AsyncRelayCommand(_ => SaveAsync(), _ => !IsSaving && !IsEditorLoading);
             InsertTagCommand = new RelayCommand(o => InsertTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
+            OpenInWordCommand = new AsyncRelayCommand(_ => OpenInWordAsync(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
+            RefreshFromWordCommand = new RelayCommand(_ => RefreshFromWord(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
             AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
             CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
             OpenStarterTemplatesCommand = new RelayCommand(o => OpenStarterTemplates());
@@ -421,11 +447,14 @@ namespace Win11DesktopApp.ViewModels
             InitializePageLayoutOptions();
             LoadPersistedPageLayout();
             EnsureTemplateSourceAvailable();
+            LoadLayoutSourceState();
 
             GoBackCommand = new RelayCommand(o => NavigateBack());
             SaveCommand = new AsyncRelayCommand(_ => SaveAsync(), _ => !IsSaving && !IsEditorLoading);
             InsertTagCommand = new RelayCommand(o => InsertTag(o));
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
+            OpenInWordCommand = new AsyncRelayCommand(_ => OpenInWordAsync(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
+            RefreshFromWordCommand = new RelayCommand(_ => RefreshFromWord(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
             AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
             CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
             OpenStarterTemplatesCommand = new RelayCommand(o => OpenStarterTemplates());
@@ -687,9 +716,15 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 SavePersistedPageLayout();
-                StatusMessage = Res("EditorSaved");
+
+                // Soft mode: editor content is now the source of truth until user refreshes from Word again.
+                var clearedWordLayout = ClearWordLayoutSourceIfNeeded();
+
                 LastSavedAt = DateTime.Now;
                 IsDirty = false;
+                StatusMessage = clearedWordLayout
+                    ? Res("EditorWordClearedByEditorSave")
+                    : Res("EditorSaved");
             }
             catch (Exception ex)
             {
@@ -699,6 +734,135 @@ namespace Win11DesktopApp.ViewModels
             {
                 IsSaving = false;
                 CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private bool ClearWordLayoutSourceIfNeeded()
+        {
+            if (!IsWordLayoutMode || string.IsNullOrWhiteSpace(TemplateFolderPath))
+                return false;
+
+            _templateService.SetTemplateLayoutSource(TemplateFolderPath, TemplateLayoutSource.Editor);
+            IsWordLayoutMode = false;
+            return true;
+        }
+
+        private void LoadLayoutSourceState()
+        {
+            if (string.IsNullOrWhiteSpace(TemplateFolderPath))
+            {
+                IsWordLayoutMode = false;
+                return;
+            }
+
+            IsWordLayoutMode = string.Equals(
+                _templateService.GetTemplateLayoutSource(TemplateFolderPath),
+                TemplateLayoutSource.Word,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task OpenInWordAsync()
+        {
+            if (_templateUnavailable)
+                return;
+
+            if (!PolicyService.EnsureWriteAllowed("відкрити шаблон у Word"))
+                return;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(TemplateFolderPath) || string.IsNullOrWhiteSpace(OriginalTemplatePath))
+                {
+                    StatusMessage = Res("EditorErrPath");
+                    return;
+                }
+
+                // Persist editor edits first (also clears soft Word layout if content changed).
+                if (IsDirty)
+                    await SaveAsync();
+
+                Directory.CreateDirectory(TemplateFolderPath);
+
+                // Export editor → DOCX only when generation is not locked to a polished Word file.
+                // If LayoutSource=word and editor was not saved, open the existing polished DOCX as-is.
+                if (!IsWordLayoutMode)
+                {
+                    if (!File.Exists(RtfFilePath))
+                    {
+                        StatusMessage = Res("MsgTemplateNotFound");
+                        return;
+                    }
+
+                    await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(
+                        RtfFilePath,
+                        OriginalTemplatePath,
+                        new Dictionary<string, string>()));
+                }
+                else if (!File.Exists(OriginalTemplatePath))
+                {
+                    StatusMessage = Res("EditorWordDocxMissing");
+                    ToastService.Instance.Warning(StatusMessage);
+                    return;
+                }
+
+                if (!DocumentGenerationService.TryOpenFile(OriginalTemplatePath, out var openError))
+                {
+                    StatusMessage = openError ?? Res("EditorWordOpenFailedFmt");
+                    ToastService.Instance.Warning(StatusMessage);
+                    return;
+                }
+
+                StatusMessage = IsWordLayoutMode
+                    ? Res("EditorWordOpenedHint")
+                    : Res("EditorWordOpenedEditorHint");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ResF("EditorErrFmt", ex.Message);
+                ToastService.Instance.Warning(StatusMessage);
+            }
+        }
+
+        private void RefreshFromWord()
+        {
+            if (_templateUnavailable)
+                return;
+
+            if (!PolicyService.EnsureWriteAllowed("оновити шаблон з Word"))
+                return;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(TemplateFolderPath) || string.IsNullOrWhiteSpace(OriginalTemplatePath))
+                {
+                    StatusMessage = Res("EditorErrPath");
+                    return;
+                }
+
+                if (!File.Exists(OriginalTemplatePath))
+                {
+                    StatusMessage = Res("EditorWordDocxMissing");
+                    ToastService.Instance.Warning(StatusMessage);
+                    return;
+                }
+
+                if (!DocumentGenerationService.IsExpandedNativeDocx(OriginalTemplatePath))
+                {
+                    StatusMessage = Res("EditorWordSaveInWordFirst");
+                    ToastService.Instance.Warning(StatusMessage);
+                    return;
+                }
+
+                _templateService.SetTemplateLayoutSource(TemplateFolderPath, TemplateLayoutSource.Word);
+                IsWordLayoutMode = true;
+                IsDirty = false;
+                StatusMessage = Res("EditorWordLayoutActive");
+                ToastService.Instance.Success(Res("EditorWordRefreshOk"));
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ResF("EditorErrFmt", ex.Message);
+                ToastService.Instance.Warning(StatusMessage);
             }
         }
 
@@ -722,9 +886,16 @@ namespace Win11DesktopApp.ViewModels
         public void NotifyEditorLoaded()
         {
             IsEditorLoading = false;
-            StatusMessage = LastSavedAt.HasValue
-                ? ResF("EditorLastSavedFmt", LastSavedAt.Value.ToString("HH:mm"))
-                : Res("EditorReady");
+            if (IsWordLayoutMode)
+            {
+                StatusMessage = Res("EditorWordLayoutActive");
+            }
+            else
+            {
+                StatusMessage = LastSavedAt.HasValue
+                    ? ResF("EditorLastSavedFmt", LastSavedAt.Value.ToString("HH:mm"))
+                    : Res("EditorReady");
+            }
             CommandManager.InvalidateRequerySuggested();
         }
 
@@ -736,7 +907,9 @@ namespace Win11DesktopApp.ViewModels
             if (!IsDirty)
                 IsDirty = true;
 
-            StatusMessage = Res("EditorUnsaved");
+            StatusMessage = IsWordLayoutMode
+                ? Res("EditorWordWillClearOnSave")
+                : Res("EditorUnsaved");
         }
 
         private async void RunAIInsertTags()

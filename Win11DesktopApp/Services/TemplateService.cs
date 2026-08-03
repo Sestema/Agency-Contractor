@@ -179,7 +179,8 @@ namespace Win11DesktopApp.Services
                 Description = description,
                 CreatedAt = now,
                 UpdatedAt = now,
-                TagsUsed = new List<string>()
+                TagsUsed = new List<string>(),
+                LayoutSource = TemplateLayoutSource.Editor
             };
 
             SafeFileService.WriteJsonAtomic(Path.Combine(templateFolder, "metadata.json"), metadata);
@@ -240,7 +241,8 @@ namespace Win11DesktopApp.Services
             var templateFolder = CreateUniqueTemplateFolder(templatesRoot, safeName);
 
             const string destFileName = "template.docx";
-            SafeFileService.CopyFile(sourceFilePath, Path.Combine(templateFolder, destFileName));
+            var destDocxPath = Path.Combine(templateFolder, destFileName);
+            SafeFileService.CopyFile(sourceFilePath, destDocxPath);
 
             SaveImportedDocxEditorContent(sourceFilePath, templateFolder);
 
@@ -252,7 +254,10 @@ namespace Win11DesktopApp.Services
                 Description = description,
                 CreatedAt = now,
                 UpdatedAt = now,
-                TagsUsed = new List<string>()
+                TagsUsed = new List<string>(),
+                LayoutSource = DocumentGenerationService.IsExpandedNativeDocx(destDocxPath)
+                    ? TemplateLayoutSource.Word
+                    : TemplateLayoutSource.Editor
             };
 
             SafeFileService.WriteJsonAtomic(Path.Combine(templateFolder, "metadata.json"), metadata);
@@ -922,6 +927,96 @@ namespace Win11DesktopApp.Services
             }
 
             return normalizedPath;
+        }
+
+        public string GetTemplateLayoutSource(string templateFolder)
+        {
+            if (string.IsNullOrWhiteSpace(templateFolder))
+                return TemplateLayoutSource.Editor;
+
+            try
+            {
+                var metadataPath = Path.Combine(templateFolder, "metadata.json");
+                if (!File.Exists(metadataPath))
+                    return TemplateLayoutSource.Editor;
+
+                var metadata = SafeFileService.ReadJson<TemplateMetadata>(metadataPath);
+                if (metadata == null || string.IsNullOrWhiteSpace(metadata.LayoutSource))
+                    return TemplateLayoutSource.Editor;
+
+                return string.Equals(metadata.LayoutSource.Trim(), TemplateLayoutSource.Word, StringComparison.OrdinalIgnoreCase)
+                    ? TemplateLayoutSource.Word
+                    : TemplateLayoutSource.Editor;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("TemplateService.GetTemplateLayoutSource", ex);
+                return TemplateLayoutSource.Editor;
+            }
+        }
+
+        public void SetTemplateLayoutSource(string templateFolder, string layoutSource)
+        {
+            if (string.IsNullOrWhiteSpace(templateFolder) || !Directory.Exists(templateFolder))
+                return;
+
+            var normalized = string.Equals(layoutSource, TemplateLayoutSource.Word, StringComparison.OrdinalIgnoreCase)
+                ? TemplateLayoutSource.Word
+                : TemplateLayoutSource.Editor;
+
+            try
+            {
+                var metadataPath = Path.Combine(templateFolder, "metadata.json");
+                TemplateMetadata metadata;
+                if (File.Exists(metadataPath))
+                {
+                    metadata = SafeFileService.ReadJson<TemplateMetadata>(metadataPath) ?? new TemplateMetadata();
+                }
+                else
+                {
+                    metadata = new TemplateMetadata();
+                }
+
+                metadata.LayoutSource = normalized;
+                metadata.UpdatedAt = DateTime.Now;
+                SafeFileService.WriteJsonAtomic(metadataPath, metadata);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("TemplateService.SetTemplateLayoutSource", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Single resolve for DOCX generation (employee profile + batch).
+        /// Word layout uses native template.docx only when expanded (no AltChunk).
+        /// Editor layout prefers content.rtf, then falls back to template.docx.
+        /// </summary>
+        public TemplateDocxGenerationSource ResolveDocxGenerationSource(string templateFolder, string templateDocxPath)
+        {
+            var layout = GetTemplateLayoutSource(templateFolder);
+            var rtfPath = string.IsNullOrWhiteSpace(templateFolder)
+                ? string.Empty
+                : Path.Combine(templateFolder, "content.rtf");
+            var hasRtf = !string.IsNullOrEmpty(rtfPath) && File.Exists(rtfPath);
+            var hasDocx = !string.IsNullOrWhiteSpace(templateDocxPath) && File.Exists(templateDocxPath);
+
+            if (string.Equals(layout, TemplateLayoutSource.Word, StringComparison.OrdinalIgnoreCase))
+            {
+                if (hasDocx && DocumentGenerationService.IsExpandedNativeDocx(templateDocxPath))
+                    return new TemplateDocxGenerationSource(TemplateDocxSourceKind.NativeDocx, templateDocxPath, null);
+
+                return new TemplateDocxGenerationSource(TemplateDocxSourceKind.None, templateDocxPath ?? string.Empty, "EditorWordDocxNotReady");
+            }
+
+            if (hasRtf)
+                return new TemplateDocxGenerationSource(TemplateDocxSourceKind.Rtf, rtfPath, null);
+
+            if (hasDocx)
+                return new TemplateDocxGenerationSource(TemplateDocxSourceKind.NativeDocx, templateDocxPath, null);
+
+            return new TemplateDocxGenerationSource(TemplateDocxSourceKind.None, string.Empty, "MsgTemplateNotFound");
         }
 
         public string GenerateDocumentFromTemplate(string firmName, TemplateEntry template)
