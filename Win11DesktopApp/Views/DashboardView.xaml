@@ -893,7 +893,7 @@
                                                                        FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
                                                             <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0">
                                                                 <Run Text="{Binding FirmName}"/>
-                                                                <Run Text=" ┬╖ "/>
+                                                                <Run Text=" - "/>
                                                                 <Run Text="{Binding DateText}"/>
                                                             </TextBlock>
                                                         </StackPanel>
@@ -960,7 +960,7 @@
                                                                        FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
                                                             <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0">
                                                                 <Run Text="{Binding FirmName}"/>
-                                                                <Run Text=" ┬╖ "/>
+                                                                <Run Text=" - "/>
                                                                 <Run Text="{Binding DateText}"/>
                                                             </TextBlock>
                                                         </StackPanel>

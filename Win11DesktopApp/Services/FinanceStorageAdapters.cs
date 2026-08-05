@@ -33,10 +33,15 @@ namespace Win11DesktopApp.Services
         void UpsertFirmExpense(int year, int month, FirmExpense expense);
         bool DeleteFirmExpense(int year, int month, string expenseId);
         void ReplaceFirmExpensesForFirm(int year, int month, string firmName, IReadOnlyList<FirmExpense> expenses);
-        /// <summary>
-        /// Replaces all firm expenses for the month without touching salary entry rows.
-        /// </summary>
         void ReplaceAllFirmExpenses(int year, int month, IReadOnlyList<FirmExpense> expenses);
+        /// <summary>
+        /// Permanently removes salary entry rows for an employee across all months (hard delete / purge).
+        /// </summary>
+        int RemoveEmployeeSalaryEntries(string? employeeId, string? originalFolder, string? deletedFolder);
+        /// <summary>
+        /// Rewrites employee_folder on salary rows that still point at old paths after restore.
+        /// </summary>
+        int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder);
         void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, string fromMonthKey, CancellationToken cancellationToken = default);
         Dictionary<string, Dictionary<string, (decimal netSalary, bool paid)>> GetSavedPaymentsForAllRequests(
             string beforeMonthKey,
@@ -64,6 +69,10 @@ namespace Win11DesktopApp.Services
         void InsertAdvance(string employeeId, string employeeFolder, AdvancePayment advance);
         void DeleteAdvance(string advanceId);
         void DeleteAdvancesForEmployee(string employeeId, string originalFolder, string deletedFolder);
+        /// <summary>
+        /// Rewrites employee_folder on advances after restore from Recently Deleted.
+        /// </summary>
+        int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder);
         List<AdvancePayment> GetAdvances(string companyId, string monthKey);
         decimal GetTotalAdvancesForEmployee(string employeeId, string employeeFolder, string companyId, string monthKey);
         decimal GetTotalAdvancesForEmployee(string employeeId, string employeeFolder, string monthKey);
@@ -95,6 +104,14 @@ namespace Win11DesktopApp.Services
     {
         void UpsertSalaryHistoryRecord(string employeeId, string employeeFolder, SalaryHistoryRecord record);
         void DeleteSalaryHistoryRecord(string employeeId, string employeeFolder, int year, int month, string firmName);
+        /// <summary>
+        /// Permanently removes all salary history rows for an employee (hard delete / purge).
+        /// </summary>
+        int DeleteSalaryHistoryForEmployee(string? employeeId, string? originalFolder, string? deletedFolder);
+        /// <summary>
+        /// Rewrites employee_folder on salary history rows after restore.
+        /// </summary>
+        int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder);
         List<SalaryHistoryRecord> GetSalaryHistory(string employeeId, string employeeFolder);
         int RemoveDuplicateSalaryHistoryRecords();
     }
@@ -176,6 +193,12 @@ namespace Win11DesktopApp.Services
         public void ReplaceAllFirmExpenses(int year, int month, IReadOnlyList<FirmExpense> expenses)
             => _salaryDbService.ReplaceAllFirmExpenses(year, month, expenses);
 
+        public int RemoveEmployeeSalaryEntries(string? employeeId, string? originalFolder, string? deletedFolder)
+            => _salaryDbService.RemoveEmployeeSalaryEntries(employeeId, originalFolder, deletedFolder);
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+            => _salaryDbService.RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+
         public void UpdateHourlyRateForward(string? employeeId, string employeeFolder, string firmName, decimal newRate, string fromMonthKey, CancellationToken cancellationToken = default)
             => _salaryDbService.UpdateHourlyRateForward(employeeId, employeeFolder, firmName, newRate, fromMonthKey, cancellationToken);
 
@@ -236,6 +259,9 @@ namespace Win11DesktopApp.Services
 
         public void DeleteAdvancesForEmployee(string employeeId, string originalFolder, string deletedFolder)
             => _localDbService.DeleteAdvancesForEmployee(employeeId, originalFolder, deletedFolder);
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+            => _localDbService.RemapAdvanceEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
 
         public List<AdvancePayment> GetAdvances(string companyId, string monthKey)
             => _localDbService.GetAdvances(companyId, monthKey);
@@ -323,6 +349,12 @@ namespace Win11DesktopApp.Services
 
         public void DeleteSalaryHistoryRecord(string employeeId, string employeeFolder, int year, int month, string firmName)
             => _localDbService.DeleteSalaryHistoryRecord(employeeId, employeeFolder, year, month, firmName);
+
+        public int DeleteSalaryHistoryForEmployee(string? employeeId, string? originalFolder, string? deletedFolder)
+            => _localDbService.DeleteSalaryHistoryForEmployee(employeeId, originalFolder, deletedFolder);
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+            => _localDbService.RemapSalaryHistoryEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
 
         public List<SalaryHistoryRecord> GetSalaryHistory(string employeeId, string employeeFolder)
             => _localDbService.GetSalaryHistory(employeeId, employeeFolder);

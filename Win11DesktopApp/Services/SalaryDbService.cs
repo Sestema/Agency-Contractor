@@ -1600,6 +1600,99 @@ WHERE id = @id;";
         private static string NormalizeEmployeePath(string? path)
             => (path ?? string.Empty).Replace('/', '\\').Trim().TrimEnd('\\');
 
+        public int RemoveEmployeeSalaryEntries(string? employeeId, string? originalFolder, string? deletedFolder)
+        {
+            var id = employeeId?.Trim() ?? string.Empty;
+            var original = NormalizeEmployeePath(originalFolder);
+            var deleted = NormalizeEmployeePath(deletedFolder);
+            if (string.IsNullOrWhiteSpace(id) && string.IsNullOrWhiteSpace(original) && string.IsNullOrWhiteSpace(deleted))
+                return 0;
+
+            var removed = 0;
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                try
+                {
+                    using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                    using var command = connection.CreateCommand();
+                    command.CommandText = @"
+DELETE FROM salary_entries
+WHERE (@employeeId <> '' AND ifnull(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+   OR (@originalFolder <> '' AND lower(ifnull(employee_folder, '')) = lower(@originalFolder))
+   OR (@deletedFolder <> '' AND lower(ifnull(employee_folder, '')) = lower(@deletedFolder));";
+                    command.Parameters.AddWithValue("@employeeId", id);
+                    command.Parameters.AddWithValue("@originalFolder", original);
+                    command.Parameters.AddWithValue("@deletedFolder", deleted);
+                    removed += command.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("SalaryDbService.RemoveEmployeeSalaryEntries", ex);
+                }
+            }
+
+            if (removed > 0)
+                MarkMonthDbIndexDirty();
+
+            return removed;
+        }
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            var target = NormalizeEmployeePath(toFolder);
+            if (string.IsNullOrWhiteSpace(target))
+                return 0;
+
+            var id = employeeId?.Trim() ?? string.Empty;
+            var fromA = NormalizeEmployeePath(fromFolderA);
+            var fromB = NormalizeEmployeePath(fromFolderB);
+            if (string.IsNullOrWhiteSpace(id) && string.IsNullOrWhiteSpace(fromA) && string.IsNullOrWhiteSpace(fromB))
+                return 0;
+
+            var updated = 0;
+            foreach (var monthDb in EnumerateMonthDatabases())
+            {
+                try
+                {
+                    using var connection = OpenMonthConnection(monthDb.year, monthDb.month);
+                    using var transaction = connection.BeginTransaction();
+                    using var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = @"
+UPDATE salary_entries
+SET employee_folder = @toFolder,
+    employee_id = CASE
+        WHEN @employeeId <> '' AND (ifnull(employee_id, '') = '' OR lower(employee_id) = lower(@employeeId))
+            THEN @employeeId
+        ELSE employee_id
+    END,
+    updated_at = @updatedAt
+WHERE (
+        (@employeeId <> '' AND ifnull(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+        OR (@fromFolderA <> '' AND lower(ifnull(employee_folder, '')) = lower(@fromFolderA))
+        OR (@fromFolderB <> '' AND lower(ifnull(employee_folder, '')) = lower(@fromFolderB))
+      )
+  AND lower(ifnull(employee_folder, '')) <> lower(@toFolder);";
+                    command.Parameters.AddWithValue("@toFolder", target);
+                    command.Parameters.AddWithValue("@employeeId", id);
+                    command.Parameters.AddWithValue("@fromFolderA", fromA);
+                    command.Parameters.AddWithValue("@fromFolderB", fromB);
+                    command.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+                    updated += command.ExecuteNonQuery();
+                    transaction.Commit();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogError("SalaryDbService.RemapEmployeeFolder", ex);
+                }
+            }
+
+            if (updated > 0)
+                MarkMonthDbIndexDirty();
+
+            return updated;
+        }
+
         private static string ToInvariant(decimal value)
         {
             return value.ToString(CultureInfo.InvariantCulture);

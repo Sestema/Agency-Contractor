@@ -293,7 +293,80 @@ namespace Win11DesktopApp.Services
                 RequireLocalDb().RemoveAccommodationsForEmployee(deletedFolder);
             ReportsService.RemoveEmployeeEntries(employeeId, originalFolder, deletedFolder);
 
+            // Modern month DBs / Postgres salary_entries (legacy JSON cleaned below).
+            try
+            {
+                var removedEntries = MonthPaymentsService.RemoveEmployeeSalaryEntries(employeeId, originalFolder, deletedFolder);
+                if (removedEntries > 0)
+                    LoggingService.LogInfo("FinanceService.RemoveEmployeeReferences", $"Removed {removedEntries} salary_entries for employee.");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.RemoveEmployeeReferences.SalaryEntries", ex);
+            }
+
+            try
+            {
+                SalaryHistoryService.DeleteSalaryHistoryForEmployee(employeeId, originalFolder, deletedFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.RemoveEmployeeReferences.SalaryHistory", ex);
+            }
+
             CleanupPaymentFiles(Matches);
+        }
+
+        /// <summary>
+        /// After restoring from Recently Deleted, rewrite finance rows that still point at old folders.
+        /// </summary>
+        public void RemapEmployeeFolderReferences(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            if (string.IsNullOrWhiteSpace(toFolder))
+                return;
+
+            try
+            {
+                MonthPaymentsService.RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.SalaryEntries", ex);
+            }
+
+            try
+            {
+                AdvancesService.RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.Advances", ex);
+            }
+
+            try
+            {
+                SalaryHistoryService.RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.SalaryHistory", ex);
+            }
+
+            try
+            {
+                var localDb = RequireLocalDb();
+                if (!string.IsNullOrWhiteSpace(fromFolderA))
+                    localDb.RemapAccommodationEmployeeFolder(fromFolderA, toFolder);
+                if (!string.IsNullOrWhiteSpace(fromFolderB)
+                    && !string.Equals(fromFolderB, fromFolderA, StringComparison.OrdinalIgnoreCase))
+                    localDb.RemapAccommodationEmployeeFolder(fromFolderB, toFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.Accommodations", ex);
+            }
+
+            InvalidatePaymentsCache();
         }
 
         #endregion

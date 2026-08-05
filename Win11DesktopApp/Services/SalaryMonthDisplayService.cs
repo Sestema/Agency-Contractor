@@ -18,15 +18,18 @@ namespace Win11DesktopApp.Services
         private readonly FinanceService _financeService;
         private readonly EmployeeService _employeeService;
         private readonly CompanyService _companyService;
+        private readonly RecentlyDeletedService _recentlyDeletedService;
 
         public SalaryMonthDisplayService(
             FinanceService financeService,
             EmployeeService employeeService,
-            CompanyService companyService)
+            CompanyService companyService,
+            RecentlyDeletedService recentlyDeletedService)
         {
             _financeService = financeService ?? throw new ArgumentNullException(nameof(financeService));
             _employeeService = employeeService ?? throw new ArgumentNullException(nameof(employeeService));
             _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
+            _recentlyDeletedService = recentlyDeletedService ?? throw new ArgumentNullException(nameof(recentlyDeletedService));
         }
 
         public sealed class BuildResult
@@ -336,6 +339,14 @@ namespace Win11DesktopApp.Services
                 existingKeys.Add(key);
             }
             timing.ArchivedLoopMs = archivedLoopSw.ElapsedMilliseconds;
+
+            // Soft-deleted employees stay in salary_*.db for restore; hide them from the UI only.
+            var hideIndex = _recentlyDeletedService.BuildFinanceHideIndex();
+            if (!hideIndex.IsEmpty)
+            {
+                entries.RemoveAll(entry => hideIndex.Matches(entry.EmployeeId, entry.EmployeeFolder));
+            }
+
             timing.TotalMs = totalSw.ElapsedMilliseconds;
 
             return new BuildResult

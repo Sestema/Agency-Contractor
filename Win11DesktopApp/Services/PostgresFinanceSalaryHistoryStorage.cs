@@ -50,6 +50,51 @@ WHERE year = @year
             command.ExecuteNonQuery();
         }
 
+        public int DeleteSalaryHistoryForEmployee(string? employeeId, string? originalFolder, string? deletedFolder)
+        {
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+DELETE FROM app.salary_history
+WHERE (@employeeId <> '' AND lower(COALESCE(employee_id, '')) = lower(@employeeId))
+   OR (@originalFolder <> '' AND lower(employee_folder) = lower(@originalFolder))
+   OR (@deletedFolder <> '' AND lower(employee_folder) = lower(@deletedFolder));";
+            command.Parameters.AddWithValue("employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("originalFolder", ToPortablePath(originalFolder ?? string.Empty));
+            command.Parameters.AddWithValue("deletedFolder", ToPortablePath(deletedFolder ?? string.Empty));
+            return command.ExecuteNonQuery();
+        }
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            if (string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE app.salary_history
+SET employee_folder = @toFolder,
+    employee_id = CASE
+        WHEN @employeeId <> '' AND (COALESCE(employee_id, '') = '' OR lower(employee_id) = lower(@employeeId))
+            THEN @employeeId
+        ELSE employee_id
+    END
+WHERE (
+        (@employeeId <> '' AND lower(COALESCE(employee_id, '')) = lower(@employeeId))
+        OR (@fromFolderA <> '' AND lower(employee_folder) = lower(@fromFolderA))
+        OR (@fromFolderB <> '' AND lower(employee_folder) = lower(@fromFolderB))
+      )
+  AND lower(employee_folder) <> lower(@toFolder);";
+            command.Parameters.AddWithValue("toFolder", ToPortablePath(toFolder));
+            command.Parameters.AddWithValue("employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("fromFolderA", ToPortablePath(fromFolderA ?? string.Empty));
+            command.Parameters.AddWithValue("fromFolderB", ToPortablePath(fromFolderB ?? string.Empty));
+            return command.ExecuteNonQuery();
+        }
+
         public List<SalaryHistoryRecord> GetSalaryHistory(string employeeId, string employeeFolder)
         {
             EnsureInitialized();

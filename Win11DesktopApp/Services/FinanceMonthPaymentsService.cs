@@ -298,6 +298,44 @@ namespace Win11DesktopApp.Services
             return true;
         }
 
+        public int RemoveEmployeeSalaryEntries(string? employeeId, string? originalFolder, string? deletedFolder)
+        {
+            if (_monthPaymentsStorage == null)
+                return 0;
+
+            try
+            {
+                var removed = _monthPaymentsStorage.RemoveEmployeeSalaryEntries(employeeId, originalFolder, deletedFolder);
+                if (removed > 0)
+                    InvalidatePaymentsCache();
+                return removed;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceMonthPaymentsService.RemoveEmployeeSalaryEntries", ex);
+                return 0;
+            }
+        }
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            if (_monthPaymentsStorage == null || string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            try
+            {
+                var updated = _monthPaymentsStorage.RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+                if (updated > 0)
+                    InvalidatePaymentsCache();
+                return updated;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceMonthPaymentsService.RemapEmployeeFolder", ex);
+                return 0;
+            }
+        }
+
         public bool UpsertSalaryEntries(int year, int month, List<SalaryEntry> entries)
             => UpsertSalaryEntriesCore(year, month, entries);
 

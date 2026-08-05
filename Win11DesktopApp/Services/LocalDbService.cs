@@ -619,6 +619,35 @@ WHERE (@employeeId <> '' AND lower(employee_id) = lower(@employeeId))
             command.ExecuteNonQuery();
         }
 
+        public int RemapAdvanceEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            EnsureInitialized();
+            if (!IsAvailable || string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE advances
+SET employee_folder = @toFolder,
+    employee_id = CASE
+        WHEN @employeeId <> '' AND (ifnull(employee_id, '') = '' OR lower(employee_id) = lower(@employeeId))
+            THEN @employeeId
+        ELSE employee_id
+    END
+WHERE (
+        (@employeeId <> '' AND lower(employee_id) = lower(@employeeId))
+        OR (@fromFolderA <> '' AND lower(employee_folder) = lower(@fromFolderA))
+        OR (@fromFolderB <> '' AND lower(employee_folder) = lower(@fromFolderB))
+      )
+  AND lower(employee_folder) <> lower(@toFolder);";
+            command.Parameters.AddWithValue("@toFolder", ToPortablePath(toFolder));
+            command.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("@fromFolderA", ToPortablePath(fromFolderA ?? string.Empty));
+            command.Parameters.AddWithValue("@fromFolderB", ToPortablePath(fromFolderB ?? string.Empty));
+            return command.ExecuteNonQuery();
+        }
+
         public MonthlySalaryReport? GetSalaryReport(string companyId, int year, int month)
         {
             EnsureInitialized();
@@ -942,6 +971,24 @@ WHERE lower(employee_folder) = lower(@employeeFolder)
             return command.ExecuteNonQuery();
         }
 
+        public int RemapAccommodationEmployeeFolder(string fromFolder, string toFolder)
+        {
+            EnsureInitialized();
+            if (!IsAvailable || string.IsNullOrWhiteSpace(fromFolder) || string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE accommodations
+SET employee_folder = @toFolder
+WHERE lower(employee_folder) = lower(@fromFolder)
+  AND lower(employee_folder) <> lower(@toFolder);";
+            command.Parameters.AddWithValue("@fromFolder", ToPortablePath(fromFolder));
+            command.Parameters.AddWithValue("@toFolder", ToPortablePath(toFolder));
+            return command.ExecuteNonQuery();
+        }
+
         public List<AccommodationRecord> GetAllAccommodations()
         {
             EnsureInitialized();
@@ -1179,6 +1226,54 @@ WHERE year = @year
             command.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
             command.Parameters.AddWithValue("@employeeFolder", ToPortablePath(employeeFolder));
             command.ExecuteNonQuery();
+        }
+
+        public int DeleteSalaryHistoryForEmployee(string? employeeId, string? originalFolder, string? deletedFolder)
+        {
+            EnsureInitialized();
+            if (!IsAvailable)
+                return 0;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+DELETE FROM salary_history
+WHERE (@employeeId <> '' AND lower(COALESCE(employee_id, '')) = lower(@employeeId))
+   OR (@originalFolder <> '' AND lower(employee_folder) = lower(@originalFolder))
+   OR (@deletedFolder <> '' AND lower(employee_folder) = lower(@deletedFolder));";
+            command.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("@originalFolder", ToPortablePath(originalFolder ?? string.Empty));
+            command.Parameters.AddWithValue("@deletedFolder", ToPortablePath(deletedFolder ?? string.Empty));
+            return command.ExecuteNonQuery();
+        }
+
+        public int RemapSalaryHistoryEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            EnsureInitialized();
+            if (!IsAvailable || string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE salary_history
+SET employee_folder = @toFolder,
+    employee_id = CASE
+        WHEN @employeeId <> '' AND (COALESCE(employee_id, '') = '' OR lower(employee_id) = lower(@employeeId))
+            THEN @employeeId
+        ELSE employee_id
+    END
+WHERE (
+        (@employeeId <> '' AND lower(COALESCE(employee_id, '')) = lower(@employeeId))
+        OR (@fromFolderA <> '' AND lower(employee_folder) = lower(@fromFolderA))
+        OR (@fromFolderB <> '' AND lower(employee_folder) = lower(@fromFolderB))
+      )
+  AND lower(employee_folder) <> lower(@toFolder);";
+            command.Parameters.AddWithValue("@toFolder", ToPortablePath(toFolder));
+            command.Parameters.AddWithValue("@employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("@fromFolderA", ToPortablePath(fromFolderA ?? string.Empty));
+            command.Parameters.AddWithValue("@fromFolderB", ToPortablePath(fromFolderB ?? string.Empty));
+            return command.ExecuteNonQuery();
         }
 
         public List<ActivityLogEntry> GetAllActivityLogs()

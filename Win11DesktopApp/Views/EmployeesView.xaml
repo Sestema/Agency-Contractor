@@ -1143,19 +1143,19 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
                             </Style>
                         </Border.Style>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Style="{StaticResource EmpStatIconBadge}" Background="{DynamicResource AccentBrush}">
+                                        <Border Style="{StaticResource EmpStatIconBadge}" Background="{DynamicResource InfoChipForegroundBrush}">
                                             <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
                                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding DocumentPackagePercentText}" FontFamily="Segoe UI"
                                                        FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource AccentDarkBrush}"
+                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"
                                                        VerticalAlignment="Center"
                                                        SnapsToDevicePixels="True" UseLayoutRounding="True"
                                                        TextOptions.TextFormattingMode="Ideal"
@@ -1163,7 +1163,7 @@
                                                        TextOptions.TextHintingMode="Animated"/>
                                             <TextBlock Text="{DynamicResource EmpStatDocumentPackage}" FontFamily="Segoe UI"
                                                        FontSize="{DynamicResource FS11}" FontWeight="Medium"
-                                                       Foreground="{DynamicResource AccentDarkBrush}" Opacity="0.9"
+                                                       Foreground="{DynamicResource InfoChipForegroundBrush}" Opacity="0.9"
                                                        Margin="4,0,0,0"
                                                        VerticalAlignment="Center"
                                                        SnapsToDevicePixels="True" UseLayoutRounding="True"

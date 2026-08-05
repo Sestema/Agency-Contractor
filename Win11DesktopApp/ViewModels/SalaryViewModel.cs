@@ -32,6 +32,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly CompanyService _companyService;
         private readonly SyncEventService _syncEventService;
         private readonly SalaryMonthDisplayService _salaryMonthDisplayService;
+        private readonly RecentlyDeletedService _recentlyDeletedService;
         private static readonly TimeSpan SalarySyncReceiveDebounce = TimeSpan.FromSeconds(4);
         private readonly object _ratePropagationGate = new();
         private readonly object _salarySyncGate = new();
@@ -399,7 +400,8 @@ namespace Win11DesktopApp.ViewModels
             DocumentLocalizationService? documentLocalizationService = null,
             CompanyService? companyService = null,
             SyncEventService? syncEventService = null,
-            SalaryMonthDisplayService? salaryMonthDisplayService = null)
+            SalaryMonthDisplayService? salaryMonthDisplayService = null,
+            RecentlyDeletedService? recentlyDeletedService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _financeService = financeService ?? throw new InvalidOperationException("FinanceService is not initialized.");
@@ -411,6 +413,7 @@ namespace Win11DesktopApp.ViewModels
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
             _syncEventService = syncEventService ?? throw new InvalidOperationException("SyncEventService is not initialized.");
             _salaryMonthDisplayService = salaryMonthDisplayService ?? throw new InvalidOperationException("SalaryMonthDisplayService is not initialized.");
+            _recentlyDeletedService = recentlyDeletedService ?? throw new InvalidOperationException("RecentlyDeletedService is not initialized.");
             _syncEventService.SyncEventReceived += OnSyncEventReceived;
 
             _selectedYear = DateTime.Now.Year;
@@ -1926,6 +1929,17 @@ namespace Win11DesktopApp.ViewModels
 
                 var useEntryUpsert = (!forceSaveAllEntries || isRestrictedBusinessSave) && expensesForSave.Count == 0;
                 var firmFilterForSave = SelectedFirmFilter;
+
+                // Replace-style saves must re-merge soft-deleted rows so Save cannot wipe recycle-bin finance data.
+                if (!useEntryUpsert)
+                {
+                    entriesForSave = MergeRecentlyDeletedEntriesForSave(
+                        saveYear,
+                        saveMonth,
+                        entriesForSave,
+                        isFirmScopedSave ? firmFilterForSave : null);
+                }
+
                 StatusMessage = L("FinSalarySaving") ?? "Збереження…";
                 var saveSucceeded = useEntryUpsert
                     ? await _financeService.UpsertSalaryEntriesAsync(saveYear, saveMonth, entriesForSave).ConfigureAwait(true)
@@ -2009,6 +2023,59 @@ namespace Win11DesktopApp.ViewModels
             {
                 _saveReportGate.Release();
             }
+        }
+
+        /// <summary>
+        /// Soft-deleted employees are filtered from <see cref="Entries"/> but must remain in replace-style
+        /// month writes (Postgres full replace / firm replace) until permanent purge.
+        /// </summary>
+        private List<SalaryEntry> MergeRecentlyDeletedEntriesForSave(
+            int year,
+            int month,
+            List<SalaryEntry> entriesForSave,
+            string? firmNameFilter)
+        {
+            var hideIndex = _recentlyDeletedService.BuildFinanceHideIndex();
+            if (hideIndex.IsEmpty)
+                return entriesForSave;
+
+            var loaded = _financeService.TryLoadAllFirmPayments(year, month, forceReload: true);
+            if (!loaded.success || loaded.entries.Count == 0)
+                return entriesForSave;
+
+            var merged = new List<SalaryEntry>(entriesForSave);
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in merged)
+                keys.Add(BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName));
+
+            var restored = 0;
+            foreach (var row in loaded.entries)
+            {
+                if (!string.IsNullOrWhiteSpace(firmNameFilter)
+                    && !string.Equals(row.FirmName, firmNameFilter, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!hideIndex.Matches(row.EmployeeId, row.EmployeeFolder))
+                    continue;
+
+                var key = BuildEmployeeFirmKey(row.EmployeeId, row.EmployeeFolder, row.FirmName);
+                if (!keys.Add(key))
+                    continue;
+
+                merged.Add(row);
+                restored++;
+            }
+
+            if (restored > 0)
+            {
+                LoggingService.LogInfo(
+                    "Salary.Save.MergeRecentlyDeleted",
+                    $"Preserved {restored} recently-deleted salary row(s) for {year:D4}-{month:D2}.");
+            }
+
+            return merged;
         }
 
         private List<SalaryEntry> BuildChangedEntriesForSave()

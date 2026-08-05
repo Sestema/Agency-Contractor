@@ -58,6 +58,35 @@ WHERE (@employeeId <> '' AND lower(employee_id) = lower(@employeeId))
             command.ExecuteNonQuery();
         }
 
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            if (string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE app.advances
+SET employee_folder = @toFolder,
+    employee_id = CASE
+        WHEN @employeeId <> '' AND (COALESCE(employee_id, '') = '' OR lower(employee_id) = lower(@employeeId))
+            THEN @employeeId
+        ELSE employee_id
+    END
+WHERE (
+        (@employeeId <> '' AND lower(employee_id) = lower(@employeeId))
+        OR (@fromFolderA <> '' AND lower(employee_folder) = lower(@fromFolderA))
+        OR (@fromFolderB <> '' AND lower(employee_folder) = lower(@fromFolderB))
+      )
+  AND lower(employee_folder) <> lower(@toFolder);";
+            command.Parameters.AddWithValue("toFolder", ToPortablePath(toFolder));
+            command.Parameters.AddWithValue("employeeId", employeeId ?? string.Empty);
+            command.Parameters.AddWithValue("fromFolderA", ToPortablePath(fromFolderA ?? string.Empty));
+            command.Parameters.AddWithValue("fromFolderB", ToPortablePath(fromFolderB ?? string.Empty));
+            return command.ExecuteNonQuery();
+        }
+
         public List<AdvancePayment> GetAdvances(string companyId, string monthKey)
         {
             EnsureInitialized();

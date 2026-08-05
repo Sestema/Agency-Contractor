@@ -93,6 +93,24 @@ namespace Win11DesktopApp.Services
             return filtered;
         }
 
+        /// <summary>
+        /// Manifest-based hide index for Finance. Uses raw manifest (not pruned UI list)
+        /// so salary rows stay hidden even if the recycle folder is briefly unavailable.
+        /// </summary>
+        public RecentlyDeletedFinanceHideIndex BuildFinanceHideIndex()
+        {
+            try
+            {
+                EnsureStorage();
+                return RecentlyDeletedFinanceHideIndex.FromItems(LoadManifest());
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("RecentlyDeletedService.BuildFinanceHideIndex", ex.Message);
+                return RecentlyDeletedFinanceHideIndex.Empty;
+            }
+        }
+
         private static bool IsDirectoryEffectivelyEmpty(string path)
         {
             try
@@ -206,6 +224,13 @@ namespace Win11DesktopApp.Services
 
                 MoveDirectory(item.DeletedEmployeeFolder, restorePath);
                 _employeeService.SyncEmployeeIndexForFolder(restorePath, item.FirmName);
+
+                // Remap finance paths that still point at the pre-delete / recycle folders.
+                _financeService?.RemapEmployeeFolderReferences(
+                    item.UniqueId,
+                    item.OriginalEmployeeFolder,
+                    item.DeletedEmployeeFolder,
+                    restorePath);
 
                 manifest.Remove(item);
                 SaveManifest(manifest);

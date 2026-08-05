@@ -98,6 +98,38 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        public int DeleteSalaryHistoryForEmployee(string? employeeId, string? originalFolder, string? deletedFolder)
+        {
+            if (_salaryHistoryStorage == null)
+                return 0;
+
+            try
+            {
+                return _salaryHistoryStorage.DeleteSalaryHistoryForEmployee(employeeId, originalFolder, deletedFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceSalaryHistoryService.DeleteSalaryHistoryForEmployee", ex);
+                return 0;
+            }
+        }
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            if (_salaryHistoryStorage == null || string.IsNullOrWhiteSpace(toFolder))
+                return 0;
+
+            try
+            {
+                return _salaryHistoryStorage.RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("FinanceSalaryHistoryService.RemapEmployeeFolder", ex);
+                return 0;
+            }
+        }
+
         public List<SalaryHistoryRecord> LoadSalaryHistory(string employeeFolder)
         {
             try

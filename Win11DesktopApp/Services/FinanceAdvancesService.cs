@@ -40,6 +40,11 @@ namespace Win11DesktopApp.Services
             RequireStorage().DeleteAdvancesForEmployee(employeeId ?? string.Empty, originalFolder, deletedFolder);
         }
 
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            return RequireStorage().RemapEmployeeFolder(employeeId, fromFolderA, fromFolderB, toFolder);
+        }
+
         #endregion
 
         #region Queries

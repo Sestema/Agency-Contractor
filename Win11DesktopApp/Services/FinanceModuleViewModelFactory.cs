@@ -14,6 +14,7 @@ public sealed class FinanceModuleViewModelFactory
     private readonly CompanyService _companyService;
     private readonly SyncEventService _syncEventService;
     private readonly SalaryMonthDisplayService _salaryMonthDisplayService;
+    private readonly RecentlyDeletedService _recentlyDeletedService;
 
     public FinanceModuleViewModelFactory(
         NavigationService navigationService,
@@ -25,7 +26,8 @@ public sealed class FinanceModuleViewModelFactory
         DocumentLocalizationService documentLocalizationService,
         CompanyService companyService,
         SyncEventService syncEventService,
-        SalaryMonthDisplayService salaryMonthDisplayService)
+        SalaryMonthDisplayService salaryMonthDisplayService,
+        RecentlyDeletedService recentlyDeletedService)
     {
         _navigationService = navigationService;
         _employeeService = employeeService;
@@ -37,6 +39,7 @@ public sealed class FinanceModuleViewModelFactory
         _companyService = companyService;
         _syncEventService = syncEventService;
         _salaryMonthDisplayService = salaryMonthDisplayService;
+        _recentlyDeletedService = recentlyDeletedService;
     }
 
     public SalaryViewModel CreateSalary()
@@ -51,7 +54,8 @@ public sealed class FinanceModuleViewModelFactory
             _documentLocalizationService,
             _companyService,
             _syncEventService,
-            _salaryMonthDisplayService);
+            _salaryMonthDisplayService,
+            _recentlyDeletedService);
     }
 
     public TablesMenuViewModel CreateTablesMenu()

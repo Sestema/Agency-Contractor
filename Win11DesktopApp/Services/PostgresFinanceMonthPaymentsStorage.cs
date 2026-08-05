@@ -178,6 +178,66 @@ ORDER BY firm_name, name;";
             transaction.Commit();
         }
 
+        public int RemoveEmployeeSalaryEntries(string? employeeId, string? originalFolder, string? deletedFolder)
+        {
+            var id = employeeId?.Trim() ?? string.Empty;
+            var original = NormalizeEmployeePath(originalFolder);
+            var deleted = NormalizeEmployeePath(deletedFolder);
+            if (string.IsNullOrWhiteSpace(id) && string.IsNullOrWhiteSpace(original) && string.IsNullOrWhiteSpace(deleted))
+                return 0;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+DELETE FROM salary.salary_entries
+WHERE (@employeeId <> '' AND COALESCE(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+   OR (@originalFolder <> '' AND lower(COALESCE(employee_folder, '')) = lower(@originalFolder))
+   OR (@deletedFolder <> '' AND lower(COALESCE(employee_folder, '')) = lower(@deletedFolder));";
+            command.Parameters.AddWithValue("employeeId", id);
+            command.Parameters.AddWithValue("originalFolder", original);
+            command.Parameters.AddWithValue("deletedFolder", deleted);
+            return command.ExecuteNonQuery();
+        }
+
+        public int RemapEmployeeFolder(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        {
+            var target = NormalizeEmployeePath(toFolder);
+            if (string.IsNullOrWhiteSpace(target))
+                return 0;
+
+            var id = employeeId?.Trim() ?? string.Empty;
+            var fromA = NormalizeEmployeePath(fromFolderA);
+            var fromB = NormalizeEmployeePath(fromFolderB);
+            if (string.IsNullOrWhiteSpace(id) && string.IsNullOrWhiteSpace(fromA) && string.IsNullOrWhiteSpace(fromB))
+                return 0;
+
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+UPDATE salary.salary_entries
+SET employee_folder = @toFolder,
+    employee_id = CASE
+        WHEN @employeeId <> '' AND (COALESCE(employee_id, '') = '' OR lower(employee_id) = lower(@employeeId))
+            THEN @employeeId
+        ELSE employee_id
+    END,
+    updated_at = @updatedAt
+WHERE (
+        (@employeeId <> '' AND COALESCE(employee_id, '') <> '' AND lower(employee_id) = lower(@employeeId))
+        OR (@fromFolderA <> '' AND lower(COALESCE(employee_folder, '')) = lower(@fromFolderA))
+        OR (@fromFolderB <> '' AND lower(COALESCE(employee_folder, '')) = lower(@fromFolderB))
+      )
+  AND lower(COALESCE(employee_folder, '')) <> lower(@toFolder);";
+            command.Parameters.AddWithValue("toFolder", target);
+            command.Parameters.AddWithValue("employeeId", id);
+            command.Parameters.AddWithValue("fromFolderA", fromA);
+            command.Parameters.AddWithValue("fromFolderB", fromB);
+            command.Parameters.AddWithValue("updatedAt", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+            return command.ExecuteNonQuery();
+        }
+
         public void UpsertFirmExpense(int year, int month, FirmExpense expense)
         {
             EnsureInitialized();
@@ -958,6 +1018,9 @@ ON CONFLICT(source_year, source_month, id) DO UPDATE SET
             => PostgresConnectionFactory.OpenConnection(_settingsService);
 
         private static string BuildSourcePath(int year, int month) => $"postgres://salary/{year:D4}-{month:D2}";
+
+        private static string NormalizeEmployeePath(string? path)
+            => (path ?? string.Empty).Replace('/', '\\').Trim().TrimEnd('\\');
 
         private static string ToInvariant(decimal value) => value.ToString(CultureInfo.InvariantCulture);
 
