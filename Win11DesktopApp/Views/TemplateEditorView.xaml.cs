@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Input;
@@ -22,6 +24,10 @@ namespace Win11DesktopApp.Views
         private TemplateEditorViewModel? _vm;
         private bool _isLoaded;
         private bool _suppressEditorEvents;
+        private bool _systemFontsLoaded;
+        private string _syncedFontFamily = string.Empty;
+        private string _syncedFontSize = string.Empty;
+        private Image? _clickedImage;
         private AITemplateOverlayWindow? _aiOverlay;
         private const double DefaultPageHeightPx = 1123.0;
         private const double DefaultParagraphSpacingPx = 8.0;
@@ -592,15 +598,85 @@ namespace Win11DesktopApp.Views
 
         private void FontFamilyCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!_isLoaded || _suppressEditorEvents || Editor == null) return;
+            if (!_isLoaded || _suppressEditorEvents || Editor == null)
+                return;
+
+            if (FontFamilyCombo.SelectedItem is ComboBoxItem item
+                && !string.IsNullOrWhiteSpace(item.Content?.ToString()))
+            {
+                ApplyFontFamily(item.Content.ToString()!);
+            }
+        }
+
+        private void FontFamilyCombo_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyFontFamilyFromComboText();
+        }
+
+        private void FontFamilyCombo_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+                return;
+
+            ApplyFontFamilyFromComboText();
+            Editor.Focus();
+            e.Handled = true;
+        }
+
+        private void FontFamilyCombo_DropDownOpened(object sender, EventArgs e)
+        {
+            EnsureSystemFontsLoaded();
+        }
+
+        private void FontSizeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEditorEvents || Editor == null)
+                return;
+
+            if (FontSizeCombo.SelectedItem is ComboBoxItem item
+                && TryParseFontSize(item.Content?.ToString(), out var size))
+            {
+                ApplySelectionProperty(TextElement.FontSizeProperty, size);
+            }
+        }
+
+        private void FontSizeCombo_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyFontSizeFromComboText();
+        }
+
+        private void FontSizeCombo_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+                return;
+
+            ApplyFontSizeFromComboText();
+            Editor.Focus();
+            e.Handled = true;
+        }
+
+        private void ApplyFontFamilyFromComboText()
+        {
+            if (!_isLoaded || _suppressEditorEvents)
+                return;
+
+            var name = FontFamilyCombo.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(name)
+                || string.Equals(name, _syncedFontFamily, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            ApplyFontFamily(name);
+        }
+
+        private void ApplyFontFamily(string? name)
+        {
+            name = name?.Trim();
+            if (string.IsNullOrWhiteSpace(name) || Editor == null)
+                return;
 
             try
             {
-                if (FontFamilyCombo.SelectedItem is ComboBoxItem item
-                    && !string.IsNullOrWhiteSpace(item.Content?.ToString()))
-                {
-                    ApplySelectionProperty(TextElement.FontFamilyProperty, new FontFamily(item.Content.ToString()!));
-                }
+                ApplySelectionProperty(TextElement.FontFamilyProperty, new FontFamily(name));
             }
             catch (Exception ex)
             {
@@ -608,23 +684,20 @@ namespace Win11DesktopApp.Views
             }
         }
 
-        private void FontSizeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ApplyFontSizeFromComboText()
         {
-            // Guard: skip during initialization
-            if (!_isLoaded || _suppressEditorEvents || Editor == null) return;
+            if (!_isLoaded || _suppressEditorEvents || Editor == null)
+                return;
 
-            try
-            {
-                if (FontSizeCombo.SelectedItem is ComboBoxItem item &&
-                    double.TryParse(item.Content?.ToString(), out double size))
-                {
-                    ApplySelectionProperty(TextElement.FontSizeProperty, size);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"FontSizeCombo error: {ex.Message}");
-            }
+            var text = FontSizeCombo.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(text)
+                || string.Equals(text, _syncedFontSize, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (!TryParseFontSize(text, out var size))
+                return;
+
+            ApplySelectionProperty(TextElement.FontSizeProperty, size);
         }
 
         private void TextColorButton_Click(object sender, RoutedEventArgs e)
@@ -725,6 +798,13 @@ namespace Win11DesktopApp.Views
 
             SyncParagraphFormattingControls();
             UpdateToolbarButtonStates();
+        }
+
+        private void Editor_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _clickedImage = e.OriginalSource is Image image && image.Source != null
+                ? image
+                : null;
         }
 
         private void SpacingMenuButton_Click(object sender, RoutedEventArgs e)
@@ -1037,11 +1117,15 @@ namespace Win11DesktopApp.Views
             var list = GetCurrentParentList(paragraph);
             ApplyToolbarButtonState(BulletListButton, list?.MarkerStyle == TextMarkerStyle.Disc);
             ApplyToolbarButtonState(NumberedListButton, list?.MarkerStyle == TextMarkerStyle.Decimal);
+
+            UpdateTableToolbarState();
+            UpdateImageToolbarState();
+            SyncFontCombosFromSelection();
         }
 
         private bool IsSelectionPropertyActive(DependencyProperty property, object expectedValue)
         {
-            var value = Editor.Selection?.GetPropertyValue(property);
+            var value = GetCaretFormattingValue(property);
             if (value == null || value == DependencyProperty.UnsetValue)
                 return false;
 
@@ -1050,7 +1134,7 @@ namespace Win11DesktopApp.Views
 
         private bool IsUnderlineActive()
         {
-            var value = Editor.Selection?.GetPropertyValue(Inline.TextDecorationsProperty);
+            var value = GetCaretFormattingValue(Inline.TextDecorationsProperty);
             if (value == null || value == DependencyProperty.UnsetValue)
                 return false;
 
@@ -1060,10 +1144,606 @@ namespace Win11DesktopApp.Views
             return false;
         }
 
+        private object? GetCaretFormattingValue(DependencyProperty property)
+        {
+            var selection = Editor?.Selection;
+            if (selection == null)
+                return DependencyProperty.UnsetValue;
+
+            if (!selection.IsEmpty)
+                return selection.GetPropertyValue(property);
+
+            var pointer = selection.Start;
+            if (FindRunAtPointer(pointer) is { } run)
+                return run.GetValue(property);
+
+            if (pointer.Paragraph != null)
+                return pointer.Paragraph.GetValue(property);
+
+            return selection.GetPropertyValue(property);
+        }
+
+        private static Run? FindRunAtPointer(TextPointer pointer)
+        {
+            if (pointer.Parent is Run parentRun)
+                return parentRun;
+
+            return pointer.GetAdjacentElement(LogicalDirection.Backward) as Run
+                ?? pointer.GetAdjacentElement(LogicalDirection.Forward) as Run;
+        }
+
         private static System.Windows.Documents.List? GetCurrentParentList(Paragraph? paragraph)
         {
             if (paragraph?.Parent is ListItem listItem && listItem.Parent is System.Windows.Documents.List list)
                 return list;
+
+            return null;
+        }
+
+        private void SyncFontCombosFromSelection()
+        {
+            if (Editor?.Selection == null || FontFamilyCombo == null || FontSizeCombo == null)
+                return;
+
+            var wasSuppressed = _suppressEditorEvents;
+            _suppressEditorEvents = true;
+            try
+            {
+                var familyValue = GetCaretFormattingValue(TextElement.FontFamilyProperty);
+                if (familyValue is FontFamily fontFamily)
+                {
+                    var name = GetFontFamilyName(fontFamily);
+                    _syncedFontFamily = name;
+                    EnsureAndSelectComboText(FontFamilyCombo, name, numeric: false);
+                }
+                else
+                {
+                    _syncedFontFamily = string.Empty;
+                    ClearEditableCombo(FontFamilyCombo);
+                }
+
+                var sizeValue = GetCaretFormattingValue(TextElement.FontSizeProperty);
+                if (TryCoerceFontSize(sizeValue, out var size))
+                {
+                    var formatted = FormatFontSize(size);
+                    _syncedFontSize = formatted;
+                    EnsureAndSelectComboText(FontSizeCombo, formatted, numeric: true);
+                }
+                else
+                {
+                    _syncedFontSize = string.Empty;
+                    ClearEditableCombo(FontSizeCombo);
+                }
+            }
+            finally
+            {
+                _suppressEditorEvents = wasSuppressed;
+            }
+        }
+
+        private void EnsureSystemFontsLoaded()
+        {
+            if (_systemFontsLoaded || FontFamilyCombo == null)
+                return;
+
+            var current = FontFamilyCombo.Text;
+            var wasSuppressed = _suppressEditorEvents;
+            _suppressEditorEvents = true;
+            try
+            {
+                var names = new SortedSet<string>(StringComparer.CurrentCultureIgnoreCase);
+                foreach (var family in Fonts.SystemFontFamilies)
+                {
+                    try
+                    {
+                        var name = GetFontFamilyName(family);
+                        if (!string.IsNullOrWhiteSpace(name))
+                            names.Add(name);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                FontFamilyCombo.Items.Clear();
+                foreach (var name in names)
+                    FontFamilyCombo.Items.Add(new ComboBoxItem { Content = name });
+
+                if (!string.IsNullOrWhiteSpace(current))
+                    EnsureAndSelectComboText(FontFamilyCombo, current, numeric: false);
+
+                _systemFontsLoaded = true;
+            }
+            finally
+            {
+                _suppressEditorEvents = wasSuppressed;
+            }
+        }
+
+        private static void EnsureAndSelectComboText(ComboBox comboBox, string text, bool numeric)
+        {
+            ComboBoxItem? match = comboBox.Items.OfType<ComboBoxItem>()
+                .FirstOrDefault(item => string.Equals(item.Content?.ToString(), text, StringComparison.OrdinalIgnoreCase));
+
+            if (match == null)
+            {
+                match = new ComboBoxItem { Content = text };
+                if (numeric && TryParseFontSize(text, out var size))
+                {
+                    var insertAt = comboBox.Items.Count;
+                    for (var i = 0; i < comboBox.Items.Count; i++)
+                    {
+                        if (comboBox.Items[i] is ComboBoxItem existing
+                            && TryParseFontSize(existing.Content?.ToString(), out var existingSize)
+                            && existingSize > size)
+                        {
+                            insertAt = i;
+                            break;
+                        }
+                    }
+
+                    comboBox.Items.Insert(insertAt, match);
+                }
+                else
+                {
+                    comboBox.Items.Add(match);
+                }
+            }
+
+            comboBox.SelectedItem = match;
+            comboBox.Text = text;
+        }
+
+        private static void ClearEditableCombo(ComboBox comboBox)
+        {
+            comboBox.SelectedIndex = -1;
+            comboBox.Text = string.Empty;
+        }
+
+        private static bool TryCoerceFontSize(object? value, out double size)
+        {
+            size = 0;
+            if (value == null || value == DependencyProperty.UnsetValue)
+                return false;
+            if (value is double d && d > 0)
+            {
+                size = d;
+                return true;
+            }
+
+            return TryParseFontSize(value.ToString(), out size);
+        }
+
+        private static bool TryParseFontSize(string? text, out double size)
+        {
+            size = 0;
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+
+            if (!double.TryParse(text.Trim(), NumberStyles.Number, CultureInfo.CurrentCulture, out size)
+                && !double.TryParse(text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out size))
+            {
+                return false;
+            }
+
+            return size is >= 1 and <= 1638;
+        }
+
+        private static string FormatFontSize(double size)
+        {
+            var rounded = Math.Round(size, 1);
+            return Math.Abs(rounded - Math.Truncate(rounded)) < 0.05
+                ? ((int)Math.Round(rounded)).ToString(CultureInfo.InvariantCulture)
+                : rounded.ToString("0.#", CultureInfo.InvariantCulture);
+        }
+
+        private static string GetFontFamilyName(FontFamily fontFamily)
+        {
+            try
+            {
+                var current = XmlLanguage.GetLanguage(CultureInfo.CurrentUICulture.IetfLanguageTag);
+                if (fontFamily.FamilyNames.TryGetValue(current, out var localized) && !string.IsNullOrWhiteSpace(localized))
+                    return localized.Trim();
+
+                if (fontFamily.FamilyNames.TryGetValue(XmlLanguage.GetLanguage("en-us"), out var english) && !string.IsNullOrWhiteSpace(english))
+                    return english.Trim();
+
+                var first = fontFamily.FamilyNames.Values.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(first))
+                    return first.Trim();
+            }
+            catch
+            {
+            }
+
+            var source = fontFamily.Source ?? string.Empty;
+            var comma = source.IndexOf(',');
+            var name = comma >= 0 ? source[..comma].Trim() : source.Trim();
+            return name.TrimStart('.', '/', '\\', '#');
+        }
+
+        private void UpdateTableToolbarState()
+        {
+            if (TableToolbarGroup == null)
+                return;
+
+            var table = FindCurrentTable();
+            TableToolbarGroup.Visibility = table == null ? Visibility.Collapsed : Visibility.Visible;
+            if (table == null)
+                return;
+
+            ApplyToolbarButtonState(TableAlignLeftButton, table.TextAlignment == TextAlignment.Left);
+            ApplyToolbarButtonState(TableAlignCenterButton, table.TextAlignment == TextAlignment.Center);
+            ApplyToolbarButtonState(TableAlignRightButton, table.TextAlignment == TextAlignment.Right);
+        }
+
+        private void UpdateImageToolbarState()
+        {
+            if (ImageToolbarGroup == null)
+                return;
+
+            var image = FindCurrentImage();
+            ImageToolbarGroup.Visibility = image == null ? Visibility.Collapsed : Visibility.Visible;
+            if (image == null)
+                return;
+
+            var alignment = GetImageAlignment(image);
+            ApplyToolbarButtonState(ImageAlignLeftButton, alignment == TextAlignment.Left);
+            ApplyToolbarButtonState(ImageAlignCenterButton, alignment == TextAlignment.Center);
+            ApplyToolbarButtonState(ImageAlignRightButton, alignment == TextAlignment.Right);
+        }
+
+        private void TableAlignLeftButton_Click(object sender, RoutedEventArgs e)
+            => AlignCurrentTable(TextAlignment.Left, shrinkIfFullWidth: false);
+
+        private void TableAlignCenterButton_Click(object sender, RoutedEventArgs e)
+            => AlignCurrentTable(TextAlignment.Center, shrinkIfFullWidth: true);
+
+        private void TableAlignRightButton_Click(object sender, RoutedEventArgs e)
+            => AlignCurrentTable(TextAlignment.Right, shrinkIfFullWidth: true);
+
+        private void TableNarrowerButton_Click(object sender, RoutedEventArgs e)
+            => ScaleCurrentTableWidth(0.85);
+
+        private void TableWiderButton_Click(object sender, RoutedEventArgs e)
+            => ScaleCurrentTableWidth(1.15);
+
+        private void TableColumnNarrowerButton_Click(object sender, RoutedEventArgs e)
+            => ScaleCurrentTableColumn(0.85);
+
+        private void TableColumnWiderButton_Click(object sender, RoutedEventArgs e)
+            => ScaleCurrentTableColumn(1.15);
+
+        private void ImageAlignLeftButton_Click(object sender, RoutedEventArgs e)
+            => AlignCurrentImage(TextAlignment.Left, shrinkIfFullWidth: false);
+
+        private void ImageAlignCenterButton_Click(object sender, RoutedEventArgs e)
+            => AlignCurrentImage(TextAlignment.Center, shrinkIfFullWidth: true);
+
+        private void ImageAlignRightButton_Click(object sender, RoutedEventArgs e)
+            => AlignCurrentImage(TextAlignment.Right, shrinkIfFullWidth: true);
+
+        private void ImageNarrowerButton_Click(object sender, RoutedEventArgs e)
+            => ScaleCurrentImage(0.85);
+
+        private void ImageWiderButton_Click(object sender, RoutedEventArgs e)
+            => ScaleCurrentImage(1.15);
+
+        private void AlignCurrentImage(TextAlignment alignment, bool shrinkIfFullWidth)
+        {
+            var image = FindCurrentImage();
+            if (image == null)
+                return;
+
+            if (shrinkIfFullWidth)
+            {
+                var contentWidth = GetPageContentWidth();
+                EnsureExplicitImageSize(image, contentWidth);
+                var (width, _) = GetImageDisplaySize(image);
+                if (width >= contentWidth * 0.97)
+                    ScaleImage(image, contentWidth, 0.8);
+            }
+
+            if (GetImageParagraph(image) is { } paragraph)
+                paragraph.TextAlignment = alignment;
+
+            if (image.Parent is BlockUIContainer block)
+                block.TextAlignment = alignment;
+
+            image.HorizontalAlignment = alignment switch
+            {
+                TextAlignment.Center => HorizontalAlignment.Center,
+                TextAlignment.Right => HorizontalAlignment.Right,
+                _ => HorizontalAlignment.Left
+            };
+
+            _vm?.MarkDirty();
+            UpdateImageToolbarState();
+        }
+
+        private void ScaleCurrentImage(double factor)
+        {
+            var image = FindCurrentImage();
+            if (image == null)
+                return;
+
+            var contentWidth = GetPageContentWidth();
+            EnsureExplicitImageSize(image, contentWidth);
+            ScaleImage(image, contentWidth, factor);
+            _vm?.MarkDirty();
+            UpdateImageToolbarState();
+        }
+
+        private static void EnsureExplicitImageSize(Image image, double contentWidth)
+        {
+            image.Stretch = Stretch.Uniform;
+            var (width, height) = GetImageDisplaySize(image);
+            if (width > contentWidth && width > 0)
+            {
+                var scale = contentWidth / width;
+                width = contentWidth;
+                height *= scale;
+            }
+
+            image.Width = Math.Max(1, width);
+            image.Height = Math.Max(1, height);
+        }
+
+        private static void ScaleImage(Image image, double contentWidth, double factor)
+        {
+            var (width, height) = GetImageDisplaySize(image);
+            var minWidth = Math.Min(80, contentWidth);
+            var targetWidth = Math.Clamp(width * factor, minWidth, contentWidth);
+            var scale = targetWidth / Math.Max(1, width);
+            image.Stretch = Stretch.Uniform;
+            image.Width = targetWidth;
+            image.Height = Math.Max(20, height * scale);
+        }
+
+        private static (double Width, double Height) GetImageDisplaySize(Image image)
+        {
+            if (!double.IsNaN(image.Width) && image.Width > 0
+                && !double.IsNaN(image.Height) && image.Height > 0)
+            {
+                return (image.Width, image.Height);
+            }
+
+            if (image.ActualWidth > 1 && image.ActualHeight > 1)
+                return (image.ActualWidth, image.ActualHeight);
+
+            if (image.Source is BitmapSource bitmap && bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+            {
+                var dpiX = bitmap.DpiX > 0 ? bitmap.DpiX : 96;
+                var dpiY = bitmap.DpiY > 0 ? bitmap.DpiY : 96;
+                return (bitmap.PixelWidth * 96.0 / dpiX, bitmap.PixelHeight * 96.0 / dpiY);
+            }
+
+            return (400, 300);
+        }
+
+        private Image? FindCurrentImage()
+        {
+            var selection = Editor?.Selection;
+            var fromSelection = selection == null
+                ? null
+                : FindImageNearPointer(selection.Start) ?? FindImageNearPointer(selection.End);
+
+            if (fromSelection != null)
+            {
+                _clickedImage = fromSelection;
+                return fromSelection;
+            }
+
+            if (_clickedImage?.Source != null && _clickedImage.IsLoaded)
+                return _clickedImage;
+
+            return null;
+        }
+
+        private static Image? FindImageNearPointer(TextPointer? pointer)
+        {
+            if (pointer == null)
+                return null;
+
+            return FindImageFromNode(pointer.Parent as DependencyObject)
+                ?? FindImageFromNode(pointer.GetAdjacentElement(LogicalDirection.Backward) as DependencyObject)
+                ?? FindImageFromNode(pointer.GetAdjacentElement(LogicalDirection.Forward) as DependencyObject);
+        }
+
+        private static Image? FindImageFromNode(DependencyObject? node)
+        {
+            var current = node;
+            for (var hops = 0; current != null && hops < 24; hops++)
+            {
+                switch (current)
+                {
+                    case Image image:
+                        return image;
+                    case InlineUIContainer inline when inline.Child is Image inlineImage:
+                        return inlineImage;
+                    case BlockUIContainer block when block.Child is Image blockImage:
+                        return blockImage;
+                }
+
+                if (current is FrameworkContentElement content)
+                    current = content.Parent;
+                else if (current is FrameworkElement element)
+                    current = element.Parent ?? LogicalTreeHelper.GetParent(element);
+                else
+                    break;
+            }
+
+            return null;
+        }
+
+        private static Paragraph? GetImageParagraph(Image image)
+        {
+            if (image.Parent is InlineUIContainer inline)
+                return inline.Parent as Paragraph;
+
+            return FindParent<Paragraph>(image.Parent as DependencyObject)
+                ?? LogicalTreeHelper.GetParent(image) as Paragraph;
+        }
+
+        private static TextAlignment GetImageAlignment(Image image)
+        {
+            if (GetImageParagraph(image) is { } paragraph)
+                return paragraph.TextAlignment;
+
+            if (image.Parent is BlockUIContainer block)
+                return block.TextAlignment;
+
+            return image.HorizontalAlignment switch
+            {
+                HorizontalAlignment.Center => TextAlignment.Center,
+                HorizontalAlignment.Right => TextAlignment.Right,
+                _ => TextAlignment.Left
+            };
+        }
+
+        private void AlignCurrentTable(TextAlignment alignment, bool shrinkIfFullWidth)
+        {
+            var table = FindCurrentTable();
+            if (table == null)
+                return;
+
+            if (shrinkIfFullWidth)
+            {
+                var contentWidth = GetPageContentWidth();
+                EnsureExplicitColumnWidths(table, contentWidth);
+                if (GetTableWidth(table, contentWidth) >= contentWidth * 0.97)
+                    ScaleTableColumns(table, contentWidth, 0.8);
+            }
+
+            table.TextAlignment = alignment;
+            _vm?.MarkDirty();
+            UpdateTableToolbarState();
+        }
+
+        private void ScaleCurrentTableWidth(double factor)
+        {
+            var table = FindCurrentTable();
+            if (table == null)
+                return;
+
+            var contentWidth = GetPageContentWidth();
+            EnsureExplicitColumnWidths(table, contentWidth);
+            ScaleTableColumns(table, contentWidth, factor);
+            _vm?.MarkDirty();
+            UpdateTableToolbarState();
+        }
+
+        private void ScaleCurrentTableColumn(double factor)
+        {
+            var table = FindCurrentTable();
+            var cell = FindCurrentTableCell();
+            if (table == null || cell == null)
+                return;
+
+            var contentWidth = GetPageContentWidth();
+            EnsureExplicitColumnWidths(table, contentWidth);
+
+            var row = FindParent<TableRow>(cell);
+            if (row == null)
+                return;
+
+            var index = row.Cells.IndexOf(cell);
+            if (index < 0 || index >= table.Columns.Count)
+                return;
+
+            var column = table.Columns[index];
+            var current = column.Width.IsAbsolute && column.Width.Value > 0
+                ? column.Width.Value
+                : contentWidth / Math.Max(1, table.Columns.Count);
+            var next = Math.Clamp(current * factor, 48, contentWidth * 0.8);
+            column.Width = new GridLength(next);
+            _vm?.MarkDirty();
+            UpdateTableToolbarState();
+        }
+
+        private double GetPageContentWidth()
+        {
+            var pageWidth = _vm?.PagePreviewWidth > 0 ? _vm.PagePreviewWidth : 794;
+            var padding = _vm?.PagePadding ?? new Thickness(96);
+            return Math.Max(160, pageWidth - padding.Left - padding.Right);
+        }
+
+        private static double GetTableWidth(Table table, double fallbackContentWidth)
+        {
+            var total = 0.0;
+            foreach (var column in table.Columns)
+            {
+                if (column.Width.IsAbsolute && column.Width.Value > 0)
+                    total += column.Width.Value;
+                else
+                    total += fallbackContentWidth / Math.Max(1, table.Columns.Count);
+            }
+
+            return total;
+        }
+
+        private static void EnsureTableColumns(Table table)
+        {
+            if (table.Columns.Count > 0)
+                return;
+
+            var cellCount = table.RowGroups
+                .SelectMany(group => group.Rows)
+                .Select(row => row.Cells.Count)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            for (var i = 0; i < cellCount; i++)
+                table.Columns.Add(new TableColumn());
+        }
+
+        private static void EnsureExplicitColumnWidths(Table table, double contentWidth)
+        {
+            EnsureTableColumns(table);
+            if (table.Columns.Count == 0)
+                return;
+
+            var hasExplicit = table.Columns.Any(column => column.Width.IsAbsolute && column.Width.Value > 0);
+            if (hasExplicit)
+                return;
+
+            var each = contentWidth / table.Columns.Count;
+            foreach (var column in table.Columns)
+                column.Width = new GridLength(each);
+        }
+
+        private static void ScaleTableColumns(Table table, double contentWidth, double factor)
+        {
+            if (table.Columns.Count == 0)
+                return;
+
+            var total = GetTableWidth(table, contentWidth);
+            var target = Math.Clamp(total * factor, contentWidth * 0.35, contentWidth);
+            var scale = target / Math.Max(1, total);
+            foreach (var column in table.Columns)
+            {
+                var current = column.Width.IsAbsolute && column.Width.Value > 0
+                    ? column.Width.Value
+                    : contentWidth / table.Columns.Count;
+                column.Width = new GridLength(Math.Max(40, current * scale));
+            }
+        }
+
+        private Table? FindCurrentTable()
+            => FindParent<Table>(Editor.Selection?.Start?.Parent as DependencyObject);
+
+        private TableCell? FindCurrentTableCell()
+            => FindParent<TableCell>(Editor.Selection?.Start?.Parent as DependencyObject);
+
+        private static T? FindParent<T>(DependencyObject? node) where T : class
+        {
+            while (node != null)
+            {
+                if (node is T match)
+                    return match;
+
+                node = node is FrameworkContentElement element ? element.Parent : null;
+            }
 
             return null;
         }

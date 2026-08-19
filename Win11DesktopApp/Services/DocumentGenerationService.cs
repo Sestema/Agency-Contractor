@@ -245,6 +245,10 @@ namespace Win11DesktopApp.Services
 
             rtfContent = ReplaceRtfTags(rtfContent, tagValues);
 
+            var pageSetup = TryLoadEditorPageSetup(rtfTemplatePath);
+            if (pageSetup != null)
+                rtfContent = ApplyRtfPageSetup(rtfContent, pageSetup);
+
             var docxPath = outputPath;
             if (!docxPath.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
                 docxPath = Path.ChangeExtension(docxPath, ".docx");
@@ -256,18 +260,6 @@ namespace Win11DesktopApp.Services
                 var mainPart = doc.AddMainDocumentPart();
                 mainPart.Document = new Document(new Body());
 
-                var sectionProps = new SectionProperties(
-                    new PageMargin
-                    {
-                        Top = 720,
-                        Right = (UInt32Value)720U,
-                        Bottom = 720,
-                        Left = (UInt32Value)720U,
-                        Header = (UInt32Value)720U,
-                        Footer = (UInt32Value)720U
-                    });
-                mainPart.Document.Body!.Append(sectionProps);
-
                 var chunk = mainPart.AddAlternativeFormatImportPart(
                     AlternativeFormatImportPartType.Rtf, "altChunkRtf1");
 
@@ -278,10 +270,139 @@ namespace Win11DesktopApp.Services
 
                 var altChunk = new AltChunk { Id = "altChunkRtf1" };
                 mainPart.Document.Body!.Append(altChunk);
+                mainPart.Document.Body.Append(CreateSectionProperties(pageSetup));
                 mainPart.Document.Save();
             }
 
             return docxPath;
+        }
+
+        private sealed record EditorPageSetup(
+            int PaperWidthTwips,
+            int PaperHeightTwips,
+            bool IsLandscape,
+            int MarginLeftTwips,
+            int MarginRightTwips,
+            int MarginTopTwips,
+            int MarginBottomTwips);
+
+        private static EditorPageSetup? TryLoadEditorPageSetup(string rtfTemplatePath)
+        {
+            var folder = Path.GetDirectoryName(rtfTemplatePath);
+            if (string.IsNullOrWhiteSpace(folder))
+                return null;
+
+            var layoutPath = Path.Combine(folder, "editor-layout.json");
+            if (!File.Exists(layoutPath))
+                return null;
+
+            try
+            {
+                var settings = SafeFileService.ReadJsonOrDefault(layoutPath, new TemplateEditorLayoutSettings());
+                var isLetter = string.Equals(settings.PageSizeKey, "letter", StringComparison.OrdinalIgnoreCase);
+                var isLandscape = string.Equals(settings.OrientationKey, "landscape", StringComparison.OrdinalIgnoreCase);
+
+                var portraitWidth = isLetter ? 12240 : 11906;
+                var portraitHeight = isLetter ? 15840 : 16838;
+
+                ResolveEditorMargins(settings.MarginKey, out var left, out var right, out var top, out var bottom);
+
+                return new EditorPageSetup(
+                    isLandscape ? portraitHeight : portraitWidth,
+                    isLandscape ? portraitWidth : portraitHeight,
+                    isLandscape,
+                    left,
+                    right,
+                    top,
+                    bottom);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("DocumentGenerationService.LoadEditorPageSetup", ex.Message);
+                return null;
+            }
+        }
+
+        private static void ResolveEditorMargins(string? marginKey, out int left, out int right, out int top, out int bottom)
+        {
+            if (string.Equals(marginKey, "narrow", StringComparison.OrdinalIgnoreCase))
+            {
+                left = right = top = bottom = 720;
+                return;
+            }
+
+            if (string.Equals(marginKey, "wide", StringComparison.OrdinalIgnoreCase))
+            {
+                left = right = 2880;
+                top = bottom = 1440;
+                return;
+            }
+
+            left = right = top = bottom = 1440;
+        }
+
+        private static string ApplyRtfPageSetup(string rtf, EditorPageSetup setup)
+        {
+            if (string.IsNullOrEmpty(rtf))
+                return rtf;
+
+            rtf = Regex.Replace(rtf, @"\\landscape\b", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+            rtf = Regex.Replace(rtf, @"\\paperw-?\d+", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+            rtf = Regex.Replace(rtf, @"\\paperh-?\d+", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+            rtf = Regex.Replace(rtf, @"\\margl-?\d+", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+            rtf = Regex.Replace(rtf, @"\\margr-?\d+", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+            rtf = Regex.Replace(rtf, @"\\margt-?\d+", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+            rtf = Regex.Replace(rtf, @"\\margb-?\d+", string.Empty, RegexOptions.None, TimeSpan.FromSeconds(2));
+
+            var controls =
+                $"\\paperw{setup.PaperWidthTwips}\\paperh{setup.PaperHeightTwips}" +
+                $"\\margl{setup.MarginLeftTwips}\\margr{setup.MarginRightTwips}" +
+                $"\\margt{setup.MarginTopTwips}\\margb{setup.MarginBottomTwips}";
+            if (setup.IsLandscape)
+                controls += "\\landscape";
+
+            const string marker = @"{\rtf1";
+            var idx = rtf.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+                return rtf.Insert(idx + marker.Length, controls);
+
+            return controls + rtf;
+        }
+
+        private static SectionProperties CreateSectionProperties(EditorPageSetup? setup)
+        {
+            if (setup == null)
+            {
+                return new SectionProperties(
+                    new PageMargin
+                    {
+                        Top = 720,
+                        Right = (UInt32Value)720U,
+                        Bottom = 720,
+                        Left = (UInt32Value)720U,
+                        Header = (UInt32Value)720U,
+                        Footer = (UInt32Value)720U
+                    });
+            }
+
+            var pageSize = new PageSize
+            {
+                Width = (UInt32Value)(uint)setup.PaperWidthTwips,
+                Height = (UInt32Value)(uint)setup.PaperHeightTwips,
+                Orient = setup.IsLandscape ? PageOrientationValues.Landscape : PageOrientationValues.Portrait
+            };
+
+            var margin = new PageMargin
+            {
+                Top = setup.MarginTopTwips,
+                Right = (UInt32Value)(uint)setup.MarginRightTwips,
+                Bottom = setup.MarginBottomTwips,
+                Left = (UInt32Value)(uint)setup.MarginLeftTwips,
+                Header = (UInt32Value)720U,
+                Footer = (UInt32Value)720U
+            };
+
+            return new SectionProperties(pageSize, margin);
         }
 
         /// <summary>

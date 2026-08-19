@@ -37,7 +37,7 @@ namespace Win11DesktopApp.Services.Scanning
                             }
                             finally
                             {
-                                try { session.Close(); } catch { }
+                                try { session.Close(); } catch (Exception ex) { LoggingService.LogWarning("TwainScannerService.IsAvailable.Close", ex.Message); }
                             }
                         }
                     });
@@ -81,7 +81,7 @@ namespace Win11DesktopApp.Services.Scanning
                         }
                         finally
                         {
-                            try { session.Close(); } catch { }
+                            try { session.Close(); } catch (Exception ex) { LoggingService.LogWarning("TwainScannerService.GetDevicesAsync.Close", ex.Message); }
                         }
                     }
                     catch (Exception ex)
@@ -141,7 +141,7 @@ namespace Win11DesktopApp.Services.Scanning
                         var imageService = new ImageEnhancementService();
                         using var mat = imageService.LoadImage(tempPath);
                         imageService.SaveImage(mat, jpgPath);
-                        try { File.Delete(tempPath); } catch { }
+                        try { File.Delete(tempPath); } catch (Exception ex) { LoggingService.LogWarning("TwainScannerService.ScanToFileAsync.DeleteTemp", ex.Message); }
 
                         savedPath = jpgPath;
                     }
@@ -164,7 +164,7 @@ namespace Win11DesktopApp.Services.Scanning
                 source.Open();
                 source.Enable(SourceEnableMode.ShowUI, false, IntPtr.Zero);
                 source.Close();
-                try { session.Close(); } catch { }
+                try { session.Close(); } catch (Exception ex) { LoggingService.LogWarning("TwainScannerService.ScanToFileAsync.Close", ex.Message); }
 
                 if (transferError != null)
                     throw transferError;

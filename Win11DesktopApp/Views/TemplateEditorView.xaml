@@ -148,11 +148,17 @@
                     <Border Style="{StaticResource ToolbarGroupBorder}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <ComboBox x:Name="FontFamilyCombo" Width="136" Height="26" Margin="0,0,4,0"
+                                <ComboBox x:Name="FontFamilyCombo" Width="168" Height="26" Margin="0,0,4,0"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="True"
+                                          StaysOpenOnEdit="True"
                                           VerticalContentAlignment="Center" FontSize="{DynamicResource FS11}"
                                           SelectionChanged="FontFamilyCombo_SelectionChanged"
+                                          LostFocus="FontFamilyCombo_LostFocus"
+                                          PreviewKeyDown="FontFamilyCombo_PreviewKeyDown"
+                                          DropDownOpened="FontFamilyCombo_DropDownOpened"
                                           ToolTip="{DynamicResource EditorFontFamily}">
-                                    <ComboBoxItem Content="Segoe UI" IsSelected="True"/>
+                                    <ComboBoxItem Content="Segoe UI"/>
                                     <ComboBoxItem Content="Arial"/>
                                     <ComboBoxItem Content="Calibri"/>
                                     <ComboBoxItem Content="Times New Roman"/>
@@ -160,14 +166,19 @@
                                     <ComboBoxItem Content="Verdana"/>
                                 </ComboBox>
                                 <ComboBox x:Name="FontSizeCombo" Width="68" Height="26" Margin="0,0,4,0"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="True"
+                                          StaysOpenOnEdit="True"
                                           VerticalContentAlignment="Center" FontSize="{DynamicResource FS11}"
                                           SelectionChanged="FontSizeCombo_SelectionChanged"
+                                          LostFocus="FontSizeCombo_LostFocus"
+                                          PreviewKeyDown="FontSizeCombo_PreviewKeyDown"
                                           ToolTip="{DynamicResource EditorFontSize}">
                                     <ComboBoxItem Content="8"/>
                                     <ComboBoxItem Content="9"/>
                                     <ComboBoxItem Content="10"/>
                                     <ComboBoxItem Content="11"/>
-                                    <ComboBoxItem Content="12" IsSelected="True"/>
+                                    <ComboBoxItem Content="12"/>
                                     <ComboBoxItem Content="14"/>
                                     <ComboBoxItem Content="16"/>
                                     <ComboBoxItem Content="18"/>
@@ -410,6 +421,110 @@
                                 </StackPanel>
                             </StackPanel>
                             <TextBlock Text="{DynamicResource EditorParagraph}" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="TableToolbarGroup"
+                            Style="{StaticResource ToolbarGroupBorder}"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="TableAlignLeftButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableAlignLeftButton_Click"
+                                        ToolTip="{DynamicResource EditorTableAlignLeft}">
+                                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="TableAlignCenterButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableAlignCenterButton_Click"
+                                        ToolTip="{DynamicResource EditorTableAlignCenter}">
+                                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="TableAlignRightButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableAlignRightButton_Click"
+                                        ToolTip="{DynamicResource EditorTableAlignRight}">
+                                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="TableNarrowerButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableNarrowerButton_Click"
+                                        ToolTip="{DynamicResource EditorTableNarrower}">
+                                    <TextBlock Text="&#xE73F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="TableWiderButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableWiderButton_Click"
+                                        ToolTip="{DynamicResource EditorTableWider}">
+                                    <TextBlock Text="&#xE740;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="TableColumnNarrowerButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableColumnNarrowerButton_Click"
+                                        ToolTip="{DynamicResource EditorTableColumnNarrower}">
+                                    <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="TableColumnWiderButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="TableColumnWiderButton_Click"
+                                        ToolTip="{DynamicResource EditorTableColumnWider}">
+                                    <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource EditorTable}" Style="{StaticResource ToolbarGroupTitle}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="ImageToolbarGroup"
+                            Style="{StaticResource ToolbarGroupBorder}"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="ImageAlignLeftButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="ImageAlignLeftButton_Click"
+                                        ToolTip="{DynamicResource EditorImageAlignLeft}">
+                                    <TextBlock Text="&#xE8E4;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="ImageAlignCenterButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="ImageAlignCenterButton_Click"
+                                        ToolTip="{DynamicResource EditorImageAlignCenter}">
+                                    <TextBlock Text="&#xE8E3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="ImageAlignRightButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="ImageAlignRightButton_Click"
+                                        ToolTip="{DynamicResource EditorImageAlignRight}">
+                                    <TextBlock Text="&#xE8E2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="ImageNarrowerButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="ImageNarrowerButton_Click"
+                                        ToolTip="{DynamicResource EditorImageNarrower}">
+                                    <TextBlock Text="&#xE73F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                                <Button x:Name="ImageWiderButton"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        Click="ImageWiderButton_Click"
+                                        ToolTip="{DynamicResource EditorImageWider}">
+                                    <TextBlock Text="&#xE740;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource ForegroundBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource EditorImage}" Style="{StaticResource ToolbarGroupTitle}"/>
                         </StackPanel>
                     </Border>
 
@@ -778,6 +893,7 @@
                                          SpellCheck.IsEnabled="False"
                                          TextChanged="Editor_TextChanged"
                                          SelectionChanged="Editor_SelectionChanged"
+                                         PreviewMouseLeftButtonDown="Editor_PreviewMouseLeftButtonDown"
                                          SizeChanged="Editor_SizeChanged"/>
                             <Canvas x:Name="PageBreakCanvas" IsHitTestVisible="False"
                                     Width="{Binding ActualWidth, ElementName=Editor}"

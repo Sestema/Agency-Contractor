@@ -800,7 +800,9 @@
 
             <Style x:Key="HeaderBackButton" TargetType="Button">
                 <Setter Property="Height" Value="36"/>
-                <Setter Property="Padding" Value="12,0"/>
+                <Setter Property="MinWidth" Value="36"/>
+                <Setter Property="MinHeight" Value="36"/>
+                <Setter Property="Padding" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
@@ -808,7 +810,8 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Grid Height="{TemplateBinding Height}">
+                            <Grid MinWidth="{TemplateBinding MinWidth}"
+                                  Height="{TemplateBinding Height}">
                                 <Border x:Name="Bd"
                                         Background="{DynamicResource CardBackgroundBrush}"
                                         BorderBrush="{DynamicResource CardBorderBrush}"

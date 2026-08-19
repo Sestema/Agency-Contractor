@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.Helpers
 {
@@ -137,7 +138,10 @@ namespace Win11DesktopApp.Helpers
                 int darkMode = isDark ? 1 : 0;
                 DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AcrylicHelper.ApplyImmersiveDarkMode", ex.Message);
+            }
         }
 
         private static bool TryEnableWin11Backdrop(IntPtr hwnd, bool isDark, BackdropKind kind)
@@ -154,8 +158,9 @@ namespace Win11DesktopApp.Helpers
                 int hr = DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
                 return hr == 0;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning("AcrylicHelper.TryEnableWin11Backdrop", ex.Message);
                 return false;
             }
         }
@@ -194,8 +199,9 @@ namespace Win11DesktopApp.Helpers
                     Marshal.FreeHGlobal(accentPtr);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.LogWarning("AcrylicHelper.TryEnableWin10Acrylic", ex.Message);
                 return false;
             }
         }
@@ -208,7 +214,10 @@ namespace Win11DesktopApp.Helpers
                 int backdropType = 1; // DWMSBT_NONE
                 DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AcrylicHelper.TryDisableWin11Backdrop", ex.Message);
+            }
         }
 
         private static void TryDisableWin10Acrylic(IntPtr hwnd)
@@ -236,7 +245,10 @@ namespace Win11DesktopApp.Helpers
                     Marshal.FreeHGlobal(accentPtr);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AcrylicHelper.TryDisableWin10Acrylic", ex.Message);
+            }
         }
     }
 }

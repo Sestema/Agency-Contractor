@@ -67,12 +67,10 @@
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="Background" Value="#313244"/>
-            <Setter Property="Foreground" Value="#CDD6F4"/>
-            <Setter Property="RowBackground" Value="#313244"/>
-            <Setter Property="AlternatingRowBackground" Value="#363849"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="HorizontalGridLinesBrush" Value="#45475A"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#45475A"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="CanUserDeleteRows" Value="False"/>

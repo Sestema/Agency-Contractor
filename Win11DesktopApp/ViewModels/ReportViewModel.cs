@@ -597,7 +597,7 @@ namespace Win11DesktopApp.ViewModels
         public string EmployeeSearchText
         {
             get => _employeeSearchText;
-            set { if (SetProperty(ref _employeeSearchText, value)) FilterEmployeesDebounced(); }
+            set { if (SetProperty(ref _employeeSearchText, value)) _ = FilterEmployeesDebouncedAsync(); }
         }
 
         // ===== Chart =====
@@ -1169,16 +1169,16 @@ namespace Win11DesktopApp.ViewModels
             var cts = new CancellationTokenSource();
             var previous = Interlocked.Exchange(ref _refreshCts, cts);
             previous?.Cancel();
-            previous?.Dispose();
 
             IsLoading = true;
+            var token = cts.Token;
 
             try
             {
-                await Task.Delay(50, cts.Token);
+                await Task.Delay(50, token);
 
                 if (reloadFilters)
-                    await LoadFiltersAsync(cts.Token);
+                    await LoadFiltersAsync(token);
 
                 var companiesSnapshot = _companyService.Companies
                     .Where(PolicyService.CanAccessCompany)
@@ -1189,9 +1189,9 @@ namespace Win11DesktopApp.ViewModels
                 var typeDisplayMap = CreateDocTypeDisplayMap();
 
                 var result = await Task.Run(() =>
-                    BuildReportResult(companiesSnapshot, filterSnapshot, dateFrom, dateTo, typeDisplayMap, cts.Token), cts.Token);
+                    BuildReportResult(companiesSnapshot, filterSnapshot, dateFrom, dateTo, typeDisplayMap, token), token);
 
-                cts.Token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
                 ApplyReportResult(result, dateFrom, dateTo);
             }
             catch (OperationCanceledException)
@@ -2365,21 +2365,31 @@ namespace Win11DesktopApp.ViewModels
                 }));
         }
 
-        private async void FilterEmployeesDebounced()
+        private async Task FilterEmployeesDebouncedAsync()
         {
             var cts = new CancellationTokenSource();
             var previous = Interlocked.Exchange(ref _searchCts, cts);
             previous?.Cancel();
-            previous?.Dispose();
+            var token = cts.Token;
 
             try
             {
-                await Task.Delay(300, cts.Token);
-                if (!cts.Token.IsCancellationRequested)
-                    FilterEmployees();
+                await Task.Delay(300, token);
+                FilterEmployees();
             }
             catch (OperationCanceledException)
             {
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("ReportViewModel.FilterEmployees", ex);
+            }
+            finally
+            {
+                if (ReferenceEquals(_searchCts, cts))
+                    _searchCts = null;
+
+                cts.Dispose();
             }
         }
 
@@ -2423,11 +2433,9 @@ namespace Win11DesktopApp.ViewModels
 
             var refreshCts = Interlocked.Exchange(ref _refreshCts, null);
             refreshCts?.Cancel();
-            refreshCts?.Dispose();
 
             var searchCts = Interlocked.Exchange(ref _searchCts, null);
             searchCts?.Cancel();
-            searchCts?.Dispose();
         }
 
         private void OnDetailsClose()

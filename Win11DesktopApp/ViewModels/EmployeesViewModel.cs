@@ -59,6 +59,9 @@ namespace Win11DesktopApp.ViewModels
         public string UniqueId { get; init; } = string.Empty;
         public bool IsComplete { get; init; }
         public string OkText { get; init; } = string.Empty;
+        public int CompletedCount { get; init; }
+        public int RequiredCount { get; init; }
+        public string ProgressText { get; init; } = string.Empty;
         public IReadOnlyList<DocumentPackageDocStatusItem> Documents { get; init; }
             = Array.Empty<DocumentPackageDocStatusItem>();
         public string EmployeeFolder { get; init; } = string.Empty;
@@ -233,6 +236,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private bool _isDocumentPackageDialogOpen;
+        private bool _restoreDocumentPackageDialog;
         public bool IsDocumentPackageDialogOpen
         {
             get => _isDocumentPackageDialogOpen;
@@ -889,7 +893,7 @@ namespace Win11DesktopApp.ViewModels
                 StatFilter = "all";
             });
             OpenDocumentPackageDialogCommand = new AsyncRelayCommand(_ => OpenDocumentPackageDialogAsync());
-            CloseDocumentPackageDialogCommand = new RelayCommand(_ => IsDocumentPackageDialogOpen = false);
+            CloseDocumentPackageDialogCommand = new RelayCommand(_ => CloseDocumentPackageDialog());
             OpenDocumentPackageEmployeeCommand = new RelayCommand(
                 o => OpenEmployeeFromDocumentPackage(o as DocumentPackageStatRow),
                 o => o is DocumentPackageStatRow);
@@ -1259,7 +1263,16 @@ namespace Win11DesktopApp.ViewModels
                 AddEmployeeVm.RequestClose -= OnAddEmployeeClose;
         }
 
-        private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
+        private void OnDetailsClose()
+        {
+            IsEmployeeDetailsOpen = false;
+            if (!_restoreDocumentPackageDialog)
+                return;
+
+            _restoreDocumentPackageDialog = false;
+            IsDocumentPackageDialogOpen = true;
+            _ = RefreshDocumentPackageStatsAsync();
+        }
 
         private void OnDetailsDataChanged(EmployeeModels.EmployeeDataChangedEventArgs e)
         {
@@ -1389,6 +1402,7 @@ namespace Win11DesktopApp.ViewModels
 
         private void OpenEmployee(EmployeeModels.EmployeeSummary? employee)
         {
+            _restoreDocumentPackageDialog = false;
             var firmName = ResolveEmployeeFirmName(employee);
             if (employee == null || string.IsNullOrWhiteSpace(firmName)) return;
             if (!CanAccessEmployee(employee)) return;
@@ -1619,6 +1633,12 @@ namespace Win11DesktopApp.ViewModels
             DocumentPackageStatRows = new ObservableCollection<DocumentPackageStatRow>(result.Rows);
         }
 
+        private void CloseDocumentPackageDialog()
+        {
+            _restoreDocumentPackageDialog = false;
+            IsDocumentPackageDialogOpen = false;
+        }
+
         private async Task OpenDocumentPackageDialogAsync()
         {
             await RefreshDocumentPackageStatsAsync();
@@ -1643,6 +1663,13 @@ namespace Win11DesktopApp.ViewModels
 
             IsDocumentPackageDialogOpen = false;
             OpenEmployee(employee);
+            if (!IsEmployeeDetailsOpen)
+            {
+                IsDocumentPackageDialogOpen = true;
+                return;
+            }
+
+            _restoreDocumentPackageDialog = true;
             if (EmployeeDetailsVm != null && EmployeeDetailsVm.HasDocumentPackage)
                 EmployeeDetailsVm.TabIndex = 4;
         }
@@ -1747,6 +1774,9 @@ namespace Win11DesktopApp.ViewModels
                     UniqueId = employee.UniqueId ?? string.Empty,
                     IsComplete = isComplete,
                     OkText = okText,
+                    CompletedCount = employeeCompleted,
+                    RequiredCount = employeeRequired,
+                    ProgressText = $"{employeeCompleted}/{employeeRequired}",
                     Documents = documents,
                     EmployeeFolder = employee.EmployeeFolder ?? string.Empty
                 });

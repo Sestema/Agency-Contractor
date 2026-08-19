@@ -2999,6 +2999,7 @@ namespace Win11DesktopApp.Services
                 Check(Res("HistFieldInsExp"), oldData.InsuranceExpiry, newData.InsuranceExpiry);
                 Check(Res("HistFieldPhone"), oldData.Phone, newData.Phone);
                 Check(Res("HistFieldEmail"), oldData.Email, newData.Email);
+                Check(Res("HistFieldProfileNote"), oldData.ProfileNote, newData.ProfileNote);
                 Check(Res("HistFieldStatus"), oldData.Status, newData.Status);
                 Check(Res("HistFieldPosition"), oldData.PositionTag, newData.PositionTag);
                 Check(Res("HistFieldPosNumber"), oldData.PositionNumber, newData.PositionNumber);

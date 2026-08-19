@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -29,6 +30,13 @@ namespace AdminPanel
             public double WindowLeft { get; set; }
             public double WindowTop { get; set; }
             public string WindowState { get; set; } = nameof(System.Windows.WindowState.Normal);
+            public string ClientSearch { get; set; } = string.Empty;
+            public string ClientStatus { get; set; } = "all";
+            public string LicenseFilter { get; set; } = "all";
+            public string ActivityFilter { get; set; } = "all";
+            public string VersionFilter { get; set; } = string.Empty;
+            public string SortMemberPath { get; set; } = string.Empty;
+            public string SortDirection { get; set; } = string.Empty;
         }
 
         private sealed class SessionSummaryRow
@@ -57,6 +65,20 @@ namespace AdminPanel
             }
         }
 
+        private sealed class ActivityRow
+        {
+            public DateTime At { get; set; }
+            public string Kind { get; set; } = "";
+            public string ActionCode { get; set; } = "";
+            public string ActionDisplay { get; set; } = "";
+            public string Subject { get; set; } = "";
+            public string Place { get; set; } = "";
+            public string Details { get; set; } = "";
+
+            public string DateDisplay => At.ToString("dd.MM.yyyy HH:mm");
+            public string DayDisplay => FormatActivityDay(At);
+        }
+
         private readonly SupabaseService _svc;
         private ClientRecord? _selected;
         private ClientProfileRecord? _selectedProfile;
@@ -71,8 +93,18 @@ namespace AdminPanel
         private string? _profileLoadingClientId;
         private string? _tenantClientId;
         private string? _tenantLoadingClientId;
+        private ClientMirrorSnapshot? _activitySnapshot;
+        private string? _activityClientId;
+        private string? _activityLoadingClientId;
+        private bool _activityLoadFailed;
+        private List<ActivityRow> _allActivity = new();
         private bool _isUpdatingTelemetryEventFilter;
         private bool _isPopulatingAccessConfig;
+        private bool _isRestoringFilters;
+        private bool _clientFiltersRestored;
+        private AdminPanelLayoutSettings? _restoredLayout;
+        private string? _clientSortMemberPath;
+        private ListSortDirection _clientSortDirection = ListSortDirection.Descending;
         private WindowState _lastNonMinimizedWindowState = WindowState.Normal;
 
         private const string BaseUrl = "https://tssgxhatnjvqthdiyuwo.supabase.co";
@@ -137,12 +169,31 @@ namespace AdminPanel
 
                 _allClients = clientsTask.Result;
 
-                PopulateVersionFilter();
+                _isRestoringFilters = true;
+                try
+                {
+                    PopulateVersionFilter();
+                    ApplyRestoredClientFilters();
+                }
+                finally
+                {
+                    _isRestoringFilters = false;
+                }
+
                 ApplyClientFilters(restoreSelection: false);
                 RestoreClientSelection(selectedId);
 
                 if (_selected == null)
                     OnClientSelected();
+                else
+                {
+                    _activityClientId = null;
+                    _activitySnapshot = null;
+                    _activityLoadFailed = false;
+                    _ = EnsureSelectedClientActivityLoadedAsync(_selected.Id);
+                    if (IsActivityOrHistoryTabSelected())
+                        _ = EnsureSelectedClientTelemetryLoadedAsync(_selected.Id);
+                }
 
                 TxtStatus.Text = $"Оновлено: {DateTime.Now:HH:mm:ss}";
             }
@@ -172,7 +223,16 @@ namespace AdminPanel
 
                 var json = File.ReadAllText(path);
                 var settings = JsonSerializer.Deserialize<AdminPanelLayoutSettings>(json, LayoutJsonOptions);
+                _restoredLayout = settings;
                 RestoreWindowLayout(settings);
+                if (!string.IsNullOrWhiteSpace(settings?.SortMemberPath))
+                {
+                    _clientSortMemberPath = settings.SortMemberPath;
+                    _clientSortDirection = string.Equals(settings.SortDirection, nameof(ListSortDirection.Ascending), StringComparison.Ordinal)
+                        ? ListSortDirection.Ascending
+                        : ListSortDirection.Descending;
+                }
+
                 var layouts = settings?.ClientGridColumns;
                 if (layouts == null || layouts.Count == 0)
                     return;
@@ -218,6 +278,7 @@ namespace AdminPanel
                 var bounds = windowStateToSave == WindowState.Normal
                     ? new Rect(Left, Top, Width, Height)
                     : RestoreBounds;
+                CaptureClientGridSort();
                 var settings = new AdminPanelLayoutSettings
                 {
                     WindowWidth = bounds.Width,
@@ -227,6 +288,15 @@ namespace AdminPanel
                     WindowState = windowStateToSave == WindowState.Maximized
                         ? nameof(System.Windows.WindowState.Maximized)
                         : nameof(System.Windows.WindowState.Normal),
+                    ClientSearch = TxtClientSearch.Text ?? string.Empty,
+                    ClientStatus = GetSelectedComboTag(CmbClientStatus),
+                    LicenseFilter = GetSelectedComboTag(CmbLicenseFilter),
+                    ActivityFilter = GetSelectedComboTag(CmbActivityFilter),
+                    VersionFilter = CmbVersionFilter.SelectedItem as string ?? string.Empty,
+                    SortMemberPath = _clientSortMemberPath ?? string.Empty,
+                    SortDirection = _clientSortDirection == ListSortDirection.Ascending
+                        ? nameof(ListSortDirection.Ascending)
+                        : nameof(ListSortDirection.Descending),
                     ClientGridColumns = DgClients.Columns
                         .Where(column => !string.IsNullOrWhiteSpace(column.Header?.ToString()))
                         .Select(column => new GridColumnLayout
@@ -384,7 +454,9 @@ namespace AdminPanel
                 .ToList();
 
             var selectedId = restoreSelection ? _selected?.Id : null;
+            CaptureClientGridSort();
             DgClients.ItemsSource = filteredList;
+            ApplyClientGridSort();
             UpdateClientCounters(filteredList);
 
             if (restoreSelection && !string.IsNullOrWhiteSpace(selectedId))
@@ -393,8 +465,65 @@ namespace AdminPanel
 
         private void UpdateClientCounters(List<ClientRecord> filtered)
         {
-            var expiringSoon = filtered.Count(c => IsExpiringWithin(c, 7));
-            TxtCount.Text = $"Показано: {filtered.Count}/{_allClients.Count} | Заблокованих: {filtered.Count(c => c.IsBlocked)} | <=7 днів: {expiringSoon}";
+            var expiringSoonFiltered = filtered.Count(c => IsExpiringWithin(c, 7));
+            var expiringSoonAll = _allClients.Count(c => IsExpiringWithin(c, 7));
+            TxtCount.Text = $"Показано: {filtered.Count}/{_allClients.Count} | Заблокованих: {filtered.Count(c => c.IsBlocked)} | <=7 днів: {expiringSoonFiltered}";
+            if (TxtStatExpiring != null)
+                TxtStatExpiring.Text = $"<=7 днів: {expiringSoonAll}";
+        }
+
+        private void ApplyRestoredClientFilters()
+        {
+            if (_clientFiltersRestored || _restoredLayout == null)
+                return;
+
+            TxtClientSearch.Text = _restoredLayout.ClientSearch ?? string.Empty;
+            SelectComboTag(CmbClientStatus, string.IsNullOrWhiteSpace(_restoredLayout.ClientStatus) ? "all" : _restoredLayout.ClientStatus);
+            SelectComboTag(CmbLicenseFilter, string.IsNullOrWhiteSpace(_restoredLayout.LicenseFilter) ? "all" : _restoredLayout.LicenseFilter);
+            SelectComboTag(CmbActivityFilter, string.IsNullOrWhiteSpace(_restoredLayout.ActivityFilter) ? "all" : _restoredLayout.ActivityFilter);
+
+            var version = _restoredLayout.VersionFilter;
+            if (!string.IsNullOrWhiteSpace(version) && CmbVersionFilter.Items.Contains(version))
+                CmbVersionFilter.SelectedItem = version;
+
+            _clientFiltersRestored = true;
+        }
+
+        private void CaptureClientGridSort()
+        {
+            if (DgClients.Items.SortDescriptions.Count == 0)
+                return;
+
+            var sort = DgClients.Items.SortDescriptions[0];
+            _clientSortMemberPath = sort.PropertyName;
+            _clientSortDirection = sort.Direction;
+        }
+
+        private void ApplyClientGridSort()
+        {
+            DgClients.Items.SortDescriptions.Clear();
+            foreach (var column in DgClients.Columns)
+                column.SortDirection = null;
+
+            if (string.IsNullOrWhiteSpace(_clientSortMemberPath))
+                return;
+
+            DgClients.Items.SortDescriptions.Add(new SortDescription(_clientSortMemberPath, _clientSortDirection));
+            var sortedColumn = DgClients.Columns.FirstOrDefault(column =>
+                string.Equals(GetColumnSortPath(column), _clientSortMemberPath, StringComparison.Ordinal));
+            if (sortedColumn != null)
+                sortedColumn.SortDirection = _clientSortDirection;
+        }
+
+        private static string? GetColumnSortPath(DataGridColumn column)
+        {
+            if (!string.IsNullOrWhiteSpace(column.SortMemberPath))
+                return column.SortMemberPath;
+
+            if (column is DataGridBoundColumn bound && bound.Binding is System.Windows.Data.Binding binding)
+                return binding.Path?.Path;
+
+            return column.Header?.ToString();
         }
 
         private void UpdateStats(List<TelemetryRecord> telemetry, string? clientId)
@@ -473,11 +602,21 @@ namespace AdminPanel
             if (string.IsNullOrWhiteSpace(selectedId))
                 return;
 
-            if (ReferenceEquals(ClientDataTabs.SelectedItem, TabSessions) || ReferenceEquals(ClientDataTabs.SelectedItem, TabEvents))
+            if (ReferenceEquals(ClientDataTabs.SelectedItem, TabSessions)
+                || ReferenceEquals(ClientDataTabs.SelectedItem, TabEvents)
+                || ReferenceEquals(ClientDataTabs.SelectedItem, TabActivity))
                 await EnsureSelectedClientTelemetryLoadedAsync(selectedId);
+
+            if (ReferenceEquals(ClientDataTabs.SelectedItem, TabActivity))
+                await EnsureSelectedClientActivityLoadedAsync(selectedId);
         }
 
         private void DgClients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            OpenSelectedClientMirror();
+        }
+
+        private void OpenSelectedClientMirror()
         {
             if (_selected == null)
                 return;
@@ -514,6 +653,11 @@ namespace AdminPanel
             _telemetryHasMore = false;
             _telemetryClientId = null;
 
+            _activitySnapshot = null;
+            _activityClientId = null;
+            _activityLoadFailed = false;
+            _allActivity = new List<ActivityRow>();
+
             RefreshSessionSummaries();
             PopulateTelemetryEventFilter();
             ApplyTelemetryFilters();
@@ -523,7 +667,19 @@ namespace AdminPanel
 
             var selectedId = _selected?.Id;
             if (!string.IsNullOrWhiteSpace(selectedId))
+            {
                 _ = EnsureSelectedClientTenantLoadedAsync(selectedId);
+                _ = EnsureSelectedClientActivityLoadedAsync(selectedId);
+                if (IsActivityOrHistoryTabSelected())
+                    _ = EnsureSelectedClientTelemetryLoadedAsync(selectedId);
+            }
+        }
+
+        private bool IsActivityOrHistoryTabSelected()
+        {
+            return ReferenceEquals(ClientDataTabs.SelectedItem, TabActivity)
+                || ReferenceEquals(ClientDataTabs.SelectedItem, TabSessions)
+                || ReferenceEquals(ClientDataTabs.SelectedItem, TabEvents);
         }
 
         private async Task EnsureSelectedClientTenantLoadedAsync(string expectedClientId)
@@ -596,8 +752,9 @@ namespace AdminPanel
                 RefreshSessionSummaries();
                 UpdateStats(_activeTelemetry, expectedClientId);
                 PopulateClientDetails(_selected);
-                    PopulateTelemetryEventFilter();
-                    ApplyTelemetryFilters();
+                PopulateTelemetryEventFilter();
+                ApplyTelemetryFilters();
+                RefreshActivityUi();
                 UpdateActionButtons();
             }
             catch (Exception ex)
@@ -790,6 +947,7 @@ namespace AdminPanel
                 UpdateStats(_activeTelemetry, selectedId);
                 PopulateTelemetryEventFilter();
                 ApplyTelemetryFilters();
+                RefreshActivityUi();
             }
             catch (Exception ex)
             {
@@ -923,12 +1081,435 @@ namespace AdminPanel
             return string.Join(" | ", parts);
         }
 
+        private async Task EnsureSelectedClientActivityLoadedAsync(string expectedClientId)
+        {
+            if (string.IsNullOrWhiteSpace(expectedClientId))
+                return;
+
+            if (string.Equals(_activityClientId, expectedClientId, StringComparison.Ordinal) && !_activityLoadFailed)
+                return;
+
+            if (string.Equals(_activityLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                return;
+
+            _activityLoadingClientId = expectedClientId;
+            _activityLoadFailed = false;
+            RefreshActivityUi();
+
+            try
+            {
+                var snapshot = await _svc.GetClientMirrorSnapshotAsync(expectedClientId);
+                if (!string.Equals(_selected?.Id, expectedClientId, StringComparison.Ordinal))
+                    return;
+
+                _activitySnapshot = snapshot;
+                _activityClientId = expectedClientId;
+                _activityLoadFailed = false;
+                RefreshActivityUi();
+            }
+            catch (Exception ex)
+            {
+                if (!string.Equals(_selected?.Id, expectedClientId, StringComparison.Ordinal))
+                    return;
+
+                _activitySnapshot = null;
+                _activityClientId = expectedClientId;
+                _activityLoadFailed = true;
+                TxtStatus.Text = $"Activity error: {ex.Message}";
+                RefreshActivityUi();
+            }
+            finally
+            {
+                if (string.Equals(_activityLoadingClientId, expectedClientId, StringComparison.Ordinal))
+                    _activityLoadingClientId = null;
+                RefreshActivityUi();
+            }
+        }
+
+        private void RefreshActivityUi()
+        {
+            if (TxtDetailActivity == null || TxtActivitySummary == null || DgActivity == null)
+                return;
+
+            if (_selected == null)
+            {
+                _allActivity = new List<ActivityRow>();
+                DgActivity.ItemsSource = _allActivity;
+                TxtActivitySummary.Text = "Виберіть клієнта";
+                TxtDetailActivity.Text = "—";
+                return;
+            }
+
+            var isLoading = string.Equals(_activityLoadingClientId, _selected.Id, StringComparison.Ordinal);
+            var snapshotReady = string.Equals(_activityClientId, _selected.Id, StringComparison.Ordinal);
+            var telemetryReady = string.Equals(_telemetryClientId, _selected.Id, StringComparison.Ordinal);
+
+            if (!snapshotReady && !telemetryReady && isLoading)
+            {
+                _allActivity = new List<ActivityRow>();
+                DgActivity.ItemsSource = _allActivity;
+                TxtActivitySummary.Text = "Завантаження активності...";
+                TxtDetailActivity.Text = "Завантаження активності...";
+                return;
+            }
+
+            var telemetry = telemetryReady ? _activeTelemetry : new List<TelemetryRecord>();
+            var snapshot = snapshotReady ? _activitySnapshot : null;
+            _allActivity = BuildClientActivity(snapshot, telemetry);
+            ApplyActivityFilters();
+            TxtDetailActivity.Text = BuildActivityDetailSummary(_allActivity, isLoading, snapshotReady);
+        }
+
+        private void ApplyActivityFilters()
+        {
+            if (DgActivity == null || TxtActivitySummary == null)
+                return;
+
+            IEnumerable<ActivityRow> filtered = _allActivity;
+            var kind = GetSelectedComboTag(CmbActivityKind);
+            filtered = kind switch
+            {
+                "firm" => filtered.Where(row => row.Kind == "firm"),
+                "employee" => filtered.Where(row => row.Kind == "employee"),
+                "deleted" => filtered.Where(row => row.ActionCode == "deleted"),
+                "app" => filtered.Where(row => row.Kind == "app"),
+                _ => filtered
+            };
+
+            var query = (TxtActivitySearch?.Text ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                filtered = filtered.Where(row =>
+                    row.ActionDisplay.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    row.Subject.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    row.Place.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    row.Details.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    row.DayDisplay.Contains(query, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var filteredList = filtered.ToList();
+            DgActivity.ItemsSource = filteredList;
+            TxtActivitySummary.Text = BuildActivityTabSummary(filteredList);
+        }
+
+        private void ActivityFilter_Changed(object sender, EventArgs e)
+        {
+            if (!IsLoaded)
+                return;
+
+            ApplyActivityFilters();
+        }
+
+        private void BtnResetActivityFilters_Click(object sender, RoutedEventArgs e)
+        {
+            SelectComboTag(CmbActivityKind, "all");
+            TxtActivitySearch.Text = string.Empty;
+            ApplyActivityFilters();
+        }
+
+        private string BuildActivityTabSummary(List<ActivityRow> rows)
+        {
+            if (_selected == null)
+                return "Виберіть клієнта";
+
+            var isLoading = string.Equals(_activityLoadingClientId, _selected.Id, StringComparison.Ordinal);
+            var snapshotReady = string.Equals(_activityClientId, _selected.Id, StringComparison.Ordinal);
+            var telemetryReady = string.Equals(_telemetryClientId, _selected.Id, StringComparison.Ordinal);
+
+            if (rows.Count == 0)
+            {
+                if (isLoading)
+                    return "Завантаження активності...";
+                if (_activityLoadFailed && snapshotReady)
+                    return "Дзеркало недоступне. Показано лише події програми, якщо вони вже завантажені.";
+                if (!snapshotReady && !telemetryReady)
+                    return "Активність ще не завантажено.";
+                return "Дій поки немає";
+            }
+
+            var last = rows[0];
+            var extra = isLoading ? " | ще завантажується" : string.Empty;
+            return $"Показано: {rows.Count} | Остання: {last.DateDisplay} — {last.ActionDisplay} {last.Subject}".Trim() + extra;
+        }
+
+        private string BuildActivityDetailSummary(List<ActivityRow> rows, bool isLoading, bool snapshotReady)
+        {
+            if (rows.Count == 0)
+            {
+                if (isLoading)
+                    return "Завантаження активності...";
+                if (_activityLoadFailed)
+                    return "Не вдалося завантажити дзеркало. Відкрийте вкладку «Активність» після оновлення.";
+                if (!snapshotReady)
+                    return "Завантаження активності...";
+                return "Дій у дзеркалі ще немає. Клієнт або ще не синхронізувався, або нічого не змінював.";
+            }
+
+            var last = rows[0];
+            var parts = new List<string>();
+            if (last.At.Date == DateTime.Today)
+                parts.Add("Активний сьогодні");
+            else if (last.At.Date == DateTime.Today.AddDays(-1))
+                parts.Add("Остання дія вчора");
+            else
+                parts.Add($"Остання дія {last.At:dd.MM HH:mm}");
+
+            var weekStart = DateTime.Now.AddDays(-7);
+            var week = rows.Where(row => row.At >= weekStart).ToList();
+            var addedFirms = week.Count(row => row.Kind == "firm" && row.ActionCode == "added");
+            var addedEmployees = week.Count(row => row.Kind == "employee" && row.ActionCode == "added");
+            var updated = week.Count(row => row.ActionCode == "updated" || row.ActionCode == "archived");
+            var deleted = week.Count(row => row.ActionCode == "deleted");
+            var weekParts = new List<string>();
+            if (addedFirms > 0)
+                weekParts.Add($"+{addedFirms} фірм");
+            if (addedEmployees > 0)
+                weekParts.Add($"+{addedEmployees} працівників");
+            if (updated > 0)
+                weekParts.Add($"{updated} змін");
+            if (deleted > 0)
+                weekParts.Add($"{deleted} видалень");
+
+            parts.Add(weekParts.Count > 0
+                ? "за 7 днів: " + string.Join(", ", weekParts)
+                : "за 7 днів без змін у даних");
+            parts.Add($"остання: {last.ActionDisplay} {last.Subject}".Trim());
+            if (isLoading)
+                parts.Add("оновлюється...");
+
+            return string.Join(" · ", parts);
+        }
+
+        private List<ActivityRow> BuildClientActivity(ClientMirrorSnapshot? snapshot, IEnumerable<TelemetryRecord> telemetry)
+        {
+            var rows = new List<ActivityRow>();
+            var employerNames = new Dictionary<Guid, string>();
+
+            if (snapshot != null)
+            {
+                foreach (var employer in snapshot.Employers)
+                    employerNames[employer.EmployerId] = employer.DisplayName;
+
+                foreach (var agency in snapshot.Agencies)
+                    AddMirrorEntityActivity(rows, "agency", agency.DisplayName, "", agency.SourceUpdatedAt, agency.DeletedAt, agency.IsDeleted);
+
+                foreach (var employer in snapshot.Employers)
+                    AddMirrorEntityActivity(rows, "firm", employer.DisplayName, "", employer.SourceUpdatedAt, employer.DeletedAt, employer.IsDeleted, employer.CreatedAt);
+
+                foreach (var employee in snapshot.Employees)
+                {
+                    var place = !string.IsNullOrWhiteSpace(employee.EmployerDisplayName)
+                        ? employee.EmployerDisplayName
+                        : employee.EmployerId.HasValue && employerNames.TryGetValue(employee.EmployerId.Value, out var employerName)
+                            ? employerName
+                            : employee.ArchivedFromFirm;
+
+                    if (employee.IsDeleted && employee.DeletedAt.HasValue)
+                    {
+                        AddActivity(rows, ToLocal(employee.DeletedAt), "employee", "deleted", "Видалив працівника", employee.FullName, place, "Видалено");
+                        continue;
+                    }
+
+                    var at = ToLocal(employee.SourceUpdatedAt);
+                    if (!at.HasValue)
+                        continue;
+
+                    if (employee.IsArchived)
+                    {
+                        var archiveDetails = string.IsNullOrWhiteSpace(place)
+                            ? "В архіві"
+                            : $"В архіві · {place}";
+                        AddActivity(rows, at, "employee", "archived", "Перемістив в архів", employee.FullName, place, archiveDetails);
+                    }
+                    else
+                    {
+                        AddActivity(rows, at, "employee", "updated", "Оновив дані працівника", employee.FullName, place, "Редагування картки");
+                    }
+                }
+            }
+
+            foreach (var item in telemetry)
+            {
+                var at = ToLocal(item.CreatedAt);
+                if (!at.HasValue)
+                    continue;
+
+                if (string.Equals(item.EventType, "heartbeat", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (string.Equals(item.EventType, "app_started", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(item.EventType, "first_launch", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddActivity(rows, at, "app", "started", "Запустив програму", item.AppVersion, "",
+                        string.IsNullOrWhiteSpace(item.AppVersion) ? "" : $"версія {item.AppVersion}");
+                    continue;
+                }
+
+                if (string.Equals(item.EventType, "app_updated", StringComparison.OrdinalIgnoreCase))
+                {
+                    var fromVersion = ReadTelemetryString(item, "from_version");
+                    var toVersion = ReadTelemetryString(item, "to_version");
+                    var details = !string.IsNullOrWhiteSpace(fromVersion) && !string.IsNullOrWhiteSpace(toVersion)
+                        ? $"{fromVersion} → {toVersion}"
+                        : item.AppVersion;
+                    AddActivity(rows, at, "app", "updated", "Оновив програму", details, "", "");
+                    continue;
+                }
+
+                if (string.Equals(item.EventType, "firm_created", StringComparison.OrdinalIgnoreCase))
+                {
+                    var firmName = ReadTelemetryString(item, "firm_name");
+                    if (string.IsNullOrWhiteSpace(firmName))
+                        firmName = "Фірма";
+                    if (HasCloseActivity(rows, "firm", "added", firmName, at.Value))
+                        continue;
+                    AddActivity(rows, at, "firm", "added", "Додав фірму", firmName, "", "");
+                    continue;
+                }
+
+                if (string.Equals(item.EventType, "employee_added", StringComparison.OrdinalIgnoreCase))
+                {
+                    var employeeName = ReadTelemetryString(item, "employee_name");
+                    var firmName = ReadTelemetryString(item, "firm_name");
+                    if (string.IsNullOrWhiteSpace(employeeName))
+                        employeeName = "Працівник";
+                    RemoveCloseActivity(rows, "employee", new[] { "updated", "archived" }, employeeName, at.Value);
+                    AddActivity(rows, at, "employee", "added", "Додав працівника", employeeName, firmName, "Новий запис");
+                }
+            }
+
+            return rows
+                .OrderByDescending(row => row.At)
+                .ThenBy(row => row.ActionDisplay, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static void AddMirrorEntityActivity(
+            List<ActivityRow> rows,
+            string kind,
+            string name,
+            string place,
+            DateTime? sourceUpdatedAt,
+            DateTime? deletedAt,
+            bool isDeleted,
+            DateTime? createdAt = null)
+        {
+            var addedLabel = kind == "agency" ? "Додав агенцію" : "Додав фірму";
+            var updatedLabel = kind == "agency" ? "Змінив агенцію" : "Змінив фірму";
+            var deletedLabel = kind == "agency" ? "Видалив агенцію" : "Видалив фірму";
+
+            var created = ToLocal(createdAt);
+            var updated = ToLocal(sourceUpdatedAt);
+            var deleted = ToLocal(deletedAt);
+
+            if (created.HasValue)
+                AddActivity(rows, created, kind, "added", addedLabel, name, place, "");
+
+            if (isDeleted && deleted.HasValue)
+                AddActivity(rows, deleted, kind, "deleted", deletedLabel, name, place, "");
+
+            if (!updated.HasValue)
+                return;
+
+            if (created.HasValue && Math.Abs((updated.Value - created.Value).TotalMinutes) < 3)
+                return;
+
+            if (deleted.HasValue && Math.Abs((updated.Value - deleted.Value).TotalMinutes) < 3)
+                return;
+
+            AddActivity(rows, updated, kind, "updated", updatedLabel, name, place, "");
+        }
+
+        private static void AddActivity(
+            List<ActivityRow> rows,
+            DateTime? at,
+            string kind,
+            string actionCode,
+            string actionDisplay,
+            string subject,
+            string place,
+            string details)
+        {
+            if (!at.HasValue)
+                return;
+
+            rows.Add(new ActivityRow
+            {
+                At = at.Value,
+                Kind = kind,
+                ActionCode = actionCode,
+                ActionDisplay = actionDisplay,
+                Subject = string.IsNullOrWhiteSpace(subject) ? "—" : subject.Trim(),
+                Place = place?.Trim() ?? string.Empty,
+                Details = details?.Trim() ?? string.Empty
+            });
+        }
+
+        private static bool HasCloseActivity(List<ActivityRow> rows, string kind, string actionCode, string subject, DateTime at)
+        {
+            return rows.Any(row =>
+                row.Kind == kind
+                && row.ActionCode == actionCode
+                && string.Equals(row.Subject, subject, StringComparison.OrdinalIgnoreCase)
+                && Math.Abs((row.At - at).TotalMinutes) <= 20);
+        }
+
+        private static void RemoveCloseActivity(List<ActivityRow> rows, string kind, IEnumerable<string> actionCodes, string subject, DateTime at)
+        {
+            var codes = actionCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            rows.RemoveAll(row =>
+                row.Kind == kind
+                && codes.Contains(row.ActionCode)
+                && string.Equals(row.Subject, subject, StringComparison.OrdinalIgnoreCase)
+                && Math.Abs((row.At - at).TotalMinutes) <= 20);
+        }
+
+        private static DateTime? ToLocal(DateTime? value)
+        {
+            if (!value.HasValue)
+                return null;
+
+            var at = value.Value;
+            if (at.Kind == DateTimeKind.Unspecified)
+                at = DateTime.SpecifyKind(at, DateTimeKind.Utc);
+
+            return at.ToLocalTime();
+        }
+
+        private static string FormatActivityDay(DateTime at)
+        {
+            var day = at.Date;
+            var today = DateTime.Today;
+            if (day == today)
+                return "Сьогодні";
+            if (day == today.AddDays(-1))
+                return "Вчора";
+            return at.ToString("dd.MM.yyyy");
+        }
+
+        private static string ReadTelemetryString(TelemetryRecord telemetry, string propertyName)
+        {
+            if (telemetry.EventData?.ValueKind != JsonValueKind.Object)
+                return string.Empty;
+
+            if (!telemetry.EventData.Value.TryGetProperty(propertyName, out var value))
+                return string.Empty;
+
+            return value.ValueKind switch
+            {
+                JsonValueKind.String => value.GetString() ?? string.Empty,
+                JsonValueKind.Number => value.ToString(),
+                _ => value.ToString()
+            };
+        }
+
         private void PopulateClientDetails(ClientRecord? client)
         {
             if (client == null)
             {
                 TxtDetailHeader.Text = "Клієнт не вибраний";
                 TxtDetailStatus.Text = "—";
+                TxtDetailRisk.Text = "—";
                 TxtDetailClientId.Text = "—";
                 TxtDetailMachine.Text = "—";
                 TxtDetailMachineId.Text = "—";
@@ -958,6 +1539,7 @@ namespace AdminPanel
                 TxtNotes.Text = string.Empty;
                 BtnSaveNotes.IsEnabled = false;
                 BtnSaveAccessConfig.IsEnabled = false;
+                RefreshActivityUi();
                 return;
             }
 
@@ -971,6 +1553,9 @@ namespace AdminPanel
                 "activated" => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A6E3A1")),
                 _ => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CDD6F4"))
             };
+            TxtDetailRisk.Text = client.RiskReasons == null || client.RiskReasons.Count == 0
+                ? client.RiskDisplay
+                : $"{client.RiskDisplay}: {string.Join("; ", client.RiskReasons)}";
             TxtDetailClientId.Text = client.Id;
             TxtDetailMachine.Text = client.MachineName;
             TxtDetailMachineId.Text = client.MachineId;
@@ -1005,6 +1590,7 @@ namespace AdminPanel
             TxtNotes.Text = client.Notes ?? string.Empty;
             BtnSaveNotes.IsEnabled = HasNotesChanged();
             BtnSaveAccessConfig.IsEnabled = HasAccessConfigChanged();
+            RefreshActivityUi();
         }
 
         private void SetAccessConfigFields(Action apply)
@@ -1082,59 +1668,9 @@ namespace AdminPanel
                    telemetry.EventDataDisplay.Contains("exception", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static int GetDaysSinceLastSeen(DateTime? lastSeen)
-        {
-            if (!lastSeen.HasValue)
-                return int.MaxValue;
-
-            return (int)(DateTime.UtcNow - lastSeen.Value.ToUniversalTime()).TotalDays;
-        }
-
-        private static Version? GetLatestKnownVersion(IEnumerable<ClientRecord> clients)
-        {
-            Version? latest = null;
-            foreach (var client in clients)
-            {
-                if (!TryParseComparableVersion(client.AppVersion, out var current))
-                    continue;
-
-                if (latest == null || current > latest)
-                    latest = current;
-            }
-
-            return latest;
-        }
-
-        private static bool IsOutdatedVersion(string? appVersion, Version? latestVersion)
-        {
-            if (latestVersion == null || !TryParseComparableVersion(appVersion, out var current))
-                return false;
-
-            return current < latestVersion;
-        }
-
-        private static bool TryParseComparableVersion(string? value, out Version version)
-        {
-            version = new Version(0, 0);
-
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            var trimmed = value.Trim();
-            if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-                trimmed = trimmed[1..];
-
-            var comparable = new string(trimmed.TakeWhile(ch => char.IsDigit(ch) || ch == '.').ToArray());
-            if (string.IsNullOrWhiteSpace(comparable) || !Version.TryParse(comparable, out var parsedVersion))
-                return false;
-
-            version = parsedVersion;
-            return true;
-        }
-
         private void ClientFilter_Changed(object sender, EventArgs e)
         {
-            if (!IsLoaded)
+            if (!IsLoaded || _isRestoringFilters)
                 return;
 
             ApplyClientFilters();
@@ -1720,14 +2256,127 @@ namespace AdminPanel
             };
         }
 
-        private static string? PromptInput(string message, string title, string defaultValue = "")
+        private async void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.F5)
+            {
+                e.Handled = true;
+                await RefreshAsync();
+                return;
+            }
+
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                TxtClientSearch.Focus();
+                TxtClientSearch.SelectAll();
+                return;
+            }
+
+            if (e.Key == Key.Enter && DgClients.IsKeyboardFocusWithin)
+            {
+                e.Handled = true;
+                OpenSelectedClientMirror();
+                return;
+            }
+
+            if (e.Key != Key.Escape || IsTypingInEditor())
+                return;
+
+            if (TxtTelemetrySearch.IsKeyboardFocusWithin || CmbTelemetryPreset.IsKeyboardFocusWithin || CmbTelemetryEvent.IsKeyboardFocusWithin)
+            {
+                BtnResetTelemetryFilters_Click(sender, e);
+                e.Handled = true;
+                return;
+            }
+
+            if (TxtActivitySearch.IsKeyboardFocusWithin || CmbActivityKind.IsKeyboardFocusWithin)
+            {
+                BtnResetActivityFilters_Click(sender, e);
+                e.Handled = true;
+                return;
+            }
+
+            BtnResetClientFilters_Click(sender, e);
+            e.Handled = true;
+        }
+
+        private bool IsTypingInEditor()
+        {
+            return TxtNotes.IsKeyboardFocusWithin
+                || TxtManagedGeminiKey.IsKeyboardFocusWithin
+                || TxtBusinessMaxUsers.IsKeyboardFocusWithin
+                || TxtBusinessMaxDevices.IsKeyboardFocusWithin;
+        }
+
+        private void DgClients_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+            if (row?.Item is ClientRecord client)
+                DgClients.SelectedItem = client;
+        }
+
+        private void ClientGridContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            var hasSelection = _selected != null;
+            MenuCopyIp.IsEnabled = hasSelection && !string.IsNullOrWhiteSpace(_selected?.IpAddress);
+            MenuBlockClient.IsEnabled = hasSelection && _selected?.IsBlocked == false;
+            MenuUnblockClient.IsEnabled = hasSelection && _selected?.IsBlocked == true;
+        }
+
+        private void MenuOpenMirror_Click(object sender, RoutedEventArgs e)
+        {
+            OpenSelectedClientMirror();
+        }
+
+        private void MenuCopyClientId_Click(object sender, RoutedEventArgs e)
+        {
+            CopyClientField(_selected?.Id, "Client ID");
+        }
+
+        private void MenuCopyMachineId_Click(object sender, RoutedEventArgs e)
+        {
+            CopyClientField(_selected?.MachineId, "Machine ID");
+        }
+
+        private void MenuCopyIp_Click(object sender, RoutedEventArgs e)
+        {
+            CopyClientField(_selected?.IpAddress, "IP");
+        }
+
+        private void CopyClientField(string? value, string label)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            Clipboard.SetText(value);
+            TxtStatus.Text = $"Скопійовано {label}";
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T match)
+                    return match;
+
+                child = VisualTreeHelper.GetParent(child);
+            }
+
+            return null;
+        }
+
+        private string? PromptInput(string message, string title, string defaultValue = "")
         {
             var dialog = new Window
             {
                 Title = title,
-                Width = 420,
-                Height = 190,
+                Width = 440,
+                MinHeight = 200,
+                SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ShowInTaskbar = false,
                 Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x2E)),
                 ResizeMode = ResizeMode.NoResize
             };
@@ -1745,24 +2394,51 @@ namespace AdminPanel
             {
                 Text = defaultValue,
                 FontSize = 13,
-                Padding = new Thickness(8, 6, 8, 6)
+                Padding = new Thickness(8, 6, 8, 6),
+                Background = new SolidColorBrush(Color.FromRgb(0x31, 0x32, 0x44)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0xCD, 0xD6, 0xF4)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x58, 0x5B, 0x70)),
+                CaretBrush = new SolidColorBrush(Color.FromRgb(0xCD, 0xD6, 0xF4))
             };
-            var button = new Button
+            var buttons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 12, 0, 0)
+            };
+            var cancel = new Button
+            {
+                Content = "Скасувати",
+                Width = 110,
+                Padding = new Thickness(0, 6, 0, 6),
+                Margin = new Thickness(0, 0, 8, 0),
+                IsCancel = true,
+                Background = new SolidColorBrush(Color.FromRgb(0x45, 0x47, 0x5A)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0xCD, 0xD6, 0xF4))
+            };
+            var ok = new Button
             {
                 Content = "OK",
                 Width = 90,
                 Padding = new Thickness(0, 6, 0, 6),
-                Margin = new Thickness(0, 12, 0, 0),
-                HorizontalAlignment = HorizontalAlignment.Right,
+                IsDefault = true,
                 Background = new SolidColorBrush(Color.FromRgb(0x89, 0xB4, 0xFA)),
                 FontWeight = FontWeights.SemiBold
             };
-            button.Click += (_, _) => { dialog.DialogResult = true; dialog.Close(); };
+            cancel.Click += (_, _) => { dialog.DialogResult = false; dialog.Close(); };
+            ok.Click += (_, _) => { dialog.DialogResult = true; dialog.Close(); };
 
+            buttons.Children.Add(cancel);
+            buttons.Children.Add(ok);
             panel.Children.Add(label);
             panel.Children.Add(textBox);
-            panel.Children.Add(button);
+            panel.Children.Add(buttons);
             dialog.Content = panel;
+            dialog.Loaded += (_, _) =>
+            {
+                textBox.Focus();
+                textBox.SelectAll();
+            };
 
             return dialog.ShowDialog() == true ? textBox.Text : null;
         }

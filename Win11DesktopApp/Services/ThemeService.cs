@@ -116,7 +116,10 @@ namespace Win11DesktopApp.Services
                 var obj = ColorConverter.ConvertFromString(hex);
                 if (obj is Color c) { color = c; return true; }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ThemeService.TryParseColor", ex.Message);
+            }
             color = Colors.Transparent;
             return false;
         }

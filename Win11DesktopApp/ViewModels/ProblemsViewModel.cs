@@ -391,22 +391,21 @@ namespace Win11DesktopApp.ViewModels
             var debounceCts = new CancellationTokenSource();
             var previousDebounce = Interlocked.Exchange(ref _loadProblemsDebounceCts, debounceCts);
             previousDebounce?.Cancel();
-            previousDebounce?.Dispose();
             _ = DebounceLoadProblemsAsync(debounceCts);
         }
 
         private async Task DebounceLoadProblemsAsync(CancellationTokenSource debounceCts)
         {
+            var token = debounceCts.Token;
             try
             {
-                await Task.Delay(LoadProblemsDebounceMs, debounceCts.Token);
+                await Task.Delay(LoadProblemsDebounceMs, token);
                 if (!ReferenceEquals(Interlocked.CompareExchange(ref _loadProblemsDebounceCts, null, debounceCts), debounceCts))
                     return;
 
                 var loadCts = new CancellationTokenSource();
                 var previousLoad = Interlocked.Exchange(ref _loadProblemsCts, loadCts);
                 previousLoad?.Cancel();
-                previousLoad?.Dispose();
 
                 var version = Interlocked.Increment(ref _loadProblemsVersion);
                 await LoadProblemsAsync(version, loadCts);
@@ -526,23 +525,17 @@ namespace Win11DesktopApp.ViewModels
                 if (token.IsCancellationRequested || version != Volatile.Read(ref _loadProblemsVersion))
                     return;
 
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    if (token.IsCancellationRequested || version != Volatile.Read(ref _loadProblemsVersion))
-                        return;
-
-                    _allGroups = snapshot.Groups;
-                    RebuildFirmOptions();
-                    IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(snapshot.IgnoredProblems);
-                    TotalProblems = snapshot.ActiveProblemCount;
-                    TotalPeople = snapshot.GroupCount;
-                    ExpiredCount = snapshot.ExpiredCount;
-                    ExpiredPeople = snapshot.ExpiredPeople;
-                    WarningCount = snapshot.WarningCount;
-                    WarningPeople = snapshot.WarningPeople;
-                    IgnoredCount = snapshot.IgnoredProblems.Count;
-                    ApplyFilter();
-                });
+                _allGroups = snapshot.Groups;
+                RebuildFirmOptions();
+                IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(snapshot.IgnoredProblems);
+                TotalProblems = snapshot.ActiveProblemCount;
+                TotalPeople = snapshot.GroupCount;
+                ExpiredCount = snapshot.ExpiredCount;
+                ExpiredPeople = snapshot.ExpiredPeople;
+                WarningCount = snapshot.WarningCount;
+                WarningPeople = snapshot.WarningPeople;
+                IgnoredCount = snapshot.IgnoredProblems.Count;
+                ApplyFilter();
             }
             catch (OperationCanceledException)
             {
@@ -652,13 +645,10 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var list = filtered.ToList();
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ProblemGroups = new ObservableCollection<EmployeeProblemGroup>(list!);
-                HasProblems = list.Count > 0;
-                IsAllClear = _allGroups.Count == 0;
-                IsFilteredEmpty = _allGroups.Count > 0 && list.Count == 0;
-            });
+            ProblemGroups = new ObservableCollection<EmployeeProblemGroup>(list!);
+            HasProblems = list.Count > 0;
+            IsAllClear = _allGroups.Count == 0;
+            IsFilteredEmpty = _allGroups.Count > 0 && list.Count == 0;
         }
 
         private static bool CollectProblem(List<DocumentExpiryInfo> activeList, List<DocumentExpiryInfo> ignoredList,
@@ -803,11 +793,9 @@ namespace Win11DesktopApp.ViewModels
 
             var debounceCts = Interlocked.Exchange(ref _loadProblemsDebounceCts, null);
             debounceCts?.Cancel();
-            debounceCts?.Dispose();
 
             var loadCts = Interlocked.Exchange(ref _loadProblemsCts, null);
             loadCts?.Cancel();
-            loadCts?.Dispose();
         }
 
         private sealed class ProblemsSnapshot

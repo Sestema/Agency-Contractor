@@ -67,6 +67,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly EmployeeDetailsViewModelFactory _employeeDetailsViewModelFactory;
         private readonly MainModuleViewModelFactory _mainModuleViewModelFactory;
         private CancellationTokenSource? _loadCts;
+        private Task? _loadTask;
         public ICommand GoBackCommand { get; }
         public ICommand OpenEmployeesCommand { get; }
         public ICommand OpenAllEmployeesCommand { get; }
@@ -476,7 +477,7 @@ namespace Win11DesktopApp.ViewModels
                 _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(company));
             });
 
-            RefreshCommand = new RelayCommand(_ => LoadDataAsync());
+            RefreshCommand = new AsyncRelayCommand(async _ => await LoadDataAsync());
             AIReportCommand = new RelayCommand(_ => GenerateAIReport(), _ => !IsAIReportLoading);
             CloseAIReportCommand = new RelayCommand(_ => IsAIReportOpen = false);
             SwapWidgetsCommand = new RelayCommand(o =>
@@ -491,7 +492,7 @@ namespace Win11DesktopApp.ViewModels
 
             LoadLayout();
             UpdateMovementPeriodTexts();
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         private void ApplyMovementMonthCount(int count)
@@ -508,7 +509,7 @@ namespace Win11DesktopApp.ViewModels
             _appSettingsService.SaveSettings();
             IsMovementPeriodMenuOpen = false;
             UpdateMovementPeriodTexts();
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         private void UpdateMovementPeriodTexts()
@@ -621,7 +622,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
         }
 
         private void OnDetailsClose() => IsEmployeeDetailsOpen = false;
-        private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e) => LoadDataAsync();
+        private void OnDetailsDataChanged(EmployeeDataChangedEventArgs e) => _ = LoadDataAsync();
 
         private string GetSlot(int index) => index switch { 0 => Slot0, 1 => Slot1, 2 => Slot2, _ => "" };
         private void SetSlot(int index, string value) { switch (index) { case 0: Slot0 = value; break; case 1: Slot1 = value; break; case 2: Slot2 = value; break; } }
@@ -656,45 +657,46 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
             _appSettingsService.SaveSettings();
         }
 
-        private async void LoadDataAsync()
+        private async Task LoadDataAsync()
         {
             var cts = new CancellationTokenSource();
             var previous = Interlocked.Exchange(ref _loadCts, cts);
             previous?.Cancel();
-            previous?.Dispose();
 
+            var loadTask = LoadDataCoreAsync(cts);
+            _loadTask = loadTask;
+            await loadTask;
+        }
+
+        private async Task LoadDataCoreAsync(CancellationTokenSource cts)
+        {
             IsLoading = true;
+            var token = cts.Token;
             try
             {
-                var data = await Task.Run(GatherDashboardData, cts.Token);
-                if (cts.Token.IsCancellationRequested)
+                var data = await Task.Run(GatherDashboardData, token);
+                if (token.IsCancellationRequested)
                     return;
 
-                Application.Current?.Dispatcher?.Invoke(() =>
-                {
-                    if (cts.Token.IsCancellationRequested)
-                        return;
-
-                    TotalEmployees = data.TotalEmployees;
-                    TotalProblems = data.TotalProblems;
-                    TotalTemplates = data.TotalTemplates;
-                    TotalCompanies = data.TotalCompanies;
-                    TotalEmployeesAllTime = data.TotalEmployeesAllTime;
-                    GeneratedDocumentsCount = data.GeneratedDocumentsCount;
-                    ProgramMinutes = data.ProgramMinutes;
-                    SavedMinutes = data.SavedMinutes;
-                    MonthlyEmployeesAddedCount = data.MonthlyEmployeesAddedCount;
-                    MonthlyEmployeesArchivedCount = data.MonthlyEmployeesArchivedCount;
-                    MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyAddedEmployees);
-                    MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyArchivedEmployees);
-                    EmployeeTrend = data.EmployeeTrend;
-                    ProblemTrend = data.ProblemTrend;
-                    TemplateTrend = data.TemplateTrend;
-                    ExpiringDocs = new ObservableCollection<DashboardItem>(data.ExpiringDocs);
-                    SalaryMonths = new ObservableCollection<SalaryMonthSummary>(data.SalaryMonths);
-                    SalaryTotalText = data.SalaryTotalText;
-                    CompanyStats = new ObservableCollection<CompanyStatItem>(data.CompanyStats);
-                });
+                TotalEmployees = data.TotalEmployees;
+                TotalProblems = data.TotalProblems;
+                TotalTemplates = data.TotalTemplates;
+                TotalCompanies = data.TotalCompanies;
+                TotalEmployeesAllTime = data.TotalEmployeesAllTime;
+                GeneratedDocumentsCount = data.GeneratedDocumentsCount;
+                ProgramMinutes = data.ProgramMinutes;
+                SavedMinutes = data.SavedMinutes;
+                MonthlyEmployeesAddedCount = data.MonthlyEmployeesAddedCount;
+                MonthlyEmployeesArchivedCount = data.MonthlyEmployeesArchivedCount;
+                MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyAddedEmployees);
+                MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(data.MonthlyArchivedEmployees);
+                EmployeeTrend = data.EmployeeTrend;
+                ProblemTrend = data.ProblemTrend;
+                TemplateTrend = data.TemplateTrend;
+                ExpiringDocs = new ObservableCollection<DashboardItem>(data.ExpiringDocs);
+                SalaryMonths = new ObservableCollection<SalaryMonthSummary>(data.SalaryMonths);
+                SalaryTotalText = data.SalaryTotalText;
+                CompanyStats = new ObservableCollection<CompanyStatItem>(data.CompanyStats);
             }
             catch (OperationCanceledException)
             {
@@ -709,7 +711,7 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 if (ReferenceEquals(_loadCts, cts))
                 {
                     _loadCts = null;
-                    Application.Current?.Dispatcher?.Invoke(() => IsLoading = false);
+                    IsLoading = false;
                 }
 
                 cts.Dispose();
@@ -720,7 +722,10 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
         {
             var loadCts = Interlocked.Exchange(ref _loadCts, null);
             loadCts?.Cancel();
-            loadCts?.Dispose();
+
+            var loadTask = Interlocked.Exchange(ref _loadTask, null);
+            if (loadTask is { IsCompleted: false })
+                _ = ObserveCancelledLoadAsync(loadTask);
 
             if (EmployeeDetailsVm != null)
             {
@@ -728,6 +733,21 @@ Use text section headers like [OVERVIEW], [PROBLEMS], [RECOMMENDATIONS], [RISKS]
                 EmployeeDetailsVm.DataChanged -= OnDetailsDataChanged;
                 EmployeeDetailsVm.Cleanup();
                 EmployeeDetailsVm = null;
+            }
+        }
+
+        private static async Task ObserveCancelledLoadAsync(Task loadTask)
+        {
+            try
+            {
+                await loadTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("DashboardViewModel.Cleanup.Load", ex);
             }
         }
 

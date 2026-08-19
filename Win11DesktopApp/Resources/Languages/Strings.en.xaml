@@ -555,6 +555,8 @@
     <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Checkbox completion for this firm’s document package</sys:String>
     <sys:String x:Key="EmpDocumentPackageColName">Last name First name</sys:String>
     <sys:String x:Key="EmpDocumentPackageColStatus">Status</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColPresence">Present</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColScanned">Scanned</sys:String>
     <sys:String x:Key="EmpDocumentPackageStatusOk">All OK</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingPresence">present</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingScanned">scanned</sys:String>
@@ -746,6 +748,10 @@
     <sys:String x:Key="DetTabDocumentPackage">Document package</sys:String>
     <sys:String x:Key="DetDocumentPackageHint">You can edit the current firm’s package. History from previous firms is kept forever.</sys:String>
     <sys:String x:Key="DetDocumentPackageProgress">Done: {0}/{1}</sys:String>
+    <sys:String x:Key="DetSidebarExpiry">Document expiry</sys:String>
+    <sys:String x:Key="DetSidebarNote">Note</sys:String>
+    <sys:String x:Key="DetSidebarNoteEmpty">No note</sys:String>
+    <sys:String x:Key="DetSidebarNoteWrite">Write</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Current firm: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Read-only — data from a previous firm.</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Previously in this firm’s package (no longer required)</sys:String>
@@ -973,6 +979,20 @@
     <sys:String x:Key="EditorAlignLeft">Align left</sys:String>
     <sys:String x:Key="EditorAlignCenter">Align center</sys:String>
     <sys:String x:Key="EditorAlignRight">Align right</sys:String>
+    <sys:String x:Key="EditorTable">Table</sys:String>
+    <sys:String x:Key="EditorTableAlignLeft">Align table left</sys:String>
+    <sys:String x:Key="EditorTableAlignCenter">Align table center</sys:String>
+    <sys:String x:Key="EditorTableAlignRight">Align table right</sys:String>
+    <sys:String x:Key="EditorTableNarrower">Narrower table</sys:String>
+    <sys:String x:Key="EditorTableWider">Wider table</sys:String>
+    <sys:String x:Key="EditorTableColumnNarrower">Narrower column</sys:String>
+    <sys:String x:Key="EditorTableColumnWider">Wider column</sys:String>
+    <sys:String x:Key="EditorImage">Image</sys:String>
+    <sys:String x:Key="EditorImageAlignLeft">Align image left</sys:String>
+    <sys:String x:Key="EditorImageAlignCenter">Align image center</sys:String>
+    <sys:String x:Key="EditorImageAlignRight">Align image right</sys:String>
+    <sys:String x:Key="EditorImageNarrower">Smaller image</sys:String>
+    <sys:String x:Key="EditorImageWider">Larger image</sys:String>
     <sys:String x:Key="EditorSpacing">Spacing</sys:String>
     <sys:String x:Key="EditorLineSpacing">Line</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Paragraph</sys:String>
@@ -1110,6 +1130,7 @@
     <sys:String x:Key="ReportColumnsResetButton">Reset columns</sys:String>
     <sys:String x:Key="ReportColumnsDialogTitle">Column settings</sys:String>
     <sys:String x:Key="ReportColumnsDialogDesc">Choose which columns to show and change their order.</sys:String>
+    <sys:String x:Key="ReportColumnsSearchPlaceholder">Search columns by name or key</sys:String>
     <sys:String x:Key="ReportColumnsMoveUp">Move up</sys:String>
     <sys:String x:Key="ReportColumnsMoveDown">Move down</sys:String>
     <sys:String x:Key="ReportExportTitle">Export Settings</sys:String>
@@ -2037,6 +2058,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="WizCropInstruction">Select the area with employee photo on passport and press "Crop"</sys:String>
     <sys:String x:Key="WizCropApply">Crop</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
+    <sys:String x:Key="HistFieldProfileNote">Note</sys:String>
     <sys:String x:Key="HistFieldVisaType">Visa type</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Insurance company</sys:String>
     <sys:String x:Key="HistFieldInsCompanyFull">Insurance company full name</sys:String>

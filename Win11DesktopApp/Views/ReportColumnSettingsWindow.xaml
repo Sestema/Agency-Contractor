@@ -30,8 +30,30 @@
         </StackPanel>
 
         <Border Grid.Row="1" Style="{StaticResource DialogSectionCard}" Padding="10">
-            <ListBox x:Name="ColumnsList"
-                     ItemsSource="{Binding}"
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" Margin="2,2,2,10">
+                    <TextBox x:Name="SearchBox"
+                             TextChanged="SearchBox_TextChanged"
+                             Padding="32,7,10,7"
+                             FontSize="{DynamicResource FS13}"
+                             VerticalContentAlignment="Center"/>
+                    <TextBlock Text="&#xE721;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="11,0,0,0"
+                               IsHitTestVisible="False"/>
+                    <TextBlock x:Name="SearchPlaceholder"
+                               Text="{DynamicResource ReportColumnsSearchPlaceholder}"
+                               FontSize="{DynamicResource FS12}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="34,0,0,0"
+                               IsHitTestVisible="False"/>
+                </Grid>
+
+                <ListBox x:Name="ColumnsList"
                      Background="Transparent"
                      BorderThickness="0"
                      HorizontalContentAlignment="Stretch"
@@ -107,7 +129,8 @@
                         </Border>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
-            </ListBox>
+                </ListBox>
+            </DockPanel>
         </Border>
 
         <Grid Grid.Row="2" Margin="0,16,0,0">

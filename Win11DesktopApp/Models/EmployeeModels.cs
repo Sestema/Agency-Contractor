@@ -103,6 +103,7 @@ namespace Win11DesktopApp.EmployeeModels
         public string ContractType { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string ProfileNote { get; set; } = string.Empty;
         public bool HasBankAccountData { get; set; }
         public string BankAccountNumber { get; set; } = string.Empty;
         public string BankName { get; set; } = string.Empty;

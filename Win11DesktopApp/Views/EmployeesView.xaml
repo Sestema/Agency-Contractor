@@ -514,8 +514,8 @@
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}"
-                                Width="30" Height="30" Margin="0,0,8,0">
-                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                                Margin="0,0,8,0">
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                         </Button>
                         <!-- App branding -->
                         <Border Width="30" Height="30"
@@ -3225,9 +3225,9 @@
             </Border>
             <Border Background="{DynamicResource ContentBackgroundBrush}"
                     CornerRadius="16"
-                    Width="720"
-                    MaxHeight="640"
-                    Padding="24"
+                    Width="900"
+                    MaxHeight="680"
+                    Padding="22,20"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     BorderBrush="{DynamicResource CardBorderBrush}"
@@ -3236,18 +3236,17 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid Grid.Row="0" Margin="0,0,0,14">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal">
-                            <Border Style="{StaticResource PageHeaderIconBadge}" Width="38" Height="38" Margin="0,0,10,0"
+                            <Border Style="{StaticResource PageHeaderIconBadge}" Width="38" Height="38" Margin="0,0,12,0"
                                     Background="{DynamicResource AccentBrush}">
                                 <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                            Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -3260,42 +3259,57 @@
                                 <TextBlock Text="{DynamicResource EmpDocumentPackageDialogSubtitle}"
                                            FontSize="{DynamicResource FS12}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                           Margin="0,2,0,0"/>
+                                           TextWrapping="Wrap"
+                                           MaxWidth="560"
+                                           Margin="0,3,0,0"/>
                             </StackPanel>
                         </StackPanel>
-                        <Border Grid.Column="1"
-                                Background="{DynamicResource AccentLightBrush}"
-                                BorderBrush="{DynamicResource AccentBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="12,6"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="{Binding DocumentPackagePercentText}"
-                                       FontSize="{DynamicResource FS16}"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentDarkBrush}"/>
-                        </Border>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="{DynamicResource AccentLightBrush}"
+                                    BorderBrush="{DynamicResource AccentBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="16"
+                                    Padding="12,5"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,8,0">
+                                <TextBlock Text="{Binding DocumentPackagePercentText}"
+                                           FontSize="{DynamicResource FS14}"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentDarkBrush}"/>
+                            </Border>
+                            <Button Command="{Binding CloseDocumentPackageDialogCommand}"
+                                    Width="36" Height="36"
+                                    Padding="0"
+                                    Style="{StaticResource HeaderGhostButton}"
+                                    ToolTip="{DynamicResource DetBtnClose}">
+                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
 
-                    <TextBlock Grid.Row="1"
-                               Text="{DynamicResource EmpDocumentPackageColName}"
-                               FontSize="{DynamicResource FS11}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource SecondaryForegroundBrush}"
-                               Margin="4,0,4,8"/>
-
-                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding DocumentPackageStatRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource ContentBackgroundBrush}"
-                                            BorderBrush="{DynamicResource CardBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="10"
+                                    <Border BorderThickness="1"
+                                            CornerRadius="12"
                                             Padding="14,12"
                                             Margin="0,0,0,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <StackPanel>
-                                            <Grid Margin="0,0,0,8">
+                                            <Grid Margin="0,0,0,10">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
@@ -3309,104 +3323,189 @@
                                                         BorderThickness="0"
                                                         Padding="0"
                                                         ToolTip="{DynamicResource EmpDocumentPackageOpenEmployeeTooltip}">
-                                                    <TextBlock Text="{Binding DisplayName}"
-                                                               FontSize="{DynamicResource FS14}"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource AccentDarkBrush}"
-                                                               TextDecorations="Underline"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   FontSize="{DynamicResource FS14}"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="&#xE76C;"
+                                                                   FontFamily="Segoe MDL2 Assets"
+                                                                   FontSize="{DynamicResource FS11}"
+                                                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                                                   Margin="8,1,0,0"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
                                                 </Button>
                                                 <Border Grid.Column="1"
-                                                        Background="{DynamicResource SuccessLightBrush}"
-                                                        BorderBrush="{DynamicResource SuccessBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="8"
-                                                        Padding="10,3"
+                                                        CornerRadius="10"
+                                                        Padding="10,4"
                                                         VerticalAlignment="Center"
                                                         Margin="10,0,0,0"
                                                         Visibility="{Binding IsComplete, Converter={StaticResource BoolToVis}}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                        </Style>
+                                                    </Border.Style>
                                                     <TextBlock Text="{Binding OkText}"
                                                                FontSize="{DynamicResource FS11}"
                                                                FontWeight="SemiBold"
                                                                Foreground="{DynamicResource SuccessBrush}"/>
+                                                </Border>
+                                                <Border Grid.Column="1"
+                                                        Background="{DynamicResource CardHoverBrush}"
+                                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="10"
+                                                        Padding="10,4"
+                                                        VerticalAlignment="Center"
+                                                        Margin="10,0,0,0"
+                                                        Visibility="{Binding IsComplete, Converter={StaticResource InverseBoolToVis}}">
+                                                    <TextBlock Text="{Binding ProgressText}"
+                                                               FontSize="{DynamicResource FS11}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                                 </Border>
                                             </Grid>
 
                                             <ItemsControl ItemsSource="{Binding Documents}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Background="{DynamicResource CardHoverBrush}"
+                                                        <Border Background="{DynamicResource ContentBackgroundBrush}"
+                                                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                BorderThickness="1"
                                                                 CornerRadius="8"
-                                                                Padding="10,8"
+                                                                Padding="10,7"
                                                                 Margin="0,0,0,5">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="160"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="148"/>
+                                                                    <ColumnDefinition Width="148"/>
                                                                 </Grid.ColumnDefinitions>
 
                                                                 <TextBlock Text="{Binding DocumentName}"
                                                                            FontSize="{DynamicResource FS12}"
                                                                            FontWeight="SemiBold"
                                                                            Foreground="{DynamicResource ForegroundBrush}"
-                                                                           TextTrimming="CharacterEllipsis"
+                                                                           TextWrapping="Wrap"
                                                                            VerticalAlignment="Center"
                                                                            Margin="0,0,12,0"/>
 
-                                                                <StackPanel Grid.Column="1"
-                                                                            Orientation="Horizontal"
-                                                                            VerticalAlignment="Center"
-                                                                            Margin="0,0,16,0"
-                                                                            Visibility="{Binding ShowPresence, Converter={StaticResource BoolToVis}}">
-                                                                    <TextBlock Text="{Binding PresenceIcon}"
-                                                                               FontSize="{DynamicResource FS13}"
-                                                                               FontWeight="Bold"
-                                                                               VerticalAlignment="Center"
-                                                                               Margin="0,0,5,0">
-                                                                        <TextBlock.Style>
-                                                                            <Style TargetType="TextBlock">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-                                                                                <Style.Triggers>
-                                                                                    <DataTrigger Binding="{Binding IsPresent}" Value="True">
-                                                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                                                                    </DataTrigger>
-                                                                                </Style.Triggers>
-                                                                            </Style>
-                                                                        </TextBlock.Style>
-                                                                    </TextBlock>
-                                                                    <TextBlock Text="{Binding PresenceLabel}"
-                                                                               FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                               VerticalAlignment="Center"/>
-                                                                </StackPanel>
+                                                                <Border Grid.Column="1"
+                                                                        CornerRadius="8"
+                                                                        Padding="8,4"
+                                                                        Margin="0,0,8,0"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        VerticalAlignment="Center"
+                                                                        Visibility="{Binding ShowPresence, Converter={StaticResource BoolToVis}}">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                                                            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+                                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsPresent}" Value="True">
+                                                                                    <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                                                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                                                   FontSize="{DynamicResource FS12}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Margin="0,0,6,0">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Text" Value="&#xE711;"/>
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsPresent}" Value="True">
+                                                                                            <Setter Property="Text" Value="&#xE73E;"/>
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                        <TextBlock Text="{Binding PresenceLabel}"
+                                                                                   FontSize="{DynamicResource FS11}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   VerticalAlignment="Center">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsPresent}" Value="True">
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </StackPanel>
+                                                                </Border>
 
-                                                                <StackPanel Grid.Column="2"
-                                                                            Orientation="Horizontal"
-                                                                            VerticalAlignment="Center"
-                                                                            Visibility="{Binding ShowScanned, Converter={StaticResource BoolToVis}}">
-                                                                    <TextBlock Text="{Binding ScannedIcon}"
-                                                                               FontSize="{DynamicResource FS13}"
-                                                                               FontWeight="Bold"
-                                                                               VerticalAlignment="Center"
-                                                                               Margin="0,0,5,0">
-                                                                        <TextBlock.Style>
-                                                                            <Style TargetType="TextBlock">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-                                                                                <Style.Triggers>
-                                                                                    <DataTrigger Binding="{Binding IsScanned}" Value="True">
-                                                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                                                                    </DataTrigger>
-                                                                                </Style.Triggers>
-                                                                            </Style>
-                                                                        </TextBlock.Style>
-                                                                    </TextBlock>
-                                                                    <TextBlock Text="{Binding ScannedLabel}"
-                                                                               FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                               VerticalAlignment="Center"/>
-                                                                </StackPanel>
+                                                                <Border Grid.Column="2"
+                                                                        CornerRadius="8"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        VerticalAlignment="Center"
+                                                                        Visibility="{Binding ShowScanned, Converter={StaticResource BoolToVis}}">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                                                            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+                                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsScanned}" Value="True">
+                                                                                    <Setter Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                                                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                                                   FontSize="{DynamicResource FS12}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Margin="0,0,6,0">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Text" Value="&#xE711;"/>
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsScanned}" Value="True">
+                                                                                            <Setter Property="Text" Value="&#xE73E;"/>
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                        <TextBlock Text="{Binding ScannedLabel}"
+                                                                                   FontSize="{DynamicResource FS11}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   VerticalAlignment="Center">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsScanned}" Value="True">
+                                                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </StackPanel>
+                                                                </Border>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
@@ -3419,7 +3518,7 @@
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <Button Grid.Row="3"
+                    <Button Grid.Row="2"
                             Command="{Binding CloseDocumentPackageDialogCommand}"
                             HorizontalAlignment="Right"
                             Margin="0,14,0,0"
@@ -3429,7 +3528,7 @@
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1"
                             Foreground="{DynamicResource ForegroundBrush}">
-                        <TextBlock Text="{DynamicResource BtnCancel}" FontSize="{DynamicResource FS13}"/>
+                        <TextBlock Text="{DynamicResource DetBtnClose}" FontSize="{DynamicResource FS13}"/>
                     </Button>
                 </Grid>
             </Border>

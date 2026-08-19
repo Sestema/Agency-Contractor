@@ -572,6 +572,8 @@
     <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Stav zaškrtnutí balíčku u zaměstnanců aktuální firmy</sys:String>
     <sys:String x:Key="EmpDocumentPackageColName">Příjmení Jméno</sys:String>
     <sys:String x:Key="EmpDocumentPackageColStatus">Stav</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColPresence">Přítomnost</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColScanned">Naskenováno</sys:String>
     <sys:String x:Key="EmpDocumentPackageStatusOk">Vše v pořádku</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingPresence">přítomnost</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingScanned">naskenováno</sys:String>
@@ -760,6 +762,10 @@
     <sys:String x:Key="DetTabDocumentPackage">Balíček dokumentů</sys:String>
     <sys:String x:Key="DetDocumentPackageHint">Balíček aktuální firmy lze upravovat. Historie z předchozích firem se uchovává natrvalo.</sys:String>
     <sys:String x:Key="DetDocumentPackageProgress">Hotovo: {0}/{1}</sys:String>
+    <sys:String x:Key="DetSidebarExpiry">Platnost dokumentů</sys:String>
+    <sys:String x:Key="DetSidebarNote">Poznámka</sys:String>
+    <sys:String x:Key="DetSidebarNoteEmpty">Žádná poznámka</sys:String>
+    <sys:String x:Key="DetSidebarNoteWrite">Napsat</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Aktuální firma: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Pouze pro čtení — data z předchozí firmy.</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Dříve v balíčku této firmy (již nevyžadováno)</sys:String>
@@ -987,6 +993,20 @@
     <sys:String x:Key="EditorAlignLeft">Zarovnat doleva</sys:String>
     <sys:String x:Key="EditorAlignCenter">Zarovnat na střed</sys:String>
     <sys:String x:Key="EditorAlignRight">Zarovnat doprava</sys:String>
+    <sys:String x:Key="EditorTable">Tabulka</sys:String>
+    <sys:String x:Key="EditorTableAlignLeft">Tabulka vlevo</sys:String>
+    <sys:String x:Key="EditorTableAlignCenter">Tabulka na střed</sys:String>
+    <sys:String x:Key="EditorTableAlignRight">Tabulka vpravo</sys:String>
+    <sys:String x:Key="EditorTableNarrower">Užší tabulka</sys:String>
+    <sys:String x:Key="EditorTableWider">Širší tabulka</sys:String>
+    <sys:String x:Key="EditorTableColumnNarrower">Užší sloupec</sys:String>
+    <sys:String x:Key="EditorTableColumnWider">Širší sloupec</sys:String>
+    <sys:String x:Key="EditorImage">Obrázek</sys:String>
+    <sys:String x:Key="EditorImageAlignLeft">Obrázek vlevo</sys:String>
+    <sys:String x:Key="EditorImageAlignCenter">Obrázek na střed</sys:String>
+    <sys:String x:Key="EditorImageAlignRight">Obrázek vpravo</sys:String>
+    <sys:String x:Key="EditorImageNarrower">Menší obrázek</sys:String>
+    <sys:String x:Key="EditorImageWider">Větší obrázek</sys:String>
     <sys:String x:Key="EditorSpacing">Řádkování</sys:String>
     <sys:String x:Key="EditorLineSpacing">Řádky</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Odstavec</sys:String>
@@ -1124,6 +1144,7 @@
     <sys:String x:Key="ReportColumnsResetButton">Obnovit sloupce</sys:String>
     <sys:String x:Key="ReportColumnsDialogTitle">Nastavení sloupců</sys:String>
     <sys:String x:Key="ReportColumnsDialogDesc">Vyberte, které sloupce zobrazit, a změňte jejich pořadí.</sys:String>
+    <sys:String x:Key="ReportColumnsSearchPlaceholder">Hledat sloupec podle názvu nebo klíče</sys:String>
     <sys:String x:Key="ReportColumnsMoveUp">Posunout výš</sys:String>
     <sys:String x:Key="ReportColumnsMoveDown">Posunout níž</sys:String>
     <sys:String x:Key="ReportExportTitle">Nastavení exportu</sys:String>
@@ -2051,6 +2072,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="WizCropInstruction">Vyberte oblast s fotkou zaměstnance na pase a stiskněte "Oříznout"</sys:String>
     <sys:String x:Key="WizCropApply">Oříznout</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
+    <sys:String x:Key="HistFieldProfileNote">Poznámka</sys:String>
     <sys:String x:Key="HistFieldVisaType">Typ víza</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Pojišťovna</sys:String>
     <sys:String x:Key="HistFieldInsCompanyFull">Pojišťovna - plný název</sys:String>

@@ -1539,7 +1539,10 @@ namespace Win11DesktopApp.ViewModels
                             Brush = brush;
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("SettingsViewModel.AccentPresetItem", ex.Message);
+                    }
                 }
                 Brush ??= System.Windows.Media.Brushes.Transparent;
             }

@@ -1489,7 +1489,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey(docKey, parsed, StepIndex));
+                ApplyParsedDataByKey(docKey, parsed, StepIndex);
                 AIScanStatus = string.Format(Res("AIScanDone"), parsedFieldCount);
             }
             catch (OperationCanceledException)
@@ -1531,7 +1531,7 @@ namespace Win11DesktopApp.ViewModels
                 if (primaryParsed.Count > 0)
                 {
                     totalFields += primaryParsed.Count;
-                    Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("id_card", primaryParsed, sourceStepIndex));
+                    ApplyParsedDataByKey("id_card", primaryParsed, sourceStepIndex);
                 }
 
                 if (!string.IsNullOrWhiteSpace(PassportPage2PreviewPath) && File.Exists(PassportPage2PreviewPath))
@@ -1541,7 +1541,7 @@ namespace Win11DesktopApp.ViewModels
                     if (secondaryParsed.Count > 0)
                     {
                         totalFields += secondaryParsed.Count;
-                        Application.Current.Dispatcher.Invoke(() => ApplyParsedDataByKey("id_card_back", secondaryParsed, sourceStepIndex));
+                        ApplyParsedDataByKey("id_card_back", secondaryParsed, sourceStepIndex);
                     }
                 }
 

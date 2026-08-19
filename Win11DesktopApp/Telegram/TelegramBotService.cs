@@ -537,7 +537,7 @@ namespace Win11DesktopApp.Telegram
             var cts = _cts;
             var dailyDigestTask = _dailyDigestTask;
 
-            try { cts?.Cancel(); } catch { }
+            try { cts?.Cancel(); } catch (Exception ex) { LoggingService.LogWarning("TelegramBot.Stop.Cancel", ex.Message); }
             if (dailyDigestTask != null)
             {
                 try { dailyDigestTask.Wait(TimeSpan.FromSeconds(2)); }

@@ -141,12 +141,12 @@ namespace Win11DesktopApp.Services
                         Details = string.IsNullOrWhiteSpace(details) ? null : details
                     };
                     var line = JsonSerializer.Serialize(entry, _jsonOptions) + Environment.NewLine;
-                    File.AppendAllText(_logPath, line);
+                    RetryHelper.Execute(() => File.AppendAllText(_logPath, line));
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Last resort — cannot log, just ignore
+                System.Diagnostics.Debug.WriteLine($"[LOG WRITE FAILED] {source}: {ex.Message}");
             }
         }
 

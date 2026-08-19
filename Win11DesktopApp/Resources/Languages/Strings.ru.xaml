@@ -555,6 +555,8 @@
     <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Готовность галочек пакета по сотрудникам текущей фирмы</sys:String>
     <sys:String x:Key="EmpDocumentPackageColName">Фамилия Имя</sys:String>
     <sys:String x:Key="EmpDocumentPackageColStatus">Статус</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColPresence">Наличие</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColScanned">Отсканирован</sys:String>
     <sys:String x:Key="EmpDocumentPackageStatusOk">Все ок</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingPresence">наличие</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingScanned">отсканирован</sys:String>
@@ -743,6 +745,10 @@
     <sys:String x:Key="DetTabDocumentPackage">Пакет документов</sys:String>
     <sys:String x:Key="DetDocumentPackageHint">Пакет текущей фирмы можно изменять. История с предыдущих фирм сохраняется навсегда.</sys:String>
     <sys:String x:Key="DetDocumentPackageProgress">Готово: {0}/{1}</sys:String>
+    <sys:String x:Key="DetSidebarExpiry">Сроки документов</sys:String>
+    <sys:String x:Key="DetSidebarNote">Примечание</sys:String>
+    <sys:String x:Key="DetSidebarNoteEmpty">Нет примечания</sys:String>
+    <sys:String x:Key="DetSidebarNoteWrite">Написать</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Текущая фирма: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Только просмотр — данные с предыдущей фирмы.</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Ранее в пакете этой фирмы (больше не требуется)</sys:String>
@@ -970,6 +976,20 @@
     <sys:String x:Key="EditorAlignLeft">По левому краю</sys:String>
     <sys:String x:Key="EditorAlignCenter">По центру</sys:String>
     <sys:String x:Key="EditorAlignRight">По правому краю</sys:String>
+    <sys:String x:Key="EditorTable">Таблица</sys:String>
+    <sys:String x:Key="EditorTableAlignLeft">Таблица слева</sys:String>
+    <sys:String x:Key="EditorTableAlignCenter">Таблица по центру</sys:String>
+    <sys:String x:Key="EditorTableAlignRight">Таблица справа</sys:String>
+    <sys:String x:Key="EditorTableNarrower">Уже таблица</sys:String>
+    <sys:String x:Key="EditorTableWider">Шире таблица</sys:String>
+    <sys:String x:Key="EditorTableColumnNarrower">Уже колонка</sys:String>
+    <sys:String x:Key="EditorTableColumnWider">Шире колонка</sys:String>
+    <sys:String x:Key="EditorImage">Картинка</sys:String>
+    <sys:String x:Key="EditorImageAlignLeft">Картинка слева</sys:String>
+    <sys:String x:Key="EditorImageAlignCenter">Картинка по центру</sys:String>
+    <sys:String x:Key="EditorImageAlignRight">Картинка справа</sys:String>
+    <sys:String x:Key="EditorImageNarrower">Меньше картинка</sys:String>
+    <sys:String x:Key="EditorImageWider">Больше картинка</sys:String>
     <sys:String x:Key="EditorSpacing">Интервалы</sys:String>
     <sys:String x:Key="EditorLineSpacing">Межстрочный</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Абзац</sys:String>
@@ -1107,6 +1127,7 @@
     <sys:String x:Key="ReportColumnsResetButton">Сбросить колонки</sys:String>
     <sys:String x:Key="ReportColumnsDialogTitle">Настройка колонок</sys:String>
     <sys:String x:Key="ReportColumnsDialogDesc">Выберите, какие колонки показывать, и измените их порядок.</sys:String>
+    <sys:String x:Key="ReportColumnsSearchPlaceholder">Поиск колонки по названию или ключу</sys:String>
     <sys:String x:Key="ReportColumnsMoveUp">Переместить выше</sys:String>
     <sys:String x:Key="ReportColumnsMoveDown">Переместить ниже</sys:String>
     <sys:String x:Key="ReportExportTitle">Настройки экспорта</sys:String>
@@ -2034,6 +2055,7 @@
     <sys:String x:Key="WizCropInstruction">Выделите область с фото сотрудника на паспорте и нажмите "Обрезать"</sys:String>
     <sys:String x:Key="WizCropApply">Обрезать</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
+    <sys:String x:Key="HistFieldProfileNote">Примечание</sys:String>
     <sys:String x:Key="HistFieldVisaType">Тип визы</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Страховая компания</sys:String>
     <sys:String x:Key="HistFieldInsCompanyFull">Страховая компания - полное название</sys:String>

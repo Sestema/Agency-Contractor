@@ -174,6 +174,23 @@
             </Setter>
         </Style>
 
+        <Style x:Key="SidebarChip" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+
+        <Style x:Key="SidebarFactIcon" TargetType="Border">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
+
         <Style x:Key="DetailsSectionCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
@@ -323,7 +340,10 @@
                             Grid.Column="0"
                             Padding="18,16"
                             Background="{DynamicResource WindowBackgroundBrush}">
-                        <ScrollViewer Style="{StaticResource ThinScroll}">
+                        <ScrollViewer Style="{StaticResource ThinScroll}"
+                                      VerticalScrollBarVisibility="Hidden"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      PanningMode="VerticalOnly">
                             <StackPanel>
                                 <!-- Photo -->
                                 <Border Style="{StaticResource DialogPreviewSurface}"
@@ -374,96 +394,142 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- Name -->
-                                <TextBlock Text="{Binding FullName}" FontSize="{DynamicResource FS16}" FontWeight="Bold" 
-                                           Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"
-                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-
-                                <!-- Position -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4"
+                                <!-- Position / contract chips -->
+                                <WrapPanel Margin="0,0,0,4">
+                                    <Border Style="{StaticResource SidebarChip}"
                                             Visibility="{Binding Data.PositionTag, Converter={StaticResource StringToVis}}">
-                                    <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                               TextTrimming="CharacterEllipsis">
-                                        <Run Text="{Binding Data.PositionTag, Mode=OneWay}"/>
-                                    </TextBlock>
-                                </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE821;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Data.PositionTag}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis" MaxWidth="220"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border>
+                                        <Border.Style>
+                                            <Style TargetType="Border" BasedOn="{StaticResource SidebarChip}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Data.ContractType}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Data.ContractType}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Data.EmployeeType}" Value="passport_only">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Data.ContractType}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </WrapPanel>
 
-                                <!-- Contract type (hidden for passport_only) -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Data.ContractType}" Value="">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Data.ContractType}" Value="{x:Null}">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Data.EmployeeType}" Value="passport_only">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" 
-                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Data.ContractType}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-
-                                <!-- Separator -->
-                                <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,12"/>
-
-                                <!-- Contact info -->
-                                <Border Style="{StaticResource DialogPreviewSurface}" Padding="12" Margin="0,0,0,12">
+                                <!-- Contact / dates -->
+                                <Border Style="{StaticResource DialogPreviewSurface}" Padding="12" Margin="0,4,0,12">
                                     <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                                            Visibility="{Binding Data.Phone, Converter={StaticResource StringToVis}}">
-                                    <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
-                                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Data.Phone}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
+                                        <Grid Margin="0,0,0,10"
+                                              Visibility="{Binding Data.Phone, Converter={StaticResource StringToVis}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource SidebarFactIcon}">
+                                                <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource DetFieldPhone}" FontSize="{DynamicResource FS10}"
+                                                           Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                                <TextBlock Text="{Binding Data.Phone}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Grid>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                                            Visibility="{Binding Data.Email, Converter={StaticResource StringToVis}}">
-                                    <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
-                                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Data.Email}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
+                                        <Grid Margin="0,0,0,10"
+                                              Visibility="{Binding Data.Email, Converter={StaticResource StringToVis}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource SidebarFactIcon}">
+                                                <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource DetFieldEmail}" FontSize="{DynamicResource FS10}"
+                                                           Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                                <TextBlock Text="{Binding Data.Email}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                                            ToolTip="{DynamicResource DetFieldStartDate}"
-                                            Visibility="{Binding Data.StartDate, Converter={StaticResource StringToVis}}">
-                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
-                                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Data.StartDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <TextBlock Text="{DynamicResource DetFieldStartDate}" FontSize="{DynamicResource FS10}"
-                                               Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="8,1,0,0"/>
-                                </StackPanel>
+                                        <Grid Margin="0,0,0,10"
+                                              ToolTip="{DynamicResource DetFieldStartDate}"
+                                              Visibility="{Binding Data.StartDate, Converter={StaticResource StringToVis}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource SidebarFactIcon}">
+                                                <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource DetFieldStartDate}" FontSize="{DynamicResource FS10}"
+                                                           Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                                <TextBlock Text="{Binding Data.StartDate}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                                            ToolTip="{DynamicResource ReportColEndDateFull}"
-                                            Visibility="{Binding FirmEndDate, Converter={StaticResource StringToVis}}">
-                                    <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
-                                               Foreground="{DynamicResource ErrorBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding FirmEndDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <TextBlock Text="{DynamicResource ReportColEndDateFull}" FontSize="{DynamicResource FS10}"
-                                               Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="8,1,0,0"/>
-                                </StackPanel>
+                                        <Grid Margin="0,0,0,10"
+                                              ToolTip="{DynamicResource ReportColEndDateFull}"
+                                              Visibility="{Binding FirmEndDate, Converter={StaticResource StringToVis}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource SidebarFactIcon}" Background="{DynamicResource ErrorLightBrush}">
+                                                <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource ErrorBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource ReportColEndDateFull}" FontSize="{DynamicResource FS10}"
+                                                           Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                                <TextBlock Text="{Binding FirmEndDate}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                                            ToolTip="{DynamicResource DetFieldSignDate}"
-                                            Visibility="{Binding Data.ContractSignDate, Converter={StaticResource StringToVis}}">
-                                    <TextBlock Text="&#xE8D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" 
-                                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Data.ContractSignDate}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <TextBlock Text="{DynamicResource DetFieldSignDate}" FontSize="{DynamicResource FS10}"
-                                               Foreground="{DynamicResource TertiaryForegroundBrush}" VerticalAlignment="Center" Margin="8,1,0,0"/>
-                                </StackPanel>
+                                        <Grid ToolTip="{DynamicResource DetFieldSignDate}"
+                                              Visibility="{Binding Data.ContractSignDate, Converter={StaticResource StringToVis}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Style="{StaticResource SidebarFactIcon}">
+                                                <TextBlock Text="&#xE8D2;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource DetFieldSignDate}" FontSize="{DynamicResource FS10}"
+                                                           Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                                <TextBlock Text="{Binding Data.ContractSignDate}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
 
@@ -479,91 +545,238 @@
                                     </StackPanel>
                                 </Button>
 
-                                <!-- Open folder button -->
+                                <!-- Secondary actions -->
                                 <Button Command="{Binding OpenFolderCommand}"
                                         Style="{StaticResource SidebarSecondaryButton}"
-                                        Margin="0,8,0,0">
+                                        Padding="10,7"
+                                        Margin="0,6,0,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="{DynamicResource DetBtnOpenFolder}" FontSize="{DynamicResource FS12}"/>
                                     </StackPanel>
                                 </Button>
 
-                                <!-- AI Validate button -->
-                                <Button Command="{Binding AIValidateCommand}" Margin="0,8,0,0"
-                                        Style="{StaticResource SidebarSecondaryButton}">
+                                <Button Command="{Binding AIValidateCommand}" Margin="0,6,0,0"
+                                        Style="{StaticResource SidebarSecondaryButton}"
+                                        Padding="10,7">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                        <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,8,0" VerticalAlignment="Center"
                                                    Foreground="{DynamicResource PurpleBrush}"/>
-                                        <TextBlock Text="{DynamicResource AIValidateBtn}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{DynamicResource AIValidateBtn}" FontSize="{DynamicResource FS12}"/>
                                     </StackPanel>
                                 </Button>
 
-
-                                <!-- Export PDF button -->
-                                <Button Command="{Binding ExportProfilePdfCommand}" Margin="0,8,0,0"
-                                        Style="{StaticResource SidebarSecondaryButton}">
+                                <Button Command="{Binding ExportProfilePdfCommand}" Margin="0,6,0,0"
+                                        Style="{StaticResource SidebarSecondaryButton}"
+                                        Padding="10,7">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xEA00;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                        <TextBlock Text="&#xEA00;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,8,0" VerticalAlignment="Center"
                                                    Foreground="{DynamicResource AccentBrush}"/>
-                                        <TextBlock Text="{DynamicResource DetBtnExportPdf}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{DynamicResource DetBtnExportPdf}" FontSize="{DynamicResource FS12}"/>
                                     </StackPanel>
                                 </Button>
 
-                                <!-- Archive button -->
-                                <Button Command="{Binding ArchiveEmployeeCommand}" Padding="12,9" Cursor="Hand" Margin="0,8,0,0"
+                                <Button Command="{Binding ArchiveEmployeeCommand}" Padding="10,7" Cursor="Hand" Margin="0,14,0,0"
                                         Visibility="{Binding IsNotArchiveMode, Converter={StaticResource BoolToVis}}"
-                                        Background="{DynamicResource ErrorLightBrush}" 
+                                        Background="Transparent"
                                         BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                                         Foreground="{DynamicResource ErrorBrush}" HorizontalContentAlignment="Center"
                                         Style="{StaticResource SidebarSecondaryButton}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{DynamicResource DetBtnArchive}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource DetBtnArchive}" FontSize="{DynamicResource FS12}"/>
                                     </StackPanel>
                                 </Button>
 
-                                <!-- Delete employee button (Archive mode only) -->
-                                <Button Command="{Binding DeleteEmployeeCommand}" Padding="12,9" Cursor="Hand" Margin="0,8,0,0"
+                                <Button Command="{Binding DeleteEmployeeCommand}" Padding="10,7" Cursor="Hand" Margin="0,14,0,0"
                                         Visibility="{Binding IsArchiveMode, Converter={StaticResource BoolToVis}}"
                                         ToolTip="{DynamicResource EmpTooltipDelete}"
-                                        Background="{DynamicResource ErrorLightBrush}" 
+                                        Background="Transparent"
                                         BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                                         Foreground="{DynamicResource ErrorBrush}" HorizontalContentAlignment="Center"
                                         Style="{StaticResource SidebarSecondaryButton}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{DynamicResource DetBtnDeleteEmployee}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource DetBtnDeleteEmployee}" FontSize="{DynamicResource FS12}"/>
                                     </StackPanel>
                                 </Button>
 
                                 <Border Style="{StaticResource DialogPreviewSurface}" Padding="12" Margin="0,12,0,0">
                                     <StackPanel>
-                                        <!-- Status -->
-                                        <TextBlock Text="{DynamicResource DetLabelStatus}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
-                                        <Border CornerRadius="6" Padding="8,4" 
-                                                Background="{Binding Data.Status, Converter={StaticResource StatusBg}}">
-                                            <TextBlock Text="{Binding Data.Status, Converter={StaticResource StatusDisplayConverter}, FallbackValue='—'}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                                       Foreground="{Binding Data.Status, Converter={StaticResource StatusColor}}"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{DynamicResource DetSidebarNote}"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="Wrap"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                <Button Command="{Binding BeginProfileNoteEditCommand}"
+                                                        Visibility="{Binding ShowWriteProfileNote, Converter={StaticResource BoolToVis}}"
+                                                        Style="{StaticResource SidebarSecondaryButton}"
+                                                        Padding="8,4"
+                                                        FontSize="{DynamicResource FS11}"
+                                                        Content="{DynamicResource DetSidebarNoteWrite}"/>
+                                                <Button Command="{Binding BeginProfileNoteEditCommand}"
+                                                        Visibility="{Binding ShowEditProfileNote, Converter={StaticResource BoolToVis}}"
+                                                        Style="{StaticResource SidebarSecondaryButton}"
+                                                        Padding="8,4"
+                                                        FontSize="{DynamicResource FS11}"
+                                                        Content="{DynamicResource EmpBtnEdit}"/>
+                                                <Button Command="{Binding SaveProfileNoteCommand}"
+                                                        Visibility="{Binding ShowSaveProfileNote, Converter={StaticResource BoolToVis}}"
+                                                        Style="{StaticResource SidebarSecondaryButton}"
+                                                        Padding="8,4"
+                                                        FontSize="{DynamicResource FS11}"
+                                                        Content="{DynamicResource DetBtnSave}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Text="{Binding ProfileNoteDraft}"
+                                                   Visibility="{Binding ShowProfileNoteText, Converter={StaticResource BoolToVis}}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,8,0,0"/>
+                                        <TextBlock Text="{DynamicResource DetSidebarNoteEmpty}"
+                                                   Visibility="{Binding ShowProfileNoteEmpty, Converter={StaticResource BoolToVis}}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,8,0,0"/>
+                                        <TextBox Text="{Binding ProfileNoteDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                 Visibility="{Binding IsProfileNoteEditing, Converter={StaticResource BoolToVis}}"
+                                                 Style="{StaticResource FieldInput}"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="Wrap"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 MinHeight="64"
+                                                 MaxHeight="160"
+                                                 VerticalContentAlignment="Top"
+                                                 Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource DialogPreviewSurface}" Padding="12" Margin="0,12,0,0"
+                                        Visibility="{Binding ShowSidebarInsights, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <Button Command="{Binding ShowDocumentPackageCommand}"
+                                                Cursor="Hand"
+                                                HorizontalContentAlignment="Stretch"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                Margin="0,0,0,8"
+                                                Visibility="{Binding HasDocumentPackage, Converter={StaticResource BoolToVis}}"
+                                                ToolTip="{DynamicResource DetTabDocumentPackage}">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{DynamicResource DetTabDocumentPackage}"
+                                                               FontSize="{DynamicResource FS11}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource ForegroundBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding DocumentPackageProgressText}"
+                                                               FontSize="{DynamicResource FS11}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AccentDarkBrush}"/>
+                                                </Grid>
+                                                <Grid Height="8" ClipToBounds="True">
+                                                    <Border CornerRadius="4" Background="{DynamicResource CardBorderBrush}"/>
+                                                    <Border CornerRadius="4" HorizontalAlignment="Stretch"
+                                                            RenderTransformOrigin="0,0.5">
+                                                        <Border.Background>
+                                                            <DynamicResource ResourceKey="BrandSuccessHorizontalGradientBrush"/>
+                                                        </Border.Background>
+                                                        <Border.RenderTransform>
+                                                            <ScaleTransform ScaleX="{Binding DocumentPackageProgressPercent, Converter={StaticResource PercentToScale}, FallbackValue=0}" ScaleY="1"/>
+                                                        </Border.RenderTransform>
+                                                    </Border>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <TextBlock Text="{DynamicResource DetSidebarExpiry}"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                                   Margin="0,0,0,6"
+                                                   Visibility="{Binding HasAnyExpiryWarning, Converter={StaticResource BoolToVis}}"/>
+
+                                        <Border CornerRadius="8" Padding="8,6" Margin="0,0,0,5" Cursor="Hand"
+                                                Background="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                Visibility="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding ShowDocumentsCommand}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{DynamicResource DetDocPassport}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                           Foreground="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnText}}"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           Foreground="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
                                         </Border>
 
-                                        <!-- Profile completion -->
-                                        <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,10,0,4">
-                                            <Run Text="{DynamicResource DetProfileCompletion}"/>
-                                            <Run Text="{Binding ProfileCompletionPercent, Mode=OneWay, FallbackValue=0}"/><Run Text="%"/>
-                                        </TextBlock>
-                                        <Grid Height="8" Margin="0,0,0,4" ClipToBounds="True">
-                                            <Border CornerRadius="4" Background="{DynamicResource CardBorderBrush}"/>
-                                            <Border CornerRadius="4" HorizontalAlignment="Stretch"
-                                                    RenderTransformOrigin="0,0.5">
-                                                <Border.Background>
-                                                    <DynamicResource ResourceKey="BrandSuccessHorizontalGradientBrush"/>
-                                                </Border.Background>
-                                                <Border.RenderTransform>
-                                                    <ScaleTransform ScaleX="{Binding ProfileCompletionPercent, Converter={StaticResource PercentToScale}, FallbackValue=0}" ScaleY="1"/>
-                                                </Border.RenderTransform>
-                                            </Border>
-                                        </Grid>
+                                        <Border CornerRadius="8" Padding="8,6" Margin="0,0,0,5" Cursor="Hand"
+                                                Background="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                Visibility="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding ShowDocumentsCommand}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{DynamicResource DetDocVisa}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                           Foreground="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnText}}"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           Foreground="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border CornerRadius="8" Padding="8,6" Margin="0,0,0,5" Cursor="Hand"
+                                                Background="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                Visibility="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding ShowDocumentsCommand}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{DynamicResource DetDocInsurance}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                           Foreground="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnText}}"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           Foreground="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border CornerRadius="8" Padding="8,6" Cursor="Hand"
+                                                Background="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                Visibility="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding ShowDocumentsCommand}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{DynamicResource DetDocWorkPermit}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                           Foreground="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnText}}"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           Foreground="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"
+                                                           Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

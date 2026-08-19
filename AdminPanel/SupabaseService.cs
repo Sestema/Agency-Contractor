@@ -47,6 +47,31 @@ namespace AdminPanel
         public string RiskDisplay =>
             $"{(string.IsNullOrWhiteSpace(RiskLevel) ? "Unknown" : RiskLevel)} ({RiskScore})";
 
+        public string RiskLevelCode
+        {
+            get
+            {
+                var level = RiskLevel ?? string.Empty;
+                if (level.Contains("High", StringComparison.OrdinalIgnoreCase))
+                    return "high";
+                if (level.Contains("Warn", StringComparison.OrdinalIgnoreCase))
+                    return "warning";
+                return "ok";
+            }
+        }
+
+        public string RiskBadgeLabel => RiskLevelCode switch
+        {
+            "high" => "High",
+            "warning" => "Warn",
+            _ => "OK"
+        };
+
+        public string RiskReasonsDisplay =>
+            RiskReasons == null || RiskReasons.Count == 0
+                ? "Причин ризику немає"
+                : string.Join("\n", RiskReasons.Where(reason => !string.IsNullOrWhiteSpace(reason)));
+
         public string LatestHeartbeatDisplay =>
             LatestHeartbeatAt?.ToLocalTime().ToString("dd.MM HH:mm") ?? "—";
 
@@ -81,11 +106,11 @@ namespace AdminPanel
 
         public string AccessStateLabel => AccessStateCode switch
         {
-            "blocked" => "⛔ Blocked",
-            "readonly" => "👁 Read-only",
-            "trial" => "⏳ Trial",
-            "activated" => "✅ Activated",
-            _ => "❔ Unknown"
+            "blocked" => "Blocked",
+            "readonly" => "Read-only",
+            "trial" => "Trial",
+            "activated" => "Activated",
+            _ => "Unknown"
         };
 
         public string AccessStateDetail => AccessStateCode switch
@@ -444,12 +469,6 @@ namespace AdminPanel
             }) ?? new TelemetryPageResult();
         }
 
-        public async Task<List<TelemetryRecord>> GetTelemetryAsync(string? clientId = null, int limit = 200, string? beforeCreatedAt = null)
-        {
-            var page = await GetTelemetryPageAsync(clientId, limit, beforeCreatedAt);
-            return page.Items;
-        }
-
         public async Task BlockClientAsync(string clientId, string reason)
         {
             await CallAsync<object>("block_client", new { client_id = clientId, reason });
@@ -499,11 +518,6 @@ namespace AdminPanel
             return await CallAsync<ClientAccessUpdateResult>("update_client_access", payload);
         }
 
-        public async Task<TenantRecord?> GetTenantForClientAsync(string clientId)
-        {
-            return await TryGetTenantForClientAsync(clientId);
-        }
-
         public async Task<TenantRecord?> TryGetTenantForClientAsync(string clientId)
         {
             try
@@ -529,48 +543,6 @@ namespace AdminPanel
         public async Task<ClientProfileRecord?> GetClientProfileAsync(string clientId)
         {
             return await CallAsync<ClientProfileRecord>("get_profile", new { client_id = clientId });
-        }
-
-        public async Task<ClientMirrorStateRecord?> GetClientMirrorStateAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.State;
-        }
-
-        public async Task<List<AdminMirrorAgencyRecord>> GetMirrorAgenciesAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.Agencies;
-        }
-
-        public async Task<List<AdminMirrorEmployerRecord>> GetMirrorEmployersAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.Employers;
-        }
-
-        public async Task<List<AdminMirrorEmployerAddressRecord>> GetMirrorEmployerAddressesAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.Employers.SelectMany(item => item.Addresses).ToList();
-        }
-
-        public async Task<List<AdminMirrorEmployerPositionRecord>> GetMirrorEmployerPositionsAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.Employers.SelectMany(item => item.Positions).ToList();
-        }
-
-        public async Task<List<AdminMirrorEmployeeRecord>> GetMirrorEmployeesAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.Employees;
-        }
-
-        public async Task<List<AdminMirrorEmployeeFirmHistoryRecord>> GetMirrorEmployeeHistoryAsync(string clientId)
-        {
-            var snapshot = await GetClientMirrorSnapshotAsync(clientId);
-            return snapshot.Employees.SelectMany(item => item.FirmHistory).ToList();
         }
 
         public async Task<ClientMirrorSnapshot> GetClientMirrorSnapshotAsync(string clientId)

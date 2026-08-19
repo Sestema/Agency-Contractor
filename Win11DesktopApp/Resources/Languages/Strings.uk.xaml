@@ -572,6 +572,8 @@
     <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Готовність галочок пакета по працівниках поточної фірми</sys:String>
     <sys:String x:Key="EmpDocumentPackageColName">Прізвище Ім'я</sys:String>
     <sys:String x:Key="EmpDocumentPackageColStatus">Статус</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColPresence">Наявність</sys:String>
+    <sys:String x:Key="EmpDocumentPackageColScanned">Відсканований</sys:String>
     <sys:String x:Key="EmpDocumentPackageStatusOk">Все ок</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingPresence">наявність</sys:String>
     <sys:String x:Key="EmpDocumentPackageMissingScanned">насканований</sys:String>
@@ -762,6 +764,10 @@
     <sys:String x:Key="DetTabDocumentPackage">Пакет документів</sys:String>
     <sys:String x:Key="DetDocumentPackageHint">Пакет поточної фірми можна змінювати. Історія з попередніх фірм зберігається назавжди.</sys:String>
     <sys:String x:Key="DetDocumentPackageProgress">Готово: {0}/{1}</sys:String>
+    <sys:String x:Key="DetSidebarExpiry">Терміни документів</sys:String>
+    <sys:String x:Key="DetSidebarNote">Примітка</sys:String>
+    <sys:String x:Key="DetSidebarNoteEmpty">Немає примітки</sys:String>
+    <sys:String x:Key="DetSidebarNoteWrite">Написати</sys:String>
     <sys:String x:Key="DetDocumentPackageCurrentFirm">Поточна фірма: {0}</sys:String>
     <sys:String x:Key="DetDocumentPackageHistoryHint">Тільки перегляд — дані з попередньої фірми.</sys:String>
     <sys:String x:Key="DetDocumentPackageRetiredSection">Раніше в пакеті цієї фірми (більше не вимагається)</sys:String>
@@ -991,6 +997,20 @@
     <sys:String x:Key="EditorAlignLeft">По лівому краю</sys:String>
     <sys:String x:Key="EditorAlignCenter">По центру</sys:String>
     <sys:String x:Key="EditorAlignRight">По правому краю</sys:String>
+    <sys:String x:Key="EditorTable">Таблиця</sys:String>
+    <sys:String x:Key="EditorTableAlignLeft">Таблиця ліворуч</sys:String>
+    <sys:String x:Key="EditorTableAlignCenter">Таблиця по центру</sys:String>
+    <sys:String x:Key="EditorTableAlignRight">Таблиця праворуч</sys:String>
+    <sys:String x:Key="EditorTableNarrower">Вужча таблиця</sys:String>
+    <sys:String x:Key="EditorTableWider">Ширша таблиця</sys:String>
+    <sys:String x:Key="EditorTableColumnNarrower">Вужча колонка</sys:String>
+    <sys:String x:Key="EditorTableColumnWider">Ширша колонка</sys:String>
+    <sys:String x:Key="EditorImage">Картинка</sys:String>
+    <sys:String x:Key="EditorImageAlignLeft">Картинка ліворуч</sys:String>
+    <sys:String x:Key="EditorImageAlignCenter">Картинка по центру</sys:String>
+    <sys:String x:Key="EditorImageAlignRight">Картинка праворуч</sys:String>
+    <sys:String x:Key="EditorImageNarrower">Менша картинка</sys:String>
+    <sys:String x:Key="EditorImageWider">Більша картинка</sys:String>
     <sys:String x:Key="EditorSpacing">Інтервали</sys:String>
     <sys:String x:Key="EditorLineSpacing">Міжрядковий</sys:String>
     <sys:String x:Key="EditorParagraphSpacing">Абзац</sys:String>
@@ -1128,6 +1148,7 @@
     <sys:String x:Key="ReportColumnsResetButton">Скинути колонки</sys:String>
     <sys:String x:Key="ReportColumnsDialogTitle">Налаштування колонок</sys:String>
     <sys:String x:Key="ReportColumnsDialogDesc">Оберіть, які колонки показувати, та змініть їх порядок.</sys:String>
+    <sys:String x:Key="ReportColumnsSearchPlaceholder">Пошук колонки за назвою або ключем</sys:String>
     <sys:String x:Key="ReportColumnsMoveUp">Перемістити вище</sys:String>
     <sys:String x:Key="ReportColumnsMoveDown">Перемістити нижче</sys:String>
     <sys:String x:Key="ReportExportTitle">Налаштування експорту</sys:String>
@@ -2052,6 +2073,7 @@
     <sys:String x:Key="WizCropInstruction">Виділіть область з фото працівника на паспорті та натисніть "Обрізати"</sys:String>
     <sys:String x:Key="WizCropApply">Обрізати</sys:String>
     <sys:String x:Key="HistFieldEmail">Email</sys:String>
+    <sys:String x:Key="HistFieldProfileNote">Примітка</sys:String>
     <sys:String x:Key="HistFieldVisaType">Тип візи</sys:String>
     <sys:String x:Key="HistFieldInsCompany">Страхова компанія</sys:String>
     <sys:String x:Key="HistFieldInsCompanyFull">Страхова компанія - повна назва</sys:String>

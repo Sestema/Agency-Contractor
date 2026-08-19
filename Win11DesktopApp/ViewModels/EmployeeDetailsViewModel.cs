@@ -589,6 +589,7 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(ShowGenerateActions));
                     OnPropertyChanged(nameof(HeaderSubtitle));
                     OnPropertyChanged(nameof(ShowArchiveModeChip));
+                    NotifyProfileNoteUi();
                 }
             }
         }
@@ -605,6 +606,7 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(IsNotArchiveMode));
                     OnPropertyChanged(nameof(ShowGenerateActions));
                     OnPropertyChanged(nameof(HeaderSubtitle));
+                    NotifyProfileNoteUi();
                 }
             }
         }
@@ -1014,6 +1016,8 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(DocumentPackageProgressText));
                     OnPropertyChanged(nameof(DocumentPackageCompletedCount));
                     OnPropertyChanged(nameof(DocumentPackageTotalCount));
+                    OnPropertyChanged(nameof(DocumentPackageProgressPercent));
+                    OnPropertyChanged(nameof(ShowSidebarInsights));
                     OnPropertyChanged(nameof(CurrentDocumentPackageSection));
                     OnPropertyChanged(nameof(CanEditDocumentPackage));
                 }
@@ -1048,6 +1052,61 @@ namespace Win11DesktopApp.ViewModels
                     format = "Готово: {0}/{1}";
                 return string.Format(format, DocumentPackageCompletedCount, DocumentPackageTotalCount);
             }
+        }
+
+        public int DocumentPackageProgressPercent
+        {
+            get
+            {
+                if (DocumentPackageTotalCount <= 0)
+                    return 0;
+                return (int)Math.Round(100.0 * DocumentPackageCompletedCount / DocumentPackageTotalCount);
+            }
+        }
+
+        public bool HasAnyExpiryWarning =>
+            !string.IsNullOrEmpty(PassportExpiryWarning)
+            || !string.IsNullOrEmpty(VisaExpiryWarning)
+            || !string.IsNullOrEmpty(InsuranceExpiryWarning)
+            || !string.IsNullOrEmpty(WorkPermitExpiryWarning);
+
+        public bool ShowSidebarInsights => HasDocumentPackage || HasAnyExpiryWarning;
+
+        private string _profileNoteDraft = string.Empty;
+        public string ProfileNoteDraft
+        {
+            get => _profileNoteDraft;
+            set => SetProperty(ref _profileNoteDraft, value ?? string.Empty);
+        }
+
+        private bool _isProfileNoteEditing;
+        public bool IsProfileNoteEditing
+        {
+            get => _isProfileNoteEditing;
+            private set
+            {
+                if (SetProperty(ref _isProfileNoteEditing, value))
+                    NotifyProfileNoteUi();
+            }
+        }
+
+        public bool HasProfileNote => !string.IsNullOrWhiteSpace(Data?.ProfileNote);
+        public bool CanEditProfileNote => !IsReadOnlyMode && !IsArchiveMode;
+        public bool ShowWriteProfileNote => CanEditProfileNote && !IsProfileNoteEditing && !HasProfileNote;
+        public bool ShowEditProfileNote => CanEditProfileNote && !IsProfileNoteEditing && HasProfileNote;
+        public bool ShowSaveProfileNote => CanEditProfileNote && IsProfileNoteEditing;
+        public bool ShowProfileNoteText => !IsProfileNoteEditing && HasProfileNote;
+        public bool ShowProfileNoteEmpty => !IsProfileNoteEditing && !HasProfileNote;
+
+        private void NotifyProfileNoteUi()
+        {
+            OnPropertyChanged(nameof(HasProfileNote));
+            OnPropertyChanged(nameof(CanEditProfileNote));
+            OnPropertyChanged(nameof(ShowWriteProfileNote));
+            OnPropertyChanged(nameof(ShowEditProfileNote));
+            OnPropertyChanged(nameof(ShowSaveProfileNote));
+            OnPropertyChanged(nameof(ShowProfileNoteText));
+            OnPropertyChanged(nameof(ShowProfileNoteEmpty));
         }
 
         private bool _isDocumentPackageEditing;
@@ -1285,6 +1344,8 @@ namespace Win11DesktopApp.ViewModels
 
         public ICommand ShowSalaryCommand { get; }
         public ICommand ShowDocumentPackageCommand { get; }
+        public ICommand BeginProfileNoteEditCommand { get; }
+        public ICommand SaveProfileNoteCommand { get; }
         public ICommand EditDocumentPackageCommand { get; }
         public ICommand SaveDocumentPackageCommand { get; }
         public ICommand CancelDocumentPackageEditCommand { get; }
@@ -1775,6 +1836,8 @@ namespace Win11DesktopApp.ViewModels
             _tabIndex = Math.Clamp(settings.EmployeeDetailsLastTabIndex, 0, 4);
 
             Data = LoadInitialEmployeeData();
+            Data.ProfileNote ??= string.Empty;
+            ProfileNoteDraft = Data.ProfileNote;
             Data.Status = StatusHelper.Normalize(Data.Status);
             RecomputeFirmEndDate();
             NormalizeInsuranceCompanyFields();
@@ -1816,6 +1879,8 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 TabIndex = 4;
             });
+            BeginProfileNoteEditCommand = new RelayCommand(_ => BeginProfileNoteEdit(), _ => CanEditProfileNote);
+            SaveProfileNoteCommand = new AsyncRelayCommand(_ => SaveProfileNoteAsync(), _ => CanEditProfileNote);
             EditDocumentPackageCommand = new RelayCommand(_ => BeginDocumentPackageEdit());
             SaveDocumentPackageCommand = new RelayCommand(_ => SaveDocumentPackageEdit());
             CancelDocumentPackageEditCommand = new RelayCommand(_ => CancelDocumentPackageEdit());
@@ -2265,6 +2330,56 @@ namespace Win11DesktopApp.ViewModels
 
         // Document generation methods moved to EmployeeDetailsViewModel.Documents.cs
         // History and salary methods moved to EmployeeDetailsViewModel.History.cs
+
+        private void BeginProfileNoteEdit()
+        {
+            if (!CanEditProfileNote)
+                return;
+            if (!PolicyService.EnsureWriteAllowed("Редагувати профіль працівника"))
+                return;
+            if (!CanEditCurrentFirm("Редагувати профіль працівника"))
+                return;
+
+            ProfileNoteDraft = Data.ProfileNote ?? string.Empty;
+            IsProfileNoteEditing = true;
+        }
+
+        private async Task SaveProfileNoteAsync()
+        {
+            if (!CanEditProfileNote)
+                return;
+            if (!PolicyService.EnsureWriteAllowed("Зберегти профіль працівника"))
+                return;
+            if (!CanEditCurrentFirm("Зберегти профіль працівника"))
+                return;
+
+            var trimmed = (ProfileNoteDraft ?? string.Empty).Trim();
+            try
+            {
+                var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
+                Data.ProfileNote = trimmed;
+                if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
+                {
+                    if (oldData != null)
+                    {
+                        await _employeeService.RecordChanges(_employeeFolder, oldData, Data);
+                        LogProfileChanges(oldData, Data);
+                    }
+
+                    ProfileNoteDraft = trimmed;
+                    IsProfileNoteEditing = false;
+                    NotifyProfileNoteUi();
+                }
+                else
+                {
+                    StatusMessage = Res("MsgProfileSaveFail");
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ex.Message;
+            }
+        }
 
         private async Task SaveProfileAsync()
         {
@@ -3118,6 +3233,9 @@ namespace Win11DesktopApp.ViewModels
             CurrentDocumentPackageSection?.NotifyProgressChanged();
             OnPropertyChanged(nameof(DocumentPackageProgressText));
             OnPropertyChanged(nameof(DocumentPackageCompletedCount));
+            OnPropertyChanged(nameof(DocumentPackageTotalCount));
+            OnPropertyChanged(nameof(DocumentPackageProgressPercent));
+            OnPropertyChanged(nameof(ShowSidebarInsights));
         }
 
         private void OnDocumentPackageCheckboxChanged(DocumentPackageCheckboxChange change)
@@ -5029,6 +5147,9 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             OnPropertyChanged(nameof(PassportExpiryWarning));
             OnPropertyChanged(nameof(VisaExpiryWarning));
             OnPropertyChanged(nameof(InsuranceExpiryWarning));
+            OnPropertyChanged(nameof(WorkPermitExpiryWarning));
+            OnPropertyChanged(nameof(HasAnyExpiryWarning));
+            OnPropertyChanged(nameof(ShowSidebarInsights));
             OnPropertyChanged(nameof(ProfileCompletionPercent));
         }
 

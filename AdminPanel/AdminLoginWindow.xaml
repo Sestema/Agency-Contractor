@@ -3,11 +3,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Admin Login"
         Width="430"
-        Height="250"
+        Height="260"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Background="#1E1E2E">
-    <Grid Margin="18">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/AdminTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -15,45 +23,47 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Administrator login"
-                   Foreground="#CDD6F4"
-                   FontSize="22"
-                   FontWeight="SemiBold"/>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="&#xE7EE;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                       Foreground="#89B4FA" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Text="Administrator login"
+                       Foreground="#CDD6F4"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
 
         <TextBlock Grid.Row="1"
-                   Margin="0,18,0,8"
-                   Text="Password"
+                   Margin="0,20,0,8"
+                   Text="Пароль"
                    Foreground="#A6ADC8"/>
 
-        <Border Grid.Row="2"
-                Height="38"
-                Margin="0,0,0,10"
-                Background="#313244"
-                BorderBrush="#89B4FA"
-                BorderThickness="1.5"
-                CornerRadius="6">
-            <PasswordBox x:Name="PasswordInput"
-                         Margin="1"
-                         Padding="10,7"
-                         Background="#313244"
-                         Foreground="#FFFFFF"
-                         CaretBrush="#FFFFFF"
-                         BorderThickness="0"/>
-        </Border>
+        <PasswordBox Grid.Row="2"
+                     x:Name="PasswordInput"
+                     Height="36"
+                     Margin="0,0,0,8"
+                     Padding="10,8"
+                     Background="#1E1E2E"
+                     Foreground="#CDD6F4"
+                     CaretBrush="#CDD6F4"
+                     BorderBrush="#585B70"
+                     BorderThickness="1"
+                     FontSize="13"/>
 
         <StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
-                    Margin="0,22,0,0">
-            <Button Width="92"
-                    Height="34"
+                    Margin="0,18,0,0">
+            <Button Width="108"
+                    Style="{StaticResource GhostBtn}"
                     Margin="0,0,8,0"
                     Click="Cancel_Click"
-                    Content="Cancel"/>
-            <Button Width="92"
-                    Height="34"
+                    Content="Скасувати"/>
+            <Button Width="108"
+                    Style="{StaticResource PrimaryBtn}"
                     Click="Login_Click"
-                    Content="Login"/>
+                    IsDefault="True"
+                    Content="Увійти"/>
         </StackPanel>
     </Grid>
 </Window>

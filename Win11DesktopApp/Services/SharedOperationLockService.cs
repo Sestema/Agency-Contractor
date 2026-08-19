@@ -175,7 +175,7 @@ public sealed class SharedOperationLockService
 
             _disposed = true;
             try { SafeFileService.DeleteFile(_lockPath); }
-            catch { }
+            catch (Exception ex) { LoggingService.LogWarning("SharedOperationLockService.Dispose", ex.Message); }
         }
     }
 }
