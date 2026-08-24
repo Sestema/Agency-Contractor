@@ -33,11 +33,68 @@ namespace Win11DesktopApp.Services
 
         public Mat Sharpen(Mat src, double amount = 1.5)
         {
+            if (amount <= 0.01)
+                return src.Clone();
+
+            amount = Math.Min(amount, 2.5);
             using var blurred = new Mat();
             Cv2.GaussianBlur(src, blurred, new Size(0, 0), 3);
             var result = new Mat();
             Cv2.AddWeighted(src, 1.0 + amount, blurred, -amount, 0, result);
             return result;
+        }
+
+        /// <summary>
+        /// HSV saturation: 0 keeps the image, negative fades, positive boosts colors.
+        /// </summary>
+        public Mat AdjustSaturation(Mat src, int amount)
+        {
+            if (amount == 0)
+                return src.Clone();
+
+            var scale = Math.Max(0.05, 1.0 + amount / 100.0);
+            using var hsv = new Mat();
+            Cv2.CvtColor(src, hsv, ColorConversionCodes.BGR2HSV);
+            var channels = hsv.Split();
+            try
+            {
+                channels[1].ConvertTo(channels[1], -1, scale, 0);
+                using var merged = new Mat();
+                Cv2.Merge(channels, merged);
+                var result = new Mat();
+                Cv2.CvtColor(merged, result, ColorConversionCodes.HSV2BGR);
+                return result;
+            }
+            finally
+            {
+                foreach (var ch in channels)
+                    ch.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Color temperature: positive warms (more red), negative cools (more blue).
+        /// </summary>
+        public Mat AdjustWarmth(Mat src, int amount)
+        {
+            if (amount == 0)
+                return src.Clone();
+
+            var shift = amount * 0.55;
+            var channels = src.Split();
+            try
+            {
+                channels[0].ConvertTo(channels[0], -1, 1, -shift);
+                channels[2].ConvertTo(channels[2], -1, 1, shift);
+                var result = new Mat();
+                Cv2.Merge(channels, result);
+                return result;
+            }
+            finally
+            {
+                foreach (var ch in channels)
+                    ch.Dispose();
+            }
         }
 
         public Mat Deskew(Mat src, double angleDegrees)

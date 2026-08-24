@@ -843,8 +843,8 @@ namespace Win11DesktopApp.ViewModels
 
             BatchGenerateCommand = new RelayCommand(o => OpenBatchGenerate(), o => Employees.Any(e => e.IsSelected));
             CloseBatchGenerateCommand = new RelayCommand(o => IsBatchGenerateOpen = false);
-            BatchGenerateFromTemplateCommand = new RelayCommand(o => BatchGenerate(o as TemplateEntry));
-            BatchGenerateToFolderCommand = new RelayCommand(o => BatchGenerateToFolder(o as TemplateEntry));
+            BatchGenerateFromTemplateCommand = new AsyncRelayCommand(o => BatchGenerateAsync(o as TemplateEntry));
+            BatchGenerateToFolderCommand = new AsyncRelayCommand(o => BatchGenerateToFolderAsync(o as TemplateEntry));
             OpenBatchAIValidationCommand = new RelayCommand(o => OpenBatchAIValidation(), o => Employees.Count > 0);
             CloseBatchAIValidationCommand = new RelayCommand(o =>
             {

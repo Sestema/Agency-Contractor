@@ -63,17 +63,11 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Effect" Value="{DynamicResource CardShadow}"/>
         </Style>
 
         <Style x:Key="MainHeaderStatPill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="CornerRadius" Value="14"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="12" ShadowDepth="1" Direction="270" Color="#0F172A" Opacity="0.06"/>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <Style x:Key="MainHeaderWeatherPill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
@@ -153,7 +147,7 @@
                 <!-- Center: Search Box -->
                 <Grid Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="{DynamicResource UiSearchW}">
                     <Border Style="{StaticResource ToolbarSearchContainer}" CornerRadius="20" Padding="6,0"
-                            Height="{DynamicResource UiControlH}" Effect="{DynamicResource CardShadow}">
+                            Height="{DynamicResource UiControlH}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -209,9 +203,6 @@
                         <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                 Width="{DynamicResource UiSearchW}" MaxHeight="400" Padding="4">
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.18"/>
-                            </Border.Effect>
                             <Grid>
                                 <!-- No results -->
                                 <TextBlock Text="{DynamicResource GlobalSearchNoResults}" FontSize="{DynamicResource FS13}"
@@ -476,7 +467,6 @@
                             CornerRadius="20"
                             Margin="0,0,0,10"
                             Padding="0"
-                            Effect="{DynamicResource CardShadow}"
                             SnapsToDevicePixels="True"
                             UseLayoutRounding="True"
                             TextOptions.TextFormattingMode="Ideal"
@@ -545,9 +535,6 @@
                                         Padding="12,6"
                                         VerticalAlignment="Center"
                                         Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Direction="270" Color="#F59E0B" Opacity="0.18"/>
-                                    </Border.Effect>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="&#xE7BA;"
                                                    FontFamily="Segoe MDL2 Assets"
@@ -577,9 +564,6 @@
                                         Margin="10,0,0,0"
                                         VerticalAlignment="Center"
                                         Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Direction="270" Color="#3B82F6" Opacity="0.18"/>
-                                    </Border.Effect>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="&#xE716;"
                                                    FontFamily="Segoe MDL2 Assets"
@@ -742,7 +726,8 @@
             </ScrollViewer>
         </Grid>
         
-        <!-- Drawer Overlay (Click to close) -->
+        <!-- Drawer Overlay (Click to close). Fade is driven from code so the first
+             open can skip animation while the list materializes. -->
         <Border x:Name="DrawerOverlay" Background="{DynamicResource OverlayBrush}" Opacity="0"
                 IsHitTestVisible="{Binding IsDrawerOpen}">
             <Border.InputBindings>
@@ -754,55 +739,20 @@
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsDrawerOpen}" Value="True">
                             <Setter Property="Visibility" Value="Visible"/>
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                         From="0" To="1" Duration="0:0:0.25"
-                                                         EasingFunction="{StaticResource DrawerEase}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Border.Style>
         </Border>
         
-        <!-- Drawer Panel -->
+        <!-- Drawer Panel: no DropShadowEffect — a full-height animated shadow is the
+             main first-open hitch on integrated GPUs. Slide is driven from code. -->
         <Border x:Name="DrawerPanel" Width="370" HorizontalAlignment="Left"
                 Background="{DynamicResource ContentBackgroundBrush}"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0"
-                Effect="{DynamicResource DialogShadow}">
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0">
             <Border.RenderTransform>
-                <TranslateTransform X="-370"/>
+                <TranslateTransform x:Name="DrawerSlide" X="-370"/>
             </Border.RenderTransform>
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsDrawerOpen}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                         From="-370" To="0" Duration="0:0:0.3"
-                                                         EasingFunction="{StaticResource DrawerEase}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                         From="0" To="-370" Duration="0:0:0.25"
-                                                         EasingFunction="{StaticResource DrawerEase}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
 
             <Grid Margin="0">
                 <Grid.RowDefinitions>
@@ -1075,7 +1025,8 @@
                          ScrollViewer.CanContentScroll="True"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling"
-                         VirtualizingPanel.ScrollUnit="Pixel">
+                         VirtualizingPanel.ScrollUnit="Pixel"
+                         PreviewMouseRightButtonUp="CompanyList_PreviewMouseRightButtonUp">
                     <ListBox.Resources>
                         <Style TargetType="ScrollViewer" BasedOn="{StaticResource ThinScroll}"/>
                     </ListBox.Resources>
@@ -1090,27 +1041,6 @@
                                 <Setter Property="Margin" Value="0,0,0,8"/>
                                 <Setter Property="Cursor" Value="Hand"/>
                                 <Setter Property="ToolTip" Value="{DynamicResource MainTooltipDblClick}"/>
-                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
-                                <Setter Property="ContextMenu">
-                                    <Setter.Value>
-                                        <ContextMenu DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
-                                            <MenuItem Header="{DynamicResource CompanyMoveUp}"
-                                                      Command="{Binding Tag.MoveCompanyUpCommand}"
-                                                      CommandParameter="{Binding DataContext}">
-                                                <MenuItem.Icon>
-                                                    <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                            <MenuItem Header="{DynamicResource CompanyMoveDown}"
-                                                      Command="{Binding Tag.MoveCompanyDownCommand}"
-                                                      CommandParameter="{Binding DataContext}">
-                                                <MenuItem.Icon>
-                                                    <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                        </ContextMenu>
-                                    </Setter.Value>
-                                </Setter>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">

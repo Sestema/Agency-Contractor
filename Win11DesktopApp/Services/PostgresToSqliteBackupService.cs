@@ -156,6 +156,14 @@ namespace Win11DesktopApp.Services
                 "custom_salary_fields",
                 "accommodations");
 
+            await using (var alter = postgres.CreateCommand())
+            {
+                alter.CommandText = @"
+ALTER TABLE app.custom_salary_fields ADD COLUMN IF NOT EXISTS is_qr_transfer INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE app.custom_salary_fields ADD COLUMN IF NOT EXISTS qr_message_text TEXT NOT NULL DEFAULT '';";
+                await alter.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             var count = 0;
             count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.schema_version", "schema_version", new[] { "version" }, cancellationToken).ConfigureAwait(false);
             count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.migration_journal", "migration_journal", new[] { "id", "stage", "status", "records_found", "records_imported", "folders_scanned", "folders_skipped", "started_at", "completed_at", "error_message" }, cancellationToken).ConfigureAwait(false);
@@ -165,7 +173,7 @@ namespace Win11DesktopApp.Services
             count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.salary_history", "salary_history", new[] { "id", "employee_id", "employee_folder", "year", "month", "firm_name", "full_name", "paid_at", "hours_worked", "hourly_rate", "gross_salary", "advance", "net_salary", "note", "custom_values_json", "custom_fields_json" }, cancellationToken).ConfigureAwait(false);
             count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.advances", "advances", new[] { "id", "employee_id", "employee_folder", "employee_name", "company_id", "date", "amount", "month", "note" }, cancellationToken).ConfigureAwait(false);
             count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.salary_reports", "salary_reports", new[] { "id", "company_id", "company_name", "year", "month", "notes", "created_at", "updated_at", "entries_json" }, cancellationToken).ConfigureAwait(false);
-            count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.custom_salary_fields", "custom_salary_fields", new[] { "id", "name", "operation", "firm_name", "order_index" }, cancellationToken).ConfigureAwait(false);
+            count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.custom_salary_fields", "custom_salary_fields", new[] { "id", "name", "operation", "firm_name", "order_index", "is_qr_transfer", "qr_message_text" }, cancellationToken).ConfigureAwait(false);
             count += await CopyPostgresTableToSqliteAsync(postgres, sqlite, transaction, "app.accommodations", "accommodations", new[] { "id", "employee_folder", "employee_name", "company_id", "year", "month", "amount", "address" }, cancellationToken).ConfigureAwait(false);
             transaction.Commit();
             return count;

@@ -151,64 +151,22 @@ namespace Win11DesktopApp.Views
             _renderCts = new CancellationTokenSource();
             var token = _renderCts.Token;
 
-            int brightness = (int)BrightnessSlider.Value;
-            int contrast = (int)ContrastSlider.Value;
-            double deskew = DeskewSlider.Value;
-            double gamma = GammaSlider.Value;
-            int denoise = (int)DenoiseSlider.Value;
+            var sliders = ReadSliderValues();
             var srcMat = _previewMat;
 
             try
             {
                 var (bitmap, pixW, pixH) = await Task.Run<(BitmapImage? bitmap, int pixW, int pixH)>(() =>
                 {
-                    Mat result = srcMat;
-                    bool needsDispose = false;
-
                     if (token.IsCancellationRequested) return (null, 0, 0);
 
-                    if (brightness != 0 || contrast != 0)
-                    {
-                        var tmp = _service.AdjustBrightnessContrast(result, brightness, contrast);
-                        if (needsDispose) result.Dispose();
-                        result = tmp;
-                        needsDispose = true;
-                    }
-
-                    if (Math.Abs(gamma - 1.0) > 0.05)
-                    {
-                        var tmp = _service.GammaCorrection(result, gamma);
-                        if (needsDispose) result.Dispose();
-                        result = tmp;
-                        needsDispose = true;
-                    }
-
-                    if (token.IsCancellationRequested) { if (needsDispose) result.Dispose(); return (null, 0, 0); }
-
-                    if (denoise > 0)
-                    {
-                        var tmp = _service.Denoise(result, denoise);
-                        if (needsDispose) result.Dispose();
-                        result = tmp;
-                        needsDispose = true;
-                    }
-
-                    if (token.IsCancellationRequested) { if (needsDispose) result.Dispose(); return (null, 0, 0); }
-
-                    if (Math.Abs(deskew) > 0.01)
-                    {
-                        var tmp = _service.Deskew(result, deskew);
-                        if (needsDispose) result.Dispose();
-                        result = tmp;
-                        needsDispose = true;
-                    }
-
-                    if (!needsDispose)
-                        result = srcMat.Clone();
+                    var result = ApplySliderChain(srcMat, sliders, token);
+                    if (result == null)
+                        return (null, 0, 0);
 
                     Cv2.ImEncode(".bmp", result, out byte[] buf);
                     int w = result.Cols, h = result.Rows;
-                    if (needsDispose) result.Dispose();
+                    result.Dispose();
 
                     var ms = new MemoryStream(buf);
                     var bi = new BitmapImage();
@@ -243,48 +201,90 @@ namespace Win11DesktopApp.Views
             finally { _isRendering = false; }
         }
 
+        private readonly struct SliderValues
+        {
+            public int Brightness { get; init; }
+            public int Contrast { get; init; }
+            public int Saturation { get; init; }
+            public int Warmth { get; init; }
+            public int Denoise { get; init; }
+            public int Sharpen { get; init; }
+            public double Deskew { get; init; }
+            public double Gamma { get; init; }
+        }
+
+        private SliderValues ReadSliderValues() => new()
+        {
+            Brightness = (int)BrightnessSlider.Value,
+            Contrast = (int)ContrastSlider.Value,
+            Saturation = (int)SaturationSlider.Value,
+            Warmth = (int)WarmthSlider.Value,
+            Denoise = (int)DenoiseSlider.Value,
+            Sharpen = (int)SharpenSlider.Value,
+            Deskew = DeskewSlider.Value,
+            Gamma = GammaSlider.Value
+        };
+
         private Mat ApplySlidersFull(Mat src)
         {
-            int brightness = (int)BrightnessSlider.Value;
-            int contrast = (int)ContrastSlider.Value;
-            double deskew = DeskewSlider.Value;
-            double gamma = GammaSlider.Value;
-            int denoise = (int)DenoiseSlider.Value;
+            return ApplySliderChain(src, ReadSliderValues())
+                ?? src.Clone();
+        }
 
+        private Mat? ApplySliderChain(Mat src, SliderValues sliders, CancellationToken token = default)
+        {
             Mat result = src;
-            bool needsDispose = false;
+            var needsDispose = false;
 
-            if (brightness != 0 || contrast != 0)
+            void Replace(Mat next)
             {
-                var tmp = _service.AdjustBrightnessContrast(result, brightness, contrast);
-                if (needsDispose) result.Dispose();
-                result = tmp;
+                if (needsDispose)
+                    result.Dispose();
+                result = next;
                 needsDispose = true;
             }
 
-            if (Math.Abs(gamma - 1.0) > 0.05)
+            if (token.IsCancellationRequested)
             {
-                var tmp = _service.GammaCorrection(result, gamma);
-                if (needsDispose) result.Dispose();
-                result = tmp;
-                needsDispose = true;
+                if (needsDispose)
+                    result.Dispose();
+                return null;
             }
 
-            if (denoise > 0)
+            if (sliders.Brightness != 0 || sliders.Contrast != 0)
+                Replace(_service.AdjustBrightnessContrast(result, sliders.Brightness, sliders.Contrast));
+
+            if (sliders.Saturation != 0)
+                Replace(_service.AdjustSaturation(result, sliders.Saturation));
+
+            if (sliders.Warmth != 0)
+                Replace(_service.AdjustWarmth(result, sliders.Warmth));
+
+            if (Math.Abs(sliders.Gamma - 1.0) > 0.05)
+                Replace(_service.GammaCorrection(result, sliders.Gamma));
+
+            if (token.IsCancellationRequested)
             {
-                var tmp = _service.Denoise(result, denoise);
-                if (needsDispose) result.Dispose();
-                result = tmp;
-                needsDispose = true;
+                if (needsDispose)
+                    result.Dispose();
+                return null;
             }
 
-            if (Math.Abs(deskew) > 0.01)
+            if (sliders.Denoise > 0)
+                Replace(_service.Denoise(result, sliders.Denoise));
+
+            if (sliders.Sharpen > 0)
+                Replace(_service.Sharpen(result, sliders.Sharpen / 50.0));
+
+            if (token.IsCancellationRequested)
             {
-                var tmp = _service.Deskew(result, deskew);
-                if (needsDispose) result.Dispose();
-                result = tmp;
-                needsDispose = true;
+                if (needsDispose)
+                    result.Dispose();
+                return null;
             }
+
+            if (Math.Abs(sliders.Deskew) > 0.01)
+                Replace(_service.Deskew(result, sliders.Deskew));
 
             if (!needsDispose)
                 result = src.Clone();
@@ -332,9 +332,12 @@ namespace Win11DesktopApp.Views
             if (!_isLoaded) return;
             BrightnessValueText.Text = ((int)BrightnessSlider.Value).ToString();
             ContrastValueText.Text = ((int)ContrastSlider.Value).ToString();
+            SaturationValueText.Text = ((int)SaturationSlider.Value).ToString();
+            WarmthValueText.Text = ((int)WarmthSlider.Value).ToString();
             DeskewValueText.Text = $"{DeskewSlider.Value:F1}°";
             GammaValueText.Text = $"{GammaSlider.Value:F1}";
             DenoiseValueText.Text = ((int)DenoiseSlider.Value).ToString();
+            SharpenValueText.Text = ((int)SharpenSlider.Value).ToString();
             ScheduleRefresh();
         }
 
@@ -524,26 +527,6 @@ namespace Win11DesktopApp.Views
             }
         }
 
-        private void BtnSharpen_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                if (_currentMat == null || _currentMat.Empty()) return;
-                var sharpened = _service.Sharpen(_currentMat);
-                _currentMat.Dispose();
-                _currentMat = sharpened;
-                BuildPreviewMat();
-                ClearCropSelection();
-                RefreshPreviewAsync();
-                StatusText.Text = Application.Current.TryFindResource("ImgEditorSharpened") as string ?? "Різкість збільшено!";
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("ImageEditorWindow.BtnSharpen", ex.Message);
-                StatusText.Text = $"Error: {ex.Message}";
-            }
-        }
-
         private void BtnAutoEnhance_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -617,15 +600,21 @@ namespace Win11DesktopApp.Views
             _isLoaded = false;
             BrightnessSlider.Value = 0;
             ContrastSlider.Value = 0;
+            SaturationSlider.Value = 0;
+            WarmthSlider.Value = 0;
             DeskewSlider.Value = 0;
             GammaSlider.Value = 1.0;
             DenoiseSlider.Value = 0;
+            SharpenSlider.Value = 0;
             _isLoaded = true;
             BrightnessValueText.Text = "0";
             ContrastValueText.Text = "0";
+            SaturationValueText.Text = "0";
+            WarmthValueText.Text = "0";
             DeskewValueText.Text = "0.0°";
             GammaValueText.Text = "1.0";
             DenoiseValueText.Text = "0";
+            SharpenValueText.Text = "0";
         }
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)

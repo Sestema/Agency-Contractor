@@ -101,7 +101,6 @@
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="MinWidth" Value="128"/>
-            <Setter Property="Effect" Value="{DynamicResource CardShadow}"/>
         </Style>
 
         <Style x:Key="ReportStatTitle" TargetType="TextBlock">

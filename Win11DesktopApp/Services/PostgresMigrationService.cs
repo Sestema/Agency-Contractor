@@ -198,7 +198,7 @@ namespace Win11DesktopApp.Services
             count += await CopyTableAsync(sqlite, postgres, transaction, "salary_history", "app.salary_history", new[] { "id", "employee_id", "employee_folder", "year", "month", "firm_name", "full_name", "paid_at", "hours_worked", "hourly_rate", "gross_salary", "advance", "net_salary", "note", "custom_values_json", "custom_fields_json" }, cancellationToken).ConfigureAwait(false);
             count += await CopyTableAsync(sqlite, postgres, transaction, "advances", "app.advances", new[] { "id", "employee_id", "employee_folder", "employee_name", "company_id", "date", "amount", "month", "note" }, cancellationToken).ConfigureAwait(false);
             count += await CopyTableAsync(sqlite, postgres, transaction, "salary_reports", "app.salary_reports", new[] { "id", "company_id", "company_name", "year", "month", "notes", "created_at", "updated_at", "entries_json" }, cancellationToken).ConfigureAwait(false);
-            count += await CopyTableAsync(sqlite, postgres, transaction, "custom_salary_fields", "app.custom_salary_fields", new[] { "id", "name", "operation", "firm_name", "order_index" }, cancellationToken).ConfigureAwait(false);
+            count += await CopyTableAsync(sqlite, postgres, transaction, "custom_salary_fields", "app.custom_salary_fields", new[] { "id", "name", "operation", "firm_name", "order_index", "is_qr_transfer", "qr_message_text" }, cancellationToken).ConfigureAwait(false);
             count += await CopyTableAsync(sqlite, postgres, transaction, "accommodations", "app.accommodations", new[] { "id", "employee_folder", "employee_name", "company_id", "year", "month", "amount", "address" }, cancellationToken).ConfigureAwait(false);
             return count;
         }
@@ -487,8 +487,13 @@ CREATE TABLE IF NOT EXISTS app.custom_salary_fields (
     name TEXT NOT NULL,
     operation INTEGER NOT NULL,
     firm_name TEXT NOT NULL,
-    order_index INTEGER NOT NULL DEFAULT 0
+    order_index INTEGER NOT NULL DEFAULT 0,
+    is_qr_transfer INTEGER NOT NULL DEFAULT 0,
+    qr_message_text TEXT NOT NULL DEFAULT ''
 );
+
+ALTER TABLE app.custom_salary_fields ADD COLUMN IF NOT EXISTS is_qr_transfer INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE app.custom_salary_fields ADD COLUMN IF NOT EXISTS qr_message_text TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS app.accommodations (
     id TEXT PRIMARY KEY,

@@ -22,11 +22,6 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.22" Color="#000000"/>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <Style x:Key="DragHandle" TargetType="TextBlock">
@@ -378,11 +373,6 @@
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="AllowDrop" Value="True"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.2" Color="#000000"/>
-                </Setter.Value>
-            </Setter>
         </Style>
     </UserControl.Resources>
 

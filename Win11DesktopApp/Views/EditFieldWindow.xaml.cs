@@ -11,8 +11,16 @@ namespace Win11DesktopApp.Views
         public string FieldName { get; private set; } = string.Empty;
         public FieldOperation FieldOperation { get; private set; }
         public string FieldFirmName { get; private set; } = string.Empty;
+        public bool IsQrTransfer { get; private set; }
+        public string QrMessageText { get; private set; } = string.Empty;
 
-        public EditFieldWindow(string name, FieldOperation operation, string firmName, List<string> availableFirms)
+        public EditFieldWindow(
+            string name,
+            FieldOperation operation,
+            string firmName,
+            bool isQrTransfer,
+            string qrMessageText,
+            List<string> availableFirms)
         {
             InitializeComponent();
 
@@ -40,6 +48,16 @@ namespace Win11DesktopApp.Views
             if (firmName == FinanceConstants.AllFirmsKey || string.IsNullOrEmpty(firmName))
                 selectedIdx = 0;
             FirmBox.SelectedIndex = selectedIdx;
+
+            IsQrBox.IsChecked = isQrTransfer;
+            QrMessageBox.Text = qrMessageText ?? string.Empty;
+            QrMessageBox.IsEnabled = isQrTransfer;
+        }
+
+        private void IsQrBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (QrMessageBox != null)
+                QrMessageBox.IsEnabled = IsQrBox.IsChecked == true;
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -60,6 +78,8 @@ namespace Win11DesktopApp.Views
 
             var firmItem = FirmBox.SelectedItem as ComboBoxItem;
             FieldFirmName = firmItem?.Tag?.ToString() ?? FinanceConstants.AllFirmsKey;
+            IsQrTransfer = IsQrBox.IsChecked == true;
+            QrMessageText = IsQrTransfer ? (QrMessageBox.Text ?? string.Empty).Trim() : string.Empty;
 
             DialogResult = true;
             Close();

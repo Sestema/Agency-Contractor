@@ -8,6 +8,8 @@ using System.Windows;
 using System.Windows.Markup;
 using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Fonts;
+using Win11DesktopApp.AppStartup;
+using Win11DesktopApp.AppStartup.Steps;
 using Win11DesktopApp.DependencyInjection;
 using Win11DesktopApp.Invoices.Services;
 using Win11DesktopApp.Helpers;
@@ -72,24 +74,6 @@ namespace Win11DesktopApp
         private static ConnectedClientsService ConnectedClientsService => GetRequiredService<ConnectedClientsService>();
         private static DailySqliteBackupService DailySqliteBackupService => GetRequiredService<DailySqliteBackupService>();
 
-        private enum MultiUserStartupResult
-        {
-            Skipped,
-            OwnerSelected,
-            MemberLoggedIn,
-            Cancelled
-        }
-
-        private sealed class StartupFlowState
-        {
-            public bool SkipLicenseGate { get; init; }
-            public LocalLicenseStatus LocalLicenseStatus { get; set; } = null!;
-            public ClientAccessState StartupAccess { get; set; } = new();
-            public string? StartupClientId { get; set; }
-            public bool IsRemoteTrialExpired { get; set; }
-            public RemotePolicy? StartupPolicy { get; set; }
-        }
-
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -134,62 +118,44 @@ namespace Win11DesktopApp
                 args.Handled = true;
             };
 
-            StartupIntegrityService startupIntegrityService;
             var startupStopwatch = Stopwatch.StartNew();
             void LogStartupPhase(string phase) =>
                 LoggingService.LogInfo("App.Startup", $"{phase} at {startupStopwatch.ElapsedMilliseconds} ms");
 
-            try
+            var ctx = new StartupContext(this, LogStartupPhase, BackgroundTaskToken);
+            IStartupStep[] steps =
             {
-                startupIntegrityService = InitializeCoreServices();
-#if DEBUG
-                Diagnostics.BindingErrorTraceListener.Enable();
-#endif
-                LogStartupPhase("startup_begin");
-                startupIntegrityService.IncludeFinanceStartupState(FinanceService);
-                RunBackgroundWarmupTasks();
-            }
-            catch (Exception ex)
+                new InitializeServicesStep(),
+                new LanguageThemeStep(),
+                new SplashStep(),
+                new MigrationsStep(),
+                new ResolveAccessStep(),
+                new UnifiedLoginStep(),
+                new ProfileGateStep(),
+                new PolicyStep(),
+                new ShowMainWindowStep(),
+                new BackgroundHostedServicesStep()
+            };
+
+            foreach (var step in steps)
             {
-                LoggingService.LogError("App.OnStartup.Init", ex);
-                ErrorHandler.Report("App.OnStartup", ex, ErrorSeverity.Critical, showUser: true);
-                Shutdown(-1);
-                return;
-            }
-
-            ApplySavedLanguageAndTheme();
-            ShowSplashWindow();
-            RunStartupMigrations();
-            AppStatisticsService.StartSession();
-            LoggingService.LogInfo("App", "All services initialized");
-            LogStartupPhase("services_initialized");
-
-            var startupState = CreateStartupFlowState();
-            await ResolveStartupAccessAsync(startupState, LogStartupPhase);
-
-            var multiUserStartupResult = await RunMultiUserStartupGateAsync(startupState, LogStartupPhase);
-            if (multiUserStartupResult == MultiUserStartupResult.Cancelled)
-                return;
-
-            if (multiUserStartupResult != MultiUserStartupResult.MemberLoggedIn)
-            {
-                if (!await RunProfileGateAsync(startupState, LogStartupPhase))
+                var result = await step.RunAsync(ctx, ctx.Token);
+                if (result == StartupStepResult.Stop)
                     return;
-
-                if (multiUserStartupResult == MultiUserStartupResult.OwnerSelected)
-                    ClearBusinessUserSession();
-                else
-                    RestoreBusinessUserSession();
             }
-            await TryMigrateLegacyLicenseAsync(startupState, LogStartupPhase);
-            if (!await ApplyStartupPolicyAsync(startupState, LogStartupPhase))
-                return;
-
-            ShowMainWindow(LogStartupPhase);
-            await FinalizeStartupAsync(startupIntegrityService, startupState);
         }
 
-        private static void ApplySavedLanguageAndTheme()
+        internal void IncludeFinanceStartupState(StartupIntegrityService startupIntegrityService)
+        {
+            startupIntegrityService.IncludeFinanceStartupState(FinanceService);
+        }
+
+        internal void StartStatisticsSession()
+        {
+            AppStatisticsService.StartSession();
+        }
+
+        internal static void ApplySavedLanguageAndTheme()
         {
             if (!string.IsNullOrEmpty(AppSettingsService.Settings.LanguageCode))
             {
@@ -211,7 +177,7 @@ namespace Win11DesktopApp
             }
         }
 
-        private static void RunStartupMigrations()
+        internal static void RunStartupMigrations()
         {
             if (GetRequiredService<AppDataStorageFactory>().IsPostgresRuntimeActiveAtStartup)
             {
@@ -307,7 +273,7 @@ namespace Win11DesktopApp
             }
         }
 
-        private static StartupFlowState CreateStartupFlowState()
+        internal static StartupFlowState CreateStartupFlowState()
         {
             return new StartupFlowState
             {
@@ -326,7 +292,7 @@ namespace Win11DesktopApp
             CurrentProfileService.SetCurrentProfile(profile);
         }
 
-        private static void RestoreBusinessUserSession()
+        internal static void RestoreBusinessUserSession()
         {
             var userId = AppSettingsService.Settings.CurrentBusinessUserId;
             if (string.IsNullOrWhiteSpace(userId))
@@ -341,12 +307,12 @@ namespace Win11DesktopApp
             CurrentProfileService.SetCurrentBusinessUser(user);
         }
 
-        private static void ClearBusinessUserSession()
+        internal static void ClearBusinessUserSession()
         {
             BusinessUserAuthService.LogoutSession();
         }
 
-        private async Task<MultiUserStartupResult> RunMultiUserStartupGateAsync(StartupFlowState state, Action<string> logStartupPhase)
+        internal async Task<MultiUserStartupResult> RunMultiUserStartupGateAsync(StartupFlowState state, Action<string> logStartupPhase)
         {
             if (!AppSettingsService.Settings.ExperimentalMultiUser)
             {
@@ -453,7 +419,7 @@ namespace Win11DesktopApp
         private static string Res(string key) =>
             Application.Current?.TryFindResource(key) as string ?? key;
 
-        private static async Task ResolveStartupAccessAsync(StartupFlowState state, Action<string> logStartupPhase)
+        internal static async Task ResolveStartupAccessAsync(StartupFlowState state, Action<string> logStartupPhase)
         {
             var startupClientTask = TelemetryService.GetStartupAccessStateAsync();
             var startupTelemetryCompleted = await Task.WhenAny(startupClientTask, Task.Delay(3500)) == startupClientTask;
@@ -481,7 +447,7 @@ namespace Win11DesktopApp
             }
         }
 
-        private async Task<bool> RunProfileGateAsync(StartupFlowState state, Action<string> logStartupPhase)
+        internal async Task<bool> RunProfileGateAsync(StartupFlowState state, Action<string> logStartupPhase)
         {
             if (!string.IsNullOrWhiteSpace(state.StartupClientId))
             {
@@ -584,7 +550,7 @@ namespace Win11DesktopApp
             return true;
         }
 
-        private static async Task TryMigrateLegacyLicenseAsync(StartupFlowState state, Action<string> logStartupPhase)
+        internal static async Task TryMigrateLegacyLicenseAsync(StartupFlowState state, Action<string> logStartupPhase)
         {
             if (state.StartupAccess.IsLive
                 && !state.StartupAccess.IsBlocked
@@ -609,7 +575,7 @@ namespace Win11DesktopApp
             }
         }
 
-        private async Task<bool> ApplyStartupPolicyAsync(StartupFlowState state, Action<string> logStartupPhase)
+        internal async Task<bool> ApplyStartupPolicyAsync(StartupFlowState state, Action<string> logStartupPhase)
         {
             if (state.StartupAccess.IsBlocked)
             {
@@ -660,7 +626,7 @@ namespace Win11DesktopApp
             return true;
         }
 
-        private void ShowMainWindow(Action<string> logStartupPhase)
+        internal void ShowMainWindow(Action<string> logStartupPhase)
         {
             NavigationService.NavigateTo<MainViewModel>();
 
@@ -674,7 +640,7 @@ namespace Win11DesktopApp
             logStartupPhase("main_window_shown");
         }
 
-        private static async Task FinalizeStartupAsync(StartupIntegrityService startupIntegrityService, StartupFlowState state)
+        internal static async Task FinalizeStartupAsync(StartupIntegrityService startupIntegrityService, StartupFlowState state)
         {
             if (state.StartupAccess.PendingCommands.Count > 0)
                 await CommandService.ExecutePendingCommandsAsync(state.StartupAccess.PendingCommands, state.StartupClientId);
@@ -729,7 +695,7 @@ namespace Win11DesktopApp
             ConnectedClientsService.Start();
         }
 
-        private static StartupIntegrityService InitializeCoreServices()
+        internal static StartupIntegrityService InitializeCoreServices()
         {
             _serviceProvider = BuildServiceProvider();
 
@@ -789,7 +755,7 @@ namespace Win11DesktopApp
                 EmployeeService.InvalidateEmployeesCache();
         }
 
-        private static void RunBackgroundWarmupTasks()
+        internal static void RunBackgroundWarmupTasks()
         {
             RunBackgroundTask("App.PendingCleanupStartup", async _ =>
             {
@@ -848,7 +814,7 @@ namespace Win11DesktopApp
                 var monthDbs = SalaryDbService.EnumerateMonthDatabases()
                     .OrderByDescending(monthDb => monthDb.year)
                     .ThenByDescending(monthDb => monthDb.month)
-                    .Take(12)
+                    .Take(1)
                     .ToList();
 
                 foreach (var monthDb in monthDbs)
@@ -995,7 +961,7 @@ namespace Win11DesktopApp
             window.BeginAnimation(UIElement.OpacityProperty, anim);
         }
 
-        private static void ShowSplashWindow()
+        internal static void ShowSplashWindow()
         {
             try
             {

@@ -28,12 +28,22 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public void TryResolveBankName_ShouldReturnFalseForUnknownCode()
+        public void TryConvertToIban_ShouldBuildCzechIban()
         {
-            var resolved = CzechBankAccountResolver.TryResolveBankName("123456789/9999", out var bankName);
+            var iban = CzechBankAccountResolver.TryConvertToIban("19-2000145399/0800");
 
-            Assert.False(resolved);
-            Assert.Equal(string.Empty, bankName);
+            Assert.Equal("CZ6508000000192000145399", iban);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("123456789")]
+        [InlineData("123456789/12")]
+        public void TryConvertToIban_ShouldReturnNullForInvalidAccount(string accountNumber)
+        {
+            var iban = CzechBankAccountResolver.TryConvertToIban(accountNumber);
+
+            Assert.Null(iban);
         }
     }
 }

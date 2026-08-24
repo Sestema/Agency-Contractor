@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows.Media.Imaging;
 using QRCoder;
 using Win11DesktopApp.Invoices.Models;
+using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.Invoices.Services;
 
@@ -242,54 +243,7 @@ public sealed class InvoiceQrPaymentService
         if (!string.IsNullOrWhiteSpace(normalizedIban))
             return normalizedIban;
 
-        return TryConvertCzechAccountToIban(legacyAccountNumber) ?? string.Empty;
-    }
-
-    private static string? TryConvertCzechAccountToIban(string? legacyAccountNumber)
-    {
-        if (string.IsNullOrWhiteSpace(legacyAccountNumber))
-            return null;
-
-        var raw = legacyAccountNumber.Trim();
-        var slashIndex = raw.LastIndexOf('/');
-        if (slashIndex <= 0 || slashIndex >= raw.Length - 1)
-            return null;
-
-        var accountPart = raw[..slashIndex];
-        var bankCodeDigits = NormalizeDigits(raw[(slashIndex + 1)..]);
-        if (bankCodeDigits.Length != 4)
-            return null;
-
-        var accountSegments = accountPart.Split('-', 2, StringSplitOptions.TrimEntries);
-        var prefixDigits = accountSegments.Length == 2 ? NormalizeDigits(accountSegments[0]) : string.Empty;
-        var accountDigits = NormalizeDigits(accountSegments.Length == 2 ? accountSegments[1] : accountSegments[0]);
-        if (accountDigits.Length == 0 || accountDigits.Length > 10 || prefixDigits.Length > 6)
-            return null;
-
-        var bban = string.Concat(
-            bankCodeDigits,
-            prefixDigits.PadLeft(6, '0'),
-            accountDigits.PadLeft(10, '0'));
-
-        var checksum = CalculateIbanChecksum(bban + "123500");
-        if (checksum <= 0)
-            return null;
-
-        return $"CZ{checksum:00}{bban}";
-    }
-
-    private static int CalculateIbanChecksum(string value)
-    {
-        var remainder = 0;
-        foreach (var ch in value)
-        {
-            if (!char.IsDigit(ch))
-                return 0;
-
-            remainder = ((remainder * 10) + (ch - '0')) % 97;
-        }
-
-        return 98 - remainder;
+        return CzechBankAccountResolver.TryConvertToIban(legacyAccountNumber) ?? string.Empty;
     }
 
     private static string NormalizeDigits(string? value)

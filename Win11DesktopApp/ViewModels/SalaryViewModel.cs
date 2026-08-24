@@ -89,8 +89,14 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<CustomSalaryField> ActiveCustomFields
         {
             get => _activeCustomFields;
-            set => SetProperty(ref _activeCustomFields, value);
+            set
+            {
+                if (SetProperty(ref _activeCustomFields, value))
+                    OnPropertyChanged(nameof(HasQrTransferColumn));
+            }
         }
+
+        public bool HasQrTransferColumn => ActiveCustomFields.Any(f => f.IsQrTransfer);
 
         private ObservableCollection<FirmExpense> _firmExpenses = new();
         public ObservableCollection<FirmExpense> FirmExpenses
@@ -112,6 +118,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CloseAdvanceDialogCommand { get; }
         public ICommand ConfirmAdvanceCommand { get; }
         public ICommand ManageColumnsCommand { get; }
+        public ICommand PrintQrCommand { get; }
         public ICommand AddExpenseCommand { get; }
         public ICommand RemoveExpenseCommand { get; }
         public ICommand SelectFirmCommand { get; }
@@ -439,6 +446,7 @@ namespace Win11DesktopApp.ViewModels
             ConfirmAdvanceCommand = new RelayCommand(o => ConfirmAdvance(), _ => CanEditAnyVisibleSalary);
             AddAdvanceCommand = new RelayCommand(o => OpenAdvanceDialog(), _ => CanEditAnyVisibleSalary);
             ManageColumnsCommand = new RelayCommand(o => OpenManageColumns(), _ => CanEditAnyVisibleSalary);
+            PrintQrCommand = new RelayCommand(_ => OpenPrintQr(), _ => HasQrTransferColumn);
             AddExpenseCommand = new AsyncRelayCommand(async _ => await AddExpenseAsync(), _ => CanEditSelectedFirmExpenses);
             RemoveExpenseCommand = new AsyncRelayCommand(
                 async o => await RemoveExpenseAsync(o as string),
@@ -513,6 +521,7 @@ namespace Win11DesktopApp.ViewModels
 
             CustomFieldsChanged?.Invoke();
             RecalcTotals();
+            OnPropertyChanged(nameof(HasQrTransferColumn));
         }
 
         private async Task ChangeMonthAsync(int delta)
@@ -3040,6 +3049,130 @@ namespace Win11DesktopApp.ViewModels
             dialog.Owner = Application.Current.MainWindow;
             if (dialog.ShowDialog() == true)
                 RefreshActiveFields();
+        }
+
+        public void ShowQrForEntry(SalaryEntry entry, CustomSalaryField field)
+        {
+            if (entry == null || field == null || !field.IsQrTransfer)
+                return;
+
+            EmployeeData? data = null;
+            if (!string.IsNullOrWhiteSpace(entry.EmployeeFolder))
+                data = _employeeService.LoadEmployeeData(entry.EmployeeFolder);
+
+            var preview = SalaryQrPaymentService.CreatePreview(
+                entry.FullName,
+                data?.BankAccountNumber,
+                data?.BankName,
+                entry[field.Id],
+                field.QrMessageText);
+
+            var window = new Views.SalaryQrPreviewWindow(preview)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            window.ShowDialog();
+        }
+
+        private void OpenPrintQr()
+        {
+            var field = ActiveCustomFields.FirstOrDefault(f => f.IsQrTransfer);
+            if (field == null)
+                return;
+
+            if (!PolicyService.EnsureExportsAllowed("друкувати QR"))
+                return;
+
+            var rows = new List<Views.SalaryQrPrintRow>();
+            foreach (var entry in VisibleEntries())
+            {
+                var amount = entry[field.Id];
+                if (amount <= 0m)
+                    continue;
+
+                EmployeeData? data = null;
+                if (!string.IsNullOrWhiteSpace(entry.EmployeeFolder))
+                    data = _employeeService.LoadEmployeeData(entry.EmployeeFolder);
+
+                var account = data?.BankAccountNumber ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(CzechBankAccountResolver.TryConvertToIban(account)))
+                    continue;
+
+                rows.Add(new Views.SalaryQrPrintRow
+                {
+                    FullName = entry.FullName ?? string.Empty,
+                    FirmName = entry.FirmName ?? string.Empty,
+                    Amount = amount,
+                    AccountNumber = account,
+                    BankName = data?.BankName ?? string.Empty,
+                    MessageText = field.QrMessageText ?? string.Empty
+                });
+            }
+
+            var dialog = new Views.SalaryQrPrintWindow(rows)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var save = new SaveFileDialog
+            {
+                Filter = "PDF (*.pdf)|*.pdf",
+                FileName = $"Salary_QR_{_selectedYear}-{_selectedMonth:D2}.pdf"
+            };
+            if (save.ShowDialog() != true)
+                return;
+
+            try
+            {
+                var pdfItems = dialog.SelectedRows.Select(row =>
+                {
+                    var preview = SalaryQrPaymentService.CreatePreview(
+                        row.FullName,
+                        row.AccountNumber,
+                        row.BankName,
+                        row.Amount,
+                        row.MessageText);
+                    return new SalaryQrPdfItem
+                    {
+                        EmployeeName = row.FullName,
+                        FirmName = row.FirmName,
+                        AccountNumber = row.AccountNumber,
+                        BankName = preview.BankName,
+                        Iban = preview.Iban,
+                        Amount = row.Amount,
+                        MessageText = preview.MessageText,
+                        QrPngBytes = preview.PngBytes
+                    };
+                }).ToList();
+
+                SalaryQrPdfExportService.GenerateToFile(
+                    save.FileName,
+                    MonthDisplay,
+                    pdfItems,
+                    new SalaryQrPdfExportLabels
+                    {
+                        Title = L("FinQrPrintTitle") ?? "QR",
+                        Amount = L("FinQrAmount") ?? "Amount",
+                        Account = L("FinQrAccount") ?? "Account",
+                        Bank = L("FinQrBank") ?? "Bank",
+                        Iban = L("FinQrIban") ?? "IBAN",
+                        Message = L("FinQrMessage") ?? "Message"
+                    });
+
+                var status = L("FinQrPrinted") ?? "QR PDF saved.";
+                StatusMessage = status;
+                ToastService.Instance.Success(status);
+                _activityLogService.Log("ExportPdf", "Export", "", "",
+                    $"Експортовано QR-платежі {MonthDisplay} → PDF",
+                    details: $"Працівників: {pdfItems.Count}; Файл: {Path.GetFileName(save.FileName)}");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Export error: {ex.Message}";
+                ToastService.Instance.Error(StatusMessage);
+            }
         }
 
         private static string SummarizeForLog(IEnumerable<string> items, string emptyFallback)

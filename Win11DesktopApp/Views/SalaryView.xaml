@@ -218,6 +218,18 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Command="{Binding PrintQrCommand}" Style="{StaticResource FilledActionButton}"
+                            Background="{DynamicResource PurpleBrush}" Margin="0,0,6,0"
+                            Visibility="{Binding HasQrTransferColumn, Converter={StaticResource BoolToVis}}"
+                            ToolTip="{DynamicResource FinQrPrintDesc}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xED14;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{DynamicResource FinQrPrint}" FontSize="{DynamicResource FS11}"
+                                       Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button Command="{Binding AddAdvanceCommand}" Style="{StaticResource FilledActionButton}"
                             Background="{DynamicResource WarningBrush}" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal">
@@ -394,6 +406,7 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="True"
                               PreviewMouseWheel="DataGrid_PreviewMouseWheel"
+                              PreviewMouseRightButtonDown="SalaryGrid_PreviewMouseRightButtonDown"
                               Loaded="SalaryGrid_Loaded"
                               Unloaded="SalaryGrid_Unloaded">
 

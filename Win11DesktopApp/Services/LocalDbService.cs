@@ -796,7 +796,7 @@ ORDER BY year DESC, month DESC;";
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
             command.CommandText = @"
-SELECT id, name, operation, firm_name, order_index
+SELECT id, name, operation, firm_name, order_index, is_qr_transfer, qr_message_text
 FROM custom_salary_fields
 ORDER BY firm_name, order_index, id;";
 
@@ -804,14 +804,7 @@ ORDER BY firm_name, order_index, id;";
             var result = new List<CustomSalaryField>();
             while (reader.Read())
             {
-                result.Add(new CustomSalaryField
-                {
-                    Id = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
-                    Name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                    Operation = reader.IsDBNull(2) ? FieldOperation.Subtract : (FieldOperation)reader.GetInt32(2),
-                    FirmName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                    Order = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
-                });
+                result.Add(ReadCustomSalaryField(reader));
             }
 
             return result;
@@ -825,22 +818,7 @@ ORDER BY firm_name, order_index, id;";
 
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = @"
-INSERT INTO custom_salary_fields (
-    id, name, operation, firm_name, order_index
-) VALUES (
-    @id, @name, @operation, @firmName, @order
-)
-ON CONFLICT(id) DO UPDATE SET
-    name = excluded.name,
-    operation = excluded.operation,
-    firm_name = excluded.firm_name,
-    order_index = excluded.order_index;";
-            command.Parameters.AddWithValue("@id", string.IsNullOrWhiteSpace(field.Id) ? Guid.NewGuid().ToString() : field.Id);
-            command.Parameters.AddWithValue("@name", field.Name ?? string.Empty);
-            command.Parameters.AddWithValue("@operation", (int)field.Operation);
-            command.Parameters.AddWithValue("@firmName", field.FirmName ?? string.Empty);
-            command.Parameters.AddWithValue("@order", field.Order);
+            BindCustomSalaryField(command, field);
             command.ExecuteNonQuery();
         }
 
@@ -1690,7 +1668,9 @@ CREATE TABLE IF NOT EXISTS custom_salary_fields (
     name TEXT NOT NULL,
     operation INTEGER NOT NULL,
     firm_name TEXT NOT NULL,
-    order_index INTEGER NOT NULL DEFAULT 0
+    order_index INTEGER NOT NULL DEFAULT 0,
+    is_qr_transfer INTEGER NOT NULL DEFAULT 0,
+    qr_message_text TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS accommodations (
@@ -1749,6 +1729,8 @@ CREATE INDEX IF NOT EXISTS idx_acc_emp_ym ON accommodations(employee_folder, yea
             EnsureColumnExists(connection, "activity_log", "entity_id", "TEXT");
             EnsureColumnExists(connection, "activity_log", "old_values_json", "TEXT");
             EnsureColumnExists(connection, "activity_log", "new_values_json", "TEXT");
+            EnsureColumnExists(connection, "custom_salary_fields", "is_qr_transfer", "INTEGER NOT NULL DEFAULT 0");
+            EnsureColumnExists(connection, "custom_salary_fields", "qr_message_text", "TEXT NOT NULL DEFAULT ''");
 
             using var countCommand = connection.CreateCommand();
             countCommand.CommandText = "SELECT COUNT(1) FROM schema_version;";
@@ -1943,23 +1925,46 @@ ON CONFLICT(company_id, year, month) DO UPDATE SET
 
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
+            BindCustomSalaryField(command, field, normalizedId);
+            command.ExecuteNonQuery();
+        }
+
+        private static CustomSalaryField ReadCustomSalaryField(SqliteDataReader reader)
+        {
+            return new CustomSalaryField
+            {
+                Id = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                Name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                Operation = reader.IsDBNull(2) ? FieldOperation.Subtract : (FieldOperation)reader.GetInt32(2),
+                FirmName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                Order = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                IsQrTransfer = reader.FieldCount > 5 && !reader.IsDBNull(5) && Convert.ToInt32(reader.GetValue(5), CultureInfo.InvariantCulture) != 0,
+                QrMessageText = reader.FieldCount > 6 && !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty
+            };
+        }
+
+        private static void BindCustomSalaryField(SqliteCommand command, CustomSalaryField field, string? overrideId = null)
+        {
             command.CommandText = @"
 INSERT INTO custom_salary_fields (
-    id, name, operation, firm_name, order_index
+    id, name, operation, firm_name, order_index, is_qr_transfer, qr_message_text
 ) VALUES (
-    @id, @name, @operation, @firmName, @order
+    @id, @name, @operation, @firmName, @order, @isQr, @qrMessage
 )
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     operation = excluded.operation,
     firm_name = excluded.firm_name,
-    order_index = excluded.order_index;";
-            command.Parameters.AddWithValue("@id", normalizedId);
+    order_index = excluded.order_index,
+    is_qr_transfer = excluded.is_qr_transfer,
+    qr_message_text = excluded.qr_message_text;";
+            command.Parameters.AddWithValue("@id", overrideId ?? (string.IsNullOrWhiteSpace(field.Id) ? Guid.NewGuid().ToString() : field.Id));
             command.Parameters.AddWithValue("@name", field.Name ?? string.Empty);
             command.Parameters.AddWithValue("@operation", (int)field.Operation);
             command.Parameters.AddWithValue("@firmName", field.FirmName ?? string.Empty);
             command.Parameters.AddWithValue("@order", field.Order);
-            command.ExecuteNonQuery();
+            command.Parameters.AddWithValue("@isQr", field.IsQrTransfer ? 1 : 0);
+            command.Parameters.AddWithValue("@qrMessage", field.QrMessageText ?? string.Empty);
         }
 
         private void UpsertAccommodation(SqliteConnection connection, SqliteTransaction transaction, AccommodationRecord record)

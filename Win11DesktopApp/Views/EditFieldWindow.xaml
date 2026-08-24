@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource FinEditFieldTitle}"
-        Width="440" Height="320" WindowStartupLocation="CenterOwner"
+        Width="440" Height="430" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{DynamicResource WindowBackgroundBrush}">
 
@@ -32,6 +32,7 @@
         <Border Grid.Row="1" Style="{StaticResource DialogSectionCard}">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -66,6 +67,28 @@
                           FontSize="{DynamicResource FS12}"
                           Style="{StaticResource ThemedComboBox}"
                           Margin="0,10,0,0"/>
+
+                <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                    <CheckBox x:Name="IsQrBox"
+                              Content="{DynamicResource FinQrForBank}"
+                              FontSize="{DynamicResource FS12}"
+                              Foreground="{DynamicResource ForegroundBrush}"
+                              Checked="IsQrBox_Changed"
+                              Unchecked="IsQrBox_Changed"/>
+                    <TextBlock Text="{DynamicResource FinQrMessageLabel}"
+                               FontSize="{DynamicResource FS11}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,8,0,4"/>
+                    <TextBox x:Name="QrMessageBox"
+                             Padding="10,7"
+                             FontSize="{DynamicResource FS13}"
+                             VerticalContentAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource FinQrMessageHint}"
+                               FontSize="{DynamicResource FS10}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
             </Grid>
         </Border>
 

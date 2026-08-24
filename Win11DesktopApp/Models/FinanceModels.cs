@@ -22,6 +22,8 @@ namespace Win11DesktopApp.Models
         public FieldOperation Operation { get; set; } = FieldOperation.Subtract;
         public string FirmName { get; set; } = string.Empty;
         public int Order { get; set; } = 0;
+        public bool IsQrTransfer { get; set; }
+        public string QrMessageText { get; set; } = string.Empty;
     }
 
     public class FirmExpense : INotifyPropertyChanged

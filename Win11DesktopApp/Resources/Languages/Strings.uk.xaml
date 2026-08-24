@@ -1321,6 +1321,8 @@
     <sys:String x:Key="ImgEditorPerspectiveNotFound">Контур документа не знайдено. Спробуйте зробити фото з більшим контрастом.</sys:String>
     <sys:String x:Key="ImgEditorGamma">Гамма</sys:String>
     <sys:String x:Key="ImgEditorDenoise">Шумоподавлення</sys:String>
+    <sys:String x:Key="ImgEditorSaturation">Насиченість</sys:String>
+    <sys:String x:Key="ImgEditorWarmth">Тепло</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI не завантажений</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1778,6 +1780,25 @@
     <sys:String x:Key="FinManageColumnsDesc">Додайте, редагуйте або видаліть власні стовпці для розрахунку зарплати.</sys:String>
     <sys:String x:Key="FinBtnAddField">Додати</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Редагувати стовпець</sys:String>
+    <sys:String x:Key="FinQrForBank">QR для банку</sys:String>
+    <sys:String x:Key="FinQrMessageLabel">Текст для банку</sys:String>
+    <sys:String x:Key="FinQrMessageHint">Один спільний текст для всіх. Його бачить банк у платежі. Не змінюється по місяцях.</sys:String>
+    <sys:String x:Key="FinQrColumnHint">Правий клік — QR-код для банку</sys:String>
+    <sys:String x:Key="FinQrTitle">Платіж QR</sys:String>
+    <sys:String x:Key="FinQrNeedsAmount">Введіть суму в клітинці, щоб згенерувати QR.</sys:String>
+    <sys:String x:Key="FinQrNeedsAccount">У картці працівника немає номера рахунку.</sys:String>
+    <sys:String x:Key="FinQrAmount">Сума</sys:String>
+    <sys:String x:Key="FinQrAccount">Рахунок</sys:String>
+    <sys:String x:Key="FinQrBank">Банк</sys:String>
+    <sys:String x:Key="FinQrIban">IBAN</sys:String>
+    <sys:String x:Key="FinQrMessage">Повідомлення</sys:String>
+    <sys:String x:Key="FinQrNoImage">QR недоступний</sys:String>
+    <sys:String x:Key="FinQrPrint">Друк QR</sys:String>
+    <sys:String x:Key="FinQrPrintTitle">Друк QR-платежів</sys:String>
+    <sys:String x:Key="FinQrPrintDesc">Оберіть працівників із сумою та рахунком. Окремо від звичайного PDF зарплати.</sys:String>
+    <sys:String x:Key="FinQrPrintNone">Немає рядків із сумою більше 0 і рахунком у картці.</sys:String>
+    <sys:String x:Key="FinQrPrintEmpty">Оберіть хоча б одного працівника</sys:String>
+    <sys:String x:Key="FinQrPrinted">PDF з QR збережено</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Видалити стовпець '{0}'?</sys:String>
     <sys:String x:Key="FinExportSelectTitle">Експорт</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Оберіть фірми та формат експорту</sys:String>

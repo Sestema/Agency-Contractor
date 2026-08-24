@@ -1317,6 +1317,8 @@
     <sys:String x:Key="ImgEditorPerspectiveNotFound">Obrys dokumentu nenalezen. Zkuste fotografii s větším kontrastem.</sys:String>
     <sys:String x:Key="ImgEditorGamma">Gama</sys:String>
     <sys:String x:Key="ImgEditorDenoise">Potlačení šumu</sys:String>
+    <sys:String x:Key="ImgEditorSaturation">Sytost</sys:String>
+    <sys:String x:Key="ImgEditorWarmth">Teplota barev</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI není načten</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1774,6 +1776,25 @@
     <sys:String x:Key="FinManageColumnsDesc">Přidejte, upravte nebo odstraňte vlastní sloupce pro výpočet mzdy.</sys:String>
     <sys:String x:Key="FinBtnAddField">Přidat</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Upravit sloupec</sys:String>
+    <sys:String x:Key="FinQrForBank">QR pro banku</sys:String>
+    <sys:String x:Key="FinQrMessageLabel">Text pro banku</sys:String>
+    <sys:String x:Key="FinQrMessageHint">Jeden společný text pro všechny. Banka ho uvidí u platby. Nemění se po měsících.</sys:String>
+    <sys:String x:Key="FinQrColumnHint">Pravý klik — QR kód pro banku</sys:String>
+    <sys:String x:Key="FinQrTitle">QR platba</sys:String>
+    <sys:String x:Key="FinQrNeedsAmount">Zadejte částku do buňky, aby se vygeneroval QR kód.</sys:String>
+    <sys:String x:Key="FinQrNeedsAccount">Na kartě zaměstnance chybí číslo účtu.</sys:String>
+    <sys:String x:Key="FinQrAmount">Částka</sys:String>
+    <sys:String x:Key="FinQrAccount">Účet</sys:String>
+    <sys:String x:Key="FinQrBank">Banka</sys:String>
+    <sys:String x:Key="FinQrIban">IBAN</sys:String>
+    <sys:String x:Key="FinQrMessage">Zpráva</sys:String>
+    <sys:String x:Key="FinQrNoImage">QR není k dispozici</sys:String>
+    <sys:String x:Key="FinQrPrint">Tisk QR</sys:String>
+    <sys:String x:Key="FinQrPrintTitle">Tisk QR plateb</sys:String>
+    <sys:String x:Key="FinQrPrintDesc">Vyberte zaměstnance s částkou a účtem. Odděleně od běžného PDF mezd.</sys:String>
+    <sys:String x:Key="FinQrPrintNone">Žádné řádky s částkou větší než 0 a účtem na kartě.</sys:String>
+    <sys:String x:Key="FinQrPrintEmpty">Vyberte alespoň jednu osobu</sys:String>
+    <sys:String x:Key="FinQrPrinted">PDF s QR bylo uloženo</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Opravdu chcete smazat sloupec '{0}'?</sys:String>
     <sys:String x:Key="FinExportSelectTitle">Export</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Vyberte firmy a formát exportu</sys:String>

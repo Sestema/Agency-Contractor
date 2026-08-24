@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -61,9 +62,108 @@ namespace Win11DesktopApp.Views
         private int _dragSourceIndex = -1;
         private const double DragThreshold = 10;
 
+        private MainViewModel? _drawerVm;
+        private bool _drawerHasOpenedOnce;
+        private ContextMenu? _companyItemMenu;
+        private MenuItem? _companyMoveUpItem;
+        private MenuItem? _companyMoveDownItem;
+
         public MainPage()
         {
             InitializeComponent();
+            DataContextChanged += OnMainPageDataContextChanged;
+            Loaded += OnMainPageLoaded;
+            Unloaded += OnMainPageUnloaded;
+        }
+
+        private void OnMainPageDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            BindDrawerViewModel(e.NewValue as MainViewModel);
+        }
+
+        private void OnMainPageLoaded(object sender, RoutedEventArgs e)
+        {
+            BindDrawerViewModel(DataContext as MainViewModel);
+        }
+
+        private void OnMainPageUnloaded(object sender, RoutedEventArgs e)
+        {
+            BindDrawerViewModel(null);
+        }
+
+        private void BindDrawerViewModel(MainViewModel? vm)
+        {
+            if (_drawerVm != null)
+                _drawerVm.PropertyChanged -= OnDrawerViewModelPropertyChanged;
+
+            _drawerVm = vm;
+            if (_drawerVm != null)
+            {
+                _drawerVm.PropertyChanged += OnDrawerViewModelPropertyChanged;
+                ApplyDrawerOpenState(_drawerVm.IsDrawerOpen, animate: false);
+            }
+        }
+
+        private void OnDrawerViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(MainViewModel.IsDrawerOpen) || _drawerVm == null)
+                return;
+
+            ApplyDrawerOpenState(_drawerVm.IsDrawerOpen, animate: true);
+        }
+
+        private void ApplyDrawerOpenState(bool open, bool animate)
+        {
+            DrawerSlide.BeginAnimation(TranslateTransform.XProperty, null);
+            DrawerOverlay.BeginAnimation(OpacityProperty, null);
+
+            if (open)
+            {
+                var skipSlide = !animate || !_drawerHasOpenedOnce;
+                if (skipSlide)
+                {
+                    DrawerSlide.X = 0;
+                    DrawerOverlay.Opacity = 1;
+                }
+                else
+                {
+                    AnimateDouble(DrawerSlide, TranslateTransform.XProperty, DrawerSlide.X, 0, TimeSpan.FromMilliseconds(300));
+                    AnimateDouble(DrawerOverlay, OpacityProperty, 0, 1, TimeSpan.FromMilliseconds(250));
+                }
+
+                _drawerHasOpenedOnce = true;
+            }
+            else
+            {
+                if (animate && _drawerHasOpenedOnce)
+                    AnimateDouble(DrawerSlide, TranslateTransform.XProperty, DrawerSlide.X, -370, TimeSpan.FromMilliseconds(250));
+                else
+                    DrawerSlide.X = -370;
+
+                DrawerOverlay.Opacity = 0;
+            }
+        }
+
+        private void AnimateDouble(UIElement target, DependencyProperty property, double from, double to, TimeSpan duration)
+        {
+            var ease = TryFindResource("DrawerEase") as IEasingFunction ?? new CubicEase { EasingMode = EasingMode.EaseOut };
+            var animation = new DoubleAnimation(from, to, duration)
+            {
+                EasingFunction = ease,
+                FillBehavior = FillBehavior.HoldEnd
+            };
+            target.BeginAnimation(property, animation);
+        }
+
+        private void AnimateDouble(TranslateTransform target, DependencyProperty property, double from, double to, TimeSpan duration)
+        {
+            var ease = TryFindResource("DrawerEase") as IEasingFunction ?? new CubicEase { EasingMode = EasingMode.EaseOut };
+            var animation = new DoubleAnimation(from, to, duration)
+            {
+                EasingFunction = ease,
+                FillBehavior = FillBehavior.HoldEnd
+            };
+            target.BeginAnimation(property, animation);
         }
 
         private void Card_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -327,6 +427,70 @@ namespace Win11DesktopApp.Views
                 var result = FindUniformGrid(VisualTreeHelper.GetChild(parent, i));
                 if (result != null) return result;
             }
+            return null;
+        }
+
+        private void CompanyList_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            var source = e.OriginalSource as DependencyObject;
+            var item = FindAncestor<ListBoxItem>(source);
+            if (item?.DataContext is not EmployerCompany company)
+                return;
+            if (DataContext is not MainViewModel vm)
+                return;
+
+            EnsureCompanyItemMenu();
+            _companyMoveUpItem!.Command = vm.MoveCompanyUpCommand;
+            _companyMoveUpItem.CommandParameter = company;
+            _companyMoveDownItem!.Command = vm.MoveCompanyDownCommand;
+            _companyMoveDownItem.CommandParameter = company;
+
+            _companyItemMenu!.PlacementTarget = item;
+            _companyItemMenu.IsOpen = true;
+            e.Handled = true;
+        }
+
+        private void EnsureCompanyItemMenu()
+        {
+            if (_companyItemMenu != null)
+                return;
+
+            _companyMoveUpItem = new MenuItem
+            {
+                Icon = CreateMdl2Icon("\uE70E")
+            };
+            _companyMoveUpItem.SetResourceReference(HeaderedItemsControl.HeaderProperty, "CompanyMoveUp");
+
+            _companyMoveDownItem = new MenuItem
+            {
+                Icon = CreateMdl2Icon("\uE70D")
+            };
+            _companyMoveDownItem.SetResourceReference(HeaderedItemsControl.HeaderProperty, "CompanyMoveDown");
+
+            _companyItemMenu = new ContextMenu();
+            _companyItemMenu.Items.Add(_companyMoveUpItem);
+            _companyItemMenu.Items.Add(_companyMoveDownItem);
+        }
+
+        private static TextBlock CreateMdl2Icon(string glyph)
+        {
+            return new TextBlock
+            {
+                Text = glyph,
+                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontSize = 12
+            };
+        }
+
+        private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T match)
+                    return match;
+                current = VisualTreeHelper.GetParent(current);
+            }
+
             return null;
         }
 

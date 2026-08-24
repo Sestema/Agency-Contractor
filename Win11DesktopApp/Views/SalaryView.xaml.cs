@@ -327,7 +327,7 @@ namespace Win11DesktopApp.Views
                         UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
                     },
                     Width = new DataGridLength(80),
-                    Header = $"{prefix}{field.Name}"
+                    Header = CreateCustomColumnHeader(field, prefix, brush)
                 };
 
                 var secondaryBrush = Application.Current.TryFindResource("SecondaryForegroundBrush") as Brush ?? Brushes.Gray;
@@ -361,6 +361,74 @@ namespace Win11DesktopApp.Views
                 AttachColumnWidthListeners();
             }
             _suppressWidthSave = false;
+        }
+
+        private static FrameworkElement CreateCustomColumnHeader(CustomSalaryField field, string prefix, Brush brush)
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Tag = field.Id
+            };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{prefix}{field.Name}",
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            if (field.IsQrTransfer)
+            {
+                var hint = Application.Current.TryFindResource("FinQrColumnHint") as string
+                    ?? "Right-click for bank QR";
+                panel.ToolTip = hint;
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "\uED14",
+                    FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                    FontSize = 11,
+                    Margin = new Thickness(4, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = Application.Current.TryFindResource("AccentBrush") as Brush ?? brush,
+                    ToolTip = hint
+                });
+            }
+
+            return panel;
+        }
+
+        private void SalaryGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is not SalaryViewModel vm)
+                return;
+
+            var cell = FindParent<DataGridCell>(e.OriginalSource as DependencyObject);
+            if (cell?.Column?.Header is not FrameworkElement header || header.Tag is not string fieldId)
+                return;
+
+            var field = vm.ActiveCustomFields.FirstOrDefault(f => f.Id == fieldId);
+            if (field == null || !field.IsQrTransfer)
+                return;
+
+            var entry = cell.DataContext as SalaryEntry ?? SalaryGrid.SelectedItem as SalaryEntry;
+            if (entry == null)
+                return;
+
+            e.Handled = true;
+            vm.ShowQrForEntry(entry, field);
+        }
+
+        private static T? FindParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T match)
+                    return match;
+                child = VisualTreeHelper.GetParent(child);
+            }
+
+            return null;
         }
 
         private void SalaryGrid_Loaded(object sender, RoutedEventArgs e)

@@ -1300,6 +1300,8 @@
     <sys:String x:Key="ImgEditorPerspectiveNotFound">Контур документа не найден. Попробуйте фото с бо́льшим контрастом.</sys:String>
     <sys:String x:Key="ImgEditorGamma">Гамма</sys:String>
     <sys:String x:Key="ImgEditorDenoise">Шумоподавление</sys:String>
+    <sys:String x:Key="ImgEditorSaturation">Насыщенность</sys:String>
+    <sys:String x:Key="ImgEditorWarmth">Теплота</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI не загружен</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1757,6 +1759,25 @@
     <sys:String x:Key="FinManageColumnsDesc">Добавляйте, редактируйте или удаляйте столбцы для расчёта зарплаты.</sys:String>
     <sys:String x:Key="FinBtnAddField">Добавить</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Редактировать столбец</sys:String>
+    <sys:String x:Key="FinQrForBank">QR для банка</sys:String>
+    <sys:String x:Key="FinQrMessageLabel">Текст для банка</sys:String>
+    <sys:String x:Key="FinQrMessageHint">Один общий текст для всех. Банк видит его в платеже. По месяцам не меняется.</sys:String>
+    <sys:String x:Key="FinQrColumnHint">Правый клик — QR-код для банка</sys:String>
+    <sys:String x:Key="FinQrTitle">QR-платёж</sys:String>
+    <sys:String x:Key="FinQrNeedsAmount">Введите сумму в ячейке, чтобы сгенерировать QR.</sys:String>
+    <sys:String x:Key="FinQrNeedsAccount">В карточке сотрудника нет номера счёта.</sys:String>
+    <sys:String x:Key="FinQrAmount">Сумма</sys:String>
+    <sys:String x:Key="FinQrAccount">Счёт</sys:String>
+    <sys:String x:Key="FinQrBank">Банк</sys:String>
+    <sys:String x:Key="FinQrIban">IBAN</sys:String>
+    <sys:String x:Key="FinQrMessage">Сообщение</sys:String>
+    <sys:String x:Key="FinQrNoImage">QR недоступен</sys:String>
+    <sys:String x:Key="FinQrPrint">Печать QR</sys:String>
+    <sys:String x:Key="FinQrPrintTitle">Печать QR-платежей</sys:String>
+    <sys:String x:Key="FinQrPrintDesc">Выберите сотрудников с суммой и счётом. Отдельно от обычного PDF зарплаты.</sys:String>
+    <sys:String x:Key="FinQrPrintNone">Нет строк с суммой больше 0 и счётом в карточке.</sys:String>
+    <sys:String x:Key="FinQrPrintEmpty">Выберите хотя бы одного сотрудника</sys:String>
+    <sys:String x:Key="FinQrPrinted">PDF с QR сохранён</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Удалить столбец '{0}'?</sys:String>
     <sys:String x:Key="FinExportSelectTitle">Экспорт</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Выберите фирмы и формат экспорта</sys:String>

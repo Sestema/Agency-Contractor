@@ -44,11 +44,13 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(field.Id))
                 field.Id = Guid.NewGuid().ToString();
 
+            EnsureSingleQrTransfer(field);
             RequireLocalDb().UpsertCustomSalaryField(field);
         }
 
         public void UpdateCustomField(CustomSalaryField updated)
         {
+            EnsureSingleQrTransfer(updated);
             RequireLocalDb().UpsertCustomSalaryField(updated);
         }
 
@@ -67,6 +69,24 @@ namespace Win11DesktopApp.Services
 
             RequireLocalDb().DeleteCustomSalaryField(fieldId);
             return true;
+        }
+
+        private void EnsureSingleQrTransfer(CustomSalaryField field)
+        {
+            if (field == null || !field.IsQrTransfer)
+                return;
+
+            if (string.IsNullOrEmpty(field.Id))
+                field.Id = Guid.NewGuid().ToString();
+
+            foreach (var other in GetFieldsSnapshot())
+            {
+                if (!other.IsQrTransfer || string.Equals(other.Id, field.Id, StringComparison.Ordinal))
+                    continue;
+
+                other.IsQrTransfer = false;
+                RequireLocalDb().UpsertCustomSalaryField(other);
+            }
         }
 
         private List<CustomSalaryField> GetFieldsSnapshot()

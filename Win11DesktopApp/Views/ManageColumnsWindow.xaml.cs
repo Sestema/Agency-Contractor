@@ -16,6 +16,8 @@ namespace Win11DesktopApp.Views
         public FieldOperation Operation { get; set; }
         public string FirmName { get; set; } = string.Empty;
         public int Order { get; set; }
+        public bool IsQrTransfer { get; set; }
+        public string QrMessageText { get; set; } = string.Empty;
 
         public string OperationSymbol => Operation switch
         {
@@ -29,6 +31,8 @@ namespace Win11DesktopApp.Views
         public string FirmDisplay => string.IsNullOrEmpty(FirmName) || FirmName == FinanceConstants.AllFirmsKey
             ? L("FinFilterAll") ?? "All firms"
             : FirmName;
+
+        public Visibility QrBadgeVisibility => IsQrTransfer ? Visibility.Visible : Visibility.Collapsed;
 
         private static string? L(string key)
         {
@@ -68,7 +72,9 @@ namespace Win11DesktopApp.Views
                     Name = f.Name,
                     Operation = f.Operation,
                     FirmName = f.FirmName,
-                    Order = f.Order
+                    Order = f.Order,
+                    IsQrTransfer = f.IsQrTransfer,
+                    QrMessageText = f.QrMessageText ?? string.Empty
                 });
             }
         }
@@ -97,12 +103,24 @@ namespace Win11DesktopApp.Views
                 Name = name,
                 Operation = op,
                 FirmName = firmName,
-                Order = maxOrder
+                Order = maxOrder,
+                IsQrTransfer = NewIsQrTransfer.IsChecked == true,
+                QrMessageText = NewIsQrTransfer.IsChecked == true
+                    ? (NewQrMessage.Text ?? string.Empty).Trim()
+                    : string.Empty
             };
 
             _financeService.AddCustomField(field);
             LoadFields();
             NewFieldName.Text = string.Empty;
+            NewIsQrTransfer.IsChecked = false;
+            NewQrMessage.Text = string.Empty;
+        }
+
+        private void NewIsQrTransfer_Changed(object sender, RoutedEventArgs e)
+        {
+            if (NewQrMessage != null)
+                NewQrMessage.IsEnabled = NewIsQrTransfer.IsChecked == true;
         }
 
         private void EditField_Click(object sender, RoutedEventArgs e)
@@ -112,7 +130,12 @@ namespace Win11DesktopApp.Views
                 var item = _items.FirstOrDefault(i => i.Id == fieldId);
                 if (item == null) return;
 
-                var editWin = new EditFieldWindow(item.Name, item.Operation, item.FirmName,
+                var editWin = new EditFieldWindow(
+                    item.Name,
+                    item.Operation,
+                    item.FirmName,
+                    item.IsQrTransfer,
+                    item.QrMessageText,
                     _items.Select(i => i.FirmName).Distinct().Where(f => f != FinanceConstants.AllFirmsKey).ToList());
                 editWin.Owner = this;
 
@@ -124,7 +147,9 @@ namespace Win11DesktopApp.Views
                         Name = editWin.FieldName,
                         Operation = editWin.FieldOperation,
                         FirmName = editWin.FieldFirmName,
-                        Order = item.Order
+                        Order = item.Order,
+                        IsQrTransfer = editWin.IsQrTransfer,
+                        QrMessageText = editWin.QrMessageText
                     };
                     _financeService.UpdateCustomField(updated);
                     LoadFields();

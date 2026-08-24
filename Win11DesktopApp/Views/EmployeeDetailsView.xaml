@@ -608,42 +608,64 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{DynamicResource DetSidebarNote}"
-                                                       FontSize="{DynamicResource FS11}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource ForegroundBrush}"
-                                                       VerticalAlignment="Center"
-                                                       TextWrapping="Wrap"/>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="&#xE70B;" FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="{DynamicResource FS12}"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock Text="{DynamicResource DetSidebarNote}"
+                                                           FontSize="{DynamicResource FS11}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ForegroundBrush}"
+                                                           VerticalAlignment="Center"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
                                                 <Button Command="{Binding BeginProfileNoteEditCommand}"
                                                         Visibility="{Binding ShowWriteProfileNote, Converter={StaticResource BoolToVis}}"
                                                         Style="{StaticResource SidebarSecondaryButton}"
-                                                        Padding="8,4"
-                                                        FontSize="{DynamicResource FS11}"
-                                                        Content="{DynamicResource DetSidebarNoteWrite}"/>
+                                                        Width="28" Height="28" MinWidth="28" Padding="0"
+                                                        BorderThickness="0" Background="Transparent"
+                                                        ToolTip="{DynamicResource DetSidebarNoteWrite}">
+                                                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets"
+                                                               FontSize="{DynamicResource FS13}"
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
                                                 <Button Command="{Binding BeginProfileNoteEditCommand}"
                                                         Visibility="{Binding ShowEditProfileNote, Converter={StaticResource BoolToVis}}"
                                                         Style="{StaticResource SidebarSecondaryButton}"
-                                                        Padding="8,4"
-                                                        FontSize="{DynamicResource FS11}"
-                                                        Content="{DynamicResource EmpBtnEdit}"/>
+                                                        Width="28" Height="28" MinWidth="28" Padding="0"
+                                                        BorderThickness="0" Background="Transparent"
+                                                        ToolTip="{DynamicResource EmpBtnEdit}">
+                                                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets"
+                                                               FontSize="{DynamicResource FS13}"
+                                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
                                                 <Button Command="{Binding SaveProfileNoteCommand}"
                                                         Visibility="{Binding ShowSaveProfileNote, Converter={StaticResource BoolToVis}}"
                                                         Style="{StaticResource SidebarSecondaryButton}"
-                                                        Padding="8,4"
-                                                        FontSize="{DynamicResource FS11}"
-                                                        Content="{DynamicResource DetBtnSave}"/>
+                                                        Width="28" Height="28" MinWidth="28" Padding="0"
+                                                        BorderThickness="0" Background="Transparent"
+                                                        ToolTip="{DynamicResource DetBtnSave}">
+                                                    <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets"
+                                                               FontSize="{DynamicResource FS13}"
+                                                               Foreground="{DynamicResource AccentDarkBrush}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
                                             </StackPanel>
                                         </Grid>
                                         <TextBlock Text="{Binding ProfileNoteDraft}"
                                                    Visibility="{Binding ShowProfileNoteText, Converter={StaticResource BoolToVis}}"
                                                    FontSize="{DynamicResource FS12}"
-                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
                                                    TextWrapping="Wrap"
                                                    Margin="0,8,0,0"/>
                                         <TextBlock Text="{DynamicResource DetSidebarNoteEmpty}"
                                                    Visibility="{Binding ShowProfileNoteEmpty, Converter={StaticResource BoolToVis}}"
-                                                   FontSize="{DynamicResource FS12}"
+                                                   FontSize="{DynamicResource FS11}"
+                                                   FontStyle="Italic"
                                                    Foreground="{DynamicResource TertiaryForegroundBrush}"
                                                    TextWrapping="Wrap"
                                                    Margin="0,8,0,0"/>
@@ -2114,54 +2136,60 @@
                                                     <!-- Timeline column: icon + vertical line -->
                                                     <Grid Grid.Column="0" HorizontalAlignment="Center">
                                                         <Border Width="2" Background="{DynamicResource DividerBrush}" VerticalAlignment="Stretch" HorizontalAlignment="Center"/>
-                                                        <Border Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top" Margin="0,8,0,0"
+                                                        <Border Width="24" Height="24" CornerRadius="12" VerticalAlignment="Top" Margin="0,6,0,0"
                                                                 HorizontalAlignment="Center"
                                                                 Background="{Binding EventColor, Converter={StaticResource HexToBrush}}">
-                                                            <TextBlock Text="{Binding EventIcon}" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                                            <TextBlock Text="{Binding EventIcon}" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
                                                     </Grid>
 
                                                     <!-- Card -->
-                                                    <Border Grid.Column="1" Style="{StaticResource DetailsMiniCard}" Padding="14,12" Margin="0,4,0,8">
+                                                    <Border Grid.Column="1" Style="{StaticResource DetailsMiniCard}" Padding="10,8" Margin="0,2,0,6">
                                                         <StackPanel>
-                                                            <Grid Margin="0,0,0,4">
+                                                            <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="*"/>
                                                                     <ColumnDefinition Width="Auto"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <StackPanel Orientation="Horizontal" Grid.Column="0">
-                                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                                    <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                               Text="{Binding Timestamp, StringFormat='{}{0:dd.MM.yyyy  HH:mm}'}"/>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                                                    <Border CornerRadius="999" Padding="8,2" Margin="0,0,8,0"
+                                                                <WrapPanel VerticalAlignment="Center" Margin="0,0,8,0">
+                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,10,2" VerticalAlignment="Center">
+                                                                        <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
+                                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                                        <TextBlock FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Text="{Binding Timestamp, StringFormat='{}{0:dd.MM.yyyy  HH:mm}'}"/>
+                                                                    </StackPanel>
+                                                                    <Border CornerRadius="999" Padding="7,1" Margin="0,0,8,2"
                                                                             Background="{DynamicResource AccentLightBrush}"
                                                                             Visibility="{Binding ActorName, Converter={StaticResource StringToVis}}">
                                                                         <TextBlock Text="{Binding ActorName}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
-                                                                                   Foreground="{DynamicResource AccentDarkBrush}"/>
+                                                                                   Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border CornerRadius="4" Padding="8,2"
+                                                                    <Border CornerRadius="4" Padding="7,1" Margin="0,0,0,2"
                                                                             Background="{Binding EventColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.15}">
                                                                         <TextBlock Text="{Binding Action}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
-                                                                                   Foreground="{Binding EventColor, Converter={StaticResource HexToBrush}}"/>
+                                                                                   Foreground="{Binding EventColor, Converter={StaticResource HexToBrush}}" VerticalAlignment="Center"/>
                                                                     </Border>
-                                                                    <Button Command="{Binding DataContext.DeleteHistoryEntryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                            CommandParameter="{Binding}"
-                                                                            Style="{StaticResource HeaderGhostButton}"
-                                                                            Width="28"
-                                                                            Height="28"
-                                                                            Margin="8,0,0,0"
-                                                                            ToolTip="{DynamicResource DetTooltipDeleteHistory}">
-                                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
-                                                                    </Button>
-                                                                </StackPanel>
+                                                                </WrapPanel>
+                                                                <Button Grid.Column="1"
+                                                                        Command="{Binding DataContext.DeleteHistoryEntryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Style="{StaticResource HeaderGhostButton}"
+                                                                        Width="22"
+                                                                        Height="22"
+                                                                        MinWidth="22"
+                                                                        Padding="0"
+                                                                        VerticalAlignment="Top"
+                                                                        ToolTip="{DynamicResource DetTooltipDeleteHistory}">
+                                                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Button>
                                                             </Grid>
-                                                            <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS13}"
+                                                            <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FS12}"
                                                                        Foreground="{DynamicResource ForegroundBrush}"
-                                                                       TextWrapping="Wrap"/>
+                                                                       TextWrapping="Wrap"
+                                                                       Margin="0,4,0,0"/>
                                                         </StackPanel>
                                                     </Border>
                                                 </Grid>

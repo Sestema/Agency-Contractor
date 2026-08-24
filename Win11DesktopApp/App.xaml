@@ -88,9 +88,9 @@
             <system:Double x:Key="UiSearchW">420</system:Double>
             <system:Double x:Key="UiTopBarH">60</system:Double>
             <system:Double x:Key="UiMenuCardW">160</system:Double>
-            <system:Double x:Key="UiMenuCardH">170</system:Double>
-            <system:Double x:Key="UiMenuCardIcon">58</system:Double>
-            <system:Double x:Key="UiMenuCardIconInner">27</system:Double>
+            <system:Double x:Key="UiMenuCardH">182</system:Double>
+            <system:Double x:Key="UiMenuCardIcon">72</system:Double>
+            <system:Double x:Key="UiMenuCardIconInner">32</system:Double>
             <system:Double x:Key="UiBadgeH">24</system:Double>
             <system:Double x:Key="UiCardGap">10</system:Double>
             <system:Double x:Key="UiEmployeeTileW">470</system:Double>
@@ -1567,11 +1567,6 @@
                         <ScaleTransform ScaleX="1" ScaleY="1"/>
                     </Setter.Value>
                 </Setter>
-                <Setter Property="Effect">
-                    <Setter.Value>
-                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.12"/>
-                    </Setter.Value>
-                </Setter>
                 <Style.Triggers>
                     <EventTrigger RoutedEvent="MouseEnter">
                         <BeginStoryboard>
@@ -1588,12 +1583,6 @@
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
                                 </DoubleAnimation>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                 To="30" Duration="0:0:0.18"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                 To="8" Duration="0:0:0.18"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                 To="0.18" Duration="0:0:0.18"/>
                             </Storyboard>
                         </BeginStoryboard>
                     </EventTrigger>
@@ -1612,12 +1601,6 @@
                                         <CubicEase EasingMode="EaseOut"/>
                                     </DoubleAnimation.EasingFunction>
                                 </DoubleAnimation>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)"
-                                                 To="20" Duration="0:0:0.18"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.ShadowDepth)"
-                                                 To="4" Duration="0:0:0.18"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)"
-                                                 To="0.12" Duration="0:0:0.18"/>
                             </Storyboard>
                         </BeginStoryboard>
                     </EventTrigger>
@@ -1906,7 +1889,6 @@
             <Style x:Key="ModernInteractiveCard" TargetType="Border" BasedOn="{StaticResource HoverLiftCard}">
                 <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}"/>
                 <Setter Property="Padding" Value="{StaticResource CardInnerPaddingCompact}"/>
-                <Setter Property="Effect" Value="{DynamicResource CardShadow}"/>
             </Style>
 
             <Style x:Key="ModernDialogCard" TargetType="Border" BasedOn="{StaticResource ElevatedInfoCard}">

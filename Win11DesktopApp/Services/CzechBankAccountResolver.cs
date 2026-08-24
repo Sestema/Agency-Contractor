@@ -84,6 +84,53 @@ namespace Win11DesktopApp.Services
             return false;
         }
 
+        public static string? TryConvertToIban(string? accountNumber)
+        {
+            if (string.IsNullOrWhiteSpace(accountNumber))
+                return null;
+
+            var raw = accountNumber.Trim();
+            var slashIndex = raw.LastIndexOf('/');
+            if (slashIndex <= 0 || slashIndex >= raw.Length - 1)
+                return null;
+
+            var accountPart = raw[..slashIndex];
+            var bankCodeDigits = NormalizeDigits(raw[(slashIndex + 1)..]);
+            if (bankCodeDigits.Length != 4)
+                return null;
+
+            var accountSegments = accountPart.Split('-', 2, StringSplitOptions.TrimEntries);
+            var prefixDigits = accountSegments.Length == 2 ? NormalizeDigits(accountSegments[0]) : string.Empty;
+            var accountDigits = NormalizeDigits(accountSegments.Length == 2 ? accountSegments[1] : accountSegments[0]);
+            if (accountDigits.Length == 0 || accountDigits.Length > 10 || prefixDigits.Length > 6)
+                return null;
+
+            var bban = string.Concat(
+                bankCodeDigits,
+                prefixDigits.PadLeft(6, '0'),
+                accountDigits.PadLeft(10, '0'));
+
+            var checksum = CalculateIbanChecksum(bban + "123500");
+            if (checksum <= 0)
+                return null;
+
+            return $"CZ{checksum:00}{bban}";
+        }
+
+        private static int CalculateIbanChecksum(string value)
+        {
+            var remainder = 0;
+            foreach (var ch in value)
+            {
+                if (!char.IsDigit(ch))
+                    return 0;
+
+                remainder = ((remainder * 10) + (ch - '0')) % 97;
+            }
+
+            return 98 - remainder;
+        }
+
         private static string NormalizeDigits(string? value)
             => new string((value ?? string.Empty).Where(char.IsDigit).ToArray());
     }

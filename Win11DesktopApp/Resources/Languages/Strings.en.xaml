@@ -1303,6 +1303,8 @@
     <sys:String x:Key="ImgEditorPerspectiveNotFound">Document contour not found. Try a photo with more contrast.</sys:String>
     <sys:String x:Key="ImgEditorGamma">Gamma</sys:String>
     <sys:String x:Key="ImgEditorDenoise">Denoise</sys:String>
+    <sys:String x:Key="ImgEditorSaturation">Saturation</sys:String>
+    <sys:String x:Key="ImgEditorWarmth">Warmth</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI not loaded</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1760,6 +1762,25 @@
     <sys:String x:Key="FinManageColumnsDesc">Add, edit or remove custom columns for salary calculation.</sys:String>
     <sys:String x:Key="FinBtnAddField">Add</sys:String>
     <sys:String x:Key="FinEditFieldTitle">Edit Column</sys:String>
+    <sys:String x:Key="FinQrForBank">QR for bank</sys:String>
+    <sys:String x:Key="FinQrMessageLabel">Bank message</sys:String>
+    <sys:String x:Key="FinQrMessageHint">One shared text for everyone. The bank sees it on the payment. It does not change by month.</sys:String>
+    <sys:String x:Key="FinQrColumnHint">Right-click for the bank QR code</sys:String>
+    <sys:String x:Key="FinQrTitle">QR payment</sys:String>
+    <sys:String x:Key="FinQrNeedsAmount">Enter an amount in the cell to generate a QR code.</sys:String>
+    <sys:String x:Key="FinQrNeedsAccount">This employee card has no bank account number.</sys:String>
+    <sys:String x:Key="FinQrAmount">Amount</sys:String>
+    <sys:String x:Key="FinQrAccount">Account</sys:String>
+    <sys:String x:Key="FinQrBank">Bank</sys:String>
+    <sys:String x:Key="FinQrIban">IBAN</sys:String>
+    <sys:String x:Key="FinQrMessage">Message</sys:String>
+    <sys:String x:Key="FinQrNoImage">QR is not available</sys:String>
+    <sys:String x:Key="FinQrPrint">Print QR</sys:String>
+    <sys:String x:Key="FinQrPrintTitle">Print QR payments</sys:String>
+    <sys:String x:Key="FinQrPrintDesc">Choose people who have an amount and a bank account. Separate from the regular salary PDF.</sys:String>
+    <sys:String x:Key="FinQrPrintNone">No rows with amount greater than 0 and a bank account on the card.</sys:String>
+    <sys:String x:Key="FinQrPrintEmpty">Select at least one person</sys:String>
+    <sys:String x:Key="FinQrPrinted">QR PDF saved</sys:String>
     <sys:String x:Key="FinConfirmDeleteField">Delete column '{0}'?</sys:String>
     <sys:String x:Key="FinExportSelectTitle">Export</sys:String>
     <sys:String x:Key="FinExportSelectDesc">Select firms and export format</sys:String>

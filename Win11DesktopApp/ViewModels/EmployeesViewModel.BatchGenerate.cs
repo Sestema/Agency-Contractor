@@ -37,7 +37,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
 
-        private void BatchGenerateToFolder(TemplateEntry? template)
+        private async Task BatchGenerateToFolderAsync(TemplateEntry? template)
         {
             if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
                 return;
@@ -52,10 +52,10 @@ namespace Win11DesktopApp.ViewModels
             if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
                 return;
 
-            BatchGenerate(template, dialog.FolderName);
+            await BatchGenerateAsync(template, dialog.FolderName);
         }
 
-        private void BatchGenerate(TemplateEntry? template, string? outputFolder = null)
+        private async Task BatchGenerateAsync(TemplateEntry? template, string? outputFolder = null)
         {
             if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
                 return;
@@ -67,6 +67,7 @@ namespace Win11DesktopApp.ViewModels
                     Directory.CreateDirectory(outputFolder);
 
                 var selected = Employees.Where(e => e.IsSelected).ToList();
+                var companyName = _company.Name;
                 int success = 0;
                 int fail = 0;
                 var resultLines = new List<string>();
@@ -79,88 +80,17 @@ namespace Win11DesktopApp.ViewModels
 
                     try
                     {
-                        var data = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
-                        if (data == null)
-                        {
-                            fail++;
-                            resultLines.Add(string.Format(GetString("EmpGenErrorProfileNotFoundFmt") ?? "[ПОМИЛКА] {0}: анкета не знайдена", employeeName));
-                            continue;
-                        }
-
-                        if (!IsBatchEmployeeIdentityMatch(emp, data))
-                        {
-                            fail++;
-                            resultLines.Add(string.Format(GetString("EmpGenErrorIdentityMismatchFmt") ?? "[ПОМИЛКА] {0}: дані не співпадають з вибраним працівником", employeeName));
-                            LoggingService.LogWarning("EmployeesViewModel.BatchGenerate",
-                                $"Skipped batch document generation because selected employee id '{emp.UniqueId}' does not match employee.json id '{data.UniqueId}' in folder '{emp.EmployeeFolder}'.");
-                            continue;
-                        }
-
-                        var templateFullPath = _templateService.GetTemplateFullPath(_company.Name, template.FilePath) ?? string.Empty;
-                        var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
-                        var docxSource = _templateService.ResolveDocxGenerationSource(templateFolder, templateFullPath);
-                        bool hasTemplateFile = File.Exists(templateFullPath);
-                        bool hasDocxSource = docxSource.Kind != TemplateDocxSourceKind.None;
-
-                        if (!hasTemplateFile && !hasDocxSource)
-                        {
-                            fail++;
-                            resultLines.Add(string.Format(GetString("EmpGenErrorTemplateNotFoundFmt") ?? "[ПОМИЛКА] {0}: шаблон не знайдено", employeeName));
-                            continue;
-                        }
-
-                        var tagValues = _tagCatalogService.GetTagValueMapForEmployee(_company.Name, data)
-                            ?? new Dictionary<string, string>();
-                        var format = template.Format?.ToUpper() ?? Path.GetExtension(templateFullPath).TrimStart('.').ToUpper();
-                        var generatedFileName = string.Empty;
-
-                        string SanitizeFn(string n) => string.Join("_", n.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
-                        string BuildOutputPath(string fileName)
-                        {
-                            var targetFolder = string.IsNullOrWhiteSpace(outputFolder)
-                                ? emp.EmployeeFolder
-                                : outputFolder;
-                            return EnsureUniqueBatchOutputPath(Path.Combine(targetFolder, fileName));
-                        }
-
-                        if (format == "DOCX" || hasDocxSource)
-                        {
-                            if (!hasDocxSource)
-                            {
-                                fail++;
-                                var err = GetString(docxSource.ErrorResourceKey ?? "EditorWordDocxNotReady")
-                                    ?? (docxSource.ErrorResourceKey ?? "EditorWordDocxNotReady");
-                                resultLines.Add($"[ПОМИЛКА] {employeeName}: {err}");
-                                continue;
-                            }
-
-                            var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
-                            var outPath = BuildOutputPath(outName);
-                            if (docxSource.Kind == TemplateDocxSourceKind.Rtf)
-                                _documentGenerationService.GenerateDocxFromRtf(docxSource.Path, outPath, tagValues);
-                            else
-                                _documentGenerationService.GenerateDocx(docxSource.Path, outPath, tagValues);
-                            generatedFileName = Path.GetFileName(outPath);
-                        }
-                        else if (format == "XLSX" && hasTemplateFile)
-                        {
-                            var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.xlsx");
-                            var outPath = BuildOutputPath(outName);
-                            _documentGenerationService.GenerateXlsx(templateFullPath, outPath, tagValues);
-                            generatedFileName = Path.GetFileName(outPath);
-                        }
-                        else if (format == "PDF" && hasTemplateFile)
-                        {
-                            var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.pdf");
-                            var outPath = BuildOutputPath(outName);
-                            _documentGenerationService.GeneratePdf(templateFullPath, outPath, tagValues);
-                            generatedFileName = Path.GetFileName(outPath);
-                        }
+                        var generatedFileName = await Task.Run(() => GenerateBatchDocumentForEmployee(
+                            emp,
+                            template,
+                            companyName,
+                            outputFolder,
+                            employeeName,
+                            resultLines));
 
                         if (string.IsNullOrWhiteSpace(generatedFileName))
                         {
                             fail++;
-                            resultLines.Add(string.Format(GetString("EmpGenErrorUnsupportedFormatFmt") ?? "[ПОМИЛКА] {0}: формат не підтримується ({1})", employeeName, format));
                             continue;
                         }
 
@@ -191,6 +121,95 @@ namespace Win11DesktopApp.ViewModels
             {
                 IsLoading = false;
             }
+        }
+
+        private string? GenerateBatchDocumentForEmployee(
+            EmployeeModels.EmployeeSummary emp,
+            TemplateEntry template,
+            string companyName,
+            string? outputFolder,
+            string employeeName,
+            List<string> resultLines)
+        {
+            var data = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
+            if (data == null)
+            {
+                resultLines.Add(string.Format(GetString("EmpGenErrorProfileNotFoundFmt") ?? "[ПОМИЛКА] {0}: анкета не знайдена", employeeName));
+                return null;
+            }
+
+            if (!IsBatchEmployeeIdentityMatch(emp, data))
+            {
+                resultLines.Add(string.Format(GetString("EmpGenErrorIdentityMismatchFmt") ?? "[ПОМИЛКА] {0}: дані не співпадають з вибраним працівником", employeeName));
+                LoggingService.LogWarning("EmployeesViewModel.BatchGenerate",
+                    $"Skipped batch document generation because selected employee id '{emp.UniqueId}' does not match employee.json id '{data.UniqueId}' in folder '{emp.EmployeeFolder}'.");
+                return null;
+            }
+
+            var templateFullPath = _templateService.GetTemplateFullPath(companyName, template.FilePath) ?? string.Empty;
+            var templateFolder = Path.GetDirectoryName(templateFullPath) ?? string.Empty;
+            var hasTemplateFile = File.Exists(templateFullPath);
+            var format = (template.Format?.ToUpperInvariant()
+                ?? Path.GetExtension(templateFullPath).TrimStart('.').ToUpperInvariant());
+
+            var tagValues = _tagCatalogService.GetTagValueMapForEmployee(companyName, data)
+                ?? new Dictionary<string, string>();
+
+            string SanitizeFn(string n) => string.Join("_", n.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+            string BuildOutputPath(string fileName)
+            {
+                var targetFolder = string.IsNullOrWhiteSpace(outputFolder)
+                    ? emp.EmployeeFolder
+                    : outputFolder;
+                return EnsureUniqueBatchOutputPath(Path.Combine(targetFolder, fileName));
+            }
+
+            if (format == "PDF" && hasTemplateFile)
+            {
+                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.pdf");
+                var outPath = BuildOutputPath(outName);
+                _documentGenerationService.GeneratePdf(templateFullPath, outPath, tagValues);
+                return Path.GetFileName(outPath);
+            }
+
+            if (format == "XLSX" && hasTemplateFile)
+            {
+                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.xlsx");
+                var outPath = BuildOutputPath(outName);
+                _documentGenerationService.GenerateXlsx(templateFullPath, outPath, tagValues);
+                return Path.GetFileName(outPath);
+            }
+
+            var docxSource = _templateService.ResolveDocxGenerationSource(templateFolder, templateFullPath);
+            var hasDocxSource = docxSource.Kind != TemplateDocxSourceKind.None;
+
+            if (format == "DOCX" || hasDocxSource)
+            {
+                if (!hasDocxSource)
+                {
+                    var err = GetString(docxSource.ErrorResourceKey ?? "EditorWordDocxNotReady")
+                        ?? (docxSource.ErrorResourceKey ?? "EditorWordDocxNotReady");
+                    resultLines.Add($"[ПОМИЛКА] {employeeName}: {err}");
+                    return null;
+                }
+
+                var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
+                var outPath = BuildOutputPath(outName);
+                if (docxSource.Kind == TemplateDocxSourceKind.Rtf)
+                    _documentGenerationService.GenerateDocxFromRtf(docxSource.Path, outPath, tagValues);
+                else
+                    _documentGenerationService.GenerateDocx(docxSource.Path, outPath, tagValues);
+                return Path.GetFileName(outPath);
+            }
+
+            if (!hasTemplateFile && !hasDocxSource)
+            {
+                resultLines.Add(string.Format(GetString("EmpGenErrorTemplateNotFoundFmt") ?? "[ПОМИЛКА] {0}: шаблон не знайдено", employeeName));
+                return null;
+            }
+
+            resultLines.Add(string.Format(GetString("EmpGenErrorUnsupportedFormatFmt") ?? "[ПОМИЛКА] {0}: формат не підтримується ({1})", employeeName, format));
+            return null;
         }
 
         private static string EnsureUniqueBatchOutputPath(string path)
