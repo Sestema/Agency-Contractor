@@ -3288,8 +3288,27 @@
                         </StackPanel>
                     </Grid>
 
-                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding DocumentPackageStatRows}">
+                    <ItemsControl Grid.Row="1"
+                                  ItemsSource="{Binding DocumentPackageStatRows}"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ItemsControl.Template>
+                            <ControlTemplate TargetType="ItemsControl">
+                                <ScrollViewer Style="{StaticResource ThinScroll}"
+                                              CanContentScroll="True"
+                                              Focusable="False"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderThickness="1"
@@ -3515,8 +3534,7 @@
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    </ItemsControl>
 
                     <Button Grid.Row="2"
                             Command="{Binding CloseDocumentPackageDialogCommand}"

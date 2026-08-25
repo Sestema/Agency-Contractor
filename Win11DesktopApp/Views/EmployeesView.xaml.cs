@@ -57,6 +57,15 @@ namespace Win11DesktopApp.Views
 
         private void EmployeesView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape
+                && DataContext is EmployeesViewModel escapeVm
+                && escapeVm.IsDocumentPackageDialogOpen)
+            {
+                escapeVm.CloseDocumentPackageDialogCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 EmployeeSearchBox.Focus();

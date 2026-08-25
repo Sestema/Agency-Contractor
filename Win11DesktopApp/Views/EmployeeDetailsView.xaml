@@ -82,6 +82,12 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
+        <Style x:Key="DocCardIconBtn" TargetType="Button" BasedOn="{StaticResource DocCardBtn}">
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+
         <!-- Tab button base -->
         <Style x:Key="TabBtn" TargetType="Button">
             <Setter Property="Padding" Value="14,7"/>
@@ -209,6 +215,82 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
+
+        <DataTemplate x:Key="CustomSignedDocumentCardTemplate">
+            <Border Style="{StaticResource DetailsMiniCard}" Margin="0,0,0,8" Padding="12,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,8,0" VerticalAlignment="Center">
+                        <WrapPanel>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                       FontSize="{DynamicResource FS13}"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+                            <Border Margin="8,0,0,0" CornerRadius="6" Padding="6,1"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource SuccessChipBackgroundBrush}"
+                                    Visibility="{Binding IsClosed, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{DynamicResource DetCustomDocClosed}"
+                                           FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource SuccessChipForegroundBrush}"/>
+                            </Border>
+                        </WrapPanel>
+                        <WrapPanel Margin="0,2,0,0">
+                            <TextBlock Text="{DynamicResource DetCustomDocSigned}" FontSize="{DynamicResource FS11}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding SignDate}" FontSize="{DynamicResource FS11}"
+                                       Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,12,0"/>
+                            <TextBlock Text="{DynamicResource DetCustomDocExpires}" FontSize="{DynamicResource FS11}"
+                                       Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0"
+                                       Visibility="{Binding ExpiryDate, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding ExpiryDate}" FontSize="{DynamicResource FS11}"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       Visibility="{Binding ExpiryDate, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{DynamicResource DetCustomDocNoExpiry}" FontSize="{DynamicResource FS11}"
+                                       Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                       Visibility="{Binding ExpiryDate, Converter={StaticResource InverseStringToVis}}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                    <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                        <Button Style="{StaticResource DocCardIconBtn}" Margin="0,0,4,0"
+                                Command="{Binding DataContext.OpenCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                ToolTip="{DynamicResource DetBtnOpenFile}">
+                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Style="{StaticResource DocCardIconBtn}" Margin="0,0,4,0"
+                                Command="{Binding DataContext.EditCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                ToolTip="{DynamicResource DetBtnEditDoc}">
+                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Style="{StaticResource DocCardIconBtn}" Margin="0,0,4,0"
+                                Command="{Binding DataContext.HideCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                ToolTip="{DynamicResource DetBtnHideDoc}">
+                            <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Style="{StaticResource DocCardIconBtn}" Margin="0,0,4,0"
+                                Command="{Binding DataContext.RestoreCustomDocValidityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Visibility="{Binding IsClosed, Converter={StaticResource BoolToVis}}"
+                                ToolTip="{DynamicResource DetBtnRestoreValidity}">
+                            <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Style="{StaticResource DocCardIconBtn}" Margin="0"
+                                Command="{Binding DataContext.DeleteCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                ToolTip="{DynamicResource DetBtnDeleteDoc}">
+                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                    </WrapPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
 
         <Style x:Key="DetailsDocumentCard" TargetType="Border" BasedOn="{StaticResource DetailsMiniCard}">
             <Setter Property="Width" Value="300"/>
@@ -1276,15 +1358,29 @@
                                     </primitives:UniformGrid>
 
                                     <!-- ========== CUSTOM SIGNED DOCUMENTS ========== -->
-                                    <StackPanel Margin="0,20,0,0">
+                                    <Border Style="{StaticResource DetailsSectionCard}" Margin="0,8,0,0" BorderThickness="1.5">
+                                    <StackPanel>
                                         <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                 <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
                                                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="{DynamicResource DetCustomDocsTitle}" Style="{StaticResource SectionHeader}"
                                                            FontSize="{DynamicResource FS15}" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <Button HorizontalAlignment="Right" Command="{Binding AddCustomDocCommand}"
+                                            <Button Grid.Column="1" Command="{Binding OpenCustomDocFolderCommand}"
+                                                    Style="{StaticResource DocCardBtn}" Margin="0,0,8,0"
+                                                    ToolTip="{DynamicResource DetBtnOpenCustomDocFolder}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource DetBtnOpenCustomDocFolder}" FontSize="{DynamicResource FS11}"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="2" Command="{Binding AddCustomDocCommand}"
                                                     Background="{DynamicResource AccentBrush}" Foreground="White"
                                                     BorderThickness="0" Padding="10,6" Cursor="Hand">
                                                 <StackPanel Orientation="Horizontal">
@@ -1310,72 +1406,25 @@
                                             </TextBlock.Style>
                                         </TextBlock>
 
-                                        <!-- List of custom docs -->
-                                        <ItemsControl ItemsSource="{Binding CustomDocuments}">
+                                        <ItemsControl ItemsSource="{Binding CustomDocumentSections}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Style="{StaticResource DetailsMiniCard}" Margin="0,0,0,8">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <StackPanel Grid.Column="0">
-                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                                           FontSize="{DynamicResource FS13}"
-                                                                           Foreground="{DynamicResource ForegroundBrush}"/>
-                                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                                    <TextBlock Text="{DynamicResource DetCustomDocSigned}" FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0"/>
-                                                                    <TextBlock Text="{Binding SignDate}" FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,16,0"/>
-                                                                    <TextBlock Text="{DynamicResource DetCustomDocExpires}" FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0"
-                                                                               Visibility="{Binding ExpiryDate, Converter={StaticResource StringToVis}}"/>
-                                                                    <TextBlock Text="{Binding ExpiryDate}" FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource ForegroundBrush}"
-                                                                               Visibility="{Binding ExpiryDate, Converter={StaticResource StringToVis}}"/>
-                                                                    <TextBlock Text="{DynamicResource DetCustomDocNoExpiry}" FontSize="{DynamicResource FS11}"
-                                                                               Foreground="{DynamicResource TertiaryForegroundBrush}"
-                                                                               Visibility="{Binding ExpiryDate, Converter={StaticResource InverseStringToVis}}"/>
-                                                                </StackPanel>
-                                                            </StackPanel>
-                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <Button Style="{StaticResource DocCardBtn}" Margin="0,0,6,0"
-                                                                        Command="{Binding DataContext.OpenCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnOpenFile}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
-                                                                </Button>
-                                                                <Button Style="{StaticResource DocCardBtn}" Margin="0,0,6,0"
-                                                                        Command="{Binding DataContext.OpenCustomDocFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnOpenCustomDocFolder}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
-                                                                </Button>
-                                                                <Button Style="{StaticResource DocCardBtn}" Margin="0,0,6,0"
-                                                                        Command="{Binding DataContext.HideCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        ToolTip="{DynamicResource DetBtnHideDoc}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnHideDoc}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
-                                                                </Button>
-                                                                <Button Style="{StaticResource DocCardBtn}"
-                                                                        Command="{Binding DataContext.DeleteCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnDeleteDoc}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
-                                                                </Button>
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Border>
+                                                    <StackPanel Margin="0,0,0,8">
+                                                        <StackPanel Margin="0,0,0,8"
+                                                                    Visibility="{Binding ShowHeader, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="{Binding HeaderText}"
+                                                                       FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       TextWrapping="Wrap"/>
+                                                            <TextBlock Text="{Binding HintText}"
+                                                                       FontSize="{DynamicResource FS10}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       TextWrapping="Wrap" Margin="0,2,0,0"
+                                                                       Visibility="{Binding ShowHint, Converter={StaticResource BoolToVis}}"/>
+                                                        </StackPanel>
+                                                        <ItemsControl ItemsSource="{Binding Documents}"
+                                                                      ItemTemplate="{StaticResource CustomSignedDocumentCardTemplate}"/>
+                                                    </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -1424,54 +1473,44 @@
                                                             Background="{DynamicResource ContentBackgroundBrush}"
                                                             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                                             Opacity="0.65">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FS12}"
-                                                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                           FontStyle="Italic"/>
-                                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                                    <TextBlock Text="{DynamicResource DetCustomDocSigned}" FontSize="{DynamicResource FS10}"
-                                                                               Foreground="{DynamicResource TertiaryForegroundBrush}" Margin="0,0,4,0"/>
-                                                                    <TextBlock Text="{Binding SignDate}" FontSize="{DynamicResource FS10}"
-                                                                               Foreground="{DynamicResource TertiaryForegroundBrush}"/>
-                                                                </StackPanel>
-                                                            </StackPanel>
-                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <Button Style="{StaticResource DocCardBtn}" Margin="0,0,6,0"
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       FontStyle="Italic" TextWrapping="Wrap"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Margin="0,2,0,8" FontSize="{DynamicResource FS10}"
+                                                                       Foreground="{DynamicResource TertiaryForegroundBrush}">
+                                                                <Run Text="{DynamicResource DetCustomDocSigned}"/>
+                                                                <Run Text=" "/>
+                                                                <Run Text="{Binding SignDate}"/>
+                                                            </TextBlock>
+                                                            <WrapPanel>
+                                                                <Button Style="{StaticResource DocCardIconBtn}"
                                                                         Command="{Binding DataContext.OpenCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnOpenFile}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
+                                                                        CommandParameter="{Binding}"
+                                                                        ToolTip="{DynamicResource DetBtnOpenFile}">
+                                                                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
                                                                 </Button>
-                                                                <Button Style="{StaticResource DocCardBtn}" Margin="0,0,6,0"
+                                                                <Button Style="{StaticResource DocCardIconBtn}"
                                                                         Command="{Binding DataContext.UnhideCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE7B3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnShowDoc}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
+                                                                        CommandParameter="{Binding}"
+                                                                        ToolTip="{DynamicResource DetBtnShowDoc}">
+                                                                    <TextBlock Text="&#xE7B3;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
                                                                 </Button>
-                                                                <Button Style="{StaticResource DocCardBtn}"
+                                                                <Button Style="{StaticResource DocCardIconBtn}"
                                                                         Command="{Binding DataContext.DeleteCustomDocCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                        CommandParameter="{Binding}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                        <TextBlock Text="{DynamicResource DetBtnDeleteDoc}" FontSize="{DynamicResource FS11}"/>
-                                                                    </StackPanel>
+                                                                        CommandParameter="{Binding}"
+                                                                        ToolTip="{DynamicResource DetBtnDeleteDoc}">
+                                                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"/>
                                                                 </Button>
-                                                            </StackPanel>
-                                                        </Grid>
+                                                            </WrapPanel>
+                                                        </StackPanel>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
+                                    </Border>
                                 </StackPanel>
                                 </ScrollViewer>
 
@@ -3410,7 +3449,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS24}"
                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource DetAddCustomDocTitle}" FontSize="{DynamicResource FS18}"
+                        <TextBlock Text="{Binding CustomDocDialogTitle}" FontSize="{DynamicResource FS18}"
                                    FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
@@ -3433,6 +3472,7 @@
                              Padding="10,8" FontSize="{DynamicResource FS13}" Margin="0,0,0,12"/>
 
                     <!-- File picker -->
+                    <StackPanel Visibility="{Binding IsEditingCustomDoc, Converter={StaticResource InverseBoolToVis}}">
                     <TextBlock Text="{DynamicResource DetCustomDocFieldFile}" FontSize="{DynamicResource FS12}"
                                Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
                     <Grid Margin="0,0,0,16">
@@ -3471,6 +3511,7 @@
                             <TextBlock Text="{DynamicResource DetBtnBrowseFile}" FontSize="{DynamicResource FS12}"/>
                         </Button>
                     </Grid>
+                    </StackPanel>
                     <!-- Error message -->
                     <TextBlock Text="{Binding AddCustomDocError}" FontSize="{DynamicResource FS12}"
                                Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap"

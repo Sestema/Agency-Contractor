@@ -619,6 +619,10 @@
     <sys:String x:Key="DetCustomDocsTitle">Custom signed documents</sys:String>
     <sys:String x:Key="DetBtnAddCustomDoc">Add document</sys:String>
     <sys:String x:Key="DetAddCustomDocTitle">Add signed document</sys:String>
+    <sys:String x:Key="DetEditCustomDocTitle">Edit document</sys:String>
+    <sys:String x:Key="DetBtnEditDoc">Edit</sys:String>
+    <sys:String x:Key="DetCustomDocPreviousFirmHint">Added while the employee worked at this company.</sys:String>
+    <sys:String x:Key="DetCustomDocUnknownFirm">Previous companies</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Document name</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Sign date</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Expiry date (optional)</sys:String>
@@ -677,6 +681,8 @@
     <sys:String x:Key="DetBtnOpenCustomDocFolder">Open folder</sys:String>
     <sys:String x:Key="DetBtnHideDoc">Hide</sys:String>
     <sys:String x:Key="DetBtnShowDoc">Show</sys:String>
+    <sys:String x:Key="DetCustomDocClosed">Completed</sys:String>
+    <sys:String x:Key="DetBtnRestoreValidity">Restore validity</sys:String>
     <sys:String x:Key="DetHiddenDocsSection">Hidden documents</sys:String>
     <sys:String x:Key="DetCustomDocEmpty">No custom documents added yet.</sys:String>
     <sys:String x:Key="MsgCustomDocNameRequired">Please enter the document name.</sys:String>
@@ -841,6 +847,8 @@
     <sys:String x:Key="ProbIgnoreTooltip">Ignore for selected period</sys:String>
     <sys:String x:Key="ProbIgnore">Ignore</sys:String>
     <sys:String x:Key="ProbIgnoreForDays">Ignore for {0} days</sys:String>
+    <sys:String x:Key="ProbCloseValidity">End validity</sys:String>
+    <sys:String x:Key="ProbCloseValidityTooltip">The file stays, reminders stop</sys:String>
     <sys:String x:Key="ProbDocPassport">Passport</sys:String>
     <sys:String x:Key="ProbDocVisa">Visa</sys:String>
     <sys:String x:Key="ProbDocInsurance">Insurance</sys:String>
@@ -1980,6 +1988,7 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="HistoryActionDocReplace">Document replacement</sys:String>
     <sys:String x:Key="HistoryDescDocReplace">Replaced document: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Document added</sys:String>
+    <sys:String x:Key="HistoryActionDocEdit">Document updated</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Document deleted</sys:String>
     <sys:String x:Key="HistoryActionDocumentPackage">Document package</sys:String>
     <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>

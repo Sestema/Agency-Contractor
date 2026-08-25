@@ -1783,7 +1783,8 @@ namespace Win11DesktopApp.ViewModels
             }
 
             rows = rows
-                .OrderBy(r => r.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+                .OrderByDescending(r => r.IsComplete)
+                .ThenBy(r => r.DisplayName, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
             if (totalRequired == 0)

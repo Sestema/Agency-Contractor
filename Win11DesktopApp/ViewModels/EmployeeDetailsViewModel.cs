@@ -348,6 +348,56 @@ namespace Win11DesktopApp.ViewModels
         }
     }
 
+    public sealed class CustomDocumentFirmSectionViewModel
+    {
+        public CustomDocumentFirmSectionViewModel(
+            string firmName,
+            bool isCurrent,
+            IEnumerable<CustomSignedDocument> documents,
+            bool showHeader)
+        {
+            FirmName = firmName;
+            IsCurrent = isCurrent;
+            ShowHeader = showHeader;
+            Documents = new ObservableCollection<CustomSignedDocument>(documents);
+        }
+
+        public string FirmName { get; }
+        public bool IsCurrent { get; }
+        public bool ShowHeader { get; }
+        public bool ShowHint => !IsCurrent;
+        public ObservableCollection<CustomSignedDocument> Documents { get; }
+
+        public string HeaderText
+        {
+            get
+            {
+                if (IsCurrent)
+                {
+                    var format = Application.Current?.TryFindResource("DetDocumentPackageCurrentFirm") as string;
+                    if (string.IsNullOrWhiteSpace(format) || format == "DetDocumentPackageCurrentFirm")
+                        format = "Поточна фірма: {0}";
+                    return string.Format(format, FirmName);
+                }
+
+                return string.IsNullOrWhiteSpace(FirmName)
+                    ? (Application.Current?.TryFindResource("DetCustomDocUnknownFirm") as string ?? "Попередні фірми")
+                    : FirmName;
+            }
+        }
+
+        public string HintText
+        {
+            get
+            {
+                var hint = Application.Current?.TryFindResource("DetCustomDocPreviousFirmHint") as string;
+                if (string.IsNullOrWhiteSpace(hint) || hint == "DetCustomDocPreviousFirmHint")
+                    hint = "Додано, коли працівник працював у цій фірмі.";
+                return hint;
+            }
+        }
+    }
+
     public partial class EmployeeDetailsViewModel : ViewModelBase
     {
         private string DocRes(string key) =>
@@ -1124,6 +1174,20 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _customDocuments, value);
         }
 
+        private ObservableCollection<CustomDocumentFirmSectionViewModel> _customDocumentSections = new();
+        public ObservableCollection<CustomDocumentFirmSectionViewModel> CustomDocumentSections
+        {
+            get => _customDocumentSections;
+            set => SetProperty(ref _customDocumentSections, value);
+        }
+
+        private CustomSignedDocument? _editingCustomDoc;
+        public bool IsEditingCustomDoc => _editingCustomDoc != null;
+        public string CustomDocDialogTitle =>
+            IsEditingCustomDoc
+                ? (Res("DetEditCustomDocTitle") ?? "Редагувати документ")
+                : (Res("DetAddCustomDocTitle") ?? "Додати підписаний документ");
+
         private bool _isAddCustomDocOpen;
         public bool IsAddCustomDocOpen
         {
@@ -1167,6 +1231,7 @@ namespace Win11DesktopApp.ViewModels
         }
 
         public ICommand AddCustomDocCommand { get; private set; } = null!;
+        public ICommand EditCustomDocCommand { get; private set; } = null!;
         public ICommand CancelAddCustomDocCommand { get; private set; } = null!;
         public ICommand ConfirmAddCustomDocCommand { get; private set; } = null!;
         public ICommand BrowseCustomDocFileCommand { get; private set; } = null!;
@@ -1194,6 +1259,7 @@ namespace Win11DesktopApp.ViewModels
         public int HiddenCustomDocsCount => HiddenCustomDocuments.Count;
         public ICommand HideCustomDocCommand { get; private set; } = null!;
         public ICommand UnhideCustomDocCommand { get; private set; } = null!;
+        public ICommand RestoreCustomDocValidityCommand { get; private set; } = null!;
         public ICommand ToggleHiddenDocsSectionCommand { get; private set; } = null!;
 
         public string FullName => $"{Data.FirstName} {Data.LastName}";
@@ -1990,6 +2056,9 @@ namespace Win11DesktopApp.ViewModels
                 if (!PolicyService.EnsureWriteAllowed("Додати підписаний документ"))
                     return;
 
+                _editingCustomDoc = null;
+                OnPropertyChanged(nameof(IsEditingCustomDoc));
+                OnPropertyChanged(nameof(CustomDocDialogTitle));
                 NewCustomDocName = string.Empty;
                 NewCustomDocSignDate = DateTime.Today.ToString("dd.MM.yyyy");
                 NewCustomDocExpiryDate = string.Empty;
@@ -1997,7 +2066,24 @@ namespace Win11DesktopApp.ViewModels
                 AddCustomDocError = string.Empty;
                 IsAddCustomDocOpen = true;
             }, _ => !IsReadOnlyMode);
-            CancelAddCustomDocCommand = new RelayCommand(o => IsAddCustomDocOpen = false, _ => !IsReadOnlyMode);
+            EditCustomDocCommand = new RelayCommand(o =>
+            {
+                if (o is not CustomSignedDocument cd)
+                    return;
+                if (!PolicyService.EnsureWriteAllowed("Редагувати підписаний документ"))
+                    return;
+
+                _editingCustomDoc = cd;
+                OnPropertyChanged(nameof(IsEditingCustomDoc));
+                OnPropertyChanged(nameof(CustomDocDialogTitle));
+                NewCustomDocName = cd.Name;
+                NewCustomDocSignDate = cd.SignDate;
+                NewCustomDocExpiryDate = cd.ExpiryDate ?? string.Empty;
+                NewCustomDocFilePath = string.Empty;
+                AddCustomDocError = string.Empty;
+                IsAddCustomDocOpen = true;
+            }, _ => !IsReadOnlyMode);
+            CancelAddCustomDocCommand = new RelayCommand(o => CloseCustomDocDialog(), _ => !IsReadOnlyMode);
             ConfirmAddCustomDocCommand = new AsyncRelayCommand(_ => ConfirmAddCustomDocAsync(), _ => !IsReadOnlyMode);
             BrowseCustomDocFileCommand = new RelayCommand(o => BrowseCustomDocFile(), _ => !IsReadOnlyMode);
             ScanCustomDocFileCommand = new RelayCommand(o => ScanCustomDocFile(), _ => !IsReadOnlyMode);
@@ -2025,6 +2111,10 @@ namespace Win11DesktopApp.ViewModels
             UnhideCustomDocCommand = new RelayCommand(o =>
             {
                 if (o is CustomSignedDocument cd) ToggleHideDoc(cd, false);
+            }, _ => !IsReadOnlyMode);
+            RestoreCustomDocValidityCommand = new RelayCommand(o =>
+            {
+                if (o is CustomSignedDocument cd) RestoreCustomDocValidity(cd);
             }, _ => !IsReadOnlyMode);
             ToggleHiddenDocsSectionCommand = new RelayCommand(o =>
                 IsHiddenSectionVisible = !IsHiddenSectionVisible);
@@ -3729,7 +3819,7 @@ namespace Win11DesktopApp.ViewModels
 
             if (IsAddCustomDocOpen)
             {
-                IsAddCustomDocOpen = false;
+                CloseCustomDocDialog();
                 return true;
             }
 
@@ -5157,13 +5247,80 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
         private void LoadCustomDocuments()
         {
-            var all = Data.CustomDocuments ?? new List<CustomSignedDocument>();
-            CustomDocuments = new ObservableCollection<CustomSignedDocument>(
-                all.Where(d => !d.IsHidden));
+            Data.CustomDocuments ??= new List<CustomSignedDocument>();
+            var fallbackFirm = EmployeeService.InferCustomDocumentFirm(Data, _firmName ?? string.Empty);
+            if (EmployeeService.AssignMissingCustomDocumentFirms(Data, fallbackFirm) && !IsReadOnlyMode)
+                _employeeService.SaveEmployeeData(_employeeFolder, Data);
+
+            var all = Data.CustomDocuments;
+            var visible = all.Where(d => !d.IsHidden).ToList();
+            CustomDocuments = new ObservableCollection<CustomSignedDocument>(visible);
             HiddenCustomDocuments = new ObservableCollection<CustomSignedDocument>(
                 all.Where(d => d.IsHidden));
+            CustomDocumentSections = new ObservableCollection<CustomDocumentFirmSectionViewModel>(
+                BuildCustomDocumentSections(visible));
             OnPropertyChanged(nameof(HiddenCustomDocsCount));
             OnPropertyChanged(nameof(HasHiddenDocs));
+        }
+
+        private List<CustomDocumentFirmSectionViewModel> BuildCustomDocumentSections(
+            IReadOnlyList<CustomSignedDocument> visible)
+        {
+            var currentFirm = _firmName?.Trim() ?? string.Empty;
+            var groups = visible
+                .GroupBy(doc =>
+                {
+                    var firm = doc.FirmName?.Trim() ?? string.Empty;
+                    return string.IsNullOrWhiteSpace(firm) ? currentFirm : firm;
+                }, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            const bool showHeaders = true;
+
+            var sections = new List<CustomDocumentFirmSectionViewModel>();
+            var currentGroup = groups.FirstOrDefault(g =>
+                string.Equals(g.Key, currentFirm, StringComparison.OrdinalIgnoreCase));
+            if (currentGroup != null)
+            {
+                sections.Add(new CustomDocumentFirmSectionViewModel(
+                    currentFirm, isCurrent: true, currentGroup, showHeaders));
+            }
+
+            var historyOrder = (Data.FirmHistory ?? new List<FirmHistoryEntry>())
+                .Select(entry => entry.FirmName?.Trim())
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var otherKeys = groups
+                .Select(g => g.Key)
+                .Where(key => !string.Equals(key, currentFirm, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(key =>
+                {
+                    var index = historyOrder.FindIndex(h =>
+                        string.Equals(h, key, StringComparison.OrdinalIgnoreCase));
+                    return index >= 0 ? index : int.MaxValue;
+                })
+                .ThenBy(key => key, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            foreach (var key in otherKeys)
+            {
+                var group = groups.First(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase));
+                sections.Add(new CustomDocumentFirmSectionViewModel(
+                    key, isCurrent: false, group, showHeader: true));
+            }
+
+            return sections;
+        }
+
+        private void CloseCustomDocDialog()
+        {
+            _editingCustomDoc = null;
+            OnPropertyChanged(nameof(IsEditingCustomDoc));
+            OnPropertyChanged(nameof(CustomDocDialogTitle));
+            AddCustomDocError = string.Empty;
+            IsAddCustomDocOpen = false;
         }
 
         private void ToggleHideDoc(CustomSignedDocument doc, bool hide)
@@ -5177,20 +5334,32 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 return;
             }
 
+            LoadCustomDocuments();
             if (hide)
+                IsHiddenSectionVisible = true;
+        }
+
+        private void RestoreCustomDocValidity(CustomSignedDocument doc)
+        {
+            if (!PolicyService.EnsureWriteAllowed("Відновити дійсність документа"))
+                return;
+
+            var previousClosed = doc.IsClosed;
+            doc.IsClosed = false;
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
             {
-                CustomDocuments.Remove(doc);
-                HiddenCustomDocuments.Add(doc);
-                if (!IsHiddenSectionVisible)
-                    IsHiddenSectionVisible = true;
+                doc.IsClosed = previousClosed;
+                StatusMessage = Res("MsgProfileSaveFail");
+                return;
             }
-            else
-            {
-                HiddenCustomDocuments.Remove(doc);
-                CustomDocuments.Add(doc);
-            }
-            OnPropertyChanged(nameof(HiddenCustomDocsCount));
-            OnPropertyChanged(nameof(HasHiddenDocs));
+
+            LoadCustomDocuments();
+            InvalidateDetailCaches();
+            RaiseDataChanged();
+
+            var expiryPart = string.IsNullOrWhiteSpace(doc.ExpiryDate) ? "" : $" ({doc.ExpiryDate})";
+            _activityLogService.Log("CustomDocValidityRestored", "Document", _firmName, FullName,
+                $"{doc.Name}{expiryPart}", employeeFolder: _employeeFolder);
         }
 
         private void BrowseCustomDocFile()
@@ -5246,6 +5415,12 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 return;
             }
 
+            if (_editingCustomDoc != null)
+            {
+                await SaveEditedCustomDocAsync(_editingCustomDoc);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(NewCustomDocFilePath) || !File.Exists(NewCustomDocFilePath))
             {
                 AddCustomDocError = Res("MsgCustomDocFileMissing") ?? "Please select a file.";
@@ -5267,7 +5442,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 Name = NewCustomDocName.Trim(),
                 SignDate = NewCustomDocSignDate,
                 ExpiryDate = NewCustomDocExpiryDate,
-                FileName = savedFileName
+                FileName = savedFileName,
+                FirmName = _firmName ?? string.Empty
             };
 
             Data.CustomDocuments ??= new List<CustomSignedDocument>();
@@ -5294,8 +5470,78 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             _activityLogService.Log("CustomDocAdded", "Document", _firmName, FullName,
                 histDesc, employeeFolder: _employeeFolder);
 
-            CustomDocuments.Add(doc);
-            IsAddCustomDocOpen = false;
+            CloseCustomDocDialog();
+            LoadCustomDocuments();
+            StatusMessage = Res("MsgSaved") ?? "Saved.";
+            InvalidateDetailCaches();
+            RaiseDataChanged();
+        }
+
+        private async Task SaveEditedCustomDocAsync(CustomSignedDocument doc)
+        {
+            var previousName = doc.Name;
+            var previousSign = doc.SignDate;
+            var previousExpiry = doc.ExpiryDate;
+            var previousFileName = doc.FileName;
+
+            var newName = NewCustomDocName.Trim();
+            var newSign = NewCustomDocSignDate;
+            var newExpiry = NewCustomDocExpiryDate?.Trim() ?? string.Empty;
+            var newBaseName = $"{Data.FirstName} {Data.LastName} - {newName} - {newSign.Replace(".", "-")}";
+
+            var renamedFileName = previousFileName;
+            var fileWasRenamed = false;
+            var nameOrSignChanged = !string.Equals(newName, previousName, StringComparison.Ordinal)
+                || !string.Equals(newSign, previousSign, StringComparison.Ordinal);
+            if (nameOrSignChanged
+                && !string.IsNullOrWhiteSpace(previousFileName)
+                && !string.IsNullOrEmpty(_employeeService.GetCustomDocPath(_employeeFolder, previousFileName)))
+            {
+                renamedFileName = _employeeService.RenameCustomDocument(_employeeFolder, previousFileName, newBaseName);
+                if (string.IsNullOrEmpty(renamedFileName))
+                {
+                    AddCustomDocError = Res("MsgSaveFail") ?? "Failed to save file.";
+                    return;
+                }
+
+                fileWasRenamed = !string.Equals(renamedFileName, previousFileName, StringComparison.OrdinalIgnoreCase);
+            }
+
+            doc.Name = newName;
+            doc.SignDate = newSign;
+            doc.ExpiryDate = newExpiry;
+            doc.FileName = renamedFileName;
+
+            if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
+            {
+                doc.Name = previousName;
+                doc.SignDate = previousSign;
+                doc.ExpiryDate = previousExpiry;
+                doc.FileName = previousFileName;
+                if (fileWasRenamed)
+                    _employeeService.RestoreCustomDocumentFileName(_employeeFolder, renamedFileName, previousFileName);
+                AddCustomDocError = Res("MsgProfileSaveFail") ?? "Failed to save profile.";
+                return;
+            }
+
+            var expiryPart = string.IsNullOrEmpty(doc.ExpiryDate) ? "" : $", до: {doc.ExpiryDate}";
+            var histDesc = $"{doc.Name} (підписано: {doc.SignDate}{expiryPart})";
+
+            await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
+            {
+                EventType = "CustomDocumentUpdated",
+                Action = Res("HistoryActionDocEdit") ?? "Змінено документ",
+                Field = doc.Name,
+                OldValue = previousName,
+                NewValue = doc.Name,
+                Description = histDesc
+            });
+
+            _activityLogService.Log("CustomDocUpdated", "Document", _firmName, FullName,
+                histDesc, employeeFolder: _employeeFolder);
+
+            CloseCustomDocDialog();
+            LoadCustomDocuments();
             StatusMessage = Res("MsgSaved") ?? "Saved.";
             InvalidateDetailCaches();
             RaiseDataChanged();
@@ -5338,7 +5584,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             _activityLogService.Log("CustomDocDeleted", "Document", _firmName, FullName,
                 histDesc, employeeFolder: _employeeFolder);
 
-            CustomDocuments.Remove(doc);
+            LoadCustomDocuments();
             InvalidateDetailCaches();
             RaiseDataChanged();
         }

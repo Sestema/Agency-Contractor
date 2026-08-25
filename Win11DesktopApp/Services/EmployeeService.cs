@@ -868,6 +868,89 @@ namespace Win11DesktopApp.Services
             SaveEmployeeData(employeeFolder, data);
         }
 
+        public bool SetCustomDocumentValidityClosed(
+            string employeeFolder,
+            string customDocumentId,
+            string documentName,
+            string expiryDate,
+            string fileName,
+            bool isClosed)
+        {
+            var data = LoadEmployeeData(employeeFolder);
+            if (data?.CustomDocuments == null)
+                return false;
+
+            var doc = FindCustomDocument(data.CustomDocuments, customDocumentId, documentName, expiryDate, fileName);
+            if (doc == null)
+                return false;
+
+            doc.IsClosed = isClosed;
+            return SaveEmployeeData(employeeFolder, data);
+        }
+
+        public static bool AssignMissingCustomDocumentFirms(EmployeeData? data, string firmName)
+        {
+            if (data?.CustomDocuments == null || string.IsNullOrWhiteSpace(firmName))
+                return false;
+
+            var stamp = firmName.Trim();
+            var changed = false;
+            foreach (var doc in data.CustomDocuments)
+            {
+                if (!string.IsNullOrWhiteSpace(doc.FirmName))
+                    continue;
+                doc.FirmName = stamp;
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        public static string InferCustomDocumentFirm(EmployeeData? data, string currentFirmName)
+        {
+            var current = currentFirmName?.Trim() ?? string.Empty;
+            if (data == null)
+                return current;
+
+            var previous = (data.FirmHistory ?? new List<FirmHistoryEntry>())
+                .Select(entry => entry.FirmName?.Trim())
+                .Where(name => !string.IsNullOrWhiteSpace(name)
+                    && !string.Equals(name, current, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (previous.Count > 0)
+                return previous[previous.Count - 1]!;
+
+            var archivedFrom = data.ArchivedFromFirm?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(archivedFrom)
+                && !string.Equals(archivedFrom, current, StringComparison.OrdinalIgnoreCase))
+                return archivedFrom;
+
+            return current;
+        }
+
+        private static CustomSignedDocument? FindCustomDocument(
+            List<CustomSignedDocument> docs,
+            string customDocumentId,
+            string documentName,
+            string expiryDate,
+            string fileName)
+        {
+            if (!string.IsNullOrWhiteSpace(customDocumentId))
+            {
+                var byId = docs.FirstOrDefault(d =>
+                    string.Equals(d.Id, customDocumentId, StringComparison.Ordinal));
+                if (byId != null)
+                    return byId;
+            }
+
+            return docs.FirstOrDefault(d =>
+                string.Equals(d.Name, documentName, StringComparison.Ordinal) &&
+                string.Equals(d.ExpiryDate ?? string.Empty, expiryDate ?? string.Empty, StringComparison.Ordinal) &&
+                (string.IsNullOrWhiteSpace(fileName)
+                    || string.Equals(d.FileName, fileName, StringComparison.OrdinalIgnoreCase)));
+        }
+
         public void ClearIgnoredDocument(string employeeFolder, string docType)
         {
             var data = LoadEmployeeData(employeeFolder);
@@ -960,6 +1043,84 @@ namespace Win11DesktopApp.Services
             {
                 LoggingService.LogError("EmployeeService.DeleteCustomDocFile", ex);
             }
+        }
+
+        public string RenameCustomDocument(string employeeFolder, string currentFileName, string newBaseName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(employeeFolder)
+                    || string.IsNullOrWhiteSpace(currentFileName)
+                    || string.IsNullOrWhiteSpace(newBaseName))
+                    return string.Empty;
+
+                var folder = Path.Combine(employeeFolder, "CustomDocs");
+                var source = Path.Combine(folder, currentFileName);
+                if (!File.Exists(source))
+                    return string.Empty;
+
+                var ext = Path.GetExtension(currentFileName);
+                if (string.IsNullOrWhiteSpace(ext))
+                    ext = Path.GetExtension(source);
+
+                var safeBase = SanitizeCustomDocBaseName(newBaseName);
+                var destName = $"{safeBase}{ext}";
+                var dest = Path.Combine(folder, destName);
+
+                if (string.Equals(Path.GetFullPath(source), Path.GetFullPath(dest), StringComparison.OrdinalIgnoreCase))
+                    return Path.GetFileName(source);
+
+                var counter = 1;
+                while (File.Exists(dest))
+                {
+                    destName = $"{safeBase} ({counter}){ext}";
+                    dest = Path.Combine(folder, destName);
+                    counter++;
+                }
+
+                SafeFileService.MoveFile(source, dest);
+                return destName;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.RenameCustomDocument", ex);
+                return string.Empty;
+            }
+        }
+
+        public string RestoreCustomDocumentFileName(string employeeFolder, string currentFileName, string originalFileName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(employeeFolder)
+                    || string.IsNullOrWhiteSpace(currentFileName)
+                    || string.IsNullOrWhiteSpace(originalFileName))
+                    return string.Empty;
+
+                var folder = Path.Combine(employeeFolder, "CustomDocs");
+                var source = Path.Combine(folder, currentFileName);
+                var dest = Path.Combine(folder, originalFileName);
+                if (!File.Exists(source))
+                    return string.Empty;
+
+                if (string.Equals(Path.GetFullPath(source), Path.GetFullPath(dest), StringComparison.OrdinalIgnoreCase))
+                    return Path.GetFileName(source);
+
+                SafeFileService.MoveFile(source, dest);
+                return originalFileName;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.RestoreCustomDocumentFileName", ex);
+                return string.Empty;
+            }
+        }
+
+        private static string SanitizeCustomDocBaseName(string baseName)
+        {
+            var invalid = Path.GetInvalidFileNameChars();
+            var cleaned = string.Join("_", baseName.Split(invalid, StringSplitOptions.RemoveEmptyEntries)).Trim();
+            return string.IsNullOrWhiteSpace(cleaned) ? "document" : cleaned;
         }
 
         public string SaveDocumentFromSource(string sourcePath, string employeeFolder, string baseName)
@@ -2606,6 +2767,7 @@ namespace Win11DesktopApp.Services
                         data.IsArchived = true;
                         data.ArchivedFromFirm = firmName;
                         data.Status = "Dismissed";
+                        AssignMissingCustomDocumentFirms(data, firmName);
                         WriteJsonAtomic(jsonPath, data);
                     }
                 }
@@ -2769,6 +2931,7 @@ namespace Win11DesktopApp.Services
                     data.IsArchived = true;
                     data.ArchivedFromFirm = firmName;
                     data.Status = "Dismissed";
+                    AssignMissingCustomDocumentFirms(data, firmName);
                     WriteJsonAtomic(jsonPath, data);
                 }
 

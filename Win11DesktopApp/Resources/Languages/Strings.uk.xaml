@@ -636,6 +636,10 @@
     <sys:String x:Key="DetCustomDocsTitle">Власні підписані документи</sys:String>
     <sys:String x:Key="DetBtnAddCustomDoc">Додати документ</sys:String>
     <sys:String x:Key="DetAddCustomDocTitle">Додати підписаний документ</sys:String>
+    <sys:String x:Key="DetEditCustomDocTitle">Редагувати документ</sys:String>
+    <sys:String x:Key="DetBtnEditDoc">Редагувати</sys:String>
+    <sys:String x:Key="DetCustomDocPreviousFirmHint">Додано, коли працівник працював у цій фірмі.</sys:String>
+    <sys:String x:Key="DetCustomDocUnknownFirm">Попередні фірми</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Назва документа</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Дата підписання</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Дата закінчення (необов'язково)</sys:String>
@@ -693,6 +697,8 @@
     <sys:String x:Key="DetBtnOpenCustomDocFolder">Відкрити папку</sys:String>
     <sys:String x:Key="DetBtnHideDoc">Сховати</sys:String>
     <sys:String x:Key="DetBtnShowDoc">Показати</sys:String>
+    <sys:String x:Key="DetCustomDocClosed">Завершено</sys:String>
+    <sys:String x:Key="DetBtnRestoreValidity">Відновити дійсність</sys:String>
     <sys:String x:Key="DetHiddenDocsSection">Приховані документи</sys:String>
     <sys:String x:Key="DetCustomDocEmpty">Власних документів ще немає.</sys:String>
     <sys:String x:Key="MsgCustomDocNameRequired">Введіть назву документа.</sys:String>
@@ -857,6 +863,8 @@
     <sys:String x:Key="ProbIgnoreTooltip">Ігнорувати на вибраний термін</sys:String>
     <sys:String x:Key="ProbIgnore">Ігнорувати</sys:String>
     <sys:String x:Key="ProbIgnoreForDays">Ігнорувати на {0} днів</sys:String>
+    <sys:String x:Key="ProbCloseValidity">Завершити дійсність</sys:String>
+    <sys:String x:Key="ProbCloseValidityTooltip">Файл лишається, нагадування більше не буде</sys:String>
     <sys:String x:Key="ProbDocPassport">Паспорт</sys:String>
     <sys:String x:Key="ProbDocVisa">Віза</sys:String>
     <sys:String x:Key="ProbDocInsurance">Страховка</sys:String>
@@ -1996,6 +2004,7 @@
     <sys:String x:Key="HistoryActionDocReplace">Заміна документу</sys:String>
     <sys:String x:Key="HistoryDescDocReplace">Замінено документ: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Додано документ</sys:String>
+    <sys:String x:Key="HistoryActionDocEdit">Змінено документ</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Видалено документ</sys:String>
     <sys:String x:Key="HistoryActionDocumentPackage">Пакет документів</sys:String>
     <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>

@@ -36,6 +36,9 @@ namespace Win11DesktopApp.EmployeeModels
         public int DaysRemaining { get; set; }
         public string Severity { get; set; } = string.Empty;
         public string IgnoredUntil { get; set; } = string.Empty;
+        public string CustomDocumentId { get; set; } = string.Empty;
+        public string CustomDocumentFileName { get; set; } = string.Empty;
+        public bool IsCustomDocument { get; set; }
     }
 
     /// <summary>

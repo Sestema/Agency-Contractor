@@ -13,6 +13,15 @@ namespace Win11DesktopApp.EmployeeModels
         public string ExpiryDate { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
         public bool IsHidden { get; set; } = false;
+        /// <summary>
+        /// Permanent: keep the file in the profile, but stop expiry reminders in Problems.
+        /// Core documents (passport/visa/insurance/permit) never use this.
+        /// </summary>
+        public bool IsClosed { get; set; } = false;
+        /// <summary>
+        /// Firm where this file was added. Kept after archive/restore so old and new firms stay separate.
+        /// </summary>
+        public string FirmName { get; set; } = string.Empty;
     }
 
     /// <summary>

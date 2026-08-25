@@ -238,10 +238,10 @@ namespace Win11DesktopApp.ViewModels
 
                 void AddField(ColumnDescriptor column, string label, string value)
                 {
-                    column.Item().PaddingTop(4).Row(field =>
+                    column.Item().PaddingTop(2.5f).Row(field =>
                     {
-                        field.ConstantItem(78).Text($"{label}:").FontSize(6.7f).FontColor("#7F8F8F");
-                        field.RelativeItem().Text(value).FontSize(7.8f).SemiBold().FontColor("#243333");
+                        field.ConstantItem(88).Text($"{label}:").FontSize(8f).FontColor("#7F8F8F");
+                        field.RelativeItem().Text(value).FontSize(9.2f).SemiBold().FontColor("#243333");
                     });
                 }
 
@@ -250,9 +250,9 @@ namespace Win11DesktopApp.ViewModels
                     if (fields.Count == 0)
                         return;
 
-                    column.Item().PaddingBottom(10).Background("#F7FBFB").BorderLeft(3).BorderColor("#1E7E7E").PaddingLeft(9).PaddingRight(8).PaddingVertical(8).Column(section =>
+                    column.Item().PaddingBottom(6).Background("#F7FBFB").BorderLeft(3).BorderColor("#1E7E7E").PaddingLeft(9).PaddingRight(8).PaddingVertical(7).Column(section =>
                     {
-                        section.Item().Text(title.ToUpperInvariant()).FontSize(8.6f).Bold().FontColor("#1E7E7E");
+                        section.Item().Text(title.ToUpperInvariant()).FontSize(10f).Bold().FontColor("#1E7E7E");
 
                         foreach (var field in fields)
                             AddField(section, field.Label, field.Value);
@@ -264,9 +264,9 @@ namespace Win11DesktopApp.ViewModels
                     if (documents.Count == 0)
                         return;
 
-                    column.Item().PaddingBottom(10).Background("#F7FBFB").BorderLeft(3).BorderColor("#1E7E7E").PaddingLeft(9).PaddingRight(8).PaddingVertical(8).Column(section =>
+                    column.Item().PaddingBottom(6).Background("#F7FBFB").BorderLeft(3).BorderColor("#1E7E7E").PaddingLeft(9).PaddingRight(8).PaddingVertical(7).Column(section =>
                     {
-                        section.Item().Text(title.ToUpperInvariant()).FontSize(8.6f).Bold().FontColor("#1E7E7E");
+                        section.Item().Text(title.ToUpperInvariant()).FontSize(10f).Bold().FontColor("#1E7E7E");
 
                         foreach (var document in documents)
                         {
@@ -277,10 +277,10 @@ namespace Win11DesktopApp.ViewModels
                                 string.IsNullOrWhiteSpace(document.FileName) ? null : document.FileName
                             }.Where(part => !string.IsNullOrWhiteSpace(part));
 
-                            section.Item().PaddingTop(6).Column(item =>
+                            section.Item().PaddingTop(4).Column(item =>
                             {
-                                item.Item().Text(ValueOrDash(document.Name)).FontSize(7.8f).SemiBold().FontColor("#273333");
-                                item.Item().Text(string.Join(" • ", parts)).FontSize(6.4f).FontColor("#7F8F8F");
+                                item.Item().Text(ValueOrDash(document.Name)).FontSize(9.2f).SemiBold().FontColor("#273333");
+                                item.Item().Text(string.Join(" • ", parts)).FontSize(7.5f).FontColor("#7F8F8F");
                             });
                         }
                     });
@@ -288,17 +288,16 @@ namespace Win11DesktopApp.ViewModels
 
                 void PhotoBlock(IContainer container)
                 {
-                    container.Width(74).Height(74).Border(1).BorderColor("#D7E5E5").Background("#F3F8F8").Padding(3).Element(photo =>
+                    if (HasPhoto && File.Exists(PhotoFilePath))
                     {
-                        if (HasPhoto && File.Exists(PhotoFilePath))
-                        {
-                            photo.Image(PhotoFilePath).FitArea();
-                        }
-                        else
-                        {
-                            photo.AlignCenter().AlignMiddle().Text(Initials()).FontSize(20).Bold().FontColor("#1E7E7E");
-                        }
-                    });
+                        container.Shrink().Width(112).Border(1).BorderColor("#C5D6D6")
+                            .Image(PhotoFilePath).FitWidth();
+                        return;
+                    }
+
+                    container.Shrink().Width(112).Height(140).Border(1).BorderColor("#C5D6D6").Background("#F3F8F8")
+                        .AlignCenter().AlignMiddle()
+                        .Text(Initials()).FontSize(26).Bold().FontColor("#1E7E7E");
                 }
 
                 var document = QuestPDF.Fluent.Document.Create(container =>
@@ -306,116 +305,110 @@ namespace Win11DesktopApp.ViewModels
                     container.Page(page =>
                     {
                         page.Size(PageSizes.A4);
-                        page.Margin(24);
-                        page.DefaultTextStyle(style => style.FontFamily("Segoe UI").FontSize(7.5f).FontColor("#273333"));
+                        page.Margin(20);
+                        page.DefaultTextStyle(style => style.FontFamily("Segoe UI").FontSize(9f).FontColor("#273333"));
 
-                        page.Header().Background("#F2FAF9").Padding(9).Row(row =>
+                        page.Content().Row(columns =>
                         {
-                            row.ConstantItem(84).Element(PhotoBlock);
-                            row.RelativeItem().PaddingLeft(12).Column(header =>
+                            columns.RelativeItem().Column(left =>
                             {
-                                header.Item().Text(FullName).FontSize(17).Bold().FontColor("#1E7E7E");
-                                header.Item().PaddingTop(2).Text(ValueOrDash(Data.PositionTag)).FontSize(8.5f).FontColor("#516161");
-                                header.Item().PaddingTop(2).Text(ValueOrDash(_firmName)).FontSize(8).SemiBold().FontColor("#273333");
-
-                                header.Item().PaddingTop(5).Row(tags =>
+                                left.Item().PaddingBottom(8).Row(idRow =>
                                 {
-                                    tags.AutoItem().Background("#E4F3F2").PaddingHorizontal(8).PaddingVertical(4)
-                                        .Text(ValueOrDash(Data.Status)).FontSize(6.5f).Bold().FontColor("#1E7E7E");
-                                    if (!string.IsNullOrWhiteSpace(Data.ContractType))
+                                    idRow.AutoItem().AlignTop().Element(PhotoBlock);
+                                    idRow.RelativeItem().PaddingLeft(10).AlignMiddle().Column(text =>
                                     {
-                                        tags.AutoItem().PaddingLeft(6).Background("#F1F5F5").PaddingHorizontal(8).PaddingVertical(4)
-                                            .Text(Data.ContractType).FontSize(6.5f).Bold().FontColor("#516161");
-                                    }
+                                        text.Item().Text(FullName).FontSize(18).Bold().FontColor("#1E7E7E");
+                                        text.Item().PaddingTop(3)
+                                            .Text(ValueOrDash(_firmName)).FontSize(9.5f).SemiBold().FontColor("#273333");
+                                        if (!string.IsNullOrWhiteSpace(Data.ContractType))
+                                        {
+                                            text.Item().PaddingTop(6).AlignLeft().Element(badge =>
+                                            {
+                                                badge.Background("#F1F5F5").PaddingHorizontal(8).PaddingVertical(3)
+                                                    .Text(Data.ContractType).FontSize(8f).Bold().FontColor("#516161");
+                                            });
+                                        }
+                                    });
                                 });
+
+                                AddSection(left, DocRes("DetSecPassport"), Fields(
+                                    (DocRes("PdfFieldNumber"), Data.PassportNumber),
+                                    (DocRes("PdfFieldAuthority"), Data.PassportAuthority),
+                                    (DocRes("PdfFieldValidTo"), Data.PassportExpiry),
+                                    (DocRes("DetFieldBirthCity"), Data.PassportCity),
+                                    (DocRes("DetFieldBirthCountry"), Data.PassportCountry),
+                                    (DocRes("DetFieldCitizenship"), Data.Citizenship),
+                                    (DocRes("DetFieldIssuingCountry"), Data.IssuingCountry)));
+
+                                AddSection(left, DocRes("DetSecVisa"), Fields(
+                                    (DocRes("PdfFieldNumber"), Data.VisaNumber),
+                                    (DocRes("PdfFieldAuthority"), Data.VisaAuthority),
+                                    (DocRes("PdfFieldType"), Data.VisaType),
+                                    (DocRes("PdfFieldIssued"), Data.VisaStartDate),
+                                    (DocRes("PdfFieldValidToF"), Data.VisaExpiry),
+                                    (DocRes("PdfFieldPermit"), Data.WorkPermitName)));
+
+                                AddSection(left, DocRes("DetDocWorkPermit"), Fields(
+                                    (DocRes("PdfFieldNumber"), Data.WorkPermitNumber),
+                                    (DocRes("PdfFieldType"), Data.WorkPermitType),
+                                    (DocRes("PdfFieldIssued"), Data.WorkPermitIssueDate),
+                                    (DocRes("PdfFieldValidTo"), Data.WorkPermitExpiry),
+                                    (DocRes("PdfFieldAuthority"), Data.WorkPermitAuthority)));
+
+                                AddSection(left, DocRes("PdfSecInsurance"), Fields(
+                                    (DocRes("DetFieldInsCompany"), Data.InsuranceCompanyShort),
+                                    (DocRes("DetFieldInsCompanyFull"), Data.InsuranceCompanyFull),
+                                    (DocRes("PdfFieldNumber"), Data.InsuranceNumber),
+                                    (DocRes("PdfFieldValidToF"), Data.InsuranceExpiry)));
                             });
-                        });
 
-                        page.Content().PaddingTop(16).Column(content =>
-                        {
-                            content.Item().Row(columns =>
+                            columns.ConstantItem(12);
+
+                            columns.RelativeItem().Column(right =>
                             {
-                                columns.RelativeItem().Column(left =>
-                                {
-                                    AddSection(left, DocRes("DetSecPassport"), Fields(
-                                        (DocRes("PdfFieldNumber"), Data.PassportNumber),
-                                        (DocRes("PdfFieldAuthority"), Data.PassportAuthority),
-                                        (DocRes("PdfFieldValidTo"), Data.PassportExpiry),
-                                        (DocRes("DetFieldBirthCity"), Data.PassportCity),
-                                        (DocRes("DetFieldBirthCountry"), Data.PassportCountry),
-                                        (DocRes("DetFieldCitizenship"), Data.Citizenship),
-                                        (DocRes("DetFieldIssuingCountry"), Data.IssuingCountry)));
+                                AddSection(right, DocRes("PdfSecContacts"), Fields(
+                                    (DocRes("DetFieldPhone"), Data.Phone),
+                                    ("Email", Data.Email),
+                                    (DocRes("DetFieldStartDate"), Data.StartDate),
+                                    (DocRes("DetFieldBirthDate"), Data.BirthDate),
+                                    (DocRes("DetFieldRodneCislo"), Data.HasRodneCisloData ? Data.RodneCislo : string.Empty),
+                                    (DocRes("DetFieldBankAccount"), Data.BankAccountNumber),
+                                    (DocRes("DetFieldBankName"), Data.BankName)));
 
-                                    AddSection(left, DocRes("DetSecVisa"), Fields(
-                                        (DocRes("PdfFieldNumber"), Data.VisaNumber),
-                                        (DocRes("PdfFieldAuthority"), Data.VisaAuthority),
-                                        (DocRes("PdfFieldType"), Data.VisaType),
-                                        (DocRes("PdfFieldIssued"), Data.VisaStartDate),
-                                        (DocRes("PdfFieldValidToF"), Data.VisaExpiry),
-                                        (DocRes("PdfFieldPermit"), Data.WorkPermitName)));
+                                AddSection(right, DocRes("DetSecAddrLocal"), Fields(
+                                    (DocRes("DetFieldStreet"), Data.AddressLocal.Street),
+                                    (DocRes("PdfFieldNumber"), Data.AddressLocal.Number),
+                                    (DocRes("DetFieldCity"), Data.AddressLocal.City),
+                                    (DocRes("DetFieldZip"), Data.AddressLocal.Zip)));
 
-                                    AddSection(left, DocRes("DetDocWorkPermit"), Fields(
-                                        (DocRes("PdfFieldNumber"), Data.WorkPermitNumber),
-                                        (DocRes("PdfFieldType"), Data.WorkPermitType),
-                                        (DocRes("PdfFieldIssued"), Data.WorkPermitIssueDate),
-                                        (DocRes("PdfFieldValidTo"), Data.WorkPermitExpiry),
-                                        (DocRes("PdfFieldAuthority"), Data.WorkPermitAuthority)));
+                                AddSection(right, DocRes("DetSecAddrAbroad"), Fields(
+                                    (DocRes("DetFieldStreet"), Data.AddressAbroad.Street),
+                                    (DocRes("PdfFieldNumber"), Data.AddressAbroad.Number),
+                                    (DocRes("DetFieldCity"), Data.AddressAbroad.City),
+                                    (DocRes("DetFieldZip"), Data.AddressAbroad.Zip)));
 
-                                    AddSection(left, DocRes("PdfSecInsurance"), Fields(
-                                        (DocRes("DetFieldInsCompany"), Data.InsuranceCompanyShort),
-                                        (DocRes("DetFieldInsCompanyFull"), Data.InsuranceCompanyFull),
-                                        (DocRes("PdfFieldNumber"), Data.InsuranceNumber),
-                                        (DocRes("PdfFieldValidToF"), Data.InsuranceExpiry)));
-                                });
+                                AddSection(right, DocRes("DetSecWork"), Fields(
+                                    ("Firma", _firmName),
+                                    ("Agency", agencyName),
+                                    (DocRes("DetFieldPosition"), Data.PositionTag),
+                                    (DocRes("PdfFieldPosNumber"), Data.PositionNumber),
+                                    (DocRes("DetFieldSalary"), Money(Data.MonthlySalaryBrutto)),
+                                    (DocRes("DetFieldHourly"), Money(Data.HourlySalary)),
+                                    (DocRes("DetFieldContractType"), Data.ContractType),
+                                    (DocRes("PdfFieldDepartment"), Data.Department),
+                                    (DocRes("DetFieldStartDate"), Data.StartDate),
+                                    (DocRes("DetFieldEndDate"), Data.EndDate),
+                                    (DocRes("DetFieldSignDate"), Data.ContractSignDate),
+                                    ("Work address", Data.WorkAddressTag)));
 
-                                columns.ConstantItem(14);
-
-                                columns.RelativeItem().Column(right =>
-                                {
-                                    AddSection(right, DocRes("PdfSecContacts"), Fields(
-                                        (DocRes("DetFieldPhone"), Data.Phone),
-                                        ("Email", Data.Email),
-                                        (DocRes("DetFieldStartDate"), Data.StartDate),
-                                        (DocRes("DetFieldBirthDate"), Data.BirthDate),
-                                        (DocRes("DetFieldRodneCislo"), Data.HasRodneCisloData ? Data.RodneCislo : string.Empty),
-                                        (DocRes("DetFieldBankAccount"), Data.BankAccountNumber),
-                                        (DocRes("DetFieldBankName"), Data.BankName)));
-
-                                    AddSection(right, DocRes("DetSecAddrLocal"), Fields(
-                                        (DocRes("DetFieldStreet"), Data.AddressLocal.Street),
-                                        (DocRes("PdfFieldNumber"), Data.AddressLocal.Number),
-                                        (DocRes("DetFieldCity"), Data.AddressLocal.City),
-                                        (DocRes("DetFieldZip"), Data.AddressLocal.Zip)));
-
-                                    AddSection(right, DocRes("DetSecAddrAbroad"), Fields(
-                                        (DocRes("DetFieldStreet"), Data.AddressAbroad.Street),
-                                        (DocRes("PdfFieldNumber"), Data.AddressAbroad.Number),
-                                        (DocRes("DetFieldCity"), Data.AddressAbroad.City),
-                                        (DocRes("DetFieldZip"), Data.AddressAbroad.Zip)));
-
-                                    AddSection(right, DocRes("DetSecWork"), Fields(
-                                        ("Firma", _firmName),
-                                        ("Agency", agencyName),
-                                        (DocRes("DetFieldPosition"), Data.PositionTag),
-                                        (DocRes("PdfFieldPosNumber"), Data.PositionNumber),
-                                        (DocRes("DetFieldSalary"), Money(Data.MonthlySalaryBrutto)),
-                                        (DocRes("DetFieldHourly"), Money(Data.HourlySalary)),
-                                        (DocRes("DetFieldContractType"), Data.ContractType),
-                                        (DocRes("PdfFieldDepartment"), Data.Department),
-                                        (DocRes("DetFieldStartDate"), Data.StartDate),
-                                        (DocRes("DetFieldEndDate"), Data.EndDate),
-                                        (DocRes("DetFieldSignDate"), Data.ContractSignDate),
-                                        ("Work address", Data.WorkAddressTag)));
-
-                                    AddDocumentRows(right, DocRes("DetSecCustomDocuments"), customDocuments);
-                                });
+                                AddDocumentRows(right, DocRes("DetSecCustomDocuments"), customDocuments);
                             });
                         });
 
                         page.Footer().AlignRight().Text(text =>
                         {
-                            text.Span("Agency Contractor • ").FontSize(7).FontColor("#7F8F8F");
-                            text.Span(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(7).FontColor("#7F8F8F");
+                            text.Span("Agency Contractor • ").FontSize(8).FontColor("#7F8F8F");
+                            text.Span(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(8).FontColor("#7F8F8F");
                         });
                     });
                 });

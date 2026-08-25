@@ -619,6 +619,10 @@
     <sys:String x:Key="DetCustomDocsTitle">Пользовательские подписанные документы</sys:String>
     <sys:String x:Key="DetBtnAddCustomDoc">Добавить документ</sys:String>
     <sys:String x:Key="DetAddCustomDocTitle">Добавить подписанный документ</sys:String>
+    <sys:String x:Key="DetEditCustomDocTitle">Редактировать документ</sys:String>
+    <sys:String x:Key="DetBtnEditDoc">Редактировать</sys:String>
+    <sys:String x:Key="DetCustomDocPreviousFirmHint">Добавлено, когда сотрудник работал в этой фирме.</sys:String>
+    <sys:String x:Key="DetCustomDocUnknownFirm">Предыдущие фирмы</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Название документа</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Дата подписания</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Дата окончания (необязательно)</sys:String>
@@ -673,6 +677,8 @@
     <sys:String x:Key="DetCustomDocSigned">Подписано:</sys:String>
     <sys:String x:Key="DetCustomDocExpires">Действует до:</sys:String>
     <sys:String x:Key="DetCustomDocNoExpiry">Без срока</sys:String>
+    <sys:String x:Key="DetCustomDocClosed">Завершено</sys:String>
+    <sys:String x:Key="DetBtnRestoreValidity">Восстановить действие</sys:String>
     <sys:String x:Key="DetBtnDeleteDoc">Удалить</sys:String>
     <sys:String x:Key="DetBtnOpenCustomDocFolder">Открыть папку</sys:String>
     <sys:String x:Key="DetCustomDocEmpty">Пользовательских документов пока нет.</sys:String>
@@ -838,6 +844,8 @@
     <sys:String x:Key="ProbIgnoreTooltip">Игнорировать на выбранный срок</sys:String>
     <sys:String x:Key="ProbIgnore">Игнорировать</sys:String>
     <sys:String x:Key="ProbIgnoreForDays">Игнорировать на {0} дней</sys:String>
+    <sys:String x:Key="ProbCloseValidity">Завершить действие</sys:String>
+    <sys:String x:Key="ProbCloseValidityTooltip">Файл остаётся, напоминания больше не будет</sys:String>
     <sys:String x:Key="ProbDocPassport">Паспорт</sys:String>
     <sys:String x:Key="ProbDocVisa">Виза</sys:String>
     <sys:String x:Key="ProbDocInsurance">Страховка</sys:String>
@@ -1977,6 +1985,7 @@
     <sys:String x:Key="HistoryActionDocReplace">Замена документа</sys:String>
     <sys:String x:Key="HistoryDescDocReplace">Заменён документ: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Документ добавлен</sys:String>
+    <sys:String x:Key="HistoryActionDocEdit">Документ изменён</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Документ удалён</sys:String>
     <sys:String x:Key="HistoryActionDocumentPackage">Пакет документов</sys:String>
     <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>

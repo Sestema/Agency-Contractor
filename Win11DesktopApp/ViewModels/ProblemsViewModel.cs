@@ -35,6 +35,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand GoBackCommand { get; }
         public ICommand OpenEmployeeCommand { get; }
         public ICommand IgnoreProblemCommand { get; }
+        public ICommand CloseCustomDocumentValidityCommand { get; }
         public ICommand RestoreProblemCommand { get; }
         public ICommand ToggleIgnoredListCommand { get; }
         public ICommand ExportToPdfCommand { get; }
@@ -339,6 +340,12 @@ namespace Win11DesktopApp.ViewModels
                     ShowIgnoreMenu(info);
             });
 
+            CloseCustomDocumentValidityCommand = new RelayCommand(o =>
+            {
+                if (o is DocumentExpiryInfo info)
+                    CloseCustomDocumentValidity(info);
+            });
+
             RestoreProblemCommand = new RelayCommand(o =>
             {
                 if (o is DocumentExpiryInfo info)
@@ -384,6 +391,38 @@ namespace Win11DesktopApp.ViewModels
                 contextMenu.PlacementTarget = target;
 
             contextMenu.IsOpen = true;
+        }
+
+        private void CloseCustomDocumentValidity(DocumentExpiryInfo info)
+        {
+            if (!info.IsCustomDocument)
+                return;
+
+            if (!PolicyService.EnsureWriteAllowed("Завершити дійсність документа"))
+                return;
+
+            var closed = _employeeService.SetCustomDocumentValidityClosed(
+                info.EmployeeFolder,
+                info.CustomDocumentId,
+                info.DocumentType,
+                info.ExpiryDateStr,
+                info.CustomDocumentFileName,
+                isClosed: true);
+
+            if (!closed)
+            {
+                LoggingService.LogWarning("ProblemsViewModel.CloseCustomDocumentValidity",
+                    $"Custom document not found for {info.EmployeeFolder}: {info.DocumentType} / {info.ExpiryDateStr}");
+                return;
+            }
+
+            var desc = string.IsNullOrWhiteSpace(info.ExpiryDateStr)
+                ? info.DocumentType
+                : $"{info.DocumentType} ({info.ExpiryDateStr})";
+            _activityLogService.Log("CustomDocValidityClosed", "Document", info.FirmName, info.EmployeeName,
+                desc, employeeFolder: info.EmployeeFolder);
+
+            LoadProblems();
         }
 
         private void LoadProblems()
@@ -479,8 +518,11 @@ namespace Win11DesktopApp.ViewModels
                                     foreach (var cd in employeeData.CustomDocuments)
                                     {
                                         token.ThrowIfCancellationRequested();
-                                        if (!cd.IsHidden && !string.IsNullOrWhiteSpace(cd.ExpiryDate))
-                                            CollectProblem(activeProblems, ignoredProblems, emp, cd.Name, cd.ExpiryDate, ignoredDocuments);
+                                        if (cd.IsHidden || cd.IsClosed || string.IsNullOrWhiteSpace(cd.ExpiryDate))
+                                            continue;
+
+                                        CollectProblem(activeProblems, ignoredProblems, emp, cd.Name, cd.ExpiryDate, ignoredDocuments,
+                                            customDocumentId: cd.Id, customDocumentFileName: cd.FileName);
                                     }
                                 }
                             }
@@ -652,7 +694,8 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private static bool CollectProblem(List<DocumentExpiryInfo> activeList, List<DocumentExpiryInfo> ignoredList,
-            EmployeeSummary emp, string docType, string expiryDate, IReadOnlyDictionary<string, string>? ignoredDocuments)
+            EmployeeSummary emp, string docType, string expiryDate, IReadOnlyDictionary<string, string>? ignoredDocuments,
+            string? customDocumentId = null, string? customDocumentFileName = null)
         {
             if (string.IsNullOrWhiteSpace(expiryDate)) return false;
 
@@ -671,7 +714,10 @@ namespace Win11DesktopApp.ViewModels
                 ExpiryDateStr = expiryDate,
                 ExpiryDate = DateParsingHelper.TryParseDate(expiryDate) ?? DateTime.MinValue,
                 DaysRemaining = days,
-                Severity = severity
+                Severity = severity,
+                CustomDocumentId = customDocumentId ?? string.Empty,
+                CustomDocumentFileName = customDocumentFileName ?? string.Empty,
+                IsCustomDocument = !string.IsNullOrWhiteSpace(customDocumentId) || !string.IsNullOrWhiteSpace(customDocumentFileName)
             };
 
             if (TryGetIgnoredUntil(ignoredDocuments, docType, out var untilStr))

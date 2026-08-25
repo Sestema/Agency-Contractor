@@ -636,6 +636,10 @@
     <sys:String x:Key="DetCustomDocsTitle">Vlastní podepsané dokumenty</sys:String>
     <sys:String x:Key="DetBtnAddCustomDoc">Přidat dokument</sys:String>
     <sys:String x:Key="DetAddCustomDocTitle">Přidat podepsaný dokument</sys:String>
+    <sys:String x:Key="DetEditCustomDocTitle">Upravit dokument</sys:String>
+    <sys:String x:Key="DetBtnEditDoc">Upravit</sys:String>
+    <sys:String x:Key="DetCustomDocPreviousFirmHint">Přidáno, když zaměstnanec pracoval v této firmě.</sys:String>
+    <sys:String x:Key="DetCustomDocUnknownFirm">Předchozí firmy</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Název dokumentu</sys:String>
     <sys:String x:Key="DetCustomDocFieldSignDate">Datum podpisu</sys:String>
     <sys:String x:Key="DetCustomDocFieldExpiry">Datum vypršení (volitelné)</sys:String>
@@ -690,6 +694,8 @@
     <sys:String x:Key="DetCustomDocSigned">Podepsáno:</sys:String>
     <sys:String x:Key="DetCustomDocExpires">Platí do:</sys:String>
     <sys:String x:Key="DetCustomDocNoExpiry">Bez expirace</sys:String>
+    <sys:String x:Key="DetCustomDocClosed">Ukončeno</sys:String>
+    <sys:String x:Key="DetBtnRestoreValidity">Obnovit platnost</sys:String>
     <sys:String x:Key="DetBtnDeleteDoc">Smazat</sys:String>
     <sys:String x:Key="DetBtnOpenCustomDocFolder">Otevřít složku</sys:String>
     <sys:String x:Key="DetCustomDocEmpty">Zatím žádné vlastní dokumenty.</sys:String>
@@ -855,6 +861,8 @@
     <sys:String x:Key="ProbIgnoreTooltip">Ignorovat na vybranou dobu</sys:String>
     <sys:String x:Key="ProbIgnore">Ignorovat</sys:String>
     <sys:String x:Key="ProbIgnoreForDays">Ignorovat na {0} dní</sys:String>
+    <sys:String x:Key="ProbCloseValidity">Ukončit platnost</sys:String>
+    <sys:String x:Key="ProbCloseValidityTooltip">Soubor zůstane, připomínky skončí</sys:String>
     <sys:String x:Key="ProbDocPassport">Pas</sys:String>
     <sys:String x:Key="ProbDocVisa">Vízum</sys:String>
     <sys:String x:Key="ProbDocInsurance">Pojištění</sys:String>
@@ -1994,6 +2002,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistoryActionDocReplace">Nahrazení dokumentu</sys:String>
     <sys:String x:Key="HistoryDescDocReplace">Nahrazen dokument: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Dokument přidán</sys:String>
+    <sys:String x:Key="HistoryActionDocEdit">Dokument upraven</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Dokument smazán</sys:String>
     <sys:String x:Key="HistoryActionDocumentPackage">Balíček dokumentů</sys:String>
     <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>
