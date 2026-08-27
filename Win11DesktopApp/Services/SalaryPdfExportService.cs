@@ -45,8 +45,10 @@ namespace Win11DesktopApp.Services
             IReadOnlyList<SalaryEntry> entries,
             IReadOnlyList<CustomSalaryField> fields,
             IReadOnlyList<FirmExpense> expenses,
-            SalaryPdfExportLabels labels)
+            SalaryPdfExportLabels labels,
+            string? currencySymbol = null)
         {
+            var symbol = string.IsNullOrWhiteSpace(currencySymbol) ? "Kč" : currencySymbol.Trim();
             var orderedFields = (fields ?? Array.Empty<CustomSalaryField>())
                 .OrderBy(field => field.Order)
                 .ThenBy(field => field.Name)
@@ -210,7 +212,7 @@ namespace Win11DesktopApp.Services
                                 TotalsCell(FormatMoney(total));
                             }
 
-                            TotalsCell(FormatMoney(exportEntries.Sum(e => e.NetSalary)) + " Kč", color: "#1565C0");
+                            TotalsCell(FormatMoney(exportEntries.Sum(e => e.NetSalary)) + " " + symbol, color: "#1565C0");
                             table.Cell().Background(TotalsColor).BorderTop(0.75f).BorderColor(HeaderColor);
                             table.Cell().Background(TotalsColor).BorderTop(0.75f).BorderColor(HeaderColor);
                         });
@@ -241,13 +243,13 @@ namespace Win11DesktopApp.Services
                                 {
                                     ExpenseCell(expenseTable, expense.FirmName, "#2F5496");
                                     ExpenseCell(expenseTable, expense.Name, "#4E342E");
-                                    ExpenseCell(expenseTable, FormatMoney(expense.Amount, 0) + " Kč", "#E65100", alignCenter: true);
+                                    ExpenseCell(expenseTable, FormatMoney(expense.Amount, 0) + " " + symbol, "#E65100", alignCenter: true);
                                 }
 
                                 expenseTable.Cell().Background("#FFF2CC");
                                 expenseTable.Cell().Background("#FFF2CC").AlignRight().Text(labels.ExpenseTotal).Bold().FontColor("#BF360C");
                                 expenseTable.Cell().Background("#FFF2CC").AlignCenter()
-                                    .Text(FormatMoney(exportExpenses.Sum(e => e.Amount), 0) + " Kč")
+                                    .Text(FormatMoney(exportExpenses.Sum(e => e.Amount), 0) + " " + symbol)
                                     .Bold()
                                     .FontColor("#BF360C");
                             });
@@ -259,7 +261,7 @@ namespace Win11DesktopApp.Services
                             .Row(row =>
                             {
                                 row.RelativeItem().Text(labels.GrandTotal).Bold().FontSize(10).FontColor("#3E2723");
-                                row.ConstantItem(120).AlignRight().Text(FormatMoney(netTotal + expensesTotal) + " Kč")
+                                row.ConstantItem(120).AlignRight().Text(FormatMoney(netTotal + expensesTotal) + " " + symbol)
                                     .Bold()
                                     .FontSize(10)
                                     .FontColor("#3E2723");
@@ -332,7 +334,7 @@ namespace Win11DesktopApp.Services
                                             .PaddingVertical(2)
                                             .PaddingHorizontal(3)
                                             .AlignCenter()
-                                            .Text(FormatMoney(group.Sum(e => e.NetSalary), 0) + " Kč")
+                                            .Text(FormatMoney(group.Sum(e => e.NetSalary), 0) + " " + symbol)
                                             .Bold()
                                             .FontSize(7);
 

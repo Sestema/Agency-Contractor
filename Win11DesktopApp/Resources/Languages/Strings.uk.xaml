@@ -1772,6 +1772,11 @@
     <sys:String x:Key="FinHoursRoundedDesc">Години показуються і зберігаються з округленням до 1 знака після коми, наприклад 8,5.</sys:String>
     <sys:String x:Key="FinHoursCustom">Довільна точність</sys:String>
     <sys:String x:Key="FinHoursCustomDesc">Можна вводити будь-яку кількість знаків після коми, наприклад 213,23 — без округлення.</sys:String>
+    <sys:String x:Key="FinCurrencyConfig">Валюта</sys:String>
+    <sys:String x:Key="FinCurrencyUsd">Долар ($)</sys:String>
+    <sys:String x:Key="FinCurrencyEur">Євро (€)</sys:String>
+    <sys:String x:Key="FinCurrencyCzk">Чеська крона (Kč)</sys:String>
+    <sys:String x:Key="FinCurrencyPln">Польський злотий (zł)</sys:String>
     <sys:String x:Key="FinStatRemaining">Залишилось виплатити</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Доплатки (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Знято (−)</sys:String>
@@ -1782,7 +1787,7 @@
     <sys:String x:Key="FinExpenseSelectFirm">Оберіть фірму для додавання витрат</sys:String>
     <sys:String x:Key="FinAdvanceInvalid">Невірна сума</sys:String>
     <sys:String x:Key="FinAdvanceNotFound">Працівника не знайдено</sys:String>
-    <sys:String x:Key="FinAdvanceAdded">Аванс {0} Kč → {1}</sys:String>
+    <sys:String x:Key="FinAdvanceAdded">Аванс {0} → {1}</sys:String>
     <sys:String x:Key="FinBtnManageColumns">Стовпці</sys:String>
     <sys:String x:Key="FinManageColumnsTitle">Управління стовпцями</sys:String>
     <sys:String x:Key="FinManageColumnsDesc">Додайте, редагуйте або видаліть власні стовпці для розрахунку зарплати.</sys:String>
@@ -2768,8 +2773,8 @@
     <sys:String x:Key="ActLogMsgCompanyDeletedFmt">Видалено фірму: {0}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeArchivedFmt">Архівовано {0} з {1}, дата закінчення: {2}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeRestoredFmt">Відновлено {0} до {1}, дата початку: {2}</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Аванс {0} Kč → {1} ({2})</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Видалено аванс {0} Kč ← {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Аванс {0} → {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Видалено аванс {0} ← {1} ({2})</sys:String>
     <sys:String x:Key="ActLogMsgMonthPaidFmt">Позначено оплачено: {0}</sys:String>
     <sys:String x:Key="ActLogMsgRootFolderChanged">Змінено кореневу папку</sys:String>
     <sys:String x:Key="ActLogMsgSalaryExportFmt">Експортовано виплату {0} → {1}</sys:String>

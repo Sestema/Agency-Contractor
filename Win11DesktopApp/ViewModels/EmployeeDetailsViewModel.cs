@@ -3767,6 +3767,8 @@ namespace Win11DesktopApp.ViewModels
 
             _isCleanedUp = true;
             CleanupPdfPreviews();
+            PhotoFilePath = string.Empty;
+            HasPhoto = false;
             PassportPreviewPath = string.Empty;
             VisaPreviewPath = string.Empty;
             PassportPage2PreviewPath = string.Empty;
@@ -3777,6 +3779,7 @@ namespace Win11DesktopApp.ViewModels
             PassportPage2PreviewState = DocPreviewState.Empty;
             InsurancePreviewState = DocPreviewState.Empty;
             WorkPermitPreviewState = DocPreviewState.Empty;
+            Converters.ImagePathConverter.InvalidateCacheForFolder(_employeeFolder);
         }
 
         /// <summary>

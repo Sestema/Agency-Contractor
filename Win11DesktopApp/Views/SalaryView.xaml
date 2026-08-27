@@ -316,7 +316,7 @@
                                 <TextBlock Text="{DynamicResource FinStatGross}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                             </StackPanel>
                             <TextBlock FontSize="{DynamicResource FS20}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center">
-                                <Run Text="{Binding TotalGross, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                <Run Text="{Binding TotalGross, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -338,7 +338,7 @@
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
-                                <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -1101,7 +1101,7 @@
                                                                 </TextBlock>
                                                                 <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource AccentDarkBrush}">
                                                                     <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/>
-                                                                    <Run Text=" Kč"/>
+                                                                    <Run Text="{Binding DataContext.CurrencySuffix, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"/>
                                                                 </TextBlock>
                                                             </Grid>
                                                         </StackPanel>
@@ -1259,7 +1259,7 @@
                                     <TextBlock Text="{DynamicResource FinExpenseTotal}" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}">
-                                        <Run Text="{Binding TotalExpenses, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding TotalExpenses, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1279,7 +1279,7 @@
                                     <TextBlock Text="{DynamicResource FinStatNet}" FontSize="{DynamicResource FS12}"
                                                Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS14}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}">
-                                        <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding TotalNet, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1295,7 +1295,7 @@
                                     <TextBlock Text="{DynamicResource FinStatGrandTotal}" FontSize="{DynamicResource FS12}"
                                                Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS16}" FontWeight="Bold" Foreground="White">
-                                        <Run Text="{Binding GrandTotal, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding GrandTotal, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1361,7 +1361,7 @@
                                     <TextBlock Text="{DynamicResource FinStatPaid}" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}">
-                                        <Run Text="{Binding StatPaid, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding StatPaid, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1377,7 +1377,7 @@
                                     <TextBlock Text="{DynamicResource FinStatRemaining}" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource ErrorBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}">
-                                        <Run Text="{Binding StatRemaining, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding StatRemaining, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1393,7 +1393,7 @@
                                     <TextBlock Text="{DynamicResource FinStatAdvances}" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}">
-                                        <Run Text="{Binding StatAdvances, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding StatAdvances, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1409,7 +1409,7 @@
                                     <TextBlock Text="{DynamicResource FinStatCustomAdd}" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource AccentDarkBrush}">
-                                        <Run Text="{Binding StatCustomAdd, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding StatCustomAdd, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1425,7 +1425,7 @@
                                     <TextBlock Text="{DynamicResource FinStatCustomSub}" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="{DynamicResource FS12}" FontWeight="Bold" Foreground="{DynamicResource PurpleBrush}">
-                                        <Run Text="{Binding StatCustomSub, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                        <Run Text="{Binding StatCustomSub, StringFormat={}{0:N0}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                                     </TextBlock>
                                 </Grid>
                             </Border>
@@ -1454,7 +1454,7 @@
                             <TextBlock Text="{DynamicResource FinStatNet}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock FontSize="{DynamicResource FS14}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center">
-                                <Run Text="{Binding TotalNet, StringFormat={}{0:N2}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                <Run Text="{Binding TotalNet, StringFormat={}{0:N2}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -1466,7 +1466,7 @@
                             <TextBlock Text="{DynamicResource FinStatGrandTotal}" FontSize="{DynamicResource FS11}" Foreground="White"
                                        FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock FontSize="{DynamicResource FS15}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center">
-                                <Run Text="{Binding GrandTotal, StringFormat={}{0:N2}, Mode=OneWay}"/><Run Text=" Kč"/>
+                                <Run Text="{Binding GrandTotal, StringFormat={}{0:N2}, Mode=OneWay}"/><Run Text="{Binding CurrencySuffix, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -1560,6 +1560,23 @@
                                  Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
                     <TextBlock Text="{DynamicResource FinHoursCustomDesc}" FontSize="{DynamicResource FS10}"
                                Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="20,1,0,0"/>
+
+                    <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,13,0,11"/>
+
+                    <TextBlock Text="{DynamicResource FinCurrencyConfig}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,5"/>
+                    <RadioButton GroupName="SalaryCurrencyDialog" Content="{DynamicResource FinCurrencyUsd}"
+                                 IsChecked="{Binding IsDisplayCurrencyUsd}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <RadioButton GroupName="SalaryCurrencyDialog" Content="{DynamicResource FinCurrencyEur}"
+                                 IsChecked="{Binding IsDisplayCurrencyEur}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <RadioButton GroupName="SalaryCurrencyDialog" Content="{DynamicResource FinCurrencyCzk}"
+                                 IsChecked="{Binding IsDisplayCurrencyCzk}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
+                    <RadioButton GroupName="SalaryCurrencyDialog" Content="{DynamicResource FinCurrencyPln}"
+                                 IsChecked="{Binding IsDisplayCurrencyPln}"
+                                 Foreground="{DynamicResource ForegroundBrush}" FontSize="{DynamicResource FS11}" Margin="0,3,0,0"/>
                 </StackPanel>
             </Border>
         </Grid>

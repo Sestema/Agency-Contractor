@@ -727,7 +727,7 @@ namespace Win11DesktopApp.Views
 
                     var amountTb = new TextBlock
                     {
-                        Text = $"{debt.Amount:N0} Kč",
+                        Text = $"{debt.Amount:N0}{vm.CurrencySuffix}",
                         FontSize = 11,
                         FontWeight = FontWeights.Bold,
                         Foreground = errorBrush,
@@ -779,7 +779,7 @@ namespace Win11DesktopApp.Views
 
                     var amountTb = new TextBlock
                     {
-                        Text = $"{adv.Amount:N0} Kč",
+                        Text = $"{adv.Amount:N0}{vm.CurrencySuffix}",
                         FontSize = 11,
                         FontWeight = FontWeights.SemiBold,
                         Foreground = warningFg,

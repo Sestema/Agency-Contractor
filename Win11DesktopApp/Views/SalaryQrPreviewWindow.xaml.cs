@@ -6,12 +6,13 @@ namespace Win11DesktopApp.Views
 {
     public partial class SalaryQrPreviewWindow : Window
     {
-        public SalaryQrPreviewWindow(SalaryQrPaymentPreview preview)
+        public SalaryQrPreviewWindow(SalaryQrPaymentPreview preview, string? currencySymbol = null)
         {
             InitializeComponent();
 
+            var symbol = string.IsNullOrWhiteSpace(currencySymbol) ? "Kč" : currencySymbol.Trim();
             NameText.Text = preview.EmployeeName;
-            AmountText.Text = $"{TryL("FinQrAmount") ?? "Amount"}: {preview.Amount.ToString("N0", CultureInfo.CurrentCulture)} Kč";
+            AmountText.Text = $"{TryL("FinQrAmount") ?? "Amount"}: {preview.Amount.ToString("N0", CultureInfo.CurrentCulture)} {symbol}";
             AccountText.Text = $"{TryL("FinQrAccount") ?? "Account"}: {preview.AccountNumber}";
             BankText.Text = string.IsNullOrWhiteSpace(preview.BankName)
                 ? string.Empty

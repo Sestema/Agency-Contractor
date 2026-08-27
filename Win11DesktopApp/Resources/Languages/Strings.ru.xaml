@@ -1751,6 +1751,11 @@
     <sys:String x:Key="FinHoursRoundedDesc">Часы показываются и сохраняются с округлением до 1 знака после запятой, например 8,5.</sys:String>
     <sys:String x:Key="FinHoursCustom">Произвольная точность</sys:String>
     <sys:String x:Key="FinHoursCustomDesc">Можно вводить любое количество знаков после запятой, например 213,23 — без округления.</sys:String>
+    <sys:String x:Key="FinCurrencyConfig">Валюта</sys:String>
+    <sys:String x:Key="FinCurrencyUsd">Доллар ($)</sys:String>
+    <sys:String x:Key="FinCurrencyEur">Евро (€)</sys:String>
+    <sys:String x:Key="FinCurrencyCzk">Чешская крона (Kč)</sys:String>
+    <sys:String x:Key="FinCurrencyPln">Польский злотый (zł)</sys:String>
     <sys:String x:Key="FinStatRemaining">Осталось выплатить</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Доплаты (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Вычеты (−)</sys:String>
@@ -1761,7 +1766,7 @@
     <sys:String x:Key="FinExpenseSelectFirm">Сначала выберите фирму для добавления расходов</sys:String>
     <sys:String x:Key="FinAdvanceInvalid">Неверная сумма</sys:String>
     <sys:String x:Key="FinAdvanceNotFound">Сотрудник не найден</sys:String>
-    <sys:String x:Key="FinAdvanceAdded">Аванс {0} Kč → {1}</sys:String>
+    <sys:String x:Key="FinAdvanceAdded">Аванс {0} → {1}</sys:String>
     <sys:String x:Key="FinBtnManageColumns">Столбцы</sys:String>
     <sys:String x:Key="FinManageColumnsTitle">Управление столбцами</sys:String>
     <sys:String x:Key="FinManageColumnsDesc">Добавляйте, редактируйте или удаляйте столбцы для расчёта зарплаты.</sys:String>
@@ -2750,8 +2755,8 @@
     <sys:String x:Key="ActLogMsgCompanyDeletedFmt">Удалена фирма: {0}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeArchivedFmt">Архивирован {0} из {1}, дата окончания: {2}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeRestoredFmt">Восстановлен {0} в {1}, дата начала: {2}</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Аванс {0} Kč → {1} ({2})</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Удален аванс {0} Kč ← {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Аванс {0} → {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Удален аванс {0} ← {1} ({2})</sys:String>
     <sys:String x:Key="ActLogMsgMonthPaidFmt">Отмечено оплачено: {0}</sys:String>
     <sys:String x:Key="ActLogMsgRootFolderChanged">Корневая папка изменена</sys:String>
     <sys:String x:Key="ActLogMsgSalaryExportFmt">Экспортирована выплата {0} → {1}</sys:String>

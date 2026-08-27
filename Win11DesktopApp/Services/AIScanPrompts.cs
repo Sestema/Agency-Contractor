@@ -19,7 +19,7 @@ namespace Win11DesktopApp.Services
         {
             var prompt = docKey switch
             {
-                "passport" => @"Read THIS passport photo. Ignore any previous documents. ONLY Latin alphabet, NEVER Cyrillic.
+                "passport" => @"Read THIS passport photo. Ignore any previous documents. ONLY Latin alphabet, NEVER Cyrillic. If Czech letters appear (á č ď é ě í ň ó ř š ť ú ů ý ž, ČR), keep the diacritics — do not strip them.
 
 STEP 1: Find the MRZ — two lines of CAPITAL letters/numbers at the very bottom of the passport page.
 MRZ Line 1 format: P<COUNTRYCODESURNAME<<FIRSTNAME<<<<<<<<<
@@ -53,7 +53,7 @@ STEP 6: Find RodneCislo / personal identification number:
 Return ONLY this JSON (FirstName=given name, LastName=surname):
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":""""}",
 
-                "insurance" => @"Read this insurance card/document photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+                "insurance" => @"Read this insurance card/document photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 This is a Czech health insurance card (prukaz pojistence). Extract these fields:
 - FirstName: holder's first/given name if it is clearly printed on the card. If not clearly visible, leave empty.
@@ -69,7 +69,7 @@ This is a Czech health insurance card (prukaz pojistence). Extract these fields:
 Return ONLY valid JSON, no other text:
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""InsuranceCompanyCode"":"""",""InsuranceCompanyShort"":"""",""InsuranceCompanyFull"":"""",""InsuranceCompanyRaw"":"""",""InsuranceNumber"":"""",""InsuranceExpiry"":""""}",
 
-                "visa" => @"Read this Czech visa/residence permit document photo. CRITICAL: ALL output in Latin alphabet ONLY, never Cyrillic.
+                "visa" => @"Read this Czech visa/residence permit document photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 IMPORTANT: The photo may contain MULTIPLE documents on one page. You MUST identify the correct one:
 
@@ -115,7 +115,7 @@ Also extract if clearly visible:
 Return ONLY valid JSON, no other text:
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""PassportNumber"":"""",""VisaNumber"":"""",""VisaAuthority"":"""",""VisaType"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""WorkPermitName"":"""",""Citizenship"":"""",""IssuingCountry"":""""}",
 
-                "permit" => @"Read this Czech work permit document (Povolení k zaměstnání / ROZHODNUTÍ). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic. Read ALL pages of the document.
+                "permit" => @"Read this Czech work permit document (Povolení k zaměstnání / ROZHODNUTÍ). CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP. Read ALL pages of the document.
 
 This is typically a multi-page official document (ROZHODNUTÍ) issued by Úřad práce České republiky (Czech Labour Office).
 
@@ -155,7 +155,7 @@ Also extract if clearly visible:
 Return ONLY valid JSON, no other text:
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""WorkPermitName"":"""",""WorkPermitNumber"":"""",""WorkPermitType"":"""",""WorkPermitIssueDate"":"""",""WorkPermitExpiry"":"""",""WorkPermitAuthority"":"""",""Citizenship"":"""",""IssuingCountry"":""""}",
 
-                "id_card" => @"Read this EU national ID card (Carte de Identitate, Personalausweis, Občanský průkaz, etc.). CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+                "id_card" => @"Read this EU national ID card (Carte de Identitate, Personalausweis, Občanský průkaz, etc.). CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 STEP 1: Find the card holder's personal data:
 - Last name (Nume/Name/Příjmení): the surname field
@@ -196,7 +196,7 @@ STEP 8: Find RodneCislo / personal identification number:
 Return ONLY this JSON (PassportExpiry = card expiry date):
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
 
-                "passport2" => @"Read this passport second page or EU residence permit photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+                "passport2" => @"Read this passport second page or EU residence permit photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 If this is the SECOND SIDE of a Czech residence ID card, extract these fields:
 - WorkPermitName: look for the field 'DRUH POBYTU NA ÚZEMÍ' or 'DRUH POVOLENÍ'. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. Return the EXACT Czech text from the document if clearly visible.
@@ -212,7 +212,7 @@ If this is NOT that document type, still extract the fields that are clearly vis
 Return ONLY valid JSON, no other text:
 {""WorkPermitName"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""VisaAuthority"":"""",""PassportCity"":"""",""PassportCountry"":""""}",
 
-                "id_card_back" => @"Read ONLY the BACK / SECOND SIDE of this EU national ID card. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+                "id_card_back" => @"Read ONLY the BACK / SECOND SIDE of this EU national ID card. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 This prompt is ONLY for the second side of a 2-sided EU ID card. Give priority to data printed on THIS side, even if similar data may exist on the front side.
 
@@ -230,7 +230,7 @@ If a field is not clearly visible on THIS side, leave it empty. NEVER invent val
 Return ONLY valid JSON, no other text:
 {""WorkPermitName"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":""""}",
 
-                "visa2" => @"Read this second-side visa / residence ID card / residence permit photo. CRITICAL: ALL output must be in Latin alphabet ONLY, never Cyrillic.
+                "visa2" => @"Read this second-side visa / residence ID card / residence permit photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 If this is the BACK SIDE of a residence or ID-style document, extract these fields when visible:
 - WorkPermitName: residence status / permit label if clearly visible, such as 'Přechodný pobyt', 'Trvalý pobyt', 'Dočasná ochrana', 'Strpění'. Return the exact Czech status when visible.
@@ -310,6 +310,7 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
             CleanVisaDates(cleaned);
             CleanAuthorityFields(cleaned);
             NormalizeCountryFields(cleaned);
+            NormalizeDateFields(cleaned);
 
             return cleaned;
         }
@@ -494,6 +495,19 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
                 return true;
 
             return Regex.IsMatch(normalizedValue, @"^\d{9}$");
+        }
+
+        private static void NormalizeDateFields(Dictionary<string, string> parsed)
+        {
+            foreach (var key in parsed.Keys.Where(key => !key.StartsWith("__", StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                if (!IsDateField(key) || !parsed.TryGetValue(key, out var value))
+                    continue;
+
+                var formatted = DateParsingHelper.TryFormatDdMmYyyy(value);
+                if (!string.IsNullOrWhiteSpace(formatted))
+                    parsed[key] = formatted;
+            }
         }
 
         private static void CleanVisaDates(Dictionary<string, string> parsed)

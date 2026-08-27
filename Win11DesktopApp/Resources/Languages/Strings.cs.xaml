@@ -1768,6 +1768,11 @@
     <sys:String x:Key="FinHoursRoundedDesc">Hodiny se zobrazují a ukládají zaokrouhlené na 1 desetinné místo, např. 8,5.</sys:String>
     <sys:String x:Key="FinHoursCustom">Vlastní přesnost</sys:String>
     <sys:String x:Key="FinHoursCustomDesc">Můžete zadat libovolný počet desetinných míst, např. 213,23 — bez zaokrouhlení.</sys:String>
+    <sys:String x:Key="FinCurrencyConfig">Měna</sys:String>
+    <sys:String x:Key="FinCurrencyUsd">Dolar ($)</sys:String>
+    <sys:String x:Key="FinCurrencyEur">Euro (€)</sys:String>
+    <sys:String x:Key="FinCurrencyCzk">Česká koruna (Kč)</sys:String>
+    <sys:String x:Key="FinCurrencyPln">Polský zlotý (zł)</sys:String>
     <sys:String x:Key="FinStatRemaining">Zbývá vyplatit</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Příplatky (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Srážky (−)</sys:String>
@@ -1778,7 +1783,7 @@
     <sys:String x:Key="FinExpenseSelectFirm">Nejprve vyberte firmu pro přidání výdajů</sys:String>
     <sys:String x:Key="FinAdvanceInvalid">Neplatná částka</sys:String>
     <sys:String x:Key="FinAdvanceNotFound">Zaměstnanec nenalezen</sys:String>
-    <sys:String x:Key="FinAdvanceAdded">Záloha {0} Kč → {1}</sys:String>
+    <sys:String x:Key="FinAdvanceAdded">Záloha {0} → {1}</sys:String>
     <sys:String x:Key="FinBtnManageColumns">Sloupce</sys:String>
     <sys:String x:Key="FinManageColumnsTitle">Správa sloupců</sys:String>
     <sys:String x:Key="FinManageColumnsDesc">Přidejte, upravte nebo odstraňte vlastní sloupce pro výpočet mzdy.</sys:String>
@@ -2767,8 +2772,8 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="ActLogMsgCompanyDeletedFmt">Odstraněna firma: {0}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeArchivedFmt">Archivován {0} z {1}, datum ukončení: {2}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeRestoredFmt">Obnoven {0} do {1}, datum začátku: {2}</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Záloha {0} Kč → {1} ({2})</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Odstraněna záloha {0} Kč ← {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Záloha {0} → {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Odstraněna záloha {0} ← {1} ({2})</sys:String>
     <sys:String x:Key="ActLogMsgMonthPaidFmt">Označeno jako zaplaceno: {0}</sys:String>
     <sys:String x:Key="ActLogMsgRootFolderChanged">Kořenová složka změněna</sys:String>
     <sys:String x:Key="ActLogMsgSalaryExportFmt">Exportována mzda {0} → {1}</sys:String>

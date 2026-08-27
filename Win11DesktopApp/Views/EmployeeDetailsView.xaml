@@ -86,6 +86,7 @@
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="MinWidth" Value="34"/>
             <Setter Property="Margin" Value="0,0,6,6"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="200"/>
         </Style>
 
         <!-- Tab button base -->

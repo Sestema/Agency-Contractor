@@ -33,8 +33,10 @@ namespace Win11DesktopApp.Services
             string outputPath,
             string monthTitle,
             IReadOnlyList<SalaryQrPdfItem> items,
-            SalaryQrPdfExportLabels labels)
+            SalaryQrPdfExportLabels labels,
+            string? currencySymbol = null)
         {
+            var symbol = string.IsNullOrWhiteSpace(currencySymbol) ? "Kč" : currencySymbol.Trim();
             var pages = (items ?? Array.Empty<SalaryQrPdfItem>())
                 .Where(item => item.QrPngBytes is { Length: > 0 })
                 .ToList();
@@ -72,7 +74,7 @@ namespace Win11DesktopApp.Services
                                     if (!string.IsNullOrWhiteSpace(item.FirmName))
                                         info.Item().Text(item.FirmName).FontSize(8).FontColor(Colors.Grey.Darken1);
 
-                                    info.Item().PaddingTop(2).Text($"{labels.Amount}: {item.Amount.ToString("N0", CultureInfo.CurrentCulture)} Kč").FontSize(10).Bold();
+                                    info.Item().PaddingTop(2).Text($"{labels.Amount}: {item.Amount.ToString("N0", CultureInfo.CurrentCulture)} {symbol}").FontSize(10).Bold();
                                     info.Item().Text($"{labels.Account}: {item.AccountNumber}");
                                     if (!string.IsNullOrWhiteSpace(item.BankName))
                                         info.Item().Text($"{labels.Bank}: {item.BankName}").FontSize(8);

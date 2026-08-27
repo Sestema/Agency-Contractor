@@ -11,8 +11,11 @@ namespace Win11DesktopApp.Services
         private static readonly string[] DateFormats = new[]
         {
             "dd.MM.yyyy", "d.M.yyyy", "dd/MM/yyyy", "d/M/yyyy",
-            "yyyy-MM-dd", "MM/dd/yyyy", "M/d/yyyy",
-            "dd.MM.yy", "d.M.yy"
+            "dd-MM-yyyy", "d-M-yyyy",
+            "yyyy-MM-dd",
+            "MM/dd/yyyy", "M/d/yyyy",
+            "dd.MM.yy", "d.M.yy",
+            "dd-MM-yy", "d-M-yy"
         };
 
         public static DateTime? TryParseDate(string dateStr)
@@ -20,16 +23,23 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrWhiteSpace(dateStr))
                 return null;
 
-            if (DateTime.TryParseExact(dateStr.Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
+            var trimmed = dateStr.Trim();
+            if (DateTime.TryParseExact(trimmed, DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
                 return result;
 
-            if (DateTime.TryParse(dateStr.Trim(), CultureInfo.GetCultureInfo("cs-CZ"), DateTimeStyles.None, out result))
+            if (DateTime.TryParse(trimmed, CultureInfo.GetCultureInfo("cs-CZ"), DateTimeStyles.None, out result))
                 return result;
 
-            if (DateTime.TryParse(dateStr.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+            if (DateTime.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
                 return result;
 
             return null;
+        }
+
+        public static string? TryFormatDdMmYyyy(string? dateStr)
+        {
+            var date = TryParseDate(dateStr ?? string.Empty);
+            return date?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
         }
 
         public static int GetDaysRemaining(string dateStr)

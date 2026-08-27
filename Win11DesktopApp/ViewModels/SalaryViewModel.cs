@@ -312,6 +312,97 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        public string SalaryDisplayCurrency
+        {
+            get => NormalizeDisplayCurrency(_appSettingsService.Settings.SalaryDisplayCurrency);
+            set
+            {
+                var code = NormalizeDisplayCurrency(value);
+                if (string.Equals(NormalizeDisplayCurrency(_appSettingsService.Settings.SalaryDisplayCurrency), code, StringComparison.OrdinalIgnoreCase))
+                    return;
+                _appSettingsService.Settings.SalaryDisplayCurrency = code;
+                _appSettingsService.SaveSettings();
+                NotifyDisplayCurrencyChanged();
+            }
+        }
+
+        public string CurrencySymbol => ResolveCurrencySymbol(SalaryDisplayCurrency);
+
+        public string CurrencySuffix => " " + CurrencySymbol;
+
+        public bool IsDisplayCurrencyUsd
+        {
+            get => SalaryDisplayCurrency == "USD";
+            set { if (value) SalaryDisplayCurrency = "USD"; }
+        }
+
+        public bool IsDisplayCurrencyEur
+        {
+            get => SalaryDisplayCurrency == "EUR";
+            set { if (value) SalaryDisplayCurrency = "EUR"; }
+        }
+
+        public bool IsDisplayCurrencyCzk
+        {
+            get => SalaryDisplayCurrency == "CZK";
+            set { if (value) SalaryDisplayCurrency = "CZK"; }
+        }
+
+        public bool IsDisplayCurrencyPln
+        {
+            get => SalaryDisplayCurrency == "PLN";
+            set { if (value) SalaryDisplayCurrency = "PLN"; }
+        }
+
+        private string ExcelCurrencyFormat => FormatExcelCurrency(CurrencySymbol, twoDecimals: true);
+
+        private string ExcelCurrencyFormatWhole => FormatExcelCurrency(CurrencySymbol, twoDecimals: false);
+
+        private static string NormalizeDisplayCurrency(string? value)
+        {
+            var text = (value ?? string.Empty).Trim();
+            if (text.Equals("EUR", StringComparison.OrdinalIgnoreCase) || text == "€")
+                return "EUR";
+            if (text.Equals("USD", StringComparison.OrdinalIgnoreCase) || text == "$")
+                return "USD";
+            if (text.Equals("PLN", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("zł", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("zl", StringComparison.OrdinalIgnoreCase))
+                return "PLN";
+            return "CZK";
+        }
+
+        public static string ResolveCurrencySymbol(string? currencyCode)
+        {
+            return NormalizeDisplayCurrency(currencyCode) switch
+            {
+                "EUR" => "€",
+                "USD" => "$",
+                "PLN" => "zł",
+                _ => "Kč"
+            };
+        }
+
+        private static string FormatExcelCurrency(string symbol, bool twoDecimals)
+        {
+            var escaped = (symbol ?? "Kč").Replace("\"", "\"\"");
+            return twoDecimals ? $"#,##0.00 \"{escaped}\"" : $"#,##0 \"{escaped}\"";
+        }
+
+        private string FormatAmountWithCurrency(decimal amount)
+            => $"{amount.ToString("N0", CultureInfo.CurrentCulture)} {CurrencySymbol}";
+
+        private void NotifyDisplayCurrencyChanged()
+        {
+            OnPropertyChanged(nameof(SalaryDisplayCurrency));
+            OnPropertyChanged(nameof(CurrencySymbol));
+            OnPropertyChanged(nameof(CurrencySuffix));
+            OnPropertyChanged(nameof(IsDisplayCurrencyUsd));
+            OnPropertyChanged(nameof(IsDisplayCurrencyEur));
+            OnPropertyChanged(nameof(IsDisplayCurrencyCzk));
+            OnPropertyChanged(nameof(IsDisplayCurrencyPln));
+        }
+
         private bool _isAdvanceDialogOpen;
         public bool IsAdvanceDialogOpen { get => _isAdvanceDialogOpen; set => SetProperty(ref _isAdvanceDialogOpen, value); }
 
@@ -2857,15 +2948,15 @@ namespace Win11DesktopApp.ViewModels
             _financeService.AddAdvance(advance);
 
             _activityLogService.Log("AdvanceAdded", "Advance", target.FirmName, target.FullName,
-                $"Аванс {amount:N0} Kč → {target.FullName} ({target.FirmName})",
-                "", amount.ToString("N0"),
+                $"Аванс {FormatAmountWithCurrency(amount)} → {target.FullName} ({target.FirmName})",
+                "", FormatAmountWithCurrency(amount),
                 employeeFolder: target.EmployeeFolder);
 
             RefreshAdvanceSums();
 
             IsAdvanceDialogOpen = false;
-            var msg = L("FinAdvanceAdded") ?? "Advance {0} Kč → {1}";
-            StatusMessage = string.Format(msg, amount.ToString("N0"), target.FullName);
+            var msg = L("FinAdvanceAdded") ?? "Advance {0} → {1}";
+            StatusMessage = string.Format(msg, FormatAmountWithCurrency(amount), target.FullName);
         }
 
         private void RefreshAdvanceSums()
@@ -3029,7 +3120,7 @@ namespace Win11DesktopApp.ViewModels
 
             if (amount >= 1000)
             {
-                var msg = $"{L("FinAdvanceDeleteConfirm") ?? "Delete advance"} {amount:N0} Kč?";
+                var msg = $"{L("FinAdvanceDeleteConfirm") ?? "Delete advance"} {FormatAmountWithCurrency(amount)}?";
                 var title = L("TitleWarning") ?? "Warning";
                 if (MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                     return;
@@ -3039,7 +3130,8 @@ namespace Win11DesktopApp.ViewModels
             RefreshAdvanceSums();
             if (!string.IsNullOrEmpty(employeeName))
                 _activityLogService.Log("AdvanceDeleted", "Advance", firmName, employeeName,
-                    $"Видалено аванс {amount:N0} Kč ← {employeeName} ({firmName})");
+                    $"Видалено аванс {FormatAmountWithCurrency(amount)} ← {employeeName} ({firmName})",
+                    newValue: FormatAmountWithCurrency(amount));
         }
 
         private void OpenManageColumns()
@@ -3067,7 +3159,7 @@ namespace Win11DesktopApp.ViewModels
                 entry[field.Id],
                 field.QrMessageText);
 
-            var window = new Views.SalaryQrPreviewWindow(preview)
+            var window = new Views.SalaryQrPreviewWindow(preview, CurrencySymbol)
             {
                 Owner = Application.Current.MainWindow
             };
@@ -3105,7 +3197,8 @@ namespace Win11DesktopApp.ViewModels
                     Amount = amount,
                     AccountNumber = account,
                     BankName = data?.BankName ?? string.Empty,
-                    MessageText = field.QrMessageText ?? string.Empty
+                    MessageText = field.QrMessageText ?? string.Empty,
+                    CurrencySymbol = CurrencySymbol
                 });
             }
 
@@ -3159,7 +3252,8 @@ namespace Win11DesktopApp.ViewModels
                         Bank = L("FinQrBank") ?? "Bank",
                         Iban = L("FinQrIban") ?? "IBAN",
                         Message = L("FinQrMessage") ?? "Message"
-                    });
+                    },
+                    CurrencySymbol);
 
                 var status = L("FinQrPrinted") ?? "QR PDF saved.";
                 StatusMessage = status;
@@ -3329,7 +3423,8 @@ namespace Win11DesktopApp.ViewModels
                     exportEntries,
                     fields,
                     expenses,
-                    labels);
+                    labels,
+                    CurrencySymbol);
 
                 StatusMessage = L("FinSalaryExportedPdf") is string pdfMsg && pdfMsg.Length > 0
                     ? pdfMsg
@@ -3555,7 +3650,7 @@ namespace Win11DesktopApp.ViewModels
             ws.Cell(totalsRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
             ws.Cell(totalsRow, fixedBefore - 1).Value = expTotalGross;
-            ws.Cell(totalsRow, fixedBefore - 1).Style.NumberFormat.Format = "#,##0.00 \"Kč\"";
+            ws.Cell(totalsRow, fixedBefore - 1).Style.NumberFormat.Format = ExcelCurrencyFormat;
             ws.Cell(totalsRow, fixedBefore - 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
             var expTotalAdvance = exportEntries.Sum(e => e.Advance);
@@ -3576,7 +3671,7 @@ namespace Win11DesktopApp.ViewModels
 
             int netCol = fixedBefore + dynamicCount + 1;
             ws.Cell(totalsRow, netCol).Value = expTotalNet;
-            ws.Cell(totalsRow, netCol).Style.NumberFormat.Format = "#,##0.00 \"Kč\"";
+            ws.Cell(totalsRow, netCol).Style.NumberFormat.Format = ExcelCurrencyFormat;
             ws.Cell(totalsRow, netCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             ws.Cell(totalsRow, netCol).Style.Font.FontColor = XLColor.FromHtml("#1565C0");
 
@@ -3618,7 +3713,7 @@ namespace Win11DesktopApp.ViewModels
                 ws.Cell(row, 2).Value = expense.Name;
                 ws.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#4E342E");
                 ws.Cell(row, 3).Value = expense.Amount;
-                ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0 \"Kč\"";
+                ws.Cell(row, 3).Style.NumberFormat.Format = ExcelCurrencyFormatWhole;
                 ws.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#E65100");
                 for (int bc = 1; bc <= 4; bc++)
@@ -3634,7 +3729,7 @@ namespace Win11DesktopApp.ViewModels
             ws.Cell(row, 2).Style.Font.Bold = true;
             ws.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#BF360C");
             ws.Cell(row, 3).Value = exportExpenses.Sum(e => e.Amount);
-            ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0 \"Kč\"";
+            ws.Cell(row, 3).Style.NumberFormat.Format = ExcelCurrencyFormatWhole;
             ws.Cell(row, 3).Style.Font.Bold = true;
             ws.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#BF360C");
@@ -3669,7 +3764,7 @@ namespace Win11DesktopApp.ViewModels
             ws.Cell(row, 1).Style.Font.FontSize = 15;
             ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#3E2723");
             ws.Cell(row, 2).Value = grandTotalValue;
-            ws.Cell(row, 2).Style.NumberFormat.Format = "#,##0.00 \"Kč\"";
+            ws.Cell(row, 2).Style.NumberFormat.Format = ExcelCurrencyFormat;
             ws.Cell(row, 2).Style.Font.Bold = true;
             ws.Cell(row, 2).Style.Font.FontSize = 15;
             ws.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#3E2723");
@@ -3718,7 +3813,7 @@ namespace Win11DesktopApp.ViewModels
                 firmNameCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
                 ws.Cell(row, 4).Value = g.Sum(e => e.NetSalary);
-                ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0 \"Kč\"";
+                ws.Cell(row, 4).Style.NumberFormat.Format = ExcelCurrencyFormatWhole;
                 ws.Cell(row, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 ws.Cell(row, 5).Value = g.Sum(e => e.HoursWorked);
                 ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0.0";
@@ -3790,7 +3885,7 @@ namespace Win11DesktopApp.ViewModels
 
                 var valCell = ws.Cell(sRow, sCol2);
                 valCell.Value = value;
-                valCell.Style.NumberFormat.Format = "#,##0 \"Kč\"";
+                valCell.Style.NumberFormat.Format = ExcelCurrencyFormatWhole;
                 valCell.Style.Font.Bold = true;
                 valCell.Style.Font.FontSize = 13;
                 valCell.Style.Font.FontColor = XLColor.FromHtml(borderColor);

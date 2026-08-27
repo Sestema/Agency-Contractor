@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -448,42 +449,60 @@ namespace Win11DesktopApp.ViewModels
                 && BatchNamesMatch(firstName, data.LastName)
                 && BatchNamesMatch(lastName, data.FirstName);
 
-            if (hasFirst && !BatchNamesMatch(firstName, data.FirstName) && !swapped)
+            if (hasFirst && !swapped)
             {
-                var isLikelyOcr = IsLikelyNameOcrSlip(data.FirstName, firstName);
-                AddBatchAIResult(
-                    employeeName,
-                    employeeFolder,
-                    docName,
-                    documentPath,
-                    "warning",
-                    isLikelyOcr
-                        ? string.Format(GetString("EmpAIFirstNameOcrFmt") ?? "Ім'я схоже на OCR-помилку, перевірте вручну: профіль '{0}', документ '{1}'.", data.FirstName, firstName)
-                        : string.Format(GetString("EmpAIFirstNameMismatchFmt") ?? "Ім'я не збігається: профіль '{0}', документ '{1}'.", data.FirstName, firstName),
-                    "FirstName",
-                    GetString("EmpAIFieldFirstName") ?? "Ім'я",
-                    data.FirstName,
-                    firstName,
-                    canApply: !isLikelyOcr);
+                if (!BatchNamesMatch(firstName, data.FirstName))
+                {
+                    var isLikelyOcr = IsLikelyNameOcrSlip(data.FirstName, firstName);
+                    AddBatchAIResult(
+                        employeeName,
+                        employeeFolder,
+                        docName,
+                        documentPath,
+                        "warning",
+                        isLikelyOcr
+                            ? string.Format(GetString("EmpAIFirstNameOcrFmt") ?? "Ім'я схоже на OCR-помилку, перевірте вручну: профіль '{0}', документ '{1}'.", data.FirstName, firstName)
+                            : string.Format(GetString("EmpAIFirstNameMismatchFmt") ?? "Ім'я не збігається: профіль '{0}', документ '{1}'.", data.FirstName, firstName),
+                        "FirstName",
+                        GetString("EmpAIFieldFirstName") ?? "Ім'я",
+                        data.FirstName,
+                        firstName,
+                        canApply: !isLikelyOcr);
+                }
+                else
+                {
+                    TryAddDiacriticUpgrade(
+                        employeeName, employeeFolder, docName, documentPath,
+                        "FirstName", GetString("EmpAIFieldFirstName") ?? "Ім'я", data.FirstName, firstName);
+                }
             }
 
-            if (hasLast && !BatchNamesMatch(lastName, data.LastName) && !swapped)
+            if (hasLast && !swapped)
             {
-                var isLikelyOcr = IsLikelyNameOcrSlip(data.LastName, lastName);
-                AddBatchAIResult(
-                    employeeName,
-                    employeeFolder,
-                    docName,
-                    documentPath,
-                    "warning",
-                    isLikelyOcr
-                        ? string.Format(GetString("EmpAILastNameOcrFmt") ?? "Прізвище схоже на OCR-помилку, перевірте вручну: профіль '{0}', документ '{1}'.", data.LastName, lastName)
-                        : string.Format(GetString("EmpAILastNameMismatchFmt") ?? "Прізвище не збігається: профіль '{0}', документ '{1}'.", data.LastName, lastName),
-                    "LastName",
-                    GetString("EmpAIFieldLastName") ?? "Прізвище",
-                    data.LastName,
-                    lastName,
-                    canApply: !isLikelyOcr);
+                if (!BatchNamesMatch(lastName, data.LastName))
+                {
+                    var isLikelyOcr = IsLikelyNameOcrSlip(data.LastName, lastName);
+                    AddBatchAIResult(
+                        employeeName,
+                        employeeFolder,
+                        docName,
+                        documentPath,
+                        "warning",
+                        isLikelyOcr
+                            ? string.Format(GetString("EmpAILastNameOcrFmt") ?? "Прізвище схоже на OCR-помилку, перевірте вручну: профіль '{0}', документ '{1}'.", data.LastName, lastName)
+                            : string.Format(GetString("EmpAILastNameMismatchFmt") ?? "Прізвище не збігається: профіль '{0}', документ '{1}'.", data.LastName, lastName),
+                        "LastName",
+                        GetString("EmpAIFieldLastName") ?? "Прізвище",
+                        data.LastName,
+                        lastName,
+                        canApply: !isLikelyOcr);
+                }
+                else
+                {
+                    TryAddDiacriticUpgrade(
+                        employeeName, employeeFolder, docName, documentPath,
+                        "LastName", GetString("EmpAIFieldLastName") ?? "Прізвище", data.LastName, lastName);
+                }
             }
 
             if (TryGetBatchValue(extracted, "BirthDate", out var birthDate) && !BatchValuesMatch("BirthDate", data.BirthDate, birthDate))
@@ -540,19 +559,26 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            if (!BatchValuesMatch(fieldKey, currentValue, suggested))
-                AddBatchAIResult(
-                    employeeName,
-                    employeeFolder,
-                    docName,
-                    documentPath,
-                    "warning",
-                    string.Format(GetString("EmpAIFieldMismatchFmt") ?? "{0}: профіль '{1}', документ '{2}'.", displayName, currentValue, suggested),
-                    fieldKey,
-                    displayName,
-                    currentValue,
-                    suggested,
-                    canApply: true);
+            if (BatchValuesMatch(fieldKey, currentValue, suggested))
+            {
+                TryAddDiacriticUpgrade(
+                    employeeName, employeeFolder, docName, documentPath,
+                    fieldKey, displayName, currentValue, suggested);
+                return;
+            }
+
+            AddBatchAIResult(
+                employeeName,
+                employeeFolder,
+                docName,
+                documentPath,
+                "warning",
+                string.Format(GetString("EmpAIFieldMismatchFmt") ?? "{0}: профіль '{1}', документ '{2}'.", displayName, currentValue, suggested),
+                fieldKey,
+                displayName,
+                currentValue,
+                suggested,
+                canApply: true);
         }
 
         private async Task ApplyBatchAISuggestionAsync(BatchAIValidationResultItem item)
@@ -633,6 +659,14 @@ namespace Win11DesktopApp.ViewModels
             if (string.Equals(fieldKey, "FirstName", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(fieldKey, "LastName", StringComparison.OrdinalIgnoreCase))
                 return FormatPersonName(value);
+
+            if (fieldKey.EndsWith("Expiry", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("IssueDate", StringComparison.OrdinalIgnoreCase)
+                || fieldKey.EndsWith("StartDate", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fieldKey, "BirthDate", StringComparison.OrdinalIgnoreCase))
+            {
+                return DateParsingHelper.TryFormatDdMmYyyy(value) ?? value?.Trim() ?? string.Empty;
+            }
 
             return value?.Trim() ?? string.Empty;
         }
@@ -751,7 +785,74 @@ namespace Win11DesktopApp.ViewModels
                 || string.Equals(fieldKey, "LastName", StringComparison.OrdinalIgnoreCase))
                 return BatchNamesMatch(current, suggested);
 
-            return string.Equals(current.Trim(), suggested.Trim(), StringComparison.OrdinalIgnoreCase);
+            return string.Equals(FoldDiacritics(current), FoldDiacritics(suggested), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void TryAddDiacriticUpgrade(
+            string employeeName,
+            string employeeFolder,
+            string docName,
+            string documentPath,
+            string fieldKey,
+            string displayName,
+            string currentValue,
+            string suggested)
+        {
+            if (!IsDiacriticUpgrade(currentValue, suggested))
+                return;
+
+            AddBatchAIResult(
+                employeeName,
+                employeeFolder,
+                docName,
+                documentPath,
+                "missing",
+                string.Format(
+                    GetString("EmpAIFieldDiacriticUpgradeFmt")
+                    ?? "{0}: у профілі без гачків '{1}', у документі '{2}'.",
+                    displayName, currentValue, suggested),
+                fieldKey,
+                displayName,
+                currentValue,
+                suggested,
+                canApply: true);
+        }
+
+        private static bool IsDiacriticUpgrade(string current, string suggested)
+        {
+            if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(suggested))
+                return false;
+
+            if (!string.Equals(FoldDiacritics(current), FoldDiacritics(suggested), StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return CountDiacriticMarks(suggested) > CountDiacriticMarks(current);
+        }
+
+        private static string FoldDiacritics(string value)
+        {
+            var normalized = value.Trim().Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+            foreach (var ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                    builder.Append(ch);
+            }
+
+            return string.Join(" ", builder.ToString().ToUpperInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static int CountDiacriticMarks(string value)
+        {
+            var normalized = value.Normalize(NormalizationForm.FormD);
+            var count = 0;
+            foreach (var ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.NonSpacingMark)
+                    count++;
+            }
+
+            return count;
         }
 
         private static bool BatchNamesMatch(string left, string right)
@@ -764,12 +865,11 @@ namespace Win11DesktopApp.ViewModels
 
         private static string NormalizeBatchName(string value)
         {
-            var normalized = value.Trim().ToUpperInvariant()
+            var normalized = FoldDiacritics(value)
                 .Replace('-', ' ')
                 .Replace('’', '\'')
                 .Replace('`', '\'')
-                .Replace('´', '\'')
-                .Replace('\u00A0', ' ');
+                .Replace('´', '\'');
 
             return string.Join(" ", normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }

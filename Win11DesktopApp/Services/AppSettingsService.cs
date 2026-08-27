@@ -112,6 +112,7 @@ namespace Win11DesktopApp.Services
             public bool ShowStatCustomSub { get; set; } = false;
             public bool SalaryNameOrderLastFirst { get; set; } = false;
             public bool SalaryHoursCustomPrecision { get; set; } = false;
+            public string SalaryDisplayCurrency { get; set; } = "CZK";
             public string InterfaceSize { get; set; } = "Medium";
             public string TextSize { get; set; } = "Medium";
             public string DocumentLanguage { get; set; } = "";

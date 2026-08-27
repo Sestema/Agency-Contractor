@@ -1754,6 +1754,11 @@
     <sys:String x:Key="FinHoursRoundedDesc">Hours are shown and saved rounded to 1 decimal place, e.g. 8.5.</sys:String>
     <sys:String x:Key="FinHoursCustom">Custom precision</sys:String>
     <sys:String x:Key="FinHoursCustomDesc">You can enter any number of decimal places, e.g. 213.23 — no rounding applied.</sys:String>
+    <sys:String x:Key="FinCurrencyConfig">Currency</sys:String>
+    <sys:String x:Key="FinCurrencyUsd">Dollar ($)</sys:String>
+    <sys:String x:Key="FinCurrencyEur">Euro (€)</sys:String>
+    <sys:String x:Key="FinCurrencyCzk">Czech koruna (Kč)</sys:String>
+    <sys:String x:Key="FinCurrencyPln">Polish zloty (zł)</sys:String>
     <sys:String x:Key="FinStatRemaining">Remaining to pay</sys:String>
     <sys:String x:Key="FinStatCustomAdd">Surcharges (+)</sys:String>
     <sys:String x:Key="FinStatCustomSub">Deductions (−)</sys:String>
@@ -1764,7 +1769,7 @@
     <sys:String x:Key="FinExpenseSelectFirm">Select a firm first to add expenses</sys:String>
     <sys:String x:Key="FinAdvanceInvalid">Invalid amount</sys:String>
     <sys:String x:Key="FinAdvanceNotFound">Employee not found</sys:String>
-    <sys:String x:Key="FinAdvanceAdded">Advance {0} Kč → {1}</sys:String>
+    <sys:String x:Key="FinAdvanceAdded">Advance {0} → {1}</sys:String>
     <sys:String x:Key="FinBtnManageColumns">Columns</sys:String>
     <sys:String x:Key="FinManageColumnsTitle">Manage Columns</sys:String>
     <sys:String x:Key="FinManageColumnsDesc">Add, edit or remove custom columns for salary calculation.</sys:String>
@@ -2753,8 +2758,8 @@ The company folder on disk will be deleted together with all its contents.</sys:
     <sys:String x:Key="ActLogMsgCompanyDeletedFmt">Deleted firm: {0}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeArchivedFmt">Archived {0} from {1}, end date: {2}</sys:String>
     <sys:String x:Key="ActLogMsgEmployeeRestoredFmt">Restored {0} to {1}, start date: {2}</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Advance {0} Kč → {1} ({2})</sys:String>
-    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Deleted advance {0} Kč ← {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceAddedFmt">Advance {0} → {1} ({2})</sys:String>
+    <sys:String x:Key="ActLogMsgAdvanceDeletedFmt">Deleted advance {0} ← {1} ({2})</sys:String>
     <sys:String x:Key="ActLogMsgMonthPaidFmt">Marked as paid: {0}</sys:String>
     <sys:String x:Key="ActLogMsgRootFolderChanged">Root folder changed</sys:String>
     <sys:String x:Key="ActLogMsgSalaryExportFmt">Exported salary {0} → {1}</sys:String>

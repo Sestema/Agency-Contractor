@@ -15,7 +15,8 @@ namespace Win11DesktopApp.Views
         public string AccountNumber { get; init; } = string.Empty;
         public string BankName { get; init; } = string.Empty;
         public string MessageText { get; init; } = string.Empty;
-        public string AmountText => $"{Amount.ToString("N0", CultureInfo.CurrentCulture)} Kč";
+        public string CurrencySymbol { get; init; } = "Kč";
+        public string AmountText => $"{Amount.ToString("N0", CultureInfo.CurrentCulture)} {CurrencySymbol}";
     }
 
     public partial class SalaryQrPrintWindow : Window
