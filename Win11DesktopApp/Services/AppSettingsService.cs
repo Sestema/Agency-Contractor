@@ -108,6 +108,10 @@ namespace Win11DesktopApp.Services
 
             public static WorkspaceUiSettings CreateDefaults() => new();
 
+            public bool HasSalaryColumnLayout =>
+                (SalaryColumnWidthByKey != null && SalaryColumnWidthByKey.Count > 0)
+                || (SalaryColumnWidths != null && SalaryColumnWidths.Count > 0);
+
             public void ApplyTo(AppSettings settings)
             {
                 settings.SalaryDisplayCurrency = string.IsNullOrWhiteSpace(SalaryDisplayCurrency)
@@ -531,15 +535,46 @@ namespace Win11DesktopApp.Services
         private void RestoreActiveUiFromStore()
         {
             var keys = GetWorkspaceUiKeys(Settings.RootFolderPath);
-            WorkspaceUiSettings? stored = null;
-            foreach (var key in keys)
-            {
-                if (Settings.WorkspaceUiById.TryGetValue(key, out stored))
-                    break;
-            }
+            var stored = FindStoredWorkspaceUi(keys);
+
+            var keepColumns = SalaryColumnWidthLayout.ResolveStore(
+                Settings.SalaryColumnWidthByKey,
+                Settings.SalaryColumnWidths);
+            var keepLegacy = Settings.SalaryColumnWidths?.ToList() ?? new List<double>();
 
             (stored ?? WorkspaceUiSettings.CreateDefaults()).ApplyTo(Settings);
+
+            if (!HasSalaryColumnLayout(Settings) && keepColumns.Count > 0)
+            {
+                Settings.SalaryColumnWidthByKey = keepColumns;
+                Settings.SalaryColumnWidths = keepLegacy;
+            }
         }
+
+        private WorkspaceUiSettings? FindStoredWorkspaceUi(IReadOnlyList<string> keys)
+        {
+            WorkspaceUiSettings? best = null;
+            var bestScore = -1;
+            foreach (var key in keys)
+            {
+                if (!Settings.WorkspaceUiById.TryGetValue(key, out var stored) || stored == null)
+                    continue;
+
+                var score = stored.HasSalaryColumnLayout ? 1 : 0;
+                score += stored.SalaryColumnWidthByKey?.Count ?? 0;
+                if (best != null && score <= bestScore)
+                    continue;
+
+                best = stored;
+                bestScore = score;
+            }
+
+            return best;
+        }
+
+        private static bool HasSalaryColumnLayout(AppSettings settings) =>
+            (settings.SalaryColumnWidthByKey != null && settings.SalaryColumnWidthByKey.Count > 0)
+            || (settings.SalaryColumnWidths != null && settings.SalaryColumnWidths.Count > 0);
 
         private List<string> GetWorkspaceUiKeys(string? folderPath)
         {

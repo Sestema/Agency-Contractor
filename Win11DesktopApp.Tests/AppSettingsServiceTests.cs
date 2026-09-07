@@ -188,6 +188,95 @@ namespace Win11DesktopApp.Tests
             }
         }
 
+        [Fact]
+        public void LoadSettings_ApplyPending_MissingTargetUi_KeepsExistingColumnWidths()
+        {
+            var root = CreateTempSettingsRoot();
+            try
+            {
+                var folderA = Path.Combine(root, "Stavba");
+                var folderB = Path.Combine(root, "WorkNet");
+                Directory.CreateDirectory(folderA);
+                Directory.CreateDirectory(folderB);
+                var pathA = AppSettingsService.NormalizeWorkspacePath(folderA);
+                var pathB = AppSettingsService.NormalizeWorkspacePath(folderB);
+
+                WriteSettings(root, new AppSettingsService.AppSettings
+                {
+                    AppVersion = AppSettingsService.CurrentAppVersion,
+                    RootFolderPath = pathA,
+                    PendingWorkspacePath = pathB,
+                    SalaryDisplayCurrency = "EUR",
+                    SalaryColumnWidthByKey = { ["HoursWorked"] = 88 },
+                    Workspaces =
+                    {
+                        new AppSettingsService.WorkspaceSetting { Path = pathA, WorkspaceId = "ws_a", DisplayName = "Stavba" },
+                        new AppSettingsService.WorkspaceSetting { Path = pathB, WorkspaceId = "ws_b", DisplayName = "WorkNet" }
+                    },
+                    WorkspaceUiById =
+                    {
+                        ["ws_a"] = Ui("EUR", 88, showPaid: true),
+                        [pathA] = Ui("EUR", 88, showPaid: true)
+                    }
+                });
+
+                var service = new AppSettingsService(root, suppressStartupNotifications: true);
+
+                Assert.Equal(pathB, AppSettingsService.NormalizeWorkspacePath(service.Settings.RootFolderPath));
+                Assert.Equal("CZK", service.Settings.SalaryDisplayCurrency);
+                Assert.Equal(88, service.Settings.SalaryColumnWidthByKey["HoursWorked"]);
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Fact]
+        public void LoadSettings_PrefersWorkspaceUiSnapshotWithColumnWidths()
+        {
+            var root = CreateTempSettingsRoot();
+            try
+            {
+                var folderA = Path.Combine(root, "Stavba");
+                var folderB = Path.Combine(root, "WorkNet");
+                Directory.CreateDirectory(folderA);
+                Directory.CreateDirectory(folderB);
+                var pathA = AppSettingsService.NormalizeWorkspacePath(folderA);
+                var pathB = AppSettingsService.NormalizeWorkspacePath(folderB);
+
+                WriteSettings(root, new AppSettingsService.AppSettings
+                {
+                    AppVersion = AppSettingsService.CurrentAppVersion,
+                    RootFolderPath = pathA,
+                    PendingWorkspacePath = pathB,
+                    SalaryDisplayCurrency = "EUR",
+                    SalaryColumnWidthByKey = { ["HoursWorked"] = 80 },
+                    Workspaces =
+                    {
+                        new AppSettingsService.WorkspaceSetting { Path = pathA, WorkspaceId = "ws_a", DisplayName = "Stavba" },
+                        new AppSettingsService.WorkspaceSetting { Path = pathB, WorkspaceId = "ws_b", DisplayName = "WorkNet" }
+                    },
+                    WorkspaceUiById =
+                    {
+                        ["ws_a"] = Ui("EUR", 80, showPaid: true),
+                        [pathA] = Ui("EUR", 80, showPaid: true),
+                        ["ws_b"] = new AppSettingsService.WorkspaceUiSettings { SalaryDisplayCurrency = "CZK" },
+                        [pathB] = Ui("CZK", 140, showPaid: false)
+                    }
+                });
+
+                var service = new AppSettingsService(root, suppressStartupNotifications: true);
+
+                Assert.Equal("CZK", service.Settings.SalaryDisplayCurrency);
+                Assert.Equal(140, service.Settings.SalaryColumnWidthByKey["hours"]);
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
         private static string CreateTempSettingsRoot()
         {
             var root = Path.Combine(Path.GetTempPath(), "ac-ws-ui-" + Guid.NewGuid().ToString("N"));

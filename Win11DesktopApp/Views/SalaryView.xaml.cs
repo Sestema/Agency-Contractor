@@ -29,7 +29,10 @@ namespace Win11DesktopApp.Views
         private readonly List<(DataGridColumn Column, EventHandler Handler)> _columnWidthSubscriptions = new();
         private DispatcherTimer? _saveWidthsTimer;
         private bool _suppressWidthSave;
+        private bool _columnWidthsReady;
+        private int _widthRestoreGeneration;
         private bool _columnRebuildQueued;
+        private readonly HashSet<string> _userChangedColumnKeys = new(StringComparer.OrdinalIgnoreCase);
 
         public SalaryView()
         {
@@ -285,6 +288,9 @@ namespace Win11DesktopApp.Views
             // width-changed notifications from the remove/add churn below.
             // Do not clear ItemsSource here — with grouping it leaves the grid half-empty.
             _suppressWidthSave = true;
+            _columnWidthsReady = false;
+            var restoreGeneration = ++_widthRestoreGeneration;
+            _userChangedColumnKeys.Clear();
             DetachColumnWidthListeners();
 
             for (int i = 0; i < _dynamicColumnCount; i++)
@@ -356,18 +362,24 @@ namespace Win11DesktopApp.Views
                 _dynamicColumnCount++;
             }
 
-            // Re-subscribe to all (fixed + dynamic) columns after rebuild.
+            // Restore first, then attach listeners only after layout has settled.
+            // Attaching earlier lets XAML default pixel widths flush into settings.
             if (SalaryGrid.IsLoaded)
             {
                 RestoreColumnWidths();
-                AttachColumnWidthListeners();
                 Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
                 {
+                    if (restoreGeneration != _widthRestoreGeneration)
+                        return;
+
+                    AttachColumnWidthListeners();
+                    _columnWidthsReady = true;
                     _suppressWidthSave = false;
                 }));
                 return;
             }
 
+            _columnWidthsReady = false;
             _suppressWidthSave = false;
         }
 
@@ -451,11 +463,13 @@ namespace Win11DesktopApp.Views
                 vm.EndSalaryEntryEdit(null);
 
             DetachColumnWidthListeners();
-            // Flush any pending debounced save.
+            // Flush a user resize that is still in the debounce window. Skip when
+            // restore has not finished — that would persist XAML defaults.
             if (_saveWidthsTimer?.IsEnabled == true)
             {
                 _saveWidthsTimer.Stop();
-                SaveColumnWidths();
+                if (_columnWidthsReady && !_suppressWidthSave)
+                    SaveColumnWidths();
             }
         }
 
@@ -491,7 +505,14 @@ namespace Win11DesktopApp.Views
 
         private void OnColumnWidthChanged(object? sender, EventArgs e)
         {
-            if (_suppressWidthSave) return;
+            if (_suppressWidthSave || !_columnWidthsReady) return;
+
+            if (sender is DataGridColumn column)
+            {
+                var key = GetColumnKey(column);
+                if (!string.IsNullOrWhiteSpace(key) && TryGetPersistedColumnWidth(column, out _))
+                    _userChangedColumnKeys.Add(key);
+            }
 
             // Debounce rapid drag updates so we don't hammer the settings file.
             if (_saveWidthsTimer == null)
@@ -509,7 +530,8 @@ namespace Win11DesktopApp.Views
 
         private void SaveColumnWidths()
         {
-            if (_suppressWidthSave) return;
+            if (_suppressWidthSave || !_columnWidthsReady) return;
+            if (_userChangedColumnKeys.Count == 0) return;
             if (DataContext is not SalaryViewModel vm) return;
 
             var measured = new List<(string Key, double Width)>();
@@ -519,21 +541,24 @@ namespace Win11DesktopApp.Views
                 if (string.IsNullOrWhiteSpace(key))
                     continue;
 
-                // Star/auto columns follow leftover space and currency text length.
-                // Persist only an explicit pixel width the user actually set.
-                if (column.Width.UnitType != DataGridLengthUnitType.Pixel)
+                if (!TryGetPersistedColumnWidth(column, out var width))
                     continue;
 
-                measured.Add((key, column.Width.Value));
+                measured.Add((key, width));
             }
 
             if (measured.Count == 0)
                 return;
 
             var svc = vm.AppSettingsService;
-            svc.Settings.SalaryColumnWidthByKey = SalaryColumnWidthLayout.Merge(
+            var merged = SalaryColumnWidthLayout.MergeUserChanges(
                 svc.Settings.SalaryColumnWidthByKey,
-                measured);
+                measured,
+                _userChangedColumnKeys);
+            if (SameWidthMap(svc.Settings.SalaryColumnWidthByKey, merged))
+                return;
+
+            svc.Settings.SalaryColumnWidthByKey = merged;
             svc.SaveSettings();
         }
 
@@ -548,24 +573,51 @@ namespace Win11DesktopApp.Views
             if (widths.Count == 0)
                 return;
 
-            _suppressWidthSave = true;
-            try
+            foreach (var column in SalaryGrid.Columns)
             {
-                foreach (var column in SalaryGrid.Columns)
-                {
-                    var key = GetColumnKey(column);
-                    if (string.IsNullOrWhiteSpace(key) || !widths.TryGetValue(key, out var width))
-                        continue;
-                    if (!SalaryColumnWidthLayout.CanPersistWidth(width))
-                        continue;
+                var key = GetColumnKey(column);
+                if (string.IsNullOrWhiteSpace(key) || !widths.TryGetValue(key, out var width))
+                    continue;
+                if (!SalaryColumnWidthLayout.CanPersistWidth(width))
+                    continue;
 
-                    column.Width = new DataGridLength(width);
-                }
+                column.Width = new DataGridLength(width);
             }
-            finally
+        }
+
+        private static bool TryGetPersistedColumnWidth(DataGridColumn column, out double width)
+        {
+            var unit = column.Width.UnitType switch
             {
-                _suppressWidthSave = true;
+                DataGridLengthUnitType.Pixel => SalaryColumnWidthLayout.WidthUnit.Pixel,
+                DataGridLengthUnitType.Star => SalaryColumnWidthLayout.WidthUnit.Star,
+                _ => SalaryColumnWidthLayout.WidthUnit.Other
+            };
+
+            return SalaryColumnWidthLayout.TryMeasurePersistedWidth(
+                unit,
+                column.Width.Value,
+                column.ActualWidth,
+                column.Width.DisplayValue,
+                out width);
+        }
+
+        private static bool SameWidthMap(
+            IReadOnlyDictionary<string, double>? left,
+            IReadOnlyDictionary<string, double>? right)
+        {
+            var a = SalaryColumnWidthLayout.Sanitize(left);
+            var b = SalaryColumnWidthLayout.Sanitize(right);
+            if (a.Count != b.Count)
+                return false;
+
+            foreach (var pair in a)
+            {
+                if (!b.TryGetValue(pair.Key, out var width) || Math.Abs(width - pair.Value) > 0.5)
+                    return false;
             }
+
+            return true;
         }
 
         private static string? GetColumnKey(DataGridColumn column)

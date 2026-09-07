@@ -99,6 +99,11 @@
 
         <Style x:Key="SeverityText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale"/>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Severity}" Value="Warning">
                     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
@@ -595,10 +600,11 @@
                                                                     <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
                                                                                Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                                     <TextBlock Text="{Binding ExpiryDateStr}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,8,0"/>
-                                                                    <Border CornerRadius="6" Padding="6,1"
+                                                                    <Border CornerRadius="6" Padding="6,2"
+                                                                            UseLayoutRounding="True"
+                                                                            SnapsToDevicePixels="True"
                                                                             Style="{StaticResource SeverityTile}">
-                                                                        <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
-                                                                                   Text="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}}"
+                                                                        <TextBlock Text="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}}"
                                                                                    Style="{StaticResource SeverityText}"/>
                                                                     </Border>
                                                                 </StackPanel>

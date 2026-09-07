@@ -696,7 +696,7 @@
                             </DataGridTextColumn>
 
                             <!-- Rate (FIXED) -->
-                            <DataGridTextColumn Binding="{Binding HourlyRate, StringFormat={}{0:N0}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="60">
+                            <DataGridTextColumn Binding="{Binding HourlyRate, StringFormat={}{0:N0}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="60" SortMemberPath="HourlyRate">
                                 <DataGridTextColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColRate}"/>
