@@ -125,52 +125,6 @@ namespace Win11DesktopApp.Converters
             => Binding.DoNothing;
     }
 
-    /// <summary>
-    /// Unified expiry severity converter. Parameter: "Foreground" (default) or "Background".
-    /// </summary>
-    public class ExpirySeverityColorConverter : IValueConverter
-    {
-        private static readonly Dictionary<string, (string fgKey, string bgKey, Color fgFallback, Color bgFallback)> SeverityColors = new()
-        {
-            { "Expired", ("ErrorBrush", "ErrorLightBrush", Color.FromRgb(0xC6, 0x28, 0x28), Color.FromRgb(0xFF, 0xEB, 0xEE)) },
-            { "Critical", ("ErrorBrush", "ErrorLightBrush", Color.FromRgb(0xD3, 0x2F, 0x2F), Color.FromRgb(0xFF, 0xEB, 0xEE)) },
-            { "Warning", ("WarningBrush", "WarningLightBrush", Color.FromRgb(0xEF, 0x6C, 0x00), Color.FromRgb(0xFF, 0xF3, 0xE0)) },
-        };
-
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            var severity = value?.ToString() ?? "Ok";
-            bool isBg = parameter?.ToString() == "Background";
-            if (SeverityColors.TryGetValue(severity, out var c))
-                return FindThemeBrush(isBg ? c.bgKey : c.fgKey, isBg ? c.bgFallback : c.fgFallback);
-
-            return FindThemeBrush(
-                isBg ? "AccentLightBrush" : "AccentBrush",
-                isBg ? Color.FromRgb(0xE8, 0xF5, 0xE9) : Color.FromRgb(0x2E, 0x7D, 0x32));
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => Binding.DoNothing;
-
-        private static Brush FindThemeBrush(string resourceKey, Color fallback)
-        {
-            return Application.Current?.TryFindResource(resourceKey) as Brush
-                ?? new SolidColorBrush(fallback);
-        }
-    }
-
-    /// <summary>
-    /// Kept for backward compatibility — delegates to ExpirySeverityColorConverter with Background param.
-    /// </summary>
-    public class ExpirySeverityBackgroundConverter : IValueConverter
-    {
-        private static readonly ExpirySeverityColorConverter _inner = new();
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => _inner.Convert(value, targetType, "Background", culture);
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => Binding.DoNothing;
-    }
-
     public class IntToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -239,6 +193,13 @@ namespace Win11DesktopApp.Converters
     /// </summary>
     public class DocTypeToGeometryConverter : IValueConverter
     {
+        // The lists that use this converter recycle their containers, so it runs again for every
+        // row that scrolls into view and each call walked the resource tree up to App. The shapes
+        // live in Icons.xaml rather than in a theme file, so a theme switch cannot change them and
+        // holding on to them is safe. Only successful lookups are stored: caching a miss would
+        // outlive whatever made it miss (Icons.xaml not merged yet) and hide the icon for good.
+        private static readonly Dictionary<string, Geometry> _geometryByKey = new();
+
         public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             var key = value as string switch
@@ -249,7 +210,15 @@ namespace Win11DesktopApp.Converters
                 "Дозвіл на роботу" => "IconDocWorkPermit",
                 _ => "IconInvoices"
             };
-            return Application.Current?.TryFindResource(key) as Geometry;
+
+            if (_geometryByKey.TryGetValue(key, out var cached))
+                return cached;
+
+            if (Application.Current?.TryFindResource(key) is not Geometry geometry)
+                return null;
+
+            _geometryByKey[key] = geometry;
+            return geometry;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

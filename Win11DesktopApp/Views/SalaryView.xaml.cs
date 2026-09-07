@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Win11DesktopApp.Models;
+using Win11DesktopApp.Services;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
@@ -327,6 +328,7 @@ namespace Win11DesktopApp.Views
                         UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
                     },
                     Width = new DataGridLength(80),
+                    SortMemberPath = field.Id,
                     Header = CreateCustomColumnHeader(field, prefix, brush)
                 };
 
@@ -359,7 +361,13 @@ namespace Win11DesktopApp.Views
             {
                 RestoreColumnWidths();
                 AttachColumnWidthListeners();
+                Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+                {
+                    _suppressWidthSave = false;
+                }));
+                return;
             }
+
             _suppressWidthSave = false;
         }
 
@@ -501,33 +509,78 @@ namespace Win11DesktopApp.Views
 
         private void SaveColumnWidths()
         {
+            if (_suppressWidthSave) return;
             if (DataContext is not SalaryViewModel vm) return;
+
+            var measured = new List<(string Key, double Width)>();
+            foreach (var column in SalaryGrid.Columns)
+            {
+                var key = GetColumnKey(column);
+                if (string.IsNullOrWhiteSpace(key))
+                    continue;
+
+                // Star/auto columns follow leftover space and currency text length.
+                // Persist only an explicit pixel width the user actually set.
+                if (column.Width.UnitType != DataGridLengthUnitType.Pixel)
+                    continue;
+
+                measured.Add((key, column.Width.Value));
+            }
+
+            if (measured.Count == 0)
+                return;
+
             var svc = vm.AppSettingsService;
-            svc.Settings.SalaryColumnWidths = SalaryGrid.Columns
-                .Select(c => c.ActualWidth)
-                .ToList();
+            svc.Settings.SalaryColumnWidthByKey = SalaryColumnWidthLayout.Merge(
+                svc.Settings.SalaryColumnWidthByKey,
+                measured);
             svc.SaveSettings();
         }
 
         private void RestoreColumnWidths()
         {
-            var widths = (DataContext as SalaryViewModel)?.AppSettingsService.Settings.SalaryColumnWidths;
-            if (widths == null || widths.Count == 0) return;
+            if (DataContext is not SalaryViewModel vm)
+                return;
 
-            // Prevent our own programmatic width assignment from triggering a save loop.
+            var widths = SalaryColumnWidthLayout.ResolveStore(
+                vm.AppSettingsService.Settings.SalaryColumnWidthByKey,
+                vm.AppSettingsService.Settings.SalaryColumnWidths);
+            if (widths.Count == 0)
+                return;
+
             _suppressWidthSave = true;
             try
             {
-                for (int i = 0; i < SalaryGrid.Columns.Count && i < widths.Count; i++)
+                foreach (var column in SalaryGrid.Columns)
                 {
-                    if (widths[i] > 0)
-                        SalaryGrid.Columns[i].Width = new DataGridLength(widths[i]);
+                    var key = GetColumnKey(column);
+                    if (string.IsNullOrWhiteSpace(key) || !widths.TryGetValue(key, out var width))
+                        continue;
+                    if (!SalaryColumnWidthLayout.CanPersistWidth(width))
+                        continue;
+
+                    column.Width = new DataGridLength(width);
                 }
             }
             finally
             {
-                _suppressWidthSave = false;
+                _suppressWidthSave = true;
             }
+        }
+
+        private static string? GetColumnKey(DataGridColumn column)
+        {
+            if (!string.IsNullOrWhiteSpace(column.SortMemberPath))
+                return column.SortMemberPath;
+
+            if (column.Header is FrameworkElement header
+                && header.Tag is string tag
+                && !string.IsNullOrWhiteSpace(tag))
+            {
+                return tag;
+            }
+
+            return null;
         }
 
         private void RestoreSidebarRowRatio()

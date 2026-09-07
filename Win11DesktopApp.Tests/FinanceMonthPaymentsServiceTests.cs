@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 using Xunit;
@@ -55,6 +56,40 @@ namespace Win11DesktopApp.Tests
             Assert.Equal(string.Empty, result.errorMessage);
             Assert.Empty(result.entries);
             Assert.Empty(result.expenses);
+        }
+
+        [Fact]
+        public void TryLoadAllFirmPayments_ShouldReadLatestDiskData_NotAStaleMemorySnapshot()
+        {
+            _salaryDbService.ReplaceMonthData(2026, 4,
+                new List<SalaryEntry>
+                {
+                    new()
+                    {
+                        EmployeeId = "emp-a",
+                        EmployeeFolder = @"C:\Employees\A",
+                        FirmName = "Firm A",
+                        FullName = "Employee A",
+                        HoursWorked = 0m,
+                        HourlyRate = 100m,
+                        SavedNetSalary = 0m,
+                        Status = "pending"
+                    }
+                },
+                new List<FirmExpense>());
+
+            var first = _service.TryLoadAllFirmPayments(2026, 4);
+            Assert.True(first.success);
+            Assert.Equal(0m, first.entries.Single().HoursWorked);
+
+            var changed = first.entries.Single();
+            changed.HoursWorked = 12m;
+            changed.SavedNetSalary = 1200m;
+            _salaryDbService.SaveMonthPayments(2026, 4, new List<SalaryEntry> { changed }, new List<FirmExpense>());
+
+            var second = _service.TryLoadAllFirmPayments(2026, 4);
+            Assert.True(second.success);
+            Assert.Equal(12m, second.entries.Single().HoursWorked);
         }
 
         [Fact]

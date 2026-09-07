@@ -6,16 +6,108 @@
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
              xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
              xmlns:views="clr-namespace:Win11DesktopApp.Views"
-             xmlns:h="clr-namespace:Win11DesktopApp.Helpers"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
-        <conv:ExpirySeverityColorConverter x:Key="SeverityColor"/>
-        <conv:ExpirySeverityBackgroundConverter x:Key="SeverityBg"/>
         <conv:DocTypeToGeometryConverter x:Key="DocTypeGeometry"/>
         <conv:StringNullOrEmptyToVisibilityConverter x:Key="StrToVis"/>
+
+        <!-- Severity colours live in styles rather than a converter so they survive a theme
+             switch: a converter resolves the brush once when the binding is set up and is never
+             asked again, because the severity itself has not changed. DynamicResource re-resolves.
+             Expired and Critical share one colour, so red is the default and only the remaining
+             two states need a trigger. Ok cannot reach this list, but it is covered to keep the
+             behaviour identical to the converter that used to fall back to accent.
+
+             There are two families because the employee card binds WorstSeverity while each
+             document row binds Severity, and a trigger's binding is fixed inside the style. -->
+
+        <Style x:Key="WorstSeverityStrip" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding WorstSeverity}" Value="Warning">
+                    <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding WorstSeverity}" Value="Ok">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="WorstSeverityBadge" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding WorstSeverity}" Value="Warning">
+                    <Setter Property="Background" Value="{DynamicResource WarningLightBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding WorstSeverity}" Value="Ok">
+                    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="WorstSeverityGlyph" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding WorstSeverity}" Value="Warning">
+                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding WorstSeverity}" Value="Ok">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SeverityRowBorder" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Severity}" Value="Ok">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Shared by the document type tile and the days-remaining badge. -->
+        <Style x:Key="SeverityTile" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                    <Setter Property="Background" Value="{DynamicResource WarningLightBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Severity}" Value="Ok">
+                    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SeverityGlyphPath" TargetType="Path">
+            <Setter Property="Stroke" Value="{DynamicResource ErrorBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                    <Setter Property="Stroke" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Severity}" Value="Ok">
+                    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SeverityText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Severity}" Value="Ok">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource PageBackgroundBrush}" Margin="24,14,24,24" ClipToBounds="False">
@@ -75,21 +167,26 @@
             <Button Command="{Binding FilterExpiredCommand}" Cursor="Hand" Margin="0,0,8,0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource ErrorLightBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource ErrorLightBrush}" BorderThickness="1">
+                        <!-- All four chips share one rule: the border is always 2 thick and only
+                             changes colour. Thickness adds to the chip's size, so switching 1 to 2
+                             on selection made the whole chip grow and its numbers shift. Inactive,
+                             the border matches its own fill and is invisible. -->
+                        <Border x:Name="Bd" Background="{DynamicResource ErrorChipBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
+                                BorderBrush="{DynamicResource ErrorChipBackgroundBrush}" BorderThickness="2">
                             <StackPanel>
-                                <TextBlock Text="{Binding ExpiredDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource ErrorBrush}"/>
+                                <TextBlock Text="{Binding ExpiredDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource ErrorChipForegroundBrush}"/>
+                                <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource ErrorChipForegroundBrush}"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
                             </Trigger>
+                            <!-- Declared after the hover trigger so an active chip keeps its strong
+                                 ring while still darkening under the mouse. -->
                             <DataTrigger Binding="{Binding IsFilterExpired}" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -100,21 +197,20 @@
             <Button Command="{Binding FilterWarningCommand}" Cursor="Hand" Margin="0,0,8,0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource WarningLightBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource WarningLightBrush}" BorderThickness="1">
+                        <Border x:Name="Bd" Background="{DynamicResource WarningChipBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
+                                BorderBrush="{DynamicResource WarningChipBackgroundBrush}" BorderThickness="2">
                             <StackPanel>
-                                <TextBlock Text="{Binding WarningDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Text="{Binding WarningDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource WarningChipForegroundBrush}"/>
+                                <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource WarningChipForegroundBrush}"/>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WarningLightBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
                             </Trigger>
                             <DataTrigger Binding="{Binding IsFilterWarning}" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WarningLightBrush}"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -125,8 +221,11 @@
             <Button Command="{Binding FilterAllCommand}" Cursor="Hand" Margin="0,0,8,0">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
+                        <!-- The neutral chip has no chip brush family, so it keeps the card colours
+                             and a visible grey ring when inactive. Hover fills instead of dimming:
+                             the old Opacity 0.85 faded the chip's own numbers. -->
                         <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="2">
                             <StackPanel>
                                 <TextBlock Text="{Binding TotalDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" 
                                            Foreground="{DynamicResource ForegroundBrush}"/>
@@ -135,11 +234,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                             </Trigger>
                             <DataTrigger Binding="{Binding IsFilterAll}" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -150,21 +248,28 @@
             <Button Command="{Binding ToggleIgnoredListCommand}" Cursor="Hand">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentLightBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
+                        <Border x:Name="Bd" Background="{DynamicResource InfoChipBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
+                                BorderBrush="{DynamicResource InfoChipBackgroundBrush}" BorderThickness="2">
                             <StackPanel>
-                                <TextBlock Text="{Binding IgnoredCount}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource AccentDarkBrush}"/>
+                                <TextBlock Text="{Binding IgnoredCount}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource InfoChipForegroundBrush}"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{DynamicResource ProbIgnored}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource AccentDarkBrush}"/>
-                                    <TextBlock Text=" &#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
-                                               Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center" Margin="4,1,0,0"/>
+                                    <TextBlock Text="{DynamicResource ProbIgnored}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                    <TextBlock x:Name="Chev" Text=" &#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
+                                               Foreground="{DynamicResource InfoChipForegroundBrush}" VerticalAlignment="Center" Margin="4,1,0,0"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
                             </Trigger>
+                            <!-- This chip opens the ignored panel, so it needs to show that the panel
+                                 is open: ring plus the chevron pointing the other way. -->
+                            <DataTrigger Binding="{Binding IsIgnoredListVisible}" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Chev" Property="Text" Value=" &#xE70E;"/>
+                            </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Button.Template>
@@ -200,7 +305,7 @@
                                  Foreground="{DynamicResource ForegroundBrush}"
                                  CaretBrush="{DynamicResource ForegroundBrush}"
                                  FontSize="{DynamicResource FS13}" Padding="0"
-                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}">
+                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged, Delay=300}">
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
                                     <Setter Property="Tag" Value="{DynamicResource ProbSearchPlaceholder}"/>
@@ -342,6 +447,7 @@
                           Visibility="{Binding HasProblems, Converter={StaticResource BoolToVis}}"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Pixel"
                           ScrollViewer.CanContentScroll="True">
                 <ItemsControl.Template>
                     <ControlTemplate TargetType="ItemsControl">
@@ -356,33 +462,32 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
+                        <!-- No entry animation and no RenderTransform on these cards on purpose.
+                             The panel recycles containers, so a Loaded-driven fade replays every
+                             time a card scrolls back into view, and fading a card full of text
+                             pushes it through an opacity layer that softens the glyphs. -->
                         <DataTemplate>
-                            <Border Style="{StaticResource ModernCard}"
-                                    Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
+                            <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12"
                                     Padding="0" Margin="10,4,10,7"
                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                    RenderTransformOrigin="0.5,0.5" Cursor="Hand"
+                                    Cursor="Hand"
                                     UseLayoutRounding="True" SnapsToDevicePixels="True"
                                     TextOptions.TextFormattingMode="Display"
                                     TextOptions.TextRenderingMode="ClearType"
                                     MouseLeftButtonDown="EmployeeCard_MouseLeftButtonDown"
-                                    h:StaggerAnimation.Enable="True"
                                     Effect="{x:Null}">
-                                <Border.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                        <TranslateTransform Y="0"/>
-                                    </TransformGroup>
-                                </Border.RenderTransform>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="5"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Severity color strip (worst severity) -->
-                                    <Border Grid.Column="0" CornerRadius="8,0,0,8"
-                                            Background="{Binding WorstSeverity, Converter={StaticResource SeverityColor}}"/>
+                                    <!-- Severity color strip (worst severity). Inset top and bottom so the bar
+                                         never reaches the card's corner arcs, which curve inward for the first
+                                         11 device pixels and would otherwise clip its ends. The radius has to
+                                         stay at or below half the 5 width, or WPF trims it back to fit. -->
+                                    <Border Grid.Column="0" Margin="0,10" CornerRadius="2.5"
+                                            Style="{StaticResource WorstSeverityStrip}"/>
 
                                     <Grid Grid.Column="1" Margin="12,10,12,8">
                                         <Grid.RowDefinitions>
@@ -401,10 +506,10 @@
                                             <!-- Icon -->
                                             <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" 
                                                     Margin="0,0,10,0" VerticalAlignment="Center"
-                                                    Background="{Binding WorstSeverity, Converter={StaticResource SeverityBg}}">
+                                                    Style="{StaticResource WorstSeverityBadge}">
                                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="{Binding WorstSeverity, Converter={StaticResource SeverityColor}}"/>
+                                                           Style="{StaticResource WorstSeverityGlyph}"/>
                                             </Border>
 
                                             <!-- Name + firm -->
@@ -458,7 +563,7 @@
                                                 <DataTemplate>
                                                     <Border Margin="0,0,0,4" Padding="10,6,8,6" CornerRadius="7"
                                                             Background="{DynamicResource SurfaceBrush}"
-                                                            BorderBrush="{Binding Severity, Converter={StaticResource SeverityColor}}"
+                                                            Style="{StaticResource SeverityRowBorder}"
                                                             BorderThickness="4,0,0,0">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
@@ -471,11 +576,11 @@
                                                             <!-- Document type icon tile -->
                                                             <Border Grid.Column="0" Width="26" Height="26" CornerRadius="7"
                                                                     Margin="0,0,9,0" VerticalAlignment="Center"
-                                                                    Background="{Binding Severity, Converter={StaticResource SeverityBg}}">
+                                                                    Style="{StaticResource SeverityTile}">
                                                                 <Path Data="{Binding DocumentType, Converter={StaticResource DocTypeGeometry}}"
                                                                       Stretch="Uniform" Width="15" Height="15"
                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                      Stroke="{Binding Severity, Converter={StaticResource SeverityColor}}"
+                                                                      Style="{StaticResource SeverityGlyphPath}"
                                                                       StrokeThickness="1.5" Fill="Transparent"
                                                                       StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                                                             </Border>
@@ -491,10 +596,10 @@
                                                                                Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                                     <TextBlock Text="{Binding ExpiryDateStr}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,8,0"/>
                                                                     <Border CornerRadius="6" Padding="6,1"
-                                                                            Background="{Binding Severity, Converter={StaticResource SeverityBg}}">
+                                                                            Style="{StaticResource SeverityTile}">
                                                                         <TextBlock FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
                                                                                    Text="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}}"
-                                                                                   Foreground="{Binding Severity, Converter={StaticResource SeverityColor}}"/>
+                                                                                   Style="{StaticResource SeverityText}"/>
                                                                     </Border>
                                                                 </StackPanel>
                                                             </StackPanel>
@@ -556,24 +661,6 @@
                                         </ItemsControl>
                                     </Grid>
                                 </Grid>
-                                <Border.Triggers>
-                                    <EventTrigger RoutedEvent="MouseEnter">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
-                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                    <EventTrigger RoutedEvent="MouseLeave">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
-                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Border.Triggers>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -616,24 +703,28 @@
         </Grid>
         <!-- Employee Details Overlay -->
         <Grid Grid.RowSpan="4" Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsEmployeeDetailsOpen}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
-                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
+            <!-- Only the dim fades in. The same animation used to sit on this Grid, which meant
+                 the whole employee card - a very large view full of text - was pushed through a
+                 half-screen opacity buffer for the whole quarter second. The dim is a flat rect
+                 with no children, so fading it costs nothing; the card itself just appears. -->
             <Border Background="{DynamicResource OverlayBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmployeeDetailsOpen}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding EmployeeDetailsVm.CloseCommand}"/>
                 </Border.InputBindings>

@@ -247,7 +247,7 @@
             <Setter Property="UseLayoutRounding" Value="True"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
             <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
-            <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
         </Style>
         <Style x:Key="EmpToolbarTextBold" TargetType="TextBlock" BasedOn="{StaticResource EmpToolbarText}">
             <Setter Property="FontWeight" Value="Bold"/>
@@ -261,7 +261,7 @@
             <Setter Property="UseLayoutRounding" Value="True"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
             <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
-            <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
         </Style>
         <Style x:Key="EmpStatChipBorder" TargetType="Border">
             <Setter Property="CornerRadius" Value="9"/>
@@ -273,33 +273,7 @@
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
             <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
-            <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
-            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="1" ScaleY="1"/>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Trigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.02" Duration="0:0:0.12"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.02" Duration="0:0:0.12"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.EnterActions>
-                    <Trigger.ExitActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15"/>
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.ExitActions>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
         </Style>
 
         <!-- Segmented sort button: hover only applies while the segment is inactive (Tag is empty).
@@ -314,7 +288,7 @@
             <Setter Property="UseLayoutRounding" Value="True"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
             <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
-            <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -386,6 +360,40 @@
             <Setter Property="Margin" Value="0,0,7,0"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+
+        <!-- Typography for the stat chips. Foreground is left unset on purpose: each chip
+             derives from these and drives its own color from the idle/zero/active state. -->
+        <Style x:Key="EmpStatChipValueText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS14}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
+        </Style>
+
+        <Style x:Key="EmpStatChipLabelText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS11}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            <Setter Property="TextOptions.TextHintingMode" Value="Fixed"/>
+        </Style>
+
+        <Style x:Key="EmpStatChipGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <!-- View-mode segment: transparent flat button, icon color reacts to the shared sliding pill behind it. -->
@@ -489,15 +497,19 @@
 
                 <!-- ===== UNIFIED HEADER CARD (branding + company switcher + search + actions / stats + sort + view) ===== -->
                 <Grid Grid.Row="0" Margin="0,0,0,8" ClipToBounds="False">
+                    <!-- Shadow-only layer (no content, so caching it cannot blur any text).
+                         The blur is rasterized once instead of on every header repaint. -->
                     <Border CornerRadius="14" Background="{DynamicResource CardBackgroundBrush}"
-                            Effect="{DynamicResource CardShadow}"/>
+                            Effect="{DynamicResource CardShadow}"
+                            CacheMode="BitmapCache"
+                            RenderOptions.CachingHint="Cache"/>
                     <Border CornerRadius="14" BorderThickness="1" Padding="10,7"
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             Background="{DynamicResource CardBackgroundBrush}"
                             UseLayoutRounding="True" SnapsToDevicePixels="True"
                             TextOptions.TextFormattingMode="Ideal"
                             TextOptions.TextRenderingMode="ClearType"
-                            TextOptions.TextHintingMode="Animated">
+                            TextOptions.TextHintingMode="Fixed">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -597,7 +609,7 @@
                                     UseLayoutRounding="True" SnapsToDevicePixels="True"
                                     TextOptions.TextFormattingMode="Ideal"
                                     TextOptions.TextRenderingMode="ClearType"
-                                    TextOptions.TextHintingMode="Animated"
+                                    TextOptions.TextHintingMode="Fixed"
                                     MouseEnter="CompanyDropdown_MouseEnter"
                                     MouseLeave="CompanyDropdown_MouseLeave">
                                 <Grid>
@@ -740,7 +752,7 @@
                                 UseLayoutRounding="True"
                                 TextOptions.TextFormattingMode="Ideal"
                                 TextOptions.TextRenderingMode="ClearType"
-                                TextOptions.TextHintingMode="Animated">
+                                TextOptions.TextHintingMode="Fixed">
                         <Grid Margin="6,0,4,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -1017,9 +1029,14 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                            <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
                                 <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                    </Trigger>
+                                    <!-- "All" is the default, not a narrowing filter: an accent outline is enough.
+                                         Filling it would leave a permanent colored blob in the toolbar. -->
                                     <DataTrigger Binding="{Binding StatFilter}" Value="all">
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
@@ -1028,27 +1045,15 @@
                         </Border.Style>
                                     <StackPanel Orientation="Horizontal">
                                         <Border Style="{StaticResource EmpStatIconBadge}" Background="{DynamicResource InfoChipForegroundBrush}">
-                                            <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <TextBlock Text="&#xE716;" Style="{StaticResource EmpStatChipGlyph}" Foreground="White"/>
                                         </Border>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding TotalCount}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
-                                            <TextBlock Text="{DynamicResource EmpStatTotal}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS11}" FontWeight="Medium"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}" Opacity="0.9"
-                                                       Margin="4,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
+                                            <TextBlock Text="{Binding TotalCount}"
+                                                       Style="{StaticResource EmpStatChipValueText}"
+                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                            <TextBlock Text="{DynamicResource EmpStatTotal}"
+                                                       Style="{StaticResource EmpStatChipLabelText}"
+                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
                                         </StackPanel>
                         </StackPanel>
                     </Border>
@@ -1058,38 +1063,93 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                            <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
                                 <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                    </Trigger>
+                                    <!-- Nothing to report: drop the warning color so it stops competing for attention. -->
+                                    <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding ProblemsCount}" Value="0"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
+                                    </MultiDataTrigger>
+                                    <!-- Active filter last, so a solid fill wins over both hover and the muted state.
+                                         Uses the accent (not the chip color): it is the one fill the app pairs with
+                                         white text in every theme, and it matches the primary button and view pill. -->
                                     <DataTrigger Binding="{Binding StatFilter}" Value="problems">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Style="{StaticResource EmpStatIconBadge}" Background="{DynamicResource WarningChipForegroundBrush}">
-                                            <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Border>
+                                            <Border.Style>
+                                                <Style TargetType="Border" BasedOn="{StaticResource EmpStatIconBadge}">
+                                                    <Setter Property="Background" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
+                                                            <Setter Property="Background" Value="{DynamicResource TertiaryForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StatFilter}" Value="problems">
+                                                            <Setter Property="Background" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="&#xE7BA;">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipGlyph}">
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding StatFilter}" Value="problems">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </Border>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding ProblemsCount}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource WarningChipForegroundBrush}"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
-                                            <TextBlock Text="{DynamicResource EmpStatProblems}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS11}" FontWeight="Medium"
-                                                       Foreground="{DynamicResource WarningChipForegroundBrush}" Opacity="0.9"
-                                                       Margin="4,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
+                                            <TextBlock Text="{Binding ProblemsCount}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipValueText}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding StatFilter}" Value="problems">
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{DynamicResource EmpStatProblems}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipLabelText}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding StatFilter}" Value="problems">
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                         </StackPanel>
                     </Border>
@@ -1099,38 +1159,92 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                            <Setter Property="Background" Value="{DynamicResource SuccessChipBackgroundBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource SuccessChipBackgroundBrush}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource SuccessChipBorderBrush}"/>
                                 <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource SuccessChipBorderBrush}"/>
+                                    </Trigger>
+                                    <!-- Nobody joined this month: keep the chip quiet instead of green. -->
+                                    <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                    </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding NewThisMonth}" Value="0"/>
+                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
+                                    </MultiDataTrigger>
+                                    <!-- Active filter last, so a solid fill wins over both hover and the muted state.
+                                         Accent fill for the same reason as the problems chip above. -->
                                     <DataTrigger Binding="{Binding StatFilter}" Value="new">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Style="{StaticResource EmpStatIconBadge}" Background="{DynamicResource SuccessChipForegroundBrush}">
-                                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Border>
+                                            <Border.Style>
+                                                <Style TargetType="Border" BasedOn="{StaticResource EmpStatIconBadge}">
+                                                    <Setter Property="Background" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
+                                                            <Setter Property="Background" Value="{DynamicResource TertiaryForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StatFilter}" Value="new">
+                                                            <Setter Property="Background" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="&#xE710;">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipGlyph}">
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding StatFilter}" Value="new">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </Border>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding NewThisMonth}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource SuccessChipForegroundBrush}"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
-                                            <TextBlock Text="{DynamicResource EmpStatNewMonth}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS11}" FontWeight="Medium"
-                                                       Foreground="{DynamicResource SuccessChipForegroundBrush}" Opacity="0.9"
-                                                       Margin="4,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
+                                            <TextBlock Text="{Binding NewThisMonth}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipValueText}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding StatFilter}" Value="new">
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{DynamicResource EmpStatNewMonth}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipLabelText}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding StatFilter}" Value="new">
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                         </StackPanel>
                     </Border>
@@ -1145,31 +1259,24 @@
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
                                 <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                    </Trigger>
+                                </Style.Triggers>
                             </Style>
                         </Border.Style>
                                     <StackPanel Orientation="Horizontal">
                                         <Border Style="{StaticResource EmpStatIconBadge}" Background="{DynamicResource InfoChipForegroundBrush}">
-                                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <TextBlock Text="&#xE8A5;" Style="{StaticResource EmpStatChipGlyph}" Foreground="White"/>
                                         </Border>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding DocumentPackagePercentText}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
-                                            <TextBlock Text="{DynamicResource EmpStatDocumentPackage}" FontFamily="Segoe UI"
-                                                       FontSize="{DynamicResource FS11}" FontWeight="Medium"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}" Opacity="0.9"
-                                                       Margin="4,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                       TextOptions.TextFormattingMode="Ideal"
-                                                       TextOptions.TextRenderingMode="ClearType"
-                                                       TextOptions.TextHintingMode="Animated"/>
+                                            <TextBlock Text="{Binding DocumentPackagePercentText}"
+                                                       Style="{StaticResource EmpStatChipValueText}"
+                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                            <TextBlock Text="{DynamicResource EmpStatDocumentPackage}"
+                                                       Style="{StaticResource EmpStatChipLabelText}"
+                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
                                         </StackPanel>
                         </StackPanel>
                     </Border>

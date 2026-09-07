@@ -14,14 +14,50 @@
         <conv:IntToVisibilityConverter x:Key="IntToVis"/>
         <CubicEase x:Key="Ease" EasingMode="EaseOut"/>
 
+        <!-- Every stat card opens something on click, so it has to answer the mouse:
+             accent outline plus a faint fill. No shadow or scale here on purpose - the cards
+             are full of text and both would blur it. -->
+        <!-- Spacing scale for this page: radius 12 on top-level cards, 8 on nested blocks,
+             every margin and padding a multiple of 4. Dialogs keep radius 16 on purpose:
+             a bigger surface carries a bigger corner. -->
+        <!-- Type scale for this page - five roles, nothing in between: FS26 headline number,
+             FS20 number inside a widget, FS15 title, FS13 body, FS11 caption. Weight, not
+             size, separates a dialog title from a widget number at the same FS20.
+             Icon FontSize is geometry, not type, and is deliberately outside this scale. -->
         <Style x:Key="StatCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Padding" Value="18,13"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,12"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Stat card icon, deliberately monochrome. On this page color is reserved for numbers
+             that mean something (red problem count, green/red movement); four bright gradients
+             here were competing with the data instead of labeling it. -->
+        <Style x:Key="StatCardIconBadge" TargetType="Border">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <Style x:Key="StatCardIconGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="DragHandle" TargetType="TextBlock">
@@ -73,11 +109,27 @@
 
         <Style x:Key="DashboardWidgetCard" TargetType="Border">
             <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Padding" Value="13,11"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <!-- One step lighter than the card it sits in, never darker: the window background
+                 is below the card in every theme, so using it here read as a hole punched
+                 through the surface (worst in the dark themes, where it is much darker). -->
+            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+        </Style>
+
+        <!-- Container tier inside the dialogs: same rank as WidgetSlot on the page, so it gets
+             the same radius and padding. It used to borrow DashboardWidgetCard and patch the
+             padding inline, which left it with the nested radius, a stray bottom margin, and
+             the same fill as the cards it contains - a list that only separated from its own
+             panel by a one pixel border. -->
+        <Style x:Key="DialogPanelCard" TargetType="Border">
+            <Setter Property="Padding" Value="16"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
         </Style>
 
         <!-- ===== WIDGET: Expiring Documents ===== -->
@@ -88,7 +140,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                     <TextBlock Style="{StaticResource DragHandle}" Tag="grip"
                                MouseLeftButtonDown="Grip_MouseLeftButtonDown"/>
                     <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16"
@@ -99,14 +151,14 @@
 
                 <Border Grid.Row="1"
                         Style="{StaticResource CompactEmptyStateCard}"
-                        Padding="20,18"
+                        Padding="20,16"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Stretch"
                         Visibility="{Binding DataContext.ExpiringDocs.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}, ConverterParameter=invert}">
                     <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="40"
-                                   Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                        <TextBlock Text="{DynamicResource DashAllOk}" FontSize="{DynamicResource FS14}"
+                                   Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <TextBlock Text="{DynamicResource DashAllOk}" FontSize="{DynamicResource FS13}"
                                    Foreground="{DynamicResource SecondaryForegroundBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
                     </StackPanel>
                 </Border>
@@ -116,7 +168,7 @@
                     <ItemsControl ItemsSource="{Binding DataContext.ExpiringDocs, RelativeSource={RelativeSource AncestorType=UserControl}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource DashboardWidgetCard}" Cursor="Hand" Margin="0,0,0,6">
+                                <Border Style="{StaticResource DashboardWidgetCard}" Cursor="Hand">
                                     <Border.InputBindings>
                                         <MouseBinding MouseAction="LeftClick"
                                                       Command="{Binding DataContext.OpenEmployeeDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -129,7 +181,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="10"
+                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
                                                 Margin="0,0,12,0" VerticalAlignment="Center"
                                                 Background="{Binding SeverityColor, Converter={StaticResource HexToBrush}, ConverterParameter=0.12}">
                                             <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="15"
@@ -183,35 +235,35 @@
                     </Grid.RowDefinitions>
 
                     <UniformGrid Columns="2" Margin="0,0,0,12">
-                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,6,8">
+                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,4,8">
                             <StackPanel>
                                 <TextBlock Text="{Binding DataContext.TotalEmployeesAllTime, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                           FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource DashEfficiencyEmployeesAllTime}" FontSize="{DynamicResource FS10}"
+                                           FontSize="{DynamicResource FS20}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock Text="{DynamicResource DashEfficiencyEmployeesAllTime}" FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="6,0,0,8">
+                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="4,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="{Binding DataContext.GeneratedDocumentsCount, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                           FontSize="{DynamicResource FS22}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource DashEfficiencyGeneratedDocs}" FontSize="{DynamicResource FS10}"
+                                           FontSize="{DynamicResource FS20}" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                                <TextBlock Text="{DynamicResource DashEfficiencyGeneratedDocs}" FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,6,0">
+                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="0,0,4,0">
                             <StackPanel>
                                 <TextBlock Text="{Binding DataContext.ProgramTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                           FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="{DynamicResource InfoBrush}"/>
-                                <TextBlock Text="{DynamicResource DashEfficiencyProgramTime}" FontSize="{DynamicResource FS10}"
+                                           FontSize="{DynamicResource FS20}" FontWeight="Bold" Foreground="{DynamicResource InfoBrush}"/>
+                                <TextBlock Text="{DynamicResource DashEfficiencyProgramTime}" FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="6,0,0,0">
+                        <Border Style="{StaticResource DashboardWidgetCard}" Margin="4,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="{Binding DataContext.SavedTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                           FontSize="{DynamicResource FS18}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
-                                <TextBlock Text="{DynamicResource DashEfficiencySavedTime}" FontSize="{DynamicResource FS10}"
+                                           FontSize="{DynamicResource FS20}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
+                                <TextBlock Text="{DynamicResource DashEfficiencySavedTime}" FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
@@ -219,10 +271,10 @@
 
                     <TextBlock Grid.Row="1"
                                Text="{DynamicResource DashEfficiencyFormula}"
-                               FontSize="{DynamicResource FS10}"
+                               FontSize="{DynamicResource FS11}"
                                Foreground="{DynamicResource TertiaryForegroundBrush}"
                                TextWrapping="Wrap"
-                               Margin="0,0,0,10"/>
+                               Margin="0,0,0,8"/>
 
                     <Grid Grid.Row="2" VerticalAlignment="Bottom">
                         <Grid.RowDefinitions>
@@ -232,18 +284,18 @@
                             <RowDefinition Height="8"/>
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" Margin="0,0,0,4">
-                            <TextBlock Text="{DynamicResource DashEfficiencySavedTime}" FontSize="{DynamicResource FS10}"
+                            <TextBlock Text="{DynamicResource DashEfficiencySavedTime}" FontSize="{DynamicResource FS11}"
                                        Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                            <TextBlock Text="{Binding DataContext.SavedTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                            <TextBlock Text="{Binding DataContext.SavedTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Right"/>
                         </DockPanel>
                         <ProgressBar Grid.Row="1" Minimum="0" Maximum="{Binding DataContext.EfficiencyChartMaxMinutes, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      Value="{Binding DataContext.SavedMinutes, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{DynamicResource SuccessBrush}"
                                      Background="{DynamicResource DividerBrush}" BorderThickness="0"/>
                         <DockPanel Grid.Row="2" Margin="0,8,0,4">
-                            <TextBlock Text="{DynamicResource DashEfficiencyProgramTime}" FontSize="{DynamicResource FS10}"
+                            <TextBlock Text="{DynamicResource DashEfficiencyProgramTime}" FontSize="{DynamicResource FS11}"
                                        Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                            <TextBlock Text="{Binding DataContext.ProgramTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}" FontSize="{DynamicResource FS10}" FontWeight="SemiBold"
+                            <TextBlock Text="{Binding DataContext.ProgramTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Right"/>
                         </DockPanel>
                         <ProgressBar Grid.Row="3" Minimum="0" Maximum="{Binding DataContext.EfficiencyChartMaxMinutes, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -278,7 +330,7 @@
 
                 <Border Grid.Row="2"
                         Style="{StaticResource CompactEmptyStateCard}"
-                        Padding="20,18"
+                        Padding="20,16"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Stretch"
                         Visibility="{Binding DataContext.SalaryMonths.Count, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}, ConverterParameter=invert}">
@@ -321,11 +373,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding MonthLabel}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource ForegroundBrush}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding GrossText}" FontSize="{DynamicResource FS12}"
+                                                <TextBlock Grid.Column="1" Text="{Binding GrossText}" FontSize="{DynamicResource FS13}"
                                                            FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"
                                                            VerticalAlignment="Center"/>
                                             </Grid>
-                                            <TextBlock Text="{Binding CountText}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                            <TextBlock Text="{Binding CountText}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                                        Margin="0,0,0,4"/>
                                             <Grid Height="6" Margin="0,0,0,4">
                                                 <Border CornerRadius="3" Background="{DynamicResource WindowBackgroundBrush}"
@@ -347,10 +399,10 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding PaidText}" FontSize="{DynamicResource FS11}"
                                                            Foreground="{Binding StatusColor, Converter={StaticResource HexToBrush}}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding NetText}" FontSize="{DynamicResource FS10}"
+                                                <TextBlock Grid.Column="1" Text="{Binding NetText}" FontSize="{DynamicResource FS11}"
                                                            Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                             </Grid>
-                                            <TextBlock Text="{Binding ExpenseText}" FontSize="{DynamicResource FS10}"
+                                            <TextBlock Text="{Binding ExpenseText}" FontSize="{DynamicResource FS11}"
                                                        Foreground="{DynamicResource WarningBrush}" Margin="0,0,0,1"
                                                        Visibility="{Binding HasExpenses, Converter={StaticResource BoolToVis}}"/>
                                             <TextBlock Text="{Binding GrandTotalText}" FontSize="{DynamicResource FS11}"
@@ -368,8 +420,8 @@
         <!-- Widget slot style with drop highlight -->
         <Style x:Key="WidgetSlot" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Padding" Value="18"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="AllowDrop" Value="True"/>
@@ -384,7 +436,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <Grid Grid.Row="0" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -400,7 +452,7 @@
                 </Border>
                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="{DynamicResource DashboardTitle}" Style="{StaticResource PageHeaderTitleText}"/>
-                    <TextBlock FontSize="{DynamicResource FS12}"
+                    <TextBlock FontSize="{DynamicResource FS11}"
                                Foreground="{DynamicResource MutedForegroundBrush}"
                                Margin="0,3,0,0">
                         <Run Text="{Binding TotalEmployees}"/>
@@ -421,7 +473,7 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                    Foreground="{DynamicResource PurpleBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="{DynamicResource AIReportBtn}" FontSize="{DynamicResource FS12}"
+                        <TextBlock Text="{DynamicResource AIReportBtn}" FontSize="{DynamicResource FS13}"
                                    Foreground="{DynamicResource PurpleBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -436,8 +488,8 @@
         </Grid>
 
         <!-- Stats Cards Row -->
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,18">
-            <Border Style="{StaticResource StatCard}" Margin="0,0,10,0">
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+            <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding OpenMonthlyMovementDetailsCommand}"/>
                 </Border.InputBindings>
@@ -447,7 +499,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource MainStatMonthlyMovement}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource MainStatMonthlyMovement}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         <TextBlock Text="{Binding MonthlyMovementSummaryText}" FontSize="{DynamicResource FS26}" FontWeight="Bold"
                                    Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -482,15 +534,13 @@
                                          BorderThickness="0"/>
                         </Grid>
                     </StackPanel>
-                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="12" VerticalAlignment="Center"
-                            Background="{DynamicResource BrandWarmGradientBrush}">
-                        <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="20"
-                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Grid.Column="1" Style="{StaticResource StatCardIconBadge}">
+                        <TextBlock Text="&#xE9D2;" Style="{StaticResource StatCardIconGlyph}"/>
                     </Border>
                 </Grid>
             </Border>
 
-            <Border Style="{StaticResource StatCard}" Margin="0,0,10,0">
+            <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding OpenProblemsCommand}"/>
                 </Border.InputBindings>
@@ -500,21 +550,19 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource DashWidgetDocuments}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource DashWidgetDocuments}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         <TextBlock Text="{Binding TotalProblems}" FontSize="{DynamicResource FS26}" FontWeight="Bold"
                                    Foreground="{DynamicResource ErrorBrush}" Margin="0,4,0,0"/>
                         <TextBlock Text="{Binding ProblemTrend}" FontSize="{DynamicResource FS11}"
                                    Foreground="{DynamicResource WarningBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
-                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="12" VerticalAlignment="Center"
-                            Background="{DynamicResource BrandDangerGradientBrush}">
-                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="20"
-                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Grid.Column="1" Style="{StaticResource StatCardIconBadge}">
+                        <TextBlock Text="&#xE7BA;" Style="{StaticResource StatCardIconGlyph}"/>
                     </Border>
                 </Grid>
             </Border>
 
-            <Border Style="{StaticResource StatCard}" Margin="0,0,10,0">
+            <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding OpenAllEmployeesCommand}"/>
                 </Border.InputBindings>
@@ -524,16 +572,14 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource DashWidgetActiveEmployees}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource DashWidgetActiveEmployees}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         <TextBlock Text="{Binding TotalEmployees}" FontSize="{DynamicResource FS26}" FontWeight="Bold"
                                    Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
                         <TextBlock Text="{DynamicResource DashAllCompanies}" FontSize="{DynamicResource FS11}"
                                    Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
-                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="12" VerticalAlignment="Center"
-                            Background="{DynamicResource BrandSuccessGradientBrush}">
-                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="20"
-                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Grid.Column="1" Style="{StaticResource StatCardIconBadge}">
+                        <TextBlock Text="&#xE8A5;" Style="{StaticResource StatCardIconGlyph}"/>
                     </Border>
                 </Grid>
             </Border>
@@ -548,15 +594,13 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource SearchCatCompanies}" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource SearchCatCompanies}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                         <TextBlock Text="{Binding TotalCompanies}" FontSize="{DynamicResource FS26}" FontWeight="Bold"
                                    Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
                         <TextBlock Text="{DynamicResource DashVisibleCompanies}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
-                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="12" VerticalAlignment="Center"
-                            Background="{DynamicResource BrandAiGradientBrush}">
-                        <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="20"
-                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Grid.Column="1" Style="{StaticResource StatCardIconBadge}">
+                        <TextBlock Text="&#xE80F;" Style="{StaticResource StatCardIconGlyph}"/>
                     </Border>
                 </Grid>
             </Border>
@@ -728,7 +772,7 @@
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{DynamicResource MainStatMonthlyMovement}" FontSize="{DynamicResource FS20}"
                                            FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{Binding MonthlyMovementSummaryText}" FontSize="{DynamicResource FS12}"
+                                <TextBlock Text="{Binding MonthlyMovementSummaryText}" FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0"/>
                                 <TextBlock Text="{Binding MovementPeriodHint}" FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource TertiaryForegroundBrush}" Margin="0,2,0,0"/>
@@ -759,7 +803,7 @@
                                     </Border.Effect>
                                     <StackPanel>
                                         <TextBlock Text="{DynamicResource DashMovementPeriodMenuTitle}"
-                                                   FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                   FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource ForegroundBrush}"
                                                    TextWrapping="Wrap" Margin="4,0,4,10"/>
                                         <Button Command="{Binding SetMovementMonthCountCommand}" CommandParameter="1"
@@ -773,7 +817,7 @@
                                                            Foreground="{DynamicResource SuccessBrush}" Margin="0,2,10,0" VerticalAlignment="Top"
                                                            Visibility="{Binding IsMovementPeriod1, Converter={StaticResource BoolToVis}}"/>
                                                 <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="{DynamicResource DashMovementPeriod1Title}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                    <TextBlock Text="{DynamicResource DashMovementPeriod1Title}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                                     <TextBlock Text="{DynamicResource DashMovementPeriod1Desc}" FontSize="{DynamicResource FS11}"
                                                                Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="0,3,0,0"/>
@@ -791,7 +835,7 @@
                                                            Foreground="{DynamicResource SuccessBrush}" Margin="0,2,10,0" VerticalAlignment="Top"
                                                            Visibility="{Binding IsMovementPeriod2, Converter={StaticResource BoolToVis}}"/>
                                                 <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="{DynamicResource DashMovementPeriod2Title}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                    <TextBlock Text="{DynamicResource DashMovementPeriod2Title}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                                     <TextBlock Text="{DynamicResource DashMovementPeriod2Desc}" FontSize="{DynamicResource FS11}"
                                                                Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="0,3,0,0"/>
@@ -809,7 +853,7 @@
                                                            Foreground="{DynamicResource SuccessBrush}" Margin="0,2,10,0" VerticalAlignment="Top"
                                                            Visibility="{Binding IsMovementPeriod3, Converter={StaticResource BoolToVis}}"/>
                                                 <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="{DynamicResource DashMovementPeriod3Title}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                    <TextBlock Text="{DynamicResource DashMovementPeriod3Title}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                                     <TextBlock Text="{DynamicResource DashMovementPeriod3Desc}" FontSize="{DynamicResource FS11}"
                                                                Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" Margin="0,3,0,0"/>
@@ -829,7 +873,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Style="{StaticResource DashboardWidgetCard}" Padding="16">
+                        <Border Grid.Column="0" Style="{StaticResource DialogPanelCard}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -852,7 +896,7 @@
                                     </Border>
                                 </Grid>
                                 <TextBlock Grid.Row="1" Text="{Binding MovementAddedEmptyText}"
-                                           FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           FontSize="{DynamicResource FS13}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                            VerticalAlignment="Center" TextAlignment="Center"
                                            Visibility="{Binding MonthlyAddedEmployees.Count, Converter={StaticResource IntToVis}, ConverterParameter=invert}"/>
                                 <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
@@ -896,7 +940,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="2" Style="{StaticResource DashboardWidgetCard}" Padding="16">
+                        <Border Grid.Column="2" Style="{StaticResource DialogPanelCard}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -919,7 +963,7 @@
                                     </Border>
                                 </Grid>
                                 <TextBlock Grid.Row="1" Text="{Binding MovementArchivedEmptyText}"
-                                           FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           FontSize="{DynamicResource FS13}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                            VerticalAlignment="Center" TextAlignment="Center"
                                            Visibility="{Binding MonthlyArchivedEmployees.Count, Converter={StaticResource IntToVis}, ConverterParameter=invert}"/>
                                 <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
@@ -1007,7 +1051,7 @@
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{DynamicResource SearchCatCompanies}" FontSize="{DynamicResource FS20}"
                                            FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock FontSize="{DynamicResource FS12}"
+                                <TextBlock FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,2,0,0">
                                     <Run Text="{Binding TotalCompanies}"/>
                                     <Run Text="{DynamicResource DashActiveCompaniesInline}"/>
@@ -1024,7 +1068,7 @@
                         </Button>
                     </Grid>
 
-                    <Border Grid.Row="1" Style="{StaticResource DashboardWidgetCard}" Padding="16">
+                    <Border Grid.Row="1" Style="{StaticResource DialogPanelCard}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -1048,7 +1092,7 @@
                             </Grid>
 
                             <TextBlock Grid.Row="1" Text="{DynamicResource DashCompaniesEmpty}"
-                                       FontSize="{DynamicResource FS12}" Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                       FontSize="{DynamicResource FS13}" Foreground="{DynamicResource SecondaryForegroundBrush}"
                                        VerticalAlignment="Center" TextAlignment="Center"
                                        Visibility="{Binding CompanyStats.Count, Converter={StaticResource IntToVis}, ConverterParameter=invert}"/>
                             <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}"
@@ -1082,7 +1126,7 @@
                                                                HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                                     <Border Grid.Column="2" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right"
                                                             VerticalAlignment="Center" Background="{DynamicResource ErrorLightBrush}">
-                                                        <TextBlock Text="{Binding ProblemCount}" FontSize="{DynamicResource FS12}"
+                                                        <TextBlock Text="{Binding ProblemCount}" FontSize="{DynamicResource FS13}"
                                                                    FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}"/>
                                                     </Border>
                                                     <TextBlock Grid.Column="3" Text="{Binding TemplateCount}" FontSize="{DynamicResource FS13}"

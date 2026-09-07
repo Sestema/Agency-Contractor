@@ -68,10 +68,15 @@ namespace Win11DesktopApp.ViewModels
         private readonly AddCompanyViewModelFactory _addCompanyViewModelFactory;
         private readonly AppNotificationService _notificationService;
         private readonly WeatherService _weatherService;
+        private readonly WorkspaceSwitchService _workspaceSwitchService;
         private readonly DispatcherTimer _clockTimer;
 
         public ICommand GoToSettingsCommand { get; }
         public ICommand ToggleNotificationsCommand { get; }
+        public ICommand ToggleWorkspaceSwitcherCommand { get; }
+        public ICommand SwitchWorkspaceCommand { get; }
+        public ICommand ConfirmWorkspaceSwitchCommand { get; }
+        public ICommand CancelWorkspaceSwitchCommand { get; }
         public ICommand MarkNotificationsReadCommand { get; }
         public ICommand ClearNotificationsCommand { get; }
         public ICommand ToggleDrawerCommand { get; }
@@ -271,6 +276,65 @@ namespace Win11DesktopApp.ViewModels
         public int UnreadNotificationsCount => _notificationService.UnreadCount;
         public bool HasUnreadNotifications => _notificationService.HasUnread;
         public bool HasNotifications => Notifications.Count > 0;
+
+        public ObservableCollection<WorkspaceItem> Workspaces { get; } = new();
+
+        public string CurrentWorkspaceName => _workspaceSwitchService.CurrentDisplayName;
+
+        public bool ShowWorkspaceSwitcher => Workspaces.Count >= 2;
+
+        private bool _isWorkspaceSwitcherOpen;
+        public bool IsWorkspaceSwitcherOpen
+        {
+            get => _isWorkspaceSwitcherOpen;
+            set
+            {
+                if (SetProperty(ref _isWorkspaceSwitcherOpen, value) && value)
+                    RefreshWorkspaces();
+            }
+        }
+
+        private bool _isWorkspaceSwitchDialogOpen;
+        public bool IsWorkspaceSwitchDialogOpen
+        {
+            get => _isWorkspaceSwitchDialogOpen;
+            set => SetProperty(ref _isWorkspaceSwitchDialogOpen, value);
+        }
+
+        private string _workspaceSwitchTitle = string.Empty;
+        public string WorkspaceSwitchTitle
+        {
+            get => _workspaceSwitchTitle;
+            set => SetProperty(ref _workspaceSwitchTitle, value);
+        }
+
+        private string _workspaceSwitchMessage = string.Empty;
+        public string WorkspaceSwitchMessage
+        {
+            get => _workspaceSwitchMessage;
+            set => SetProperty(ref _workspaceSwitchMessage, value);
+        }
+
+        private string _workspaceSwitchConfirmText = string.Empty;
+        public string WorkspaceSwitchConfirmText
+        {
+            get => _workspaceSwitchConfirmText;
+            set => SetProperty(ref _workspaceSwitchConfirmText, value);
+        }
+
+        private bool _isWorkspaceRestarting;
+        public bool IsWorkspaceRestarting
+        {
+            get => _isWorkspaceRestarting;
+            set
+            {
+                if (SetProperty(ref _isWorkspaceRestarting, value))
+                    CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private string? _pendingWorkspacePath;
+        private bool _pendingDiscardUnsavedSalary;
 
         private CancellationTokenSource? _searchCts;
         private Timer? _searchDebounce;
@@ -558,7 +622,8 @@ namespace Win11DesktopApp.ViewModels
             MainModuleViewModelFactory mainModuleViewModelFactory,
             AddCompanyViewModelFactory addCompanyViewModelFactory,
             AppNotificationService notificationService,
-            WeatherService weatherService)
+            WeatherService weatherService,
+            WorkspaceSwitchService workspaceSwitchService)
         {
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _companyService = companyService ?? throw new ArgumentNullException(nameof(companyService));
@@ -572,9 +637,23 @@ namespace Win11DesktopApp.ViewModels
             _addCompanyViewModelFactory = addCompanyViewModelFactory ?? throw new ArgumentNullException(nameof(addCompanyViewModelFactory));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
+            _workspaceSwitchService = workspaceSwitchService ?? throw new ArgumentNullException(nameof(workspaceSwitchService));
 
             GoToSettingsCommand = new RelayCommand(o => _navigationService.NavigateTo<SettingsViewModel>());
             ToggleNotificationsCommand = new RelayCommand(o => ToggleNotifications());
+            ToggleWorkspaceSwitcherCommand = new RelayCommand(_ =>
+            {
+                IsWorkspaceSwitcherOpen = !IsWorkspaceSwitcherOpen;
+                if (IsWorkspaceSwitcherOpen)
+                    IsNotificationCenterOpen = false;
+            });
+            SwitchWorkspaceCommand = new RelayCommand(param =>
+            {
+                if (param is WorkspaceItem item)
+                    RequestWorkspaceSwitch(item);
+            });
+            ConfirmWorkspaceSwitchCommand = new AsyncRelayCommand(async _ => await ConfirmWorkspaceSwitchAsync(), _ => !IsWorkspaceRestarting);
+            CancelWorkspaceSwitchCommand = new RelayCommand(_ => CancelWorkspaceSwitch(), _ => !IsWorkspaceRestarting);
             MarkNotificationsReadCommand = new RelayCommand(o => _notificationService.MarkAllRead());
             ClearNotificationsCommand = new RelayCommand(o => _notificationService.ClearAll());
             ButtonCommand = new RelayCommand(o => { });
@@ -711,6 +790,8 @@ namespace Win11DesktopApp.ViewModels
 
             RefreshProblemsCount();
             RefreshOverviewStats();
+            RefreshWorkspaces();
+            _workspaceSwitchService.WorkspacesChanged += OnWorkspacesChanged;
             _notificationService.PropertyChanged += OnNotificationServicePropertyChanged;
             Notifications.CollectionChanged += OnNotificationsCollectionChanged;
         }
@@ -724,7 +805,94 @@ namespace Win11DesktopApp.ViewModels
         {
             IsNotificationCenterOpen = !IsNotificationCenterOpen;
             if (IsNotificationCenterOpen)
+            {
+                IsWorkspaceSwitcherOpen = false;
                 _notificationService.MarkAllRead();
+            }
+        }
+
+        private void RefreshWorkspaces()
+        {
+            Workspaces.Clear();
+            foreach (var item in _workspaceSwitchService.GetWorkspaces())
+                Workspaces.Add(item);
+            OnPropertyChanged(nameof(CurrentWorkspaceName));
+            OnPropertyChanged(nameof(ShowWorkspaceSwitcher));
+            if (!ShowWorkspaceSwitcher)
+                IsWorkspaceSwitcherOpen = false;
+        }
+
+        private void OnWorkspacesChanged(object? sender, EventArgs e) => RefreshWorkspaces();
+
+        private void RequestWorkspaceSwitch(WorkspaceItem item)
+        {
+            IsWorkspaceSwitcherOpen = false;
+            if (item.IsActive)
+                return;
+
+            if (!_workspaceSwitchService.CanSwitchTo(item.FolderPath, out var reason))
+            {
+                WorkspaceSwitchTitle = Res("WorkspaceConfirmTitle");
+                WorkspaceSwitchMessage = reason;
+                WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                _pendingWorkspacePath = null;
+                IsWorkspaceSwitchDialogOpen = true;
+                return;
+            }
+
+            _pendingWorkspacePath = item.FolderPath;
+            _pendingDiscardUnsavedSalary = false;
+            WorkspaceSwitchTitle = Res("WorkspaceConfirmTitle");
+            WorkspaceSwitchMessage = _workspaceSwitchService.BuildConfirmMessage(item.DisplayName);
+            WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+            IsWorkspaceSwitchDialogOpen = true;
+        }
+
+        private async Task ConfirmWorkspaceSwitchAsync()
+        {
+            if (IsWorkspaceRestarting || string.IsNullOrWhiteSpace(_pendingWorkspacePath))
+            {
+                IsWorkspaceSwitchDialogOpen = false;
+                return;
+            }
+
+            IsWorkspaceRestarting = true;
+            WorkspaceSwitchConfirmText = Res("WorkspaceRestarting");
+            var result = await _workspaceSwitchService.PrepareSwitchAsync(_pendingWorkspacePath, _pendingDiscardUnsavedSalary);
+            if (!result.Success)
+            {
+                if (result.NeedsDiscardConfirm && !_pendingDiscardUnsavedSalary)
+                {
+                    _pendingDiscardUnsavedSalary = true;
+                    IsWorkspaceRestarting = false;
+                    WorkspaceSwitchTitle = Res("WorkspaceSalaryDiscardTitle");
+                    WorkspaceSwitchMessage = Res("WorkspaceSalaryDiscardMessage");
+                    WorkspaceSwitchConfirmText = Res("WorkspaceSalaryDiscardConfirm");
+                    return;
+                }
+
+                IsWorkspaceRestarting = false;
+                WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                WorkspaceSwitchMessage = result.Message;
+                return;
+            }
+
+            if (!_workspaceSwitchService.TryRestartApplication(out var error))
+            {
+                IsWorkspaceRestarting = false;
+                WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                WorkspaceSwitchMessage = error;
+            }
+        }
+
+        private void CancelWorkspaceSwitch()
+        {
+            if (IsWorkspaceRestarting)
+                return;
+
+            IsWorkspaceSwitchDialogOpen = false;
+            _pendingWorkspacePath = null;
+            _pendingDiscardUnsavedSalary = false;
         }
 
         private void OnNotificationServicePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -762,6 +930,7 @@ namespace Win11DesktopApp.ViewModels
         {
             _companyService.SelectedCompanyChanged -= OnSelectedCompanyChanged;
             _companyService.VisibilityChanged -= OnVisibilityChanged;
+            _workspaceSwitchService.WorkspacesChanged -= OnWorkspacesChanged;
             _notificationService.PropertyChanged -= OnNotificationServicePropertyChanged;
             Notifications.CollectionChanged -= OnNotificationsCollectionChanged;
             _searchDebounce?.Dispose();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -198,6 +199,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly BusinessUserDirectoryService _businessUserDirectoryService;
         private readonly BusinessUserSessionService _businessUserSessionService;
         private readonly WorkspaceSessionService _workspaceSessionService;
+        private readonly WorkspaceSwitchService _workspaceSwitchService;
         private readonly List<BusinessUserEmployerEditorItem> _allBusinessUserEmployerEditorItems = new();
 
         public ICommand GoBackCommand { get; }
@@ -252,6 +254,11 @@ namespace Win11DesktopApp.ViewModels
         public ICommand LogoutBusinessUserCommand { get; }
         public ICommand ChangeBusinessUserPasswordCommand { get; }
         public ICommand RefreshWorkspaceTeamStatusCommand { get; }
+        public ICommand SwitchWorkspaceCommand { get; }
+        public ICommand ReplaceWorkspaceCommand { get; }
+        public ICommand RemoveWorkspaceCommand { get; }
+        public ICommand ConfirmWorkspaceSwitchCommand { get; }
+        public ICommand CancelWorkspaceSwitchCommand { get; }
 
         private bool _isCompanyVisibilityOpen;
         public bool IsCompanyVisibilityOpen
@@ -260,6 +267,7 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isCompanyVisibilityOpen, value);
         }
 
+        public ObservableCollection<WorkspaceItem> Workspaces { get; } = new();
         public ObservableCollection<CompanyVisibilityItem> CompanyVisibilityItems { get; } = new();
         public ObservableCollection<ConnectedClientViewItem> ConnectedClients { get; } = new();
         public ObservableCollection<WorkspaceTeamSessionViewItem> WorkspaceTeamSessions { get; } = new();
@@ -413,24 +421,57 @@ namespace Win11DesktopApp.ViewModels
         public bool IsUsersSettingsSection =>
             string.Equals(CurrentSettingsSection, "Users", StringComparison.OrdinalIgnoreCase);
 
-        public string RootFolderPath
+        public string RootFolderPath => _appSettingsService.Settings.RootFolderPath;
+
+        private string _workspaceListStatus = string.Empty;
+        public string WorkspaceListStatus
         {
-            get => _appSettingsService.Settings.RootFolderPath;
+            get => _workspaceListStatus;
+            set => SetProperty(ref _workspaceListStatus, value);
+        }
+
+        private bool _isWorkspaceSwitchDialogOpen;
+        public bool IsWorkspaceSwitchDialogOpen
+        {
+            get => _isWorkspaceSwitchDialogOpen;
+            set => SetProperty(ref _isWorkspaceSwitchDialogOpen, value);
+        }
+
+        private string _workspaceSwitchTitle = string.Empty;
+        public string WorkspaceSwitchTitle
+        {
+            get => _workspaceSwitchTitle;
+            set => SetProperty(ref _workspaceSwitchTitle, value);
+        }
+
+        private string _workspaceSwitchMessage = string.Empty;
+        public string WorkspaceSwitchMessage
+        {
+            get => _workspaceSwitchMessage;
+            set => SetProperty(ref _workspaceSwitchMessage, value);
+        }
+
+        private string _workspaceSwitchConfirmText = string.Empty;
+        public string WorkspaceSwitchConfirmText
+        {
+            get => _workspaceSwitchConfirmText;
+            set => SetProperty(ref _workspaceSwitchConfirmText, value);
+        }
+
+        private bool _isWorkspaceRestarting;
+        public bool IsWorkspaceRestarting
+        {
+            get => _isWorkspaceRestarting;
             set
             {
-                if (_appSettingsService.Settings.RootFolderPath != value)
-                {
-                    var oldPath = _appSettingsService.Settings.RootFolderPath;
-                    _appSettingsService.Settings.RootFolderPath = value;
-                    _appSettingsService.SaveSettings();
-                    EnsureWorkspacePassportForRoot(value);
-                    _activityLogService.Log("RootFolderChanged", "Settings", "", "",
-                        $"Змінено кореневу папку", oldPath ?? "", value);
-                    OnPropertyChanged();
-                    RaiseSecondPcDatabaseAccessPropertiesChanged();
-                }
+                if (SetProperty(ref _isWorkspaceRestarting, value))
+                    CommandManager.InvalidateRequerySuggested();
             }
         }
+
+        private string? _pendingWorkspacePath;
+        private string? _pendingReplaceOldPath;
+        private bool _pendingDiscardUnsavedSalary;
 
         private void EnsureWorkspacePassportForRoot(string rootFolderPath)
         {
@@ -1612,7 +1653,8 @@ namespace Win11DesktopApp.ViewModels
             BusinessUserAuthService? businessUserAuthService = null,
             BusinessUserDirectoryService? businessUserDirectoryService = null,
             BusinessUserSessionService? businessUserSessionService = null,
-            WorkspaceSessionService? workspaceSessionService = null)
+            WorkspaceSessionService? workspaceSessionService = null,
+            WorkspaceSwitchService? workspaceSwitchService = null)
         {
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
@@ -1644,6 +1686,7 @@ namespace Win11DesktopApp.ViewModels
             _businessUserDirectoryService = businessUserDirectoryService ?? throw new InvalidOperationException("BusinessUserDirectoryService is not initialized.");
             _businessUserSessionService = businessUserSessionService ?? throw new InvalidOperationException("BusinessUserSessionService is not initialized.");
             _workspaceSessionService = workspaceSessionService ?? throw new InvalidOperationException("WorkspaceSessionService is not initialized.");
+            _workspaceSwitchService = workspaceSwitchService ?? throw new InvalidOperationException("WorkspaceSwitchService is not initialized.");
 
             _currentLanguage = _appSettingsService.Settings.LanguageCode;
             _currentTheme = DetectCurrentTheme();
@@ -1662,6 +1705,7 @@ namespace Win11DesktopApp.ViewModels
             RefreshTelegramState();
             EnsureValidSettingsSection();
             RefreshWorkspaceIdentityDisplay();
+            RefreshWorkspaces();
             _accessStatusService.PropertyChanged += AccessStatusService_PropertyChanged;
             _telegramBotService.StateChanged += TelegramBotService_StateChanged;
 
@@ -1697,14 +1741,7 @@ namespace Win11DesktopApp.ViewModels
                 CurrentAccentColor = hex;
             });
 
-            SelectRootFolderCommand = new RelayCommand(o =>
-            {
-                var dialog = new OpenFolderDialog();
-                if (dialog.ShowDialog() == true)
-                {
-                    RootFolderPath = dialog.FolderName;
-                }
-            });
+            SelectRootFolderCommand = new RelayCommand(o => SelectOrAddWorkspaceFolder());
 
             SelectPostgresDataDirectoryCommand = new RelayCommand(o =>
             {
@@ -2022,6 +2059,23 @@ namespace Win11DesktopApp.ViewModels
             UseSqliteStorageModeCommand = new RelayCommand(_ => UseSqliteStorageMode());
             EnablePostgresStorageModeCommand = new RelayCommand(_ => EnablePostgresStorageMode(), _ => CanEnablePostgresStorageMode);
             RestartApplicationCommand = new RelayCommand(_ => RestartApplication(), _ => HasDatabaseModeRestartPending);
+            SwitchWorkspaceCommand = new RelayCommand(param =>
+            {
+                if (param is WorkspaceItem item)
+                    RequestWorkspaceSwitch(item);
+            });
+            ReplaceWorkspaceCommand = new RelayCommand(param =>
+            {
+                if (param is WorkspaceItem item)
+                    ReplaceWorkspace(item);
+            });
+            RemoveWorkspaceCommand = new RelayCommand(param =>
+            {
+                if (param is WorkspaceItem item)
+                    RemoveWorkspace(item);
+            });
+            ConfirmWorkspaceSwitchCommand = new AsyncRelayCommand(async _ => await ConfirmWorkspaceSwitchAsync(), _ => !IsWorkspaceRestarting);
+            CancelWorkspaceSwitchCommand = new RelayCommand(_ => CancelWorkspaceSwitch(), _ => !IsWorkspaceRestarting);
 
             RefreshConnectedClients();
         }
@@ -2322,29 +2376,161 @@ namespace Win11DesktopApp.ViewModels
 
         private void RestartApplication()
         {
-            try
+            if (!_workspaceSwitchService.TryRestartApplication(out var error))
             {
-                var exePath = Environment.ProcessPath;
-                if (string.IsNullOrWhiteSpace(exePath))
+                PostgresModeStatus = error;
+                RaiseDatabaseModePropertiesChanged();
+            }
+        }
+
+        private void RefreshWorkspaces()
+        {
+            Workspaces.Clear();
+            foreach (var item in _workspaceSwitchService.GetWorkspaces())
+                Workspaces.Add(item);
+            OnPropertyChanged(nameof(RootFolderPath));
+        }
+
+        private void SelectOrAddWorkspaceFolder()
+        {
+            if (!_workspaceSwitchService.TryPickFolder(RootFolderPath, out var folderPath))
+                return;
+
+            var added = _workspaceSwitchService.TryAddWorkspace(folderPath, allowCreatePassport: !IsMemberSettingsSession);
+            RefreshWorkspaces();
+            WorkspaceListStatus = added.Message;
+            if (!added.Success && _workspaceSwitchService.CanSwitchTo(folderPath, out _))
+            {
+                var existing = Workspaces.FirstOrDefault(item => AppSettingsService.PathsEqual(item.FolderPath, folderPath));
+                if (existing != null)
+                    RequestWorkspaceSwitch(existing);
+            }
+        }
+
+        private void ReplaceWorkspace(WorkspaceItem item)
+        {
+            if (!_workspaceSwitchService.TryPickFolder(item.FolderPath, out var folderPath))
+                return;
+
+            var replaced = _workspaceSwitchService.TryReplaceWorkspace(
+                item.FolderPath,
+                folderPath,
+                allowCreatePassport: !IsMemberSettingsSession);
+            if (!replaced.Success)
+            {
+                WorkspaceListStatus = replaced.Message;
+                RefreshWorkspaces();
+                return;
+            }
+
+            if (replaced.NeedsSwitch)
+            {
+                _pendingReplaceOldPath = item.FolderPath;
+                _pendingWorkspacePath = folderPath;
+                _pendingDiscardUnsavedSalary = false;
+                WorkspaceSwitchTitle = Res("WorkspaceConfirmTitle");
+                WorkspaceSwitchMessage = _workspaceSwitchService.BuildReplaceConfirmMessage(replaced.Message);
+                WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                IsWorkspaceSwitchDialogOpen = true;
+                return;
+            }
+
+            WorkspaceListStatus = replaced.Message;
+            RefreshWorkspaces();
+        }
+
+        private void RemoveWorkspace(WorkspaceItem item)
+        {
+            var result = _workspaceSwitchService.TryRemoveWorkspace(item.FolderPath);
+            WorkspaceListStatus = result.Message;
+            RefreshWorkspaces();
+        }
+
+        private void RequestWorkspaceSwitch(WorkspaceItem item)
+        {
+            if (item.IsActive)
+                return;
+
+            if (!_workspaceSwitchService.CanSwitchTo(item.FolderPath, out var reason))
+            {
+                WorkspaceListStatus = reason;
+                return;
+            }
+
+            _pendingWorkspacePath = item.FolderPath;
+            _pendingReplaceOldPath = null;
+            _pendingDiscardUnsavedSalary = false;
+            WorkspaceSwitchTitle = Res("WorkspaceConfirmTitle");
+            WorkspaceSwitchMessage = _workspaceSwitchService.BuildConfirmMessage(item.DisplayName);
+            WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+            IsWorkspaceSwitchDialogOpen = true;
+        }
+
+        private async Task ConfirmWorkspaceSwitchAsync()
+        {
+            if (IsWorkspaceRestarting || string.IsNullOrWhiteSpace(_pendingWorkspacePath))
+                return;
+
+            IsWorkspaceRestarting = true;
+            WorkspaceSwitchConfirmText = Res("WorkspaceRestarting");
+            var result = await _workspaceSwitchService.PrepareSwitchAsync(_pendingWorkspacePath, _pendingDiscardUnsavedSalary);
+            if (!result.Success)
+            {
+                if (result.NeedsDiscardConfirm && !_pendingDiscardUnsavedSalary)
                 {
-                    PostgresModeStatus = Res("SettingsRestartPathMissing");
-                    RaiseDatabaseModePropertiesChanged();
+                    _pendingDiscardUnsavedSalary = true;
+                    IsWorkspaceRestarting = false;
+                    WorkspaceSwitchTitle = Res("WorkspaceSalaryDiscardTitle");
+                    WorkspaceSwitchMessage = Res("WorkspaceSalaryDiscardMessage");
+                    WorkspaceSwitchConfirmText = Res("WorkspaceSalaryDiscardConfirm");
                     return;
                 }
 
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath)
-                {
-                    UseShellExecute = true
-                });
+                IsWorkspaceRestarting = false;
+                WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                WorkspaceListStatus = result.Message;
+                IsWorkspaceSwitchDialogOpen = false;
+                return;
+            }
 
-                Application.Current?.Shutdown();
-            }
-            catch (Exception ex)
+            if (!string.IsNullOrWhiteSpace(_pendingReplaceOldPath))
             {
-                LoggingService.LogWarning("Settings.RestartApplication", ex.Message);
-                PostgresModeStatus = string.Format(Res("SettingsRestartFailedFmt"), ex.Message);
-                RaiseDatabaseModePropertiesChanged();
+                var replaced = _workspaceSwitchService.TryReplaceWorkspace(
+                    _pendingReplaceOldPath,
+                    _pendingWorkspacePath,
+                    allowCreatePassport: !IsMemberSettingsSession,
+                    commitActiveReplacement: true);
+                if (!replaced.Success)
+                {
+                    IsWorkspaceRestarting = false;
+                    WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                    WorkspaceListStatus = replaced.Message;
+                    IsWorkspaceSwitchDialogOpen = false;
+                    return;
+                }
+
+                _pendingReplaceOldPath = null;
+                await _appSettingsService.SaveSettingsImmediate().ConfigureAwait(true);
             }
+
+            if (!_workspaceSwitchService.TryRestartApplication(out var error))
+            {
+                IsWorkspaceRestarting = false;
+                WorkspaceSwitchConfirmText = Res("WorkspaceConfirmRestart");
+                WorkspaceListStatus = error;
+                IsWorkspaceSwitchDialogOpen = false;
+            }
+        }
+
+        private void CancelWorkspaceSwitch()
+        {
+            if (IsWorkspaceRestarting)
+                return;
+
+            IsWorkspaceSwitchDialogOpen = false;
+            _pendingWorkspacePath = null;
+            _pendingReplaceOldPath = null;
+            _pendingDiscardUnsavedSalary = false;
         }
 
         private void RaiseMigrationActionPropertiesChanged()
@@ -2641,11 +2827,7 @@ namespace Win11DesktopApp.ViewModels
 
                 PostgresNetworkAccessStatus = Res("SettingsPostgresNetworkRestartingAsAdmin");
                 LoggingService.LogInfo("Settings.RestartAsAdministrator", "Restarting as administrator for PostgreSQL network configuration.");
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath)
-                {
-                    UseShellExecute = true,
-                    Verb = "runas"
-                });
+                System.Diagnostics.Process.Start(Program.CreateRestartStartInfo(exePath, runAsAdministrator: true));
 
                 Application.Current?.Shutdown();
             }
@@ -4229,11 +4411,7 @@ namespace Win11DesktopApp.ViewModels
             var executablePath = Environment.ProcessPath;
             if (!string.IsNullOrWhiteSpace(executablePath) && System.IO.File.Exists(executablePath))
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = executablePath,
-                    UseShellExecute = true
-                });
+                System.Diagnostics.Process.Start(Program.CreateRestartStartInfo(executablePath));
             }
 
             Application.Current.Shutdown();

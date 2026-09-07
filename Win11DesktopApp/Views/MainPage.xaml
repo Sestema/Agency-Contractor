@@ -10,6 +10,7 @@
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
         <CubicEase x:Key="DrawerEase" EasingMode="EaseOut"/>
         <conv:NameToColorConverter x:Key="NameToColor"/>
         <conv:FirstCharConverter x:Key="FirstCharConverter"/>
@@ -95,6 +96,72 @@
         <Style x:Key="MainHeaderTimePill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
             <Setter Property="Padding" Value="14,8"/>
             <Setter Property="MinWidth" Value="72"/>
+        </Style>
+
+        <Style x:Key="ToolbarWorkspacePillButton" TargetType="Button">
+            <Setter Property="MinWidth" Value="{DynamicResource UiToolbarBtn}"/>
+            <Setter Property="Height" Value="{DynamicResource UiToolbarBtn}"/>
+            <Setter Property="Padding" Value="10,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Win11FocusVisual}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"/>
+                            <Border x:Name="HoverOverlay"
+                                    Background="{DynamicResource CardHoverBrush}"
+                                    BorderBrush="{DynamicResource AccentBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Opacity="0"
+                                    IsHitTestVisible="False"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.22">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="CompanySortMenuBtn" TargetType="Button">
@@ -264,6 +331,125 @@
                 
                 <!-- Right: Settings -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Grid Margin="0,0,8,0" Visibility="{Binding ShowWorkspaceSwitcher, Converter={StaticResource BoolToVis}}">
+                        <Button x:Name="WorkspaceSwitcherButton"
+                                Command="{Binding ToggleWorkspaceSwitcherCommand}"
+                                Style="{StaticResource ToolbarWorkspacePillButton}"
+                                ToolTip="{DynamicResource WorkspaceSwitcherTitle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xED25;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="{DynamicResource FS13}"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding CurrentWorkspaceName}"
+                                           FontSize="{DynamicResource FS12}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="140"/>
+                            </StackPanel>
+                        </Button>
+                        <Popup IsOpen="{Binding IsWorkspaceSwitcherOpen}"
+                               PlacementTarget="{Binding ElementName=WorkspaceSwitcherButton}"
+                               Placement="Bottom"
+                               HorizontalAlignment="Right"
+                               StaysOpen="False"
+                               AllowsTransparency="True"
+                               PopupAnimation="Fade"
+                               VerticalOffset="8">
+                            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                    MinWidth="340" MaxWidth="400" MaxHeight="460" Padding="12">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.18" Direction="270"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,2,10">
+                                        <Border Width="28" Height="28" CornerRadius="8" Margin="0,0,8,0"
+                                                Background="{DynamicResource SuccessLightBrush}">
+                                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
+                                                       Foreground="{DynamicResource SuccessBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource WorkspaceSwitcherTitle}"
+                                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <TextBlock Text="{DynamicResource WorkspaceListHint}"
+                                                       FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                       TextWrapping="Wrap" MaxWidth="300"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="280">
+                                        <ItemsControl ItemsSource="{Binding Workspaces}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.SwitchWorkspaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Cursor="Hand"
+                                                            HorizontalContentAlignment="Stretch"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="0" Margin="0">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="Card" Padding="12,10" Margin="0,0,0,8"
+                                                                        Background="{DynamicResource CardBackgroundBrush}"
+                                                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="12">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                                            <TextBlock Text="{Binding DisplayName}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                                                       Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                                                            <TextBlock Text="{Binding FolderPath}" FontSize="{DynamicResource FS11}"
+                                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                                                            <TextBlock Text="{Binding StatusText}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                                                       Foreground="{DynamicResource WarningBrush}" Margin="0,4,0,0"
+                                                                                       Visibility="{Binding HasWarningStatus, Converter={StaticResource BoolToVis}}"/>
+                                                                        </StackPanel>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="&#xE73E;"
+                                                                                   FontFamily="Segoe MDL2 Assets"
+                                                                                   FontSize="{DynamicResource FS16}"
+                                                                                   FontWeight="Bold"
+                                                                                   Foreground="{DynamicResource SuccessBrush}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Card" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <Grid Margin="0,0,8,0">
                         <Button x:Name="NotificationBellButton"
                                 Command="{Binding ToggleNotificationsCommand}"
@@ -1165,6 +1351,34 @@
                     </DataTemplate>
                 </ContentControl.Resources>
             </ContentControl>
+        </Grid>
+
+        <Grid Visibility="{Binding IsWorkspaceSwitchDialogOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="{DynamicResource OverlayBrush}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CancelWorkspaceSwitchCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Background="{DynamicResource ContentBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    CornerRadius="16" Padding="24" MaxWidth="460"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="{Binding WorkspaceSwitchTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding WorkspaceSwitchMessage}" FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding CancelWorkspaceSwitchCommand}" Style="{StaticResource HeaderGhostButton}"
+                                Margin="0,0,8,0">
+                            <TextBlock Text="{DynamicResource WorkspaceConfirmCancel}" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Command="{Binding ConfirmWorkspaceSwitchCommand}" Style="{StaticResource FilledActionButton}">
+                            <TextBlock Text="{Binding WorkspaceSwitchConfirmText}" FontSize="{DynamicResource FS13}" Foreground="White"/>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

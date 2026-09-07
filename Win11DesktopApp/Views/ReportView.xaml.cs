@@ -3,6 +3,7 @@ using System.Linq;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
@@ -426,6 +427,8 @@ namespace Win11DesktopApp.Views
         {
             if (sender is DataGrid grid)
             {
+                grid.RemoveHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(EmployeeGrid_ColumnResizeCompleted));
+                grid.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(EmployeeGrid_ColumnResizeCompleted), true);
                 AttachColumnWidthHandlers(grid);
                 ApplyColumnLayout(grid);
             }
@@ -442,7 +445,39 @@ namespace Win11DesktopApp.Views
                 }
                 CaptureColumnLayout(grid);
                 DetachColumnWidthHandlers(grid);
+                grid.RemoveHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(EmployeeGrid_ColumnResizeCompleted));
             }
+        }
+
+        private void EmployeeGrid_ColumnResizeCompleted(object sender, DragCompletedEventArgs e)
+        {
+            if (sender is not DataGrid grid || e.OriginalSource is not DependencyObject source)
+                return;
+
+            var current = source;
+            var isColumnHeaderResize = false;
+            while (current != null && !ReferenceEquals(current, grid))
+            {
+                if (current is DataGridColumnHeader)
+                {
+                    isColumnHeaderResize = true;
+                    break;
+                }
+
+                current = GetParentObject(current);
+            }
+
+            if (!isColumnHeaderResize)
+                return;
+
+            _widthSyncDebounceTimer.Stop();
+            _pendingWidthSyncGrid = null;
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+            {
+                if (grid.IsLoaded)
+                    SaveAndReapplyLayout(grid);
+            }));
         }
 
         private void EmployeeGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)

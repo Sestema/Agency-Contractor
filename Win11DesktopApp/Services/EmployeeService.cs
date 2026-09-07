@@ -710,6 +710,30 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        /// <summary>
+        /// Reads only the ignored and custom document entries, for the expiry scans that walk
+        /// every employee of every company. Deliberately skips the repair-and-save pass that
+        /// <see cref="LoadEmployeeData"/> runs: a scan has no business rewriting the file it is
+        /// reading, and doing so put a write into the menu badge's startup path.
+        /// </summary>
+        public EmployeeExpiryDocuments? LoadEmployeeExpiryDocuments(string employeeFolder)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder)) return null;
+
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            if (!File.Exists(jsonPath)) return null;
+
+            try
+            {
+                return ReadJson<EmployeeExpiryDocuments>(jsonPath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("EmployeeService.LoadEmployeeExpiryDocuments", ex);
+                return null;
+            }
+        }
+
         private static bool AutoDiscoverFiles(string employeeFolder, EmployeeData data)
         {
             if (!Directory.Exists(employeeFolder)) return false;

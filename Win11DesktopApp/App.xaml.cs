@@ -752,7 +752,20 @@ namespace Win11DesktopApp
             }
 
             if (string.Equals(e.Record.Type, "CompanyChanged", StringComparison.OrdinalIgnoreCase))
+            {
                 EmployeeService.InvalidateEmployeesCache();
+                FinanceService.InvalidatePaymentsCache();
+                return;
+            }
+
+            if (string.Equals(e.Record.Type, "SalaryChanged", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(e.Record.Type, "SalaryEntryChanged", StringComparison.OrdinalIgnoreCase))
+            {
+                if (e.Record.Year > 0 && e.Record.Month is >= 1 and <= 12)
+                    FinanceService.InvalidatePaymentsCache(e.Record.Year, e.Record.Month);
+                else
+                    FinanceService.InvalidatePaymentsCache();
+            }
         }
 
         internal static void RunBackgroundWarmupTasks()

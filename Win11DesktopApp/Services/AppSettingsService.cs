@@ -26,6 +26,10 @@ namespace Win11DesktopApp.Services
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { WriteIndented = true };
         private readonly SemaphoreSlim _saveLock = new(1, 1);
         private Timer? _debounceTimer;
+        private string? _liveUiWorkspacePath;
+        private bool _suspendPersist;
+        private bool _workspaceHandoffInProgress;
+        private bool _workspaceHandoffPersisted;
 
         public class ReportColumnSetting
         {
@@ -52,6 +56,87 @@ namespace Win11DesktopApp.Services
         {
             public string EmployerCompanyId { get; set; } = string.Empty;
             public string AccessLevel { get; set; } = "None";
+        }
+
+        public class WorkspaceSetting
+        {
+            public string Path { get; set; } = string.Empty;
+            public string WorkspaceId { get; set; } = string.Empty;
+            public string DisplayName { get; set; } = string.Empty;
+            public DateTime? LastOpenedAtUtc { get; set; }
+        }
+
+        public class WorkspaceUiSettings
+        {
+            public string SalaryDisplayCurrency { get; set; } = "CZK";
+            public bool ShowStatPaid { get; set; }
+            public bool ShowStatRemaining { get; set; }
+            public bool ShowStatAdvances { get; set; }
+            public bool ShowStatCustomAdd { get; set; }
+            public bool ShowStatCustomSub { get; set; }
+            public bool SalaryNameOrderLastFirst { get; set; }
+            public bool SalaryHoursCustomPrecision { get; set; }
+            public double SalarySidebarTopRatio { get; set; } = 2.0;
+            public double SalarySidebarWidth { get; set; } = 230.0;
+            public List<double> SalaryColumnWidths { get; set; } = new();
+            public Dictionary<string, double> SalaryColumnWidthByKey { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+            public List<ReportColumnSetting> EmployeeReportColumns { get; set; } = new();
+
+            public static WorkspaceUiSettings FromActive(AppSettings settings)
+            {
+                return new WorkspaceUiSettings
+                {
+                    SalaryDisplayCurrency = string.IsNullOrWhiteSpace(settings.SalaryDisplayCurrency)
+                        ? "CZK"
+                        : settings.SalaryDisplayCurrency,
+                    ShowStatPaid = settings.ShowStatPaid,
+                    ShowStatRemaining = settings.ShowStatRemaining,
+                    ShowStatAdvances = settings.ShowStatAdvances,
+                    ShowStatCustomAdd = settings.ShowStatCustomAdd,
+                    ShowStatCustomSub = settings.ShowStatCustomSub,
+                    SalaryNameOrderLastFirst = settings.SalaryNameOrderLastFirst,
+                    SalaryHoursCustomPrecision = settings.SalaryHoursCustomPrecision,
+                    SalarySidebarTopRatio = settings.SalarySidebarTopRatio,
+                    SalarySidebarWidth = settings.SalarySidebarWidth,
+                    SalaryColumnWidths = settings.SalaryColumnWidths?.ToList() ?? new List<double>(),
+                    SalaryColumnWidthByKey = new Dictionary<string, double>(
+                        settings.SalaryColumnWidthByKey ?? new Dictionary<string, double>(),
+                        StringComparer.OrdinalIgnoreCase),
+                    EmployeeReportColumns = CloneReportColumns(settings.EmployeeReportColumns)
+                };
+            }
+
+            public static WorkspaceUiSettings CreateDefaults() => new();
+
+            public void ApplyTo(AppSettings settings)
+            {
+                settings.SalaryDisplayCurrency = string.IsNullOrWhiteSpace(SalaryDisplayCurrency)
+                    ? "CZK"
+                    : SalaryDisplayCurrency;
+                settings.ShowStatPaid = ShowStatPaid;
+                settings.ShowStatRemaining = ShowStatRemaining;
+                settings.ShowStatAdvances = ShowStatAdvances;
+                settings.ShowStatCustomAdd = ShowStatCustomAdd;
+                settings.ShowStatCustomSub = ShowStatCustomSub;
+                settings.SalaryNameOrderLastFirst = SalaryNameOrderLastFirst;
+                settings.SalaryHoursCustomPrecision = SalaryHoursCustomPrecision;
+                settings.SalarySidebarTopRatio = SalarySidebarTopRatio;
+                settings.SalarySidebarWidth = SalarySidebarWidth;
+                settings.SalaryColumnWidths = SalaryColumnWidths?.ToList() ?? new List<double>();
+                settings.SalaryColumnWidthByKey = new Dictionary<string, double>(
+                    SalaryColumnWidthByKey ?? new Dictionary<string, double>(),
+                    StringComparer.OrdinalIgnoreCase);
+                settings.EmployeeReportColumns = CloneReportColumns(EmployeeReportColumns);
+            }
+
+            private static List<ReportColumnSetting> CloneReportColumns(List<ReportColumnSetting>? source) =>
+                source?.Select(column => new ReportColumnSetting
+                {
+                    Key = column.Key,
+                    IsVisible = column.IsVisible,
+                    DisplayIndex = column.DisplayIndex,
+                    Width = column.Width
+                }).ToList() ?? new List<ReportColumnSetting>();
         }
 
         public class BusinessUserSetting
@@ -117,6 +202,7 @@ namespace Win11DesktopApp.Services
             public string TextSize { get; set; } = "Medium";
             public string DocumentLanguage { get; set; } = "";
             public List<double> SalaryColumnWidths { get; set; } = new List<double>();
+            public Dictionary<string, double> SalaryColumnWidthByKey { get; set; } = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             public List<ReportColumnSetting> EmployeeReportColumns { get; set; } = new List<ReportColumnSetting>();
             public string ReportDateFrom { get; set; } = "";
             public string ReportDateTo { get; set; } = "";
@@ -174,6 +260,9 @@ namespace Win11DesktopApp.Services
             public bool UseApiV2ForWebPanel { get; set; } = false;
             public bool UsePostgresNotify { get; set; } = false;
             public bool MultiUserHardEnforcement { get; set; } = false;
+            public List<WorkspaceSetting> Workspaces { get; set; } = new();
+            public string PendingWorkspacePath { get; set; } = string.Empty;
+            public Dictionary<string, WorkspaceUiSettings> WorkspaceUiById { get; set; } = new(StringComparer.OrdinalIgnoreCase);
             public List<BusinessUserSetting> BusinessUsers { get; set; } = new();
             public string CurrentBusinessUserId { get; set; } = string.Empty;
             public bool RememberBusinessUserLogin { get; set; } = false;
@@ -198,15 +287,23 @@ namespace Win11DesktopApp.Services
         public bool WasResetToDefaultsOnLoad { get; private set; }
 
         public AppSettingsService(bool suppressStartupNotifications = false)
+            : this(GetDefaultSettingsDirectory(), suppressStartupNotifications)
+        {
+        }
+
+        internal AppSettingsService(string settingsDirectory, bool suppressStartupNotifications)
         {
             _suppressStartupNotifications = suppressStartupNotifications;
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var appFolder = Path.Combine(appData, "AgencyContractor");
-            Directory.CreateDirectory(appFolder);
-            _settingsPath = Path.Combine(appFolder, SettingsFileName);
-            _backupPath = Path.Combine(appFolder, BackupFileName);
-            
+            Directory.CreateDirectory(settingsDirectory);
+            _settingsPath = Path.Combine(settingsDirectory, SettingsFileName);
+            _backupPath = Path.Combine(settingsDirectory, BackupFileName);
             LoadSettings();
+        }
+
+        private static string GetDefaultSettingsDirectory()
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appData, "AgencyContractor");
         }
 
         private static string ResolveCurrentAppVersion()
@@ -235,7 +332,34 @@ namespace Win11DesktopApp.Services
 
         private void LoadSettings()
         {
-            var shouldPersistDefaults = false;
+            _suspendPersist = true;
+            var persistAfterLoad = false;
+            try
+            {
+                persistAfterLoad = LoadSettingsCore();
+                EnsureWorkspaceUiStore();
+                _liveUiWorkspacePath = Settings.RootFolderPath;
+                if (string.IsNullOrWhiteSpace(Settings.PendingWorkspacePath))
+                    CaptureActiveUiIntoStore();
+                if (ApplyPendingWorkspace())
+                    persistAfterLoad = true;
+                if (SeedWorkspaceListFromCurrentRoot())
+                    persistAfterLoad = true;
+                RestoreActiveUiFromStore();
+                _liveUiWorkspacePath = Settings.RootFolderPath;
+            }
+            finally
+            {
+                _suspendPersist = false;
+            }
+
+            if (persistAfterLoad)
+                PersistSettingsNow();
+        }
+
+        private bool LoadSettingsCore()
+        {
+            var shouldPersist = false;
 
             if (File.Exists(_settingsPath))
             {
@@ -248,33 +372,188 @@ namespace Win11DesktopApp.Services
                     LoggingService.LogError("AppSettingsService.LoadSettings", ex);
                     BackupUnreadableFile(_settingsPath, "settings");
                     if (TryRestoreFromBackup())
-                        return;
+                        return true;
 
                     Settings = new AppSettings();
                     WasResetToDefaultsOnLoad = true;
-                    shouldPersistDefaults = true;
+                    shouldPersist = true;
                     NotifyStartupWarning(Res("MsgSettingsResetToDefaults"));
                 }
             }
             else
             {
                 if (TryRestoreFromBackup())
-                    return;
+                    return true;
 
                 Settings = new AppSettings();
-                shouldPersistDefaults = true;
+                shouldPersist = true;
             }
 
             if (Settings.AppVersion != CurrentAppVersion)
             {
                 PendingUpdateFrom = Settings.AppVersion;
                 Settings.AppVersion = CurrentAppVersion;
-                _ = SaveSettingsImmediate();
+                shouldPersist = true;
             }
-            else if (shouldPersistDefaults)
+
+            return shouldPersist;
+        }
+
+        private bool ApplyPendingWorkspace()
+        {
+            Settings.Workspaces ??= new List<WorkspaceSetting>();
+            var pending = Settings.PendingWorkspacePath?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(pending))
+                return false;
+
+            if (Directory.Exists(pending))
             {
-                _ = SaveSettingsImmediate();
+                Settings.RootFolderPath = pending;
+                Settings.PendingWorkspacePath = string.Empty;
+                TouchWorkspaceLastOpened(pending);
+                LoggingService.LogInfo("AppSettingsService.ApplyPendingWorkspace",
+                    $"Switched active workspace to '{pending}'.");
+                return true;
             }
+
+            LoggingService.LogWarning("AppSettingsService.ApplyPendingWorkspace",
+                $"Pending workspace folder is missing, keeping current root. Path: '{pending}'");
+            Settings.PendingWorkspacePath = string.Empty;
+            return true;
+        }
+
+        private bool SeedWorkspaceListFromCurrentRoot()
+        {
+            Settings.Workspaces ??= new List<WorkspaceSetting>();
+            if (Settings.Workspaces.Count > 0)
+                return false;
+
+            var current = Settings.RootFolderPath?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(current))
+                return false;
+
+            Settings.Workspaces.Add(new WorkspaceSetting
+            {
+                Path = current,
+                DisplayName = SafeWorkspaceDisplayName(current),
+                LastOpenedAtUtc = DateTime.UtcNow
+            });
+            return true;
+        }
+
+        private void TouchWorkspaceLastOpened(string folderPath)
+        {
+            Settings.Workspaces ??= new List<WorkspaceSetting>();
+            var match = Settings.Workspaces.FirstOrDefault(item =>
+                PathsEqual(item.Path, folderPath));
+            if (match == null)
+            {
+                Settings.Workspaces.Add(new WorkspaceSetting
+                {
+                    Path = folderPath,
+                    DisplayName = SafeWorkspaceDisplayName(folderPath),
+                    LastOpenedAtUtc = DateTime.UtcNow
+                });
+                return;
+            }
+
+            match.LastOpenedAtUtc = DateTime.UtcNow;
+            match.DisplayName = SafeWorkspaceDisplayName(folderPath);
+        }
+
+        internal static string SafeWorkspaceDisplayName(string folderPath)
+        {
+            try
+            {
+                var name = new DirectoryInfo(folderPath.TrimEnd('\\', '/')).Name;
+                return string.IsNullOrWhiteSpace(name) ? folderPath : name;
+            }
+            catch
+            {
+                return folderPath;
+            }
+        }
+
+        internal static bool PathsEqual(string? left, string? right)
+        {
+            return string.Equals(NormalizeWorkspacePath(left), NormalizeWorkspacePath(right), StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static string NormalizeWorkspacePath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            try
+            {
+                var full = Path.GetFullPath(path.Trim());
+                return full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            }
+            catch
+            {
+                return path.Trim().TrimEnd('\\', '/');
+            }
+        }
+
+        private void EnsureWorkspaceUiStore()
+        {
+            var current = Settings.WorkspaceUiById;
+            if (current == null || !ReferenceEquals(current.Comparer, StringComparer.OrdinalIgnoreCase))
+            {
+                Settings.WorkspaceUiById = current == null
+                    ? new Dictionary<string, WorkspaceUiSettings>(StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, WorkspaceUiSettings>(current, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        public void BeginWorkspaceHandoff()
+        {
+            EnsureWorkspaceUiStore();
+            CaptureActiveUiIntoStore();
+            _workspaceHandoffInProgress = true;
+            _workspaceHandoffPersisted = false;
+        }
+
+        private void CaptureActiveUiIntoStore()
+        {
+            var folder = string.IsNullOrWhiteSpace(_liveUiWorkspacePath)
+                ? Settings.RootFolderPath
+                : _liveUiWorkspacePath;
+            var keys = GetWorkspaceUiKeys(folder);
+            if (keys.Count == 0)
+                return;
+
+            var snapshot = WorkspaceUiSettings.FromActive(Settings);
+            foreach (var key in keys)
+                Settings.WorkspaceUiById[key] = snapshot;
+        }
+
+        private void RestoreActiveUiFromStore()
+        {
+            var keys = GetWorkspaceUiKeys(Settings.RootFolderPath);
+            WorkspaceUiSettings? stored = null;
+            foreach (var key in keys)
+            {
+                if (Settings.WorkspaceUiById.TryGetValue(key, out stored))
+                    break;
+            }
+
+            (stored ?? WorkspaceUiSettings.CreateDefaults()).ApplyTo(Settings);
+        }
+
+        private List<string> GetWorkspaceUiKeys(string? folderPath)
+        {
+            var keys = new List<string>();
+            var normalized = NormalizeWorkspacePath(folderPath);
+            if (string.IsNullOrWhiteSpace(normalized))
+                return keys;
+
+            Settings.Workspaces ??= new List<WorkspaceSetting>();
+            var match = Settings.Workspaces.FirstOrDefault(item => PathsEqual(item.Path, normalized));
+            if (!string.IsNullOrWhiteSpace(match?.WorkspaceId))
+                keys.Add(match.WorkspaceId.Trim());
+            keys.Add(normalized);
+            return keys.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         private bool TryRestoreFromBackup()
@@ -286,7 +565,6 @@ namespace Win11DesktopApp.Services
                 WasRecoveredFromBackupOnLoad = true;
                 LoggingService.LogInfo("AppSettingsService", "Restored settings from backup");
                 NotifyStartupWarning(Res("MsgSettingsRecoveredFromBackup"));
-                _ = SaveSettingsImmediate();
                 return true;
             }
             catch (Exception ex)
@@ -357,6 +635,8 @@ namespace Win11DesktopApp.Services
 
         private void SanitizeSettings()
         {
+            Settings.Workspaces ??= new List<WorkspaceSetting>();
+            EnsureWorkspaceUiStore();
             Settings.Telegram ??= new TelegramBotSettings();
             Settings.Telegram.AuthorizedUsers ??= new List<TelegramAuthorizedUser>();
             Settings.Telegram.BotUsername ??= string.Empty;
@@ -450,6 +730,10 @@ namespace Win11DesktopApp.Services
                 Settings.SalaryColumnWidths = Settings.SalaryColumnWidths
                     .Select(w => SafeDouble(w, 100)).ToList();
 
+            Settings.SalaryColumnWidthByKey = SalaryColumnWidthLayout.ResolveStore(
+                Settings.SalaryColumnWidthByKey,
+                Settings.SalaryColumnWidths);
+
             if (Settings.EmployeeReportColumns?.Count > 0)
             {
                 Settings.EmployeeReportColumns = Settings.EmployeeReportColumns
@@ -496,6 +780,9 @@ namespace Win11DesktopApp.Services
 
         public async Task SaveSettingsImmediate()
         {
+            if (_suspendPersist)
+                return;
+
             await _saveLock.WaitAsync().ConfigureAwait(false);
             try
             {
@@ -570,17 +857,97 @@ namespace Win11DesktopApp.Services
             }
         }
 
+        private void PersistSettingsNow()
+        {
+            try
+            {
+                if (!_saveLock.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    LoggingService.LogWarning(
+                        "AppSettingsService.PersistSettingsNow",
+                        "Could not acquire settings lock while finishing load.");
+                    return;
+                }
+
+                try
+                {
+                    WriteSettingsCore();
+                }
+                finally
+                {
+                    _saveLock.Release();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("AppSettingsService.PersistSettingsNow", ex);
+            }
+        }
+
         private void WriteSettingsCore()
         {
             SanitizeSettings();
+            EnsureWorkspaceUiStore();
+            CaptureActiveUiIntoStore();
 
-            if (File.Exists(_settingsPath))
+            if (_workspaceHandoffInProgress && _workspaceHandoffPersisted)
             {
-                var existingJson = SafeFileService.ReadAllText(_settingsPath, Encoding.UTF8);
-                SafeFileService.WriteTextAtomic(_backupPath, existingJson, Encoding.UTF8);
+                MergeLiveUiIntoExistingFile();
+                return;
             }
 
+            BackupCurrentSettingsFile();
             SafeFileService.WriteJsonAtomic(_settingsPath, Settings, _jsonOptions, Encoding.UTF8);
+
+            if (_workspaceHandoffInProgress)
+                _workspaceHandoffPersisted = true;
+        }
+
+        private void MergeLiveUiIntoExistingFile()
+        {
+            if (!File.Exists(_settingsPath))
+            {
+                BackupCurrentSettingsFile();
+                SafeFileService.WriteJsonAtomic(_settingsPath, Settings, _jsonOptions, Encoding.UTF8);
+                return;
+            }
+
+            AppSettings disk;
+            try
+            {
+                disk = SafeFileService.ReadJsonOrDefault(_settingsPath, new AppSettings(), _jsonOptions, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("AppSettingsService.MergeLiveUiIntoExistingFile", ex.Message);
+                return;
+            }
+
+            disk.WorkspaceUiById ??= new Dictionary<string, WorkspaceUiSettings>(StringComparer.OrdinalIgnoreCase);
+            if (!ReferenceEquals(disk.WorkspaceUiById.Comparer, StringComparer.OrdinalIgnoreCase))
+            {
+                disk.WorkspaceUiById = new Dictionary<string, WorkspaceUiSettings>(
+                    disk.WorkspaceUiById, StringComparer.OrdinalIgnoreCase);
+            }
+
+            var snapshot = WorkspaceUiSettings.FromActive(Settings);
+            foreach (var key in GetWorkspaceUiKeys(_liveUiWorkspacePath))
+                disk.WorkspaceUiById[key] = snapshot;
+
+            BackupCurrentSettingsFile();
+            SafeFileService.WriteJsonAtomic(_settingsPath, disk, _jsonOptions, Encoding.UTF8);
+            LoggingService.LogInfo(
+                "AppSettingsService.MergeLiveUiIntoExistingFile",
+                $"Merged UI for '{_liveUiWorkspacePath}' without replacing the active workspace.");
+        }
+
+        private void BackupCurrentSettingsFile()
+        {
+            if (!File.Exists(_settingsPath))
+                return;
+
+            var existingJson = SafeFileService.ReadAllText(_settingsPath, Encoding.UTF8);
+            SafeFileService.WriteTextAtomic(_backupPath, existingJson, Encoding.UTF8);
         }
     }
 }

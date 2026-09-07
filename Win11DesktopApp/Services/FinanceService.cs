@@ -262,8 +262,14 @@ namespace Win11DesktopApp.Services
         public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
             => SalaryHistoryService.SaveSalaryHistoryRecord(employeeFolder, record);
 
+        public bool TrySaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
+            => SalaryHistoryService.TrySaveSalaryHistoryRecord(employeeFolder, record);
+
         public void RemoveSalaryHistoryRecord(string employeeFolder, int year, int month, string firmName)
             => SalaryHistoryService.RemoveSalaryHistoryRecord(employeeFolder, year, month, firmName);
+
+        public bool TryRemoveSalaryHistoryRecord(string employeeFolder, int year, int month, string firmName)
+            => SalaryHistoryService.TryRemoveSalaryHistoryRecord(employeeFolder, year, month, firmName);
 
         public List<SalaryHistoryRecord> LoadSalaryHistory(string employeeFolder)
             => SalaryHistoryService.LoadSalaryHistory(employeeFolder);

@@ -175,7 +175,7 @@ namespace Win11DesktopApp.Services
             int prevYear = month == 1 ? year - 1 : year;
             int prevMonth = month == 1 ? 12 : month - 1;
             var prevMonthSw = Stopwatch.StartNew();
-            var prevMonthResult = _financeService.TryLoadAllFirmPayments(prevYear, prevMonth);
+            var prevMonthResult = _financeService.TryLoadAllFirmPayments(prevYear, prevMonth, forceReload: true);
             var prevEntries = prevMonthResult.success ? prevMonthResult.entries : new List<SalaryEntry>();
             timing.PrevMonthMs = prevMonthSw.ElapsedMilliseconds;
             timing.PrevEntriesCount = prevEntries.Count;
@@ -187,7 +187,7 @@ namespace Win11DesktopApp.Services
             }
 
             var currentMonthSw = Stopwatch.StartNew();
-            var currentMonthResult = _financeService.TryLoadAllFirmPayments(year, month);
+            var currentMonthResult = _financeService.TryLoadAllFirmPayments(year, month, forceReload: true);
             var sharedEntries = currentMonthResult.success ? currentMonthResult.entries : new List<SalaryEntry>();
             timing.CurrentMonthMs = currentMonthSw.ElapsedMilliseconds;
             timing.SharedEntriesCount = sharedEntries.Count;

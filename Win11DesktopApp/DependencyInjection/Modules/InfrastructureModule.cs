@@ -13,6 +13,11 @@ namespace Win11DesktopApp.DependencyInjection
             services.AddSingleton(_ => new AppSettingsService(suppressStartupNotifications: true));
             services.AddSingleton<AccessStatusService>();
             services.AddSingleton(sp => new FolderService(sp.GetRequiredService<AppSettingsService>()));
+            services.AddSingleton(sp => new WorkspaceSwitchService(
+                sp.GetRequiredService<AppSettingsService>(),
+                sp.GetRequiredService<FolderService>(),
+                sp.GetRequiredService<NavigationService>(),
+                sp.GetRequiredService<CurrentProfileService>()));
             services.AddSingleton<WeatherService>();
             return services;
         }

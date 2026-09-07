@@ -11,6 +11,7 @@
         <conv:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:InverseBooleanConverter x:Key="InverseBoolConverter"/>
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
     </UserControl.Resources>
 
     <Grid>
@@ -1927,6 +1928,7 @@
             <!-- Root Folder Card -->
             <Border Grid.Row="9" Style="{StaticResource SettingsSectionCard}" Padding="20,18"
                     Visibility="{Binding IsOwnerProgramSettingsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -1958,17 +1960,104 @@
                     </StackPanel>
 
                     <Button Grid.Column="1" Command="{Binding SelectRootFolderCommand}" Cursor="Hand"
-                            VerticalAlignment="Center"
+                            VerticalAlignment="Top"
                             Style="{StaticResource HeaderGhostButton}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="{DynamicResource BtnSelectFolder}" 
+                            <TextBlock Text="{DynamicResource WorkspaceAddFolder}" 
                                        FontSize="{DynamicResource FS12}" FontWeight="Medium"
                                        Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </Grid>
+
+                <StackPanel Margin="0,16,0,0">
+                    <TextBlock Text="{DynamicResource WorkspaceListTitle}"
+                               FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
+                    <TextBlock Text="{DynamicResource WorkspaceListHint}"
+                               FontSize="{DynamicResource FS11}" Foreground="{DynamicResource ForegroundBrush}" Opacity="0.5"
+                               Margin="0,0,0,8" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding WorkspaceListStatus}"
+                               FontSize="{DynamicResource FS12}" Foreground="{DynamicResource WarningBrush}"
+                               Margin="0,0,0,8" TextWrapping="Wrap"
+                               Visibility="{Binding WorkspaceListStatus, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}"/>
+                    <ItemsControl ItemsSource="{Binding Workspaces}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="12,10" Margin="0,0,0,8">
+                                    <Border.Style>
+                                        <Style TargetType="Border" BasedOn="{StaticResource DialogPreviewSurface}">
+                                            <Setter Property="Padding" Value="12,10"/>
+                                            <Setter Property="Margin" Value="0,0,0,8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding FolderPath}" FontSize="{DynamicResource FS11}"
+                                                       Foreground="{DynamicResource ForegroundBrush}" Opacity="0.55"
+                                                       FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding StatusText}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                                       Margin="0,4,0,0"
+                                                       Visibility="{Binding StatusText, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Command="{Binding DataContext.SwitchWorkspaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}" Cursor="Hand"
+                                                    Style="{StaticResource HeaderGhostButton}" Margin="0,0,6,0"
+                                                    Visibility="{Binding CanSwitch, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="{DynamicResource WorkspaceSwitch}" FontSize="{DynamicResource FS12}"/>
+                                            </Button>
+                                            <Button Command="{Binding DataContext.ReplaceWorkspaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}" Cursor="Hand"
+                                                    Style="{StaticResource HeaderGhostButton}" Margin="0,0,6,0">
+                                                <TextBlock Text="{DynamicResource WorkspaceReplace}" FontSize="{DynamicResource FS12}"/>
+                                            </Button>
+                                            <Button Command="{Binding DataContext.RemoveWorkspaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}" Cursor="Hand"
+                                                    IsEnabled="{Binding CanRemove}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanRemove}" Value="False">
+                                                                <Setter Property="ToolTip" Value="{DynamicResource WorkspaceCannotRemoveActive}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                                <TextBlock Text="{DynamicResource WorkspaceRemove}" FontSize="{DynamicResource FS12}"/>
+                                            </Button>
+                                        </WrapPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                </StackPanel>
             </Border>
 
             <!-- AI (Gemini) Card -->
@@ -4369,6 +4458,33 @@
             </StackPanel>
         </Border>
     </Grid>
+
+        <Grid Grid.RowSpan="2" Visibility="{Binding IsWorkspaceSwitchDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="{DynamicResource OverlayBrush}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding CancelWorkspaceSwitchCommand}"/>
+                </Border.InputBindings>
+            </Border>
+            <Border Style="{StaticResource SettingsSectionCard}" Padding="24" MaxWidth="460"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="{Binding WorkspaceSwitchTitle}" FontSize="{DynamicResource FS18}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding WorkspaceSwitchMessage}" FontSize="{DynamicResource FS13}"
+                               Foreground="{DynamicResource ForegroundBrush}" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding CancelWorkspaceSwitchCommand}" Style="{StaticResource HeaderGhostButton}"
+                                Margin="0,0,8,0" IsEnabled="{Binding IsWorkspaceRestarting, Converter={StaticResource InverseBoolConverter}}">
+                            <TextBlock Text="{DynamicResource WorkspaceConfirmCancel}" FontSize="{DynamicResource FS13}"/>
+                        </Button>
+                        <Button Command="{Binding ConfirmWorkspaceSwitchCommand}" Style="{StaticResource FilledActionButton}"
+                                IsEnabled="{Binding IsWorkspaceRestarting, Converter={StaticResource InverseBoolConverter}}">
+                            <TextBlock Text="{Binding WorkspaceSwitchConfirmText}" FontSize="{DynamicResource FS13}" Foreground="White"/>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
 
     </Grid>
 </UserControl>

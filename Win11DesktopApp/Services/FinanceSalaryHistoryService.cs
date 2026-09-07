@@ -33,10 +33,13 @@ namespace Win11DesktopApp.Services
         }
 
         public void SaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
+            => TrySaveSalaryHistoryRecord(employeeFolder, record);
+
+        public bool TrySaveSalaryHistoryRecord(string employeeFolder, SalaryHistoryRecord record)
         {
             employeeFolder = _resolveEmployeeFolder(employeeFolder, null);
             if (string.IsNullOrEmpty(employeeFolder) || !Directory.Exists(employeeFolder))
-                return;
+                return false;
 
             try
             {
@@ -44,7 +47,7 @@ namespace Win11DesktopApp.Services
                 if (_useLocalDb && _salaryHistoryStorage != null)
                 {
                     _salaryHistoryStorage.UpsertSalaryHistoryRecord(employeeId, employeeFolder, record);
-                    return;
+                    return true;
                 }
 
                 var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
@@ -57,18 +60,23 @@ namespace Win11DesktopApp.Services
                 records.Add(record);
                 records = records.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month).ToList();
                 SafeFileService.WriteJsonAtomic(filePath, records);
+                return true;
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("FinanceSalaryHistoryService.SaveSalaryHistoryRecord", ex);
+                return false;
             }
         }
 
         public void RemoveSalaryHistoryRecord(string employeeFolder, int year, int month, string firmName)
+            => TryRemoveSalaryHistoryRecord(employeeFolder, year, month, firmName);
+
+        public bool TryRemoveSalaryHistoryRecord(string employeeFolder, int year, int month, string firmName)
         {
             employeeFolder = _resolveEmployeeFolder(employeeFolder, null);
             if (string.IsNullOrEmpty(employeeFolder) || !Directory.Exists(employeeFolder))
-                return;
+                return true;
 
             try
             {
@@ -76,7 +84,7 @@ namespace Win11DesktopApp.Services
                 if (_useLocalDb && _salaryHistoryStorage != null)
                 {
                     _salaryHistoryStorage.DeleteSalaryHistoryRecord(employeeId, employeeFolder, year, month, firmName);
-                    return;
+                    return true;
                 }
 
                 var filePath = Path.Combine(employeeFolder, SalaryHistoryFile);
@@ -88,13 +96,15 @@ namespace Win11DesktopApp.Services
                     && r.Month == month
                     && NormalizeSalaryHistoryFirmKey(r.FirmName) == firmKey);
                 if (records.Count == before)
-                    return;
+                    return true;
 
                 SafeFileService.WriteJsonAtomic(filePath, records);
+                return true;
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("FinanceSalaryHistoryService.RemoveSalaryHistoryRecord", ex);
+                return false;
             }
         }
 

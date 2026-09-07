@@ -130,6 +130,21 @@ namespace Win11DesktopApp.EmployeeModels
         public List<RequiredDocumentStatus> RequiredDocumentStatuses { get; set; } = new List<RequiredDocumentStatus>();
     }
 
+    /// <summary>
+    /// The two fields of employee.json that the expiry scans need, so they can read the file
+    /// without going through <see cref="EmployeeData"/>. Loading the full model runs the repair
+    /// pass in EmployeeService.LoadEmployeeData, which saves the file when it fixes something -
+    /// and those scans run for every employee of every company, including at startup for the
+    /// menu badge. On a shared folder that meant merely viewing a list could rewrite a file
+    /// another machine was editing. Unknown properties are ignored on deserialize, so this reads
+    /// the same file without touching its format.
+    /// </summary>
+    public class EmployeeExpiryDocuments
+    {
+        public Dictionary<string, string> IgnoredDocuments { get; set; } = new Dictionary<string, string>();
+        public List<CustomSignedDocument> CustomDocuments { get; set; } = new List<CustomSignedDocument>();
+    }
+
     public class EmployeeSummary : INotifyPropertyChanged
     {
         private bool _isSelected;

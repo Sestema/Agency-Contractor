@@ -111,7 +111,7 @@ namespace Win11DesktopApp.Services
                             var exePath = Environment.ProcessPath;
                             if (!string.IsNullOrWhiteSpace(exePath))
                             {
-                                Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+                                Process.Start(Program.CreateRestartStartInfo(exePath));
                                 await Application.Current.Dispatcher.InvokeAsync(() => Application.Current.Shutdown());
                             }
                         }

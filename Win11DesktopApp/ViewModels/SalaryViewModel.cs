@@ -20,7 +20,7 @@ using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.ViewModels
 {
-    public class SalaryViewModel : ViewModelBase, ICleanable
+    public class SalaryViewModel : ViewModelBase, ICleanable, ISalaryWorkspaceGuard
     {
         private readonly NavigationService _navigationService;
         private readonly FinanceService _financeService;
@@ -40,6 +40,7 @@ namespace Win11DesktopApp.ViewModels
         private readonly Dictionary<string, CancellationTokenSource> _salarySyncReloadCtsByKey = new(StringComparer.OrdinalIgnoreCase);
         private CancellationTokenSource? _notePropagationCts;
         private readonly SemaphoreSlim _saveReportGate = new(1, 1);
+        private readonly SemaphoreSlim _paidPersistGate = new(1, 1);
         private int _advanceRefreshVersion;
         private int _loadReportVersion;
         // Deterministic snapshot of months that have salary data (works in both SQLite and PostgreSQL
@@ -1222,12 +1223,16 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private bool HasUnsavedSalaryChanges()
+        public bool HasUnsavedSalaryChanges()
         {
             return IsDirty
                    || _dirtySalaryEntryKeys.Count > 0
                    || EntriesHaveSnapshotChanges(Entries);
         }
+
+        public bool CanPersistUnsavedSalaryChanges => CanEditSalaryModule;
+
+        public Task<bool> PersistUnsavedSalaryChangesAsync() => SaveReportAsync();
 
         private bool IsCurrentLoad(int loadVersion, int year, int month)
         {
@@ -2800,7 +2805,7 @@ namespace Win11DesktopApp.ViewModels
             for (int i = 0; i < 24; i++) // max 24 months forward
             {
                 token.ThrowIfCancellationRequested();
-                var futureMonthResult = _financeService.TryLoadAllFirmPayments(date.Year, date.Month);
+                var futureMonthResult = _financeService.TryLoadAllFirmPayments(date.Year, date.Month, forceReload: true);
                 if (!futureMonthResult.success)
                     break;
 
@@ -4061,46 +4066,80 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            _suppressPaidAutoSave = true;
+            await _paidPersistGate.WaitAsync().ConfigureAwait(true);
+            var year = _selectedYear;
+            var month = _selectedMonth;
+            var writtenFolders = new List<(string Folder, string FirmName)>();
+            var saved = false;
             try
             {
-                foreach (var e in visibleEntries)
-                    e.IsPaid = true;
+                SetPaidFlags(visibleEntries, paid: true, trackChanges: true);
+
+                var fields = ActiveCustomFields.ToList();
+                var historyJobs = new List<(string Folder, string FirmName, SalaryHistoryRecord Record)>(visibleEntries.Count);
+                foreach (var entry in visibleEntries)
+                {
+                    if (string.IsNullOrEmpty(entry.EmployeeFolder))
+                        continue;
+
+                    var folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
+                    var record = _financeService.BuildHistoryRecord(entry, year, month, fields);
+                    historyJobs.Add((folder, entry.FirmName, record));
+                }
+
+                var written = await Task.Run(() =>
+                {
+                    var succeeded = new List<(string Folder, string FirmName)>();
+                    foreach (var (folder, firmName, record) in historyJobs)
+                    {
+                        if (!_financeService.TrySaveSalaryHistoryRecord(folder, record))
+                            return (ok: false, succeeded);
+                        succeeded.Add((folder, firmName));
+                    }
+
+                    return (ok: true, succeeded);
+                }).ConfigureAwait(true);
+                writtenFolders = written.succeeded;
+
+                if (!written.ok)
+                {
+                    await CompensatePaidHistoryAsync(writtenFolders, year, month).ConfigureAwait(true);
+                    SetPaidFlags(visibleEntries, paid: false, trackChanges: false);
+                    ShowPaidPersistFailed();
+                    RecalcTotals();
+                    return;
+                }
+
+                RecalcTotals();
+                if (!await SaveReportAsync().ConfigureAwait(true))
+                {
+                    await CompensatePaidHistoryAsync(writtenFolders, year, month).ConfigureAwait(true);
+                    SetPaidFlags(visibleEntries, paid: false, trackChanges: false);
+                    ShowPaidPersistFailed();
+                    RecalcTotals();
+                    return;
+                }
+
+                saved = true;
+                var firmNames = visibleEntries.Select(e => e.FirmName).Distinct().ToList();
+                _activityLogService.Log("MonthPaid", "Salary", string.Join(", ", firmNames), "",
+                    $"Позначено оплачено: {MonthDisplay} ({visibleEntries.Count} працівників)");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.MarkAllPaidAsync", ex);
+                if (!saved)
+                {
+                    await CompensatePaidHistoryAsync(writtenFolders, year, month).ConfigureAwait(true);
+                    SetPaidFlags(visibleEntries, paid: false, trackChanges: false);
+                    ShowPaidPersistFailed();
+                    RecalcTotals();
+                }
             }
             finally
             {
-                _suppressPaidAutoSave = false;
+                _paidPersistGate.Release();
             }
-
-            var year = _selectedYear;
-            var month = _selectedMonth;
-            var fields = ActiveCustomFields.ToList();
-            var historyJobs = new List<(string Folder, SalaryHistoryRecord Record)>(visibleEntries.Count);
-            foreach (var entry in visibleEntries)
-            {
-                if (string.IsNullOrEmpty(entry.EmployeeFolder))
-                    continue;
-
-                var folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
-                var record = _financeService.BuildHistoryRecord(entry, year, month, fields);
-                historyJobs.Add((folder, record));
-            }
-
-            if (historyJobs.Count > 0)
-            {
-                await Task.Run(() =>
-                {
-                    foreach (var (folder, record) in historyJobs)
-                        _financeService.SaveSalaryHistoryRecord(folder, record);
-                }).ConfigureAwait(true);
-            }
-
-            RecalcTotals();
-            await SaveReportAsync();
-
-            var firmNames = visibleEntries.Select(e => e.FirmName).Distinct().ToList();
-            _activityLogService.Log("MonthPaid", "Salary", string.Join(", ", firmNames), "",
-                $"Позначено оплачено: {MonthDisplay} ({visibleEntries.Count} працівників)");
         }
 
         private async Task MarkAllUnpaidAsync()
@@ -4120,40 +4159,76 @@ namespace Win11DesktopApp.ViewModels
                 return;
             }
 
-            _suppressPaidAutoSave = true;
+            await _paidPersistGate.WaitAsync().ConfigureAwait(true);
+            var removedRows = new List<(string Folder, SalaryHistoryRecord? Previous)>();
+            var saved = false;
             try
             {
-                foreach (var e in visibleEntries)
-                    e.IsPaid = false;
+                var year = _selectedYear;
+                var month = _selectedMonth;
+                var removeJobs = new List<(string Folder, string FirmName, SalaryHistoryRecord? Previous)>(visibleEntries.Count);
+                foreach (var entry in visibleEntries)
+                {
+                    if (string.IsNullOrEmpty(entry.EmployeeFolder))
+                        continue;
+
+                    var folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
+                    var previous = TryGetSalaryHistoryRecord(entry.EmployeeFolder, entry.EmployeeId, entry.FirmName, year, month);
+                    removeJobs.Add((folder, entry.FirmName, previous));
+                }
+
+                SetPaidFlags(visibleEntries, paid: false, trackChanges: true);
+
+                var removed = await Task.Run(() =>
+                {
+                    var succeeded = new List<(string Folder, SalaryHistoryRecord? Previous)>();
+                    foreach (var (folder, firmName, previous) in removeJobs)
+                    {
+                        if (!_financeService.TryRemoveSalaryHistoryRecord(folder, year, month, firmName))
+                            return (ok: false, succeeded);
+                        succeeded.Add((folder, previous));
+                    }
+
+                    return (ok: true, succeeded);
+                }).ConfigureAwait(true);
+                removedRows = removed.succeeded;
+
+                if (!removed.ok)
+                {
+                    await RestoreRemovedHistoryAsync(removedRows).ConfigureAwait(true);
+                    SetPaidFlags(visibleEntries, paid: true, trackChanges: false);
+                    ShowPaidPersistFailed();
+                    RecalcTotals();
+                    return;
+                }
+
+                RecalcTotals();
+                if (!await SaveReportAsync().ConfigureAwait(true))
+                {
+                    await RestoreRemovedHistoryAsync(removedRows).ConfigureAwait(true);
+                    SetPaidFlags(visibleEntries, paid: true, trackChanges: false);
+                    ShowPaidPersistFailed();
+                    RecalcTotals();
+                    return;
+                }
+
+                saved = true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("SalaryViewModel.MarkAllUnpaidAsync", ex);
+                if (!saved)
+                {
+                    await RestoreRemovedHistoryAsync(removedRows).ConfigureAwait(true);
+                    SetPaidFlags(visibleEntries, paid: true, trackChanges: false);
+                    ShowPaidPersistFailed();
+                    RecalcTotals();
+                }
             }
             finally
             {
-                _suppressPaidAutoSave = false;
+                _paidPersistGate.Release();
             }
-
-            var year = _selectedYear;
-            var month = _selectedMonth;
-            var removeJobs = new List<(string Folder, string FirmName)>(visibleEntries.Count);
-            foreach (var entry in visibleEntries)
-            {
-                if (string.IsNullOrEmpty(entry.EmployeeFolder))
-                    continue;
-
-                var folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
-                removeJobs.Add((folder, entry.FirmName));
-            }
-
-            if (removeJobs.Count > 0)
-            {
-                await Task.Run(() =>
-                {
-                    foreach (var (folder, firmName) in removeJobs)
-                        _financeService.RemoveSalaryHistoryRecord(folder, year, month, firmName);
-                }).ConfigureAwait(true);
-            }
-
-            RecalcTotals();
-            await SaveReportAsync();
         }
 
         internal void OnEntryPaidChanged(SalaryEntry? entry)
@@ -4190,37 +4265,193 @@ namespace Win11DesktopApp.ViewModels
 
         private async Task PersistPaidChangeAsync(SalaryEntry entry)
         {
+            await _paidPersistGate.WaitAsync().ConfigureAwait(true);
+            var lastDesiredPaid = entry.IsPaid;
             try
             {
-                var isPaid = entry.IsPaid;
-                var year = _selectedYear;
-                var month = _selectedMonth;
-                var firmName = entry.FirmName;
-                var employeeFolder = entry.EmployeeFolder;
-                var employeeId = entry.EmployeeId;
-                var historyRecord = isPaid
-                    ? _financeService.BuildHistoryRecord(entry, year, month, ActiveCustomFields.ToList())
-                    : null;
-
-                await Task.Run(() =>
+                while (true)
                 {
-                    if (string.IsNullOrEmpty(employeeFolder))
-                        return;
+                    lastDesiredPaid = entry.IsPaid;
+                    var persisted = await TryPersistPaidStateAsync(entry, lastDesiredPaid).ConfigureAwait(true);
+                    if (!persisted)
+                    {
+                        RevertPaidFlag(entry, !lastDesiredPaid);
+                        ShowPaidPersistFailed();
+                        break;
+                    }
 
-                    var folder = _financeService.ResolveEmployeeFolder(employeeFolder, employeeId);
-                    if (isPaid && historyRecord != null)
-                        _financeService.SaveSalaryHistoryRecord(folder, historyRecord);
-                    else if (!isPaid)
-                        _financeService.RemoveSalaryHistoryRecord(folder, year, month, firmName);
-                }).ConfigureAwait(true);
-
-                RecalcTotals();
-                await SaveReportAsync().ConfigureAwait(true);
+                    if (entry.IsPaid == lastDesiredPaid)
+                        break;
+                }
             }
             catch (Exception ex)
             {
                 LoggingService.LogError("SalaryViewModel.PersistPaidChangeAsync", ex);
+                RevertPaidFlag(entry, !lastDesiredPaid);
+                ShowPaidPersistFailed();
             }
+            finally
+            {
+                _paidPersistGate.Release();
+            }
+        }
+
+        private async Task<bool> TryPersistPaidStateAsync(SalaryEntry entry, bool desiredPaid)
+        {
+            var year = _selectedYear;
+            var month = _selectedMonth;
+            var firmName = entry.FirmName;
+            var historyWritten = false;
+            string? folder = null;
+            SalaryHistoryRecord? previousHistory = null;
+
+            if (!string.IsNullOrEmpty(entry.EmployeeFolder))
+            {
+                folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
+                previousHistory = TryGetSalaryHistoryRecord(entry.EmployeeFolder, entry.EmployeeId, firmName, year, month);
+                var historyRecord = desiredPaid
+                    ? _financeService.BuildHistoryRecord(entry, year, month, ActiveCustomFields.ToList())
+                    : null;
+
+                var historyOk = await Task.Run(() =>
+                {
+                    if (desiredPaid)
+                        return historyRecord != null && _financeService.TrySaveSalaryHistoryRecord(folder, historyRecord);
+
+                    return _financeService.TryRemoveSalaryHistoryRecord(folder, year, month, firmName);
+                }).ConfigureAwait(true);
+
+                if (!historyOk)
+                    return false;
+
+                historyWritten = true;
+            }
+
+            try
+            {
+                RecalcTotals();
+                if (await SaveReportAsync().ConfigureAwait(true))
+                    return true;
+            }
+            catch
+            {
+                if (historyWritten && !string.IsNullOrEmpty(folder))
+                    CompensateSingleHistory(desiredPaid, folder, year, month, firmName, previousHistory);
+                throw;
+            }
+
+            if (historyWritten && !string.IsNullOrEmpty(folder))
+                CompensateSingleHistory(desiredPaid, folder, year, month, firmName, previousHistory);
+
+            return false;
+        }
+
+        private async Task CompensatePaidHistoryAsync(
+            IReadOnlyList<(string Folder, string FirmName)> written,
+            int year,
+            int month)
+        {
+            await Task.Run(() =>
+            {
+                foreach (var (folder, firmName) in written)
+                    _financeService.TryRemoveSalaryHistoryRecord(folder, year, month, firmName);
+            }).ConfigureAwait(true);
+        }
+
+        private async Task RestoreRemovedHistoryAsync(IReadOnlyList<(string Folder, SalaryHistoryRecord? Previous)> removed)
+        {
+            await Task.Run(() =>
+            {
+                foreach (var (folder, previous) in removed)
+                {
+                    if (previous != null)
+                        _financeService.TrySaveSalaryHistoryRecord(folder, previous);
+                }
+            }).ConfigureAwait(true);
+        }
+
+        private void CompensateSingleHistory(
+            bool desiredPaid,
+            string folder,
+            int year,
+            int month,
+            string firmName,
+            SalaryHistoryRecord? previousHistory)
+        {
+            if (desiredPaid)
+            {
+                _financeService.TryRemoveSalaryHistoryRecord(folder, year, month, firmName);
+                return;
+            }
+
+            if (previousHistory != null)
+                _financeService.TrySaveSalaryHistoryRecord(folder, previousHistory);
+        }
+
+        private void SetPaidFlags(IReadOnlyList<SalaryEntry> entries, bool paid, bool trackChanges)
+        {
+            _suppressPaidAutoSave = true;
+            if (!trackChanges)
+                _suppressEntryChangeTracking = true;
+            try
+            {
+                foreach (var entry in entries)
+                    entry.IsPaid = paid;
+            }
+            finally
+            {
+                _suppressPaidAutoSave = false;
+                _suppressEntryChangeTracking = false;
+            }
+
+            if (trackChanges)
+                return;
+
+            RefreshDirtyAfterPaidRevert(entries);
+        }
+
+        private void RevertPaidFlag(SalaryEntry entry, bool previousPaid)
+        {
+            if (entry.IsPaid == previousPaid)
+            {
+                RecalcTotals();
+                return;
+            }
+
+            _suppressPaidAutoSave = true;
+            _suppressEntryChangeTracking = true;
+            try
+            {
+                entry.IsPaid = previousPaid;
+            }
+            finally
+            {
+                _suppressPaidAutoSave = false;
+                _suppressEntryChangeTracking = false;
+            }
+
+            RefreshDirtyAfterPaidRevert(new[] { entry });
+            RecalcTotals();
+        }
+
+        private void RefreshDirtyAfterPaidRevert(IEnumerable<SalaryEntry> entries)
+        {
+            foreach (var entry in entries)
+            {
+                var key = BuildEmployeeFirmKey(entry.EmployeeId, entry.EmployeeFolder, entry.FirmName);
+                if (_originalEntrySnapshots.TryGetValue(key, out var snapshot) && snapshot.Matches(entry))
+                    _dirtySalaryEntryKeys.Remove(key);
+            }
+
+            IsDirty = _dirtySalaryEntryKeys.Count > 0 || EntriesHaveSnapshotChanges(Entries);
+        }
+
+        private void ShowPaidPersistFailed()
+        {
+            StatusMessage = !string.IsNullOrWhiteSpace(_financeService.LastSalaryConflictMessage)
+                ? _financeService.LastSalaryConflictMessage
+                : (L("FinSalaryPaidPersistFailed")
+                   ?? "Не вдалося зберегти позначку виплати. Галочку повернуто.");
         }
 
         private void WriteSalaryHistory(SalaryEntry entry)
@@ -4228,14 +4459,14 @@ namespace Win11DesktopApp.ViewModels
             if (string.IsNullOrEmpty(entry.EmployeeFolder)) return;
             var folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
             var record = _financeService.BuildHistoryRecord(entry, _selectedYear, _selectedMonth, ActiveCustomFields.ToList());
-            _financeService.SaveSalaryHistoryRecord(folder, record);
+            _financeService.TrySaveSalaryHistoryRecord(folder, record);
         }
 
         private void RemoveSalaryHistory(SalaryEntry entry)
         {
             if (string.IsNullOrEmpty(entry.EmployeeFolder)) return;
             var folder = _financeService.ResolveEmployeeFolder(entry.EmployeeFolder, entry.EmployeeId);
-            _financeService.RemoveSalaryHistoryRecord(folder, _selectedYear, _selectedMonth, entry.FirmName);
+            _financeService.TryRemoveSalaryHistoryRecord(folder, _selectedYear, _selectedMonth, entry.FirmName);
         }
 
         private void SelectFirm(string? firmName)
@@ -4286,6 +4517,7 @@ namespace Win11DesktopApp.ViewModels
         {
             LoggingService.LogInfo("SalaryViewModel.Cleanup", "Unsubscribed sync and cancelled pending work.");
             _syncEventService.SyncEventReceived -= OnSyncEventReceived;
+            _financeService.InvalidatePaymentsCache();
             DataLoaded = null;
             _editingSalaryEntryKey = null;
             _deferredSalarySyncReload = false;

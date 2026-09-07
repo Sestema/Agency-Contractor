@@ -661,7 +661,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- Hours (FIXED) -->
-                            <DataGridTextColumn Binding="{Binding HoursDisplayText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="70">
+                            <DataGridTextColumn Binding="{Binding HoursDisplayText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="70" SortMemberPath="HoursWorked">
                                 <DataGridTextColumn.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{DynamicResource FinColHours}"/>
@@ -918,7 +918,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- Note (LAST — Width="*" absorbs all remaining space) -->
-                            <DataGridTextColumn x:Name="NoteColumn" Width="*">
+                            <DataGridTextColumn x:Name="NoteColumn" Width="*" SortMemberPath="Note">
                                 <DataGridTextColumn.Binding>
                                     <Binding Path="Note" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged"/>
                                 </DataGridTextColumn.Binding>

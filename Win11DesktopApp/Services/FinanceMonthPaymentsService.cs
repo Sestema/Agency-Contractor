@@ -526,17 +526,10 @@ namespace Win11DesktopApp.Services
             int month,
             bool forceReload = false)
         {
-            var cacheKey = (year, month);
-            if (!forceReload)
-            {
-                lock (_paymentsCacheLock)
-                {
-                    if (_paymentsCache.TryGetValue(cacheKey, out var cached))
-                    {
-                        return (true, CloneSalaryEntries(cached.entries), CloneFirmExpenses(cached.expenses), string.Empty);
-                    }
-                }
-            }
+            // Do not serve a long-lived RAM snapshot. A second PC can save real hours
+            // while this process still holds zeros; saving that snapshot overwrites the file.
+            // forceReload is kept for callers; every load now reads storage.
+            _ = forceReload;
 
             if (_monthPaymentsStorage != null)
             {
@@ -545,14 +538,7 @@ namespace Win11DesktopApp.Services
                     if (_monthPaymentsStorage.MonthDbExists(year, month))
                     {
                         var sqliteResult = _monthPaymentsStorage.LoadMonthPayments(year, month);
-                        var sqliteEntries = CloneSalaryEntries(sqliteResult.entries);
-                        var sqliteExpenses = CloneFirmExpenses(sqliteResult.expenses);
-                        lock (_paymentsCacheLock)
-                        {
-                            _paymentsCache[cacheKey] = (sqliteEntries, sqliteExpenses);
-                        }
-
-                        return (true, CloneSalaryEntries(sqliteEntries), CloneFirmExpenses(sqliteExpenses), string.Empty);
+                        return (true, CloneSalaryEntries(sqliteResult.entries), CloneFirmExpenses(sqliteResult.expenses), string.Empty);
                     }
 
                     return (true, new List<SalaryEntry>(), new List<FirmExpense>(), string.Empty);
@@ -619,12 +605,6 @@ namespace Win11DesktopApp.Services
             EnsureSalaryDbConfigured();
             try
             {
-                lock (_paymentsCacheLock)
-                {
-                    if (_paymentsCache.TryGetValue((year, month), out var cached))
-                        return CloneFirmExpenses(cached.expenses);
-                }
-
                 if (_monthPaymentsStorage!.MonthDbExists(year, month))
                     return CloneFirmExpenses(_monthPaymentsStorage.LoadFirmExpensesOnly(year, month));
             }

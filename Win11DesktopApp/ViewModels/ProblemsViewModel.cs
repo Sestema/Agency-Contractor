@@ -488,10 +488,10 @@ namespace Win11DesktopApp.ViewModels
                             {
                                 token.ThrowIfCancellationRequested();
 
-                                EmployeeData? employeeData = null;
+                                EmployeeExpiryDocuments? employeeData = null;
                                 try
                                 {
-                                    employeeData = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
+                                    employeeData = _employeeService.LoadEmployeeExpiryDocuments(emp.EmployeeFolder);
                                 }
                                 catch (Exception ex)
                                 {
@@ -639,58 +639,109 @@ namespace Win11DesktopApp.ViewModels
                     || g.Issues.Any(i => i.DocumentTypeDisplay?.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0));
             }
 
-            IEnumerable<EmployeeProblemGroup> filtered;
+            // Work out what should be on screen without building any group objects: the severity
+            // filters only narrow each employee's issue list, so a source group plus the issues
+            // that survive the filter is all the information the sync below needs.
+            var targets = new List<(EmployeeProblemGroup Source, List<DocumentExpiryInfo> Issues)>();
 
-            if (_activeFilter == "Expired")
+            foreach (var g in baseGroups)
             {
-                filtered = baseGroups
-                    .Select(g =>
-                    {
-                        var expiredIssues = g.Issues
-                            .Where(i => i.Severity == "Expired" || i.Severity == "Critical")
-                            .ToList();
-                        if (expiredIssues.Count == 0) return null;
-                        return new EmployeeProblemGroup
-                        {
-                            UniqueId = g.UniqueId,
-                            EmployeeName = g.EmployeeName,
-                            EmployeeFolder = g.EmployeeFolder,
-                            FirmName = g.FirmName,
-                            Issues = new ObservableCollection<DocumentExpiryInfo>(expiredIssues)
-                        };
-                    })
-                    .Where(g => g != null)!;
-            }
-            else if (_activeFilter == "Warning")
-            {
-                filtered = baseGroups
-                    .Select(g =>
-                    {
-                        var warningIssues = g.Issues
-                            .Where(i => i.Severity == "Warning")
-                            .ToList();
-                        if (warningIssues.Count == 0) return null;
-                        return new EmployeeProblemGroup
-                        {
-                            UniqueId = g.UniqueId,
-                            EmployeeName = g.EmployeeName,
-                            EmployeeFolder = g.EmployeeFolder,
-                            FirmName = g.FirmName,
-                            Issues = new ObservableCollection<DocumentExpiryInfo>(warningIssues)
-                        };
-                    })
-                    .Where(g => g != null)!;
-            }
-            else
-            {
-                filtered = baseGroups;
+                List<DocumentExpiryInfo> issues;
+
+                if (_activeFilter == "Expired")
+                    issues = g.Issues.Where(i => i.Severity == "Expired" || i.Severity == "Critical").ToList();
+                else if (_activeFilter == "Warning")
+                    issues = g.Issues.Where(i => i.Severity == "Warning").ToList();
+                else
+                    issues = g.Issues.ToList();
+
+                if (issues.Count == 0) continue;
+
+                targets.Add((g, issues));
             }
 
-            var list = filtered.ToList();
-            ProblemGroups = new ObservableCollection<EmployeeProblemGroup>(list!);
-            HasProblems = list.Count > 0;
+            SyncProblemGroups(targets);
+
+            HasProblems = targets.Count > 0;
             IsAllClear = _allGroups.Count == 0;
-            IsFilteredEmpty = _allGroups.Count > 0 && list.Count == 0;
+            IsFilteredEmpty = _allGroups.Count > 0 && targets.Count == 0;
+        }
+
+        /// <summary>
+        /// Brings ProblemGroups to match the target list by editing it in place. Handing the view a
+        /// brand new collection would drop every container and send the list back to the top, which
+        /// is what used to happen on each keystroke; here a card that did not change is left alone.
+        /// Identity is EmployeeFolder because the groups are built by grouping on it, so it is unique
+        /// by construction - UniqueId can repeat when it is missing from the source data.
+        /// </summary>
+        private void SyncProblemGroups(List<(EmployeeProblemGroup Source, List<DocumentExpiryInfo> Issues)> targets)
+        {
+            for (int i = 0; i < targets.Count; i++)
+            {
+                var (source, issues) = targets[i];
+
+                int existing = -1;
+                for (int j = i; j < _problemGroups.Count; j++)
+                {
+                    if (string.Equals(_problemGroups[j].EmployeeFolder, source.EmployeeFolder, StringComparison.Ordinal))
+                    {
+                        existing = j;
+                        break;
+                    }
+                }
+
+                if (existing < 0)
+                {
+                    _problemGroups.Insert(i, new EmployeeProblemGroup
+                    {
+                        UniqueId = source.UniqueId,
+                        EmployeeName = source.EmployeeName,
+                        EmployeeFolder = source.EmployeeFolder,
+                        FirmName = source.FirmName,
+                        Issues = new ObservableCollection<DocumentExpiryInfo>(issues)
+                    });
+                    continue;
+                }
+
+                if (existing != i)
+                    _problemGroups.Move(existing, i);
+
+                UpdateDisplayGroup(_problemGroups[i], source, issues);
+            }
+
+            // Anything left past the end of the target list no longer passes the filter.
+            while (_problemGroups.Count > targets.Count)
+                _problemGroups.RemoveAt(_problemGroups.Count - 1);
+        }
+
+        private static void UpdateDisplayGroup(EmployeeProblemGroup display, EmployeeProblemGroup source,
+            List<DocumentExpiryInfo> issues)
+        {
+            display.UniqueId = source.UniqueId;
+            display.EmployeeName = source.EmployeeName;
+            display.FirmName = source.FirmName;
+
+            if (SameIssues(display.Issues, issues)) return;
+
+            display.Issues.Clear();
+            foreach (var issue in issues)
+                display.Issues.Add(issue);
+
+            // IssueCount and WorstSeverity are computed, so the collection's own notification
+            // is not enough for them.
+            display.Refresh();
+        }
+
+        private static bool SameIssues(IList<DocumentExpiryInfo> current, List<DocumentExpiryInfo> next)
+        {
+            if (current.Count != next.Count) return false;
+
+            for (int i = 0; i < next.Count; i++)
+            {
+                if (!ReferenceEquals(current[i], next[i])) return false;
+            }
+
+            return true;
         }
 
         private static bool CollectProblem(List<DocumentExpiryInfo> activeList, List<DocumentExpiryInfo> ignoredList,
@@ -760,7 +811,7 @@ namespace Win11DesktopApp.ViewModels
                             if (!needsPassport && !needsVisa && !needsInsurance && !needsWorkPermit)
                                 continue;
 
-                            var ignoredDocuments = empService.LoadEmployeeData(emp.EmployeeFolder)?.IgnoredDocuments;
+                            var ignoredDocuments = empService.LoadEmployeeExpiryDocuments(emp.EmployeeFolder)?.IgnoredDocuments;
                             if (needsPassport && !TryGetIgnoredUntil(ignoredDocuments, DocKeyPassport, out _)) count++;
                             if (needsVisa && !TryGetIgnoredUntil(ignoredDocuments, DocKeyVisa, out _)) count++;
                             if (needsInsurance && !TryGetIgnoredUntil(ignoredDocuments, DocKeyInsurance, out _)) count++;
@@ -792,7 +843,7 @@ namespace Win11DesktopApp.ViewModels
                     if (!needsPassport && !needsVisa && !needsInsurance && !needsWorkPermit)
                         continue;
 
-                    var ignoredDocuments = employeeService.LoadEmployeeData(emp.EmployeeFolder)?.IgnoredDocuments;
+                    var ignoredDocuments = employeeService.LoadEmployeeExpiryDocuments(emp.EmployeeFolder)?.IgnoredDocuments;
                     if (needsPassport && !TryGetIgnoredUntil(ignoredDocuments, DocKeyPassport, out _)) count++;
                     if (needsVisa && !TryGetIgnoredUntil(ignoredDocuments, DocKeyVisa, out _)) count++;
                     if (needsInsurance && !TryGetIgnoredUntil(ignoredDocuments, DocKeyInsurance, out _)) count++;
