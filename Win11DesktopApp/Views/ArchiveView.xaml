@@ -1251,9 +1251,12 @@
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource ForegroundBrush}"
                                    Margin="0,2,0,0"/>
-                        <TextBlock Text="{Binding FilteredCount, StringFormat={}{0} записів у поточному вигляді}"
-                                   FontSize="{DynamicResource FS10}"
-                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                        <TextBlock FontSize="{DynamicResource FS10}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}">
+                            <Run Text="{Binding FilteredCount, Mode=OneWay}"/>
+                            <Run Text=" "/>
+                            <Run Text="{DynamicResource ArchiveFilteredCountSuffix}"/>
+                        </TextBlock>
                     </StackPanel>
                 </Button>
 
@@ -1845,9 +1848,11 @@
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
                                     <TextBlock Text=" — " Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                     <TextBlock Foreground="{DynamicResource SecondaryForegroundBrush}">
-                                        <Run Text="{Binding MonthlySalaryBrutto, StringFormat={}{0:N0} Kč/міс, Mode=OneWay}"/>
+                                        <Run Text="{Binding MonthlySalaryBrutto, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                                        <Run Text="{DynamicResource ArchiveSalaryPerMonthSuffix}"/>
                                         <Run Text=" | "/>
-                                        <Run Text="{Binding HourlySalary, StringFormat={}{0:N2} Kč/год, Mode=OneWay}"/>
+                                        <Run Text="{Binding HourlySalary, StringFormat={}{0:N2}, Mode=OneWay}"/>
+                                        <Run Text="{DynamicResource ArchiveSalaryPerHourSuffix}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </DataTemplate>

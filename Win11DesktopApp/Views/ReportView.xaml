@@ -15,8 +15,10 @@
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
         <conv:InverseStringNullOrEmptyToVisibilityConverter x:Key="InvStrNullOrEmptyToVis"/>
         <conv:StringNullOrEmptyToVisibilityConverter x:Key="StrNullOrEmptyToVis"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{Binding Color, Source={StaticResource AccentBrush}}" Opacity="0.14"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{Binding Color, Source={StaticResource AccentBrush}}" Opacity="0.10"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"
+                         Color="{Binding Color, Source={StaticResource AccentBrush}}"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}"
+                         Color="{Binding Color, Source={StaticResource AccentBrush}}"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource ForegroundBrush}}"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource ForegroundBrush}}"/>
 
@@ -102,9 +104,16 @@
             <Setter Property="Padding" Value="10,8"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="MinWidth" Value="128"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="ReportStatTitle" TargetType="TextBlock">
@@ -1434,7 +1443,7 @@
             <Border Style="{StaticResource AnimatedDialogSectionCard}"
                     Padding="32,28" Width="420"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Effect="{DynamicResource CardShadow}">
+                    Effect="{x:Null}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource SectionGapLargeMargin}">
                         <Border Background="{DynamicResource InfoChipBackgroundBrush}" CornerRadius="8" Width="36" Height="36">

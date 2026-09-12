@@ -602,6 +602,9 @@
     <sys:String x:Key="EmpBtnFolder">Папка</sys:String>
     <sys:String x:Key="EmpBtnDelete">Видалити</sys:String>
     <sys:String x:Key="EmpBatchTitle">Масова генерація документів</sys:String>
+    <sys:String x:Key="EmpBatchSignDate">Дата підпису для цієї генерації</sys:String>
+    <sys:String x:Key="EmpBatchSignDateHint">Порожньо — з картки працівника. Заповнена дата лише в ці файли, картки не змінюються.</sys:String>
+    <sys:String x:Key="EmpBatchSignDateInvalid">Невірний формат дати. Вкажіть дд.мм.рррр або залиште порожнім.</sys:String>
     <sys:String x:Key="EmpTooltipExport">Експорт в Excel</sys:String>
     <sys:String x:Key="EmpTooltipSelect">Вибрати кількох</sys:String>
     <sys:String x:Key="EmpTooltipFolder">Відкрити папку працівника</sys:String>
@@ -638,6 +641,7 @@
     <sys:String x:Key="DetAddCustomDocTitle">Додати підписаний документ</sys:String>
     <sys:String x:Key="DetEditCustomDocTitle">Редагувати документ</sys:String>
     <sys:String x:Key="DetBtnEditDoc">Редагувати</sys:String>
+    <sys:String x:Key="DetTooltipEditDoc">Редагувати поточний документ</sys:String>
     <sys:String x:Key="DetCustomDocPreviousFirmHint">Додано, коли працівник працював у цій фірмі.</sys:String>
     <sys:String x:Key="DetCustomDocUnknownFirm">Попередні фірми</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Назва документа</sys:String>
@@ -672,6 +676,7 @@
     <sys:String x:Key="ScanPagesTitle">Сторінки</sys:String>
     <sys:String x:Key="ScanFinishHint">1 сторінка → JPG, кілька сторінок → PDF</sys:String>
     <sys:String x:Key="ScanBtnFinish">Готово</sys:String>
+    <sys:String x:Key="ScanReady">Сканер готовий</sys:String>
     <sys:String x:Key="ScanDevicesFound">Знайдено сканерів: {0}</sys:String>
     <sys:String x:Key="ScanNoScanner">Сканер недоступний</sys:String>
     <sys:String x:Key="ScanWorking">Сканування...</sys:String>
@@ -1960,6 +1965,7 @@
     <sys:String x:Key="CropPassport2">Паспорт 2</sys:String>
     <sys:String x:Key="CropIdCard2">ID-карта 2</sys:String>
     <sys:String x:Key="CropPermit">Дозвіл</sys:String>
+    <sys:String x:Key="CropVisaPage2">ID-карта 2</sys:String>
     <sys:String x:Key="CarouselPassport">Паспорт</sys:String>
     <sys:String x:Key="CarouselPassport2">Паспорт 2</sys:String>
     <sys:String x:Key="CarouselIdCard1">ID-карта 1</sys:String>
@@ -1967,6 +1973,7 @@
     <sys:String x:Key="CarouselVisa">Віза</sys:String>
     <sys:String x:Key="CarouselInsurance">Страховка</sys:String>
     <sys:String x:Key="CarouselPermit">Дозвіл</sys:String>
+    <sys:String x:Key="CarouselVisaPage2">ID-карта 2</sys:String>
 
     <!-- History actions -->
     <sys:String x:Key="HistoryActionCreation">Створення</sys:String>
@@ -2011,6 +2018,9 @@
     <sys:String x:Key="HistoryDescDocReplace">Замінено документ: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Додано документ</sys:String>
     <sys:String x:Key="HistoryActionDocEdit">Змінено документ</sys:String>
+    <sys:String x:Key="HistoryDescDocEdit">Змінено документ: {0}</sys:String>
+    <sys:String x:Key="ToastDocUpdated">Документ оновлено: {0}</sys:String>
+    <sys:String x:Key="ToastDocReplaced">Документ замінено: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Видалено документ</sys:String>
     <sys:String x:Key="HistoryActionDocumentPackage">Пакет документів</sys:String>
     <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>
@@ -2083,6 +2093,7 @@
     <sys:String x:Key="HistFieldBirthDate">Дата народження</sys:String>
     <sys:String x:Key="HistFieldRodneCislo">Ідентифікаційний код</sys:String>
     <sys:String x:Key="HistFieldHighestEducation">Найвищий досягнутий рівень освіти</sys:String>
+    <sys:String x:Key="HistFieldGender">Стать</sys:String>
     <sys:String x:Key="HistFieldPassportNum">Номер паспорту</sys:String>
     <sys:String x:Key="HistFieldDocumentProfileType">Тип працівника / комплект документів</sys:String>
     <sys:String x:Key="HistFieldPassportAuthority">Орган, що видав документ</sys:String>
@@ -2165,6 +2176,7 @@
     <sys:String x:Key="AIChatAttachImage">Прикріпити фото</sys:String>
     <sys:String x:Key="AIChatWelcome">Привіт! Я ваш AI помічник. Задайте питання або прикріпіть фото документа для аналізу.</sys:String>
     <sys:String x:Key="AIChatNewChat">Новий чат</sys:String>
+    <sys:String x:Key="AIChatDeleteChat">Видалити чат</sys:String>
     <sys:String x:Key="AIChatNoModel">Gemini API не налаштовано. Перейдіть в Налаштування, щоб додати API ключ.</sys:String>
     <sys:String x:Key="AIChatThinking">AI думає...</sys:String>
     <sys:String x:Key="AIChatTimeout">AI не відповів вчасно. Спробуйте ще раз.</sys:String>
@@ -2239,6 +2251,7 @@
 
     <!-- Replace Document Window -->
     <sys:String x:Key="ReplDocTitle">Заміна документа</sys:String>
+    <sys:String x:Key="ReplDocEditTitle">Редагувати документ</sys:String>
     <sys:String x:Key="ReplDocUploadHint">Завантажте зображення або PDF документа</sys:String>
     <sys:String x:Key="ReplDocUpload">Завантажити</sys:String>
     <sys:String x:Key="ReplDocEdit">Редактор</sys:String>
@@ -2477,7 +2490,7 @@
     <sys:String x:Key="WorkspaceCannotRemoveActive">Активну базу видалити не можна.</sys:String>
     <sys:String x:Key="WorkspaceRemoved">Базу прибрано зі списку.</sys:String>
     <sys:String x:Key="WorkspaceSalarySaveFailed">Не вдалося зберегти зарплати. Базу не змінено.</sys:String>
-    <sys:String x:Key="WorkspaceSalaryDiscardRequired">WorkspaceSalaryDiscardRequired</sys:String>
+    <sys:String x:Key="WorkspaceSalaryDiscardRequired">Є незбережені зміни зарплат. Продовження без збереження їх видалить.</sys:String>
     <sys:String x:Key="WorkspaceSalaryDiscardTitle">Незбережені зміни</sys:String>
     <sys:String x:Key="WorkspaceSalaryDiscardMessage">Є незбережені зміни зарплат, і зараз немає права їх записати. Якщо продовжити, вони зникнуть.</sys:String>
     <sys:String x:Key="WorkspaceSalaryDiscardConfirm">Продовжити без збереження</sys:String>
@@ -2912,4 +2925,70 @@
     <sys:String x:Key="EmpGenErrorTemplateNotFoundFmt">[ПОМИЛКА] {0}: шаблон не знайдено</sys:String>
     <sys:String x:Key="EmpGenErrorUnsupportedFormatFmt">[ПОМИЛКА] {0}: формат не підтримується ({1})</sys:String>
     <sys:String x:Key="EmpGenErrorGenericFmt">[ПОМИЛКА] {0}: {1}</sys:String>
+
+    <!-- Shared UI leftovers -->
+    <sys:String x:Key="CommonYes">Так</sys:String>
+    <sys:String x:Key="EmpBatchToFolder">В папку...</sys:String>
+    <sys:String x:Key="EmpBatchToFolderTooltip">Вибрати папку для збереження</sys:String>
+    <sys:String x:Key="ArchiveFilteredCountSuffix">записів у поточному вигляді</sys:String>
+    <sys:String x:Key="ArchiveSalaryPerMonthSuffix"> Kč/міс</sys:String>
+    <sys:String x:Key="ArchiveSalaryPerHourSuffix"> Kč/год</sys:String>
+    <sys:String x:Key="EditorUndo">Назад (Ctrl+Z)</sys:String>
+    <sys:String x:Key="EditorRedo">Вперед (Ctrl+Y)</sys:String>
+    <sys:String x:Key="EditorActions">Дії</sys:String>
+    <sys:String x:Key="EditorPageSizeA4Dims">21 × 29,7 см</sys:String>
+    <sys:String x:Key="EditorPageSizeLetterDims">21,59 × 27,94 см</sys:String>
+    <sys:String x:Key="EditorTextColor">Колір тексту</sys:String>
+    <sys:String x:Key="EditorHighlight">Колір фону тексту</sys:String>
+    <sys:String x:Key="EditorClearFormat">Очистити форматування</sys:String>
+    <sys:String x:Key="EditorColorBlack">Чорний</sys:String>
+    <sys:String x:Key="EditorColorGray">Сірий</sys:String>
+    <sys:String x:Key="EditorColorBlue">Синій</sys:String>
+    <sys:String x:Key="EditorColorGreen">Зелений</sys:String>
+    <sys:String x:Key="EditorColorRed">Червоний</sys:String>
+    <sys:String x:Key="EditorColorWhite">Білий</sys:String>
+    <sys:String x:Key="EditorColorYellow">Жовтий</sys:String>
+    <sys:String x:Key="EditorColorPink">Рожевий</sys:String>
+    <sys:String x:Key="EditorColorNone">Без фону</sys:String>
+    <sys:String x:Key="EditorAIInsertTags">AI теги</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsTooltip">AI автоматично вставить теги в потрібні місця документа</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsTitle">AI вставка тегів</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsHint">AI знаходить дані і замінює їх на теги ${...}</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsRun">Запустити AI</sys:String>
+    <sys:String x:Key="PolicyViewOnly">У вас доступ тільки для перегляду. Ви не можете змінювати дані.</sys:String>
+    <sys:String x:Key="PolicyActionDeniedFmt">Дія «{0}» недоступна для вашої ролі.</sys:String>
+    <sys:String x:Key="PolicyReadOnlyFmt">Дія «{0}» вимкнена. Клієнт переведений у режим лише перегляду адміністратором.</sys:String>
+    <sys:String x:Key="PolicyExportsDisabledFmt">Дія «{0}» вимкнена політикою адміністратора.</sys:String>
+    <sys:String x:Key="PolicyCannotEditCompanyFmt">Немає права редагувати: {0}</sys:String>
+    <sys:String x:Key="PolicyFinanceModuleUnavailable">Модуль фінансів тимчасово недоступний для цього клієнта.</sys:String>
+    <sys:String x:Key="PolicyAddEmployeeLocked">Інший ПК зараз додає працівника. Спробуйте ще раз через кілька секунд.</sys:String>
+    <sys:String x:Key="PolicyAccessBlocked">Доступ до програми заблоковано адміністратором.</sys:String>
+    <sys:String x:Key="PolicyTrialExpired">Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel.</sys:String>
+    <sys:String x:Key="PolicyVersionUnsupported">Ця версія програми більше не підтримується сервером.</sys:String>
+    <sys:String x:Key="PolicyForceUpdateRequired">Адміністратор вимагає оновити програму перед подальшою роботою.</sys:String>
+    <sys:String x:Key="PolicyVersionWillClose">Програма буде закрита. Після оновлення її можна відкрити знову.</sys:String>
+    <sys:String x:Key="PolicyCurrentVersionFmt">Поточна версія: {0}</sys:String>
+    <sys:String x:Key="PolicyRequiredVersionFmt">Потрібна версія: {0}</sys:String>
+    <sys:String x:Key="PolicyUpdateRecommendedFmt">Адміністратор рекомендує оновити програму до версії {0}. Поточна версія: {1}.</sys:String>
+    <sys:String x:Key="CmdNoUpdates">Оновлень не знайдено</sys:String>
+    <sys:String x:Key="CmdUpdateAvailableFmt">Доступне оновлення {0}</sys:String>
+    <sys:String x:Key="CmdReadOnlyByAdmin">Клієнт переведено в режим лише перегляду адміністратором.</sys:String>
+    <sys:String x:Key="CmdAdminMessageTitle">Повідомлення адміністратора</sys:String>
+    <sys:String x:Key="CmdAdminMessageFallback">Повідомлення від адміністратора</sys:String>
+    <sys:String x:Key="SingleInstanceAlreadyRunning">Програма вже запущена. Закрийте інше вікно або використовуйте вже відкриту програму.</sys:String>
+    <sys:String x:Key="HistCustomDocSignedFmt">{0} (підписано: {1})</sys:String>
+    <sys:String x:Key="HistCustomDocSignedExpiryFmt">{0} (підписано: {1}, до: {2})</sys:String>
+    <sys:String x:Key="DocProfilePassportOnly">Паспорт</sys:String>
+    <sys:String x:Key="DocProfilePassportPage2">Паспорт + паспорт 2</sys:String>
+    <sys:String x:Key="DocProfilePassportInsurance">Паспорт + страховка</sys:String>
+    <sys:String x:Key="DocProfilePassportPage2Insurance">Паспорт + паспорт 2 + страховка</sys:String>
+    <sys:String x:Key="DocProfileEuIdCardInsurance">ID-карта ЄС + страховка</sys:String>
+    <sys:String x:Key="DocProfileEuIdCardPage2Insurance">ID-карта ЄС + стор. 2 + страховка</sys:String>
+    <sys:String x:Key="DocProfilePassportVisaInsurance">Паспорт + віза + страховка</sys:String>
+    <sys:String x:Key="DocProfilePassportVisaIdCardInsurance">Паспорт + ID-карта + страховка</sys:String>
+    <sys:String x:Key="DocProfilePassportVisaWorkPermitInsurance">Паспорт + віза + дозвіл + страховка</sys:String>
+    <sys:String x:Key="EmpBulkUpdateTitle">Масове оновлення працівників</sys:String>
+    <sys:String x:Key="EmpBulkUpdateConfirmFmt">Застосувати ці зміни до позначених працівників ({0})?</sys:String>
+    <sys:String x:Key="EmpBulkUpdateDoneFmt">Масово оновлено працівників: {0}.</sys:String>
+    <sys:String x:Key="EmpBulkUpdateDoneSkippedFmt">Масово оновлено працівників: {0}. Пропущено: {1}.</sys:String>
 </ResourceDictionary>

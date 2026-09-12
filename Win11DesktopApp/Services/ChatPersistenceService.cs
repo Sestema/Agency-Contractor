@@ -6,12 +6,26 @@ using System.Text.Json;
 
 namespace Win11DesktopApp.Services
 {
+    public class ChatSessionMemory
+    {
+        public string LastEmployeeId { get; set; } = "";
+        public string LastEmployeeName { get; set; } = "";
+        public string LastFirmName { get; set; } = "";
+        public string LastMonthKey { get; set; } = "";
+        public string LastSecondaryMonthKey { get; set; } = "";
+        public string LastTopic { get; set; } = "";
+        public string LastAction { get; set; } = "";
+        public string LastAiTool { get; set; } = "";
+        public string HistorySummary { get; set; } = "";
+    }
+
     public class ChatSession
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Title { get; set; } = "";
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime LastMessageAt { get; set; } = DateTime.Now;
+        public ChatSessionMemory Memory { get; set; } = new();
         public List<ChatMessageDto> Messages { get; set; } = new();
     }
 

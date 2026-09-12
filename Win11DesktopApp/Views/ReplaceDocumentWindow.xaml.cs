@@ -30,7 +30,10 @@ namespace Win11DesktopApp.Views
         private string? _pdfPreviewTempFolder;
         private TextBlock? _insuranceNumberMismatchHint;
 
+        private readonly bool _isEditCurrent;
+
         public bool Saved { get; private set; }
+        public bool FileChanged { get; private set; }
         public string? ResultFilePath => _selectedFilePath;
         public Dictionary<string, string> NewValues { get; } = new();
 
@@ -38,16 +41,25 @@ namespace Win11DesktopApp.Views
             string docType,
             EmployeeData data,
             GeminiApiService geminiApiService,
-            EmployeeService employeeService)
+            EmployeeService employeeService,
+            string? existingFilePath = null,
+            bool editCurrent = false)
         {
             InitializeComponent();
             _geminiApiService = geminiApiService;
             _employeeService = employeeService;
             _docType = docType;
             _data = data;
+            _isEditCurrent = editCurrent;
 
-            TitleBlock.Text = Res("ReplDocTitle") + " — " + GetDocLabel();
+            var titleKey = editCurrent ? "ReplDocEditTitle" : "ReplDocTitle";
+            var title = Res(titleKey) + " — " + GetDocLabel();
+            Title = title;
+            TitleBlock.Text = title;
             BuildFieldsUI();
+
+            if (!string.IsNullOrWhiteSpace(existingFilePath) && File.Exists(existingFilePath))
+                LoadPreview(existingFilePath, markChanged: false);
         }
 
         private static string Res(string key) =>
@@ -71,6 +83,7 @@ namespace Win11DesktopApp.Views
             "passport_page2" => IsEuIdCard ? Res("StepIdCardPage2Data") : Res("StepPassportPage2Data"),
             "insurance" => Res("DetDocInsurance"),
             "work_permit" => Res("DetDocWorkPermit"),
+            "photo" => Res("DetDocPhoto"),
             _ => _docType
         };
 
@@ -240,7 +253,7 @@ namespace Win11DesktopApp.Views
                 Filter = "Documents|*.jpg;*.jpeg;*.png;*.heic;*.heif;*.pdf"
             };
             if (dialog.ShowDialog() != true) return;
-            LoadPreview(dialog.FileName);
+            LoadPreview(dialog.FileName, markChanged: true);
         }
 
         private void EnsureSessionTempFolder()
@@ -252,7 +265,7 @@ namespace Win11DesktopApp.Views
             Directory.CreateDirectory(_sessionTempFolder);
         }
 
-        private void LoadPreview(string path)
+        private void LoadPreview(string path, bool markChanged = true)
         {
             ResetPreviewUi();
 
@@ -287,6 +300,7 @@ namespace Win11DesktopApp.Views
 
                     _selectedFilePath = temp.PdfPath;
                     _selectedIsPdf = true;
+                    FileChanged = markChanged;
                     LoadPdfPreview(temp.PdfPath);
                     return;
                 }
@@ -296,6 +310,7 @@ namespace Win11DesktopApp.Views
 
                 _selectedFilePath = temp.ImagePath;
                 _selectedIsPdf = false;
+                FileChanged = markChanged;
                 LoadBitmapPreview(temp.ImagePath);
             }
             catch (Exception ex)
@@ -433,6 +448,7 @@ namespace Win11DesktopApp.Views
                 {
                     _selectedFilePath = editor.ResultPath;
                     _selectedIsPdf = false;
+                    FileChanged = true;
                     LoadBitmapPreview(_selectedFilePath);
                 }
             }
@@ -615,7 +631,8 @@ namespace Win11DesktopApp.Views
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(_selectedFilePath) || !File.Exists(_selectedFilePath))
+            var hasFile = !string.IsNullOrEmpty(_selectedFilePath) && File.Exists(_selectedFilePath);
+            if (!hasFile && !_isEditCurrent)
             {
                 MessageBox.Show(Res("MsgUploadFirst"), Res("MsgHint"), MessageBoxButton.OK, MessageBoxImage.Information);
                 return;

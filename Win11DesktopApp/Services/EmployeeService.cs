@@ -1859,20 +1859,8 @@ namespace Win11DesktopApp.Services
                             .Select(g => g.Last())
                             .ToList();
 
-                        bool needResave = deduplicated.Count != data.FirmHistory.Count;
-                        if (needResave)
-                        {
-                            data.FirmHistory = deduplicated;
-                            try
-                            {
-                                var resavePath = Path.Combine(folder, "employee.json");
-                                WriteJsonAtomic(resavePath, data);
-                            }
-                            catch (Exception ex2)
-                            {
-                                LoggingService.LogWarning("GetArchivedEmployees.Dedup", ex2.Message);
-                            }
-                        }
+                        // Dedup in memory only. Persisting here rewrote archive cards on read
+                        // and could overwrite another PC's employee.json over OneDrive.
 
                         var last = deduplicated.Last();
                         var archived = new ArchivedEmployeeSummary();
@@ -3226,19 +3214,30 @@ namespace Win11DesktopApp.Services
                 ? DeriveDocumentProfileKey(data)
                 : data.DocumentProfileType;
 
-            return key switch
+            return GetDocumentProfileDisplayName(key);
+        }
+
+        public static string GetDocumentProfileDisplayName(string key)
+        {
+            var resourceKey = key switch
             {
-                "passport_only" => "Паспорт",
-                "passport_page2" => "Паспорт + паспорт 2",
-                "passport_insurance" => "Паспорт + страховка",
-                "passport_page2_insurance" => "Паспорт + паспорт 2 + страховка",
-                "eu_id_card_insurance" => "ID-карта ЄС + страховка",
-                "eu_id_card_page2_insurance" => "ID-карта ЄС + стор. 2 + страховка",
-                "passport_visa_insurance" => "Паспорт + віза + страховка",
-                "passport_visa_id_card_insurance" => "Паспорт + ID-карта + страховка",
-                "passport_visa_work_permit_insurance" => "Паспорт + віза + дозвіл + страховка",
-                _ => key
+                "passport_only" => "DocProfilePassportOnly",
+                "passport_page2" => "DocProfilePassportPage2",
+                "passport_insurance" => "DocProfilePassportInsurance",
+                "passport_page2_insurance" => "DocProfilePassportPage2Insurance",
+                "eu_id_card_insurance" => "DocProfileEuIdCardInsurance",
+                "eu_id_card_page2_insurance" => "DocProfileEuIdCardPage2Insurance",
+                "passport_visa_insurance" => "DocProfilePassportVisaInsurance",
+                "passport_visa_id_card_insurance" => "DocProfilePassportVisaIdCardInsurance",
+                "passport_visa_work_permit_insurance" => "DocProfilePassportVisaWorkPermitInsurance",
+                _ => null
             };
+
+            if (resourceKey == null)
+                return key;
+
+            var text = Res(resourceKey);
+            return string.IsNullOrWhiteSpace(text) || text == resourceKey ? key : text;
         }
 
         private static string DeriveDocumentProfileKey(EmployeeData data)

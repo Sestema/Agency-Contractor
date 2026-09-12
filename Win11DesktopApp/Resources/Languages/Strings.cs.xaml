@@ -602,6 +602,9 @@
     <sys:String x:Key="EmpBtnFolder">Složka</sys:String>
     <sys:String x:Key="EmpBtnDelete">Smazat</sys:String>
     <sys:String x:Key="EmpBatchTitle">Hromadná generace dokumentů</sys:String>
+    <sys:String x:Key="EmpBatchSignDate">Datum podpisu pro tuto generaci</sys:String>
+    <sys:String x:Key="EmpBatchSignDateHint">Prázdné — z karty zaměstnance. Vyplněné datum pouze do těchto souborů, karty se nemění.</sys:String>
+    <sys:String x:Key="EmpBatchSignDateInvalid">Neplatný formát data. Zadejte dd.mm.rrrr nebo nechte prázdné.</sys:String>
     <sys:String x:Key="EmpTooltipExport">Export do Excelu</sys:String>
     <sys:String x:Key="EmpTooltipSelect">Vybrat více</sys:String>
     <sys:String x:Key="EmpTooltipFolder">Otevřít složku zaměstnance</sys:String>
@@ -638,6 +641,7 @@
     <sys:String x:Key="DetAddCustomDocTitle">Přidat podepsaný dokument</sys:String>
     <sys:String x:Key="DetEditCustomDocTitle">Upravit dokument</sys:String>
     <sys:String x:Key="DetBtnEditDoc">Upravit</sys:String>
+    <sys:String x:Key="DetTooltipEditDoc">Upravit aktuální dokument</sys:String>
     <sys:String x:Key="DetCustomDocPreviousFirmHint">Přidáno, když zaměstnanec pracoval v této firmě.</sys:String>
     <sys:String x:Key="DetCustomDocUnknownFirm">Předchozí firmy</sys:String>
     <sys:String x:Key="DetCustomDocFieldName">Název dokumentu</sys:String>
@@ -698,6 +702,9 @@
     <sys:String x:Key="DetBtnRestoreValidity">Obnovit platnost</sys:String>
     <sys:String x:Key="DetBtnDeleteDoc">Smazat</sys:String>
     <sys:String x:Key="DetBtnOpenCustomDocFolder">Otevřít složku</sys:String>
+    <sys:String x:Key="DetBtnHideDoc">Skrýt</sys:String>
+    <sys:String x:Key="DetBtnShowDoc">Zobrazit</sys:String>
+    <sys:String x:Key="DetHiddenDocsSection">Skryté dokumenty</sys:String>
     <sys:String x:Key="DetCustomDocEmpty">Zatím žádné vlastní dokumenty.</sys:String>
     <sys:String x:Key="MsgCustomDocNameRequired">Zadejte název dokumentu.</sys:String>
     <sys:String x:Key="MsgCustomDocSignDateRequired">Zadejte datum podpisu.</sys:String>
@@ -2009,6 +2016,9 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="HistoryDescDocReplace">Nahrazen dokument: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocAdd">Dokument přidán</sys:String>
     <sys:String x:Key="HistoryActionDocEdit">Dokument upraven</sys:String>
+    <sys:String x:Key="HistoryDescDocEdit">Upraven dokument: {0}</sys:String>
+    <sys:String x:Key="ToastDocUpdated">Dokument aktualizován: {0}</sys:String>
+    <sys:String x:Key="ToastDocReplaced">Dokument nahrazen: {0}</sys:String>
     <sys:String x:Key="HistoryActionDocDelete">Dokument smazán</sys:String>
     <sys:String x:Key="HistoryActionDocumentPackage">Balíček dokumentů</sys:String>
     <sys:String x:Key="HistoryDescDocumentPackageCheckbox">{0}: {1} — {2}: {3} → {4}</sys:String>
@@ -2164,6 +2174,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="AIChatAttachImage">Připojit obrázek</sys:String>
     <sys:String x:Key="AIChatWelcome">Ahoj! Jsem váš AI asistent. Položte otázku nebo připojte foto dokumentu k analýze.</sys:String>
     <sys:String x:Key="AIChatNewChat">Nový chat</sys:String>
+    <sys:String x:Key="AIChatDeleteChat">Smazat chat</sys:String>
     <sys:String x:Key="AIChatNoModel">Gemini API není nakonfigurováno. Přejděte do Nastavení a přidejte API klíč.</sys:String>
     <sys:String x:Key="AIChatThinking">AI přemýšlí...</sys:String>
     <sys:String x:Key="AIChatTimeout">AI neodpověděla včas. Zkuste to prosím znovu.</sys:String>
@@ -2238,6 +2249,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
 
     <!-- Replace Document Window -->
     <sys:String x:Key="ReplDocTitle">Výměna dokumentu</sys:String>
+    <sys:String x:Key="ReplDocEditTitle">Upravit dokument</sys:String>
     <sys:String x:Key="ReplDocUploadHint">Nahrajte obrázek nebo PDF dokumentu</sys:String>
     <sys:String x:Key="ReplDocUpload">Nahrát</sys:String>
     <sys:String x:Key="ReplDocEdit">Editor</sys:String>
@@ -2476,7 +2488,7 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="WorkspaceCannotRemoveActive">Aktivní databázi nelze odebrat.</sys:String>
     <sys:String x:Key="WorkspaceRemoved">Databáze byla odebrána ze seznamu.</sys:String>
     <sys:String x:Key="WorkspaceSalarySaveFailed">Mzdy se nepodařilo uložit. Databáze se nezměnila.</sys:String>
-    <sys:String x:Key="WorkspaceSalaryDiscardRequired">WorkspaceSalaryDiscardRequired</sys:String>
+    <sys:String x:Key="WorkspaceSalaryDiscardRequired">Existují neuložené změny mezd. Pokračování bez uložení je zahodí.</sys:String>
     <sys:String x:Key="WorkspaceSalaryDiscardTitle">Neuložené změny</sys:String>
     <sys:String x:Key="WorkspaceSalaryDiscardMessage">Existují neuložené změny mezd a chybí oprávnění je uložit. Pokračováním o tyto změny přijdete.</sys:String>
     <sys:String x:Key="WorkspaceSalaryDiscardConfirm">Pokračovat bez uložení</sys:String>
@@ -2911,4 +2923,70 @@ Složka firmy na disku bude smazána včetně celého jejího obsahu.</sys:Strin
     <sys:String x:Key="EmpGenErrorTemplateNotFoundFmt">[CHYBA] {0}: šablona nenalezena</sys:String>
     <sys:String x:Key="EmpGenErrorUnsupportedFormatFmt">[CHYBA] {0}: formát není podporován ({1})</sys:String>
     <sys:String x:Key="EmpGenErrorGenericFmt">[CHYBA] {0}: {1}</sys:String>
+
+    <!-- Shared UI leftovers -->
+    <sys:String x:Key="CommonYes">Ano</sys:String>
+    <sys:String x:Key="EmpBatchToFolder">Do složky...</sys:String>
+    <sys:String x:Key="EmpBatchToFolderTooltip">Vybrat složku pro uložení</sys:String>
+    <sys:String x:Key="ArchiveFilteredCountSuffix">záznamů v aktuálním pohledu</sys:String>
+    <sys:String x:Key="ArchiveSalaryPerMonthSuffix"> Kč/měs</sys:String>
+    <sys:String x:Key="ArchiveSalaryPerHourSuffix"> Kč/hod</sys:String>
+    <sys:String x:Key="EditorUndo">Zpět (Ctrl+Z)</sys:String>
+    <sys:String x:Key="EditorRedo">Vpřed (Ctrl+Y)</sys:String>
+    <sys:String x:Key="EditorActions">Akce</sys:String>
+    <sys:String x:Key="EditorPageSizeA4Dims">21 × 29,7 cm</sys:String>
+    <sys:String x:Key="EditorPageSizeLetterDims">21,59 × 27,94 cm</sys:String>
+    <sys:String x:Key="EditorTextColor">Barva textu</sys:String>
+    <sys:String x:Key="EditorHighlight">Barva pozadí textu</sys:String>
+    <sys:String x:Key="EditorClearFormat">Vymazat formátování</sys:String>
+    <sys:String x:Key="EditorColorBlack">Černá</sys:String>
+    <sys:String x:Key="EditorColorGray">Šedá</sys:String>
+    <sys:String x:Key="EditorColorBlue">Modrá</sys:String>
+    <sys:String x:Key="EditorColorGreen">Zelená</sys:String>
+    <sys:String x:Key="EditorColorRed">Červená</sys:String>
+    <sys:String x:Key="EditorColorWhite">Bílá</sys:String>
+    <sys:String x:Key="EditorColorYellow">Žlutá</sys:String>
+    <sys:String x:Key="EditorColorPink">Růžová</sys:String>
+    <sys:String x:Key="EditorColorNone">Bez pozadí</sys:String>
+    <sys:String x:Key="EditorAIInsertTags">AI tagy</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsTooltip">AI automaticky vloží tagy na správná místa dokumentu</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsTitle">AI vkládání tagů</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsHint">AI najde údaje a nahradí je tagy ${...}</sys:String>
+    <sys:String x:Key="EditorAIInsertTagsRun">Spustit AI</sys:String>
+    <sys:String x:Key="PolicyViewOnly">Máte přístup pouze pro čtení. Data nemůžete měnit.</sys:String>
+    <sys:String x:Key="PolicyActionDeniedFmt">Akce „{0}“ není pro vaši roli dostupná.</sys:String>
+    <sys:String x:Key="PolicyReadOnlyFmt">Akce „{0}“ je vypnutá. Klient je administrátorem v režimu pouze pro čtení.</sys:String>
+    <sys:String x:Key="PolicyExportsDisabledFmt">Akce „{0}“ je vypnutá politikou administrátora.</sys:String>
+    <sys:String x:Key="PolicyCannotEditCompanyFmt">Nemáte právo upravovat: {0}</sys:String>
+    <sys:String x:Key="PolicyFinanceModuleUnavailable">Modul financí je pro tohoto klienta dočasně nedostupný.</sys:String>
+    <sys:String x:Key="PolicyAddEmployeeLocked">Jiný počítač právě přidává zaměstnance. Zkuste to znovu za několik sekund.</sys:String>
+    <sys:String x:Key="PolicyAccessBlocked">Přístup k programu zablokoval administrátor.</sys:String>
+    <sys:String x:Key="PolicyTrialExpired">Zkušební období skončilo. Program běží pouze v režimu prohlížení do aktivace v AdminPanel.</sys:String>
+    <sys:String x:Key="PolicyVersionUnsupported">Tato verze programu již není serverem podporována.</sys:String>
+    <sys:String x:Key="PolicyForceUpdateRequired">Administrátor vyžaduje aktualizaci programu před další prací.</sys:String>
+    <sys:String x:Key="PolicyVersionWillClose">Program se zavře. Po aktualizaci ho můžete znovu otevřít.</sys:String>
+    <sys:String x:Key="PolicyCurrentVersionFmt">Aktuální verze: {0}</sys:String>
+    <sys:String x:Key="PolicyRequiredVersionFmt">Požadovaná verze: {0}</sys:String>
+    <sys:String x:Key="PolicyUpdateRecommendedFmt">Administrátor doporučuje aktualizovat program na verzi {0}. Aktuální verze: {1}.</sys:String>
+    <sys:String x:Key="CmdNoUpdates">Aktualizace nenalezeny</sys:String>
+    <sys:String x:Key="CmdUpdateAvailableFmt">Je dostupná aktualizace {0}</sys:String>
+    <sys:String x:Key="CmdReadOnlyByAdmin">Klient byl administrátorem přepnut do režimu pouze pro čtení.</sys:String>
+    <sys:String x:Key="CmdAdminMessageTitle">Zpráva administrátora</sys:String>
+    <sys:String x:Key="CmdAdminMessageFallback">Zpráva od administrátora</sys:String>
+    <sys:String x:Key="SingleInstanceAlreadyRunning">Program už běží. Zavřete druhé okno nebo použijte již otevřený program.</sys:String>
+    <sys:String x:Key="HistCustomDocSignedFmt">{0} (podepsáno: {1})</sys:String>
+    <sys:String x:Key="HistCustomDocSignedExpiryFmt">{0} (podepsáno: {1}, do: {2})</sys:String>
+    <sys:String x:Key="DocProfilePassportOnly">Pas</sys:String>
+    <sys:String x:Key="DocProfilePassportPage2">Pas + pas 2</sys:String>
+    <sys:String x:Key="DocProfilePassportInsurance">Pas + pojištění</sys:String>
+    <sys:String x:Key="DocProfilePassportPage2Insurance">Pas + pas 2 + pojištění</sys:String>
+    <sys:String x:Key="DocProfileEuIdCardInsurance">EU ID karta + pojištění</sys:String>
+    <sys:String x:Key="DocProfileEuIdCardPage2Insurance">EU ID karta + str. 2 + pojištění</sys:String>
+    <sys:String x:Key="DocProfilePassportVisaInsurance">Pas + vízum + pojištění</sys:String>
+    <sys:String x:Key="DocProfilePassportVisaIdCardInsurance">Pas + ID karta + pojištění</sys:String>
+    <sys:String x:Key="DocProfilePassportVisaWorkPermitInsurance">Pas + vízum + povolení + pojištění</sys:String>
+    <sys:String x:Key="EmpBulkUpdateTitle">Hromadná aktualizace zaměstnanců</sys:String>
+    <sys:String x:Key="EmpBulkUpdateConfirmFmt">Použít tyto změny na označené zaměstnance ({0})?</sys:String>
+    <sys:String x:Key="EmpBulkUpdateDoneFmt">Hromadně aktualizováno zaměstnanců: {0}.</sys:String>
+    <sys:String x:Key="EmpBulkUpdateDoneSkippedFmt">Hromadně aktualizováno zaměstnanců: {0}. Přeskočeno: {1}.</sys:String>
 </ResourceDictionary>

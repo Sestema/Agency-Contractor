@@ -64,6 +64,19 @@ namespace Win11DesktopApp.Telegram
             public DateTime ExpiresAtUtc { get; init; }
         }
 
+        public sealed class AssistantChatMemory
+        {
+            public string LastEmployeeId { get; set; } = string.Empty;
+            public string LastEmployeeName { get; set; } = string.Empty;
+            public string LastFirmName { get; set; } = string.Empty;
+            public string LastMonthKey { get; set; } = string.Empty;
+            public string LastSecondaryMonthKey { get; set; } = string.Empty;
+            public string LastTopic { get; set; } = string.Empty;
+            public string LastAction { get; set; } = string.Empty;
+            public string LastAiTool { get; set; } = string.Empty;
+            public string HistorySummary { get; set; } = string.Empty;
+        }
+
         private sealed class ConversationContext
         {
             public string LastEmployeeId { get; set; } = string.Empty;
@@ -255,7 +268,8 @@ namespace Win11DesktopApp.Telegram
 
         private static readonly string[] PronounMarkers =
         {
-            "в нього", "в неї", "його", "її", "нього", "неї", "цього працівника", "цьому працівнику", "цей працівник", "ця працівниця"
+            "в нього", "в неї", "його", "її", "нього", "неї", "йому", "їй",
+            "цього працівника", "цьому працівнику", "цей працівник", "ця працівниця", "цей", "ця"
         };
 
         private static readonly string[] FollowUpMarkers =
@@ -484,6 +498,49 @@ namespace Win11DesktopApp.Telegram
             AppendConversationTurn(conversationUserId, "model", BuildConversationModelHistoryEntry(answer, lastAiTool, resolvedEmployee, resolvedFirm, resolvedMonthKey));
 
             return answer;
+        }
+
+        public void ApplyChatMemory(long conversationUserId, AssistantChatMemory? memory)
+        {
+            if (memory == null)
+                return;
+
+            var context = GetOrCreateConversationContext(conversationUserId);
+            context.LastEmployeeId = memory.LastEmployeeId ?? string.Empty;
+            context.LastEmployeeName = memory.LastEmployeeName ?? string.Empty;
+            context.LastFirmName = memory.LastFirmName ?? string.Empty;
+            context.LastMonthKey = memory.LastMonthKey ?? string.Empty;
+            context.LastSecondaryMonthKey = memory.LastSecondaryMonthKey ?? string.Empty;
+            context.LastTopic = memory.LastTopic ?? string.Empty;
+            context.LastAction = memory.LastAction ?? string.Empty;
+            context.LastAiTool = memory.LastAiTool ?? string.Empty;
+            context.HistorySummary = memory.HistorySummary ?? string.Empty;
+            context.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        public AssistantChatMemory CaptureChatMemory(long conversationUserId)
+        {
+            var context = GetConversationContext(conversationUserId);
+            if (context == null)
+                return new AssistantChatMemory();
+
+            return new AssistantChatMemory
+            {
+                LastEmployeeId = context.LastEmployeeId,
+                LastEmployeeName = context.LastEmployeeName,
+                LastFirmName = context.LastFirmName,
+                LastMonthKey = context.LastMonthKey,
+                LastSecondaryMonthKey = context.LastSecondaryMonthKey,
+                LastTopic = context.LastTopic,
+                LastAction = context.LastAction,
+                LastAiTool = context.LastAiTool,
+                HistorySummary = context.HistorySummary
+            };
+        }
+
+        public void ClearConversationContext(long conversationUserId)
+        {
+            _conversationContexts.TryRemove(conversationUserId, out _);
         }
 
         public void Stop()
@@ -1271,6 +1328,8 @@ namespace Win11DesktopApp.Telegram
                 .AppendLine()
                 .AppendLine("## Conversation Context")
                 .AppendLine("You receive conversation history and structured follow-up context. Use it to resolve pronouns, implicit references, the same employee, the same firm, previous month and next month.")
+                .AppendLine("If last_employee_id or last_employee is set and the user did not name a different person, treat the question as about that same employee. Call employee tools with that name/id or an empty employee_query.")
+                .AppendLine("Only switch to another employee when the user clearly names a different person.")
                 .AppendLine("If a tool result contains formatted_* text that directly matches the question, use that formatted text as the answer base and only shorten it if needed.")
                 .AppendLine()
                 .AppendLine("## Tool Priorities")
@@ -1310,6 +1369,7 @@ namespace Win11DesktopApp.Telegram
                 if (context != null)
                 {
                     builder.AppendLine("Conversation context:")
+                        .AppendLine($"- last_employee_id={context.LastEmployeeId}")
                         .AppendLine($"- last_employee={context.LastEmployeeName}")
                         .AppendLine($"- last_firm={context.LastFirmName}")
                         .AppendLine($"- last_month={context.LastMonthKey}")
@@ -1326,6 +1386,7 @@ namespace Win11DesktopApp.Telegram
                 }
             }
 
+            builder.AppendLine("If last_employee is set and the user did not name another person, keep using that employee.");
             builder.AppendLine("Answer directly if enough data is available. If not, ask a short clarifying question.");
             builder.AppendLine("IMPORTANT: your answer must contain only facts from tool results or explicit prompt context.");
             builder.AppendLine("IMPORTANT: if a tool returned exact names, dates, document numbers or amounts, quote those exact values.");
@@ -3796,7 +3857,7 @@ namespace Win11DesktopApp.Telegram
             }
 
             var normalizedQuery = NormalizeForSearch(query);
-            var employeeMatches = FindEmployees(query, limit, conversationUserId, allowContextFallback: false)
+            var employeeMatches = FindEmployees(query, limit, conversationUserId, allowContextFallback: true)
                 .Select(employee => new
                 {
                     kind = "employee",
@@ -5163,7 +5224,7 @@ namespace Win11DesktopApp.Telegram
                 return new List<EmployeeSummary>();
             }
 
-            var matches = GetAllEmployees()
+            var scored = GetAllEmployees()
                 .Select(employee => new
                 {
                     Employee = employee,
@@ -5172,18 +5233,17 @@ namespace Win11DesktopApp.Telegram
                 .Where(x => x.Score > 0)
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Employee.FullName)
-                .Take(limit)
-                .Select(x => x.Employee)
                 .ToList();
 
-            if (matches.Count == 0 && allowContextFallback && userId.HasValue)
+            var bestScore = scored.Count == 0 ? 0 : scored[0].Score;
+            if (ShouldUseLastEmployee(normalized, bestScore, userId, allowContextFallback))
             {
-                var fromContext = ResolveEmployeeFromContext(userId.Value);
+                var fromContext = ResolveEmployeeFromContext(userId!.Value);
                 if (fromContext != null)
                     return new List<EmployeeSummary> { fromContext };
             }
 
-            return matches;
+            return scored.Take(limit).Select(x => x.Employee).ToList();
         }
 
         private List<EmployeeLookupResult> FindEmployeeRecords(string query, int limit, long? userId = null, bool allowContextFallback = false, bool includeArchived = true, bool includeRecentlyDeleted = true)
@@ -5201,7 +5261,7 @@ namespace Win11DesktopApp.Telegram
                 return new List<EmployeeLookupResult>();
             }
 
-            var matches = GetAllEmployeeRecords(includeArchived, includeRecentlyDeleted)
+            var scored = GetAllEmployeeRecords(includeArchived, includeRecentlyDeleted)
                 .Select(employee => new
                 {
                     Employee = employee,
@@ -5210,18 +5270,54 @@ namespace Win11DesktopApp.Telegram
                 .Where(x => x.Score > 0)
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Employee.FullName)
-                .Take(limit)
-                .Select(x => x.Employee)
                 .ToList();
 
-            if (matches.Count == 0 && allowContextFallback && userId.HasValue)
+            var bestScore = scored.Count == 0 ? 0 : scored[0].Score;
+            if (ShouldUseLastEmployee(normalized, bestScore, userId, allowContextFallback))
             {
-                var fromContext = ResolveEmployeeRecordFromContext(userId.Value);
+                var fromContext = ResolveEmployeeRecordFromContext(userId!.Value);
                 if (fromContext != null)
                     return new List<EmployeeLookupResult> { fromContext };
             }
 
-            return matches;
+            return scored.Take(limit).Select(x => x.Employee).ToList();
+        }
+
+        private bool ShouldUseLastEmployee(string query, int bestMatchScore, long? userId, bool allowContextFallback)
+        {
+            if (!allowContextFallback || !userId.HasValue)
+                return false;
+
+            if (ResolveEmployeeRecordFromContext(userId.Value) == null
+                && ResolveEmployeeFromContext(userId.Value) == null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(query))
+                return true;
+
+            if (bestMatchScore >= 60)
+                return false;
+
+            var normalized = NormalizeForSearch(query);
+            if (IsFollowUpQuestion(normalized) || IsMostlyEmployeeNoiseQuery(normalized))
+                return true;
+
+            return bestMatchScore <= 0;
+        }
+
+        private static bool IsMostlyEmployeeNoiseQuery(string normalizedText)
+        {
+            var tokens = Tokenize(normalizedText)
+                .Select(NormalizeNameToken)
+                .Where(token => !string.IsNullOrWhiteSpace(token))
+                .ToList();
+
+            if (tokens.Count == 0)
+                return true;
+
+            return tokens.All(token =>
+                EmployeeQueryNoiseWords.Contains(token, StringComparer.Ordinal)
+                || FirmQueryNoiseWords.Contains(token));
         }
 
         private static int CalculateEmployeeScore(EmployeeSummary employee, string query)

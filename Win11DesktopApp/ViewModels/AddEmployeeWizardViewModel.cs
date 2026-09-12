@@ -1254,7 +1254,7 @@ namespace Win11DesktopApp.ViewModels
             using var addEmployeeLock = _sharedOperationLockService?.TryAcquire("add-employee", TimeSpan.FromSeconds(15));
             if (_sharedOperationLockService != null && addEmployeeLock == null)
             {
-                ToastService.Instance.Warning("Інший ПК зараз додає працівника. Спробуйте ще раз через кілька секунд.");
+                ToastService.Instance.Warning(Res("PolicyAddEmployeeLocked"));
                 return;
             }
 

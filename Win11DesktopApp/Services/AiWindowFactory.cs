@@ -19,8 +19,12 @@ public sealed class AiWindowFactory
         return new AITemplateOverlayWindow(_geminiApiService);
     }
 
-    public ReplaceDocumentWindow CreateReplaceDocumentWindow(string docType, EmployeeData data)
+    public ReplaceDocumentWindow CreateReplaceDocumentWindow(
+        string docType,
+        EmployeeData data,
+        string? existingFilePath = null,
+        bool editCurrent = false)
     {
-        return new ReplaceDocumentWindow(docType, data, _geminiApiService, _employeeService);
+        return new ReplaceDocumentWindow(docType, data, _geminiApiService, _employeeService, existingFilePath, editCurrent);
     }
 }

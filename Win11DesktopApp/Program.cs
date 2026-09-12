@@ -1,9 +1,12 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Windows;
 using Velopack;
+using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp
 {
@@ -22,7 +25,7 @@ namespace Win11DesktopApp
             if (!TryAcquireMutex(mutex, isRestart))
             {
                 MessageBox.Show(
-                    "Програма вже запущена. Закрийте інше вікно або використовуйте вже відкриту програму.",
+                    ResolveSingleInstanceMessage(),
                     "Agency Contractor",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -74,6 +77,43 @@ namespace Win11DesktopApp
             {
                 return true;
             }
+        }
+
+        private static string ResolveSingleInstanceMessage()
+        {
+            const string fallback = "Програма вже запущена. Закрийте інше вікно або використовуйте вже відкриту програму.";
+            try
+            {
+                var lang = "uk";
+                var settingsPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "AgencyContractor",
+                    "settings.json");
+                if (File.Exists(settingsPath))
+                {
+                    using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath));
+                    if (doc.RootElement.TryGetProperty("LanguageCode", out var langProp))
+                    {
+                        var code = langProp.GetString();
+                        if (!string.IsNullOrWhiteSpace(code))
+                            lang = code.Trim();
+                    }
+                }
+
+                var dict = LanguageService.LoadDictionary(lang);
+                if (dict.Contains("SingleInstanceAlreadyRunning")
+                    && dict["SingleInstanceAlreadyRunning"] is string text
+                    && !string.IsNullOrWhiteSpace(text)
+                    && text != "SingleInstanceAlreadyRunning")
+                {
+                    return text;
+                }
+            }
+            catch
+            {
+            }
+
+            return fallback;
         }
     }
 }

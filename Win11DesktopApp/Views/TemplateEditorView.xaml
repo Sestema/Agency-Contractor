@@ -129,19 +129,19 @@
                                 <Button x:Name="UndoButton"
                                         Style="{StaticResource ToolbarBtn}"
                                         Click="UndoButton_Click"
-                                        ToolTip="Назад (Ctrl+Z)">
+                                        ToolTip="{DynamicResource EditorUndo}">
                                     <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                 </Button>
                                 <Button x:Name="RedoButton"
                                         Style="{StaticResource ToolbarBtn}"
                                         Click="RedoButton_Click"
-                                        ToolTip="Вперед (Ctrl+Y)">
+                                        ToolTip="{DynamicResource EditorRedo}">
                                     <TextBlock Text="&#xE7A6;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                 </Button>
                             </StackPanel>
-                            <TextBlock Text="Дії" Style="{StaticResource ToolbarGroupTitle}"/>
+                            <TextBlock Text="{DynamicResource EditorActions}" Style="{StaticResource ToolbarGroupTitle}"/>
                         </StackPanel>
                     </Border>
 
@@ -215,15 +215,15 @@
                                 <Button x:Name="TextColorButton"
                                         Style="{StaticResource ToolbarBtn}"
                                         Click="TextColorButton_Click"
-                                        ToolTip="Колір тексту">
+                                        ToolTip="{DynamicResource EditorTextColor}">
                                     <Button.ContextMenu>
                                         <ContextMenu x:Name="TextColorContextMenu" Placement="Bottom">
-                                            <MenuItem Header="Чорний" Tag="#111827" Click="TextColorMenuItem_Click"/>
-                                            <MenuItem Header="Сірий" Tag="#6B7280" Click="TextColorMenuItem_Click"/>
-                                            <MenuItem Header="Синій" Tag="#2563EB" Click="TextColorMenuItem_Click"/>
-                                            <MenuItem Header="Зелений" Tag="#059669" Click="TextColorMenuItem_Click"/>
-                                            <MenuItem Header="Червоний" Tag="#DC2626" Click="TextColorMenuItem_Click"/>
-                                            <MenuItem Header="Білий" Tag="#FFFFFF" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorBlack}" Tag="#111827" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorGray}" Tag="#6B7280" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorBlue}" Tag="#2563EB" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorGreen}" Tag="#059669" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorRed}" Tag="#DC2626" Click="TextColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorWhite}" Tag="#FFFFFF" Click="TextColorMenuItem_Click"/>
                                         </ContextMenu>
                                     </Button.ContextMenu>
                                     <TextBlock Text="A" FontWeight="Bold" FontSize="{DynamicResource FS13}"
@@ -232,15 +232,15 @@
                                 <Button x:Name="HighlightColorButton"
                                         Style="{StaticResource ToolbarBtn}"
                                         Click="HighlightColorButton_Click"
-                                        ToolTip="Колір фону тексту">
+                                        ToolTip="{DynamicResource EditorHighlight}">
                                     <Button.ContextMenu>
                                         <ContextMenu x:Name="HighlightColorContextMenu" Placement="Bottom">
-                                            <MenuItem Header="Жовтий" Tag="#FEF08A" Click="HighlightColorMenuItem_Click"/>
-                                            <MenuItem Header="Зелений" Tag="#BBF7D0" Click="HighlightColorMenuItem_Click"/>
-                                            <MenuItem Header="Синій" Tag="#BFDBFE" Click="HighlightColorMenuItem_Click"/>
-                                            <MenuItem Header="Рожевий" Tag="#FBCFE8" Click="HighlightColorMenuItem_Click"/>
-                                            <MenuItem Header="Сірий" Tag="#E5E7EB" Click="HighlightColorMenuItem_Click"/>
-                                            <MenuItem Header="Без фону" Tag="Transparent" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorYellow}" Tag="#FEF08A" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorGreen}" Tag="#BBF7D0" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorBlue}" Tag="#BFDBFE" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorPink}" Tag="#FBCFE8" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorGray}" Tag="#E5E7EB" Click="HighlightColorMenuItem_Click"/>
+                                            <MenuItem Header="{DynamicResource EditorColorNone}" Tag="Transparent" Click="HighlightColorMenuItem_Click"/>
                                         </ContextMenu>
                                     </Button.ContextMenu>
                                     <TextBlock Text="▰" FontSize="{DynamicResource FS13}"
@@ -249,7 +249,7 @@
                                 <Button x:Name="ClearFormattingButton"
                                         Style="{StaticResource ToolbarBtn}"
                                         Click="ClearFormattingButton_Click"
-                                        ToolTip="Очистити форматування">
+                                        ToolTip="{DynamicResource EditorClearFormat}">
                                     <TextBlock Text="Tx" FontSize="{DynamicResource FS11}"
                                                Foreground="{DynamicResource ForegroundBrush}"/>
                                 </Button>
@@ -605,7 +605,7 @@
                                         <ContextMenu x:Name="PageSizeContextMenu" Placement="Bottom">
                                             <MenuItem x:Name="A4PageSizeMenuItem"
                                                       Header="A4"
-                                                      InputGestureText="21 × 29,7 см"
+                                                      InputGestureText="{DynamicResource EditorPageSizeA4Dims}"
                                                       Tag="a4"
                                                       IsCheckable="True"
                                                       Click="PageSizeMenuItem_Click">
@@ -618,7 +618,7 @@
                                             </MenuItem>
                                             <MenuItem x:Name="LetterPageSizeMenuItem"
                                                       Header="Letter"
-                                                      InputGestureText="21,59 × 27,94 см"
+                                                      InputGestureText="{DynamicResource EditorPageSizeLetterDims}"
                                                       Tag="letter"
                                                       IsCheckable="True"
                                                       Click="PageSizeMenuItem_Click">
@@ -829,11 +829,11 @@
                 </Button>
                                 <Button Style="{StaticResource ToolbarBtn}" Width="Auto" Padding="8,0"
                         Command="{Binding AIInsertTagsCommand}"
-                        ToolTip="✨ AI автоматично вставить теги в потрібні місця документа">
+                        ToolTip="{DynamicResource EditorAIInsertTagsTooltip}">
                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                                    VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource SuccessBrush}"/>
-                                        <TextBlock Text="✨ AI теги" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
+                                        <TextBlock Text="{DynamicResource EditorAIInsertTags}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -1230,9 +1230,9 @@
                         <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                    Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <StackPanel>
-                            <TextBlock Text="✨ AI Вставка тегів" FontSize="{DynamicResource FS18}"
+                            <TextBlock Text="{DynamicResource EditorAIInsertTagsTitle}" FontSize="{DynamicResource FS18}"
                                        FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
-                            <TextBlock Text="AI знаходить дані і замінює їх на теги ${...}" FontSize="{DynamicResource FS12}"
+                            <TextBlock Text="{DynamicResource EditorAIInsertTagsHint}" FontSize="{DynamicResource FS12}"
                                        Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
@@ -1289,7 +1289,7 @@
                                 Background="{DynamicResource ContentBackgroundBrush}"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                                 Foreground="{DynamicResource ForegroundBrush}">
-                            <TextBlock Text="Закрити" FontSize="{DynamicResource FS13}"/>
+                            <TextBlock Text="{DynamicResource DetBtnClose}" FontSize="{DynamicResource FS13}"/>
                         </Button>
 
                         <!-- Run AI -->
@@ -1299,7 +1299,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
                                            Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Запустити AI" FontSize="{DynamicResource FS13}"/>
+                                <TextBlock Text="{DynamicResource EditorAIInsertTagsRun}" FontSize="{DynamicResource FS13}"/>
                             </StackPanel>
                         </Button>
                     </Grid>

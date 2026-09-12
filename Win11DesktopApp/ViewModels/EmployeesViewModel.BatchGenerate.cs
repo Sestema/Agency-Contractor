@@ -31,9 +31,16 @@ namespace Win11DesktopApp.ViewModels
             if (selected.Count == 0) return;
 
             BatchStatusMessage = string.Format(Res("MsgSelectedCount"), selected.Count);
+            BatchContractSignDateOverride = string.Empty;
             var templates = _templateService.GetTemplates(_company.Name);
             BatchTemplates = new ObservableCollection<TemplateEntry>(templates);
             IsBatchGenerateOpen = true;
+        }
+
+        private void CloseBatchGenerate()
+        {
+            IsBatchGenerateOpen = false;
+            BatchContractSignDateOverride = string.Empty;
         }
 
 
@@ -60,6 +67,13 @@ namespace Win11DesktopApp.ViewModels
             if (!PolicyService.EnsureWriteAllowed("Пакетна генерація документів"))
                 return;
             if (template == null || _company == null) return;
+            if (!TryResolveBatchSignDateOverride(out var signDateOverride, out var signDateError))
+            {
+                BatchStatusMessage = signDateError ?? string.Empty;
+                ToastService.Instance.Warning(signDateError ?? string.Empty);
+                return;
+            }
+
             try
             {
                 IsLoading = true;
@@ -86,7 +100,8 @@ namespace Win11DesktopApp.ViewModels
                             companyName,
                             outputFolder,
                             employeeName,
-                            resultLines));
+                            resultLines,
+                            signDateOverride));
 
                         if (string.IsNullOrWhiteSpace(generatedFileName))
                         {
@@ -108,7 +123,7 @@ namespace Win11DesktopApp.ViewModels
                 BatchStatusMessage = string.Join(Environment.NewLine,
                     new[] { string.Format(Res("MsgBatchResult"), success, fail) }.Concat(resultLines));
 
-                LogBatchGeneration(template, selected.Count, success, fail, outputFolder, resultLines);
+                LogBatchGeneration(template, selected.Count, success, fail, outputFolder, resultLines, signDateOverride);
 
                 if (!string.IsNullOrWhiteSpace(outputFolder) && success > 0)
                     OpenFolderAfterBatchGeneration(outputFolder);
@@ -129,7 +144,8 @@ namespace Win11DesktopApp.ViewModels
             string companyName,
             string? outputFolder,
             string employeeName,
-            List<string> resultLines)
+            List<string> resultLines,
+            string? signDateOverride)
         {
             var data = _employeeService.LoadEmployeeData(emp.EmployeeFolder);
             if (data == null)
@@ -154,6 +170,7 @@ namespace Win11DesktopApp.ViewModels
 
             var tagValues = _tagCatalogService.GetTagValueMapForEmployee(companyName, data)
                 ?? new Dictionary<string, string>();
+            ApplyBatchSignDateOverride(tagValues, signDateOverride);
 
             string SanitizeFn(string n) => string.Join("_", n.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
             string BuildOutputPath(string fileName)
@@ -254,17 +271,49 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private bool TryResolveBatchSignDateOverride(out string? formattedDate, out string? error)
+        {
+            formattedDate = null;
+            error = null;
+
+            var raw = BatchContractSignDateOverride?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(raw))
+                return true;
+
+            var parsed = DateParsingHelper.TryParseDate(raw);
+            if (parsed == null)
+            {
+                error = Res("EmpBatchSignDateInvalid");
+                return false;
+            }
+
+            formattedDate = parsed.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        private static void ApplyBatchSignDateOverride(Dictionary<string, string> tagValues, string? signDateOverride)
+        {
+            if (string.IsNullOrWhiteSpace(signDateOverride) || tagValues == null)
+                return;
+
+            tagValues["EMPLOYEE_ContractSignDate"] = signDateOverride;
+        }
+
         private void LogBatchGeneration(
             TemplateEntry template,
             int selectedCount,
             int success,
             int fail,
             string? outputFolder,
-            IReadOnlyList<string> resultLines)
+            IReadOnlyList<string> resultLines,
+            string? signDateOverride)
         {
             var target = string.IsNullOrWhiteSpace(outputFolder)
                 ? "папки працівників"
                 : outputFolder;
+            var signDateLine = string.IsNullOrWhiteSpace(signDateOverride)
+                ? "Дата підпису: з карток"
+                : $"Дата підпису (лише ця генерація): {signDateOverride}";
             var details = string.Join(Environment.NewLine,
                 new[]
                 {
@@ -273,6 +322,7 @@ namespace Win11DesktopApp.ViewModels
                     $"Успішно: {success}",
                     $"Помилки: {fail}",
                     $"Куди: {target}",
+                    signDateLine,
                     "Результати:"
                 }.Concat(resultLines));
 

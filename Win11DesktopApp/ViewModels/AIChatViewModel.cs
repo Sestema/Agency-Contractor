@@ -232,6 +232,7 @@ CRITICAL RULES:
             {
                 if (o is ChatSessionItem item)
                 {
+                    _telegramBotService.ClearConversationContext(GetAssistantConversationId(item.Id));
                     _chatService.DeleteSession(item.Id);
                     ChatSessions.Remove(item);
                     if (_currentSession?.Id == item.Id)
@@ -301,6 +302,8 @@ CRITICAL RULES:
 
             foreach (var item in ChatSessions)
                 item.IsSelected = item.Id == sessionId;
+
+            RestoreChatMemory();
         }
 
         private void CreateNewSession()
@@ -364,6 +367,7 @@ CRITICAL RULES:
             if (_currentSession.Messages.Count > 0)
                 _currentSession.LastMessageAt = _currentSession.Messages.Last().Timestamp;
 
+            PersistChatMemory();
             _chatService.SaveSession(_currentSession);
 
             var existing = ChatSessions.FirstOrDefault(s => s.Id == _currentSession.Id);
@@ -427,6 +431,7 @@ CRITICAL RULES:
                 _cts?.Dispose();
                 _cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 
+                RestoreChatMemory();
                 var history = BuildConversationHistory();
                 string response = await ProcessMessageAsync(text, filePath, SystemPrompt, history, _cts.Token);
 
@@ -555,10 +560,63 @@ CRITICAL RULES:
                 ct);
         }
 
-        private long GetAssistantConversationId()
+        private void RestoreChatMemory()
         {
-            var sessionId = _currentSession?.Id ?? "default";
-            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes("desktop-ai:" + sessionId));
+            if (_currentSession == null)
+                return;
+
+            _telegramBotService.ApplyChatMemory(
+                GetAssistantConversationId(_currentSession.Id),
+                ToAssistantMemory(_currentSession.Memory));
+        }
+
+        private void PersistChatMemory()
+        {
+            if (_currentSession == null)
+                return;
+
+            _currentSession.Memory = ToSessionMemory(
+                _telegramBotService.CaptureChatMemory(GetAssistantConversationId(_currentSession.Id)));
+        }
+
+        private static Telegram.TelegramBotService.AssistantChatMemory ToAssistantMemory(ChatSessionMemory? memory)
+        {
+            memory ??= new ChatSessionMemory();
+            return new Telegram.TelegramBotService.AssistantChatMemory
+            {
+                LastEmployeeId = memory.LastEmployeeId,
+                LastEmployeeName = memory.LastEmployeeName,
+                LastFirmName = memory.LastFirmName,
+                LastMonthKey = memory.LastMonthKey,
+                LastSecondaryMonthKey = memory.LastSecondaryMonthKey,
+                LastTopic = memory.LastTopic,
+                LastAction = memory.LastAction,
+                LastAiTool = memory.LastAiTool,
+                HistorySummary = memory.HistorySummary
+            };
+        }
+
+        private static ChatSessionMemory ToSessionMemory(Telegram.TelegramBotService.AssistantChatMemory? memory)
+        {
+            memory ??= new Telegram.TelegramBotService.AssistantChatMemory();
+            return new ChatSessionMemory
+            {
+                LastEmployeeId = memory.LastEmployeeId,
+                LastEmployeeName = memory.LastEmployeeName,
+                LastFirmName = memory.LastFirmName,
+                LastMonthKey = memory.LastMonthKey,
+                LastSecondaryMonthKey = memory.LastSecondaryMonthKey,
+                LastTopic = memory.LastTopic,
+                LastAction = memory.LastAction,
+                LastAiTool = memory.LastAiTool,
+                HistorySummary = memory.HistorySummary
+            };
+        }
+
+        private long GetAssistantConversationId(string? sessionId = null)
+        {
+            var id = sessionId ?? _currentSession?.Id ?? "default";
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes("desktop-ai:" + id));
             var value = BitConverter.ToInt64(bytes, 0);
             return value == 0 ? 1 : value;
         }

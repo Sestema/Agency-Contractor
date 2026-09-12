@@ -13,8 +13,6 @@
 
     <Grid>
         <Border Background="{DynamicResource PageBackgroundBrush}"
-                CacheMode="BitmapCache"
-                RenderOptions.CachingHint="Cache"
                 IsHitTestVisible="False"/>
         <Grid UseLayoutRounding="True"
               SnapsToDevicePixels="True"

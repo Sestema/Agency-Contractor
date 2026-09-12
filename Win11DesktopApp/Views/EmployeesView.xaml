@@ -478,8 +478,6 @@
 
     <Grid ClipToBounds="False">
         <Border Background="{DynamicResource PageBackgroundBrush}"
-                CacheMode="BitmapCache"
-                RenderOptions.CachingHint="Cache"
                 IsHitTestVisible="False"/>
         <Grid ClipToBounds="False"
               UseLayoutRounding="True"
@@ -1442,42 +1440,6 @@
                     </Border>
                 </Grid>
 
-                <!-- Skeleton loading placeholders -->
-                <StackPanel Grid.Row="3" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <ProgressBar IsIndeterminate="True" Height="3" Width="100" Margin="0,0,8,0"/>
-                        <TextBlock Text="{DynamicResource MsgEmployeesLoading}" FontSize="{DynamicResource FS11}" 
-                                   VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
-                    </StackPanel>
-                    <Border Style="{StaticResource SkeletonCard}" Height="72" Margin="0,0,0,6">
-                        <StackPanel Orientation="Horizontal">
-                            <Rectangle Width="44" Height="44" RadiusX="22" RadiusY="22" Style="{StaticResource SkeletonBlock}"/>
-                            <StackPanel Margin="14,4,0,0">
-                                <Rectangle Width="160" Height="14" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,8"/>
-                                <Rectangle Width="100" Height="10" Style="{StaticResource SkeletonBlock}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource SkeletonCard}" Height="72" Margin="0,0,0,6">
-                        <StackPanel Orientation="Horizontal">
-                            <Rectangle Width="44" Height="44" RadiusX="22" RadiusY="22" Style="{StaticResource SkeletonBlock}"/>
-                            <StackPanel Margin="14,4,0,0">
-                                <Rectangle Width="140" Height="14" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,8"/>
-                                <Rectangle Width="120" Height="10" Style="{StaticResource SkeletonBlock}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource SkeletonCard}" Height="72" Margin="0,0,0,6">
-                        <StackPanel Orientation="Horizontal">
-                            <Rectangle Width="44" Height="44" RadiusX="22" RadiusY="22" Style="{StaticResource SkeletonBlock}"/>
-                            <StackPanel Margin="14,4,0,0">
-                                <Rectangle Width="180" Height="14" Style="{StaticResource SkeletonBlock}" Margin="0,0,0,8"/>
-                                <Rectangle Width="90" Height="10" Style="{StaticResource SkeletonBlock}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
                 <!-- ===== SELECTION BAR ===== -->
                 <Border Grid.Row="2" CornerRadius="8" Padding="12,8" Margin="0,0,0,6"
                         Background="{DynamicResource AccentBrush}"
@@ -1515,6 +1477,23 @@
                 <!-- Bounded * row (no outer ScrollViewer) so Table/List virtualization can work.
                      Tiles/Icons keep their own ScrollViewer around WrapPanel. All employees still load. -->
                 <Grid Grid.Row="3" Margin="4,6,4,4" ClipToBounds="False">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Opacity" Value="0"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEmployeeListReady}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0" To="1" Duration="0:0:0.18"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
                             <!-- TABLE VIEW -->
                             <DataGrid ItemsSource="{Binding EmployeesForTable}" AutoGenerateColumns="False" IsReadOnly="True"
                                       CanUserSortColumns="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
@@ -1590,7 +1569,7 @@
                                                     <TextBlock>
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
-                                                                <Setter Property="Text" Value="Так"/>
+                                                                <Setter Property="Text" Value="{DynamicResource CommonYes}"/>
                                                                 <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding HasPassport}" Value="False">
@@ -1623,7 +1602,7 @@
                                                     <TextBlock>
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
-                                                                <Setter Property="Text" Value="Так"/>
+                                                                <Setter Property="Text" Value="{DynamicResource CommonYes}"/>
                                                                 <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding HasVisa}" Value="False">
@@ -1656,7 +1635,7 @@
                                                     <TextBlock>
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
-                                                                <Setter Property="Text" Value="Так"/>
+                                                                <Setter Property="Text" Value="{DynamicResource CommonYes}"/>
                                                                 <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding HasInsurance}" Value="False">
@@ -3219,8 +3198,35 @@
                 </Grid>
             </Grid>
 
-        <!-- Loading overlay (visible while a large employee list is being prepared) -->
-        <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+        <!-- Loading overlay: only this layer fades; the employee list is not animated. -->
+        <Grid>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="IsHitTestVisible" Value="False"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                            <Setter Property="IsHitTestVisible" Value="True"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <Border Background="{DynamicResource OverlayBrush}" Opacity="0.58"/>
             <Border HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -3228,10 +3234,9 @@
                     CornerRadius="16"
                     Background="{DynamicResource ContentBackgroundBrush}"
                     BorderBrush="{DynamicResource CardBorderBrush}"
-                    BorderThickness="1"
-                    Effect="{DynamicResource DialogShadow}">
+                    BorderThickness="1">
                 <StackPanel MinWidth="250">
-                    <ProgressBar IsIndeterminate="True"
+                    <ProgressBar IsIndeterminate="{Binding IsLoading}"
                                  Height="6"
                                  Margin="0,0,0,14"
                                  Foreground="{DynamicResource AccentBrush}"
@@ -4025,7 +4030,7 @@
                 </Border.InputBindings>
             </Border>
             <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="12" 
-                    Width="500" MaxHeight="500" Padding="24"
+                    Width="500" MaxHeight="560" Padding="24"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
@@ -4034,8 +4039,8 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,10">
@@ -4080,12 +4085,22 @@
                         </Button>
                     </Grid>
 
-                    <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" MaxHeight="95" Margin="0,0,0,10"
+                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                        <TextBlock Text="{DynamicResource EmpBatchSignDate}" FontSize="{DynamicResource FS11}"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding BatchContractSignDateOverride, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" FontSize="{DynamicResource FS13}"/>
+                        <TextBlock Text="{DynamicResource EmpBatchSignDateHint}" FontSize="{DynamicResource FS10}"
+                                   Foreground="{DynamicResource TertiaryForegroundBrush}" Margin="0,4,0,0"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="95" Margin="0,0,0,10"
                                   VerticalScrollBarVisibility="Auto">
                         <TextBlock Text="{Binding BatchStatusMessage}" Foreground="#888" FontSize="{DynamicResource FS12}" TextWrapping="Wrap"/>
                     </ScrollViewer>
 
-                    <ScrollViewer Grid.Row="2" Style="{StaticResource ThinScroll}" MaxHeight="300">
+                    <ScrollViewer Grid.Row="3" Style="{StaticResource ThinScroll}" MaxHeight="300">
                         <ItemsControl ItemsSource="{Binding BatchTemplates}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -4131,10 +4146,10 @@
                                                         BorderThickness="1"
                                                         VerticalAlignment="Center"
                                                         Cursor="Hand"
-                                                        ToolTip="Вибрати папку для збереження">
+                                                        ToolTip="{DynamicResource EmpBatchToFolderTooltip}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="В папку..." FontSize="{DynamicResource FS11}"/>
+                                                        <TextBlock Text="{DynamicResource EmpBatchToFolder}" FontSize="{DynamicResource FS11}"/>
                                                     </StackPanel>
                                                 </Button>
                                             </StackPanel>

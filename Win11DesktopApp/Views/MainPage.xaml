@@ -190,8 +190,6 @@
     
     <Grid ClipToBounds="True">
         <Border Background="{DynamicResource PageBackgroundBrush}"
-                CacheMode="BitmapCache"
-                RenderOptions.CachingHint="Cache"
                 IsHitTestVisible="False"/>
         <!-- Main Content -->
         <Grid>

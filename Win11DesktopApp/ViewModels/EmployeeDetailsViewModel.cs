@@ -24,7 +24,7 @@ namespace Win11DesktopApp.ViewModels
     public sealed class DocumentProfileOption
     {
         public string Key { get; init; } = string.Empty;
-        public string DisplayName { get; init; } = string.Empty;
+        public string DisplayName => EmployeeService.GetDocumentProfileDisplayName(Key);
         public string EmployeeType { get; init; } = "visa";
         public string EuDocumentType { get; init; } = "passport";
         public string VisaDocType { get; init; } = "visa_sticker";
@@ -403,6 +403,14 @@ namespace Win11DesktopApp.ViewModels
         private string DocRes(string key) =>
             _documentLocalizationService.Get(key) ?? Res(key);
 
+        private static string FormatCustomDocHistory(string name, string signDate, string? expiryDate)
+        {
+            if (string.IsNullOrEmpty(expiryDate))
+                return string.Format(Res("HistCustomDocSignedFmt"), name, signDate);
+
+            return string.Format(Res("HistCustomDocSignedExpiryFmt"), name, signDate, expiryDate);
+        }
+
         private readonly EmployeeService _employeeService;
         private readonly GeminiApiService _geminiApiService;
         private readonly FinanceService _financeService;
@@ -640,6 +648,7 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(HeaderSubtitle));
                     OnPropertyChanged(nameof(ShowArchiveModeChip));
                     NotifyProfileNoteUi();
+                    NotifyDocumentEditButtons();
                 }
             }
         }
@@ -657,12 +666,27 @@ namespace Win11DesktopApp.ViewModels
                     OnPropertyChanged(nameof(ShowGenerateActions));
                     OnPropertyChanged(nameof(HeaderSubtitle));
                     NotifyProfileNoteUi();
+                    NotifyDocumentEditButtons();
                 }
             }
         }
 
         public bool IsNotArchiveMode => !IsArchiveMode && !IsReadOnlyMode;
         public bool ShowGenerateActions => !IsReadOnlyMode;
+        public bool CanEditPassportDocument => IsNotArchiveMode && HasPassport;
+        public bool CanEditSecondaryDocument => IsNotArchiveMode && HasSecondaryDocumentFile;
+        public bool CanEditInsuranceDocument => IsNotArchiveMode && HasInsurance;
+        public bool CanEditWorkPermitDocument => IsNotArchiveMode && HasWorkPermit;
+        public bool CanEditPhotoDocument => IsNotArchiveMode && HasPhoto;
+
+        private void NotifyDocumentEditButtons()
+        {
+            OnPropertyChanged(nameof(CanEditPassportDocument));
+            OnPropertyChanged(nameof(CanEditSecondaryDocument));
+            OnPropertyChanged(nameof(CanEditInsuranceDocument));
+            OnPropertyChanged(nameof(CanEditWorkPermitDocument));
+            OnPropertyChanged(nameof(CanEditPhotoDocument));
+        }
 
         public bool IsGenderMale
         {
@@ -1385,6 +1409,11 @@ namespace Win11DesktopApp.ViewModels
         public ICommand ReplaceInsuranceCommand { get; }
         public ICommand ReplaceWorkPermitCommand { get; }
         public ICommand ReplacePhotoCommand { get; }
+        public ICommand EditPassportCommand { get; }
+        public ICommand EditVisaCommand { get; }
+        public ICommand EditInsuranceCommand { get; }
+        public ICommand EditWorkPermitCommand { get; }
+        public ICommand EditPhotoCommand { get; }
         public ICommand OpenPassportCommand { get; }
         public ICommand OpenVisaCommand { get; }
         public ICommand OpenInsuranceCommand { get; }
@@ -1573,15 +1602,15 @@ namespace Win11DesktopApp.ViewModels
         public ObservableCollection<DocumentProfileOption> DocumentProfileOptions { get; } =
             new ObservableCollection<DocumentProfileOption>
             {
-                new() { Key = "passport_only", DisplayName = "Паспорт", EmployeeType = "passport_only" },
-                new() { Key = "passport_page2", DisplayName = "Паспорт + паспорт 2", EmployeeType = "passport_only", RequiresPassportPage2 = true },
-                new() { Key = "passport_insurance", DisplayName = "Паспорт + страховка", EmployeeType = "eu_citizen", RequiresInsurance = true },
-                new() { Key = "passport_page2_insurance", DisplayName = "Паспорт + паспорт 2 + страховка", EmployeeType = "eu_citizen", RequiresInsurance = true, RequiresPassportPage2 = true },
-                new() { Key = "eu_id_card_insurance", DisplayName = "ID-карта ЄС + страховка", EmployeeType = "eu_citizen", EuDocumentType = "id_card", RequiresInsurance = true },
-                new() { Key = "eu_id_card_page2_insurance", DisplayName = "ID-карта ЄС + стор. 2 + страховка", EmployeeType = "eu_citizen", EuDocumentType = "id_card", RequiresInsurance = true, RequiresPassportPage2 = true },
-                new() { Key = "passport_visa_insurance", DisplayName = "Паспорт + віза + страховка", EmployeeType = "visa", RequiresInsurance = true, RequiresVisa = true },
-                new() { Key = "passport_visa_id_card_insurance", DisplayName = "Паспорт + ID-карта + страховка", EmployeeType = "visa", VisaDocType = "id_card", RequiresInsurance = true, RequiresVisa = true },
-                new() { Key = "passport_visa_work_permit_insurance", DisplayName = "Паспорт + віза + дозвіл + страховка", EmployeeType = "work_permit", RequiresInsurance = true, RequiresVisa = true, RequiresWorkPermit = true }
+                new() { Key = "passport_only", EmployeeType = "passport_only" },
+                new() { Key = "passport_page2", EmployeeType = "passport_only", RequiresPassportPage2 = true },
+                new() { Key = "passport_insurance", EmployeeType = "eu_citizen", RequiresInsurance = true },
+                new() { Key = "passport_page2_insurance", EmployeeType = "eu_citizen", RequiresInsurance = true, RequiresPassportPage2 = true },
+                new() { Key = "eu_id_card_insurance", EmployeeType = "eu_citizen", EuDocumentType = "id_card", RequiresInsurance = true },
+                new() { Key = "eu_id_card_page2_insurance", EmployeeType = "eu_citizen", EuDocumentType = "id_card", RequiresInsurance = true, RequiresPassportPage2 = true },
+                new() { Key = "passport_visa_insurance", EmployeeType = "visa", RequiresInsurance = true, RequiresVisa = true },
+                new() { Key = "passport_visa_id_card_insurance", EmployeeType = "visa", VisaDocType = "id_card", RequiresInsurance = true, RequiresVisa = true },
+                new() { Key = "passport_visa_work_permit_insurance", EmployeeType = "work_permit", RequiresInsurance = true, RequiresVisa = true, RequiresWorkPermit = true }
             };
 
         private bool _isUpdatingDocumentProfileFlags;
@@ -1968,6 +1997,11 @@ namespace Win11DesktopApp.ViewModels
             ReplaceInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance"), _ => !IsReadOnlyMode);
             ReplaceWorkPermitCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("work_permit"), _ => !IsReadOnlyMode);
             ReplacePhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo"), _ => !IsReadOnlyMode);
+            EditPassportCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("passport", editCurrent: true), _ => CanEditPassportDocument);
+            EditVisaCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync(UsesPassportPage2SecondaryDocument ? "passport_page2" : "visa", editCurrent: true), _ => CanEditSecondaryDocument);
+            EditInsuranceCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("insurance", editCurrent: true), _ => CanEditInsuranceDocument);
+            EditWorkPermitCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("work_permit", editCurrent: true), _ => CanEditWorkPermitDocument);
+            EditPhotoCommand = new AsyncRelayCommand(_ => ReplaceDocumentAsync("photo", editCurrent: true), _ => CanEditPhotoDocument);
 
             OpenPassportCommand = new RelayCommand(o => OpenFile(PassportFilePath), o => HasPassport);
             OpenVisaCommand = new RelayCommand(o => OpenFile(SecondaryDocumentFilePath), o => HasSecondaryDocumentFile);
@@ -2541,10 +2575,11 @@ namespace Win11DesktopApp.ViewModels
                 return 0;
 
             var fields = string.Join(Environment.NewLine, changes.Select(change => $"• {change.Label}: {change.OldValue} → {change.NewValue}"));
-            var message = $"Застосувати ці зміни до позначених працівників ({targets.Count})?{Environment.NewLine}{Environment.NewLine}{fields}";
+            var message = string.Format(Res("EmpBulkUpdateConfirmFmt"), targets.Count)
+                          + Environment.NewLine + Environment.NewLine + fields;
             var confirm = MessageBox.Show(
                 message,
-                "Масове оновлення працівників",
+                Res("EmpBulkUpdateTitle"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -2588,8 +2623,8 @@ namespace Win11DesktopApp.ViewModels
             }
 
             StatusMessage = skipped == 0
-                ? $"Масово оновлено працівників: {updated}."
-                : $"Масово оновлено працівників: {updated}. Пропущено: {skipped}.";
+                ? string.Format(Res("EmpBulkUpdateDoneFmt"), updated)
+                : string.Format(Res("EmpBulkUpdateDoneSkippedFmt"), updated, skipped);
             return updated;
         }
 
@@ -2674,21 +2709,32 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(IsGenderFemale));
         }
 
-        private async Task ReplaceDocumentAsync(string type)
+        private async Task ReplaceDocumentAsync(string type, bool editCurrent = false)
         {
             if (!PolicyService.EnsureWriteAllowed("Оновити документ працівника"))
                 return;
 
             try
             {
-                if (type == "photo")
+                if (type == "photo" && !editCurrent)
                 {
                     SetBusyState(true, Res("DashLoading") ?? "Завантаження...");
                     await ReplacePhotoSimple();
                     return;
                 }
 
-                var window = _aiWindowFactory.CreateReplaceDocumentWindow(type, Data);
+                string? existingPath = null;
+                if (editCurrent)
+                {
+                    existingPath = ResolveCurrentDocumentFullPath(type);
+                    if (string.IsNullOrWhiteSpace(existingPath) || !File.Exists(existingPath))
+                    {
+                        StatusMessage = Res("MsgFileNotFound");
+                        return;
+                    }
+                }
+
+                var window = _aiWindowFactory.CreateReplaceDocumentWindow(type, Data, existingPath, editCurrent);
                 window.Owner = Application.Current?.MainWindow;
                 if (window.ShowDialog() != true || !window.Saved)
                     return;
@@ -2697,19 +2743,30 @@ namespace Win11DesktopApp.ViewModels
                 var tempFile = window.ResultFilePath;
                 try
                 {
-                    if (!SaveReplacedDocumentFile(type, tempFile))
+                    var fileChanged = !editCurrent || window.FileChanged;
+                    if (fileChanged)
                     {
-                        StatusMessage = Res("MsgFileNotFound");
-                        return;
+                        if (!SaveReplacedDocumentFile(type, tempFile, overwriteCurrent: editCurrent))
+                        {
+                            StatusMessage = Res("MsgFileNotFound");
+                            return;
+                        }
                     }
 
                     var changes = ApplyNewFieldValues(window.NewValues);
+                    if (!fileChanged && changes.Count == 0)
+                        return;
+
                     if (!_employeeService.SaveEmployeeData(_employeeFolder, Data))
                     {
                         StatusMessage = Res("MsgProfileSaveFail");
                         return;
                     }
-                    await LogDocumentReplacement(type, changes);
+                    var fileReplaced = fileChanged && !editCurrent;
+                    await LogDocumentReplacement(type, changes, fileReplaced);
+                    ToastService.Instance.Success(string.Format(
+                        Res(fileReplaced ? "ToastDocReplaced" : "ToastDocUpdated"),
+                        GetDocumentDisplayName(type)));
 
                     OnPropertyChanged(nameof(Data));
                     OnPropertyChanged(nameof(FullName));
@@ -2733,7 +2790,7 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private bool SaveReplacedDocumentFile(string type, string? filePath)
+        private bool SaveReplacedDocumentFile(string type, string? filePath, bool overwriteCurrent = false)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
@@ -2749,21 +2806,61 @@ namespace Win11DesktopApp.ViewModels
                 "passport_page2" => "PassPage2",
                 "insurance" => string.IsNullOrWhiteSpace(Data.InsuranceCompanyShort) ? "Insurance" : Data.InsuranceCompanyShort,
                 "work_permit" => WorkPermitDocumentSuffix,
+                "photo" => "Photo",
                 _ => type
             };
 
-            // Archive the old document to CustomDocs before replacing
-            ArchiveOldDocument(type, suffix);
-
-            var saved = _employeeService.SaveDocumentFromSource(
-                filePath, _employeeFolder,
-                $"{Data.FirstName} {Data.LastName} - {suffix}");
-
-            if (string.IsNullOrWhiteSpace(saved))
+            string saved;
+            if (overwriteCurrent)
             {
-                LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
-                    $"Failed to save {type} from '{filePath}'.");
-                return false;
+                var currentPath = ResolveCurrentDocumentFullPath(type);
+                if (string.IsNullOrWhiteSpace(currentPath) || !File.Exists(currentPath))
+                {
+                    LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                        $"Cannot overwrite {type}: current file missing.");
+                    return false;
+                }
+
+                var destFolder = Path.GetDirectoryName(currentPath);
+                if (string.IsNullOrWhiteSpace(destFolder))
+                    destFolder = _employeeFolder;
+
+                saved = _employeeService.SaveDocumentFromSource(
+                    filePath, destFolder, Path.GetFileNameWithoutExtension(currentPath));
+
+                if (string.IsNullOrWhiteSpace(saved))
+                {
+                    LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                        $"Failed to overwrite {type} from '{filePath}'.");
+                    return false;
+                }
+
+                var savedFullPath = Path.Combine(destFolder, saved);
+                if (!string.Equals(Path.GetFullPath(savedFullPath), Path.GetFullPath(currentPath), StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(currentPath))
+                {
+                    try { SafeFileService.DeleteFile(currentPath); }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                            $"Could not remove old {type} after overwrite: {ex.Message}");
+                    }
+                }
+            }
+            else
+            {
+                ArchiveOldDocument(type, suffix);
+
+                saved = _employeeService.SaveDocumentFromSource(
+                    filePath, _employeeFolder,
+                    $"{Data.FirstName} {Data.LastName} - {suffix}");
+
+                if (string.IsNullOrWhiteSpace(saved))
+                {
+                    LoggingService.LogWarning("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
+                        $"Failed to save {type} from '{filePath}'.");
+                    return false;
+                }
             }
 
             switch (type)
@@ -2773,10 +2870,11 @@ namespace Win11DesktopApp.ViewModels
                 case "passport_page2": Data.Files.PassportPage2 = saved; break;
                 case "insurance": Data.Files.Insurance = saved; break;
                 case "work_permit": Data.Files.WorkPermit = saved; break;
+                case "photo": Data.Files.Photo = saved; break;
             }
 
             LoggingService.LogInfo("EmployeeDetailsViewModel.SaveReplacedDocumentFile",
-                $"Saved {type} → {saved}");
+                overwriteCurrent ? $"Overwrote {type} → {saved}" : $"Saved {type} → {saved}");
             return true;
         }
 
@@ -2805,6 +2903,7 @@ namespace Win11DesktopApp.ViewModels
                     "passport_page2" => !string.IsNullOrWhiteSpace(Data.Files.PassportPage2) ? Data.Files.PassportPage2 : Data.Files.Visa,
                     "insurance"   => Data.Files.Insurance,
                     "work_permit" => Data.Files.WorkPermit,
+                    "photo"       => Data.Files.Photo,
                     _             => null
                 };
 
@@ -2937,26 +3036,42 @@ namespace Win11DesktopApp.ViewModels
             return changes;
         }
 
-        private async Task LogDocumentReplacement(string type, List<string> changes)
+        private string? ResolveCurrentDocumentFullPath(string type) => type switch
         {
-            var (fieldName, descName) = type switch
-            {
-                "passport" => (Res("DetDocPassport"), Res("DetDocPassport")),
-                "visa" => (Res("DetDocVisa"), Res("DetDocVisa")),
-                "passport_page2" => (SecondaryDocumentDisplayName, SecondaryDocumentDisplayName),
-                "insurance" => (Res("DetDocInsurance"), Res("DetDocInsurance")),
-                "work_permit" => (Res("DetDocWorkPermit"), Res("DetDocWorkPermit")),
-                _ => (type, type)
-            };
+            "passport" => PassportFilePath,
+            "visa" => SecondaryDocumentFilePath,
+            "passport_page2" => SecondaryDocumentFilePath,
+            "insurance" => InsuranceFilePath,
+            "work_permit" => WorkPermitFilePath,
+            "photo" => PhotoFilePath,
+            _ => null
+        };
 
-            var desc = string.Format(Res("HistoryDescDocReplace"), descName);
+        private string GetDocumentDisplayName(string type) => type switch
+        {
+            "passport" => Res("DetDocPassport"),
+            "visa" => Res("DetDocVisa"),
+            "passport_page2" => SecondaryDocumentDisplayName,
+            "insurance" => Res("DetDocInsurance"),
+            "work_permit" => Res("DetDocWorkPermit"),
+            "photo" => Res("DetDocPhoto"),
+            _ => type
+        };
+
+        private async Task LogDocumentReplacement(string type, List<string> changes, bool fileReplaced = true)
+        {
+            var fieldName = GetDocumentDisplayName(type);
+            var descName = fieldName;
+
+            var descKey = fileReplaced ? "HistoryDescDocReplace" : "HistoryDescDocEdit";
+            var desc = string.Format(Res(descKey), descName);
             if (changes.Count > 0)
                 desc += " | " + string.Join(", ", changes);
 
             await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {
                 EventType = "DocumentUpdated",
-                Action = Res("HistoryActionDocReplace"),
+                Action = Res(fileReplaced ? "HistoryActionDocReplace" : "HistoryActionDocEdit"),
                 Field = fieldName,
                 Description = desc
             });
@@ -2983,6 +3098,7 @@ namespace Win11DesktopApp.ViewModels
                     Field = Res("DetDocPhoto"),
                     Description = string.Format(Res("HistoryDescDocReplace"), Res("DetDocPhoto"))
                 });
+                ToastService.Instance.Success(string.Format(Res("ToastDocReplaced"), Res("DetDocPhoto")));
                 RefreshDocuments();
                 InvalidateDetailCaches();
                 RaiseDataChanged();
@@ -3055,6 +3171,7 @@ namespace Win11DesktopApp.ViewModels
             OnPropertyChanged(nameof(SecondaryDocumentAuthorityLabel));
             OnPropertyChanged(nameof(SecondaryDocumentExpiryLabel));
             OnPropertyChanged(nameof(SecondaryDocumentRetryPreviewKey));
+            NotifyDocumentEditButtons();
 
             StartPdfPreviewLoading();
         }
@@ -4290,6 +4407,7 @@ namespace Win11DesktopApp.ViewModels
             PassportPage2PreviewState = DocPreviewState.Empty;
             InsurancePreviewState = DocPreviewState.Empty;
             WorkPermitPreviewState = DocPreviewState.Empty;
+            NotifyDocumentEditButtons();
         }
 
         private async Task RunAIValidationAsync()
@@ -5459,8 +5577,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 return;
             }
 
-            var expiryPart = string.IsNullOrEmpty(doc.ExpiryDate) ? "" : $", до: {doc.ExpiryDate}";
-            var histDesc = $"{doc.Name} (підписано: {doc.SignDate}{expiryPart})";
+            var expiryDate = string.IsNullOrEmpty(doc.ExpiryDate) ? null : doc.ExpiryDate;
+            var histDesc = FormatCustomDocHistory(doc.Name, doc.SignDate, expiryDate);
 
             await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {
@@ -5527,8 +5645,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 return;
             }
 
-            var expiryPart = string.IsNullOrEmpty(doc.ExpiryDate) ? "" : $", до: {doc.ExpiryDate}";
-            var histDesc = $"{doc.Name} (підписано: {doc.SignDate}{expiryPart})";
+            var expiryDate = string.IsNullOrEmpty(doc.ExpiryDate) ? null : doc.ExpiryDate;
+            var histDesc = FormatCustomDocHistory(doc.Name, doc.SignDate, expiryDate);
 
             await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {
@@ -5574,7 +5692,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
 
             _employeeService.DeleteCustomDocFile(_employeeFolder, doc.FileName);
 
-            var histDesc = $"{doc.Name} (підписано: {doc.SignDate})";
+            var histDesc = FormatCustomDocHistory(doc.Name, doc.SignDate, null);
 
             await _employeeService.AddHistoryEntry(_employeeFolder, Data.UniqueId, new EmployeeHistoryEntry
             {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using Win11DesktopApp.Models;
 
 namespace Win11DesktopApp.Services
@@ -168,8 +169,8 @@ namespace Win11DesktopApp.Services
                                     && !string.IsNullOrWhiteSpace(moduleKey)
                                     && HasPermission($"{moduleKey}:view");
             ToastService.Instance.Warning(hasViewOnlyAccess
-                ? "У вас доступ тільки для перегляду. Ви не можете змінювати дані."
-                : $"Дія \"{actionName}\" недоступна для вашої ролі.");
+                ? Res("PolicyViewOnly", "У вас доступ тільки для перегляду. Ви не можете змінювати дані.")
+                : string.Format(Res("PolicyActionDeniedFmt", "Дія «{0}» недоступна для вашої ролі."), LocalizeAction(actionName)));
             return false;
         }
 
@@ -181,7 +182,9 @@ namespace Win11DesktopApp.Services
             if (!IsReadOnlyMode)
                 return true;
 
-            var message = $"Дія \"{actionName}\" вимкнена. Клієнт переведений у read-only режим адміністратором.";
+            var message = string.Format(
+                Res("PolicyReadOnlyFmt", "Дія «{0}» вимкнена. Клієнт переведений у режим лише перегляду адміністратором."),
+                LocalizeAction(actionName));
             ToastService.Instance.Warning(message);
             return false;
         }
@@ -194,7 +197,9 @@ namespace Win11DesktopApp.Services
             if (!IsExportsDisabled)
                 return true;
 
-            var message = $"Дія \"{actionName}\" вимкнена політикою адміністратора.";
+            var message = string.Format(
+                Res("PolicyExportsDisabledFmt", "Дія «{0}» вимкнена політикою адміністратора."),
+                LocalizeAction(actionName));
             ToastService.Instance.Warning(message);
             return false;
         }
@@ -304,7 +309,9 @@ namespace Win11DesktopApp.Services
             LoggingService.LogWarning(
                 "PolicyService.RequireCanEditCompany",
                 $"Employer edit denied. action=\"{actionName}\" company=\"{companyName}\".");
-            ToastService.Instance.Warning($"Немає права редагувати: {companyName}");
+            ToastService.Instance.Warning(string.Format(
+                Res("PolicyCannotEditCompanyFmt", "Немає права редагувати: {0}"),
+                companyName));
             return false;
         }
 
@@ -475,6 +482,24 @@ namespace Win11DesktopApp.Services
 
             parsed = parsedVersion;
             return true;
+        }
+
+        private static string LocalizeAction(string actionName)
+        {
+            if (string.IsNullOrWhiteSpace(actionName))
+                return actionName;
+
+            var translated = Application.Current?.TryFindResource(actionName) as string;
+            if (!string.IsNullOrWhiteSpace(translated) && translated != actionName)
+                return translated;
+
+            return actionName;
+        }
+
+        private static string Res(string key, string fallback)
+        {
+            var value = Application.Current?.TryFindResource(key) as string;
+            return string.IsNullOrWhiteSpace(value) || value == key ? fallback : value;
         }
     }
 }

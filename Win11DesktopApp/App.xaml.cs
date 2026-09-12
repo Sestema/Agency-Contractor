@@ -580,7 +580,7 @@ namespace Win11DesktopApp
             if (state.StartupAccess.IsBlocked)
             {
                 MessageBox.Show(
-                    "Доступ до програми заблоковано адміністратором.",
+                    Res("PolicyAccessBlocked", "Доступ до програми заблоковано адміністратором."),
                     "Agency Contractor",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -662,7 +662,7 @@ namespace Win11DesktopApp
             if (state.IsRemoteTrialExpired)
             {
                 ToastService.Instance.Warning(
-                    "Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel.");
+                    Res("PolicyTrialExpired", "Пробний період завершився. Програма працює лише в режимі перегляду до активації в AdminPanel."));
             }
 
             RunBackgroundTask("StartupIntegrityService.BackgroundCheck", () =>
@@ -1187,14 +1187,17 @@ namespace Win11DesktopApp
                         ? policy.MinimumSupportedVersion
                         : policy.RecommendedVersion;
                     var reason = requiresMinimumVersion
-                        ? "Ця версія програми більше не підтримується сервером."
-                        : "Адміністратор вимагає оновити програму перед подальшою роботою.";
+                        ? Res("PolicyVersionUnsupported", "Ця версія програми більше не підтримується сервером.")
+                        : Res("PolicyForceUpdateRequired", "Адміністратор вимагає оновити програму перед подальшою роботою.");
                     var adminMessage = string.IsNullOrWhiteSpace(policy.AdminMessage)
                         ? string.Empty
                         : $"\n\n{policy.AdminMessage.Trim()}";
+                    var currentLine = string.Format(Res("PolicyCurrentVersionFmt", "Поточна версія: {0}"), currentVersion);
+                    var requiredLine = string.Format(Res("PolicyRequiredVersionFmt", "Потрібна версія: {0}"), requiredVersion);
+                    var closeLine = Res("PolicyVersionWillClose", "Програма буде закрита. Після оновлення її можна відкрити знову.");
 
                     MessageBox.Show(
-                        $"{reason}\n\nПоточна версія: {currentVersion}\nПотрібна версія: {requiredVersion}{adminMessage}\n\nПрограма буде закрита. Після оновлення її можна відкрити знову.",
+                        $"{reason}\n\n{currentLine}\n{requiredLine}{adminMessage}\n\n{closeLine}",
                         "Agency Contractor",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -1216,7 +1219,10 @@ namespace Win11DesktopApp
                     await dispatcher.InvokeAsync(() =>
                     {
                         ToastService.Instance.Warning(
-                            $"Адміністратор рекомендує оновити програму до версії {policy.RecommendedVersion}. Поточна версія: {currentVersion}.");
+                            string.Format(
+                                Res("PolicyUpdateRecommendedFmt", "Адміністратор рекомендує оновити програму до версії {0}. Поточна версія: {1}."),
+                                policy.RecommendedVersion,
+                                currentVersion));
                     });
                 }
             }

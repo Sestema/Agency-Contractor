@@ -1011,7 +1011,7 @@ namespace Win11DesktopApp.ViewModels
             return type ?? string.Empty;
         }
 
-        private async Task LoadFiltersAsync(CancellationToken token)
+        private async Task LoadFiltersAsync(CancellationToken token, ReportHistorySnapshot historySnapshot)
         {
             var selectedCompanies = CompanyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
             var selectedAgencies = AgencyFilters.ToDictionary(f => f.CompanyName, f => f.IsChecked, StringComparer.OrdinalIgnoreCase);
@@ -1023,7 +1023,7 @@ namespace Win11DesktopApp.ViewModels
             var dateTo = DateTo;
 
             var result = await Task.Run(() =>
-                BuildFilterLoadResult(selectedCompanies, selectedAgencies, companies, companyService, dateFrom, dateTo, token), token);
+                BuildFilterLoadResult(selectedCompanies, selectedAgencies, companies, companyService, dateFrom, dateTo, historySnapshot, token), token);
 
             token.ThrowIfCancellationRequested();
 
@@ -1177,8 +1177,10 @@ namespace Win11DesktopApp.ViewModels
             {
                 await Task.Delay(50, token);
 
+                var historySnapshot = await Task.Run(() => LoadReportHistorySnapshot(token), token);
+
                 if (reloadFilters)
-                    await LoadFiltersAsync(token);
+                    await LoadFiltersAsync(token, historySnapshot);
 
                 var companiesSnapshot = _companyService.Companies
                     .Where(PolicyService.CanAccessCompany)
@@ -1189,7 +1191,7 @@ namespace Win11DesktopApp.ViewModels
                 var typeDisplayMap = CreateDocTypeDisplayMap();
 
                 var result = await Task.Run(() =>
-                    BuildReportResult(companiesSnapshot, filterSnapshot, dateFrom, dateTo, typeDisplayMap, token), token);
+                    BuildReportResult(companiesSnapshot, filterSnapshot, dateFrom, dateTo, typeDisplayMap, historySnapshot, token), token);
 
                 token.ThrowIfCancellationRequested();
                 ApplyReportResult(result, dateFrom, dateTo);
@@ -1234,6 +1236,22 @@ namespace Win11DesktopApp.ViewModels
             };
         }
 
+        private ReportHistorySnapshot LoadReportHistorySnapshot(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            var archiveLog = TryLoadArchiveLog();
+            token.ThrowIfCancellationRequested();
+            var archivedEmployees = _employeeService.GetArchivedEmployees();
+            token.ThrowIfCancellationRequested();
+            var firmHistory = _employeeService.GetActiveEmployeeFirmHistory();
+            token.ThrowIfCancellationRequested();
+            // Past firms of currently-archived employees carry a valid archive folder (full
+            // employee.json), so previous-firm rows show complete data instead of an end-date-only
+            // stub built from the stale archive log path.
+            firmHistory.AddRange(_employeeService.GetArchivedEmployeeFirmHistory());
+            return new ReportHistorySnapshot(archiveLog, archivedEmployees, firmHistory);
+        }
+
         private FilterLoadResult BuildFilterLoadResult(
             Dictionary<string, bool> selectedCompanies,
             Dictionary<string, bool> selectedAgencies,
@@ -1241,17 +1259,14 @@ namespace Win11DesktopApp.ViewModels
             CompanyService? companyService,
             DateTime dateFrom,
             DateTime dateTo,
+            ReportHistorySnapshot historySnapshot,
             CancellationToken token)
         {
             var companyFilters = new List<FilterItemState>();
             var agencyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var archiveLog = TryLoadArchiveLog();
-            var archivedEmployees = _employeeService.GetArchivedEmployees();
-            var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
-            // Past firms of currently-archived employees carry a valid archive folder (full
-            // employee.json), so previous-firm rows show complete data instead of an end-date-only
-            // stub built from the stale archive log path.
-            activeFirmHistory.AddRange(_employeeService.GetArchivedEmployeeFirmHistory());
+            var archiveLog = historySnapshot.ArchiveLog;
+            var archivedEmployees = historySnapshot.ArchivedEmployees;
+            var firmHistory = historySnapshot.FirmHistory;
             var employeesCache = new Dictionary<string, List<EmployeeSummary>>(StringComparer.OrdinalIgnoreCase);
 
             List<EmployeeSummary> GetEmployeesCached(string firmName)
@@ -1274,7 +1289,7 @@ namespace Win11DesktopApp.ViewModels
                 if (companyService != null && !companyService.IsCompanyVisibleForRange(company, dateFrom, dateTo))
                     continue;
 
-                if (!HasFirmDataInRange(company.Name, archiveLog, archivedEmployees, activeFirmHistory, GetEmployeesCached, dateFrom, dateTo))
+                if (!HasFirmDataInRange(company.Name, archiveLog, archivedEmployees, firmHistory, GetEmployeesCached, dateFrom, dateTo))
                     continue;
 
                 companyFilters.Add(new FilterItemState(
@@ -1305,6 +1320,7 @@ namespace Win11DesktopApp.ViewModels
             DateTime dateFrom,
             DateTime dateTo,
             IReadOnlyDictionary<string, string> typeDisplayMap,
+            ReportHistorySnapshot historySnapshot,
             CancellationToken token)
         {
             int totalEmp = 0;
@@ -1315,14 +1331,10 @@ namespace Win11DesktopApp.ViewModels
             var selectedFirms = filters.SelectedFirms;
             var selectedAgencies = filters.SelectedAgencies;
             var effectiveFirms = new List<string>();
-            var archiveLog = TryLoadArchiveLog();
+            var archiveLog = historySnapshot.ArchiveLog;
             var visibleArchiveLog = GetVisibleArchiveLogEntries(archiveLog);
-            var archivedEmployees = _employeeService.GetArchivedEmployees();
-            var activeFirmHistory = _employeeService.GetActiveEmployeeFirmHistory();
-            // Past firms of currently-archived employees carry a valid archive folder (full
-            // employee.json), so previous-firm rows show complete data instead of an end-date-only
-            // stub built from the stale archive log path.
-            activeFirmHistory.AddRange(_employeeService.GetArchivedEmployeeFirmHistory());
+            var archivedEmployees = historySnapshot.ArchivedEmployees;
+            var firmHistory = historySnapshot.FirmHistory;
             var employeesCache = new Dictionary<string, List<EmployeeSummary>>(StringComparer.OrdinalIgnoreCase);
 
             List<EmployeeSummary> GetEmployeesCached(string firmName)
@@ -1346,7 +1358,7 @@ namespace Win11DesktopApp.ViewModels
                 if (companyService != null && !companyService.IsCompanyVisibleForRange(company, dateFrom, dateTo))
                     continue;
 
-                if (!HasFirmDataInRange(company.Name, archiveLog, archivedEmployees, activeFirmHistory, GetEmployeesCached, dateFrom, dateTo))
+                if (!HasFirmDataInRange(company.Name, archiveLog, archivedEmployees, firmHistory, GetEmployeesCached, dateFrom, dateTo))
                     continue;
 
                 if (!selectedFirms.Contains(company.Name))
@@ -1371,7 +1383,7 @@ namespace Win11DesktopApp.ViewModels
                 effectiveFirmsSet,
                 scopedArchiveLog,
                 archivedEmployees,
-                activeFirmHistory,
+                firmHistory,
                 GetEmployeesCached,
                 dateFrom,
                 dateTo,
@@ -3138,6 +3150,11 @@ namespace Win11DesktopApp.ViewModels
         }
 
         private sealed record FilterItemState(string Name, bool IsChecked);
+
+        private sealed record ReportHistorySnapshot(
+            List<ArchiveLogEntry> ArchiveLog,
+            List<ArchivedEmployeeSummary> ArchivedEmployees,
+            List<ArchivedEmployeeSummary> FirmHistory);
 
         private sealed record FilterLoadResult(
             List<FilterItemState> CompanyFilters,

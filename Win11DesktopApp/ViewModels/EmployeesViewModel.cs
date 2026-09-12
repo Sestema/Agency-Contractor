@@ -173,6 +173,13 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isLoading, value);
         }
 
+        private bool _isEmployeeListReady;
+        public bool IsEmployeeListReady
+        {
+            get => _isEmployeeListReady;
+            set => SetProperty(ref _isEmployeeListReady, value);
+        }
+
         public string Title => _showAllCompanies
             ? GetString("TitleEmployeesAllActive") ?? "Активні працівники"
             : _company == null
@@ -299,6 +306,13 @@ namespace Win11DesktopApp.ViewModels
         {
             get => _batchStatusMessage;
             set => SetProperty(ref _batchStatusMessage, value);
+        }
+
+        private string _batchContractSignDateOverride = string.Empty;
+        public string BatchContractSignDateOverride
+        {
+            get => _batchContractSignDateOverride;
+            set => SetProperty(ref _batchContractSignDateOverride, value);
         }
 
         // Batch AI validation dialog
@@ -842,7 +856,7 @@ namespace Win11DesktopApp.ViewModels
             });
 
             BatchGenerateCommand = new RelayCommand(o => OpenBatchGenerate(), o => Employees.Any(e => e.IsSelected));
-            CloseBatchGenerateCommand = new RelayCommand(o => IsBatchGenerateOpen = false);
+            CloseBatchGenerateCommand = new RelayCommand(o => CloseBatchGenerate());
             BatchGenerateFromTemplateCommand = new AsyncRelayCommand(o => BatchGenerateAsync(o as TemplateEntry));
             BatchGenerateToFolderCommand = new AsyncRelayCommand(o => BatchGenerateToFolderAsync(o as TemplateEntry));
             OpenBatchAIValidationCommand = new RelayCommand(o => OpenBatchAIValidation(), o => Employees.Count > 0);
@@ -905,6 +919,7 @@ namespace Win11DesktopApp.ViewModels
         {
             var generation = ++_loadGeneration;
             IsLoading = true;
+            IsEmployeeListReady = false;
             StatusMessage = LoadingMessage;
             await Dispatcher.Yield(DispatcherPriority.Render);
 
@@ -927,10 +942,13 @@ namespace Win11DesktopApp.ViewModels
                     if (generation != _loadGeneration)
                         return;
 
-                    IsLoading = false;
                     await ApplyFilterInBatchesAsync(generation);
                     if (HasVisibleEmployees)
                         StatusMessage = string.Empty;
+
+                    await Dispatcher.Yield(DispatcherPriority.Render);
+                    if (generation != _loadGeneration)
+                        return;
 
                     RefreshStats();
                     return;
@@ -965,7 +983,7 @@ namespace Win11DesktopApp.ViewModels
 
                 _allEmployees = result.Employees;
                 _lastStatus = result.Status;
-                ApplyFilter();
+                await ApplyFilterInBatchesAsync(generation);
                 if (HasVisibleEmployees)
                     StatusMessage = GetStatusMessage(result.Status);
                 IsError = result.Status == "LoadError";
@@ -991,7 +1009,10 @@ namespace Win11DesktopApp.ViewModels
             finally
             {
                 if (generation == _loadGeneration)
+                {
                     IsLoading = false;
+                    IsEmployeeListReady = true;
+                }
             }
         }
 

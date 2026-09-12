@@ -24,7 +24,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!PolicyService.IsFeatureVisible("finances"))
                 {
-                    ToastService.Instance.Warning("Модуль фінансів тимчасово недоступний для цього клієнта.");
+                    ToastService.Instance.Warning(Res("PolicyFinanceModuleUnavailable"));
                     return;
                 }
 
@@ -34,7 +34,7 @@ namespace Win11DesktopApp.ViewModels
             {
                 if (!PolicyService.IsFeatureVisible("finances"))
                 {
-                    ToastService.Instance.Warning("Модуль фінансів тимчасово недоступний для цього клієнта.");
+                    ToastService.Instance.Warning(Res("PolicyFinanceModuleUnavailable"));
                     return;
                 }
 

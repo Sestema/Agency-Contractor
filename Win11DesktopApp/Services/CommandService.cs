@@ -70,8 +70,8 @@ namespace Win11DesktopApp.Services
                     {
                         var update = await UpdateService.CheckForUpdatesAsync(PolicyService.CurrentPolicy.UpdateChannel).ConfigureAwait(false);
                         var text = update == null
-                            ? "Оновлень не знайдено"
-                            : $"Доступне оновлення {update.TargetFullRelease.Version}";
+                            ? Res("CmdNoUpdates", "Оновлень не знайдено")
+                            : string.Format(Res("CmdUpdateAvailableFmt", "Доступне оновлення {0}"), update.TargetFullRelease.Version);
 
                         await Application.Current.Dispatcher.InvokeAsync(() => ToastService.Instance.Info(text));
                         return new Dictionary<string, object?> { ["update_available"] = update != null, ["message"] = text };
@@ -98,7 +98,7 @@ namespace Win11DesktopApp.Services
 
                         await PolicyService.ApplyPolicyAsync(adHocPolicy).ConfigureAwait(false);
                         await Application.Current.Dispatcher.InvokeAsync(() =>
-                            ToastService.Instance.Warning("Клієнт переведено в read-only режим адміністратором."));
+                            ToastService.Instance.Warning(Res("CmdReadOnlyByAdmin", "Клієнт переведено в режим лише перегляду адміністратором.")));
                         return new Dictionary<string, object?> { ["read_only_mode"] = true };
                     }
 
@@ -136,7 +136,7 @@ namespace Win11DesktopApp.Services
         {
             var message = TryGetPayloadString(command.PayloadJson, "message", out var text)
                 ? text
-                : "Повідомлення від адміністратора";
+                : Res("CmdAdminMessageFallback", "Повідомлення від адміністратора");
             var severity = TryGetPayloadString(command.PayloadJson, "severity", out var severityText)
                 ? severityText
                 : "info";
@@ -146,7 +146,7 @@ namespace Win11DesktopApp.Services
             {
                 if (modal)
                 {
-                    MessageBox.Show(message, "Повідомлення адміністратора", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(message, Res("CmdAdminMessageTitle", "Повідомлення адміністратора"), MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -208,6 +208,12 @@ namespace Win11DesktopApp.Services
             }
 
             return false;
+        }
+
+        private static string Res(string key, string fallback)
+        {
+            var value = Application.Current?.TryFindResource(key) as string;
+            return string.IsNullOrWhiteSpace(value) || value == key ? fallback : value;
         }
     }
 }

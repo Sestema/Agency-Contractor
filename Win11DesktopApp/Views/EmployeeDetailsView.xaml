@@ -89,6 +89,34 @@
             <Setter Property="ToolTipService.InitialShowDelay" Value="200"/>
         </Style>
 
+        <Style x:Key="DocCardHeaderEditBtn" TargetType="Button">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="200"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
+                                Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Tab button base -->
         <Style x:Key="TabBtn" TargetType="Button">
             <Setter Property="Padding" Value="14,7"/>
@@ -1022,19 +1050,31 @@
                                                 BorderBrush="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnBorder}}">
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" 
                                                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock Text="{DynamicResource DetDocPassport}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
-                                                    <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
-                                                            Background="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
-                                                            Visibility="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
-                                                        <TextBlock Text="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
-                                                                   FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
-                                                                   Foreground="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
-                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Button Style="{StaticResource DocCardHeaderEditBtn}"
+                                                                Command="{Binding EditPassportCommand}"
+                                                                ToolTip="{DynamicResource DetTooltipEditDoc}"
+                                                                Visibility="{Binding CanEditPassportDocument, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                        </Button>
+                                                        <Border CornerRadius="4" Padding="6,2" Margin="6,0,0,0"
+                                                                Background="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                                Visibility="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                                            <TextBlock Text="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
+                                                                       FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
+                                                                       Foreground="{Binding PassportExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
+                                                        </Border>
+                                                    </StackPanel>
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
@@ -1089,19 +1129,31 @@
                                                 Visibility="{Binding HasSecondaryDocument, Converter={StaticResource BoolToVis}}">
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE81E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" 
                                                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock Text="{Binding SecondaryDocumentDisplayName}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
-                                                    <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
-                                                            Background="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
-                                                            Visibility="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
-                                                        <TextBlock Text="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
-                                                                   FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
-                                                                   Foreground="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
-                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Button Style="{StaticResource DocCardHeaderEditBtn}"
+                                                                Command="{Binding EditVisaCommand}"
+                                                                ToolTip="{DynamicResource DetTooltipEditDoc}"
+                                                                Visibility="{Binding CanEditSecondaryDocument, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                        </Button>
+                                                        <Border CornerRadius="4" Padding="6,2" Margin="6,0,0,0"
+                                                                Background="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                                Visibility="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                                            <TextBlock Text="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
+                                                                       FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
+                                                                       Foreground="{Binding VisaExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
+                                                        </Border>
+                                                    </StackPanel>
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
@@ -1171,19 +1223,31 @@
                                             </Border.Style>
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE8C9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" 
                                                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock Text="{DynamicResource DetDocInsurance}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
-                                                    <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
-                                                            Background="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
-                                                            Visibility="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
-                                                        <TextBlock Text="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
-                                                                   FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
-                                                                   Foreground="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
-                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Button Style="{StaticResource DocCardHeaderEditBtn}"
+                                                                Command="{Binding EditInsuranceCommand}"
+                                                                ToolTip="{DynamicResource DetTooltipEditDoc}"
+                                                                Visibility="{Binding CanEditInsuranceDocument, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                        </Button>
+                                                        <Border CornerRadius="4" Padding="6,2" Margin="6,0,0,0"
+                                                                Background="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                                Visibility="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                                            <TextBlock Text="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
+                                                                       FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
+                                                                       Foreground="{Binding InsuranceExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
+                                                        </Border>
+                                                    </StackPanel>
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
@@ -1254,19 +1318,31 @@
                                             </Border.Style>
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE8A1;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" 
                                                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock Text="{DynamicResource DetDocWorkPermit}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
-                                                    <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
-                                                            Background="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
-                                                            Visibility="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
-                                                        <TextBlock Text="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
-                                                                   FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
-                                                                   Foreground="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
-                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Button Style="{StaticResource DocCardHeaderEditBtn}"
+                                                                Command="{Binding EditWorkPermitCommand}"
+                                                                ToolTip="{DynamicResource DetTooltipEditDoc}"
+                                                                Visibility="{Binding CanEditWorkPermitDocument, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                        </Button>
+                                                        <Border CornerRadius="4" Padding="6,2" Margin="6,0,0,0"
+                                                                Background="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnBg}}"
+                                                                Visibility="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnVis}}">
+                                                            <TextBlock Text="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnText}}" 
+                                                                       FontSize="{DynamicResource FS9}" FontWeight="SemiBold"
+                                                                       Foreground="{Binding WorkPermitExpiryWarning, Converter={StaticResource ExpiryWarnColor}}"/>
+                                                        </Border>
+                                                    </StackPanel>
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>
@@ -1318,12 +1394,22 @@
                                         <Border Style="{StaticResource DetailsDocumentCard}">
                                             <StackPanel>
                                                 <Grid Style="{StaticResource DetailsDocumentHeader}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}" 
                                                                    Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock Text="{DynamicResource DetDocPhoto}" FontWeight="SemiBold" FontSize="{DynamicResource FS14}" 
                                                                    Foreground="{DynamicResource ForegroundBrush}"/>
                                                     </StackPanel>
+                                                    <Button Grid.Column="1" Style="{StaticResource DocCardHeaderEditBtn}"
+                                                            Command="{Binding EditPhotoCommand}"
+                                                            ToolTip="{DynamicResource DetTooltipEditDoc}"
+                                                            Visibility="{Binding CanEditPhotoDocument, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
+                                                    </Button>
                                                 </Grid>
                                                 <Border Style="{StaticResource DetailsPreviewSurface}">
                                                     <Grid>

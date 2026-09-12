@@ -8,6 +8,20 @@
              d:DesignHeight="600" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="ChatSelectableText" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsReadOnlyCaretVisible" Value="True"/>
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS13}"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="IsUndoEnabled" Value="False"/>
+            <Setter Property="Cursor" Value="IBeam"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource PageBackgroundBrush}">
@@ -91,9 +105,10 @@
                                                     Command="{Binding DataContext.DeleteChatCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                                    Width="22" Height="22" Opacity="0.4">
-                                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="11"
-                                                           Foreground="{DynamicResource ForegroundBrush}" 
+                                                    Width="28" Height="28"
+                                                    ToolTip="{DynamicResource AIChatDeleteChat}">
+                                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                                           Foreground="{DynamicResource ErrorBrush}"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </Grid>
@@ -169,8 +184,8 @@
                                                 <Border Background="{DynamicResource PurpleBrush}" CornerRadius="16,16,4,16" Padding="14,10"
                                                         HorizontalAlignment="Right">
                                                     <StackPanel>
-                                                        <TextBlock Text="{Binding Text}" Foreground="White" 
-                                                                   FontSize="{DynamicResource FS13}" TextWrapping="Wrap"/>
+                                                        <TextBox Text="{Binding Text, Mode=OneWay}" Style="{StaticResource ChatSelectableText}"
+                                                                 Foreground="White" CaretBrush="White"/>
                                                         <TextBlock Text="{Binding TimeDisplay}" Foreground="White" Opacity="0.67"
                                                                    FontSize="10" HorizontalAlignment="Right" Margin="0,4,0,0"/>
                                                     </StackPanel>
@@ -204,9 +219,9 @@
                                                         <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.08"/>
                                                     </Border.Effect>
                                                     <StackPanel>
-                                                        <TextBlock Text="{Binding Text}" 
-                                                                   Foreground="{DynamicResource ForegroundBrush}" 
-                                                                   FontSize="{DynamicResource FS13}" TextWrapping="Wrap"/>
+                                                        <TextBox Text="{Binding Text, Mode=OneWay}" Style="{StaticResource ChatSelectableText}"
+                                                                 Foreground="{DynamicResource ForegroundBrush}"
+                                                                 CaretBrush="{DynamicResource ForegroundBrush}"/>
                                                         <TextBlock Text="{Binding TimeDisplay}" Opacity="0.4"
                                                                    Foreground="{DynamicResource ForegroundBrush}" 
                                                                    FontSize="10" HorizontalAlignment="Right" Margin="0,4,0,0"/>
