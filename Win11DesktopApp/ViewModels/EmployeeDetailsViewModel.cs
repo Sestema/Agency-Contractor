@@ -2517,6 +2517,7 @@ namespace Win11DesktopApp.ViewModels
                 SetBusyState(true, Res("EditorSaving") ?? "Збереження...");
                 NormalizeInsuranceCompanyFields();
                 NormalizeDocumentProfileFields();
+                _employeeService.RepairEmployeeProfile(_employeeFolder, Data, _firmName);
                 var oldData = _employeeService.LoadEmployeeData(_employeeFolder);
 
                 if (_employeeService.SaveEmployeeData(_employeeFolder, Data, notifyUser: false))
@@ -5370,8 +5371,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
         {
             Data.CustomDocuments ??= new List<CustomSignedDocument>();
             var fallbackFirm = EmployeeService.InferCustomDocumentFirm(Data, _firmName ?? string.Empty);
-            if (EmployeeService.AssignMissingCustomDocumentFirms(Data, fallbackFirm) && !IsReadOnlyMode)
-                _employeeService.SaveEmployeeData(_employeeFolder, Data);
+            EmployeeService.AssignMissingCustomDocumentFirms(Data, fallbackFirm);
 
             var all = Data.CustomDocuments;
             var visible = all.Where(d => !d.IsHidden).ToList();

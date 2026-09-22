@@ -137,11 +137,20 @@ namespace Win11DesktopApp
                 new BackgroundHostedServicesStep()
             };
 
-            foreach (var step in steps)
+            try
             {
-                var result = await step.RunAsync(ctx, ctx.Token);
-                if (result == StartupStepResult.Stop)
-                    return;
+                foreach (var step in steps)
+                {
+                    var result = await step.RunAsync(ctx, ctx.Token);
+                    if (result == StartupStepResult.Stop)
+                        return;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError("App.OnStartup", ex);
+                ErrorHandler.Report("App.OnStartup", ex, ErrorSeverity.Critical, showUser: true);
+                Shutdown(-1);
             }
         }
 
@@ -733,6 +742,7 @@ namespace Win11DesktopApp
             PolicyService.Initialize(AppSettingsService, CurrentProfileService);
             TelemetryService.Initialize(AppSettingsService, CompanyService);
             CompanyService.InitializeAdminMirrorSyncService(AdminMirrorSyncService);
+            CompanyService.InitializeEmployeeService(EmployeeService);
             AdminMirrorSyncService.InitializeEmployeeService(EmployeeService);
             EmployeeService.InitializeFinanceService(FinanceService);
             CommandService.Initialize(AccessStatusService);
@@ -925,7 +935,9 @@ namespace Win11DesktopApp
 
                 try
                 {
-                    WorkspaceSessionService.EndSessionAsync().GetAwaiter().GetResult();
+                    var sessionEnded = WorkspaceSessionService.EndSessionAsync().Wait(TimeSpan.FromSeconds(3));
+                    if (!sessionEnded)
+                        LoggingService.LogWarning("App.OnExit.WorkspaceSessionService", "Workspace session end timed out after 3s.");
                 }
                 catch (Exception ex) { LoggingService.LogWarning("App.OnExit.WorkspaceSessionService", ex.Message); }
 

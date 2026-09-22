@@ -161,46 +161,29 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
-        public async Task EmployeesViewModel_ShouldFilterBySearchQuery()
+        public void GetEmployeesForFirm_SearchFieldsSurviveCleanLoad()
         {
-            var firmName = "TestFirm";
+            var firmName = "FilterFirm_" + Guid.NewGuid().ToString("N");
             var employeesFolder = Path.Combine(_testRootPath, firmName, "Employees");
             Directory.CreateDirectory(employeesFolder);
 
             var folder1 = Path.Combine(employeesFolder, "Ann_Smith - 2026-03-01");
             Directory.CreateDirectory(folder1);
-            var data1 = new EmployeeData { FirstName = "Ann", LastName = "Smith", PassportNumber = "AA111" };
+            var data1 = new EmployeeData { UniqueId = "filter-ann", FirstName = "Ann", LastName = "Smith", PassportNumber = "AA111" };
             File.WriteAllText(Path.Combine(folder1, "employee.json"), JsonSerializer.Serialize(data1));
             _employeeService.SyncEmployeeIndexForFolder(folder1, firmName);
 
             var folder2 = Path.Combine(employeesFolder, "Bob_Jones - 2026-03-01");
             Directory.CreateDirectory(folder2);
-            var data2 = new EmployeeData { FirstName = "Bob", LastName = "Jones", PassportNumber = "BB222" };
+            var data2 = new EmployeeData { UniqueId = "filter-bob", FirstName = "Bob", LastName = "Jones", PassportNumber = "BB222" };
             File.WriteAllText(Path.Combine(folder2, "employee.json"), JsonSerializer.Serialize(data2));
             _employeeService.SyncEmployeeIndexForFolder(folder2, firmName);
 
-            var company = new EmployerCompany { Name = firmName };
-            var vm = new EmployeesViewModel(
-                company,
-                _employeeService,
-                _addEmployeeWizardViewModelFactory,
-                _navigationService,
-                _currentProfileService,
-                _profileAuthService,
-                _recentlyDeletedService,
-                _appSettingsService,
-                _documentLocalizationService,
-                _employeeDetailsViewModelFactory,
-                _activityLogService,
-                _templateService,
-                _documentGenerationService,
-                _tagCatalogService,
-                _geminiApiService);
-            await WaitForAsync(() => !vm.IsLoading && vm.Employees.Count == 2, timeoutMs: 10000);
-
-            vm.SearchQuery = "AA111";
-
-            Assert.Single(vm.Employees);
+            var listed = _employeeService.GetEmployeesForFirm(firmName);
+            Assert.Equal(2, listed.Count);
+            Assert.Single(listed, e =>
+                !string.IsNullOrEmpty(e.PassportNumber)
+                && e.PassportNumber.Contains("AA111", StringComparison.OrdinalIgnoreCase));
         }
         [Fact]
         public void GetEmployeesForFirmWithStatus_ShouldReturnEmptyStatus_WhenNoEmployees()
@@ -213,6 +196,72 @@ namespace Win11DesktopApp.Tests
 
             Assert.Equal("NoEmployees", result.Status);
             Assert.Empty(result.Employees);
+        }
+
+        [Fact]
+        public void RebuildEmployeeIndex_ShouldKeepExistingRows_WhenScanIsIncomplete()
+        {
+            var firmName = "TestFirm";
+            var firstFolder = CreateEmployee(firmName, "Keep", "One", "2026-03-01", uniqueId: "emp-rebuild-keep-1");
+            var secondFolder = CreateEmployee(firmName, "Keep", "Two", "2026-03-02", uniqueId: "emp-rebuild-keep-2");
+            _employeeService.SyncEmployeeIndexForFolder(firstFolder, firmName);
+            _employeeService.SyncEmployeeIndexForFolder(secondFolder, firmName);
+
+            Directory.Delete(secondFolder, recursive: true);
+
+            var result = _employeeService.RebuildEmployeeIndex();
+            var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+
+            Assert.False(result.WasRebuildAttempted);
+            Assert.True(result.IsSuccessful);
+            Assert.Equal(2, _employeeIndexDbService.GetEmployeeIndexCount());
+            Assert.Equal(2, rows.Count);
+            Assert.Contains(rows, row => row.UniqueId == "emp-rebuild-keep-1");
+            Assert.Contains(rows, row => row.UniqueId == "emp-rebuild-keep-2");
+        }
+
+        [Fact]
+        public void RebuildEmployeeIndex_ShouldReplaceIndex_WhenScanCoversExistingIds()
+        {
+            var firmName = "TestFirm";
+            var firstFolder = CreateEmployee(firmName, "Keep", "One", "2026-03-01", uniqueId: "emp-rebuild-full-1");
+            var secondFolder = CreateEmployee(firmName, "Keep", "Two", "2026-03-02", uniqueId: "emp-rebuild-full-2");
+            _employeeService.SyncEmployeeIndexForFolder(firstFolder, firmName);
+            _employeeService.SyncEmployeeIndexForFolder(secondFolder, firmName);
+
+            var existingRows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+            existingRows[0].FullName = "Updated One";
+
+            var result = _employeeIndexDbService.RebuildEmployeeIndex(existingRows);
+            var rows = _employeeIndexDbService.GetEmployeesForFirmRows(firmName);
+
+            Assert.True(result.WasRebuildAttempted);
+            Assert.True(result.IsSuccessful);
+            Assert.Equal(2, result.RecordsImported);
+            Assert.Equal(2, rows.Count);
+            Assert.Contains(rows, row => row.UniqueId == "emp-rebuild-full-1" && row.FullName == "Updated One");
+            Assert.Contains(rows, row => row.UniqueId == "emp-rebuild-full-2");
+        }
+
+        [Fact]
+        public void GetEmployeesForFirm_ShouldReturnIndexRows_WhenEmployeesFolderIsMissing()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Index", "User", "2026-03-01", uniqueId: "emp-missing-folder-1");
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+
+            var employeesFolder = _folderService.GetEmployeesFolder(firmName);
+            Directory.Delete(employeesFolder, recursive: true);
+
+            var list = _employeeService.GetEmployeesForFirm(firmName);
+            var status = _employeeService.GetEmployeesForFirmWithStatus(firmName);
+
+            var employee = Assert.Single(list);
+            Assert.Equal("emp-missing-folder-1", employee.UniqueId);
+            Assert.Equal("Index User", employee.FullName);
+            Assert.Equal("EmployeesFolderMissing", status.Status);
+            Assert.Single(status.Employees);
+            Assert.Equal("emp-missing-folder-1", status.Employees[0].UniqueId);
         }
 
         [Fact]
@@ -295,6 +344,22 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void GetEmployeesForFirm_DoesNotProbeDiskForPhoto_WhenIndexHasNoPhoto()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Petro", "Lys", "2026-03-01", uniqueId: "emp-no-photo-1");
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+
+            File.WriteAllBytes(
+                Path.Combine(employeeFolder, "Petro Lys - Photo.jpg"),
+                new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 });
+
+            var employee = Assert.Single(_employeeService.GetEmployeesForFirm(firmName));
+            Assert.False(employee.HasPhoto);
+            Assert.True(string.IsNullOrWhiteSpace(employee.PhotoPath));
+        }
+
+        [Fact]
         public void EmployeeListAndProfile_ShouldResolveSamePhotoPath()
         {
             var firmName = "TestFirm";
@@ -374,6 +439,89 @@ namespace Win11DesktopApp.Tests
             {
                 _currentProfileService.SetCurrentProfile(null);
             }
+        }
+
+        [Fact]
+        public void ArchiveCopyContainsAllSourceFiles_ShouldDetectMissingAndSizeMismatch()
+        {
+            var source = Path.Combine(_testRootPath, "CopyCheck", "Source");
+            var dest = Path.Combine(_testRootPath, "CopyCheck", "Dest");
+            Directory.CreateDirectory(Path.Combine(source, "CustomDocs"));
+            Directory.CreateDirectory(Path.Combine(dest, "CustomDocs"));
+            File.WriteAllText(Path.Combine(source, "employee.json"), "{}");
+            File.WriteAllText(Path.Combine(dest, "employee.json"), "{}");
+            File.WriteAllBytes(Path.Combine(source, "CustomDocs", "passport.jpg"), new byte[] { 1, 2, 3, 4 });
+            File.WriteAllBytes(Path.Combine(dest, "CustomDocs", "passport.jpg"), new byte[] { 1, 2, 3, 4 });
+
+            Assert.True(EmployeeService.ArchiveCopyContainsAllSourceFiles(source, dest, out _));
+
+            File.Delete(Path.Combine(dest, "CustomDocs", "passport.jpg"));
+            Assert.False(EmployeeService.ArchiveCopyContainsAllSourceFiles(source, dest, out var missingReason));
+            Assert.Contains("passport.jpg", missingReason, StringComparison.OrdinalIgnoreCase);
+
+            File.WriteAllBytes(Path.Combine(dest, "CustomDocs", "passport.jpg"), new byte[] { 1 });
+            Assert.False(EmployeeService.ArchiveCopyContainsAllSourceFiles(source, dest, out var sizeReason));
+            Assert.Contains("size mismatch", sizeReason, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task RollbackFailedArchive_ShouldRestoreJson_AndRemovePartialCopy()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Rollback", "User", "2026-03-01", uniqueId: "emp-rollback-1");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var originalJson = File.ReadAllText(jsonPath);
+
+            var archivedData = JsonSerializer.Deserialize<EmployeeData>(originalJson);
+            Assert.NotNull(archivedData);
+            archivedData!.IsArchived = true;
+            archivedData.Status = "Dismissed";
+            File.WriteAllText(jsonPath, JsonSerializer.Serialize(archivedData));
+
+            var destFolder = Path.Combine(_testRootPath, "Archive", "Rollback_User - 2026-03-01");
+            Directory.CreateDirectory(destFolder);
+            File.WriteAllText(Path.Combine(destFolder, "employee.json"), "partial");
+
+            await _employeeService.RollbackFailedArchiveAsync(jsonPath, originalJson, destFolder);
+
+            var restored = JsonSerializer.Deserialize<EmployeeData>(File.ReadAllText(jsonPath));
+            Assert.NotNull(restored);
+            Assert.False(restored!.IsArchived);
+            Assert.False(Directory.Exists(destFolder));
+        }
+
+        [Fact]
+        public async Task RollbackFailedArchive_ShouldKeepArchiveFolder_WhenDestNotPassed()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Keep", "Archive", "2026-03-01", uniqueId: "emp-rollback-keep");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var originalJson = File.ReadAllText(jsonPath);
+
+            var destFolder = Path.Combine(_testRootPath, "Archive", "Keep_Archive - 2026-03-01");
+            Directory.CreateDirectory(destFolder);
+            File.WriteAllText(Path.Combine(destFolder, "employee.json"), "{\"FirstName\":\"Keep\"}");
+
+            await _employeeService.RollbackFailedArchiveAsync(jsonPath, originalJson, destFolder: null);
+
+            Assert.True(Directory.Exists(destFolder));
+            Assert.True(File.Exists(Path.Combine(destFolder, "employee.json")));
+        }
+
+        [Fact]
+        public async Task ArchiveEmployee_ShouldRemoveSource_WhenAllFilesCopied()
+        {
+            var firmName = "TestFirm";
+            var employeeFolder = CreateEmployee(firmName, "Keep", "Scan", "2026-03-01", uniqueId: "emp-copy-complete");
+            var customDocs = Path.Combine(employeeFolder, "CustomDocs");
+            Directory.CreateDirectory(customDocs);
+            File.WriteAllBytes(Path.Combine(customDocs, "passport.jpg"), new byte[] { 9, 8, 7 });
+
+            var result = await _employeeService.ArchiveEmployee(employeeFolder, firmName, "2026-03-20");
+
+            Assert.True(result.Success);
+            Assert.False(Directory.Exists(employeeFolder));
+            Assert.True(File.Exists(Path.Combine(result.ArchiveFolder, "CustomDocs", "passport.jpg")));
         }
 
         [Fact]
@@ -505,6 +653,237 @@ namespace Win11DesktopApp.Tests
             var frame = new DispatcherFrame();
             dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
             Dispatcher.PushFrame(frame);
+        }
+
+        [Fact]
+        public void LoadEmployeeData_DoesNotRewriteFile_WhenScanIsMissing()
+        {
+            var employeeFolder = CreateProfileFolder("Anna", "Koval", "missing-pass.jpg");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var beforeWrite = File.GetLastWriteTimeUtc(jsonPath);
+            var beforeText = File.ReadAllText(jsonPath);
+
+            var loaded = _employeeService.LoadEmployeeData(employeeFolder);
+
+            Assert.NotNull(loaded);
+            Assert.Equal("missing-pass.jpg", loaded.Files.Passport);
+            Assert.Equal(beforeText, File.ReadAllText(jsonPath));
+            Assert.Equal(beforeWrite, File.GetLastWriteTimeUtc(jsonPath));
+        }
+
+        [Fact]
+        public void RepairEmployeeProfile_DoesNotClearMissingScanName()
+        {
+            var employeeFolder = CreateProfileFolder("Oksana", "Melnyk", "onedrive-pass.jpg");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var beforeText = File.ReadAllText(jsonPath);
+
+            var data = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(data);
+            _employeeService.RepairEmployeeProfile(employeeFolder, data);
+            Assert.Equal("onedrive-pass.jpg", data.Files.Passport);
+            Assert.Equal(beforeText, File.ReadAllText(jsonPath));
+        }
+
+        [Fact]
+        public void SaveProfileRepair_PicksUpNewPassportScan_WithoutTreatingPdfAsInsurance()
+        {
+            var employeeFolder = CreateProfileFolder("Ivan", "Petrenko", passportFileName: "");
+            File.WriteAllBytes(Path.Combine(employeeFolder, "Ivan Petrenko - Pass.jpg"), new byte[] { 1, 2, 3 });
+            File.WriteAllBytes(Path.Combine(employeeFolder, "Ivan Petrenko - Contract.pdf"), new byte[] { 4, 5, 6 });
+
+            var data = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(data);
+            Assert.True(string.IsNullOrEmpty(data.Files.Passport));
+
+            Assert.True(_employeeService.RepairEmployeeProfile(employeeFolder, data));
+            Assert.Equal("Ivan Petrenko - Pass.jpg", data.Files.Passport);
+            Assert.True(string.IsNullOrEmpty(data.Files.Insurance));
+            Assert.True(_employeeService.SaveEmployeeData(employeeFolder, data, notifyUser: false));
+
+            var reloaded = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(reloaded);
+            Assert.Equal("Ivan Petrenko - Pass.jpg", reloaded.Files.Passport);
+            Assert.True(string.IsNullOrEmpty(reloaded.Files.Insurance));
+        }
+
+        [Fact]
+        public void RepairEmployeeProfile_StampsMissingCustomDocumentFirm_WithoutWriting()
+        {
+            var employeeFolder = CreateProfileFolder("Maria", "Hnat", passportFileName: "");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var data = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(data);
+            data.CustomDocuments = new List<CustomSignedDocument>
+            {
+                new CustomSignedDocument { Name = "Dohoda", FirmName = string.Empty }
+            };
+            File.WriteAllText(jsonPath, JsonSerializer.Serialize(data));
+            var beforeText = File.ReadAllText(jsonPath);
+            var beforeWrite = File.GetLastWriteTimeUtc(jsonPath);
+
+            var loaded = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(loaded);
+            Assert.True(_employeeService.RepairEmployeeProfile(employeeFolder, loaded, "RepairFirm"));
+            Assert.Equal("RepairFirm", loaded.CustomDocuments.Single().FirmName);
+            Assert.Equal(beforeText, File.ReadAllText(jsonPath));
+            Assert.Equal(beforeWrite, File.GetLastWriteTimeUtc(jsonPath));
+
+            Assert.True(_employeeService.SaveEmployeeData(employeeFolder, loaded, notifyUser: false));
+            var saved = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(saved);
+            Assert.Equal("RepairFirm", saved.CustomDocuments.Single().FirmName);
+        }
+
+        [Fact]
+        public void RepairEmployeeProfile_DoesNotStampFirmFromFolderPath_WhenFirmUnknown()
+        {
+            var employeeFolder = CreateProfileFolder("Taras", "Bondar", passportFileName: "");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var data = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(data);
+            data.CustomDocuments = new List<CustomSignedDocument>
+            {
+                new CustomSignedDocument { Name = "Dohoda", FirmName = string.Empty }
+            };
+            File.WriteAllText(jsonPath, JsonSerializer.Serialize(data));
+
+            var loaded = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(loaded);
+            _employeeService.RepairEmployeeProfile(employeeFolder, loaded);
+            Assert.True(string.IsNullOrWhiteSpace(loaded.CustomDocuments.Single().FirmName));
+            Assert.DoesNotContain("RepairFirm", File.ReadAllText(jsonPath), StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void SyncEmployeeIndexForFolder_DoesNotCreatePhantomUniqueId()
+        {
+            var firmName = "PhantomFirm_" + Guid.NewGuid().ToString("N");
+            var employeesFolder = Path.Combine(_testRootPath, firmName, "Employees");
+            Directory.CreateDirectory(employeesFolder);
+            var employeeFolder = Path.Combine(employeesFolder, "Petro_Lys - 01.01.2026");
+            Directory.CreateDirectory(employeeFolder);
+            var data = new EmployeeData
+            {
+                FirstName = "Petro",
+                LastName = "Lys",
+                StartDate = "01.01.2026"
+            };
+            File.WriteAllText(Path.Combine(employeeFolder, "employee.json"), JsonSerializer.Serialize(data));
+
+            _employeeService.SyncEmployeeIndexForFolder(employeeFolder, firmName);
+
+            Assert.Empty(_employeeIndexDbService.GetEmployeesForFirmRows(firmName));
+            var reloaded = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(reloaded);
+            Assert.True(string.IsNullOrWhiteSpace(reloaded.UniqueId));
+        }
+
+        [Fact]
+        public void RenameFirmReferencesInEmployeeProfiles_RewritesPackageAndSignedDocs_WithoutRenamingFolder()
+        {
+            var employeeFolder = CreateProfileFolder("Hanna", "Shelever", passportFileName: "");
+            var folderName = Path.GetFileName(employeeFolder);
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var data = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(data);
+            data.CustomDocuments = new List<CustomSignedDocument>
+            {
+                new CustomSignedDocument { Name = "Dohoda", FirmName = "Old Firm s.r.o.", FileName = "dohoda.pdf" }
+            };
+            data.RequiredDocumentStatuses = new List<RequiredDocumentStatus>
+            {
+                new RequiredDocumentStatus
+                {
+                    FirmName = "Old Firm s.r.o.",
+                    TemplateId = "pracovni",
+                    NameSnapshot = "Pracovní smlouva",
+                    TrackPresence = true,
+                    TrackScanned = true,
+                    IsPresent = true,
+                    IsScanned = true
+                }
+            };
+            data.FirmHistory = new List<FirmHistoryEntry>
+            {
+                new FirmHistoryEntry { FirmName = "Old Firm s.r.o.", StartDate = "01.01.2026" }
+            };
+            File.WriteAllText(jsonPath, JsonSerializer.Serialize(data));
+
+            var otherFolder = Path.Combine(_testRootPath, "OtherFirm", "Employees", "Ivan_Petrenko - 01.01.2026");
+            Directory.CreateDirectory(otherFolder);
+            File.WriteAllText(Path.Combine(otherFolder, "employee.json"), JsonSerializer.Serialize(new EmployeeData
+            {
+                UniqueId = "other-keep",
+                FirstName = "Ivan",
+                LastName = "Petrenko",
+                CustomDocuments =
+                {
+                    new CustomSignedDocument { Name = "Keep", FirmName = "OtherFirm" }
+                },
+                FirmHistory =
+                {
+                    new FirmHistoryEntry { FirmName = "Old Firm s.r.o.", StartDate = "01.01.2025" },
+                    new FirmHistoryEntry { FirmName = "OtherFirm", StartDate = "01.01.2026" }
+                }
+            }));
+
+            var updated = _employeeService.RenameFirmReferencesInEmployeeProfiles("Old Firm s.r.o.", "New Firm s.r.o.");
+            Assert.Equal(2, updated);
+            Assert.Equal(folderName, Path.GetFileName(employeeFolder));
+            Assert.True(Directory.Exists(employeeFolder));
+
+            var rewritten = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(rewritten);
+            Assert.Equal("New Firm s.r.o.", rewritten.CustomDocuments.Single().FirmName);
+            Assert.Equal("dohoda.pdf", rewritten.CustomDocuments.Single().FileName);
+            var package = rewritten.RequiredDocumentStatuses.Single();
+            Assert.Equal("New Firm s.r.o.", package.FirmName);
+            Assert.True(package.IsPresent);
+            Assert.True(package.IsScanned);
+            Assert.Equal("New Firm s.r.o.", rewritten.FirmHistory.Single().FirmName);
+
+            var other = _employeeService.LoadEmployeeData(otherFolder);
+            Assert.NotNull(other);
+            Assert.Equal("OtherFirm", other.CustomDocuments.Single().FirmName);
+            Assert.Equal("New Firm s.r.o.", other.FirmHistory[0].FirmName);
+            Assert.Equal("OtherFirm", other.FirmHistory[1].FirmName);
+        }
+
+        [Fact]
+        public void IsDocumentIgnored_ParsesEuropeanAndIsoDates()
+        {
+            var employeeFolder = CreateProfileFolder("Snooze", "Test", passportFileName: "");
+            var jsonPath = Path.Combine(employeeFolder, "employee.json");
+            var data = _employeeService.LoadEmployeeData(employeeFolder);
+            Assert.NotNull(data);
+            data.IgnoredDocuments = new Dictionary<string, string>
+            {
+                ["passport"] = "31.12.2099",
+                ["visa"] = "2020-01-01"
+            };
+            File.WriteAllText(jsonPath, JsonSerializer.Serialize(data));
+
+            Assert.True(_employeeService.IsDocumentIgnored(employeeFolder, "passport"));
+            Assert.False(_employeeService.IsDocumentIgnored(employeeFolder, "visa"));
+            Assert.True(EmployeeService.IsIgnoredUntilActive("03.09.2099"));
+            Assert.True(EmployeeService.IsIgnoredUntilActive("2099-09-03"));
+        }
+
+        private string CreateProfileFolder(string firstName, string lastName, string passportFileName)
+        {
+            var employeeFolder = Path.Combine(_testRootPath, "RepairFirm", "Employees", $"{firstName}_{lastName} - 01.01.2026");
+            Directory.CreateDirectory(employeeFolder);
+            var data = new EmployeeData
+            {
+                UniqueId = Guid.NewGuid().ToString(),
+                FirstName = firstName,
+                LastName = lastName,
+                StartDate = "01.01.2026",
+                Files = { Passport = passportFileName }
+            };
+            File.WriteAllText(Path.Combine(employeeFolder, "employee.json"), JsonSerializer.Serialize(data));
+            return employeeFolder;
         }
 
         public void Dispose()

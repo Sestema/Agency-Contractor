@@ -205,9 +205,23 @@ namespace Win11DesktopApp.ViewModels
                 string.Format(TryL("RecentlyDeletedActionRestoredDescription") ?? "Employee {0} was restored from Recently Deleted.", item.FullName),
                 employeeFolder: item.OriginalEmployeeFolder);
 
-            ToastService.Instance.Success(string.Format(
-                TryL("RecentlyDeletedRestoreSuccess") ?? "Employee {0} was restored.",
-                item.FullName));
+            if (result.FinanceRemapPartial)
+            {
+                MessageBox.Show(
+                    string.Format(
+                        TryL("RecentlyDeletedRestoreFinancePartial")
+                        ?? "Employee {0} was restored, but financial records were only partly updated. Check advances.",
+                        item.FullName),
+                    TryL("TitleWarning") ?? "Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            else
+            {
+                ToastService.Instance.Success(string.Format(
+                    TryL("RecentlyDeletedRestoreSuccess") ?? "Employee {0} was restored.",
+                    item.FullName));
+            }
             ClosePreviewIfMatches(item);
             LoadItems();
         }

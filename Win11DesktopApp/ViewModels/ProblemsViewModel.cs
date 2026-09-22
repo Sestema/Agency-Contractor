@@ -871,7 +871,7 @@ namespace Win11DesktopApp.ViewModels
             if (ignoredDocuments == null || !ignoredDocuments.TryGetValue(docType, out var candidate) || string.IsNullOrWhiteSpace(candidate))
                 return false;
 
-            if (!DateTime.TryParse(candidate, out var until) || DateTime.Now > until)
+            if (!EmployeeService.IsIgnoredUntilActive(candidate))
                 return false;
 
             untilStr = candidate;

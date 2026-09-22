@@ -3331,22 +3331,32 @@ namespace Win11DesktopApp.ViewModels
                     agencyName: agencyByFirm.TryGetValue(g.Key, out var agency) ? agency : string.Empty))
                 .ToList();
 
-            var selectDialog = new Views.ExportFirmSelectWindow(firmData, _appSettingsService);
+            var selectDialog = new Views.ExportFirmSelectWindow(firmData, _appSettingsService, ActiveCustomFields.ToList());
             selectDialog.Owner = Application.Current.MainWindow;
             if (selectDialog.ShowDialog() != true) return;
 
             var selectedFirms = selectDialog.SelectedFirms;
             var exportEntries = Entries.Where(e => selectedFirms.Contains(e.FirmName)).ToList();
+            if (selectDialog.HideZeroPayout)
+                exportEntries = exportEntries.Where(e => e.HasExportMoney).ToList();
 
-            if (exportEntries.Count == 0) return;
+            if (exportEntries.Count == 0)
+            {
+                StatusMessage = L("FinSalaryNoData") is string n2 && n2.Length > 0 ? n2 : "No data to export";
+                return;
+            }
 
             if (selectDialog.ExportAsPdf)
-                ExportSelectedFirmsToPdf(selectedFirms, exportEntries);
+                ExportSelectedFirmsToPdf(selectedFirms, exportEntries, selectDialog.ColumnSelection, selectDialog.FontStep);
             else
-                ExportSelectedFirmsToExcel(selectedFirms, exportEntries);
+                ExportSelectedFirmsToExcel(selectedFirms, exportEntries, selectDialog.ColumnSelection, selectDialog.FontStep);
         }
 
-        private void ExportSelectedFirmsToExcel(HashSet<string> selectedFirms, List<SalaryEntry> exportEntries)
+        private void ExportSelectedFirmsToExcel(
+            HashSet<string> selectedFirms,
+            List<SalaryEntry> exportEntries,
+            SalaryExportColumnSelection? columnSelection = null,
+            int fontStep = SalaryExportFontScale.DefaultStep)
         {
             var dlg = new SaveFileDialog
             {
@@ -3359,19 +3369,23 @@ namespace Win11DesktopApp.ViewModels
             {
                 using var wb = new XLWorkbook();
                 var ws = wb.AddWorksheet(MonthDisplay);
-                var fields = ActiveCustomFields.ToList();
-                int fixedBefore = 6;
-                int dynamicCount = fields.Count;
-                int totalCols = fixedBefore + dynamicCount + 3;
+                var columns = columnSelection ?? SalaryExportColumnSelection.All;
+                var fields = ActiveCustomFields
+                    .Where(f => columns.IsVisible(SalaryExportColumnKeys.Custom(f.Id)))
+                    .ToList();
+                int totalCols = columns.CountVisible(fields);
                 var accentBlue = XLColor.FromHtml("#4472C4");
+                var tableFont = SalaryExportFontScale.ExcelTable(fontStep);
+                var firmFont = SalaryExportFontScale.ExcelFirm(fontStep);
+                var smallFont = SalaryExportFontScale.ExcelSmall(fontStep);
 
-                ws.Style.Font.FontSize = 13;
+                ws.Style.Font.FontSize = tableFont;
 
                 int row = ExcelWriteTitle(ws, totalCols);
                 int headerRow = row;
-                row = ExcelWriteHeader(ws, row, fields, totalCols, accentBlue);
-                row = ExcelWriteDataRows(ws, row, exportEntries, fields, totalCols, accentBlue);
-                row = ExcelWriteTotals(ws, row, exportEntries, fields, fixedBefore, dynamicCount, totalCols, accentBlue);
+                row = ExcelWriteHeader(ws, row, fields, columns, totalCols, accentBlue, tableFont);
+                row = ExcelWriteDataRows(ws, row, exportEntries, fields, columns, totalCols, accentBlue, firmFont, smallFont);
+                row = ExcelWriteTotals(ws, row, exportEntries, fields, columns, totalCols, accentBlue);
 
                 var dataRange = ws.Range(headerRow, 1, row - 1, totalCols);
                 dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
@@ -3387,9 +3401,10 @@ namespace Win11DesktopApp.ViewModels
 
                 ws.Columns().AdjustToContents();
                 if (ws.Column(1).Width < 6) ws.Column(1).Width = 6;
-                ws.Column(2).Width = 28;
-                for (int c = 3; c <= totalCols; c++)
-                    if (ws.Column(c).Width < 14) ws.Column(c).Width = 14;
+                var nameCol = columns.IsVisible(SalaryExportColumnKeys.Firm) ? 2 : 1;
+                ws.Column(nameCol).Width = Math.Max(ws.Column(nameCol).Width, 28);
+                for (int c = 1; c <= totalCols; c++)
+                    if (c != nameCol && ws.Column(c).Width < 14) ws.Column(c).Width = 14;
 
                 ws.SheetView.FreezeRows(headerRow);
                 wb.SaveAs(dlg.FileName);
@@ -3406,7 +3421,11 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
-        private void ExportSelectedFirmsToPdf(HashSet<string> selectedFirms, List<SalaryEntry> exportEntries)
+        private void ExportSelectedFirmsToPdf(
+            HashSet<string> selectedFirms,
+            List<SalaryEntry> exportEntries,
+            SalaryExportColumnSelection? columnSelection = null,
+            int fontStep = SalaryExportFontScale.DefaultStep)
         {
             var dlg = new SaveFileDialog
             {
@@ -3417,7 +3436,10 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var fields = ActiveCustomFields.ToList();
+                var columns = columnSelection ?? SalaryExportColumnSelection.All;
+                var fields = ActiveCustomFields
+                    .Where(f => columns.IsVisible(SalaryExportColumnKeys.Custom(f.Id)))
+                    .ToList();
                 var expenses = _financeService.GetFirmExpensesForFirms(_selectedYear, _selectedMonth, selectedFirms);
                 var labels = BuildSalaryPdfExportLabels();
 
@@ -3429,7 +3451,9 @@ namespace Win11DesktopApp.ViewModels
                     fields,
                     expenses,
                     labels,
-                    CurrencySymbol);
+                    CurrencySymbol,
+                    columns,
+                    fontStep);
 
                 StatusMessage = L("FinSalaryExportedPdf") is string pdfMsg && pdfMsg.Length > 0
                     ? pdfMsg
@@ -3438,6 +3462,14 @@ namespace Win11DesktopApp.ViewModels
                 _activityLogService.Log("ExportPdf", "Export", "", "",
                     $"Експортовано виплату {MonthDisplay} → PDF",
                     details: BuildSalaryExportDetails(selectedFirms, exportEntries, fields, dlg.FileName));
+                try
+                {
+                    Process.Start(new ProcessStartInfo(dlg.FileName) { UseShellExecute = true });
+                }
+                catch (Exception ex2)
+                {
+                    LoggingService.LogWarning("SalaryViewModel.ExportPdf", $"Open file failed: {ex2.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -3483,14 +3515,27 @@ namespace Win11DesktopApp.ViewModels
             return 3;
         }
 
-        private int ExcelWriteHeader(IXLWorksheet ws, int row, List<CustomSalaryField> fields, int totalCols, XLColor accentBlue)
+        private int ExcelWriteHeader(
+            IXLWorksheet ws,
+            int row,
+            List<CustomSalaryField> fields,
+            SalaryExportColumnSelection columns,
+            int totalCols,
+            XLColor accentBlue,
+            double tableFont)
         {
-            var headerCols = new List<string>
-            {
-                DocL("FinColFirm") ?? "Firm", DocL("FinColName") ?? "Name",
-                DocL("FinColHours") ?? "Hours", DocL("FinColRate") ?? "Rate",
-                DocL("FinColGross") ?? "Gross", DocL("FinColAdvance") ?? "Advance"
-            };
+            var headerCols = new List<string>();
+            if (columns.IsVisible(SalaryExportColumnKeys.Firm))
+                headerCols.Add(DocL("FinColFirm") ?? "Firm");
+            headerCols.Add(DocL("FinColName") ?? "Name");
+            if (columns.IsVisible(SalaryExportColumnKeys.Hours))
+                headerCols.Add(DocL("FinColHours") ?? "Hours");
+            if (columns.IsVisible(SalaryExportColumnKeys.Rate))
+                headerCols.Add(DocL("FinColRate") ?? "Rate");
+            if (columns.IsVisible(SalaryExportColumnKeys.Gross))
+                headerCols.Add(DocL("FinColGross") ?? "Gross");
+            if (columns.IsVisible(SalaryExportColumnKeys.Advance))
+                headerCols.Add(DocL("FinColAdvance") ?? "Advance");
             foreach (var f in fields)
             {
                 string prefix = f.Operation switch
@@ -3500,16 +3545,19 @@ namespace Win11DesktopApp.ViewModels
                 };
                 headerCols.Add($"{prefix}{f.Name}");
             }
-            headerCols.Add(DocL("FinColNet") ?? "Net Pay");
-            headerCols.Add(DocL("FinColNote") ?? "Note");
-            headerCols.Add(DocL("FinColPaid") ?? "Paid");
+            if (columns.IsVisible(SalaryExportColumnKeys.Net))
+                headerCols.Add(DocL("FinColNet") ?? "Net Pay");
+            if (columns.IsVisible(SalaryExportColumnKeys.Note))
+                headerCols.Add(DocL("FinColNote") ?? "Note");
+            if (columns.IsVisible(SalaryExportColumnKeys.Paid))
+                headerCols.Add(DocL("FinColPaid") ?? "Paid");
 
             for (int c = 0; c < headerCols.Count; c++)
             {
                 var cell = ws.Cell(row, c + 1);
                 cell.Value = headerCols[c];
                 cell.Style.Font.Bold = true;
-                cell.Style.Font.FontSize = 13;
+                cell.Style.Font.FontSize = tableFont;
                 cell.Style.Fill.BackgroundColor = accentBlue;
                 cell.Style.Font.FontColor = XLColor.White;
                 cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -3517,12 +3565,13 @@ namespace Win11DesktopApp.ViewModels
                 cell.Style.Border.BottomBorder = XLBorderStyleValues.Medium;
                 cell.Style.Border.BottomBorderColor = XLColor.FromHtml("#2F5496");
             }
-            ws.Row(row).Height = 24;
+            ws.Row(row).Height = Math.Max(24, tableFont + 11);
             return row + 1;
         }
 
         private int ExcelWriteDataRows(IXLWorksheet ws, int row, List<SalaryEntry> exportEntries,
-            List<CustomSalaryField> fields, int totalCols, XLColor accentBlue)
+            List<CustomSalaryField> fields, SalaryExportColumnSelection columns, int totalCols, XLColor accentBlue,
+            double firmFont, double smallFont)
         {
             var lightBlue = XLColor.FromHtml("#D9E2F3");
             var lightGreen = XLColor.FromHtml("#E2EFDA");
@@ -3535,14 +3584,14 @@ namespace Win11DesktopApp.ViewModels
                 firmHeaderRange.Merge();
                 ws.Cell(row, 1).Value = group.Key;
                 ws.Cell(row, 1).Style.Font.Bold = true;
-                ws.Cell(row, 1).Style.Font.FontSize = 15;
+                ws.Cell(row, 1).Style.Font.FontSize = firmFont;
                 ws.Cell(row, 1).Style.Fill.BackgroundColor = lightBlue;
                 ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#2F5496");
                 ws.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 ws.Cell(row, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 firmHeaderRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
                 firmHeaderRange.Style.Border.OutsideBorderColor = accentBlue;
-                ws.Row(row).Height = 26;
+                ws.Row(row).Height = Math.Max(26, firmFont + 11);
                 row++;
                 isAlternate = false;
 
@@ -3551,10 +3600,13 @@ namespace Win11DesktopApp.ViewModels
                     int col = 1;
                     var altColor = isAlternate ? XLColor.FromHtml("#F7F9FC") : XLColor.White;
 
-                    ws.Cell(row, col).Value = entry.FirmName;
-                    ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#2F5496");
-                    ws.Cell(row, col).Style.Font.FontSize = 12;
-                    col++;
+                    if (columns.IsVisible(SalaryExportColumnKeys.Firm))
+                    {
+                        ws.Cell(row, col).Value = entry.FirmName;
+                        ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#2F5496");
+                        ws.Cell(row, col).Style.Font.FontSize = smallFont;
+                        col++;
+                    }
 
                     ws.Cell(row, col).Value = entry.DisplayName;
                     ws.Cell(row, col).Style.Font.Bold = true;
@@ -3562,31 +3614,43 @@ namespace Win11DesktopApp.ViewModels
                         ws.Cell(row, col).Style.Fill.BackgroundColor = lightGreen;
                     col++;
 
-                    ws.Cell(row, col).Value = entry.HoursWorked;
-                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.0";
-                    ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    ws.Cell(row, col).Style.Font.Bold = true;
-                    col++;
+                    if (columns.IsVisible(SalaryExportColumnKeys.Hours))
+                    {
+                        ws.Cell(row, col).Value = entry.HoursWorked;
+                        ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.0";
+                        ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        ws.Cell(row, col).Style.Font.Bold = true;
+                        col++;
+                    }
 
-                    ws.Cell(row, col).Value = entry.HourlyRate;
-                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0";
-                    ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    ws.Cell(row, col).Style.Font.Bold = true;
-                    col++;
+                    if (columns.IsVisible(SalaryExportColumnKeys.Rate))
+                    {
+                        ws.Cell(row, col).Value = entry.HourlyRate;
+                        ws.Cell(row, col).Style.NumberFormat.Format = "#,##0";
+                        ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        ws.Cell(row, col).Style.Font.Bold = true;
+                        col++;
+                    }
 
-                    ws.Cell(row, col).Value = entry.GrossSalary;
-                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
-                    ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    ws.Cell(row, col).Style.Font.Bold = true;
-                    col++;
+                    if (columns.IsVisible(SalaryExportColumnKeys.Gross))
+                    {
+                        ws.Cell(row, col).Value = entry.GrossSalary;
+                        ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
+                        ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        ws.Cell(row, col).Style.Font.Bold = true;
+                        col++;
+                    }
 
-                    ws.Cell(row, col).Value = entry.Advance;
-                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
-                    ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    ws.Cell(row, col).Style.Font.Bold = true;
-                    if (entry.Advance > 0)
-                        ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#C62828");
-                    col++;
+                    if (columns.IsVisible(SalaryExportColumnKeys.Advance))
+                    {
+                        ws.Cell(row, col).Value = entry.Advance;
+                        ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
+                        ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        ws.Cell(row, col).Style.Font.Bold = true;
+                        if (entry.Advance > 0)
+                            ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#C62828");
+                        col++;
+                    }
 
                     foreach (var f in fields)
                     {
@@ -3598,25 +3662,34 @@ namespace Win11DesktopApp.ViewModels
                         col++;
                     }
 
-                    ws.Cell(row, col).Value = entry.NetSalary;
-                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
-                    ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    ws.Cell(row, col).Style.Font.Bold = true;
-                    ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#1565C0");
-                    col++;
-
-                    ws.Cell(row, col).Value = entry.Note;
-                    ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#888888");
-                    ws.Cell(row, col).Style.Font.Bold = true;
-                    ws.Cell(row, col).Style.Font.Italic = true;
-                    col++;
-
-                    ws.Cell(row, col).Value = entry.IsPaid ? "✓" : "";
-                    ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    if (entry.IsPaid)
+                    if (columns.IsVisible(SalaryExportColumnKeys.Net))
                     {
-                        ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#2E7D32");
+                        ws.Cell(row, col).Value = entry.NetSalary;
+                        ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
+                        ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         ws.Cell(row, col).Style.Font.Bold = true;
+                        ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#1565C0");
+                        col++;
+                    }
+
+                    if (columns.IsVisible(SalaryExportColumnKeys.Note))
+                    {
+                        ws.Cell(row, col).Value = entry.Note;
+                        ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#888888");
+                        ws.Cell(row, col).Style.Font.Bold = true;
+                        ws.Cell(row, col).Style.Font.Italic = true;
+                        col++;
+                    }
+
+                    if (columns.IsVisible(SalaryExportColumnKeys.Paid))
+                    {
+                        ws.Cell(row, col).Value = entry.IsPaid ? "✓" : "";
+                        ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        if (entry.IsPaid)
+                        {
+                            ws.Cell(row, col).Style.Font.FontColor = XLColor.FromHtml("#2E7D32");
+                            ws.Cell(row, col).Style.Font.Bold = true;
+                        }
                     }
 
                     var rowBg = entry.IsPaid ? XLColor.FromHtml("#E8F5E9") : altColor;
@@ -3633,8 +3706,14 @@ namespace Win11DesktopApp.ViewModels
             return row;
         }
 
-        private int ExcelWriteTotals(IXLWorksheet ws, int row, List<SalaryEntry> exportEntries,
-            List<CustomSalaryField> fields, int fixedBefore, int dynamicCount, int totalCols, XLColor accentBlue)
+        private int ExcelWriteTotals(
+            IXLWorksheet ws,
+            int row,
+            List<SalaryEntry> exportEntries,
+            List<CustomSalaryField> fields,
+            SalaryExportColumnSelection columns,
+            int totalCols,
+            XLColor accentBlue)
         {
             var expTotalHours = exportEntries.Sum(e => e.HoursWorked);
             var expTotalGross = exportEntries.Sum(e => e.GrossSalary);
@@ -3650,35 +3729,57 @@ namespace Win11DesktopApp.ViewModels
             ws.Row(totalsRow).Style.Font.Bold = true;
             ws.Row(totalsRow).Height = 24;
 
-            ws.Cell(totalsRow, 3).Value = expTotalHours;
-            ws.Cell(totalsRow, 3).Style.NumberFormat.Format = "#,##0.0";
-            ws.Cell(totalsRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            int col = 1;
+            if (columns.IsVisible(SalaryExportColumnKeys.Firm))
+                col++;
+            col++; // name
 
-            ws.Cell(totalsRow, fixedBefore - 1).Value = expTotalGross;
-            ws.Cell(totalsRow, fixedBefore - 1).Style.NumberFormat.Format = ExcelCurrencyFormat;
-            ws.Cell(totalsRow, fixedBefore - 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-            var expTotalAdvance = exportEntries.Sum(e => e.Advance);
-            ws.Cell(totalsRow, fixedBefore).Value = expTotalAdvance;
-            ws.Cell(totalsRow, fixedBefore).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(totalsRow, fixedBefore).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-            if (expTotalAdvance > 0)
-                ws.Cell(totalsRow, fixedBefore).Style.Font.FontColor = XLColor.FromHtml("#C62828");
-
-            for (int fi = 0; fi < fields.Count; fi++)
+            if (columns.IsVisible(SalaryExportColumnKeys.Hours))
             {
-                int dynCol = fixedBefore + 1 + fi;
-                var fieldTotal = exportEntries.Sum(e => e.CustomValues.TryGetValue(fields[fi].Id, out var v) ? v : 0);
-                ws.Cell(totalsRow, dynCol).Value = fieldTotal;
-                ws.Cell(totalsRow, dynCol).Style.NumberFormat.Format = "#,##0.00";
-                ws.Cell(totalsRow, dynCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                ws.Cell(totalsRow, col).Value = expTotalHours;
+                ws.Cell(totalsRow, col).Style.NumberFormat.Format = "#,##0.0";
+                ws.Cell(totalsRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                col++;
             }
 
-            int netCol = fixedBefore + dynamicCount + 1;
-            ws.Cell(totalsRow, netCol).Value = expTotalNet;
-            ws.Cell(totalsRow, netCol).Style.NumberFormat.Format = ExcelCurrencyFormat;
-            ws.Cell(totalsRow, netCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-            ws.Cell(totalsRow, netCol).Style.Font.FontColor = XLColor.FromHtml("#1565C0");
+            if (columns.IsVisible(SalaryExportColumnKeys.Rate))
+                col++;
+
+            if (columns.IsVisible(SalaryExportColumnKeys.Gross))
+            {
+                ws.Cell(totalsRow, col).Value = expTotalGross;
+                ws.Cell(totalsRow, col).Style.NumberFormat.Format = ExcelCurrencyFormat;
+                ws.Cell(totalsRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                col++;
+            }
+
+            if (columns.IsVisible(SalaryExportColumnKeys.Advance))
+            {
+                var expTotalAdvance = exportEntries.Sum(e => e.Advance);
+                ws.Cell(totalsRow, col).Value = expTotalAdvance;
+                ws.Cell(totalsRow, col).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(totalsRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                if (expTotalAdvance > 0)
+                    ws.Cell(totalsRow, col).Style.Font.FontColor = XLColor.FromHtml("#C62828");
+                col++;
+            }
+
+            foreach (var field in fields)
+            {
+                var fieldTotal = exportEntries.Sum(e => e.CustomValues.TryGetValue(field.Id, out var v) ? v : 0);
+                ws.Cell(totalsRow, col).Value = fieldTotal;
+                ws.Cell(totalsRow, col).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(totalsRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                col++;
+            }
+
+            if (columns.IsVisible(SalaryExportColumnKeys.Net))
+            {
+                ws.Cell(totalsRow, col).Value = expTotalNet;
+                ws.Cell(totalsRow, col).Style.NumberFormat.Format = ExcelCurrencyFormat;
+                ws.Cell(totalsRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                ws.Cell(totalsRow, col).Style.Font.FontColor = XLColor.FromHtml("#1565C0");
+            }
 
             return totalsRow + 1;
         }

@@ -24,6 +24,7 @@ namespace Win11DesktopApp.Services
         private readonly SyncEventService? _syncEventService;
         private readonly FirmFinanceRenameService? _firmFinanceRenameService;
         private AdminMirrorSyncService? _adminMirrorSyncService;
+        private EmployeeService? _employeeService;
         private EmployerCompany? _selectedCompany;
 
         public ObservableCollection<EmployerCompany> Companies => _companies;
@@ -193,6 +194,11 @@ namespace Win11DesktopApp.Services
             _adminMirrorSyncService = adminMirrorSyncService ?? throw new InvalidOperationException("AdminMirrorSyncService is not initialized.");
         }
 
+        internal void InitializeEmployeeService(EmployeeService employeeService)
+        {
+            _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
+        }
+
         private static bool HasHideSchedule(EmployerCompany company)
             => company.HiddenFromYear > 0 && company.HiddenFromMonth is >= 1 and <= 12;
 
@@ -330,6 +336,30 @@ namespace Win11DesktopApp.Services
                 _folderService.EnsureCompanyStructure(newName);
 
                 await _persistenceService.SaveCompaniesAsync(_companies);
+
+                if (!string.IsNullOrEmpty(oldName) && oldName != newName)
+                {
+                    var namesToReplace = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    if (!string.IsNullOrWhiteSpace(oldName))
+                        namesToReplace.Add(oldName.Trim());
+                    foreach (var period in previousHistory)
+                    {
+                        if (string.IsNullOrWhiteSpace(period.Name)
+                            || string.Equals(period.Name.Trim(), newName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        namesToReplace.Add(period.Name.Trim());
+                    }
+
+                    var profileCount = 0;
+                    if (_employeeService != null)
+                    {
+                        foreach (var fromName in namesToReplace)
+                            profileCount += _employeeService.RenameFirmReferencesInEmployeeProfiles(fromName, newName);
+                    }
+
+                    LoggingService.LogInfo("CompanyService.UpdateCompany",
+                        $"Updated {profileCount} employee profile(s) after company rename from '{oldName}' to '{newName}'.");
+                }
 
                 _tagCatalogService.RemoveTagsForCompany(oldName);
                 if (company.Agency != null && !string.IsNullOrEmpty(company.Agency.Name))

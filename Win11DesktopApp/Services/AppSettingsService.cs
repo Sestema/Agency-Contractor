@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Win11DesktopApp.Models;
 using Win11DesktopApp.Telegram;
 
 namespace Win11DesktopApp.Services
@@ -231,6 +232,9 @@ namespace Win11DesktopApp.Services
             public bool WindowMaximized { get; set; } = false;
             public double ExportFirmSelectWindowWidth { get; set; } = -1;
             public double ExportFirmSelectWindowHeight { get; set; } = -1;
+            public bool SalaryExportHideZeroPayout { get; set; } = false;
+            public List<string> SalaryExportHiddenColumns { get; set; } = new();
+            public int SalaryExportFontStep { get; set; } = 1;
             public List<string> MenuCardOrder { get; set; } = new List<string>();
             public string DashSlot0 { get; set; } = "expiring";
             public string DashSlot1 { get; set; } = "companies";
@@ -750,6 +754,12 @@ namespace Win11DesktopApp.Services
             Settings.WindowHeight = SafeDouble(Settings.WindowHeight);
             Settings.ExportFirmSelectWindowWidth = SafeDouble(Settings.ExportFirmSelectWindowWidth);
             Settings.ExportFirmSelectWindowHeight = SafeDouble(Settings.ExportFirmSelectWindowHeight);
+            Settings.SalaryExportHiddenColumns = Settings.SalaryExportHiddenColumns?
+                .Where(key => !string.IsNullOrWhiteSpace(key))
+                .Select(key => key.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? new List<string>();
+            Settings.SalaryExportFontStep = SalaryExportFontScale.Clamp(Settings.SalaryExportFontStep);
             Settings.EmployeeZoomLevel = SafeDouble(Settings.EmployeeZoomLevel, 1.0);
             Settings.EmployeeTileSizeStep = Math.Min(6, Math.Max(1, Settings.EmployeeTileSizeStep));
             Settings.ArchiveZoomLevel = SafeDouble(Settings.ArchiveZoomLevel, 1.0);

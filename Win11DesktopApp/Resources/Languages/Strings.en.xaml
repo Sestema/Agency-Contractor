@@ -540,7 +540,7 @@
     <sys:String x:Key="LabelPosition">Position</sys:String>
     <sys:String x:Key="LabelContractType">Contract Type</sys:String>
     <sys:String x:Key="TitleEmployeesGeneric">Employees</sys:String>
-    <sys:String x:Key="EmployeesSearchPlaceholder">Search by name, passport, visa, insurance</sys:String>
+    <sys:String x:Key="EmployeesSearchPlaceholder">Search by name, phone, passport, visa, insurance</sys:String>
     <sys:String x:Key="MsgEmployeesSelectCompany">Please select a company to view employees.</sys:String>
     <sys:String x:Key="BtnSelectCompany">Select company</sys:String>
     <sys:String x:Key="MsgDeleteEmployee">Delete employee?</sys:String>
@@ -937,6 +937,7 @@
     <sys:String x:Key="RecentlyDeletedMoveSuccess">Employee {0} was moved to Recently Deleted.</sys:String>
     <sys:String x:Key="RecentlyDeletedMoveFailed">Failed to move employee to Recently Deleted: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreSuccess">Employee {0} was restored.</sys:String>
+    <sys:String x:Key="RecentlyDeletedRestoreFinancePartial">Employee {0} was restored, but financial records were only partly updated. Check advances.</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreFailed">Failed to restore employee: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveSuccess">Employee {0} was moved to archive.</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveFailed">Failed to move employee to archive: {0}</sys:String>
@@ -1832,6 +1833,16 @@
     <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
     <sys:String x:Key="FinSalaryExportedPdf">Exported PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Select at least one firm</sys:String>
+    <sys:String x:Key="FinExportSettings">Export settings</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayout">Hide people with nothing to pay</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOnTitle">Checked</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOn">PDF and Excel will skip people with 0 to pay, 0 advance, and 0 in every custom column. The salary screen stays unchanged.</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOffTitle">Unchecked</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOff">The file will include every row as on screen — including people with nothing to pay.</sys:String>
+    <sys:String x:Key="FinExportFontSizeTitle">Font size</sys:String>
+    <sys:String x:Key="FinExportFontSizeHint">1 is the current size. Move right to make firm names, names and numbers larger in PDF and Excel.</sys:String>
+    <sys:String x:Key="FinExportColumnsTitle">Columns in the file</sys:String>
+    <sys:String x:Key="FinExportColumnsHint">Checked columns appear in PDF and Excel. Unchecked columns are skipped. Firm and name are always in the file.</sys:String>
     <sys:String x:Key="BtnDone">Done</sys:String>
 
     <!-- Hardcoded strings localization -->
@@ -1897,6 +1908,7 @@
     <sys:String x:Key="MsgOpenFolderFail">Could not open folder.</sys:String>
     <sys:String x:Key="MsgEnterNewDate">Enter a new date.</sys:String>
     <sys:String x:Key="MsgSaveFail">Could not save.</sys:String>
+    <sys:String x:Key="MsgSaveError">Could not save the company list: the database is busy.</sys:String>
     <sys:String x:Key="MsgGenerating">Generating document...</sys:String>
     <sys:String x:Key="MsgTemplateNotFound">Template file not found.</sys:String>
     <sys:String x:Key="MsgProfileSaveFail">Could not save profile.</sys:String>

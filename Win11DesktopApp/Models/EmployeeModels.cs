@@ -131,13 +131,10 @@ namespace Win11DesktopApp.EmployeeModels
     }
 
     /// <summary>
-    /// The two fields of employee.json that the expiry scans need, so they can read the file
-    /// without going through <see cref="EmployeeData"/>. Loading the full model runs the repair
-    /// pass in EmployeeService.LoadEmployeeData, which saves the file when it fixes something -
-    /// and those scans run for every employee of every company, including at startup for the
-    /// menu badge. On a shared folder that meant merely viewing a list could rewrite a file
-    /// another machine was editing. Unknown properties are ignored on deserialize, so this reads
-    /// the same file without touching its format.
+    /// The two fields of employee.json that the expiry scans need. Unknown properties are
+    /// ignored on deserialize, so this reads the same file without touching its format.
+    /// LoadEmployeeData is also read-only now; this type still avoids allocating a full
+    /// <see cref="EmployeeData"/> on the menu-badge walk.
     /// </summary>
     public class EmployeeExpiryDocuments
     {

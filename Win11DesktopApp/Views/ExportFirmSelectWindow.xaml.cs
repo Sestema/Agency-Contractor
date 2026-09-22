@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
 
 namespace Win11DesktopApp.Views
@@ -74,22 +75,57 @@ namespace Win11DesktopApp.Views
         private void OnChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
+    public class ExportColumnItem : INotifyPropertyChanged
+    {
+        public string Key { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public bool IsRequired { get; set; }
+        public bool CanToggle => !IsRequired;
+
+        private bool _isSelected = true;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (IsRequired)
+                    value = true;
+                if (_isSelected == value) return;
+                _isSelected = value;
+                OnChanged(nameof(IsSelected));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
     public partial class ExportFirmSelectWindow : Window
     {
         private readonly AppSettingsService _appSettingsService;
         private readonly List<FirmExportItem> _allItems = new();
         private readonly ObservableCollection<AgencyGroupItem> _groups = new();
+        private readonly ObservableCollection<ExportColumnItem> _exportColumns = new();
         private bool _syncingSelectAllState;
         private bool _cascading;
 
         public HashSet<string> SelectedFirms { get; private set; } = new();
         public bool ExportAsPdf { get; private set; }
+        public bool HideZeroPayout { get; private set; }
+        public SalaryExportColumnSelection ColumnSelection { get; private set; } = SalaryExportColumnSelection.All;
+        public int FontStep { get; private set; } = SalaryExportFontScale.DefaultStep;
 
-        public ExportFirmSelectWindow(List<(string firmName, int count, string agencyName)> firms, AppSettingsService appSettingsService)
+        public ExportFirmSelectWindow(
+            List<(string firmName, int count, string agencyName)> firms,
+            AppSettingsService appSettingsService,
+            IReadOnlyList<CustomSalaryField>? customFields = null)
         {
             _appSettingsService = appSettingsService ?? throw new ArgumentNullException(nameof(appSettingsService));
             InitializeComponent();
             RestoreWindowSize();
+            HideZeroPayout = _appSettingsService.Settings.SalaryExportHideZeroPayout;
+            FontStep = SalaryExportFontScale.Clamp(_appSettingsService.Settings.SalaryExportFontStep);
+            BuildExportColumns(customFields);
             Closing += (_, _) => SaveWindowSize();
 
             var noAgency = TryL("FinExportNoAgency") ?? "Без агенції";
@@ -219,6 +255,80 @@ namespace Win11DesktopApp.Views
                 : Visibility.Collapsed;
         }
 
+        private void ExportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ExportSettingsWindow(_appSettingsService, _exportColumns)
+            {
+                Owner = this
+            };
+            dialog.ShowDialog();
+            HideZeroPayout = _appSettingsService.Settings.SalaryExportHideZeroPayout;
+            FontStep = SalaryExportFontScale.Clamp(_appSettingsService.Settings.SalaryExportFontStep);
+            PersistHiddenColumns();
+        }
+
+        private void BuildExportColumns(IReadOnlyList<CustomSalaryField>? customFields)
+        {
+            var hidden = new HashSet<string>(
+                _appSettingsService.Settings.SalaryExportHiddenColumns ?? new List<string>(),
+                StringComparer.OrdinalIgnoreCase);
+
+            void Add(string key, string displayName, bool required = false)
+            {
+                var item = new ExportColumnItem
+                {
+                    Key = key,
+                    DisplayName = displayName,
+                    IsRequired = required,
+                    IsSelected = required || !hidden.Contains(key)
+                };
+                item.PropertyChanged += ExportColumn_PropertyChanged;
+                _exportColumns.Add(item);
+            }
+
+            Add(SalaryExportColumnKeys.Hours, TryL("FinColHours") ?? "Hours");
+            Add(SalaryExportColumnKeys.Rate, TryL("FinColRate") ?? "Rate");
+            Add(SalaryExportColumnKeys.Gross, TryL("FinColGross") ?? "Gross");
+            Add(SalaryExportColumnKeys.Advance, TryL("FinColAdvance") ?? "Advance");
+
+            foreach (var field in (customFields ?? Array.Empty<CustomSalaryField>())
+                .OrderBy(f => f.Order)
+                .ThenBy(f => f.Name))
+            {
+                var prefix = field.Operation switch
+                {
+                    FieldOperation.Add => "+",
+                    FieldOperation.Subtract => "−",
+                    FieldOperation.Multiply => "×",
+                    FieldOperation.Divide => "÷",
+                    _ => string.Empty
+                };
+                Add(SalaryExportColumnKeys.Custom(field.Id), $"{prefix}{field.Name}");
+            }
+
+            Add(SalaryExportColumnKeys.Net, TryL("FinColNet") ?? "Net Pay");
+            Add(SalaryExportColumnKeys.Note, TryL("FinColNote") ?? "Note");
+            Add(SalaryExportColumnKeys.Paid, TryL("FinColPaid") ?? "Paid");
+
+            PersistHiddenColumns();
+        }
+
+        private void ExportColumn_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(ExportColumnItem.IsSelected)) return;
+            PersistHiddenColumns();
+        }
+
+        private void PersistHiddenColumns()
+        {
+            var hidden = _exportColumns
+                .Where(c => !c.IsRequired && !c.IsSelected)
+                .Select(c => c.Key)
+                .ToList();
+            _appSettingsService.Settings.SalaryExportHiddenColumns = hidden;
+            ColumnSelection = new SalaryExportColumnSelection(hidden);
+        }
+
         private void ExportExcel_Click(object sender, RoutedEventArgs e) => ConfirmExport(exportAsPdf: false);
 
         private void ExportPdf_Click(object sender, RoutedEventArgs e) => ConfirmExport(exportAsPdf: true);
@@ -235,6 +345,9 @@ namespace Win11DesktopApp.Views
                 return;
             }
 
+            _appSettingsService.Settings.SalaryExportHideZeroPayout = HideZeroPayout;
+            _appSettingsService.Settings.SalaryExportFontStep = FontStep;
+            PersistHiddenColumns();
             ExportAsPdf = exportAsPdf;
             DialogResult = true;
             Close();
@@ -276,6 +389,12 @@ namespace Win11DesktopApp.Views
 
                 settings.ExportFirmSelectWindowWidth = bounds.Width;
                 settings.ExportFirmSelectWindowHeight = bounds.Height;
+                settings.SalaryExportHideZeroPayout = HideZeroPayout;
+                settings.SalaryExportHiddenColumns = _exportColumns
+                    .Where(c => !c.IsRequired && !c.IsSelected)
+                    .Select(c => c.Key)
+                    .ToList();
+                settings.SalaryExportFontStep = FontStep;
 
                 await _appSettingsService.SaveSettingsImmediate();
             }

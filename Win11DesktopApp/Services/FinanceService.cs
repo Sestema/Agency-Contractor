@@ -325,11 +325,14 @@ namespace Win11DesktopApp.Services
 
         /// <summary>
         /// After restoring from Recently Deleted, rewrite finance rows that still point at old folders.
+        /// Returns the number of finance steps that failed. Restore still succeeds; the caller should warn.
         /// </summary>
-        public void RemapEmployeeFolderReferences(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
+        public int RemapEmployeeFolderReferences(string? employeeId, string? fromFolderA, string? fromFolderB, string toFolder)
         {
             if (string.IsNullOrWhiteSpace(toFolder))
-                return;
+                return 0;
+
+            var failedSteps = 0;
 
             try
             {
@@ -337,6 +340,7 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
+                failedSteps++;
                 LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.SalaryEntries", ex);
             }
 
@@ -346,6 +350,7 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
+                failedSteps++;
                 LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.Advances", ex);
             }
 
@@ -355,6 +360,7 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
+                failedSteps++;
                 LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.SalaryHistory", ex);
             }
 
@@ -369,10 +375,18 @@ namespace Win11DesktopApp.Services
             }
             catch (Exception ex)
             {
+                failedSteps++;
                 LoggingService.LogError("FinanceService.RemapEmployeeFolderReferences.Accommodations", ex);
             }
 
             InvalidatePaymentsCache();
+            if (failedSteps > 0)
+            {
+                LoggingService.LogWarning("FinanceService.RemapEmployeeFolderReferences",
+                    $"Restored employee finance remap finished with {failedSteps} failed step(s).");
+            }
+
+            return failedSteps;
         }
 
         #endregion

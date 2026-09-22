@@ -99,6 +99,29 @@ CREATE INDEX IF NOT EXISTS idx_pg_ei_full_name ON app.employee_index(full_name);
             return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
+        public List<string> GetAllEmployeeIndexUniqueIds()
+        {
+            EnsureInitialized();
+            var ids = new List<string>();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT unique_id
+FROM app.employee_index
+WHERE COALESCE(btrim(unique_id), '') <> '';";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (reader.IsDBNull(0))
+                    continue;
+                var id = reader.GetString(0).Trim();
+                if (!string.IsNullOrWhiteSpace(id))
+                    ids.Add(id);
+            }
+
+            return ids;
+        }
+
         public bool HasLegacyAbsolutePaths()
         {
             EnsureInitialized();
@@ -336,6 +359,24 @@ WHERE lower(firm_name) = lower(@oldName);";
         public EmployeeIndexRebuildResult RebuildEmployeeIndex(IReadOnlyList<EmployeeIndexRow> rows, int foldersScanned = 0, int foldersSkipped = 0)
         {
             EnsureInitialized();
+            var existingIds = GetAllEmployeeIndexUniqueIds();
+            if (!EmployeeIndexDbService.IncomingRebuildCoversExisting(existingIds, rows))
+            {
+                var skipMessage =
+                    $"Skipped global PostgreSQL employee index rebuild: scan found {rows.Count} row(s) but index already has {existingIds.Count} unique id(s). Incomplete scan must not DELETE ALL.";
+                LoggingService.LogWarning("PostgresEmployeeIndexStorage.RebuildEmployeeIndex", skipMessage);
+                return new EmployeeIndexRebuildResult
+                {
+                    WasRebuildAttempted = false,
+                    IsSuccessful = true,
+                    RecordsFound = existingIds.Count,
+                    RecordsImported = existingIds.Count,
+                    FoldersScanned = foldersScanned,
+                    FoldersSkipped = foldersSkipped,
+                    Message = skipMessage
+                };
+            }
+
             var recordsFound = rows.Count;
             var recordsImported = 0;
 

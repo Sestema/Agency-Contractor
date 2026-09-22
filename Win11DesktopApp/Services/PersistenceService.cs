@@ -72,6 +72,7 @@ namespace Win11DesktopApp.Services
         private const int CoreWriteLockTimeoutMs = 30000;
         private const int CoreWriteLockRetryDelayMs = 250;
         private static readonly TimeSpan CoreWriteLockStaleAfter = TimeSpan.FromMinutes(3);
+        private static readonly TimeSpan SaveLockTimeout = TimeSpan.FromSeconds(5);
 
         private static readonly byte[] SecureKey = new byte[32];
         private static readonly byte[] HmacKey;
@@ -107,7 +108,12 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public async Task SaveDatabaseAsync(IEnumerable<EmployerCompany> companies)
         {
-            await _saveLock.WaitAsync().ConfigureAwait(false);
+            if (!await _saveLock.WaitAsync(SaveLockTimeout).ConfigureAwait(false))
+            {
+                ReportSaveLockTimeout("PersistenceService.SaveDatabaseAsync");
+                return;
+            }
+
             try
             {
                 var companySnapshot = companies.ToList();
@@ -241,7 +247,12 @@ namespace Win11DesktopApp.Services
 
         public void SaveDatabase(IEnumerable<EmployerCompany> companies)
         {
-            _saveLock.Wait();
+            if (!_saveLock.Wait(SaveLockTimeout))
+            {
+                ReportSaveLockTimeout("PersistenceService.SaveDatabase");
+                return;
+            }
+
             try
             {
                 var companySnapshot = companies.ToList();
@@ -257,6 +268,16 @@ namespace Win11DesktopApp.Services
             {
                 _saveLock.Release();
             }
+        }
+
+        private static void ReportSaveLockTimeout(string source)
+        {
+            var message = Res("MsgSaveError");
+            if (string.IsNullOrWhiteSpace(message) || message == "MsgSaveError")
+                message = "Could not save. The company list is busy.";
+
+            LoggingService.LogWarning(source, message);
+            ErrorHandler.Report(source, message, ErrorSeverity.Error);
         }
 
         /// <summary>

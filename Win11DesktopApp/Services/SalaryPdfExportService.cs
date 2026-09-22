@@ -37,6 +37,9 @@ namespace Win11DesktopApp.Services
         private static readonly string PaidRowColor = "#E8F5E9";
         private static readonly string TotalsColor = "#FFF9C4";
         private static readonly string GrandTotalColor = "#FFD966";
+        private static readonly string GridLineColor = "#8A93A3";
+        private static float CellFontSize = 8;
+        private static float FirmFontSize = 8;
 
         public static void GenerateToFile(
             string outputPath,
@@ -46,10 +49,16 @@ namespace Win11DesktopApp.Services
             IReadOnlyList<CustomSalaryField> fields,
             IReadOnlyList<FirmExpense> expenses,
             SalaryPdfExportLabels labels,
-            string? currencySymbol = null)
+            string? currencySymbol = null,
+            SalaryExportColumnSelection? columnSelection = null,
+            int fontStep = SalaryExportFontScale.DefaultStep)
         {
             var symbol = string.IsNullOrWhiteSpace(currencySymbol) ? "Kč" : currencySymbol.Trim();
+            var columns = columnSelection ?? SalaryExportColumnSelection.All;
+            CellFontSize = SalaryExportFontScale.PdfTable(fontStep);
+            FirmFontSize = SalaryExportFontScale.PdfFirm(fontStep);
             var orderedFields = (fields ?? Array.Empty<CustomSalaryField>())
+                .Where(field => columns.IsVisible(SalaryExportColumnKeys.Custom(field.Id)))
                 .OrderBy(field => field.Order)
                 .ThenBy(field => field.Name)
                 .ToList();
@@ -62,7 +71,7 @@ namespace Win11DesktopApp.Services
                 .ThenBy(expense => expense.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
-            var columnCount = 5 + orderedFields.Count + 3;
+            var columnCount = columns.CountVisibleForPdf(orderedFields);
             var title = $"{month}.{year}";
 
             Document.Create(container =>
@@ -101,25 +110,25 @@ namespace Win11DesktopApp.Services
                             .BorderColor(HeaderColor)
                             .Table(table =>
                         {
-                            table.ColumnsDefinition(columns =>
+                            table.ColumnsDefinition(defs =>
                             {
-                                columns.RelativeColumn(3f);
-                                columns.RelativeColumn(1f);
-                                columns.RelativeColumn(1f);
-                                columns.RelativeColumn(1.2f);
-                                columns.RelativeColumn(1.1f);
+                                defs.RelativeColumn(3f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Hours)) defs.RelativeColumn(1f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Rate)) defs.RelativeColumn(1f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Gross)) defs.RelativeColumn(1.2f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Advance)) defs.RelativeColumn(1.1f);
                                 foreach (var _ in orderedFields)
-                                    columns.RelativeColumn(1f);
-                                columns.RelativeColumn(1.3f);
-                                columns.RelativeColumn(2f);
-                                columns.RelativeColumn(0.8f);
+                                    defs.RelativeColumn(1f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Net)) defs.RelativeColumn(1.3f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Note)) defs.RelativeColumn(2f);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Paid)) defs.RelativeColumn(0.8f);
                             });
 
                             table.Header(header =>
                             {
                                 void HeaderCell(string text) => header.Cell()
                                     .Background(HeaderColor)
-                                    .BorderBottom(0.75f)
+                                    .Border(0.6f)
                                     .BorderColor(FirmBandTextColor)
                                     .PaddingVertical(3)
                                     .PaddingHorizontal(2)
@@ -127,18 +136,18 @@ namespace Win11DesktopApp.Services
                                     .Text(text)
                                     .FontColor(Colors.White)
                                     .Bold()
-                                    .FontSize(7);
+                                    .FontSize(CellFontSize);
 
                                 HeaderCell(labels.ColName);
-                                HeaderCell(labels.ColHours);
-                                HeaderCell(labels.ColRate);
-                                HeaderCell(labels.ColGross);
-                                HeaderCell(labels.ColAdvance);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Hours)) HeaderCell(labels.ColHours);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Rate)) HeaderCell(labels.ColRate);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Gross)) HeaderCell(labels.ColGross);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Advance)) HeaderCell(labels.ColAdvance);
                                 foreach (var field in orderedFields)
                                     HeaderCell($"{MapFieldOperation(field.Operation)}{field.Name}");
-                                HeaderCell(labels.ColNet);
-                                HeaderCell(labels.ColNote);
-                                HeaderCell(labels.ColPaid);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Net)) HeaderCell(labels.ColNet);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Note)) HeaderCell(labels.ColNote);
+                                if (columns.IsVisible(SalaryExportColumnKeys.Paid)) HeaderCell(labels.ColPaid);
                             });
 
                             var firmGroups = exportEntries
@@ -158,7 +167,7 @@ namespace Win11DesktopApp.Services
                                     .AlignCenter()
                                     .Text(group.Key)
                                     .Bold()
-                                    .FontSize(8)
+                                    .FontSize(FirmFontSize)
                                     .FontColor(FirmBandTextColor);
 
                                 foreach (var entry in group.OrderBy(e => e.FullName, StringComparer.CurrentCultureIgnoreCase))
@@ -170,11 +179,15 @@ namespace Win11DesktopApp.Services
                                             : Colors.White;
 
                                     DataCell(table, entry.DisplayName, bg, bold: entry.GrossSalary > 0);
-                                    DataCell(table, FormatHours(entry.HoursWorked), bg, alignCenter: true, bold: true);
-                                    DataCell(table, FormatMoney(entry.HourlyRate, 0), bg, alignCenter: true, bold: true);
-                                    DataCell(table, FormatMoney(entry.GrossSalary), bg, alignCenter: true, bold: true);
-                                    DataCell(table, FormatMoney(entry.Advance), bg, alignCenter: true, bold: true,
-                                        textColor: entry.Advance > 0 ? "#C62828" : null);
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Hours))
+                                        DataCell(table, FormatHours(entry.HoursWorked), bg, alignCenter: true, bold: true);
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Rate))
+                                        DataCell(table, FormatMoney(entry.HourlyRate, 0), bg, alignCenter: true, bold: true);
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Gross))
+                                        DataCell(table, FormatMoney(entry.GrossSalary), bg, alignCenter: true, bold: true);
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Advance))
+                                        DataCell(table, FormatMoney(entry.Advance), bg, alignCenter: true, bold: true,
+                                            textColor: entry.Advance > 0 ? "#C62828" : null);
 
                                     foreach (var field in orderedFields)
                                     {
@@ -182,9 +195,12 @@ namespace Win11DesktopApp.Services
                                         DataCell(table, FormatMoney(value), bg, alignCenter: true, bold: true);
                                     }
 
-                                    DataCell(table, FormatMoney(entry.NetSalary), bg, alignCenter: true, bold: true, textColor: "#1565C0");
-                                    DataCell(table, entry.Note ?? string.Empty, bg, alignCenter: false, italic: true, textColor: "#888888");
-                                    DataCell(table, entry.IsPaid ? labels.PaidYes : string.Empty, bg, alignCenter: true, bold: entry.IsPaid, textColor: "#2E7D32");
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Net))
+                                        DataCell(table, FormatMoney(entry.NetSalary), bg, alignCenter: true, bold: true, textColor: "#1565C0");
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Note))
+                                        DataCell(table, entry.Note ?? string.Empty, bg, alignCenter: false, italic: true, textColor: "#888888");
+                                    if (columns.IsVisible(SalaryExportColumnKeys.Paid))
+                                        DataCell(table, entry.IsPaid ? labels.PaidYes : string.Empty, bg, alignCenter: true, bold: entry.IsPaid, textColor: "#2E7D32");
                                     rowIndex++;
                                 }
                             }
@@ -192,29 +208,40 @@ namespace Win11DesktopApp.Services
                             void TotalsCell(string text, string? color = null)
                                 => table.Cell()
                                     .Background(TotalsColor)
-                                    .BorderTop(0.75f)
-                                    .BorderColor(HeaderColor)
+                                    .Border(0.6f)
+                                    .BorderColor(GridLineColor)
                                     .PaddingVertical(3)
                                     .PaddingHorizontal(2)
                                     .AlignCenter()
                                     .Text(text)
                                     .Bold()
+                                    .FontSize(CellFontSize)
                                     .FontColor(color ?? Colors.Black);
 
-                            table.Cell().Background(TotalsColor).BorderTop(0.75f).BorderColor(HeaderColor);
-                            TotalsCell(FormatHours(exportEntries.Sum(e => e.HoursWorked)));
-                            TotalsCell(string.Empty);
-                            TotalsCell(FormatMoney(exportEntries.Sum(e => e.GrossSalary)));
-                            TotalsCell(FormatMoney(exportEntries.Sum(e => e.Advance)), color: "#C62828");
+                            void EmptyTotal() =>
+                                table.Cell().Background(TotalsColor).Border(0.6f).BorderColor(GridLineColor);
+
+                            EmptyTotal();
+                            if (columns.IsVisible(SalaryExportColumnKeys.Hours))
+                                TotalsCell(FormatHours(exportEntries.Sum(e => e.HoursWorked)));
+                            if (columns.IsVisible(SalaryExportColumnKeys.Rate))
+                                EmptyTotal();
+                            if (columns.IsVisible(SalaryExportColumnKeys.Gross))
+                                TotalsCell(FormatMoney(exportEntries.Sum(e => e.GrossSalary)));
+                            if (columns.IsVisible(SalaryExportColumnKeys.Advance))
+                                TotalsCell(FormatMoney(exportEntries.Sum(e => e.Advance)), color: "#C62828");
                             foreach (var field in orderedFields)
                             {
                                 var total = exportEntries.Sum(e => e.CustomValues.TryGetValue(field.Id, out var v) ? v : 0m);
                                 TotalsCell(FormatMoney(total));
                             }
 
-                            TotalsCell(FormatMoney(exportEntries.Sum(e => e.NetSalary)) + " " + symbol, color: "#1565C0");
-                            table.Cell().Background(TotalsColor).BorderTop(0.75f).BorderColor(HeaderColor);
-                            table.Cell().Background(TotalsColor).BorderTop(0.75f).BorderColor(HeaderColor);
+                            if (columns.IsVisible(SalaryExportColumnKeys.Net))
+                                TotalsCell(FormatMoney(exportEntries.Sum(e => e.NetSalary)) + " " + symbol, color: "#1565C0");
+                            if (columns.IsVisible(SalaryExportColumnKeys.Note))
+                                EmptyTotal();
+                            if (columns.IsVisible(SalaryExportColumnKeys.Paid))
+                                EmptyTotal();
                         });
 
                         if (exportExpenses.Count > 0)
@@ -298,15 +325,15 @@ namespace Win11DesktopApp.Services
 
                                     void SummaryHeaderCell(string text) => summaryTable.Cell()
                                         .Background(HeaderColor)
-                                        .BorderBottom(0.75f)
-                                        .BorderColor(FirmBandTextColor)
+                                        .Border(0.6f)
+                                        .BorderColor(GridLineColor)
                                         .PaddingVertical(3)
                                         .PaddingHorizontal(3)
                                         .AlignCenter()
                                         .Text(text)
                                         .FontColor(Colors.White)
                                         .Bold()
-                                        .FontSize(7);
+                                        .FontSize(CellFontSize);
 
                                     SummaryHeaderCell(labels.ColFirm);
                                     SummaryHeaderCell(labels.ColAmount);
@@ -318,35 +345,35 @@ namespace Win11DesktopApp.Services
                                         var bg = firmAlt ? AltRowColor : "#FFFFFF";
                                         summaryTable.Cell()
                                             .Background(bg)
-                                            .BorderBottom(0.25f)
-                                            .BorderColor(Colors.Grey.Lighten3)
+                                            .Border(0.6f)
+                                            .BorderColor(GridLineColor)
                                             .PaddingVertical(2)
                                             .PaddingHorizontal(3)
                                             .AlignLeft()
                                             .Text(group.Key)
-                                            .FontSize(7)
+                                            .FontSize(CellFontSize)
                                             .FontColor(FirmBandTextColor);
 
                                         summaryTable.Cell()
                                             .Background(bg)
-                                            .BorderBottom(0.25f)
-                                            .BorderColor(Colors.Grey.Lighten3)
+                                            .Border(0.6f)
+                                            .BorderColor(GridLineColor)
                                             .PaddingVertical(2)
                                             .PaddingHorizontal(3)
                                             .AlignCenter()
                                             .Text(FormatMoney(group.Sum(e => e.NetSalary), 0) + " " + symbol)
                                             .Bold()
-                                            .FontSize(7);
+                                            .FontSize(CellFontSize);
 
                                         summaryTable.Cell()
                                             .Background(bg)
-                                            .BorderBottom(0.25f)
-                                            .BorderColor(Colors.Grey.Lighten3)
+                                            .Border(0.6f)
+                                            .BorderColor(GridLineColor)
                                             .PaddingVertical(2)
                                             .PaddingHorizontal(3)
                                             .AlignCenter()
                                             .Text(FormatHours(group.Sum(e => e.HoursWorked)))
-                                            .FontSize(7);
+                                            .FontSize(CellFontSize);
 
                                         firmAlt = !firmAlt;
                                     }
@@ -377,62 +404,62 @@ namespace Win11DesktopApp.Services
         {
             IContainer cell = table.Cell()
                 .Background(background)
-                .BorderBottom(0.25f)
-                .BorderColor(Colors.Grey.Lighten3)
+                .Border(0.6f)
+                .BorderColor(GridLineColor)
                 .PaddingVertical(2)
                 .PaddingHorizontal(2);
 
             if (alignCenter)
             {
                 if (bold && italic && textColor != null)
-                    cell.AlignCenter().Text(text).FontSize(7).Bold().Italic().FontColor(textColor);
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).Bold().Italic().FontColor(textColor);
                 else if (bold && italic)
-                    cell.AlignCenter().Text(text).FontSize(7).Bold().Italic();
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).Bold().Italic();
                 else if (bold && textColor != null)
-                    cell.AlignCenter().Text(text).FontSize(7).Bold().FontColor(textColor);
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).Bold().FontColor(textColor);
                 else if (bold)
-                    cell.AlignCenter().Text(text).FontSize(7).Bold();
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).Bold();
                 else if (italic && textColor != null)
-                    cell.AlignCenter().Text(text).FontSize(7).Italic().FontColor(textColor);
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).Italic().FontColor(textColor);
                 else if (italic)
-                    cell.AlignCenter().Text(text).FontSize(7).Italic();
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).Italic();
                 else if (textColor != null)
-                    cell.AlignCenter().Text(text).FontSize(7).FontColor(textColor);
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize).FontColor(textColor);
                 else
-                    cell.AlignCenter().Text(text).FontSize(7);
+                    cell.AlignCenter().Text(text).FontSize(CellFontSize);
             }
             else
             {
                 if (bold && italic && textColor != null)
-                    cell.AlignLeft().Text(text).FontSize(7).Bold().Italic().FontColor(textColor);
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).Bold().Italic().FontColor(textColor);
                 else if (bold && italic)
-                    cell.AlignLeft().Text(text).FontSize(7).Bold().Italic();
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).Bold().Italic();
                 else if (bold && textColor != null)
-                    cell.AlignLeft().Text(text).FontSize(7).Bold().FontColor(textColor);
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).Bold().FontColor(textColor);
                 else if (bold)
-                    cell.AlignLeft().Text(text).FontSize(7).Bold();
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).Bold();
                 else if (italic && textColor != null)
-                    cell.AlignLeft().Text(text).FontSize(7).Italic().FontColor(textColor);
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).Italic().FontColor(textColor);
                 else if (italic)
-                    cell.AlignLeft().Text(text).FontSize(7).Italic();
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).Italic();
                 else if (textColor != null)
-                    cell.AlignLeft().Text(text).FontSize(7).FontColor(textColor);
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize).FontColor(textColor);
                 else
-                    cell.AlignLeft().Text(text).FontSize(7);
+                    cell.AlignLeft().Text(text).FontSize(CellFontSize);
             }
         }
 
         private static void ExpenseCell(TableDescriptor table, string text, string color, bool alignCenter = false)
         {
             var cell = table.Cell()
-                .BorderBottom(0.25f)
-                .BorderColor("#E0D0C0")
+                .Border(0.6f)
+                .BorderColor(GridLineColor)
                 .PaddingVertical(2)
                 .PaddingHorizontal(3);
             if (alignCenter)
-                cell.AlignCenter().Text(text).FontSize(7).FontColor(color);
+                cell.AlignCenter().Text(text).FontSize(CellFontSize).FontColor(color);
             else
-                cell.AlignLeft().Text(text).FontSize(7).FontColor(color);
+                cell.AlignLeft().Text(text).FontSize(CellFontSize).FontColor(color);
         }
 
         private static string FormatHours(decimal hours)

@@ -384,6 +384,32 @@ namespace Win11DesktopApp.Models
         }
 
         /// <summary>
+        /// True when the row has money to export: net pay, advance, or any created column.
+        /// Hours/rate alone do not count — a 0-hour placeholder stays hidden.
+        /// </summary>
+        [JsonIgnore]
+        public bool HasExportMoney
+        {
+            get
+            {
+                if (NetSalary != 0m) return true;
+                if (Advance != 0m) return true;
+                if (CustomValues == null || CustomValues.Count == 0)
+                    return false;
+
+                foreach (var pair in CustomValues)
+                {
+                    if (string.Equals(pair.Key, ManualGrossCustomKey, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (pair.Value != 0m)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
         /// True when the row carries real salary data and must not be treated as an empty orphan
         /// (hours, rate, advance, saved net, paid flag, note, or custom values).
         /// </summary>

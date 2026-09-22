@@ -1222,7 +1222,8 @@ namespace Win11DesktopApp.ViewModels
                     (!string.IsNullOrEmpty(e.FirmName) && e.FirmName.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(e.PassportNumber) && e.PassportNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(e.VisaNumber) && e.VisaNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrEmpty(e.InsuranceNumber) && e.InsuranceNumber.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    (!string.IsNullOrEmpty(e.InsuranceNumber) && e.InsuranceNumber.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    PhoneSearchHelper.MatchesPhone(e.Phone, query)
                 ).ToList();
             }
 
@@ -1843,10 +1844,13 @@ namespace Win11DesktopApp.ViewModels
 
         private static bool HasExpiringDocs(EmployeeModels.EmployeeSummary emp)
         {
-            // Severity is already computed once by EmployeeService when the employee is loaded
-            // (emp.PassportSeverity/VisaSeverity/InsuranceSeverity), so reuse it here instead of
-            // re-parsing the expiry date strings on every filter/sort/stats refresh.
-            return IsProblemSeverity(emp.PassportSeverity) || IsProblemSeverity(emp.VisaSeverity) || IsProblemSeverity(emp.InsuranceSeverity);
+            // Same set as ProblemsViewModel: passport / visa / insurance, plus work permit
+            // only for work_permit people. Severities are already on the summary.
+            return IsProblemSeverity(emp.PassportSeverity)
+                || IsProblemSeverity(emp.VisaSeverity)
+                || IsProblemSeverity(emp.InsuranceSeverity)
+                || (string.Equals(emp.EmployeeType, "work_permit", StringComparison.OrdinalIgnoreCase)
+                    && IsProblemSeverity(emp.WorkPermitSeverity));
         }
 
         private static bool IsProblemSeverity(string severity)

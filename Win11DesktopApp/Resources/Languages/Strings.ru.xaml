@@ -540,7 +540,7 @@
     <sys:String x:Key="LabelPosition">Позиция</sys:String>
     <sys:String x:Key="LabelContractType">Тип договора</sys:String>
     <sys:String x:Key="TitleEmployeesGeneric">Сотрудники</sys:String>
-    <sys:String x:Key="EmployeesSearchPlaceholder">Поиск по ФИО, паспорту, визе, страховке</sys:String>
+    <sys:String x:Key="EmployeesSearchPlaceholder">Поиск по ФИО, телефону, паспорту, визе, страховке</sys:String>
     <sys:String x:Key="MsgEmployeesSelectCompany">Пожалуйста, выберите фирму для просмотра сотрудников.</sys:String>
     <sys:String x:Key="BtnSelectCompany">Выбрать фирму</sys:String>
     <sys:String x:Key="MsgDeleteEmployee">Удалить сотрудника?</sys:String>
@@ -937,6 +937,7 @@
     <sys:String x:Key="RecentlyDeletedMoveSuccess">Сотрудник {0} перемещен в недавно удаленные.</sys:String>
     <sys:String x:Key="RecentlyDeletedMoveFailed">Не удалось переместить сотрудника в недавно удаленные: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreSuccess">Сотрудник {0} восстановлен.</sys:String>
+    <sys:String x:Key="RecentlyDeletedRestoreFinancePartial">Сотрудник {0} восстановлен, но финансовые записи обновлены частично. Проверьте авансы.</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreFailed">Не удалось восстановить сотрудника: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveSuccess">Сотрудник {0} перемещен в архив.</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveFailed">Не удалось переместить сотрудника в архив: {0}</sys:String>
@@ -1832,6 +1833,16 @@
     <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
     <sys:String x:Key="FinSalaryExportedPdf">Экспортировано PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Выберите хотя бы одну фирму</sys:String>
+    <sys:String x:Key="FinExportSettings">Настройки экспорта</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayout">Скрыть без выплаты</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOnTitle">Галочка стоит</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOn">Из PDF и Excel пропадут люди с 0 к выплате, 0 аванса и 0 во всех созданных колонках. На экране зарплаты ничего не изменится.</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOffTitle">Галочка снята</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOff">В файл попадут все строки как на экране — и те, кому нечего выплачивать.</sys:String>
+    <sys:String x:Key="FinExportFontSizeTitle">Размер шрифта</sys:String>
+    <sys:String x:Key="FinExportFontSizeHint">1 — как сейчас. Вправо — крупнее название фирмы, имена и числа в PDF и Excel.</sys:String>
+    <sys:String x:Key="FinExportColumnsTitle">Столбцы в файле</sys:String>
+    <sys:String x:Key="FinExportColumnsHint">Галочка стоит — столбец будет в PDF и Excel. Снята — при экспорте его не будет. Фирма и имя всегда в файле.</sys:String>
     <sys:String x:Key="BtnDone">Готово</sys:String>
 
     <!-- Hardcoded strings localization -->
@@ -1897,6 +1908,7 @@
     <sys:String x:Key="MsgOpenFolderFail">Не удалось открыть папку.</sys:String>
     <sys:String x:Key="MsgEnterNewDate">Введите новую дату.</sys:String>
     <sys:String x:Key="MsgSaveFail">Не удалось сохранить.</sys:String>
+    <sys:String x:Key="MsgSaveError">Не удалось сохранить список фирм: база сейчас занята.</sys:String>
     <sys:String x:Key="MsgGenerating">Генерация документа...</sys:String>
     <sys:String x:Key="MsgTemplateNotFound">Файл шаблона не найден.</sys:String>
     <sys:String x:Key="MsgProfileSaveFail">Не удалось сохранить анкету.</sys:String>

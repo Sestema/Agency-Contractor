@@ -540,7 +540,7 @@
     <sys:String x:Key="LabelPosition">Позиція</sys:String>
     <sys:String x:Key="LabelContractType">Тип договору</sys:String>
     <sys:String x:Key="TitleEmployeesGeneric">Працівники</sys:String>
-    <sys:String x:Key="EmployeesSearchPlaceholder">Пошук по ПІБ, паспорту, візі, страховці</sys:String>
+    <sys:String x:Key="EmployeesSearchPlaceholder">Пошук по ПІБ, телефону, паспорту, візі, страховці</sys:String>
     <sys:String x:Key="MsgEmployeesSelectCompany">Будь ласка, виберіть фірму, щоб переглянути список працівників.</sys:String>
     <sys:String x:Key="BtnSelectCompany">Вибрати фірму</sys:String>
     <sys:String x:Key="MsgDeleteEmployee">Видалити працівника?</sys:String>
@@ -939,6 +939,7 @@
     <sys:String x:Key="RecentlyDeletedMoveSuccess">Працівника {0} переміщено в недавно видалені.</sys:String>
     <sys:String x:Key="RecentlyDeletedMoveFailed">Не вдалося перемістити працівника в недавно видалені: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreSuccess">Працівника {0} відновлено.</sys:String>
+    <sys:String x:Key="RecentlyDeletedRestoreFinancePartial">Працівника {0} відновлено, але фінансові записи оновлено частково. Перевірте аванси.</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreFailed">Не вдалося відновити працівника: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveSuccess">Працівника {0} переміщено в архів.</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveFailed">Не вдалося перемістити працівника в архів: {0}</sys:String>
@@ -1834,6 +1835,16 @@
     <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
     <sys:String x:Key="FinSalaryExportedPdf">Експортовано PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Оберіть хоча б одну фірму</sys:String>
+    <sys:String x:Key="FinExportSettings">Налаштування експорту</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayout">Сховати, якщо немає виплати</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOnTitle">Галочка стоїть</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOn">З PDF і Excel зникнуть люди, у яких 0 до виплати, 0 авансу і 0 у всіх створених колонках. На екрані зарплати нічого не зміниться.</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOffTitle">Галочку знято</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOff">У файл потраплять усі рядки, як на екрані — і ті, кому немає що платити.</sys:String>
+    <sys:String x:Key="FinExportFontSizeTitle">Розмір шрифту</sys:String>
+    <sys:String x:Key="FinExportFontSizeHint">1 — як зараз. Вправо — більший текст назви фірми, імен і чисел у PDF і Excel.</sys:String>
+    <sys:String x:Key="FinExportColumnsTitle">Стовпці в файлі</sys:String>
+    <sys:String x:Key="FinExportColumnsHint">Галочка стоїть — стовпець буде в PDF і Excel. Знята — при експорті його не буде. Фірма й ім’я завжди в файлі.</sys:String>
     <sys:String x:Key="BtnDone">Готово</sys:String>
 
     <!-- Hardcoded strings localization -->
@@ -1899,6 +1910,7 @@
     <sys:String x:Key="MsgOpenFolderFail">Не вдалося відкрити папку.</sys:String>
     <sys:String x:Key="MsgEnterNewDate">Введіть нову дату.</sys:String>
     <sys:String x:Key="MsgSaveFail">Не вдалося зберегти.</sys:String>
+    <sys:String x:Key="MsgSaveError">Не вдалося зберегти список фірм: база зараз зайнята.</sys:String>
     <sys:String x:Key="MsgGenerating">Генерація документа...</sys:String>
     <sys:String x:Key="MsgTemplateNotFound">Файл шаблону не знайдено.</sys:String>
     <sys:String x:Key="MsgProfileSaveFail">Не вдалося зберегти анкету.</sys:String>

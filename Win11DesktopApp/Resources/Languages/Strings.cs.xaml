@@ -540,7 +540,7 @@
     <sys:String x:Key="LabelPosition">Pozice</sys:String>
     <sys:String x:Key="LabelContractType">Typ smlouvy</sys:String>
     <sys:String x:Key="TitleEmployeesGeneric">Zaměstnanci</sys:String>
-    <sys:String x:Key="EmployeesSearchPlaceholder">Hledat podle jména, pasu, víza, pojištění</sys:String>
+    <sys:String x:Key="EmployeesSearchPlaceholder">Hledat podle jména, telefonu, pasu, víza, pojištění</sys:String>
     <sys:String x:Key="MsgEmployeesSelectCompany">Vyberte prosím firmu pro zobrazení zaměstnanců.</sys:String>
     <sys:String x:Key="BtnSelectCompany">Vybrat firmu</sys:String>
     <sys:String x:Key="MsgDeleteEmployee">Smazat zaměstnance?</sys:String>
@@ -937,6 +937,7 @@
     <sys:String x:Key="RecentlyDeletedMoveSuccess">Zaměstnanec {0} byl přesunut do Nedávno smazaných.</sys:String>
     <sys:String x:Key="RecentlyDeletedMoveFailed">Nepodařilo se přesunout zaměstnance do Nedávno smazaných: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreSuccess">Zaměstnanec {0} byl obnoven.</sys:String>
+    <sys:String x:Key="RecentlyDeletedRestoreFinancePartial">Zaměstnanec {0} byl obnoven, ale finanční záznamy se aktualizovaly jen částečně. Zkontrolujte zálohy.</sys:String>
     <sys:String x:Key="RecentlyDeletedRestoreFailed">Nepodařilo se obnovit zaměstnance: {0}</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveSuccess">Zaměstnanec {0} byl přesunut do archivu.</sys:String>
     <sys:String x:Key="RecentlyDeletedArchiveFailed">Nepodařilo se přesunout zaměstnance do archivu: {0}</sys:String>
@@ -1832,6 +1833,16 @@
     <sys:String x:Key="FinExportBtnPdf">PDF</sys:String>
     <sys:String x:Key="FinSalaryExportedPdf">Exportováno PDF!</sys:String>
     <sys:String x:Key="FinExportNoFirms">Vyberte alespoň jednu firmu</sys:String>
+    <sys:String x:Key="FinExportSettings">Nastavení exportu</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayout">Skrýt řádky bez výplaty</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOnTitle">Zaškrtnuto</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOn">Z PDF a Excel zmizí lidé, kteří mají 0 k výplatě, 0 zálohy a 0 ve všech vlastních sloupcích. Na obrazovce mezd se nic nezmění.</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOffTitle">Nezaškrtnuto</sys:String>
+    <sys:String x:Key="FinExportHideZeroPayoutOff">Do souboru půjdou všechny řádky jako na obrazovce — i ti, kterým není co vyplatit.</sys:String>
+    <sys:String x:Key="FinExportFontSizeTitle">Velikost písma</sys:String>
+    <sys:String x:Key="FinExportFontSizeHint">1 — jako teď. Doprava — větší text názvu firmy, jmen a čísel v PDF i Excel.</sys:String>
+    <sys:String x:Key="FinExportColumnsTitle">Sloupce v souboru</sys:String>
+    <sys:String x:Key="FinExportColumnsHint">Zaškrtnuto — sloupec bude v PDF i Excel. Nezaškrtnuto — při exportu se vynechá. Firma a jméno jsou v souboru vždy.</sys:String>
     <sys:String x:Key="BtnDone">Hotovo</sys:String>
 
     <!-- Hardcoded strings localization -->
@@ -1897,6 +1908,7 @@
     <sys:String x:Key="MsgOpenFolderFail">Nepodařilo se otevřít složku.</sys:String>
     <sys:String x:Key="MsgEnterNewDate">Zadejte nové datum.</sys:String>
     <sys:String x:Key="MsgSaveFail">Nepodařilo se uložit.</sys:String>
+    <sys:String x:Key="MsgSaveError">Nepodařilo se uložit seznam firem: databáze je právě zaneprázdněná.</sys:String>
     <sys:String x:Key="MsgGenerating">Generování dokumentu...</sys:String>
     <sys:String x:Key="MsgTemplateNotFound">Soubor šablony nebyl nalezen.</sys:String>
     <sys:String x:Key="MsgProfileSaveFail">Nepodařilo se uložit dotazník.</sys:String>

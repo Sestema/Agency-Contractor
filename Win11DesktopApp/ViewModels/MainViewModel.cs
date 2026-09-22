@@ -1291,7 +1291,7 @@ namespace Win11DesktopApp.ViewModels
                         if (ct.IsCancellationRequested) return results;
                         if ((emp.FullName?.Contains(q, StringComparison.OrdinalIgnoreCase) == true)
                             || (emp.PassportNumber?.Contains(q, StringComparison.OrdinalIgnoreCase) == true)
-                            || (emp.Phone?.Contains(q, StringComparison.OrdinalIgnoreCase) == true))
+                            || PhoneSearchHelper.MatchesPhone(emp.Phone, q))
                         {
                             results.Add(new SearchResultItem
                             {

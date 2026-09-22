@@ -98,7 +98,7 @@ namespace Win11DesktopApp.Services
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
+                command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
                 command.ExecuteNonQuery();
             }
 
@@ -468,11 +468,19 @@ WHERE lower(firm_name) = lower(@oldName);";
         public EmployeeIndexRebuildResult RebuildEmployeeIndex(IReadOnlyList<EmployeeIndexRow> rows, LocalDbService? localDbService = null, int foldersScanned = 0, int foldersSkipped = 0)
         {
             if (UsePostgresStorage)
+            {
+                if (TrySkipIncompleteGlobalRebuild(rows, foldersScanned, foldersSkipped, localDbService) is { } skippedPostgres)
+                    return skippedPostgres;
+
                 return _postgresStorage!.RebuildEmployeeIndex(rows, foldersScanned, foldersSkipped);
+            }
 
             EnsureInitialized();
             if (!IsAvailable)
                 return new EmployeeIndexRebuildResult { Message = "Employee index SQLite path is unavailable." };
+
+            if (TrySkipIncompleteGlobalRebuild(rows, foldersScanned, foldersSkipped, localDbService) is { } skippedSqlite)
+                return skippedSqlite;
 
             var recordsFound = rows.Count;
             var recordsImported = 0;
@@ -530,6 +538,94 @@ WHERE lower(firm_name) = lower(@oldName);";
                     Message = ex.Message
                 };
             }
+        }
+
+        internal static bool IncomingRebuildCoversExisting(
+            IReadOnlyCollection<string> existingIds,
+            IReadOnlyList<EmployeeIndexRow> incoming)
+        {
+            if (existingIds.Count == 0)
+                return true;
+
+            var incomingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in incoming)
+            {
+                if (!string.IsNullOrWhiteSpace(row.UniqueId))
+                    incomingIds.Add(row.UniqueId.Trim());
+            }
+
+            foreach (var id in existingIds)
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                    continue;
+                if (!incomingIds.Contains(id.Trim()))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private EmployeeIndexRebuildResult? TrySkipIncompleteGlobalRebuild(
+            IReadOnlyList<EmployeeIndexRow> rows,
+            int foldersScanned,
+            int foldersSkipped,
+            LocalDbService? localDbService)
+        {
+            var existingIds = GetAllEmployeeIndexUniqueIds();
+            if (IncomingRebuildCoversExisting(existingIds, rows))
+                return null;
+
+            var message =
+                $"Skipped global employee index rebuild: scan found {rows.Count} row(s) but index already has {existingIds.Count} unique id(s). Incomplete scan must not DELETE ALL.";
+            LoggingService.LogWarning("EmployeeIndexDbService.RebuildEmployeeIndex", message);
+            localDbService?.RecordMigrationJournal(
+                "employee_index",
+                "skipped_incomplete_scan",
+                rows.Count,
+                existingIds.Count,
+                message,
+                foldersScanned,
+                foldersSkipped);
+
+            return new EmployeeIndexRebuildResult
+            {
+                WasRebuildAttempted = false,
+                IsSuccessful = true,
+                RecordsFound = existingIds.Count,
+                RecordsImported = existingIds.Count,
+                FoldersScanned = foldersScanned,
+                FoldersSkipped = foldersSkipped,
+                Message = message
+            };
+        }
+
+        private List<string> GetAllEmployeeIndexUniqueIds()
+        {
+            if (UsePostgresStorage)
+                return _postgresStorage!.GetAllEmployeeIndexUniqueIds();
+
+            EnsureInitialized();
+            var ids = new List<string>();
+            if (!IsAvailable)
+                return ids;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT unique_id
+FROM employee_index
+WHERE ifnull(trim(unique_id), '') <> '';";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (reader.IsDBNull(0))
+                    continue;
+                var id = reader.GetString(0).Trim();
+                if (!string.IsNullOrWhiteSpace(id))
+                    ids.Add(id);
+            }
+
+            return ids;
         }
 
         private EmployeeIndexWriteLock AcquireIndexWriteLock(TimeSpan timeout, string operation)

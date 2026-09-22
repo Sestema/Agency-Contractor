@@ -22,21 +22,42 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
-            <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource SuccessBrush}">
-                <TextBlock Text="&#xE80A;" Style="{StaticResource PageHeaderIconText}"/>
-            </Border>
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="{DynamicResource FinExportSelectTitle}"
-                           FontSize="{DynamicResource FS20}"
-                           Style="{StaticResource PageHeaderTitleText}"/>
-                <TextBlock Text="{DynamicResource FinExportSelectDesc}"
-                           FontSize="{DynamicResource FS11}"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Margin="0,4,0,0"
-                           TextWrapping="Wrap"/>
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal">
+                <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource SuccessBrush}">
+                    <TextBlock Text="&#xE80A;" Style="{StaticResource PageHeaderIconText}"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource FinExportSelectTitle}"
+                               FontSize="{DynamicResource FS20}"
+                               Style="{StaticResource PageHeaderTitleText}"/>
+                    <TextBlock Text="{DynamicResource FinExportSelectDesc}"
+                               FontSize="{DynamicResource FS11}"
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               Margin="0,4,0,0"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+
+            <Button x:Name="ExportSettingsButton"
+                    Grid.Column="1"
+                    Click="ExportSettings_Click"
+                    Style="{StaticResource HeaderGhostButton}"
+                    VerticalAlignment="Top"
+                    Padding="8,6"
+                    Cursor="Hand"
+                    ToolTip="{DynamicResource FinExportSettings}">
+                <TextBlock Text="&#xE713;"
+                           FontFamily="Segoe MDL2 Assets"
+                           FontSize="{DynamicResource FS16}"
+                           Foreground="{DynamicResource MutedForegroundBrush}"/>
+            </Button>
+        </Grid>
 
         <!-- Summary -->
         <Border Grid.Row="1" Style="{StaticResource DialogSectionCard}" Margin="0,0,0,12" Padding="16,14">

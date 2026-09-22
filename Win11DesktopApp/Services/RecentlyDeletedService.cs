@@ -226,11 +226,11 @@ namespace Win11DesktopApp.Services
                 _employeeService.SyncEmployeeIndexForFolder(restorePath, item.FirmName);
 
                 // Remap finance paths that still point at the pre-delete / recycle folders.
-                _financeService?.RemapEmployeeFolderReferences(
+                var financeFailedSteps = _financeService?.RemapEmployeeFolderReferences(
                     item.UniqueId,
                     item.OriginalEmployeeFolder,
                     item.DeletedEmployeeFolder,
-                    restorePath);
+                    restorePath) ?? 0;
 
                 manifest.Remove(item);
                 SaveManifest(manifest);
@@ -242,7 +242,8 @@ namespace Win11DesktopApp.Services
                 return new RecentlyDeletedOperationResult
                 {
                     Success = true,
-                    Item = item
+                    Item = item,
+                    FinanceRemapPartial = financeFailedSteps > 0
                 };
             }
             catch (Exception ex)
