@@ -559,12 +559,12 @@
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Выбрать</sys:String>
-    <sys:String x:Key="EmpBrandSubtitle">Панель управления</sys:String>
     <sys:String x:Key="EmpSwitchCompanyTooltip">Сменить фирму</sys:String>
     <sys:String x:Key="EmpNoCompaniesInDropdown">Нет доступных фирм</sys:String>
     <sys:String x:Key="EmpStatTotal">Всего</sys:String>
     <sys:String x:Key="EmpStatActive">Активных</sys:String>
     <sys:String x:Key="EmpStatProblems">Проблемы с док.</sys:String>
+    <sys:String x:Key="EmpStatProblemsTooltip">Проблемы с документами: паспорт, виза, страховка или разрешение на работу</sys:String>
     <sys:String x:Key="EmpStatNewMonth">Новых за мес.</sys:String>
     <sys:String x:Key="EmpStatDocumentPackage">Пакет док.</sys:String>
     <sys:String x:Key="EmpStatDocumentPackageTooltip">Нажмите, чтобы увидеть готовность пакета документов по сотрудникам</sys:String>
@@ -581,7 +581,8 @@
     <sys:String x:Key="EmpSortName">Имя</sys:String>
     <sys:String x:Key="EmpSortDate">Дата начала</sys:String>
     <sys:String x:Key="EmpSortStatus">Статус</sys:String>
-    <sys:String x:Key="EmpSortProblems">Проблемы</sys:String>
+    <sys:String x:Key="EmpSortAscending">По возрастанию</sys:String>
+    <sys:String x:Key="EmpSortDescending">По убыванию</sys:String>
     <sys:String x:Key="ViewTable">Таблица</sys:String>
     <sys:String x:Key="ViewList">Список</sys:String>
     <sys:String x:Key="ViewTiles">Плитки</sys:String>

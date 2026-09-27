@@ -178,6 +178,7 @@ namespace Win11DesktopApp.Services
             public string EmployeeViewMode { get; set; } = "List";
             public double EmployeeZoomLevel { get; set; } = 1.0;
             public int EmployeeTileSizeStep { get; set; } = 4;
+            public Dictionary<string, double> EmployeeTableColumnWidths { get; set; } = new(StringComparer.OrdinalIgnoreCase);
             public string ArchiveSortField { get; set; } = "EndDate";
             public bool ArchiveSortAscending { get; set; } = false;
             public string ArchiveViewMode { get; set; } = "List";

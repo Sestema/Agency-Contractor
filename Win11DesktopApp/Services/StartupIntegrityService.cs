@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -15,18 +14,15 @@ namespace Win11DesktopApp.Services
 {
     public sealed class StartupIntegrityService
     {
-        private const string LegacyDatabaseFileName = "company_data.json";
         private const string TemplateIndexFileName = "index.json";
 
         private readonly FolderService _folderService;
-        private readonly PersistenceService _persistenceService;
         private int _recoveryCount;
         private int _warningCount;
 
-        public StartupIntegrityService(FolderService folderService, PersistenceService persistenceService)
+        public StartupIntegrityService(FolderService folderService)
         {
             _folderService = folderService;
-            _persistenceService = persistenceService;
         }
 
         public void IncludeSettingsStartupState(AppSettingsService appSettingsService)
@@ -60,7 +56,6 @@ namespace Win11DesktopApp.Services
                 }
 
                 EnsureRootFolders();
-                EnsureDatabaseChecksumOrRestore();
                 EnsureArchiveLogIsReadableOrRepair();
                 EnsureActivityLogIsReadableOrRepair();
 
@@ -215,92 +210,6 @@ namespace Win11DesktopApp.Services
             Directory.CreateDirectory(_folderService.GetArchiveFolder());
             Directory.CreateDirectory(_folderService.GetCandidatesFolder());
             Directory.CreateDirectory(_folderService.GetBackupsFolder());
-        }
-
-        private void EnsureDatabaseChecksumOrRestore()
-        {
-            var databasePath = _folderService.DatabaseFilePath;
-            if (string.IsNullOrWhiteSpace(databasePath))
-                return;
-
-            if (!File.Exists(databasePath))
-            {
-                var legacyDatabasePath = Path.Combine(_folderService.RootPath, LegacyDatabaseFileName);
-                if (File.Exists(legacyDatabasePath))
-                {
-                    LoggingService.LogInfo("StartupIntegrityService.Database",
-                        "Legacy company_data.json detected. It is no longer auto-migrated and will be ignored; core.db is authoritative.");
-                }
-
-                return;
-            }
-
-            var encryptedData = SafeFileService.ReadAllBytes(databasePath);
-            var currentChecksum = ComputeHash(encryptedData);
-            var checksumPath = _folderService.DatabaseChecksumPath;
-
-            if (!File.Exists(checksumPath))
-            {
-                SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
-                RegisterRecovery();
-                LoggingService.LogWarning("StartupIntegrityService.Database",
-                    "database.json.sha256 was missing and has been recreated.");
-                return;
-            }
-
-            var storedChecksum = SafeFileService.ReadAllText(checksumPath, Encoding.UTF8).Trim();
-            if (string.Equals(storedChecksum, currentChecksum, StringComparison.Ordinal))
-                return;
-
-            if (CurrentDatabaseLooksValid(encryptedData))
-            {
-                SafeFileService.WriteTextAtomic(checksumPath, currentChecksum, Encoding.UTF8);
-                RegisterRecovery();
-                LoggingService.LogWarning("StartupIntegrityService.Database",
-                    "database.json checksum mismatch detected, but the current database is valid. The checksum has been refreshed.");
-                return;
-            }
-
-            RegisterWarning();
-            LoggingService.LogWarning("StartupIntegrityService.Database",
-                "database.json checksum mismatch detected. Attempting restore from latest backup.");
-
-            if (TryRestoreDatabaseFromBackup(databasePath, checksumPath))
-                return;
-
-            LoggingService.LogError("StartupIntegrityService.Database",
-                "database.json checksum mismatch detected, but restore from backup failed.");
-        }
-
-        private bool TryRestoreDatabaseFromBackup(string databasePath, string checksumPath)
-        {
-            try
-            {
-                var backupsFolder = _folderService.GetBackupsFolder();
-                if (!Directory.Exists(backupsFolder))
-                    return false;
-
-                var latestBackup = new DirectoryInfo(backupsFolder)
-                    .GetFiles("*.bak")
-                    .OrderByDescending(file => file.CreationTimeUtc)
-                    .FirstOrDefault();
-
-                if (latestBackup == null)
-                    return false;
-
-                var restoredData = SafeFileService.ReadAllBytes(latestBackup.FullName);
-                SafeFileService.WriteBytesAtomic(databasePath, restoredData);
-                SafeFileService.WriteTextAtomic(checksumPath, ComputeHash(restoredData), Encoding.UTF8);
-                RegisterRecovery();
-                LoggingService.LogWarning("StartupIntegrityService.Database",
-                    $"Restored database.json from backup '{latestBackup.Name}'.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogError("StartupIntegrityService.TryRestoreDatabaseFromBackup", ex);
-                return false;
-            }
         }
 
         private (int RepairedEntries, int WarningCount) ValidateTemplateIndex(string companyName)
@@ -491,42 +400,6 @@ namespace Win11DesktopApp.Services
             return Path.Combine(parts);
         }
 
-        private static bool CurrentDatabaseLooksValid(byte[] encryptedData)
-        {
-            try
-            {
-                var json = PersistenceService.TryDecryptDatabasePayload(encryptedData, out var v2Json)
-                    ? v2Json
-                    : Decrypt(encryptedData);
-                return JsonSerializer.Deserialize<DatabaseRoot>(json) != null;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string Decrypt(byte[] encryptedData)
-        {
-            using var aes = Aes.Create();
-            aes.Key = BuildFixedBytes("AgencyContractorSecretKey2024_Secure", 32);
-            aes.IV = BuildFixedBytes("AgencyContractor", 16);
-
-            using var decryptor = aes.CreateDecryptor();
-            using var ms = new MemoryStream(encryptedData);
-            using var cryptoStream = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var reader = new StreamReader(cryptoStream, Encoding.UTF8);
-            return reader.ReadToEnd();
-        }
-
-        private static byte[] BuildFixedBytes(string value, int length)
-        {
-            var result = new byte[length];
-            var bytes = Encoding.UTF8.GetBytes(value);
-            Array.Copy(bytes, result, Math.Min(bytes.Length, result.Length));
-            return result;
-        }
-
         private void RegisterRecovery(int count = 1)
         {
             if (count > 0)
@@ -571,12 +444,6 @@ namespace Win11DesktopApp.Services
                 else
                     ToastService.Instance.Info(message);
             });
-        }
-
-        private static string ComputeHash(byte[] data)
-        {
-            using var sha = SHA256.Create();
-            return Convert.ToBase64String(sha.ComputeHash(data));
         }
     }
 }

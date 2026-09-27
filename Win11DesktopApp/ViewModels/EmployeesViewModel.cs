@@ -90,7 +90,7 @@ namespace Win11DesktopApp.ViewModels
         private List<EmployeeModels.EmployeeSummary> _allEmployees = new List<EmployeeModels.EmployeeSummary>();
         private string _lastStatus = string.Empty;
         private int _loadGeneration;
-        private int _filterGeneration;
+        private CancellationTokenSource? _filterCts;
         private CancellationTokenSource? _batchAICts;
         private CancellationTokenSource? _thumbnailPreloadCts;
         private readonly DispatcherTimer _searchDebounceTimer;
@@ -467,6 +467,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand OpenBatchAIDocumentCommand { get; }
         public ICommand ShowBatchAIOptionsCommand { get; }
         public ICommand SortByCommand { get; }
+        public ICommand SetSortDirectionCommand { get; }
         public ICommand SetViewModeCommand { get; }
         public ICommand FilterByStatCommand { get; }
         public ICommand ClearFiltersCommand { get; }
@@ -730,6 +731,8 @@ namespace Win11DesktopApp.ViewModels
             _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _searchDebounceTimer.Tick += OnSearchDebounceTick;
             _sortField = _appSettingsService.Settings.EmployeeSortField ?? "Name";
+            if (string.Equals(_sortField, "Problems", StringComparison.OrdinalIgnoreCase))
+                _sortField = "Name";
             _sortAscending = _appSettingsService.Settings.EmployeeSortAscending;
             _viewMode = _showAllCompanies ? "Tiles" : _appSettingsService.Settings.EmployeeViewMode ?? "List";
             _tileSizeStep = Math.Max(1, Math.Min(6, _appSettingsService.Settings.EmployeeTileSizeStep));
@@ -883,20 +886,11 @@ namespace Win11DesktopApp.ViewModels
                 o => o is BatchAIValidationResultItem item && item.CanOpenDocument);
             ShowBatchAIOptionsCommand = new RelayCommand(o => ShowBatchAIOptions = true, _ => !IsBatchAIValidationRunning);
 
-            SortByCommand = new RelayCommand(o =>
+            SortByCommand = new RelayCommand(o => ApplyEmployeeSort(o as string, null));
+            SetSortDirectionCommand = new RelayCommand(o =>
             {
-                var field = o as string ?? "Name";
-                if (SortField == field)
-                    SortAscending = !SortAscending;
-                else
-                {
-                    SortField = field;
-                    SortAscending = true;
-                }
-                _appSettingsService.Settings.EmployeeSortField = SortField;
-                _appSettingsService.Settings.EmployeeSortAscending = SortAscending;
-                _appSettingsService.SaveSettings();
-                ApplyFilter();
+                var ascending = string.Equals(o as string, "asc", StringComparison.OrdinalIgnoreCase);
+                ApplyEmployeeSort(null, ascending);
             });
 
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
@@ -915,9 +909,37 @@ namespace Win11DesktopApp.ViewModels
             _ = LoadEmployeesAsync();
         }
 
+        private void ApplyEmployeeSort(string? field, bool? ascending)
+        {
+            if (!string.IsNullOrWhiteSpace(field)
+                && !string.Equals(SortField, field, StringComparison.OrdinalIgnoreCase))
+            {
+                SortField = field;
+                SortAscending = true;
+            }
+
+            if (ascending.HasValue)
+                SortAscending = ascending.Value;
+
+            _appSettingsService.Settings.EmployeeSortField = SortField;
+            _appSettingsService.Settings.EmployeeSortAscending = SortAscending;
+            _appSettingsService.SaveSettings();
+            ApplyFilter();
+        }
+
+        public IReadOnlyDictionary<string, double> EmployeeTableColumnWidths =>
+            _appSettingsService.Settings.EmployeeTableColumnWidths;
+
+        public void SaveEmployeeTableColumnWidths(Dictionary<string, double> widths)
+        {
+            _appSettingsService.Settings.EmployeeTableColumnWidths = widths;
+            _appSettingsService.SaveSettings();
+        }
+
         private async Task LoadEmployeesAsync()
         {
             var generation = ++_loadGeneration;
+            CancelEmployeeListRebuild();
             IsLoading = true;
             IsEmployeeListReady = false;
             StatusMessage = LoadingMessage;
@@ -942,8 +964,11 @@ namespace Win11DesktopApp.ViewModels
                     if (generation != _loadGeneration)
                         return;
 
-                    await ApplyFilterInBatchesAsync(generation);
-                    if (HasVisibleEmployees)
+                    var allListReady = await RebuildEmployeeListAsync();
+                    if (generation != _loadGeneration)
+                        return;
+
+                    if (allListReady && HasVisibleEmployees)
                         StatusMessage = string.Empty;
 
                     await Dispatcher.Yield(DispatcherPriority.Render);
@@ -983,10 +1008,13 @@ namespace Win11DesktopApp.ViewModels
 
                 _allEmployees = result.Employees;
                 _lastStatus = result.Status;
-                await ApplyFilterInBatchesAsync(generation);
-                if (HasVisibleEmployees)
-                    StatusMessage = GetStatusMessage(result.Status);
                 IsError = result.Status == "LoadError";
+                var listReady = await RebuildEmployeeListAsync();
+                if (generation != _loadGeneration || !string.Equals(_company?.Name, companyName, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                if (listReady && HasVisibleEmployees)
+                    StatusMessage = GetStatusMessage(result.Status);
                 await Dispatcher.Yield(DispatcherPriority.Render);
                 if (generation != _loadGeneration || !string.Equals(_company?.Name, companyName, StringComparison.OrdinalIgnoreCase))
                     return;
@@ -1078,28 +1106,41 @@ namespace Win11DesktopApp.ViewModels
 
         private void ApplyFilter()
         {
-            _ = ApplyFilterBatchedAsync();
+            _ = RebuildEmployeeListAsync();
         }
 
-        // Rebuilds Employees in small batches (yielding to the dispatcher between them) so that
-        // large filtered/sorted lists don't block the UI thread with one huge collection rebuild.
-        // Small lists (the common single-company case) still complete synchronously in one pass.
-        private async Task ApplyFilterBatchedAsync()
+        private void CancelEmployeeListRebuild()
         {
-            var generation = ++_filterGeneration;
+            _filterCts?.Cancel();
+        }
+
+        // One list rebuild for both firm load and search. A newer load or keystroke
+        // cancels the previous fill so the two cannot append into the same collection.
+        private Task<bool> RebuildEmployeeListAsync()
+        {
+            _filterCts?.Cancel();
+            _filterCts = new CancellationTokenSource();
+            return FillEmployeeListAsync(_filterCts.Token);
+        }
+
+        private async Task<bool> FillEmployeeListAsync(CancellationToken token)
+        {
+            if (token.IsCancellationRequested)
+                return false;
+
             HasEmployees = _allEmployees.Count > 0;
 
             if (_allEmployees.Count == 0)
             {
                 Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
                 HasVisibleEmployees = false;
-                return;
+                return true;
             }
 
             var query = SearchQuery?.Trim() ?? string.Empty;
             var list = BuildFilteredEmployees();
-            if (generation != _filterGeneration)
-                return;
+            if (token.IsCancellationRequested)
+                return false;
 
             Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
             UpdateFilteredState(list.Count, query);
@@ -1107,8 +1148,8 @@ namespace Win11DesktopApp.ViewModels
             const int batchSize = 48;
             for (var index = 0; index < list.Count; index += batchSize)
             {
-                if (generation != _filterGeneration)
-                    return;
+                if (token.IsCancellationRequested)
+                    return false;
 
                 foreach (var employee in list.Skip(index).Take(batchSize))
                     Employees.Add(employee);
@@ -1117,46 +1158,12 @@ namespace Win11DesktopApp.ViewModels
                     await Dispatcher.Yield(DispatcherPriority.Background);
             }
 
-            if (generation == _filterGeneration)
-            {
-                NotifyActiveViewEmployeesChanged();
-                ScheduleThumbnailPreload(list);
-            }
-        }
+            if (token.IsCancellationRequested)
+                return false;
 
-        private async Task ApplyFilterInBatchesAsync(int generation)
-        {
-            HasEmployees = _allEmployees.Count > 0;
-
-            if (_allEmployees.Count == 0)
-            {
-                Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
-                HasVisibleEmployees = false;
-                return;
-            }
-
-            var query = SearchQuery?.Trim() ?? string.Empty;
-            var list = BuildFilteredEmployees();
-            Employees = new ObservableCollection<EmployeeModels.EmployeeSummary>();
-            UpdateFilteredState(list.Count, query);
-
-            const int batchSize = 32;
-            for (var index = 0; index < list.Count; index += batchSize)
-            {
-                if (generation != _loadGeneration)
-                    return;
-
-                foreach (var employee in list.Skip(index).Take(batchSize))
-                    Employees.Add(employee);
-
-                await Dispatcher.Yield(DispatcherPriority.Background);
-            }
-
-            if (generation == _loadGeneration)
-            {
-                NotifyActiveViewEmployeesChanged();
-                ScheduleThumbnailPreload(list);
-            }
+            NotifyActiveViewEmployeesChanged();
+            ScheduleThumbnailPreload(list);
+            return true;
         }
 
         private void ScheduleThumbnailPreload(IReadOnlyList<EmployeeModels.EmployeeSummary> employees)
@@ -1238,8 +1245,6 @@ namespace Win11DesktopApp.ViewModels
                 "Status" => SortAscending
                     ? list.OrderBy(e => e.Status ?? string.Empty).ToList()
                     : list.OrderByDescending(e => e.Status ?? string.Empty).ToList(),
-                "Problems" => list.OrderByDescending(e => HasExpiringDocs(e) ? 1 : 0)
-                                  .ThenBy(e => e.FullName, StringComparer.CurrentCultureIgnoreCase).ToList(),
                 _ => list
             };
 
@@ -1351,7 +1356,6 @@ namespace Win11DesktopApp.ViewModels
             var previousFullName = existing.FullName;
             var previousStartDate = existing.StartDate;
             var previousStatus = existing.Status;
-            var previousHadProblems = HasExpiringDocs(existing);
             var wasSelected = existing.IsSelected;
 
             existing.ApplyFrom(updated);
@@ -1368,9 +1372,7 @@ namespace Win11DesktopApp.ViewModels
                 || (string.Equals(SortField, "StartDate", StringComparison.OrdinalIgnoreCase)
                     && !string.Equals(previousStartDate, existing.StartDate, StringComparison.Ordinal))
                 || (string.Equals(SortField, "Status", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(previousStatus, existing.Status, StringComparison.OrdinalIgnoreCase))
-                || (string.Equals(SortField, "Problems", StringComparison.OrdinalIgnoreCase)
-                    && previousHadProblems != HasExpiringDocs(existing));
+                    && !string.Equals(previousStatus, existing.Status, StringComparison.OrdinalIgnoreCase));
 
             if (needsFilterRebuild)
                 ApplyFilter();
@@ -1987,6 +1989,10 @@ namespace Win11DesktopApp.ViewModels
 
             _searchDebounceTimer.Stop();
             _searchDebounceTimer.Tick -= OnSearchDebounceTick;
+
+            var filterCts = Interlocked.Exchange(ref _filterCts, null);
+            filterCts?.Cancel();
+            filterCts?.Dispose();
 
             CleanupDetailsVm();
             CleanupAddEmployeeVm();

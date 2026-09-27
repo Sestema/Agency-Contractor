@@ -134,6 +134,40 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
+        <Style x:Key="TableTrimText" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Left"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+        </Style>
+
+        <Style x:Key="TableCenterText" TargetType="TextBlock" BasedOn="{StaticResource TableTrimText}">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="TableDocDateBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="4,1"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource SuccessChipBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SuccessChipBorderBrush}"/>
+        </Style>
+
+        <Style x:Key="TableDocDateText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource FS10}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+        </Style>
+
         <Style x:Key="EmployeeCardIconBtn" TargetType="Button" BasedOn="{StaticResource CardActionBtn}">
             <Setter Property="Padding" Value="7,5"/>
             <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
@@ -265,7 +299,7 @@
         </Style>
         <Style x:Key="EmpStatChipBorder" TargetType="Border">
             <Setter Property="CornerRadius" Value="9"/>
-            <Setter Property="Height" Value="30"/>
+            <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="9,3"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -279,7 +313,9 @@
         <!-- Segmented sort button: hover only applies while the segment is inactive (Tag is empty).
              The active accent fill is a separate layer that fades in/out for a smoother feel. -->
         <Style x:Key="SortSegmentButton" TargetType="Button">
-            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="8,0"/>
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -399,7 +435,7 @@
         <!-- View-mode segment: transparent flat button, icon color reacts to the shared sliding pill behind it. -->
         <Style x:Key="ViewModeSegmentButton" TargetType="Button">
             <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="24"/>
+            <Setter Property="Height" Value="28"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -464,14 +500,42 @@
 
         <!-- Compact, consistently-sized actions used only by the employees header. -->
         <Style x:Key="EmpHeaderGhostButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,0"/>
         </Style>
         <Style x:Key="EmpHeaderPrimaryButton" TargetType="Button" BasedOn="{StaticResource FilledActionButton}">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="Padding" Value="11,4"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="11,0"/>
+        </Style>
+
+        <Style x:Key="EmpSortMenuItem" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter ContentSource="Header"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
     </UserControl.Resources>
@@ -527,66 +591,42 @@
                                 Margin="0,0,8,0">
                             <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
                         </Button>
-                        <!-- App branding -->
-                        <Border Width="30" Height="30"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Margin="0,0,8,0"
-                                VerticalAlignment="Center">
-                            <Image Source="pack://application:,,,/Resources/agency_contractor_header_logo.png"
-                                   Width="30" Height="30"
-                                   Stretch="Uniform"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                            <TextBlock Text="Agency Contractor"
-                                       FontSize="{DynamicResource FS11}"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                            <TextBlock Text="{DynamicResource EmpBrandSubtitle}"
-                                       FontSize="{DynamicResource FS9}"
-                                       Foreground="{DynamicResource TertiaryForegroundBrush}"
-                                       Margin="0,0,0,0"/>
-                        </StackPanel>
-                        <!-- Company switcher pill: click opens the firm dropdown below -->
+                        <!-- Company name is the page title. Click still opens the firm dropdown. -->
                         <Border x:Name="CompanyPill"
-                                CornerRadius="11"
-                                Padding="4,3,9,3"
-                                Background="{DynamicResource EmpCompanyPillBackgroundBrush}"
-                                BorderBrush="{DynamicResource EmpCompanyPillBorderBrush}"
-                                BorderThickness="1"
-                                MaxWidth="320"
+                                Height="32"
+                                CornerRadius="8"
+                                Padding="8,0"
+                                BorderThickness="0"
+                                MaxWidth="520"
                                 VerticalAlignment="Center"
                                 Cursor="Hand"
                                 ToolTip="{DynamicResource EmpSwitchCompanyTooltip}"
                                 MouseLeftButtonUp="CompanyPill_MouseLeftButtonUp"
                                 MouseEnter="CompanyDropdown_MouseEnter"
                                 MouseLeave="CompanyDropdown_MouseLeave">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent">
-                                <Border Width="24"
-                                        Height="24"
-                                        CornerRadius="12"
-                                        Background="{DynamicResource EmpCompanyPillAvatarBackgroundBrush}"
-                                        Margin="0,0,8,0"
-                                        VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title, Converter={StaticResource FirstCharConverter}}"
-                                               FontSize="{DynamicResource FS11}"
-                                               FontWeight="SemiBold"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource EmpCompanyPillAvatarForegroundBrush}"/>
-                                </Border>
                                 <TextBlock Text="{Binding Title}"
                                            Style="{StaticResource PageHeaderTitleTextEmployees}"
-                                           Foreground="{DynamicResource EmpCompanyPillForegroundBrush}"
+                                           Foreground="{DynamicResource ForegroundBrush}"
                                            VerticalAlignment="Center"
-                                           FontSize="{DynamicResource FS11}"
-                                           MaxWidth="230"/>
+                                           FontSize="{DynamicResource FS16}"
+                                           FontWeight="SemiBold"
+                                           MaxWidth="460"/>
                                 <TextBlock FontFamily="Segoe MDL2 Assets"
                                            FontSize="{DynamicResource FS10}"
                                            Text="&#xE70D;"
-                                           Foreground="{DynamicResource EmpCompanyPillCheckBrush}"
-                                           Margin="6,1,0,0"
+                                           Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                           Margin="6,0,0,0"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
@@ -739,7 +779,7 @@
 
                     <Grid Grid.Column="1"
                             Margin="14,0,0,0"
-                          Height="30"
+                          Height="32"
                             MaxWidth="420"
                             HorizontalAlignment="Center"
                           VerticalAlignment="Center">
@@ -867,12 +907,13 @@
                         <DockPanel LastChildFill="True">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                 <!-- View mode capsule: one sliding accent pill behind 4 transparent icon buttons. -->
-                                <Border CornerRadius="8" BorderThickness="1" Padding="2"
+                                <Border CornerRadius="8" BorderThickness="1" Padding="2,1"
+                                        Height="32"
                                         BorderBrush="{DynamicResource CardBorderBrush}"
                                         Background="{DynamicResource ContentBackgroundBrush}"
                                         Margin="0,0,10,0">
                                     <Grid>
-                                        <Border x:Name="ViewModePill" Width="30" Height="24" CornerRadius="6"
+                                        <Border x:Name="ViewModePill" Width="30" Height="28" CornerRadius="6"
                                                 Background="{DynamicResource AccentBrush}"
                                                 HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <!-- The transform's base value is a plain data binding (source of truth: always
@@ -1003,21 +1044,28 @@
                                     </Grid>
                                 </Border>
 
-                                <Border Style="{StaticResource ToolbarFadeDivider}" Height="20" Margin="0,0,8,0"/>
-
-                                <TextBlock Text="&#xE71E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <Slider Value="{Binding TileSizeStep}" Minimum="1" Maximum="6" Width="72"
-                                        Style="{StaticResource EmpZoomSlider}"
-                                        TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                                        ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
-                                <Border CornerRadius="6" Padding="5,1" Margin="6,0,0,0"
-                                        Background="{DynamicResource ContentBackgroundBrush}"
-                                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                                    <TextBlock Text="{Binding TileSizeStep, StringFormat=x{0}}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" MinWidth="14"
-                                               TextAlignment="Center"
-                                               ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
-                                </Border>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTilesView}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsIconsView}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <Border Style="{StaticResource ToolbarFadeDivider}" Height="20" Margin="0,0,8,0"/>
+                                    <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}" Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0" ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
+                                    <Slider Value="{Binding TileSizeStep}" Minimum="1" Maximum="6" Width="72"
+                                            Style="{StaticResource EmpZoomSlider}"
+                                            TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center"
+                                            ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
+                                    <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}" Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Center" Margin="6,0,0,0" ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
@@ -1027,14 +1075,12 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                     </Trigger>
-                                    <!-- "All" is the default, not a narrowing filter: an accent outline is enough.
-                                         Filling it would leave a permanent colored blob in the toolbar. -->
                                     <DataTrigger Binding="{Binding StatFilter}" Value="all">
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
@@ -1048,42 +1094,27 @@
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding TotalCount}"
                                                        Style="{StaticResource EmpStatChipValueText}"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
                                             <TextBlock Text="{DynamicResource EmpStatTotal}"
                                                        Style="{StaticResource EmpStatChipLabelText}"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                         </StackPanel>
                         </StackPanel>
                     </Border>
-                                <Border Margin="0,0,6,0">
+                                <Border Margin="0,0,6,0"
+                                        ToolTip="{DynamicResource EmpStatProblemsTooltip}">
                         <Border.InputBindings>
                             <MouseBinding MouseAction="LeftClick" Command="{Binding FilterByStatCommand}" CommandParameter="problems"/>
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource WarningChipBorderBrush}"/>
-                                    </Trigger>
-                                    <!-- Nothing to report: drop the warning color so it stops competing for attention. -->
-                                    <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
                                         <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-                                    </DataTrigger>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding ProblemsCount}" Value="0"/>
-                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
-                                    </MultiDataTrigger>
-                                    <!-- Active filter last, so a solid fill wins over both hover and the muted state.
-                                         Uses the accent (not the chip color): it is the one fill the app pairs with
-                                         white text in every theme, and it matches the primary button and view pill. -->
+                                    </Trigger>
                                     <DataTrigger Binding="{Binding StatFilter}" Value="problems">
-                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -1098,9 +1129,6 @@
                                                         <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
                                                             <Setter Property="Background" Value="{DynamicResource TertiaryForegroundBrush}"/>
                                                         </DataTrigger>
-                                                        <DataTrigger Binding="{Binding StatFilter}" Value="problems">
-                                                            <Setter Property="Background" Value="White"/>
-                                                        </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
@@ -1108,11 +1136,6 @@
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipGlyph}">
                                                         <Setter Property="Foreground" Value="White"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding StatFilter}" Value="problems">
-                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
@@ -1121,13 +1144,10 @@
                                             <TextBlock Text="{Binding ProblemsCount}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipValueText}">
-                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
                                                                 <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding StatFilter}" Value="problems">
-                                                                <Setter Property="Foreground" Value="White"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -1136,13 +1156,10 @@
                                             <TextBlock Text="{DynamicResource EmpStatProblems}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipLabelText}">
-                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding ProblemsCount}" Value="0">
                                                                 <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding StatFilter}" Value="problems">
-                                                                <Setter Property="Foreground" Value="White"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -1157,28 +1174,13 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                <Setter Property="Background" Value="{DynamicResource SuccessChipBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessChipBorderBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource SuccessChipBorderBrush}"/>
-                                    </Trigger>
-                                    <!-- Nobody joined this month: keep the chip quiet instead of green. -->
-                                    <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
                                         <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-                                    </DataTrigger>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding NewThisMonth}" Value="0"/>
-                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
-                                    </MultiDataTrigger>
-                                    <!-- Active filter last, so a solid fill wins over both hover and the muted state.
-                                         Accent fill for the same reason as the problems chip above. -->
+                                    </Trigger>
                                     <DataTrigger Binding="{Binding StatFilter}" Value="new">
-                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -1193,9 +1195,6 @@
                                                         <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
                                                             <Setter Property="Background" Value="{DynamicResource TertiaryForegroundBrush}"/>
                                                         </DataTrigger>
-                                                        <DataTrigger Binding="{Binding StatFilter}" Value="new">
-                                                            <Setter Property="Background" Value="White"/>
-                                                        </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
@@ -1203,11 +1202,6 @@
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipGlyph}">
                                                         <Setter Property="Foreground" Value="White"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding StatFilter}" Value="new">
-                                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
@@ -1216,13 +1210,10 @@
                                             <TextBlock Text="{Binding NewThisMonth}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipValueText}">
-                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
                                                                 <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding StatFilter}" Value="new">
-                                                                <Setter Property="Foreground" Value="White"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -1231,13 +1222,10 @@
                                             <TextBlock Text="{DynamicResource EmpStatNewMonth}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource EmpStatChipLabelText}">
-                                                        <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding NewThisMonth}" Value="0">
                                                                 <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding StatFilter}" Value="new">
-                                                                <Setter Property="Foreground" Value="White"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -1255,11 +1243,11 @@
                         </Border.InputBindings>
                         <Border.Style>
                             <Style TargetType="Border" BasedOn="{StaticResource EmpStatChipBorder}">
-                                <Setter Property="Background" Value="{DynamicResource InfoChipBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource InfoChipBorderBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -1271,168 +1259,163 @@
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding DocumentPackagePercentText}"
                                                        Style="{StaticResource EmpStatChipValueText}"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
                                             <TextBlock Text="{DynamicResource EmpStatDocumentPackage}"
                                                        Style="{StaticResource EmpStatChipLabelText}"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                         </StackPanel>
                         </StackPanel>
                     </Border>
-                                <Border Style="{StaticResource ToolbarFadeDivider}" Height="24" Margin="8,0,10,0"/>
+                                <Border Style="{StaticResource ToolbarFadeDivider}" Height="20" Margin="8,0,10,0"/>
                 </StackPanel>
 
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource EmpSortLabel}" Style="{StaticResource EmpToolbarText}"
-                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,8,0"/>
-
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Command="{Binding SortByCommand}" CommandParameter="Name" Margin="0,0,6,0">
-                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource SortSegmentButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SortField}" Value="Name">
-                                                        <Setter Property="Tag" Value="Active"/>
-                                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE77B;" Style="{StaticResource EmpToolbarIcon}"/>
-                                            <TextBlock Text="{DynamicResource EmpSortName}" Style="{StaticResource EmpToolbarText}"/>
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}" Margin="5,0,0,0" VerticalAlignment="Center">
+                                <Button Height="32" MinHeight="32" Padding="10,0" Cursor="Hand"
+                                        ToolTip="{DynamicResource EmpSortLabel}"
+                                        Click="SortMenuButton_Click">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource EmpHeaderGhostButton}">
+                                            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                        </Style>
+                                    </Button.Style>
+                                    <Button.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                                     HasDropShadow="False">
+                                            <ContextMenu.Template>
+                                                <ControlTemplate TargetType="ContextMenu">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="8"
+                                                            Padding="4"
+                                                            SnapsToDevicePixels="True">
+                                                        <StackPanel IsItemsHost="True"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </ContextMenu.Template>
+                                            <MenuItem Header="{DynamicResource EmpSortName}" Command="{Binding SortByCommand}" CommandParameter="Name">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource EmpSortMenuItem}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SortField}" Value="Name">
+                                                                <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <MenuItem Header="{DynamicResource EmpSortDate}" Command="{Binding SortByCommand}" CommandParameter="StartDate">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource EmpSortMenuItem}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SortField}" Value="StartDate">
+                                                                <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <MenuItem Header="{DynamicResource EmpSortStatus}" Command="{Binding SortByCommand}" CommandParameter="Status">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource EmpSortMenuItem}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SortField}" Value="Status">
+                                                                <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <Separator/>
+                                            <MenuItem Header="{DynamicResource EmpSortAscending}" Command="{Binding SetSortDirectionCommand}" CommandParameter="asc">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource EmpSortMenuItem}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SortAscending}" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <MenuItem Header="{DynamicResource EmpSortDescending}" Command="{Binding SetSortDirectionCommand}" CommandParameter="desc">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem" BasedOn="{StaticResource EmpSortMenuItem}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SortAscending}" Value="False">
+                                                                <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="&#xE74A;"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SortAscending}" Value="False">
+                                                            <Setter Property="Text" Value="&#xE74B;"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <Grid VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource EmpSortName}">
                                                 <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpToolbarText}">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Setter Property="Text" Value="&#xE74A;"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding SortField}" Value="Name">
                                                                 <Setter Property="Visibility" Value="Visible"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding SortAscending}" Value="False">
-                                                                <Setter Property="Text" Value="&#xE74B;"/>
-                                                            </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                        </StackPanel>
-                    </Button>
-
-                                    <Button Command="{Binding SortByCommand}" CommandParameter="StartDate" Margin="0,0,6,0">
-                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource SortSegmentButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SortField}" Value="StartDate">
-                                                        <Setter Property="Tag" Value="Active"/>
-                                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE787;" Style="{StaticResource EmpToolbarIcon}"/>
-                                            <TextBlock Text="{DynamicResource EmpSortDate}" Style="{StaticResource EmpToolbarText}"/>
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}" Margin="5,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource EmpSortDate}">
                                                 <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpToolbarText}">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Setter Property="Text" Value="&#xE74A;"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding SortField}" Value="StartDate">
                                                                 <Setter Property="Visibility" Value="Visible"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding SortAscending}" Value="False">
-                                                                <Setter Property="Text" Value="&#xE74B;"/>
-                                                            </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                        </StackPanel>
-                    </Button>
-
-                                    <Button Command="{Binding SortByCommand}" CommandParameter="Status" Margin="0,0,6,0">
-                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource SortSegmentButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SortField}" Value="Status">
-                                                        <Setter Property="Tag" Value="Active"/>
-                                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE7BA;" Style="{StaticResource EmpToolbarIcon}"/>
-                                            <TextBlock Text="{DynamicResource EmpSortStatus}" Style="{StaticResource EmpToolbarText}"/>
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}" Margin="5,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource EmpSortStatus}">
                                                 <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpToolbarText}">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Setter Property="Text" Value="&#xE74A;"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding SortField}" Value="Status">
                                                                 <Setter Property="Visibility" Value="Visible"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding SortAscending}" Value="False">
-                                                                <Setter Property="Text" Value="&#xE74B;"/>
-                                                            </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                        </StackPanel>
-                    </Button>
-
-                                    <Button Command="{Binding SortByCommand}" CommandParameter="Problems">
-                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource SortSegmentButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SortField}" Value="Problems">
-                                                        <Setter Property="Tag" Value="Active"/>
-                                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
-                                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE7BA;">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmpToolbarIcon}">
-                                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding SortField}" Value="Problems">
-                                                                <Setter Property="Foreground" Value="White"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBlock Text="{DynamicResource EmpSortProblems}" Style="{StaticResource EmpToolbarText}"/>
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}" Margin="5,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Setter Property="Text" Value="&#xE74A;"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding SortField}" Value="Problems">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding SortAscending}" Value="False">
-                                                                <Setter Property="Text" Value="&#xE74B;"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                        </StackPanel>
-                    </Button>
-                    </StackPanel>
+                                        </Grid>
+                                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
+                                                   Margin="8,0,0,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </DockPanel>
                             </Border>
@@ -1495,7 +1478,8 @@
                         </Style>
                     </Grid.Style>
                             <!-- TABLE VIEW -->
-                            <DataGrid ItemsSource="{Binding EmployeesForTable}" AutoGenerateColumns="False" IsReadOnly="True"
+                            <DataGrid x:Name="EmployeeTableGrid" ItemsSource="{Binding EmployeesForTable}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      Loaded="EmployeeTableGrid_Loaded" Unloaded="EmployeeTableGrid_Unloaded"
                                       CanUserSortColumns="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                       BorderThickness="0" Background="Transparent" RowBackground="{DynamicResource CardBackgroundBrush}"
                                       AlternatingRowBackground="{DynamicResource ContentBackgroundBrush}"
@@ -1508,10 +1492,20 @@
                                       ScrollViewer.CanContentScroll="True"
                                       ScrollViewer.IsDeferredScrollingEnabled="True"
                                       ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                       VerticalAlignment="Stretch"
                                       Visibility="{Binding IsTableView, Converter={StaticResource BoolToVis}}"
                                       MouseDoubleClick="DataGrid_MouseDoubleClick">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeader}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCell}">
+                                        <Setter Property="Padding" Value="4,4"/>
+                                    </Style>
+                                </DataGrid.CellStyle>
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRow}">
                                         <Setter Property="Cursor" Value="Hand"/>
@@ -1523,17 +1517,39 @@
                                     </Style>
                                 </DataGrid.RowStyle>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Binding="{Binding FullName}" Width="*" FontWeight="SemiBold">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource EmpSortName}"/></DataGridTextColumn.Header>
+                                    <DataGridTextColumn Binding="{Binding FullName}" Width="*" SortMemberPath="Name">
+                                        <DataGridTextColumn.Header>
+                                            <TextBlock Text="{DynamicResource EmpSortName}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left"/>
+                                        </DataGridTextColumn.Header>
+                                        <DataGridTextColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeader}">
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                            </Style>
+                                        </DataGridTextColumn.HeaderStyle>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableTrimText}">
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="ToolTip" Value="{Binding FullName}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding PositionTitle}" Width="Auto">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource LabelPosTitle}"/></DataGridTextColumn.Header>
+                                    <DataGridTextColumn Binding="{Binding PositionTitle}" Width="1.2*" SortMemberPath="Position">
+                                        <DataGridTextColumn.Header>
+                                            <TextBlock Text="{DynamicResource LabelPosTitle}" TextTrimming="CharacterEllipsis"/>
+                                        </DataGridTextColumn.Header>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableCenterText}">
+                                                <Setter Property="ToolTip" Value="{Binding PositionTitle}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTemplateColumn Width="92">
-                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpSortStatus}"/></DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn Width="76" SortMemberPath="Status">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpSortStatus}" TextTrimming="CharacterEllipsis"/></DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Border Style="{StaticResource TableStatusBadge}"
+                                                        HorizontalAlignment="Center"
+                                                        MaxWidth="68"
                                                         Background="{Binding Status, Converter={StaticResource StatusBg}}">
                                                     <TextBlock Text="{Binding Status, Converter={StaticResource StatusDisplayConverter}}"
                                                                Style="{StaticResource TableStatusText}"
@@ -1542,23 +1558,62 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTextColumn Binding="{Binding StartDate}" Width="90">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizStartDate}"/></DataGridTextColumn.Header>
+                                    <DataGridTextColumn Binding="{Binding StartDate}" Width="74" SortMemberPath="StartDate">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizStartDate}" TextTrimming="CharacterEllipsis"/></DataGridTextColumn.Header>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableCenterText}"/>
+                                        </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding Phone}" Width="110">
-                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizPhone}"/></DataGridTextColumn.Header>
+                                    <DataGridTextColumn Binding="{Binding Phone}" Width="92" SortMemberPath="Phone">
+                                        <DataGridTextColumn.Header><TextBlock Text="{DynamicResource WizPhone}" TextTrimming="CharacterEllipsis"/></DataGridTextColumn.Header>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableCenterText}">
+                                                <Setter Property="ToolTip" Value="{Binding Phone}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Binding="{Binding Email}" Width="Auto">
-                                        <DataGridTextColumn.Header><TextBlock Text="Email"/></DataGridTextColumn.Header>
+                                    <DataGridTextColumn Binding="{Binding Email}" Width="*" SortMemberPath="Email">
+                                        <DataGridTextColumn.Header><TextBlock Text="Email" TextTrimming="CharacterEllipsis"/></DataGridTextColumn.Header>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableCenterText}">
+                                                <Setter Property="ToolTip" Value="{Binding Email}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTemplateColumn Width="56">
-                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgePassport}"/></DataGridTemplateColumn.Header>
+                                    <DataGridTextColumn Binding="{Binding ContractType}" Width="0.7*" SortMemberPath="Contract">
+                                        <DataGridTextColumn.Header>
+                                            <TextBlock Text="{DynamicResource LabelContractType}" TextTrimming="CharacterEllipsis"/>
+                                        </DataGridTextColumn.Header>
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableCenterText}">
+                                                <Setter Property="ToolTip" Value="{Binding ContractType}"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Width="78" SortMemberPath="Passport">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgePassport}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/></DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Border>
+                                                <Border ToolTip="{Binding PassportExpiry}">
                                                     <Border.Style>
-                                                        <Style TargetType="Border" BasedOn="{StaticResource TableBooleanBadge}">
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableDocDateBadge}">
                                                             <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding PassportSeverity}" Value="Expired">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding PassportSeverity}" Value="Critical">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding PassportSeverity}" Value="Warning">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
                                                                 <DataTrigger Binding="{Binding HasPassport}" Value="False">
                                                                     <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                                                     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
@@ -1566,12 +1621,22 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock>
+                                                    <TextBlock Text="{Binding PassportExpiry}">
                                                         <TextBlock.Style>
-                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
-                                                                <Setter Property="Text" Value="{DynamicResource CommonYes}"/>
-                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableDocDateText}">
                                                                 <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding PassportSeverity}" Value="Expired">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding PassportSeverity}" Value="Critical">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding PassportSeverity}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding PassportSeverity}" Value="Unknown">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
                                                                     <DataTrigger Binding="{Binding HasPassport}" Value="False">
                                                                         <Setter Property="Text" Value="-"/>
                                                                         <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
@@ -1584,14 +1649,33 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Width="56">
-                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeVisa}"/></DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn Width="78" SortMemberPath="Visa">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeVisa}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/></DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Border>
+                                                <Border ToolTip="{Binding VisaExpiry}">
                                                     <Border.Style>
-                                                        <Style TargetType="Border" BasedOn="{StaticResource TableBooleanBadge}">
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableDocDateBadge}">
                                                             <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding VisaSeverity}" Value="Expired">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding VisaSeverity}" Value="Critical">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding VisaSeverity}" Value="Warning">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
                                                                 <DataTrigger Binding="{Binding HasVisa}" Value="False">
                                                                     <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                                                     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
@@ -1599,12 +1683,22 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock>
+                                                    <TextBlock Text="{Binding VisaExpiry}">
                                                         <TextBlock.Style>
-                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
-                                                                <Setter Property="Text" Value="{DynamicResource CommonYes}"/>
-                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableDocDateText}">
                                                                 <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding VisaSeverity}" Value="Expired">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding VisaSeverity}" Value="Critical">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding VisaSeverity}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding VisaSeverity}" Value="Unknown">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
                                                                     <DataTrigger Binding="{Binding HasVisa}" Value="False">
                                                                         <Setter Property="Text" Value="-"/>
                                                                         <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
@@ -1617,14 +1711,33 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Width="56">
-                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeInsurance}"/></DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn Width="78" SortMemberPath="Insurance">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeInsurance}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/></DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Border>
+                                                <Border ToolTip="{Binding InsuranceExpiry}">
                                                     <Border.Style>
-                                                        <Style TargetType="Border" BasedOn="{StaticResource TableBooleanBadge}">
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableDocDateBadge}">
                                                             <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding EmployeeType}" Value="passport_only">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
                                                                 <DataTrigger Binding="{Binding HasInsurance}" Value="False">
                                                                     <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                                                     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
@@ -1632,12 +1745,22 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock>
+                                                    <TextBlock Text="{Binding InsuranceExpiry}">
                                                         <TextBlock.Style>
-                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableStatusText}">
-                                                                <Setter Property="Text" Value="{DynamicResource CommonYes}"/>
-                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableDocDateText}">
                                                                 <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Expired">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Critical">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding InsuranceSeverity}" Value="Unknown">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
                                                                     <DataTrigger Binding="{Binding HasInsurance}" Value="False">
                                                                         <Setter Property="Text" Value="-"/>
                                                                         <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
@@ -1650,10 +1773,78 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Header="" Width="Auto">
+                                    <DataGridTemplateColumn Width="78" SortMemberPath="Permit">
+                                        <DataGridTemplateColumn.Header><TextBlock Text="{DynamicResource EmpBadgeWorkPermit}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/></DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
+                                                <Border ToolTip="{Binding WorkPermitExpiry}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border" BasedOn="{StaticResource TableDocDateBadge}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical">
+                                                                    <Setter Property="Background" Value="{DynamicResource ErrorChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Warning">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Unknown">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningChipBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding WorkPermitExpiry}" Value="">
+                                                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding WorkPermitExpiry}" Value="{x:Null}">
+                                                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TableDocDateText}">
+                                                                <Setter Property="Text" Value="{Binding WorkPermitExpiry}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Expired">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Critical">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ErrorChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Warning">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding WorkPermitSeverity}" Value="Unknown">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding WorkPermitExpiry}" Value="">
+                                                                        <Setter Property="Text" Value="-"/>
+                                                                        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding WorkPermitExpiry}" Value="{x:Null}">
+                                                                        <Setter Property="Text" Value="-"/>
+                                                                        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="" Width="52" SortMemberPath="Actions">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                                     <Button Padding="4,2" Margin="0,0,2,0" Cursor="Hand"
                                                             Foreground="{DynamicResource ForegroundBrush}"
                                                             Style="{StaticResource CardActionBtn}"

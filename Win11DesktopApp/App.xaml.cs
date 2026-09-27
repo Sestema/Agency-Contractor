@@ -784,11 +784,6 @@ namespace Win11DesktopApp
             {
                 await PendingCleanupService.ProcessPendingCleanupAsync(EmployeeService.TryCleanupDeferredDirectory);
             }, BackgroundTaskToken);
-
-            RunBackgroundTask("App.NetPdfWarmUp", () =>
-            {
-                NetPdfFormHelper.WarmUp();
-            }, BackgroundTaskToken);
         }
 
         private static void RunBackgroundTask(string module, Action action, CancellationToken cancellationToken)

@@ -922,9 +922,9 @@ namespace Win11DesktopApp.ViewModels
             {
                 var detected = await Task.Run(() =>
                 {
-                    var netPdfFields = NetPdfFormHelper.ReadFieldBindings(_pdfFilePath).ToList();
-                    if (netPdfFields.Count > 0)
-                        return netPdfFields;
+                    var formFields = ITextFormHelper.ReadFieldBindings(_pdfFilePath).ToList();
+                    if (formFields.Count > 0)
+                        return formFields;
 
                     using var pdfDoc = PdfReader.Open(_pdfFilePath, PdfDocumentOpenMode.Modify);
                     return PdfFormFieldReflectionHelper.EnumerateFields(pdfDoc)
@@ -966,46 +966,7 @@ namespace Win11DesktopApp.ViewModels
             if (!IsFormMode)
                 return;
 
-            if (!NetPdfFormHelper.IsJavaRuntimeAvailable())
-            {
-                await HandleMissingJavaRuntimeAsync();
-                return;
-            }
-
             await EnsureFormFieldsLoadedAsync();
-        }
-
-        private async Task HandleMissingJavaRuntimeAsync()
-        {
-            var result = MessageBox.Show(
-                Res("PdfJavaRequiredMessage"),
-                Res("TitleWarning"),
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                StatusMessage = Res("PdfJavaDownloading");
-                var started = await NetPdfFormHelper.DownloadAndLaunchJavaInstallerAsync();
-                if (started)
-                {
-                    StatusMessage = Res("PdfJavaInstallerStarted");
-                    ToastService.Instance.Info(Res("PdfJavaInstallerStarted"));
-                }
-                else
-                {
-                    StatusMessage = Res("PdfJavaInstallerFailed");
-                    ToastService.Instance.Warning(Res("PdfJavaInstallerFailed"));
-                    NetPdfFormHelper.OpenJavaDownloadPage();
-                }
-            }
-            else
-            {
-                StatusMessage = Res("PdfJavaRequiredMessage");
-            }
-
-            if (IsFormMode)
-                PdfMode = "overlay";
         }
 
         private void MergeFormFieldBindings(IEnumerable<PdfFormFieldBinding> sourceBindings)

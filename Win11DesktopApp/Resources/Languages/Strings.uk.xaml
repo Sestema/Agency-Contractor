@@ -559,14 +559,14 @@
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Обрати</sys:String>
-    <sys:String x:Key="EmpBrandSubtitle">Панель управління</sys:String>
     <sys:String x:Key="EmpSwitchCompanyTooltip">Змінити фірму</sys:String>
     <sys:String x:Key="EmpNoCompaniesInDropdown">Немає доступних фірм</sys:String>
     <sys:String x:Key="EmpStatTotal">Всього</sys:String>
     <sys:String x:Key="EmpStatActive">Активних</sys:String>
-    <sys:String x:Key="EmpStatProblems">Проблеми з док.</sys:String>
-    <sys:String x:Key="EmpStatNewMonth">Нових цього міс.</sys:String>
-    <sys:String x:Key="EmpStatDocumentPackage">Пакет док.</sys:String>
+    <sys:String x:Key="EmpStatProblems">Проблеми</sys:String>
+    <sys:String x:Key="EmpStatProblemsTooltip">Проблеми з документами: паспорт, віза, страховка або дозвіл на роботу</sys:String>
+    <sys:String x:Key="EmpStatNewMonth">Нові за місяць</sys:String>
+    <sys:String x:Key="EmpStatDocumentPackage">Пакет документів</sys:String>
     <sys:String x:Key="EmpStatDocumentPackageTooltip">Натисніть, щоб побачити готовність пакета документів по працівниках</sys:String>
     <sys:String x:Key="EmpDocumentPackageDialogTitle">Пакет документів</sys:String>
     <sys:String x:Key="EmpDocumentPackageDialogSubtitle">Готовність галочок пакета по працівниках поточної фірми</sys:String>
@@ -579,9 +579,10 @@
     <sys:String x:Key="EmpDocumentPackageMissingScanned">насканований</sys:String>
     <sys:String x:Key="EmpSortLabel">Сортувати:</sys:String>
     <sys:String x:Key="EmpSortName">Ім'я</sys:String>
-    <sys:String x:Key="EmpSortDate">Дата наступу</sys:String>
+    <sys:String x:Key="EmpSortDate">Дата початку</sys:String>
     <sys:String x:Key="EmpSortStatus">Статус</sys:String>
-    <sys:String x:Key="EmpSortProblems">Проблеми</sys:String>
+    <sys:String x:Key="EmpSortAscending">За зростанням</sys:String>
+    <sys:String x:Key="EmpSortDescending">За спаданням</sys:String>
     <sys:String x:Key="ViewTable">Таблиця</sys:String>
     <sys:String x:Key="ViewList">Список</sys:String>
     <sys:String x:Key="ViewTiles">Плитки</sys:String>

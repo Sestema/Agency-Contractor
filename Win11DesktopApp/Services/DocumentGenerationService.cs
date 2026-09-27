@@ -586,7 +586,7 @@ namespace Win11DesktopApp.Services
 
         private string GeneratePdfWithFormFields(string templatePath, string outputPath, PdfTagMap tagMap, Dictionary<string, string> tagValues)
         {
-            var fillResult = NetPdfFormHelper.TryFillFormFields(templatePath, outputPath, tagMap.FormFields, tagValues);
+            var fillResult = ITextFormHelper.TryFillFormFields(templatePath, outputPath, tagMap.FormFields, tagValues);
             if (fillResult.Success)
                 return outputPath;
 

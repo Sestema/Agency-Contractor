@@ -559,12 +559,12 @@
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Select</sys:String>
-    <sys:String x:Key="EmpBrandSubtitle">Control panel</sys:String>
     <sys:String x:Key="EmpSwitchCompanyTooltip">Switch company</sys:String>
     <sys:String x:Key="EmpNoCompaniesInDropdown">No companies available</sys:String>
     <sys:String x:Key="EmpStatTotal">Total</sys:String>
     <sys:String x:Key="EmpStatActive">Active</sys:String>
     <sys:String x:Key="EmpStatProblems">Doc. problems</sys:String>
+    <sys:String x:Key="EmpStatProblemsTooltip">Document problems: passport, visa, insurance, or work permit</sys:String>
     <sys:String x:Key="EmpStatNewMonth">New this month</sys:String>
     <sys:String x:Key="EmpStatDocumentPackage">Doc. package</sys:String>
     <sys:String x:Key="EmpStatDocumentPackageTooltip">Click to see document package completion per employee</sys:String>
@@ -581,7 +581,8 @@
     <sys:String x:Key="EmpSortName">Name</sys:String>
     <sys:String x:Key="EmpSortDate">Start date</sys:String>
     <sys:String x:Key="EmpSortStatus">Status</sys:String>
-    <sys:String x:Key="EmpSortProblems">Problems</sys:String>
+    <sys:String x:Key="EmpSortAscending">Ascending</sys:String>
+    <sys:String x:Key="EmpSortDescending">Descending</sys:String>
     <sys:String x:Key="ViewTable">Table</sys:String>
     <sys:String x:Key="ViewList">List</sys:String>
     <sys:String x:Key="ViewTiles">Tiles</sys:String>

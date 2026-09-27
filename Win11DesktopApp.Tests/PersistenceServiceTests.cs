@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
@@ -44,10 +43,8 @@ namespace Win11DesktopApp.Tests
 
             var coreDbPath = Path.Combine(_testRootPath, "SQLite", "core.db");
             var jsonSnapshotPath = Path.Combine(_testRootPath, "database.json");
-            var syncStatePath = Path.Combine(_testRootPath, "SQLite", "core.sync.json");
             Assert.True(File.Exists(coreDbPath));
             Assert.False(File.Exists(jsonSnapshotPath));
-            Assert.False(File.Exists(syncStatePath));
         }
 
         [Fact]
@@ -80,22 +77,6 @@ namespace Win11DesktopApp.Tests
             Assert.False(File.Exists(jsonSnapshotPath));
             Assert.False(File.Exists(writeLockPath));
             Assert.True(!Directory.Exists(pendingFolder) || Directory.GetFiles(pendingFolder, "*.*").Length == 0);
-        }
-
-        [Fact]
-        public void SaveCompanies_ShouldDeleteObsoleteCoreSyncState()
-        {
-            var sqliteFolder = Path.Combine(_testRootPath, "SQLite");
-            Directory.CreateDirectory(sqliteFolder);
-            var syncStatePath = Path.Combine(sqliteFolder, "core.sync.json");
-            File.WriteAllText(syncStatePath, "{}", Encoding.UTF8);
-
-            _persistenceService.SaveCompanies(new List<EmployerCompany>
-            {
-                new() { Name = "Sync Cleanup" }
-            });
-
-            Assert.False(File.Exists(syncStatePath));
         }
 
         [Fact]
@@ -178,23 +159,15 @@ END;";
         }
 
         [Fact]
-        public void LoadCompanies_ShouldRejectTamperedAuthenticatedJson_WhenCoreDbMissing()
+        public void LoadCompanies_ShouldIgnoreStrayDatabaseJson_WhenCoreDbMissing()
         {
             var jsonSnapshotPath = Path.Combine(_testRootPath, "database.json");
-            var checksumPath = Path.Combine(_testRootPath, "database.json.sha256");
-            WriteLegacyDatabaseJson(jsonSnapshotPath, checksumPath, new DatabaseRoot
-            {
-                Companies = new List<EmployerCompany> { new EmployerCompany { Name = "Tamper Test" } }
-            });
-
-            var payload = File.ReadAllBytes(jsonSnapshotPath);
-            payload[25] = (byte)(payload[25] ^ 0xFF);
-            File.WriteAllBytes(jsonSnapshotPath, payload);
-            File.WriteAllText(checksumPath, Convert.ToBase64String(SHA256.HashData(payload)), Encoding.UTF8);
+            File.WriteAllText(jsonSnapshotPath, "{\"Companies\":[{\"Name\":\"Tamper Test\"}]}", Encoding.UTF8);
 
             var loaded = _persistenceService.LoadCompanies();
 
             Assert.Empty(loaded);
+            Assert.True(File.Exists(jsonSnapshotPath));
         }
 
         [Fact]
@@ -213,7 +186,7 @@ END;";
         }
 
         [Fact]
-        public void LoadCompanies_ShouldPreferCoreDb_WhenLegacyJsonIsCorrupted()
+        public void LoadCompanies_ShouldIgnoreStrayDatabaseJson_WhenCoreDbExists()
         {
             var companies = new List<EmployerCompany> { new EmployerCompany { Name = "Integrity Test" } };
             _persistenceService.SaveCompanies(companies);
@@ -224,31 +197,19 @@ END;";
             var loaded = _persistenceService.LoadCompanies();
             Assert.Single(loaded);
             Assert.Equal("Integrity Test", loaded[0].Name);
-            Assert.False(File.Exists(filePath));
-            Assert.True(File.Exists(filePath + ".migrated"));
+            Assert.True(File.Exists(filePath));
         }
 
         [Fact]
-        public void LoadCompanies_ShouldIgnoreLegacyJson_WhenCoreDbExists()
+        public void LoadCompanies_ShouldNotLetStrayDatabaseJsonOverrideCoreDb()
         {
             var initialCompanies = new List<EmployerCompany> { new EmployerCompany { Name = "Core Value" } };
             _persistenceService.SaveCompanies(initialCompanies);
 
             var legacyJsonPath = Path.Combine(_testRootPath, "database.json");
             var legacyChecksumPath = Path.Combine(_testRootPath, "database.json.sha256");
-            var incoming = new DatabaseRoot
-            {
-                Version = "2.0",
-                Companies = new List<EmployerCompany> { new EmployerCompany { Name = "Json Override" } },
-                Settings = new DatabaseSettings
-                {
-                    LanguageCode = "en",
-                    SelectedCompanyId = string.Empty,
-                    AppVersion = "0.1.59"
-                }
-            };
-
-            WriteLegacyDatabaseJson(legacyJsonPath, legacyChecksumPath, incoming);
+            File.WriteAllText(legacyJsonPath, "{\"Companies\":[{\"Name\":\"Json Override\"}]}", Encoding.UTF8);
+            File.WriteAllText(legacyChecksumPath, "stale", Encoding.UTF8);
 
             var loaded = _persistenceService.LoadCompanies();
             Assert.Single(loaded);
@@ -257,18 +218,8 @@ END;";
             var loadedAgain = _persistenceService.LoadCompanies();
             Assert.Single(loadedAgain);
             Assert.Equal("Core Value", loadedAgain[0].Name);
-            Assert.False(File.Exists(legacyJsonPath));
-            Assert.False(File.Exists(legacyChecksumPath));
-            Assert.True(File.Exists(legacyJsonPath + ".migrated"));
-            Assert.True(File.Exists(legacyChecksumPath + ".migrated"));
-        }
-
-        private static void WriteLegacyDatabaseJson(string jsonPath, string checksumPath, DatabaseRoot database)
-        {
-            var json = JsonSerializer.Serialize(database, new JsonSerializerOptions { WriteIndented = true });
-            var encrypted = EncryptLegacyJson(json);
-            File.WriteAllBytes(jsonPath, encrypted);
-            File.WriteAllText(checksumPath, Convert.ToBase64String(SHA256.HashData(encrypted)), Encoding.UTF8);
+            Assert.True(File.Exists(legacyJsonPath));
+            Assert.True(File.Exists(legacyChecksumPath));
         }
 
         private string WritePendingCoreChange(PendingCoreDatabaseChange change)
@@ -286,29 +237,6 @@ END;";
             File.WriteAllText(tmpPath, json, Encoding.UTF8);
             File.Move(tmpPath, finalPath);
             return finalPath;
-        }
-
-        private static byte[] EncryptLegacyJson(string plainText)
-        {
-            var key = new byte[32];
-            var iv = new byte[16];
-            var keyBytes = Encoding.UTF8.GetBytes("AgencyContractorSecretKey2024_Secure");
-            Array.Copy(keyBytes, key, Math.Min(keyBytes.Length, key.Length));
-            var ivBytes = Encoding.UTF8.GetBytes("AgencyContractor");
-            Array.Copy(ivBytes, iv, Math.Min(ivBytes.Length, iv.Length));
-
-            using var aes = Aes.Create();
-            aes.Key = key;
-            aes.IV = iv;
-            using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-            using var ms = new MemoryStream();
-            using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
-            using (var sw = new StreamWriter(cs))
-            {
-                sw.Write(plainText);
-            }
-
-            return ms.ToArray();
         }
 
         private void DeleteCoreDbFiles()

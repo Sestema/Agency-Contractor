@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using Win11DesktopApp.EmployeeModels;
@@ -18,6 +20,16 @@ namespace Win11DesktopApp.Views
         {
             InitializeComponent();
             PreviewMouseLeftButtonDown += ArchiveView_PreviewMouseLeftButtonDown;
+        }
+
+        private void SortMenuButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.ContextMenu == null)
+                return;
+
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.IsOpen = true;
+            e.Handled = true;
         }
 
         private void TilesItemsControl_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -190,5 +202,25 @@ namespace Win11DesktopApp.Views
 
             return null;
         }
+    }
+
+    public sealed class ArchiveViewModePillOffsetConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var width = 30.0;
+            if (parameter != null && double.TryParse(parameter.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+                width = parsed;
+
+            return (value as string) switch
+            {
+                "Tiles" => width,
+                "Icons" => width * 2,
+                _ => 0.0
+            };
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
     }
 }

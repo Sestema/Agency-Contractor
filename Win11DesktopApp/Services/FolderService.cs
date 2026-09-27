@@ -444,18 +444,6 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
-        /// Full path to the core sync state file: {Root}/SQLite/core.sync.json
-        /// </summary>
-        public string CoreSyncStatePath
-        {
-            get
-            {
-                var sqliteFolder = GetSqliteFolder();
-                return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "core.sync.json");
-            }
-        }
-
-        /// <summary>
         /// Get the salary SQLite folder path: {Root}/SQLite/Vyplaty
         /// </summary>
         public string GetSalaryDbFolder()
@@ -489,30 +477,6 @@ namespace Win11DesktopApp.Services
         {
             var sqliteFolder = GetSqliteFolder();
             return string.IsNullOrEmpty(sqliteFolder) ? string.Empty : Path.Combine(sqliteFolder, "Locks");
-        }
-
-        /// <summary>
-        /// Full path to the database file: {Root}/database.json
-        /// </summary>
-        public string DatabaseFilePath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(RootPath)) return string.Empty;
-                return Path.Combine(RootPath, "database.json");
-            }
-        }
-
-        /// <summary>
-        /// Full path to the database checksum: {Root}/database.json.sha256
-        /// </summary>
-        public string DatabaseChecksumPath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(RootPath)) return string.Empty;
-                return Path.Combine(RootPath, "database.json.sha256");
-            }
         }
 
         // ============ FOLDER STRUCTURE ============
@@ -878,24 +842,5 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        /// <summary>
-        /// Check if the root folder looks like it contains our data
-        /// (has database.json or company_data.json or company-looking subfolders).
-        /// </summary>
-        public bool IsValidDataFolder(string folderPath)
-        {
-            if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
-                return false;
-
-            // New format
-            if (File.Exists(Path.Combine(folderPath, "database.json")))
-                return true;
-
-            // Old format
-            if (File.Exists(Path.Combine(folderPath, "company_data.json")))
-                return true;
-
-            return false;
-        }
     }
 }

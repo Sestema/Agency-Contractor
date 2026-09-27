@@ -1173,324 +1173,394 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+
+        <views:ArchiveViewModePillOffsetConverter x:Key="ArchivePillOffset"/>
+
+        <Style x:Key="ArchiveChipButton" TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
+        </Style>
+
+        <Style x:Key="ArchiveViewSegment" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ArchiveSortMenuItem" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter ContentSource="Header"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource PageBackgroundBrush}">
         <Grid Margin="18,12,18,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="270"/>
-                </Grid.ColumnDefinitions>
+            <Border Grid.Row="0" Margin="0,0,0,8" CornerRadius="14" BorderThickness="1" Padding="10,7"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    Background="{DynamicResource CardBackgroundBrush}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,12,0">
-                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-                        </Button>
-                        <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource AccentBrush}">
-                            <TextBlock Text="&#xE7B8;" Style="{StaticResource PageHeaderIconText}"/>
-                        </Border>
-                        <TextBlock Text="{DynamicResource ArchiveTitle}" Style="{StaticResource PageHeaderTitleText}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <Border Grid.Column="1"
-                        Style="{StaticResource ToolbarSearchContainer}"
-                        CornerRadius="12"
-                        Padding="8,6"
-                        VerticalAlignment="Center">
-                    <Grid>
+                    <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="280"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xE721;"
-                                   Grid.Column="0"
-                                   FontFamily="Segoe MDL2 Assets"
-                                   FontSize="{DynamicResource FS13}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1"
-                                 Height="32"
-                                 BorderThickness="0"
-                                 Background="Transparent"
-                                 VerticalContentAlignment="Center"
-                                 Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Command="{Binding GoBackCommand}" Style="{StaticResource HeaderBackButton}" Margin="0,0,8,0">
+                                <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
+                            </Button>
+                            <TextBlock Text="{DynamicResource ArchiveTitle}"
+                                       FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Border Grid.Column="2" Height="32" CornerRadius="8" Padding="8,0"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                Background="{DynamicResource ContentBackgroundBrush}" VerticalAlignment="Center">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE721;" Grid.Column="0" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="{DynamicResource FS13}"
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox Grid.Column="1" BorderThickness="0" Background="Transparent"
+                                         VerticalContentAlignment="Center"
+                                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                        </Border>
                     </Grid>
-                </Border>
-            </Grid>
 
-            <WrapPanel Grid.Row="1" Margin="0,0,0,8">
-                <Button Command="{Binding FilterByStatCommand}" CommandParameter="all" MinWidth="170">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ArchiveStatCardButton}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding StatFilter}" Value="all">
-                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter Property="BorderThickness" Value="2"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource EmpStatTotal}"
-                                   FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                        <TextBlock Text="{Binding TotalArchivedCount, Mode=OneWay}"
-                                   FontSize="{DynamicResource FS20}"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource ForegroundBrush}"
-                                   Margin="0,2,0,0"/>
-                        <TextBlock FontSize="{DynamicResource FS10}"
-                                   Foreground="{DynamicResource TertiaryForegroundBrush}">
-                            <Run Text="{Binding FilteredCount, Mode=OneWay}"/>
-                            <Run Text=" "/>
-                            <Run Text="{DynamicResource ArchiveFilteredCountSuffix}"/>
-                        </TextBlock>
-                    </StackPanel>
-                </Button>
+                    <DockPanel Grid.Row="1" Margin="0,6,0,0" LastChildFill="True">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border CornerRadius="8" BorderThickness="1" Padding="2,1" Height="32"
+                                    BorderBrush="{DynamicResource CardBorderBrush}"
+                                    Background="{DynamicResource ContentBackgroundBrush}"
+                                    Margin="0,0,8,0">
+                                <Grid>
+                                    <Border Width="30" Height="28" CornerRadius="6"
+                                            Background="{DynamicResource AccentBrush}"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <Border.RenderTransform>
+                                            <TranslateTransform X="{Binding ViewMode, Converter={StaticResource ArchivePillOffset}, ConverterParameter=30}"/>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="List" ToolTip="{DynamicResource ViewList}" Style="{StaticResource ArchiveViewSegment}">
+                                            <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ViewMode}" Value="List"><Setter Property="Foreground" Value="White"/></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Button>
+                                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Tiles" ToolTip="{DynamicResource ViewTiles}" Style="{StaticResource ArchiveViewSegment}">
+                                            <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ViewMode}" Value="Tiles"><Setter Property="Foreground" Value="White"/></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Button>
+                                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Icons" ToolTip="{DynamicResource ViewIcons}" Style="{StaticResource ArchiveViewSegment}">
+                                            <TextBlock Text="&#xE80B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ViewMode}" Value="Icons"><Setter Property="Foreground" Value="White"/></DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTilesView}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsIconsView}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <Slider Value="{Binding TileSizeStep}" Minimum="1" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True"
+                                        Width="72" Style="{StaticResource ArchiveZoomSlider}" VerticalAlignment="Center"
+                                        ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
+                                <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}">
+                                <Run Text="{DynamicResource ArchiveResultsLabel}"/><Run Text=" "/><Run Text="{Binding ResultsPrimaryCount, Mode=OneWay}"/><Run Text=" / "/><Run Text="{Binding ResultsSecondaryCount, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
 
-                <Button Command="{Binding FilterByStatCommand}" CommandParameter="recent" MinWidth="160">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ArchiveStatCardButton}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding StatFilter}" Value="recent">
-                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter Property="BorderThickness" Value="2"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource ArchiveStatRecent}"
-                                   FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                        <TextBlock Text="{Binding ArchivedThisMonthCount, Mode=OneWay}"
-                                   FontSize="{DynamicResource FS20}"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   Margin="0,2,0,0"/>
-                        <TextBlock Text="{DynamicResource ArchiveFilterRecent}"
-                                   FontSize="{DynamicResource FS10}"
-                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
-                    </StackPanel>
-                </Button>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Command="{Binding FilterByStatCommand}" CommandParameter="all">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ArchiveChipButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatFilter}" Value="all">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="18" Height="18" CornerRadius="9" Background="{DynamicResource InfoChipForegroundBrush}" Margin="0,0,6,0">
+                                        <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding TotalArchivedCount, Mode=OneWay}" FontWeight="SemiBold" FontSize="{DynamicResource FS12}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{DynamicResource EmpStatTotal}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding FilterByStatCommand}" CommandParameter="recent">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ArchiveChipButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatFilter}" Value="recent">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="18" Height="18" CornerRadius="9" Background="{DynamicResource SuccessChipForegroundBrush}" Margin="0,0,6,0">
+                                        <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding ArchivedThisMonthCount, Mode=OneWay}" FontWeight="SemiBold" FontSize="{DynamicResource FS12}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{DynamicResource ArchiveFilterRecent}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding FilterByStatCommand}" CommandParameter="no_photo">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ArchiveChipButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatFilter}" Value="no_photo">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="18" Height="18" CornerRadius="9" Background="{DynamicResource WarningChipForegroundBrush}" Margin="0,0,6,0">
+                                        <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding WithoutPhotoCount, Mode=OneWay}" FontWeight="SemiBold" FontSize="{DynamicResource FS12}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{DynamicResource ArchiveFilterNoPhoto}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
 
-                <Button Command="{Binding FilterByStatCommand}" CommandParameter="no_photo" MinWidth="160">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ArchiveStatCardButton}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding StatFilter}" Value="no_photo">
-                                    <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter Property="BorderThickness" Value="2"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource DetNoPhoto}"
-                                   FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                        <TextBlock Text="{Binding WithoutPhotoCount, Mode=OneWay}"
-                                   FontSize="{DynamicResource FS20}"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource WarningBrush}"
-                                   Margin="0,2,0,0"/>
-                        <TextBlock Text="{DynamicResource ArchiveFilterNoPhoto}"
-                                   FontSize="{DynamicResource FS10}"
-                                   Foreground="{DynamicResource TertiaryForegroundBrush}"/>
-                    </StackPanel>
-                </Button>
-            </WrapPanel>
+                            <Button Height="32" MinHeight="32" Padding="10,0" Margin="4,0,6,0" Cursor="Hand"
+                                    ToolTip="{DynamicResource EmpSortLabel}" Click="SortMenuButton_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ArchiveChipButton}">
+                                        <Setter Property="Margin" Value="4,0,6,0"/>
+                                    </Style>
+                                </Button.Style>
+                                <Button.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                                 HasDropShadow="False">
+                                        <ContextMenu.Template>
+                                            <ControlTemplate TargetType="ContextMenu">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="8"
+                                                        Padding="4"
+                                                        SnapsToDevicePixels="True">
+                                                    <StackPanel IsItemsHost="True"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </ContextMenu.Template>
+                                        <MenuItem Header="{DynamicResource ArchiveSortEndDate}" Command="{Binding SortByCommand}" CommandParameter="EndDate">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource ArchiveSortMenuItem}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SortField}" Value="EndDate">
+                                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                        <MenuItem Header="{DynamicResource EmpSortName}" Command="{Binding SortByCommand}" CommandParameter="Name">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource ArchiveSortMenuItem}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SortField}" Value="Name">
+                                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                        <MenuItem Header="{DynamicResource ArchiveSortFirm}" Command="{Binding SortByCommand}" CommandParameter="Firm">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource ArchiveSortMenuItem}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SortField}" Value="Firm">
+                                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="{DynamicResource EmpSortAscending}" Command="{Binding SetSortDirectionCommand}" CommandParameter="asc">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource ArchiveSortMenuItem}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SortAscending}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                        <MenuItem Header="{DynamicResource EmpSortDescending}" Command="{Binding SetSortDirectionCommand}" CommandParameter="desc">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem" BasedOn="{StaticResource ArchiveSortMenuItem}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SortAscending}" Value="False">
+                                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="&#xE74B;"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SortAscending}" Value="True">
+                                                        <Setter Property="Text" Value="&#xE74A;"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{DynamicResource ArchiveSortEndDate}" FontSize="{DynamicResource FS12}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SortField}" Value="EndDate"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{DynamicResource EmpSortName}" FontSize="{DynamicResource FS12}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SortField}" Value="Name"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{DynamicResource ArchiveSortFirm}" FontSize="{DynamicResource FS12}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SortField}" Value="Firm"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
 
-            <Border Grid.Row="2"
-                    Background="{DynamicResource CardBackgroundBrush}"
-                    BorderBrush="{DynamicResource CardBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="10"
-                    Padding="8,6"
-                    Margin="0,0,0,8">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <WrapPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="{DynamicResource EmpSortLabel}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,6,0"
-                                   FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-
-                        <Button Command="{Binding SortByCommand}" CommandParameter="EndDate">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SortField}" Value="EndDate">
-                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <TextBlock Text="{DynamicResource ArchiveSortEndDate}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
-                        </Button>
-
-                        <Button Command="{Binding SortByCommand}" CommandParameter="Name">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SortField}" Value="Name">
-                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <TextBlock Text="{DynamicResource EmpSortName}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
-                        </Button>
-
-                        <Button Command="{Binding SortByCommand}" CommandParameter="Firm" Margin="0,0,12,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SortField}" Value="Firm">
-                                            <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <TextBlock Text="{DynamicResource ArchiveSortFirm}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"/>
-                        </Button>
-
-                        <Border Width="1" Height="20" Background="{DynamicResource CardBorderBrush}"
-                                VerticalAlignment="Center" Margin="2,0,10,0"/>
-
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,0">
-                            <TextBlock Text="&#xE71C;"
-                                       FontFamily="Segoe MDL2 Assets"
-                                       FontSize="{DynamicResource FS11}"
-                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,6,0"/>
-                            <ComboBox ItemsSource="{Binding FirmOptions}"
-                                      SelectedItem="{Binding SelectedFirm}"
-                                      MinWidth="150"
-                                      MaxWidth="220"
-                                      Height="32"
-                                      VerticalContentAlignment="Center"
-                                      FontSize="{DynamicResource FS12}"
+                            <ComboBox ItemsSource="{Binding FirmOptions}" SelectedItem="{Binding SelectedFirm}"
+                                      MinWidth="120" MaxWidth="180" Height="32" Margin="0,0,6,0"
+                                      VerticalContentAlignment="Center" FontSize="{DynamicResource FS12}"
                                       ToolTip="{DynamicResource ArchiveSortFirm}"/>
-                            <Button Command="{Binding ClearFilterCommand}"
-                                    Style="{StaticResource ArchiveToggleButtonBase}"
-                                    Margin="6,0,0,0"
-                                    Padding="8,0"
-                                    ToolTip="{DynamicResource ArchiveClearFilter}"
+                            <Button Command="{Binding ClearFilterCommand}" Style="{StaticResource ArchiveChipButton}"
+                                    Padding="8,0" ToolTip="{DynamicResource ArchiveClearFilter}"
                                     Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"/>
                             </Button>
                         </StackPanel>
-                    </WrapPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="List" ToolTip="{DynamicResource ViewList}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ViewMode}" Value="List">
-                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <TextBlock Text="&#xEA37;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-                        </Button>
-
-                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Tiles" ToolTip="{DynamicResource ViewTiles}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ViewMode}" Value="Tiles">
-                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-                        </Button>
-
-                        <Button Command="{Binding SetViewModeCommand}" CommandParameter="Icons" ToolTip="{DynamicResource ViewIcons}" Margin="0,0,10,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ArchiveToggleButtonBase}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ViewMode}" Value="Icons">
-                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <TextBlock Text="&#xE80B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"/>
-                        </Button>
-
-                        <TextBlock Text="&#xE71E;"
-                                   FontFamily="Segoe MDL2 Assets"
-                                   FontSize="{DynamicResource FS10}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,4,0"/>
-                        <Slider Value="{Binding TileSizeStep}"
-                                Minimum="1"
-                                Maximum="6"
-                                TickFrequency="1"
-                                IsSnapToTickEnabled="True"
-                                Width="72"
-                                Style="{StaticResource ArchiveZoomSlider}"
-                                VerticalAlignment="Center"
-                                ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
-                        <Border CornerRadius="6" Padding="5,1" Margin="4,0,8,0"
-                                Background="{DynamicResource ContentBackgroundBrush}"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                            <TextBlock Text="{Binding TileSizeStep, StringFormat=x{0}}"
-                                       FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                       VerticalAlignment="Center" MinWidth="14" TextAlignment="Center"
-                                       ToolTip="{DynamicResource EmpTileSizeTooltip}"/>
-                        </Border>
-
-                        <TextBlock VerticalAlignment="Center"
-                                   FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource SecondaryForegroundBrush}">
-                            <Run Text="{DynamicResource ArchiveResultsLabel}"/>
-                            <Run Text=" "/>
-                            <Run Text="{Binding ResultsPrimaryCount, Mode=OneWay}"/>
-                            <Run Text=" / "/>
-                            <Run Text="{Binding ResultsSecondaryCount, Mode=OneWay}"/>
-                        </TextBlock>
-                    </StackPanel>
+                    </DockPanel>
                 </Grid>
             </Border>
-
-            <Grid Grid.Row="3" ClipToBounds="False">
+            <Grid Grid.Row="1" ClipToBounds="False">
                 <Grid Visibility="{Binding HasArchivedData, Converter={StaticResource BoolToVis}}"
                       ClipToBounds="False">
                     <Grid.RowDefinitions>

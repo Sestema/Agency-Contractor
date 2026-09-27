@@ -54,6 +54,7 @@ namespace Win11DesktopApp.ViewModels
         public ICommand OpenEmployeeFolderCommand { get; }
         public ICommand ViewEmployeeCommand { get; }
         public ICommand SortByCommand { get; }
+        public ICommand SetSortDirectionCommand { get; }
         public ICommand SetViewModeCommand { get; }
         public ICommand FilterByStatCommand { get; }
         public ICommand ClearFilterCommand { get; }
@@ -539,24 +540,11 @@ namespace Win11DesktopApp.ViewModels
 
             ConfirmRestoreCommand = new AsyncRelayCommand(_ => ConfirmRestoreAsync());
             CancelRestoreCommand = new RelayCommand(o => IsRestoreDialogOpen = false);
-            SortByCommand = new RelayCommand(o =>
+            SortByCommand = new RelayCommand(o => ApplyArchiveSort(o as string, null));
+            SetSortDirectionCommand = new RelayCommand(o =>
             {
-                var field = o as string ?? "EndDate";
-                if (SortField == field)
-                {
-                    SortAscending = !SortAscending;
-                }
-                else
-                {
-                    SortField = field;
-                    SortAscending = field != "EndDate";
-                }
-
-                SaveArchiveDisplaySettings();
-                ResetDisplayLimit();
-                ApplySort();
-                RebuildAfterViewRefresh();
-                NotifyPaginationProperties();
+                var ascending = string.Equals(o as string, "asc", StringComparison.OrdinalIgnoreCase);
+                ApplyArchiveSort(null, ascending);
             });
             SetViewModeCommand = new RelayCommand(o => ViewMode = o as string ?? "List");
             FilterByStatCommand = new RelayCommand(o => StatFilter = o as string ?? "all");
@@ -593,6 +581,25 @@ namespace Win11DesktopApp.ViewModels
             });
 
             _ = LoadArchiveAsync();
+        }
+
+        private void ApplyArchiveSort(string? field, bool? ascending)
+        {
+            if (!string.IsNullOrWhiteSpace(field)
+                && !string.Equals(SortField, field, StringComparison.OrdinalIgnoreCase))
+            {
+                SortField = field;
+                SortAscending = true;
+            }
+
+            if (ascending.HasValue)
+                SortAscending = ascending.Value;
+
+            SaveArchiveDisplaySettings();
+            ResetDisplayLimit();
+            ApplySort();
+            RebuildAfterViewRefresh();
+            NotifyPaginationProperties();
         }
 
         private void OpenEmployeeDetails(ArchivedEmployeeSummary emp)

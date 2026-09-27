@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -14,6 +15,11 @@ namespace Win11DesktopApp.Views
         private Popup? _openEmployeeCardPopup;
         private bool _suppressNextTileCardOpen;
         private readonly DispatcherTimer _companyDropdownCloseTimer;
+        private readonly List<(DataGridColumn Column, EventHandler Handler)> _tableWidthSubscriptions = new();
+        private readonly HashSet<string> _userChangedTableColumns = new(StringComparer.OrdinalIgnoreCase);
+        private DispatcherTimer? _tableWidthSaveTimer;
+        private bool _tableWidthsReady;
+        private bool _suppressTableWidthSave;
 
         public EmployeesView()
         {
@@ -38,6 +44,16 @@ namespace Win11DesktopApp.Views
             if (DataContext is EmployeesViewModel vm && vm.ToggleCompanyDropdownCommand.CanExecute(null))
                 vm.ToggleCompanyDropdownCommand.Execute(null);
 
+            e.Handled = true;
+        }
+
+        private void SortMenuButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.ContextMenu == null)
+                return;
+
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.IsOpen = true;
             e.Handled = true;
         }
 
@@ -71,6 +87,117 @@ namespace Win11DesktopApp.Views
                 EmployeeSearchBox.Focus();
                 EmployeeSearchBox.SelectAll();
                 e.Handled = true;
+            }
+        }
+
+        private void EmployeeTableGrid_Loaded(object sender, RoutedEventArgs e)
+        {
+            _suppressTableWidthSave = true;
+            RestoreEmployeeTableWidths();
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                AttachEmployeeTableWidthListeners();
+                _tableWidthsReady = true;
+                _suppressTableWidthSave = false;
+            }));
+        }
+
+        private void EmployeeTableGrid_Unloaded(object sender, RoutedEventArgs e)
+        {
+            DetachEmployeeTableWidthListeners();
+            if (_tableWidthSaveTimer?.IsEnabled == true)
+            {
+                _tableWidthSaveTimer.Stop();
+                if (_tableWidthsReady && !_suppressTableWidthSave)
+                    SaveEmployeeTableWidths();
+            }
+            _tableWidthsReady = false;
+        }
+
+        private void AttachEmployeeTableWidthListeners()
+        {
+            DetachEmployeeTableWidthListeners();
+            var descriptor = DependencyPropertyDescriptor.FromProperty(DataGridColumn.WidthProperty, typeof(DataGridColumn));
+            if (descriptor == null)
+                return;
+
+            foreach (var column in EmployeeTableGrid.Columns)
+            {
+                EventHandler handler = OnEmployeeTableWidthChanged;
+                descriptor.AddValueChanged(column, handler);
+                _tableWidthSubscriptions.Add((column, handler));
+            }
+        }
+
+        private void DetachEmployeeTableWidthListeners()
+        {
+            if (_tableWidthSubscriptions.Count == 0)
+                return;
+
+            var descriptor = DependencyPropertyDescriptor.FromProperty(DataGridColumn.WidthProperty, typeof(DataGridColumn));
+            if (descriptor != null)
+            {
+                foreach (var (column, handler) in _tableWidthSubscriptions)
+                    descriptor.RemoveValueChanged(column, handler);
+            }
+            _tableWidthSubscriptions.Clear();
+        }
+
+        private void OnEmployeeTableWidthChanged(object? sender, EventArgs e)
+        {
+            if (_suppressTableWidthSave || !_tableWidthsReady)
+                return;
+
+            if (sender is DataGridColumn column && !string.IsNullOrWhiteSpace(column.SortMemberPath))
+                _userChangedTableColumns.Add(column.SortMemberPath);
+
+            _tableWidthSaveTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            _tableWidthSaveTimer.Tick -= SaveEmployeeTableWidthsTick;
+            _tableWidthSaveTimer.Tick += SaveEmployeeTableWidthsTick;
+            _tableWidthSaveTimer.Stop();
+            _tableWidthSaveTimer.Start();
+        }
+
+        private void SaveEmployeeTableWidthsTick(object? sender, EventArgs e)
+        {
+            _tableWidthSaveTimer?.Stop();
+            SaveEmployeeTableWidths();
+        }
+
+        private void SaveEmployeeTableWidths()
+        {
+            if (_suppressTableWidthSave || !_tableWidthsReady || _userChangedTableColumns.Count == 0)
+                return;
+            if (DataContext is not EmployeesViewModel vm)
+                return;
+
+            var stored = new Dictionary<string, double>(vm.EmployeeTableColumnWidths, StringComparer.OrdinalIgnoreCase);
+            foreach (var column in EmployeeTableGrid.Columns)
+            {
+                var key = column.SortMemberPath;
+                if (string.IsNullOrWhiteSpace(key) || !_userChangedTableColumns.Contains(key))
+                    continue;
+                if (column.ActualWidth < 36 || double.IsNaN(column.ActualWidth))
+                    continue;
+                stored[key] = Math.Round(column.ActualWidth, 1);
+            }
+
+            vm.SaveEmployeeTableColumnWidths(stored);
+        }
+
+        private void RestoreEmployeeTableWidths()
+        {
+            if (DataContext is not EmployeesViewModel vm || vm.EmployeeTableColumnWidths.Count == 0)
+                return;
+
+            foreach (var column in EmployeeTableGrid.Columns)
+            {
+                var key = column.SortMemberPath;
+                if (string.IsNullOrWhiteSpace(key) || !vm.EmployeeTableColumnWidths.TryGetValue(key, out var width))
+                    continue;
+                if (width < 36 || width > 800)
+                    continue;
+                column.Width = new DataGridLength(width);
             }
         }
 

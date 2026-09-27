@@ -559,12 +559,12 @@
 
     <!-- EmployeesView -->
     <sys:String x:Key="EmpBtnSelect">Vybrat</sys:String>
-    <sys:String x:Key="EmpBrandSubtitle">Ovládací panel</sys:String>
     <sys:String x:Key="EmpSwitchCompanyTooltip">Změnit firmu</sys:String>
     <sys:String x:Key="EmpNoCompaniesInDropdown">Žádné dostupné firmy</sys:String>
     <sys:String x:Key="EmpStatTotal">Celkem</sys:String>
     <sys:String x:Key="EmpStatActive">Aktivních</sys:String>
     <sys:String x:Key="EmpStatProblems">Problémy s dok.</sys:String>
+    <sys:String x:Key="EmpStatProblemsTooltip">Problémy s dokumenty: pas, vízum, pojištění nebo pracovní povolení</sys:String>
     <sys:String x:Key="EmpStatNewMonth">Nových tento měs.</sys:String>
     <sys:String x:Key="EmpStatDocumentPackage">Balíček dok.</sys:String>
     <sys:String x:Key="EmpStatDocumentPackageTooltip">Klikněte pro přehled dokončení balíčku dokumentů u zaměstnanců</sys:String>
@@ -581,7 +581,8 @@
     <sys:String x:Key="EmpSortName">Jméno</sys:String>
     <sys:String x:Key="EmpSortDate">Datum nástupu</sys:String>
     <sys:String x:Key="EmpSortStatus">Stav</sys:String>
-    <sys:String x:Key="EmpSortProblems">Problémy</sys:String>
+    <sys:String x:Key="EmpSortAscending">Vzestupně</sys:String>
+    <sys:String x:Key="EmpSortDescending">Sestupně</sys:String>
     <sys:String x:Key="ViewTable">Tabulka</sys:String>
     <sys:String x:Key="ViewList">Seznam</sys:String>
     <sys:String x:Key="ViewTiles">Dlaždice</sys:String>

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +14,7 @@ using Win11DesktopApp.Models;
 namespace Win11DesktopApp.Services
 {
     /// <summary>
-    /// Data model for the unified database.json file.
+    /// Companies and database settings stored in SQLite/core.db.
     /// </summary>
     public class DatabaseRoot
     {
@@ -65,24 +64,10 @@ namespace Win11DesktopApp.Services
         private static string Res(string key) =>
             System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
 
-        private static readonly byte[] DatabaseEnvelopeMagic = Encoding.ASCII.GetBytes("ACD2");
-        private const byte DatabaseEnvelopeVersion = 2;
-        private const int AesIvSizeBytes = 16;
-        private const int HmacSizeBytes = 32;
         private const int CoreWriteLockTimeoutMs = 30000;
         private const int CoreWriteLockRetryDelayMs = 250;
         private static readonly TimeSpan CoreWriteLockStaleAfter = TimeSpan.FromMinutes(3);
         private static readonly TimeSpan SaveLockTimeout = TimeSpan.FromSeconds(5);
-
-        private static readonly byte[] SecureKey = new byte[32];
-        private static readonly byte[] HmacKey;
-
-        static PersistenceService()
-        {
-            var keyBytes = Encoding.UTF8.GetBytes("AgencyContractorSecretKey2024_Secure");
-            Array.Copy(keyBytes, SecureKey, Math.Min(keyBytes.Length, SecureKey.Length));
-            HmacKey = SHA256.HashData(Encoding.UTF8.GetBytes("AgencyContractorSecretKey2024_Secure|database-json-hmac-v2"));
-        }
 
         public PersistenceService(AppSettingsService appSettingsService, FolderService folderService)
             : this(appSettingsService, folderService, new SqliteCoreDatabaseStorage(new CoreDbService(folderService)))
@@ -137,8 +122,7 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
-        /// Load the full database from SQLite/core.db. core.db is the only supported format;
-        /// any stray legacy database.json snapshot is retired (renamed) and never read.
+        /// Load the full database from SQLite/core.db.
         /// </summary>
         public DatabaseRoot LoadDatabase()
         {
@@ -146,20 +130,16 @@ namespace Win11DesktopApp.Services
             if (string.IsNullOrEmpty(rootPath) || !Directory.Exists(rootPath))
                 return new DatabaseRoot();
 
-            // core.db is authoritative. Retire any leftover legacy JSON snapshot.
             if (TryLoadCoreDatabase(out var coreDatabase))
             {
                 ApplyPendingCoreChanges();
                 if (TryLoadCoreDatabase(out var refreshedDatabase))
                     coreDatabase = refreshedDatabase;
 
-                MarkLegacyDatabaseJsonMigrated();
                 RememberLoadedDatabase(coreDatabase);
                 return coreDatabase;
             }
 
-            // Clean install — no core.db yet. Retire any stray legacy JSON and start empty.
-            MarkLegacyDatabaseJsonMigrated();
             var empty = new DatabaseRoot();
             RememberLoadedDatabase(empty);
             return empty;
@@ -319,8 +299,6 @@ namespace Win11DesktopApp.Services
             }
 
             RememberLoadedDatabase(database);
-            MarkLegacyDatabaseJsonMigrated();
-            DeleteCoreSyncState();
         }
 
         private PendingCoreDatabaseChange BuildPendingCoreChange(DatabaseRoot database)
@@ -701,96 +679,6 @@ namespace Win11DesktopApp.Services
             var invalid = Path.GetInvalidFileNameChars();
             var sanitized = new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
             return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
-        }
-
-        private void MarkLegacyDatabaseJsonMigrated()
-        {
-            var dbPath = _folderService.DatabaseFilePath;
-            if (string.IsNullOrEmpty(dbPath))
-                return;
-
-            TryMoveToMigrated(dbPath);
-            TryMoveToMigrated(_folderService.DatabaseChecksumPath);
-        }
-
-        private static void TryMoveToMigrated(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-                return;
-
-            var migratedPath = path + ".migrated";
-            try
-            {
-                if (File.Exists(migratedPath))
-                    SafeFileService.DeleteFile(migratedPath);
-
-                SafeFileService.MoveFile(path, migratedPath);
-                LoggingService.LogInfo("PersistenceService.Migration", $"Marked legacy database file as migrated: {migratedPath}");
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("PersistenceService.Migration", $"Could not mark legacy database file as migrated '{path}': {ex.Message}");
-            }
-        }
-
-        private void DeleteCoreSyncState()
-        {
-            var path = _folderService.CoreSyncStatePath;
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-                return;
-
-            try
-            {
-                SafeFileService.DeleteFile(path);
-                LoggingService.LogInfo("PersistenceService.Migration", $"Deleted obsolete core sync state: {path}");
-            }
-            catch (Exception ex)
-            {
-                LoggingService.LogWarning("PersistenceService.Migration", $"Could not delete obsolete core sync state '{path}': {ex.Message}");
-            }
-        }
-
-        // ============ ENCRYPTION ============
-
-        internal static bool TryDecryptDatabasePayload(byte[] encryptedData, out string plainText)
-        {
-            plainText = string.Empty;
-            if (!IsV2Envelope(encryptedData))
-                return false;
-
-            var macOffset = encryptedData.Length - HmacSizeBytes;
-            using var hmac = new HMACSHA256(HmacKey);
-            var expectedMac = hmac.ComputeHash(encryptedData, 0, macOffset);
-            var actualMac = encryptedData.AsSpan(macOffset, HmacSizeBytes);
-            if (!CryptographicOperations.FixedTimeEquals(expectedMac, actualMac))
-                throw new CryptographicException("database.json HMAC validation failed.");
-
-            var ivOffset = DatabaseEnvelopeMagic.Length + 1;
-            var cipherOffset = ivOffset + AesIvSizeBytes;
-            var cipherLength = macOffset - cipherOffset;
-
-            using var aes = Aes.Create();
-            aes.Key = SecureKey;
-            aes.IV = encryptedData.AsSpan(ivOffset, AesIvSizeBytes).ToArray();
-
-            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-            using var ms = new MemoryStream(encryptedData, cipherOffset, cipherLength);
-            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var sr = new StreamReader(cs, Encoding.UTF8);
-            plainText = sr.ReadToEnd();
-            return true;
-        }
-
-        private static bool IsV2Envelope(byte[] encryptedData)
-        {
-            if (encryptedData.Length < DatabaseEnvelopeMagic.Length + 1 + AesIvSizeBytes + HmacSizeBytes)
-                return false;
-
-            if (encryptedData[DatabaseEnvelopeMagic.Length] != DatabaseEnvelopeVersion)
-                return false;
-
-            return encryptedData.AsSpan(0, DatabaseEnvelopeMagic.Length)
-                .SequenceEqual(DatabaseEnvelopeMagic);
         }
     }
 }

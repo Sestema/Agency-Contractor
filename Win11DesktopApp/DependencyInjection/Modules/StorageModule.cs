@@ -26,8 +26,7 @@ namespace Win11DesktopApp.DependencyInjection
                 sp.GetRequiredService<FolderService>(),
                 sp.GetRequiredService<AppDataStorageFactory>().CreateCoreDatabaseStorage()));
             services.AddSingleton(sp => new StartupIntegrityService(
-                sp.GetRequiredService<FolderService>(),
-                sp.GetRequiredService<PersistenceService>()));
+                sp.GetRequiredService<FolderService>()));
             return services;
         }
     }
