@@ -25,6 +25,7 @@ namespace Win11DesktopApp.Tests
         {
             var templatePath = Path.Combine(_root, "form.pdf");
             CreateSampleForm(templatePath);
+            var originalAppearance = ReadDefaultAppearance(templatePath, "Textové pole");
 
             var bindings = ITextFormHelper.ReadFieldBindings(templatePath);
             var nameField = Assert.Single(bindings, field => field.FieldType == "text");
@@ -65,6 +66,7 @@ namespace Win11DesktopApp.Tests
             try
             {
                 Assert.Equal("Jan Novák", reader.AcroFields.GetField(nameField.FieldName));
+                Assert.Equal(originalAppearance, ReadDefaultAppearance(reader, nameField.FieldName));
                 var checkValue = reader.AcroFields.GetField(checkField.FieldName);
                 Assert.False(string.IsNullOrWhiteSpace(checkValue));
                 Assert.NotEqual("Off", checkValue);
@@ -114,6 +116,72 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void GeneratePdf_OverlayWritesMovableAdobeTextOnTheTag()
+        {
+            var templatePath = Path.Combine(_root, "overlay.pdf");
+            CreateBlankPage(templatePath);
+            var tagMapPath = Path.ChangeExtension(templatePath, ".tags.json");
+            File.WriteAllText(tagMapPath, JsonSerializer.Serialize(new PdfTagMap
+            {
+                Mode = "overlay",
+                Placements = new List<PdfTagPlacement>
+                {
+                    new()
+                    {
+                        Tag = "FullName",
+                        Page = 0,
+                        X = 0.2,
+                        Y = 0.3,
+                        FontSize = 10
+                    }
+                }
+            }));
+
+            var outputPath = Path.Combine(_root, "overlay-filled.pdf");
+            new DocumentGenerationService().GeneratePdf(
+                templatePath,
+                outputPath,
+                new Dictionary<string, string> { ["FullName"] = "Jan Novák" });
+
+            var reader = new PdfReader(outputPath);
+            try
+            {
+                Assert.Null(reader.AcroFields.GetField("WnLine1"));
+                var annots = reader.GetPageN(1).GetAsArray(PdfName.Annots);
+                Assert.NotNull(annots);
+                Assert.True(annots.Size > 0);
+                var annot = (PdfDictionary)PdfReader.GetPdfObject(annots[0]);
+                Assert.Equal(PdfName.Freetext, annot.GetAsName(PdfName.Subtype));
+                Assert.Equal("Jan Novák", annot.GetAsString(PdfName.Contents).ToUnicodeString());
+                var box = annot.GetAsArray(PdfName.Rect);
+                var page = reader.GetPageSize(1);
+                var llx = box.GetAsNumber(0).FloatValue;
+                var lly = box.GetAsNumber(1).FloatValue;
+                var urx = box.GetAsNumber(2).FloatValue;
+                var ury = box.GetAsNumber(3).FloatValue;
+                Assert.InRange(llx, page.Width * 0.2f - 1f, page.Width * 0.2f + 1f);
+                Assert.InRange(ury, page.Height * 0.7f - 1f, page.Height * 0.7f + 1f);
+                var (_, cellHeight) = ITextFormHelper.MeasureEditorGlyphCell("Arial", 10);
+                Assert.InRange(ury - lly, (float)cellHeight - 0.2f, (float)cellHeight + 0.2f);
+                var fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
+                var font = File.Exists(fontPath)
+                    ? BaseFont.CreateFont(fontPath, BaseFont.CP1250, BaseFont.EMBEDDED)
+                    : BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+                var expectedWidth = font.GetWidthPoint("Jan Novák", 10);
+                Assert.InRange(urx - llx, expectedWidth - 0.5f, expectedWidth + 1.5f);
+                var padding = annot.GetAsArray(new PdfName("RD"));
+                Assert.NotNull(padding);
+                Assert.Equal(4, padding.Size);
+                for (var i = 0; i < padding.Size; i++)
+                    Assert.Equal(0f, padding.GetAsNumber(i).FloatValue);
+            }
+            finally
+            {
+                reader.Close();
+            }
+        }
+
+        [Fact]
         public void GeneratePdf_FormModeUsesFieldValues()
         {
             var templatePath = Path.Combine(_root, "template.pdf");
@@ -148,6 +216,17 @@ namespace Win11DesktopApp.Tests
             {
                 reader.Close();
             }
+        }
+
+        private static void CreateBlankPage(string path)
+        {
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            var document = new Document(PageSize.A4);
+            var writer = PdfWriter.GetInstance(document, stream);
+            document.Open();
+            document.Add(new Paragraph(" "));
+            document.Close();
+            writer.Close();
         }
 
         private static void CreateSampleForm(string path)

@@ -21,7 +21,7 @@ namespace Win11DesktopApp.Views
         private readonly GeminiApiService _geminiApiService;
         private readonly ObservableCollection<OverlayMessage> _messages = new();
         private readonly List<(string role, string text)> _history = new();
-        private Func<string?>? _getTemplateContent;
+        private Func<Task<string?>>? _getTemplateContent;
         private Func<string?>? _getTagCatalog;
         private CancellationTokenSource? _cts;
 
@@ -58,6 +58,12 @@ RULES:
         }
 
         public void SetContentProviders(Func<string?> getTemplateContent, Func<string?> getTagCatalog)
+        {
+            _getTemplateContent = () => Task.FromResult(getTemplateContent());
+            _getTagCatalog = getTagCatalog;
+        }
+
+        public void SetContentProviders(Func<Task<string?>> getTemplateContent, Func<string?> getTagCatalog)
         {
             _getTemplateContent = getTemplateContent;
             _getTagCatalog = getTagCatalog;
@@ -111,7 +117,7 @@ RULES:
         {
             try
             {
-                var content = _getTemplateContent?.Invoke();
+                var content = _getTemplateContent == null ? null : await _getTemplateContent();
                 if (string.IsNullOrEmpty(content))
                 {
                     _messages.Add(new OverlayMessage { Text = Res("AIOverlayNoContent"), IsUser = false });
@@ -135,7 +141,7 @@ RULES:
         {
             try
             {
-                var content = _getTemplateContent?.Invoke();
+                var content = _getTemplateContent == null ? null : await _getTemplateContent();
                 if (string.IsNullOrEmpty(content))
                 {
                     _messages.Add(new OverlayMessage { Text = Res("AIOverlayNoContent"), IsUser = false });

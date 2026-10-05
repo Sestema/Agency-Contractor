@@ -64,6 +64,19 @@ namespace Win11DesktopApp.EmployeeModels
 
         public int IssueCount => Issues.Count;
 
+        public string Initials
+        {
+            get
+            {
+                var parts = EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) return "?";
+                var first = char.ToUpper(parts[0][0], CultureInfo.CurrentCulture);
+                return parts.Length == 1
+                    ? first.ToString()
+                    : $"{first}{char.ToUpper(parts[^1][0], CultureInfo.CurrentCulture)}";
+            }
+        }
+
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
         public void Refresh()
         {

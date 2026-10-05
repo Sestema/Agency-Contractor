@@ -37,14 +37,37 @@ namespace Win11DesktopApp.ViewModels
         public ICommand IgnoreProblemCommand { get; }
         public ICommand CloseCustomDocumentValidityCommand { get; }
         public ICommand RestoreProblemCommand { get; }
-        public ICommand ToggleIgnoredListCommand { get; }
         public ICommand ExportToPdfCommand { get; }
-        public ICommand FilterAllCommand { get; }
         public ICommand FilterExpiredCommand { get; }
         public ICommand FilterWarningCommand { get; }
+        public ICommand FilterIgnoredCommand { get; }
         public ICommand ClearFiltersCommand { get; }
+        public ICommand SetOneColumnCommand { get; }
+        public ICommand SetTwoColumnsCommand { get; }
+
+        private readonly AppSettingsService _appSettingsService;
+        private string _viewMode;
+
+        public bool IsTwoColumns => _viewMode == "Two";
+        public bool IsOneColumn => !IsTwoColumns;
+
+        private void SetViewMode(string mode)
+        {
+            if (_viewMode != mode)
+            {
+                _viewMode = mode;
+                _appSettingsService.Settings.ProblemsViewMode = mode;
+                _appSettingsService.SaveSettings();
+            }
+
+            // Raised even when unchanged so a toggle that unchecked itself on click snaps back.
+            OnPropertyChanged(nameof(IsTwoColumns));
+            OnPropertyChanged(nameof(IsOneColumn));
+        }
 
         private List<EmployeeProblemGroup> _allGroups = new();
+        private List<EmployeeProblemGroup> _ignoredGroups = new();
+        private List<DocumentExpiryInfo> _ignoredProblems = new();
 
         private ObservableCollection<EmployeeProblemGroup> _problemGroups = new();
         public ObservableCollection<EmployeeProblemGroup> ProblemGroups
@@ -53,67 +76,58 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _problemGroups, value);
         }
 
-        private ObservableCollection<DocumentExpiryInfo> _ignoredProblems = new();
-        public ObservableCollection<DocumentExpiryInfo> IgnoredProblems
-        {
-            get => _ignoredProblems;
-            set => SetProperty(ref _ignoredProblems, value);
-        }
-
-        private bool _isIgnoredListVisible;
-        public bool IsIgnoredListVisible
-        {
-            get => _isIgnoredListVisible;
-            set => SetProperty(ref _isIgnoredListVisible, value);
-        }
-
         private int _totalProblems;
         public int TotalProblems
         {
             get => _totalProblems;
-            set { SetProperty(ref _totalProblems, value); OnPropertyChanged(nameof(TotalDisplay)); }
+            set => SetProperty(ref _totalProblems, value);
         }
 
         private int _totalPeople;
         public int TotalPeople
         {
             get => _totalPeople;
-            set { SetProperty(ref _totalPeople, value); OnPropertyChanged(nameof(TotalDisplay)); }
+            set => SetProperty(ref _totalPeople, value);
         }
-
-        public string TotalDisplay => $"{TotalPeople} / {TotalProblems}";
 
         private int _expiredCount;
         public int ExpiredCount
         {
             get => _expiredCount;
-            set { SetProperty(ref _expiredCount, value); OnPropertyChanged(nameof(ExpiredDisplay)); }
+            set => SetProperty(ref _expiredCount, value);
         }
 
         private int _expiredPeople;
         public int ExpiredPeople
         {
             get => _expiredPeople;
-            set { SetProperty(ref _expiredPeople, value); OnPropertyChanged(nameof(ExpiredDisplay)); }
+            set { SetProperty(ref _expiredPeople, value); OnPropertyChanged(nameof(ExpiredPeopleText)); }
         }
 
-        public string ExpiredDisplay => $"{ExpiredPeople} / {ExpiredCount}";
+        public string ExpiredPeopleText => ResF("ProbPeopleCount", ExpiredPeople);
 
         private int _warningCount;
         public int WarningCount
         {
             get => _warningCount;
-            set { SetProperty(ref _warningCount, value); OnPropertyChanged(nameof(WarningDisplay)); }
+            set => SetProperty(ref _warningCount, value);
         }
 
         private int _warningPeople;
         public int WarningPeople
         {
             get => _warningPeople;
-            set { SetProperty(ref _warningPeople, value); OnPropertyChanged(nameof(WarningDisplay)); }
+            set { SetProperty(ref _warningPeople, value); OnPropertyChanged(nameof(WarningPeopleText)); }
         }
 
-        public string WarningDisplay => $"{WarningPeople} / {WarningCount}";
+        public string WarningPeopleText => ResF("ProbPeopleCount", WarningPeople);
+
+        private string _subtitle = "";
+        public string Subtitle
+        {
+            get => _subtitle;
+            set => SetProperty(ref _subtitle, value);
+        }
 
         private int _ignoredCount;
         public int IgnoredCount
@@ -149,19 +163,24 @@ namespace Win11DesktopApp.ViewModels
             get => _activeFilter;
             set
             {
-                if (SetProperty(ref _activeFilter, value))
-                {
-                    OnPropertyChanged(nameof(IsFilterAll));
-                    OnPropertyChanged(nameof(IsFilterExpired));
-                    OnPropertyChanged(nameof(IsFilterWarning));
+                var changed = SetProperty(ref _activeFilter, value);
+
+                // Raised even when nothing changed: a ToggleButton unchecks itself on click, and
+                // only a fresh notification puts it back in line with the filter.
+                OnPropertyChanged(nameof(IsFilterExpired));
+                OnPropertyChanged(nameof(IsFilterWarning));
+                OnPropertyChanged(nameof(IsFilterIgnored));
+
+                if (changed)
                     ApplyFilter();
-                }
             }
         }
 
-        public bool IsFilterAll => ActiveFilter == "All";
         public bool IsFilterExpired => ActiveFilter == "Expired";
         public bool IsFilterWarning => ActiveFilter == "Warning";
+        public bool IsFilterIgnored => ActiveFilter == "Ignored";
+
+        private void ToggleFilter(string filter) => ActiveFilter = ActiveFilter == filter ? "All" : filter;
 
         private string _allFirmsLabel = "";
 
@@ -218,6 +237,13 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _isFilteredEmpty, value);
         }
 
+        private bool _isIgnoredEmpty;
+        public bool IsIgnoredEmpty
+        {
+            get => _isIgnoredEmpty;
+            set => SetProperty(ref _isIgnoredEmpty, value);
+        }
+
         public string Title => Res("ProbTitle") ?? "Problems — all companies";
 
         private static new string? Res(string key)
@@ -267,10 +293,26 @@ namespace Win11DesktopApp.ViewModels
             _ => internalKey
         };
 
-        public static string DaysRemainingText(int days)
+        /// <summary>
+        /// Short status for the badge. Long overdue documents read in months or years, because
+        /// "531 days" is hard to take in at a glance; <paramref name="exact"/> always gives days.
+        /// </summary>
+        public static string DaysRemainingText(int days, bool exact = false)
         {
             if (days < 0)
-                return ResF("ProbDaysExpired", Math.Abs(days));
+            {
+                var overdue = -days;
+                if (exact || overdue < 60)
+                    return ResF("ProbDaysExpired", overdue);
+                if (overdue < 365)
+                    return ResF("ProbExpiredMonths", overdue / 30);
+
+                var years = overdue / 365;
+                var months = overdue % 365 / 30;
+                return months == 0
+                    ? ResF("ProbExpiredYears", years)
+                    : ResF("ProbExpiredYearsMonths", years, months);
+            }
             if (days == 0)
                 return Res("ProbDaysToday") ?? "expires today";
             return ResF("ProbDaysLeft", days);
@@ -291,8 +333,11 @@ namespace Win11DesktopApp.ViewModels
             CompanyService? companyService = null,
             EmployeeDetailsViewModelFactory? employeeDetailsViewModelFactory = null,
             ActivityLogService? activityLogService = null,
-            DocumentLocalizationService? documentLocalizationService = null)
+            DocumentLocalizationService? documentLocalizationService = null,
+            AppSettingsService? appSettingsService = null)
         {
+            _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
+            _viewMode = _appSettingsService.Settings.ProblemsViewMode == "Two" ? "Two" : "One";
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _employeeService = employeeService ?? throw new InvalidOperationException("EmployeeService is not initialized.");
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
@@ -320,9 +365,11 @@ namespace Win11DesktopApp.ViewModels
                 }
             });
 
-            FilterAllCommand = new RelayCommand(o => ActiveFilter = "All");
-            FilterExpiredCommand = new RelayCommand(o => ActiveFilter = "Expired");
-            FilterWarningCommand = new RelayCommand(o => ActiveFilter = "Warning");
+            FilterExpiredCommand = new RelayCommand(o => ToggleFilter("Expired"));
+            FilterWarningCommand = new RelayCommand(o => ToggleFilter("Warning"));
+            FilterIgnoredCommand = new RelayCommand(o => ToggleFilter("Ignored"));
+            SetOneColumnCommand = new RelayCommand(o => SetViewMode("One"));
+            SetTwoColumnsCommand = new RelayCommand(o => SetViewMode("Two"));
             ClearFiltersCommand = new RelayCommand(o =>
             {
                 _searchQuery = "";
@@ -353,11 +400,6 @@ namespace Win11DesktopApp.ViewModels
                     _employeeService.ClearIgnoredDocument(info.EmployeeFolder, info.DocumentType);
                     LoadProblems();
                 }
-            });
-
-            ToggleIgnoredListCommand = new RelayCommand(o =>
-            {
-                IsIgnoredListVisible = !IsIgnoredListVisible;
             });
 
             ExportToPdfCommand = new RelayCommand(o => ExportToPdf());
@@ -533,27 +575,17 @@ namespace Win11DesktopApp.ViewModels
                         }
                     }
 
-                    var groups = activeProblems
-                        .GroupBy(p => p.EmployeeFolder)
-                        .Select(g =>
-                        {
-                            var first = g.First();
-                            return new EmployeeProblemGroup
-                            {
-                                UniqueId = first.UniqueId,
-                                EmployeeName = first.EmployeeName,
-                                EmployeeFolder = first.EmployeeFolder,
-                                FirmName = first.FirmName,
-                                Issues = new ObservableCollection<DocumentExpiryInfo>(
-                                    g.OrderBy(x => x.DaysRemaining))
-                            };
-                        })
+                    var groups = GroupByEmployee(activeProblems)
                         .OrderBy(g => g.Issues.Min(i => i.DaysRemaining))
+                        .ToList();
+                    var ignoredGroups = GroupByEmployee(ignoredProblems)
+                        .OrderBy(g => g.EmployeeName, StringComparer.CurrentCulture)
                         .ToList();
 
                     return new ProblemsSnapshot
                     {
                         Groups = groups,
+                        IgnoredGroups = ignoredGroups,
                         IgnoredProblems = ignoredProblems.OrderBy(p => p.EmployeeName).ToList(),
                         ActiveProblemCount = activeProblems.Count,
                         GroupCount = groups.Count,
@@ -568,8 +600,9 @@ namespace Win11DesktopApp.ViewModels
                     return;
 
                 _allGroups = snapshot.Groups;
+                _ignoredGroups = snapshot.IgnoredGroups;
+                _ignoredProblems = snapshot.IgnoredProblems;
                 RebuildFirmOptions();
-                IgnoredProblems = new ObservableCollection<DocumentExpiryInfo>(snapshot.IgnoredProblems);
                 TotalProblems = snapshot.ActiveProblemCount;
                 TotalPeople = snapshot.GroupCount;
                 ExpiredCount = snapshot.ExpiredCount;
@@ -577,6 +610,8 @@ namespace Win11DesktopApp.ViewModels
                 WarningCount = snapshot.WarningCount;
                 WarningPeople = snapshot.WarningPeople;
                 IgnoredCount = snapshot.IgnoredProblems.Count;
+                var firmsWithProblems = _allGroups.Select(g => g.FirmName).Distinct(StringComparer.Ordinal).Count();
+                Subtitle = ResF("ProbSubtitle", TotalProblems, TotalPeople, firmsWithProblems, DateTime.Now.ToString("HH:mm"));
                 ApplyFilter();
             }
             catch (OperationCanceledException)
@@ -596,11 +631,29 @@ namespace Win11DesktopApp.ViewModels
             }
         }
 
+        private static IEnumerable<EmployeeProblemGroup> GroupByEmployee(IEnumerable<DocumentExpiryInfo> problems) =>
+            problems
+                .GroupBy(p => p.EmployeeFolder)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    return new EmployeeProblemGroup
+                    {
+                        UniqueId = first.UniqueId,
+                        EmployeeName = first.EmployeeName,
+                        EmployeeFolder = first.EmployeeFolder,
+                        FirmName = first.FirmName,
+                        Issues = new ObservableCollection<DocumentExpiryInfo>(
+                            g.OrderBy(x => x.DaysRemaining))
+                    };
+                });
+
         private void RebuildFirmOptions()
         {
             _allFirmsLabel = Res("ProbAllFirms") ?? "All companies";
 
             var firms = _allGroups
+                .Concat(_ignoredGroups)
                 .Select(g => g.FirmName)
                 .Where(f => !string.IsNullOrWhiteSpace(f))
                 .Distinct(StringComparer.Ordinal)
@@ -626,7 +679,8 @@ namespace Win11DesktopApp.ViewModels
             var hasQuery = query.Length > 0;
             var firmActive = !string.IsNullOrEmpty(_selectedFirm) && _selectedFirm != _allFirmsLabel;
 
-            IEnumerable<EmployeeProblemGroup> baseGroups = _allGroups;
+            var showIgnored = _activeFilter == "Ignored";
+            IEnumerable<EmployeeProblemGroup> baseGroups = showIgnored ? _ignoredGroups : _allGroups;
 
             if (firmActive)
                 baseGroups = baseGroups.Where(g => string.Equals(g.FirmName, _selectedFirm, StringComparison.Ordinal));
@@ -663,8 +717,9 @@ namespace Win11DesktopApp.ViewModels
             SyncProblemGroups(targets);
 
             HasProblems = targets.Count > 0;
-            IsAllClear = _allGroups.Count == 0;
-            IsFilteredEmpty = _allGroups.Count > 0 && targets.Count == 0;
+            IsAllClear = !showIgnored && _allGroups.Count == 0;
+            IsIgnoredEmpty = showIgnored && _ignoredGroups.Count == 0;
+            IsFilteredEmpty = targets.Count == 0 && !IsAllClear && !IsIgnoredEmpty;
         }
 
         /// <summary>
@@ -898,6 +953,7 @@ namespace Win11DesktopApp.ViewModels
         private sealed class ProblemsSnapshot
         {
             public List<EmployeeProblemGroup> Groups { get; init; } = new();
+            public List<EmployeeProblemGroup> IgnoredGroups { get; init; } = new();
             public List<DocumentExpiryInfo> IgnoredProblems { get; init; } = new();
             public int ActiveProblemCount { get; init; }
             public int GroupCount { get; init; }
@@ -944,25 +1000,27 @@ namespace Win11DesktopApp.ViewModels
                 {
                     "Expired" => DocRes("ProbPdfExpired") ?? "Expired",
                     "Warning" => DocRes("ProbPdfWarning") ?? "Warning",
+                    "Ignored" => DocRes("ProbPdfIgnored") ?? "Ignored",
                     _ => DocRes("ProbPdfTotal") ?? "Total"
                 };
 
-                var exportTitle = ActiveFilter switch
-                {
-                    "Expired" => $"{DocRes("ProbPdfTitle") ?? "Problems — report"} - {exportFilterLabel}",
-                    "Warning" => $"{DocRes("ProbPdfTitle") ?? "Problems — report"} - {exportFilterLabel}",
-                    _ => DocRes("ProbPdfTitle") ?? "Problems — report"
-                };
+                var exportTitle = ActiveFilter == "All"
+                    ? DocRes("ProbPdfTitle") ?? "Problems — report"
+                    : $"{DocRes("ProbPdfTitle") ?? "Problems — report"} - {exportFilterLabel}";
 
                 static bool IsExpiredSeverity(DocumentExpiryInfo issue) =>
                     issue.Severity == "Expired" || issue.Severity == "Critical";
 
-                var exportGroups = ProblemGroups.ToList();
+                // In the ignored view the cards on screen are the ignored documents themselves,
+                // so they go to the ignored section and the active list stays empty.
+                var showIgnored = ActiveFilter == "Ignored";
+                var exportGroups = showIgnored ? new List<EmployeeProblemGroup>() : ProblemGroups.ToList();
                 var exportIgnored = ActiveFilter switch
                 {
-                    "Expired" => IgnoredProblems.Where(IsExpiredSeverity).ToList(),
-                    "Warning" => IgnoredProblems.Where(i => i.Severity == "Warning").ToList(),
-                    _ => IgnoredProblems.ToList()
+                    "Expired" => _ignoredProblems.Where(IsExpiredSeverity).ToList(),
+                    "Warning" => _ignoredProblems.Where(i => i.Severity == "Warning").ToList(),
+                    "Ignored" => ProblemGroups.SelectMany(g => g.Issues).ToList(),
+                    _ => _ignoredProblems.ToList()
                 };
 
                 var exportTotalPeople = exportGroups.Count;

@@ -212,10 +212,7 @@ namespace Win11DesktopApp.ViewModels
 
                 var outName = SanitizeFn($"{data.FirstName}_{data.LastName} - {template.Name}.docx");
                 var outPath = BuildOutputPath(outName);
-                if (docxSource.Kind == TemplateDocxSourceKind.Rtf)
-                    _documentGenerationService.GenerateDocxFromRtf(docxSource.Path, outPath, tagValues);
-                else
-                    _documentGenerationService.GenerateDocx(docxSource.Path, outPath, tagValues);
+                _documentGenerationService.GeneratePreparedDocx(templateFolder, templateFullPath, outPath, tagValues);
                 return Path.GetFileName(outPath);
             }
 

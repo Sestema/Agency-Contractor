@@ -12,15 +12,12 @@ using System.Windows;
 using System.Windows.Input;
 using ClosedXML.Excel;
 using Microsoft.Win32;
-using OxyPlot;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Win11DesktopApp.Helpers;
-using OxyPlot.Axes;
-using OxyPlot.Series;
 using Win11DesktopApp.EmployeeModels;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -599,10 +596,6 @@ namespace Win11DesktopApp.ViewModels
             get => _employeeSearchText;
             set { if (SetProperty(ref _employeeSearchText, value)) _ = FilterEmployeesDebouncedAsync(); }
         }
-
-        // ===== Chart =====
-        private PlotModel _archiveChartModel = new();
-        public PlotModel ArchiveChartModel { get => _archiveChartModel; set => SetProperty(ref _archiveChartModel, value); }
 
         private bool _hasData;
         public bool HasData { get => _hasData; set => SetProperty(ref _hasData, value); }
@@ -1510,7 +1503,6 @@ namespace Win11DesktopApp.ViewModels
                 agencyDetails,
                 archiveHistory,
                 allEmployees,
-                scopedArchiveLog,
                 effectiveFirms,
                 totalEmp,
                 activeEmp,
@@ -1546,7 +1538,6 @@ namespace Win11DesktopApp.ViewModels
 
             UpdateMetricCards(result, dateFrom, dateTo);
 
-            BuildArchiveChart(result.VisibleArchiveLog, dateFrom, dateTo);
             FilterEmployees();
 
             HasData = result.TotalEmployees > 0 || result.EndedInPeriod > 0;
@@ -2496,99 +2487,6 @@ namespace Win11DesktopApp.ViewModels
             return result;
         }
 
-        private void BuildArchiveChart(List<ArchiveLogEntry> archiveLog, DateTime dateFrom, DateTime dateTo)
-        {
-            var monthlyData = new SortedDictionary<string, (int archived, int restored)>();
-
-            var current = new DateTime(dateFrom.Year, dateFrom.Month, 1);
-            var end = new DateTime(dateTo.Year, dateTo.Month, 1);
-            while (current <= end)
-            {
-                monthlyData[current.ToString("yyyy-MM")] = (0, 0);
-                current = current.AddMonths(1);
-            }
-
-            foreach (var entry in archiveLog)
-            {
-                if (!DateTime.TryParse(entry.Timestamp, out var ts)) continue;
-                if (ts.Date < dateFrom.Date || ts.Date > dateTo.Date) continue;
-
-                var key = ts.ToString("yyyy-MM");
-                if (!monthlyData.ContainsKey(key))
-                    monthlyData[key] = (0, 0);
-
-                var val = monthlyData[key];
-                if (entry.Action == "Archived")
-                    monthlyData[key] = (val.archived + 1, val.restored);
-                else if (entry.Action == "Restored")
-                    monthlyData[key] = (val.archived, val.restored + 1);
-            }
-
-            var model = new PlotModel();
-            model.PlotAreaBorderThickness = new OxyThickness(0);
-
-            var categoryAxis = new CategoryAxis
-            {
-                Position = AxisPosition.Left,
-                GapWidth = 0.3,
-                TextColor = OxyColors.Gray,
-                TicklineColor = OxyColors.Transparent,
-                MajorGridlineStyle = LineStyle.None,
-                FontSize = 11
-            };
-
-            var valueAxis = new LinearAxis
-            {
-                Position = AxisPosition.Bottom,
-                MinimumPadding = 0,
-                AbsoluteMinimum = 0,
-                TextColor = OxyColors.Gray,
-                TicklineColor = OxyColors.Transparent,
-                MajorGridlineStyle = LineStyle.Dot,
-                MajorGridlineColor = OxyColor.FromArgb(40, 128, 128, 128),
-                FontSize = 11
-            };
-
-            var archivedSeries = new BarSeries
-            {
-                Title = GetString("ReportChartArchived"),
-                FillColor = OxyColor.FromRgb(173, 20, 87),
-                StrokeThickness = 0,
-                BarWidth = 0.35
-            };
-
-            var restoredSeries = new BarSeries
-            {
-                Title = GetString("ReportChartRestored"),
-                FillColor = OxyColor.FromRgb(46, 125, 50),
-                StrokeThickness = 0,
-                BarWidth = 0.35
-            };
-
-            foreach (var kvp in monthlyData)
-            {
-                var dt = DateTime.ParseExact(kvp.Key, "yyyy-MM", CultureInfo.InvariantCulture);
-                categoryAxis.Labels.Add(dt.ToString("MMM yyyy", CultureInfo.CurrentUICulture));
-                archivedSeries.Items.Add(new BarItem(kvp.Value.archived));
-                restoredSeries.Items.Add(new BarItem(kvp.Value.restored));
-            }
-
-            model.Axes.Add(categoryAxis);
-            model.Axes.Add(valueAxis);
-            model.Series.Add(archivedSeries);
-            model.Series.Add(restoredSeries);
-
-            model.Legends.Add(new OxyPlot.Legends.Legend
-            {
-                LegendPosition = OxyPlot.Legends.LegendPosition.TopRight,
-                LegendPlacement = OxyPlot.Legends.LegendPlacement.Inside,
-                LegendTextColor = OxyColors.Gray,
-                LegendFontSize = 11
-            });
-
-            ArchiveChartModel = model;
-        }
-
         private bool IsSheetSelected(string key)
         {
             return ExportSheets.FirstOrDefault(s => s.SheetKey == key)?.IsSelected ?? true;
@@ -3172,7 +3070,6 @@ namespace Win11DesktopApp.ViewModels
             List<AgencyReportRow> AgencyDetails,
             List<ArchiveLogEntry> ArchiveHistory,
             List<EmployeeReportRow> AllEmployees,
-            List<ArchiveLogEntry> VisibleArchiveLog,
             List<string> EffectiveFirms,
             int TotalEmployees,
             int ActiveEmployees,

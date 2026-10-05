@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:oxy="http://oxyplot.org/wpf"
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
              xmlns:vm="clr-namespace:Win11DesktopApp.ViewModels"
              xmlns:views="clr-namespace:Win11DesktopApp.Views"
@@ -1053,25 +1052,6 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </StackPanel>
-                    </Border>
-
-                    <!-- ===== ARCHIVE CHART (Expander, collapsed) ===== -->
-                    <Border Style="{StaticResource ReportSurfaceCard}"
-                            Visibility="{Binding HasData, Converter={StaticResource BoolToVis}}">
-                        <Expander IsExpanded="False" Style="{StaticResource ExpanderHeaderStyle}">
-                            <Expander.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <Border Style="{StaticResource SoftIconBadge}" Background="{DynamicResource WarningChipBackgroundBrush}">
-                                        <TextBlock Text="&#xE9D2;" Style="{StaticResource SoftIconBadgeText}"
-                                                   Foreground="{DynamicResource WarningChipForegroundBrush}"/>
-                                    </Border>
-                                    <TextBlock Text="{DynamicResource ReportArchiveChart}" FontSize="{DynamicResource FS16}" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                                </StackPanel>
-                            </Expander.Header>
-                            <oxy:PlotView Model="{Binding ArchiveChartModel}" Height="280"
-                                          Background="Transparent" Margin="0,12,0,0"/>
-                        </Expander>
                     </Border>
 
                     <!-- ===== ARCHIVE HISTORY (Expander, collapsed) ===== -->

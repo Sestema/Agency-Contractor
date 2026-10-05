@@ -851,15 +851,19 @@
     <sys:String x:Key="MainStatCompaniesHint">available now</sys:String>
 
     <!-- ProblemsView -->
-    <sys:String x:Key="ProbStatExpired">People / Docs — Expired</sys:String>
-    <sys:String x:Key="ProbStatWarning">People / Docs — Expiring</sys:String>
-    <sys:String x:Key="ProbStatTotal">People / Docs — Total</sys:String>
+    <sys:String x:Key="ProbStatExpired">Expired / Critical</sys:String>
+    <sys:String x:Key="ProbStatWarning">Expiring soon</sys:String>
+    <sys:String x:Key="ProbPeopleCount">Employees: {0}</sys:String>
+    <sys:String x:Key="ProbSubtitle">Problems: {0} · Employees: {1} · Companies: {2} · Updated at {3}</sys:String>
+    <sys:String x:Key="ProbViewOneColumn">One card per row</sys:String>
+    <sys:String x:Key="ProbViewTwoColumns">Two cards per row</sys:String>
+    <sys:String x:Key="ProbNoIgnored">No ignored problems</sys:String>
+    <sys:String x:Key="ProbNoIgnoredDesc">Documents you hide with “Ignore” will appear here.</sys:String>
     <sys:String x:Key="ProbAllOk">All documents are in order!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">No expired or soon expiring documents.</sys:String>
     <sys:String x:Key="ProbTitle">Problems — all companies</sys:String>
     <sys:String x:Key="ProbExportPdf">Export PDF</sys:String>
     <sys:String x:Key="ProbIgnored">Ignored</sys:String>
-    <sys:String x:Key="ProbIgnoredTitle">Ignored problems</sys:String>
     <sys:String x:Key="ProbUntil">until </sys:String>
     <sys:String x:Key="ProbRestoreTooltip">Restore problem</sys:String>
     <sys:String x:Key="ProbRestore">Restore</sys:String>
@@ -886,6 +890,9 @@
     <sys:String x:Key="ProbPdfExportError">Export error: {0}</sys:String>
     <sys:String x:Key="ProbPdfError">Error</sys:String>
     <sys:String x:Key="ProbDaysExpired">expired {0} days ago</sys:String>
+    <sys:String x:Key="ProbExpiredMonths">expired {0} mo ago</sys:String>
+    <sys:String x:Key="ProbExpiredYears">expired {0} yr ago</sys:String>
+    <sys:String x:Key="ProbExpiredYearsMonths">expired {0} yr {1} mo ago</sys:String>
     <sys:String x:Key="ProbDaysToday">expires today</sys:String>
     <sys:String x:Key="ProbDaysLeft">in {0} days</sys:String>
     <sys:String x:Key="ProbAllFirms">All companies</sys:String>
@@ -1041,10 +1048,11 @@
     <sys:String x:Key="EditorInsert">Ins.</sys:String>
     <sys:String x:Key="EditorCopyTag">Copy tag</sys:String>
     <sys:String x:Key="EditorOpenInWord">Open in Word</sys:String>
-    <sys:String x:Key="EditorOpenInWordTooltip">Open template.docx in Microsoft Word for layout</sys:String>
+    <sys:String x:Key="EditorOpenInWordTooltip">Open template.docx in Microsoft Word</sys:String>
     <sys:String x:Key="EditorRefreshFromWord">Refresh from Word</sys:String>
-    <sys:String x:Key="EditorRefreshFromWordTooltip">After saving in Word — use this DOCX for generation</sys:String>
-    <sys:String x:Key="EditorWordLayoutActive">Generation uses Word layout. You can still edit here; after Save, open Word again and click Refresh from Word.</sys:String>
+    <sys:String x:Key="EditorRefreshFromWordTooltip">Reload the Word-saved file into the editor</sys:String>
+    <sys:String x:Key="EditorWordLayoutActive">Word layout is open. Saving will update template.docx from the editor.</sys:String>
+    <sys:String x:Key="EditorDocxLoadFailed">The document could not be opened in the editor.</sys:String>
     <sys:String x:Key="EditorWordOpenedHint">Opened in Word. After changes, save the file in Word (Ctrl+S).</sys:String>
     <sys:String x:Key="EditorWordOpenedEditorHint">Opened in Word. Save in Word (Ctrl+S), then click Refresh from Word.</sys:String>
     <sys:String x:Key="EditorWordSaveInWordFirst">First save the document in Word (Ctrl+S) to expand content, then click Refresh from Word.</sys:String>
@@ -1173,7 +1181,6 @@
     <sys:String x:Key="ReportExportSheetEmployees">Employee List</sys:String>
     <sys:String x:Key="ReportExportSheetArchive">Archive Log</sys:String>
     <sys:String x:Key="ReportTotal">TOTAL</sys:String>
-    <sys:String x:Key="ReportArchiveChart">Archive Dynamics by Month</sys:String>
     <sys:String x:Key="ReportArchiveLog">Archive Log</sys:String>
     <sys:String x:Key="ReportAgencyStats">Agency Statistics</sys:String>
     <sys:String x:Key="ReportColAgency">Agency</sys:String>
@@ -1237,8 +1244,6 @@
     <sys:String x:Key="ReportCollapseList">Collapse</sys:String>
     <sys:String x:Key="ReportHideFilters">Hide</sys:String>
     <sys:String x:Key="ReportShowFilters">Filters</sys:String>
-    <sys:String x:Key="ReportChartArchived">Archived</sys:String>
-    <sys:String x:Key="ReportChartRestored">Restored</sys:String>
     <sys:String x:Key="ReportStatusFmt">{0} companies, {1} worked, {2} new, {3} ended</sys:String>
     <sys:String x:Key="ReportSheetSummary">Summary</sys:String>
     <sys:String x:Key="ReportSheetAgencies">Agencies</sys:String>

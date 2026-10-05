@@ -851,15 +851,19 @@
     <sys:String x:Key="MainStatCompaniesHint">aktuálně dostupné</sys:String>
 
     <!-- ProblemsView -->
-    <sys:String x:Key="ProbStatExpired">Lidé / Dokumenty — Prošlé</sys:String>
-    <sys:String x:Key="ProbStatWarning">Lidé / Dokumenty — Brzy</sys:String>
-    <sys:String x:Key="ProbStatTotal">Lidé / Dokumenty — Celkem</sys:String>
+    <sys:String x:Key="ProbStatExpired">Prošlé / Kritické</sys:String>
+    <sys:String x:Key="ProbStatWarning">Brzy vyprší</sys:String>
+    <sys:String x:Key="ProbPeopleCount">Zaměstnanců: {0}</sys:String>
+    <sys:String x:Key="ProbSubtitle">Problémů: {0} · Zaměstnanců: {1} · Firem: {2} · Aktualizováno v {3}</sys:String>
+    <sys:String x:Key="ProbViewOneColumn">Jedna karta na řádek</sys:String>
+    <sys:String x:Key="ProbViewTwoColumns">Dvě karty na řádek</sys:String>
+    <sys:String x:Key="ProbNoIgnored">Žádné ignorované problémy</sys:String>
+    <sys:String x:Key="ProbNoIgnoredDesc">Zde se zobrazí dokumenty skryté tlačítkem „Ignorovat“.</sys:String>
     <sys:String x:Key="ProbAllOk">Všechny dokumenty jsou v pořádku!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">Žádné prošlé nebo brzy expirující dokumenty.</sys:String>
     <sys:String x:Key="ProbTitle">Problémy — všechny firmy</sys:String>
     <sys:String x:Key="ProbExportPdf">Export PDF</sys:String>
     <sys:String x:Key="ProbIgnored">Ignorováno</sys:String>
-    <sys:String x:Key="ProbIgnoredTitle">Ignorované problémy</sys:String>
     <sys:String x:Key="ProbUntil">do </sys:String>
     <sys:String x:Key="ProbRestoreTooltip">Obnovit problém</sys:String>
     <sys:String x:Key="ProbRestore">Obnovit</sys:String>
@@ -886,6 +890,9 @@
     <sys:String x:Key="ProbPdfExportError">Chyba exportu: {0}</sys:String>
     <sys:String x:Key="ProbPdfError">Chyba</sys:String>
     <sys:String x:Key="ProbDaysExpired">prošlo {0} dní</sys:String>
+    <sys:String x:Key="ProbExpiredMonths">prošlo {0} měs.</sys:String>
+    <sys:String x:Key="ProbExpiredYears">prošlo {0} r.</sys:String>
+    <sys:String x:Key="ProbExpiredYearsMonths">prošlo {0} r. {1} měs.</sys:String>
     <sys:String x:Key="ProbDaysToday">vyprší dnes</sys:String>
     <sys:String x:Key="ProbDaysLeft">za {0} dní</sys:String>
     <sys:String x:Key="ProbAllFirms">Všechny firmy</sys:String>
@@ -1041,10 +1048,11 @@
     <sys:String x:Key="EditorInsert">Vl.</sys:String>
     <sys:String x:Key="EditorCopyTag">Kopírovat tag</sys:String>
     <sys:String x:Key="EditorOpenInWord">Otevřít ve Wordu</sys:String>
-    <sys:String x:Key="EditorOpenInWordTooltip">Otevřít template.docx v Microsoft Word pro sazbu</sys:String>
+    <sys:String x:Key="EditorOpenInWordTooltip">Otevřít template.docx v Microsoft Word</sys:String>
     <sys:String x:Key="EditorRefreshFromWord">Obnovit z Wordu</sys:String>
-    <sys:String x:Key="EditorRefreshFromWordTooltip">Po uložení ve Wordu — použít tento DOCX pro generování</sys:String>
-    <sys:String x:Key="EditorWordLayoutActive">Generování používá layout Word. Editor můžete měnit; po Uložit znovu otevřete Word a klikněte Obnovit z Wordu.</sys:String>
+    <sys:String x:Key="EditorRefreshFromWordTooltip">Znovu načíst do editoru soubor uložený ve Wordu</sys:String>
+    <sys:String x:Key="EditorWordLayoutActive">Je otevřený layout z Wordu. Po Uložit se template.docx aktualizuje z editoru.</sys:String>
+    <sys:String x:Key="EditorDocxLoadFailed">Dokument se v editoru nepodařilo otevřít.</sys:String>
     <sys:String x:Key="EditorWordOpenedHint">Otevřeno ve Wordu. Po změnách soubor ve Wordu uložte (Ctrl+S).</sys:String>
     <sys:String x:Key="EditorWordOpenedEditorHint">Otevřeno ve Wordu. Uložte ve Wordu (Ctrl+S) a pak klikněte Obnovit z Wordu.</sys:String>
     <sys:String x:Key="EditorWordSaveInWordFirst">Nejdřív uložte dokument ve Wordu (Ctrl+S), aby se obsah rozbalil, pak klikněte Obnovit z Wordu.</sys:String>
@@ -1173,7 +1181,6 @@
     <sys:String x:Key="ReportExportSheetEmployees">Seznam zaměstnanců</sys:String>
     <sys:String x:Key="ReportExportSheetArchive">Protokol archivu</sys:String>
     <sys:String x:Key="ReportTotal">CELKEM</sys:String>
-    <sys:String x:Key="ReportArchiveChart">Dynamika archivu po měsících</sys:String>
     <sys:String x:Key="ReportArchiveLog">Protokol archivu</sys:String>
     <sys:String x:Key="ReportAgencyStats">Statistika agentur</sys:String>
     <sys:String x:Key="ReportColAgency">Agentura</sys:String>
@@ -1237,8 +1244,6 @@
     <sys:String x:Key="ReportCollapseList">Sbalit</sys:String>
     <sys:String x:Key="ReportHideFilters">Skrýt</sys:String>
     <sys:String x:Key="ReportShowFilters">Filtry</sys:String>
-    <sys:String x:Key="ReportChartArchived">Archivováno</sys:String>
-    <sys:String x:Key="ReportChartRestored">Obnoveno</sys:String>
     <sys:String x:Key="ReportStatusFmt">{0} firem, {1} pracovalo, {2} nových, {3} ukončili</sys:String>
     <sys:String x:Key="ReportSheetSummary">Souhrn</sys:String>
     <sys:String x:Key="ReportSheetAgencies">Agentury</sys:String>

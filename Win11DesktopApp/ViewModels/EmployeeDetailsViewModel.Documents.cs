@@ -99,14 +99,7 @@ namespace Win11DesktopApp.ViewModels
                     var sanitized = SanitizeFileName(outputFileName);
                     var outputPath = Path.Combine(_employeeFolder, sanitized);
 
-                    if (docxSource.Kind == TemplateDocxSourceKind.Rtf)
-                    {
-                        await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(docxSource.Path, outputPath, tagValues));
-                    }
-                    else
-                    {
-                        await Task.Run(() => _documentGenerationService.GenerateDocx(docxSource.Path, outputPath, tagValues));
-                    }
+                    await Task.Run(() => _documentGenerationService.GeneratePreparedDocx(templateFolder, templateFullPath, outputPath, tagValues));
 
                     GenerateStatusMessage = string.Format(Res("MsgDocGenerated"), sanitized);
                     wasGenerated = true;

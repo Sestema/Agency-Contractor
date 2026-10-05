@@ -36,43 +36,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="WorstSeverityBadge" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding WorstSeverity}" Value="Warning">
-                    <Setter Property="Background" Value="{DynamicResource WarningLightBrush}"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding WorstSeverity}" Value="Ok">
-                    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="WorstSeverityGlyph" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding WorstSeverity}" Value="Warning">
-                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding WorstSeverity}" Value="Ok">
-                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="SeverityRowBorder" TargetType="Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Severity}" Value="Ok">
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Shared by the document type tile and the days-remaining badge. -->
         <Style x:Key="SeverityTile" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ErrorLightBrush}"/>
             <Style.Triggers>
@@ -81,18 +44,6 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Severity}" Value="Ok">
                     <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="SeverityGlyphPath" TargetType="Path">
-            <Setter Property="Stroke" Value="{DynamicResource ErrorBrush}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Severity}" Value="Warning">
-                    <Setter Property="Stroke" Value="{DynamicResource WarningBrush}"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Severity}" Value="Ok">
-                    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -113,18 +64,89 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Filter pill. Tag carries the dot colour. The border stays 1 thick in every state so
+             selecting a pill never changes its size. IsChecked is bound OneWay: ToggleButton
+             flips it with SetCurrentValue, which keeps the binding alive. -->
+        <Style x:Key="FilterPill" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd" Padding="12,0" CornerRadius="16"
+                                Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                UseLayoutRounding="True" SnapsToDevicePixels="True">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                         Fill="{TemplateBinding Tag}"/>
+                                <ContentPresenter VerticalAlignment="Center"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LayoutToggle" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd" CornerRadius="8" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PillCount" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="PillLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Background="{DynamicResource PageBackgroundBrush}" Margin="24,14,24,24" ClipToBounds="False">
+    <Grid Background="{DynamicResource PageBackgroundBrush}" Margin="24,10,24,16" ClipToBounds="False">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Grid Grid.Row="0" Margin="0,0,0,12">
+        <Grid Grid.Row="0" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -138,22 +160,17 @@
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FS22}" Style="{StaticResource PageHeaderTitleText}"/>
-                    <TextBlock FontSize="{DynamicResource FS11}"
+                    <TextBlock Text="{Binding Subtitle}" FontSize="{DynamicResource FS11}"
                                Foreground="{DynamicResource MutedForegroundBrush}"
-                               Margin="0,2,0,0">
-                        <Run Text="{Binding TotalDisplay, Mode=OneWay}"/>
-                        <Run Text=" · "/>
-                        <Run Text="{Binding ExpiredDisplay, Mode=OneWay}"/>
-                        <Run Text=" · "/>
-                        <Run Text="{Binding WarningDisplay, Mode=OneWay}"/>
-                    </TextBlock>
+                               Margin="0,2,0,0"/>
                 </StackPanel>
             </StackPanel>
 
             <Button Grid.Column="1" Command="{Binding ExportToPdfCommand}" Padding="10,6" Style="{StaticResource FilledActionButton}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                               Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <Path Width="13" Height="13" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"
+                          Stroke="White" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                          Data="M7,0 V9 M3,5 L7,9 L11,5 M1,13 H13"/>
                     <TextBlock Text="{DynamicResource ProbExportPdf}" FontSize="{DynamicResource FS12}" FontWeight="Medium"
                                Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
@@ -161,131 +178,72 @@
         </Grid>
 
         <!-- STATS + FILTERS -->
-        <Grid Grid.Row="1" Margin="0,0,0,12">
+        <Grid Grid.Row="1" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
-            <!-- Expired / Critical -->
-            <Button Command="{Binding FilterExpiredCommand}" Cursor="Hand" Margin="0,0,8,0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <!-- All four chips share one rule: the border is always 2 thick and only
-                             changes colour. Thickness adds to the chip's size, so switching 1 to 2
-                             on selection made the whole chip grow and its numbers shift. Inactive,
-                             the border matches its own fill and is invisible. -->
-                        <Border x:Name="Bd" Background="{DynamicResource ErrorChipBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource ErrorChipBackgroundBrush}" BorderThickness="2">
-                            <StackPanel>
-                                <TextBlock Text="{Binding ExpiredDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource ErrorChipForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatExpired}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource ErrorChipForegroundBrush}"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ErrorChipBorderBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ErrorChipBorderBrush}"/>
-                            </Trigger>
-                            <!-- Declared after the hover trigger so an active chip keeps its strong
-                                 ring while still darkening under the mouse. -->
-                            <DataTrigger Binding="{Binding IsFilterExpired}" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <ToggleButton Tag="{DynamicResource ErrorBrush}"
+                              IsChecked="{Binding IsFilterExpired, Mode=OneWay}" Command="{Binding FilterExpiredCommand}"
+                              ToolTip="{Binding ExpiredPeopleText}">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton" BasedOn="{StaticResource FilterPill}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ExpiredCount}" Value="0">
+                                    <Setter Property="Opacity" Value="0.55"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToggleButton.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ExpiredCount}" Style="{StaticResource PillCount}" Foreground="{DynamicResource ErrorBrush}"/>
+                        <TextBlock Text="{DynamicResource ProbStatExpired}" Style="{StaticResource PillLabel}"/>
+                    </StackPanel>
+                </ToggleButton>
 
-            <!-- Warning / Expiring soon -->
-            <Button Command="{Binding FilterWarningCommand}" Cursor="Hand" Margin="0,0,8,0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource WarningChipBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource WarningChipBackgroundBrush}" BorderThickness="2">
-                            <StackPanel>
-                                <TextBlock Text="{Binding WarningDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource WarningChipForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatWarning}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource WarningChipForegroundBrush}"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WarningChipBorderBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource WarningChipBorderBrush}"/>
-                            </Trigger>
-                            <DataTrigger Binding="{Binding IsFilterWarning}" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                <ToggleButton Tag="{DynamicResource WarningBrush}"
+                              IsChecked="{Binding IsFilterWarning, Mode=OneWay}" Command="{Binding FilterWarningCommand}"
+                              ToolTip="{Binding WarningPeopleText}">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton" BasedOn="{StaticResource FilterPill}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding WarningCount}" Value="0">
+                                    <Setter Property="Opacity" Value="0.55"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToggleButton.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding WarningCount}" Style="{StaticResource PillCount}" Foreground="{DynamicResource WarningBrush}"/>
+                        <TextBlock Text="{DynamicResource ProbStatWarning}" Style="{StaticResource PillLabel}"/>
+                    </StackPanel>
+                </ToggleButton>
 
-            <!-- Total -->
-            <Button Command="{Binding FilterAllCommand}" Cursor="Hand" Margin="0,0,8,0">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <!-- The neutral chip has no chip brush family, so it keeps the card colours
-                             and a visible grey ring when inactive. Hover fills instead of dimming:
-                             the old Opacity 0.85 faded the chip's own numbers. -->
-                        <Border x:Name="Bd" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="2">
-                            <StackPanel>
-                                <TextBlock Text="{Binding TotalDisplay, Mode=OneWay}" FontSize="{DynamicResource FS24}" FontWeight="Bold" 
-                                           Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource ProbStatTotal}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
-                            </Trigger>
-                            <DataTrigger Binding="{Binding IsFilterAll}" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
-
-            <!-- Ignored -->
-            <Button Command="{Binding ToggleIgnoredListCommand}" Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource InfoChipBackgroundBrush}" CornerRadius="8" Padding="12,7" MinWidth="112"
-                                BorderBrush="{DynamicResource InfoChipBackgroundBrush}" BorderThickness="2">
-                            <StackPanel>
-                                <TextBlock Text="{Binding IgnoredCount}" FontSize="{DynamicResource FS24}" FontWeight="Bold" Foreground="{DynamicResource InfoChipForegroundBrush}"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{DynamicResource ProbIgnored}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource InfoChipForegroundBrush}"/>
-                                    <TextBlock x:Name="Chev" Text=" &#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
-                                               Foreground="{DynamicResource InfoChipForegroundBrush}" VerticalAlignment="Center" Margin="4,1,0,0"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource InfoChipBorderBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource InfoChipBorderBrush}"/>
-                            </Trigger>
-                            <!-- This chip opens the ignored panel, so it needs to show that the panel
-                                 is open: ring plus the chevron pointing the other way. -->
-                            <DataTrigger Binding="{Binding IsIgnoredListVisible}" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Setter TargetName="Chev" Property="Text" Value=" &#xE70E;"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                <ToggleButton Tag="{DynamicResource InfoChipForegroundBrush}"
+                              IsChecked="{Binding IsFilterIgnored, Mode=OneWay}" Command="{Binding FilterIgnoredCommand}">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton" BasedOn="{StaticResource FilterPill}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IgnoredCount}" Value="0">
+                                    <Setter Property="Opacity" Value="0.55"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToggleButton.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding IgnoredCount}" Style="{StaticResource PillCount}"/>
+                        <TextBlock Text="{DynamicResource ProbIgnored}" Style="{StaticResource PillLabel}"/>
+                    </StackPanel>
+                </ToggleButton>
             </StackPanel>
 
             <!-- Filters: search + firm -->
             <StackPanel Grid.Column="1" Orientation="Horizontal"
                         HorizontalAlignment="Right" VerticalAlignment="Center">
                 <!-- Search box -->
-                <Border CornerRadius="9" Height="36" MinWidth="240" MaxWidth="320"
+                <Border CornerRadius="10" Height="32" MinWidth="240" MaxWidth="320"
                         Background="{DynamicResource ContentBackgroundBrush}"
                         BorderBrush="{DynamicResource CardBorderBrush}"
                         BorderThickness="1"
@@ -360,94 +318,47 @@
                 </Border>
 
                 <!-- Firm filter -->
-                <ComboBox Height="36" MinWidth="170" MaxWidth="230"
+                <ComboBox Height="32" MinWidth="170" MaxWidth="230"
+                          Style="{StaticResource ThemedComboBox}"
                           VerticalContentAlignment="Center"
                           ItemsSource="{Binding FirmOptions}"
                           SelectedItem="{Binding SelectedFirm, Mode=TwoWay}"
                           ToolTip="{DynamicResource ProbAllFirms}"/>
+
+                <Border Width="1" Height="20" Margin="12,0" VerticalAlignment="Center"
+                        Background="{DynamicResource DividerBrush}"/>
+
+                <!-- Layout: one card per row or two. Icons are drawn rather than taken from an
+                     icon font, so they cannot fall back to empty boxes. -->
+                <Border Height="32" CornerRadius="10" Padding="2"
+                        Background="{DynamicResource ContentBackgroundBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton Style="{StaticResource LayoutToggle}"
+                                      IsChecked="{Binding IsOneColumn, Mode=OneWay}" Command="{Binding SetOneColumnCommand}"
+                                      ToolTip="{DynamicResource ProbViewOneColumn}">
+                            <Path Width="14" Height="12" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  Data="M1,0 H13 A1,1 0 0 1 14,1 V4 A1,1 0 0 1 13,5 H1 A1,1 0 0 1 0,4 V1 A1,1 0 0 1 1,0 Z
+                                        M1,7 H13 A1,1 0 0 1 14,8 V11 A1,1 0 0 1 13,12 H1 A1,1 0 0 1 0,11 V8 A1,1 0 0 1 1,7 Z"/>
+                        </ToggleButton>
+                        <ToggleButton Style="{StaticResource LayoutToggle}"
+                                      IsChecked="{Binding IsTwoColumns, Mode=OneWay}" Command="{Binding SetTwoColumnsCommand}"
+                                      ToolTip="{DynamicResource ProbViewTwoColumns}">
+                            <Path Width="14" Height="12" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  Data="M1,0 H5 A1,1 0 0 1 6,1 V4 A1,1 0 0 1 5,5 H1 A1,1 0 0 1 0,4 V1 A1,1 0 0 1 1,0 Z
+                                        M9,0 H13 A1,1 0 0 1 14,1 V4 A1,1 0 0 1 13,5 H9 A1,1 0 0 1 8,4 V1 A1,1 0 0 1 9,0 Z
+                                        M1,7 H5 A1,1 0 0 1 6,8 V11 A1,1 0 0 1 5,12 H1 A1,1 0 0 1 0,11 V8 A1,1 0 0 1 1,7 Z
+                                        M9,7 H13 A1,1 0 0 1 14,8 V11 A1,1 0 0 1 13,12 H9 A1,1 0 0 1 8,11 V8 A1,1 0 0 1 9,7 Z"/>
+                        </ToggleButton>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Grid>
 
-        <!-- IGNORED LIST (collapsible) -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}"
-                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="10"
-                Padding="16,12" Margin="0,0,0,12"
-                Visibility="{Binding IsIgnoredListVisible, Converter={StaticResource BoolToVis}}">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                    <TextBlock Text="&#xE7E7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                               Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{DynamicResource ProbIgnoredTitle}" FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-
-                <ItemsControl ItemsSource="{Binding IgnoredProblems}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12,8" Margin="0,0,0,5"
-                                    BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ForegroundBrush}">
-                                            <Run Text="{Binding EmployeeName, Mode=OneWay}"/>
-                                            <Run Text=" — " Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                            <Run Text="{Binding DocumentTypeDisplay, Mode=OneWay}"/>
-                                        </TextBlock>
-                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                            <TextBlock Text="{Binding FirmName}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,12,0"/>
-                                            <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                            <TextBlock Text="{Binding ExpiryDateStr}" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,12,0"/>
-                                            <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="6" Padding="6,2">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{DynamicResource ProbUntil}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource AccentDarkBrush}"/>
-                                                    <TextBlock Text="{Binding IgnoredUntil}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource AccentDarkBrush}"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </StackPanel>
-                                    </StackPanel>
-
-                                    <Button Grid.Column="1" VerticalAlignment="Center" Cursor="Hand"
-                                            Command="{Binding DataContext.RestoreProblemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            ToolTip="{DynamicResource ProbRestoreTooltip}">
-                                        <Button.Template>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border x:Name="Bd" Background="{DynamicResource AccentLightBrush}" CornerRadius="6" Padding="10,6"
-                                                        BorderBrush="{DynamicResource AccentDarkBrush}" BorderThickness="1">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
-                                                                   Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                        <TextBlock Text="{DynamicResource ProbRestore}" FontSize="{DynamicResource FS11}" FontWeight="Medium"
-                                                                   Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Button.Template>
-                                    </Button>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
-
         <!-- PROBLEMS LIST (grouped by employee) -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="2">
             <ItemsControl ItemsSource="{Binding ProblemGroups}" Margin="10,2,10,4"
                           Visibility="{Binding HasProblems, Converter={StaticResource BoolToVis}}"
                           VirtualizingPanel.IsVirtualizing="True"
@@ -461,11 +372,41 @@
                         </ScrollViewer>
                     </ControlTemplate>
                 </ItemsControl.Template>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <VirtualizingStackPanel/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+                <!-- One column keeps the virtualizing panel. Two columns use a WrapPanel with each
+                     card sized to half the viewport: WrapPanel does not virtualize, which is fine
+                     at this list's size, and unlike UniformGrid it does not force every row to the
+                     height of the tallest card. -->
+                <ItemsControl.Style>
+                    <Style TargetType="ItemsControl">
+                        <Setter Property="ItemsPanel">
+                            <Setter.Value>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel/>
+                                </ItemsPanelTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTwoColumns}" Value="True">
+                                <Setter Property="ItemsPanel">
+                                    <Setter.Value>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="ItemContainerStyle">
+                                    <Setter.Value>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="VerticalAlignment" Value="Top"/>
+                                            <Setter Property="Width"
+                                                    Value="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static conv:ColumnWidthConverter.Instance}}"/>
+                                        </Style>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ItemsControl.Style>
                     <ItemsControl.ItemTemplate>
                         <!-- No entry animation and no RenderTransform on these cards on purpose.
                              The panel recycles containers, so a Loaded-driven fade replays every
@@ -501,20 +442,21 @@
                                         </Grid.RowDefinitions>
 
                                         <!-- Employee header -->
-                                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <Grid Grid.Row="0" Margin="0,0,0,4">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- Icon -->
-                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" 
+                                            <!-- Initials -->
+                                            <Border Grid.Column="0" Width="34" Height="34" CornerRadius="17"
                                                     Margin="0,0,10,0" VerticalAlignment="Center"
-                                                    Style="{StaticResource WorstSeverityBadge}">
-                                                <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Style="{StaticResource WorstSeverityGlyph}"/>
+                                                    Background="{DynamicResource SurfaceBrush}"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                                                <TextBlock Text="{Binding Initials}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
 
                                             <!-- Name + firm -->
@@ -566,52 +508,67 @@
                                         <ItemsControl Grid.Row="1" ItemsSource="{Binding Issues}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Margin="0,0,0,4" Padding="10,6,8,6" CornerRadius="7"
-                                                            Background="{DynamicResource SurfaceBrush}"
-                                                            Style="{StaticResource SeverityRowBorder}"
-                                                            BorderThickness="4,0,0,0">
+                                                    <!-- One line per document. Name and date columns have fixed widths so
+                                                         dates and badges line up across every card; a shared size scope would
+                                                         also work but re-measures as virtualized cards scroll in and out. -->
+                                                    <Border x:Name="Row" Margin="0,0,0,1" Padding="6,4" CornerRadius="7"
+                                                            Background="Transparent">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="170"/>
+                                                                <ColumnDefinition Width="95"/>
                                                                 <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <!-- Document type icon tile -->
-                                                            <Border Grid.Column="0" Width="26" Height="26" CornerRadius="7"
-                                                                    Margin="0,0,9,0" VerticalAlignment="Center"
-                                                                    Style="{StaticResource SeverityTile}">
+                                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="6"
+                                                                    Margin="0,0,10,0" VerticalAlignment="Center"
+                                                                    Background="{DynamicResource SurfaceBrush}"
+                                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                                                                 <Path Data="{Binding DocumentType, Converter={StaticResource DocTypeGeometry}}"
-                                                                      Stretch="Uniform" Width="15" Height="15"
+                                                                      Stretch="Uniform" Width="14" Height="14"
                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                      Style="{StaticResource SeverityGlyphPath}"
+                                                                      Stroke="{DynamicResource SecondaryForegroundBrush}"
                                                                       StrokeThickness="1.5" Fill="Transparent"
                                                                       StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                                                             </Border>
 
-                                                            <!-- Doc type + date + badge -->
-                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                                <TextBlock FontSize="{DynamicResource FS12}" FontWeight="Medium"
-                                                                           Foreground="{DynamicResource ForegroundBrush}">
-                                                                    <Run Text="{Binding DocumentTypeDisplay, Mode=OneWay}"/>
-                                                                </TextBlock>
-                                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS9}"
-                                                                               Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding ExpiryDateStr}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,8,0"/>
-                                                                    <Border CornerRadius="6" Padding="6,2"
-                                                                            UseLayoutRounding="True"
-                                                                            SnapsToDevicePixels="True"
-                                                                            Style="{StaticResource SeverityTile}">
-                                                                        <TextBlock Text="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}}"
-                                                                                   Style="{StaticResource SeverityText}"/>
-                                                                    </Border>
-                                                                </StackPanel>
+                                                            <TextBlock Grid.Column="1" Text="{Binding DocumentTypeDisplay}"
+                                                                       FontSize="{DynamicResource FS13}" FontWeight="Medium"
+                                                                       Foreground="{DynamicResource ForegroundBrush}"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,0,12,0" ToolTip="{Binding DocumentTypeDisplay}"/>
+
+                                                            <TextBlock Grid.Column="2" Text="{Binding ExpiryDateStr}"
+                                                                       FontSize="{DynamicResource FS12}"
+                                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                       VerticalAlignment="Center"/>
+
+                                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <Border CornerRadius="6" Padding="7,2"
+                                                                        UseLayoutRounding="True" SnapsToDevicePixels="True"
+                                                                        Style="{StaticResource SeverityTile}"
+                                                                        ToolTip="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}, ConverterParameter=exact}">
+                                                                    <TextBlock Text="{Binding DaysRemaining, Converter={x:Static conv:DaysRemainingTextConverter.Instance}}"
+                                                                               Style="{StaticResource SeverityText}"/>
+                                                                </Border>
+                                                                <Border CornerRadius="6" Padding="7,2" Margin="6,0,0,0"
+                                                                        Background="{DynamicResource AccentLightBrush}"
+                                                                        Visibility="{Binding IgnoredUntil, Converter={StaticResource StrToVis}}">
+                                                                    <TextBlock FontSize="{DynamicResource FS11}" FontWeight="Medium"
+                                                                               Foreground="{DynamicResource AccentDarkBrush}">
+                                                                        <Run Text="{DynamicResource ProbUntil}"/><Run Text="{Binding IgnoredUntil, Mode=OneWay}"/>
+                                                                    </TextBlock>
+                                                                </Border>
                                                             </StackPanel>
 
+                                                            <StackPanel Grid.Column="5" Orientation="Horizontal"
+                                                                        VerticalAlignment="Center">
+
                                                             <!-- Close validity — custom signed documents only -->
-                                                            <Button Grid.Column="2" VerticalAlignment="Center" Cursor="Hand"
+                                                            <Button VerticalAlignment="Center" Cursor="Hand"
                                                                     Margin="0,0,6,0"
                                                                     Command="{Binding DataContext.CloseCustomDocumentValidityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
@@ -637,10 +594,36 @@
                                                                 </Button.Template>
                                                             </Button>
 
+                                                            <!-- Restore button — ignored view only -->
+                                                            <Button VerticalAlignment="Center" Cursor="Hand"
+                                                                    Command="{Binding DataContext.RestoreProblemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Visibility="{Binding DataContext.IsFilterIgnored, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"
+                                                                    ToolTip="{DynamicResource ProbRestoreTooltip}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="4,3">
+                                                                            <StackPanel Orientation="Horizontal">
+                                                                                <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS10}"
+                                                                                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                                                <TextBlock Text="{DynamicResource ProbRestore}" FontSize="{DynamicResource FS10}" Foreground="{DynamicResource AccentBrush}"
+                                                                                           VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+
                                                             <!-- Ignore button -->
-                                                            <Button Grid.Column="3" VerticalAlignment="Center" Cursor="Hand"
+                                                            <Button VerticalAlignment="Center" Cursor="Hand"
                                                                     Command="{Binding DataContext.IgnoreProblemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
+                                                                    Visibility="{Binding DataContext.IsFilterIgnored, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InverseBoolToVis}}"
                                                                     ToolTip="{DynamicResource ProbIgnoreTooltip}">
                                                                 <Button.Template>
                                                                     <ControlTemplate TargetType="Button">
@@ -660,8 +643,14 @@
                                                                     </ControlTemplate>
                                                                 </Button.Template>
                                                             </Button>
+                                                            </StackPanel>
                                                         </Grid>
                                                     </Border>
+                                                    <DataTemplate.Triggers>
+                                                        <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                                        </Trigger>
+                                                    </DataTemplate.Triggers>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -682,6 +671,18 @@
                     <TextBlock Text="{DynamicResource ProbAllOk}" Style="{StaticResource CompactEmptyStateTitleText}"
                                Foreground="{DynamicResource SuccessBrush}"/>
                     <TextBlock Text="{DynamicResource ProbAllOkDesc}" Style="{StaticResource CompactEmptyStateDescriptionText}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Empty state: ignored view with nothing ignored -->
+            <Border Style="{StaticResource CompactEmptyStateCard}"
+                    Padding="28,24"
+                    Visibility="{Binding IsIgnoredEmpty, Converter={StaticResource BoolToVis}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE7E7;" Style="{StaticResource CompactEmptyStateIconText}"
+                               FontSize="{DynamicResource FS28}" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                    <TextBlock Text="{DynamicResource ProbNoIgnored}" Style="{StaticResource CompactEmptyStateTitleText}"/>
+                    <TextBlock Text="{DynamicResource ProbNoIgnoredDesc}" Style="{StaticResource CompactEmptyStateDescriptionText}"/>
                 </StackPanel>
             </Border>
 
@@ -708,7 +709,7 @@
             </Border>
         </Grid>
         <!-- Employee Details Overlay -->
-        <Grid Grid.RowSpan="4" Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
+        <Grid Grid.RowSpan="3" Visibility="{Binding IsEmployeeDetailsOpen, Converter={StaticResource BoolToVis}}">
             <!-- Only the dim fades in. The same animation used to sit on this Grid, which meant
                  the whole employee card - a very large view full of text - was pushed through a
                  half-screen opacity buffer for the whole quarter second. The dim is a flat rect

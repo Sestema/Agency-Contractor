@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.Services;
@@ -26,19 +27,6 @@ namespace Win11DesktopApp.Helpers
 
     public static class ITextFormHelper
     {
-        private static readonly object FontSync = new();
-        private static BaseFont? _unicodeFont;
-        private static bool _unicodeFontResolved;
-
-        private static readonly string[] UnicodeFontCandidates =
-        {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "segoeui.ttf"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "tahoma.ttf"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "calibri.ttf"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arialuni.ttf")
-        };
-
         public static IReadOnlyList<PdfFormFieldBinding> ReadFieldBindings(string pdfPath)
         {
             if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
@@ -108,6 +96,77 @@ namespace Win11DesktopApp.Helpers
             }
         }
 
+        public static bool TryWriteOverlayPlacements(
+            string templatePath,
+            string outputPath,
+            IEnumerable<PdfTagPlacement> placements,
+            Dictionary<string, string> tagValues)
+        {
+            if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
+                return false;
+
+            PdfReader? reader = null;
+            PdfStamper? stamper = null;
+            FileStream? output = null;
+            var createdOutput = false;
+            var succeeded = false;
+            try
+            {
+                reader = new PdfReader(templatePath);
+                output = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.Read);
+                createdOutput = true;
+                stamper = new PdfStamper(reader, output);
+                stamper.Writer.CloseStream = false;
+                reader = null;
+
+                var font = GetOverlayFont();
+                foreach (var placement in placements)
+                {
+                    var value = ResolveOverlayValue(placement, tagValues);
+                    if (string.IsNullOrEmpty(value))
+                        continue;
+
+                    var pageNumber = placement.Page + 1;
+                    if (pageNumber < 1 || pageNumber > stamper.Reader.NumberOfPages)
+                        continue;
+
+                    var pageSize = stamper.Reader.GetPageSize(pageNumber);
+                    var fitted = FitOverlayText(font, value);
+                    if (!TryBuildOverlayRectangle(placement, fitted, font, pageSize.Width, pageSize.Height, out var rect, out var fontSize, out var multiline))
+                        continue;
+
+                    AddOverlayTextBlock(stamper, pageNumber, font, fitted, placement, rect, fontSize, multiline);
+                }
+
+                stamper.Close();
+                stamper = null;
+                succeeded = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("ITextFormHelper.TryWriteOverlayPlacements", ex.Message);
+                return false;
+            }
+            finally
+            {
+                try { stamper?.Close(); } catch { }
+                try { reader?.Close(); } catch { }
+                output?.Dispose();
+                if (!succeeded && createdOutput)
+                {
+                    try
+                    {
+                        if (File.Exists(outputPath))
+                            File.Delete(outputPath);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
         public static PdfFormFillResult TryFillFormFields(
             string templatePath,
             string outputPath,
@@ -145,7 +204,6 @@ namespace Win11DesktopApp.Helpers
                 var form = stamper.AcroFields;
                 form.GenerateAppearances = true;
                 var lookup = BuildFieldLookup(form);
-                var unicodeFont = GetUnicodeFont();
 
                 foreach (var binding in bindings)
                 {
@@ -156,7 +214,7 @@ namespace Win11DesktopApp.Helpers
                         continue;
 
                     var resolvedValue = PdfInlineTextResolver.ResolveTemplate(binding.TemplateText, tagValues) ?? string.Empty;
-                    TryApplyFieldValue(form, fieldKey, resolvedValue, unicodeFont, failedFields);
+                    TryApplyFieldValue(form, fieldKey, resolvedValue, failedFields);
                 }
 
                 stamper.Close();
@@ -196,7 +254,6 @@ namespace Win11DesktopApp.Helpers
             AcroFields form,
             string fieldKey,
             string value,
-            BaseFont? unicodeFont,
             List<PdfFormFillIssue> failedFields)
         {
             try
@@ -216,9 +273,6 @@ namespace Win11DesktopApp.Helpers
                     ApplyChoiceValue(form, fieldKey, value);
                     return;
                 }
-
-                if (unicodeFont != null)
-                    form.SetFieldProperty(fieldKey, "textfont", unicodeFont, null);
 
                 if (form.SetField(fieldKey, value))
                     return;
@@ -611,35 +665,213 @@ namespace Win11DesktopApp.Helpers
                 : 0;
         }
 
-        private static BaseFont? GetUnicodeFont()
+        /// <summary>
+        /// Glyph cell used by the PDF editor preview: distance from the top of the cell to the
+        /// baseline, and the full cell height. Overlay generation uses these same numbers.
+        /// </summary>
+        internal static (double ascent, double cellHeight) MeasureEditorGlyphCell(string? fontFamily, double emSize)
         {
-            if (_unicodeFontResolved)
-                return _unicodeFont;
+            if (emSize <= 0)
+                emSize = 10;
 
-            lock (FontSync)
+            var familyName = string.IsNullOrWhiteSpace(fontFamily) ? "Arial" : fontFamily;
+            try
             {
-                if (_unicodeFontResolved)
-                    return _unicodeFont;
+                var typeface = new System.Windows.Media.Typeface(
+                    new System.Windows.Media.FontFamily(familyName),
+                    System.Windows.FontStyles.Normal,
+                    System.Windows.FontWeights.Normal,
+                    System.Windows.FontStretches.Normal);
 
-                foreach (var path in UnicodeFontCandidates)
+                if (typeface.TryGetGlyphTypeface(out var glyphTypeface))
                 {
-                    if (!File.Exists(path))
-                        continue;
-
-                    try
-                    {
-                        _unicodeFont = BaseFont.CreateFont(path, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggingService.LogWarning("ITextFormHelper.GetUnicodeFont", ex.Message);
-                    }
+                    var ascent = glyphTypeface.Baseline * emSize;
+                    var cell = glyphTypeface.Height * emSize;
+                    if (ascent > 0 && cell > 0)
+                        return (ascent, cell);
                 }
-
-                _unicodeFontResolved = true;
-                return _unicodeFont;
             }
+            catch
+            {
+            }
+
+            return (emSize * 0.9, emSize * 1.15);
+        }
+
+        private static BaseFont? _overlayFont;
+
+        private static BaseFont GetOverlayFont()
+        {
+            if (_overlayFont != null)
+                return _overlayFont;
+
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
+            if (File.Exists(path))
+            {
+                try
+                {
+                    _overlayFont = BaseFont.CreateFont(path, BaseFont.CP1250, BaseFont.EMBEDDED);
+                    return _overlayFont;
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("ITextFormHelper.GetOverlayFont", ex.Message);
+                }
+            }
+
+            _overlayFont = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+            return _overlayFont;
+        }
+
+        private static string ResolveOverlayValue(PdfTagPlacement placement, Dictionary<string, string> tagValues)
+        {
+            if (string.Equals(placement.Kind, "inline_text", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(placement.Kind, "field", StringComparison.OrdinalIgnoreCase))
+                return PdfInlineTextResolver.ResolveTemplate(placement.TemplateText, tagValues) ?? string.Empty;
+
+            var tagName = placement.Tag;
+            return tagValues.TryGetValue(tagName, out var value) ? value ?? string.Empty : string.Empty;
+        }
+
+        private static string FitOverlayText(BaseFont font, string value)
+        {
+            foreach (var ch in value)
+            {
+                if (ch is '\r' or '\n' or '\t')
+                    continue;
+                if (!font.CharExists(ch))
+                    return SimplifyPdfUnsafeCharacters(value);
+            }
+
+            return value;
+        }
+
+        private static bool TryBuildOverlayRectangle(
+            PdfTagPlacement placement,
+            string value,
+            BaseFont font,
+            float pageWidth,
+            float pageHeight,
+            out Rectangle rect,
+            out float fontSize,
+            out bool multiline)
+        {
+            rect = new Rectangle(0, 0);
+            fontSize = placement.FontSize > 0 ? (float)placement.FontSize : 10f;
+            multiline = false;
+            if (pageWidth <= 0 || pageHeight <= 0)
+                return false;
+
+            var x = (float)(placement.X * pageWidth);
+            var yTop = (float)(placement.Y * pageHeight);
+            // Same Windows glyph cell the editor draws. The box top is the saved tag point,
+            // and the baseline sits one editor-ascent below it.
+            var (_, cellHeight) = MeasureEditorGlyphCell(placement.FontFamily, fontSize);
+            var lineHeight = (float)cellHeight;
+            var height = string.Equals(placement.Kind, "field", StringComparison.OrdinalIgnoreCase)
+                         && placement.BoxHeight > lineHeight * 1.5f
+                ? (float)placement.BoxHeight
+                : lineHeight;
+            multiline = height > lineHeight * 1.5f;
+
+            float width;
+            if (placement.MaxWidth > 0)
+                width = (float)placement.MaxWidth;
+            else
+            {
+                var measured = font.GetWidthPoint(value, fontSize);
+                width = Math.Max(4f, measured + 1f);
+            }
+
+            if (width < 4f || height < 4f)
+                return false;
+
+            if (x < 0)
+                x = 0;
+            if (x + width > pageWidth)
+                width = Math.Max(4f, pageWidth - x);
+            if (yTop < 0)
+                yTop = 0;
+            if (yTop + height > pageHeight)
+                height = Math.Max(4f, pageHeight - yTop);
+
+            var ury = pageHeight - yTop;
+            var lly = ury - height;
+            rect = new Rectangle(x, lly, x + width, ury);
+            return true;
+        }
+
+        private static void AddOverlayTextBlock(
+            PdfStamper stamper,
+            int pageNumber,
+            BaseFont font,
+            string text,
+            PdfTagPlacement placement,
+            Rectangle rect,
+            float fontSize,
+            bool multiline)
+        {
+            var annotation = new PdfAnnotation(stamper.Writer, rect);
+            annotation.Put(PdfName.Subtype, PdfName.Freetext);
+            annotation.Put(PdfName.Contents, new PdfString(text, PdfObject.TEXT_UNICODE));
+            annotation.Flags = PdfAnnotation.FLAGS_PRINT;
+
+            var border = new PdfDictionary();
+            border.Put(PdfName.W, new PdfNumber(0));
+            annotation.Put(new PdfName("BS"), border);
+            annotation.Put(new PdfName("IT"), new PdfName("FreeTextTypewriter"));
+            annotation.Put(PdfName.Q, new PdfNumber(MapAlignment(placement.TextAlign)));
+            annotation.Put(new PdfName("RD"), new PdfArray(new float[] { 0, 0, 0, 0 }));
+            var daSize = fontSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            annotation.Put(PdfName.Da, new PdfString($"/Helv {daSize} Tf 0 g"));
+
+            var width = Math.Max(1f, rect.Width);
+            var height = Math.Max(1f, rect.Height);
+            var appearance = PdfAppearance.CreateAppearance(stamper.Writer, width, height);
+            appearance.SetFontAndSize(font, fontSize);
+            appearance.SetGrayFill(0);
+            var align = MapAlignment(placement.TextAlign);
+            if (multiline)
+            {
+                var column = new ColumnText(appearance);
+                column.SetSimpleColumn(
+                    new Phrase(text, new Font(font, fontSize, Font.NORMAL, BaseColor.Black)),
+                    0,
+                    0,
+                    width,
+                    height,
+                    fontSize * 1.15f,
+                    align);
+                column.Go();
+            }
+            else
+            {
+                var (editorAscent, _) = MeasureEditorGlyphCell(placement.FontFamily, fontSize);
+                var ascent = (float)editorAscent;
+                var textWidth = font.GetWidthPoint(text, fontSize);
+                var textX = align switch
+                {
+                    Element.ALIGN_CENTER => Math.Max(0, (width - textWidth) / 2f),
+                    Element.ALIGN_RIGHT => Math.Max(0, width - textWidth),
+                    _ => 0f
+                };
+                appearance.BeginText();
+                appearance.SetTextMatrix(textX, Math.Max(0, height - ascent));
+                appearance.ShowText(text);
+                appearance.EndText();
+            }
+
+            annotation.SetAppearance(PdfAnnotation.AppearanceNormal, appearance);
+            stamper.AddAnnotation(annotation, pageNumber);
+        }
+
+        private static int MapAlignment(string? textAlign)
+        {
+            if (string.Equals(textAlign, "center", StringComparison.OrdinalIgnoreCase))
+                return Element.ALIGN_CENTER;
+            if (string.Equals(textAlign, "right", StringComparison.OrdinalIgnoreCase))
+                return Element.ALIGN_RIGHT;
+            return Element.ALIGN_LEFT;
         }
 
         private static string MapFieldType(int fieldType)

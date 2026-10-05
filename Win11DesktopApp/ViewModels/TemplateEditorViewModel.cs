@@ -3,10 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -23,11 +19,8 @@ namespace Win11DesktopApp.ViewModels
         private readonly NavigationService _navigationService;
         private readonly TemplateViewModelFactory _templateViewModelFactory;
         private readonly CompanyService _companyService;
-        private readonly GeminiApiService _geminiApiService;
         private readonly TagCatalogService _tagCatalogService;
-        private readonly StarterTemplateCatalogService _starterTemplateCatalogService;
         private readonly AppSettingsService _appSettingsService;
-        private readonly AiWindowFactory _aiWindowFactory;
         private readonly DocumentGenerationService _documentGenerationService = new();
         private bool _templateUnavailable;
         private bool _templateUnavailableNotified;
@@ -68,7 +61,6 @@ namespace Win11DesktopApp.ViewModels
 
         public ObservableCollection<TagGroupViewModel> FilteredTagGroups
             => TagGroups != null ? TagGroupViewModel.FilterTagGroups(TagGroups, TagSearchQuery) : new ObservableCollection<TagGroupViewModel>();
-        internal AiWindowFactory AiWindowFactory => _aiWindowFactory;
 
         public ICommand GoBackCommand { get; }
         public ICommand SaveCommand { get; }
@@ -76,23 +68,19 @@ namespace Win11DesktopApp.ViewModels
         public ICommand CopyTagCommand { get; }
         public ICommand OpenInWordCommand { get; }
         public ICommand RefreshFromWordCommand { get; }
-        public ICommand AIInsertTagsCommand { get; private set; }
-        public ICommand CloseAITagsCommand { get; private set; }
-        public ICommand OpenStarterTemplatesCommand { get; }
-        public ICommand CloseStarterTemplatesCommand { get; }
-        public ICommand ApplySelectedStarterTemplateCommand { get; }
-        public ICommand SelectStarterTemplateCommand { get; }
 
         public ObservableCollection<TemplateEditorPageSizeOption> AvailablePageSizes { get; } = new();
         public ObservableCollection<TemplateEditorPageOrientationOption> AvailablePageOrientations { get; } = new();
         public ObservableCollection<TemplateEditorPageMarginOption> AvailablePageMargins { get; } = new();
 
         public event Action<string>? RequestInsertTag;
-        public event Action<string>? RequestApplyStarterTemplate;
-        public event Action<List<(string ContextBefore, string ReplaceWhat, string Tag)>>? RequestReplaceTagsInDocument;
-        public Func<string?>? RequestGetRtfContent { get; set; }
-        public Func<byte[]?>? RequestGetXamlPackageContent { get; set; }
-        public Func<string?>? RequestGetPlainText { get; set; }
+        public event Action? RequestReloadDocument;
+        public Func<Task<byte[]?>>? RequestGetDocxBytes { get; set; }
+
+        public string EditorLocale => _appSettingsService.Settings?.LanguageCode ?? "uk";
+
+        public IReadOnlyList<string> HighlightTagNames =>
+            TagGroups.SelectMany(group => group.Tags.Select(tag => tag.Tag)).Distinct().ToList();
 
         private bool _isEditorLoading = true;
         public bool IsEditorLoading
@@ -188,70 +176,6 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _editorStatus, value);
         }
 
-        // ---- AI Insert Tags ----
-        private bool _isAITagsRunning;
-        public bool IsAITagsRunning
-        {
-            get => _isAITagsRunning;
-            set => SetProperty(ref _isAITagsRunning, value);
-        }
-
-        private bool _isAITagsOpen;
-        public bool IsAITagsOpen
-        {
-            get => _isAITagsOpen;
-            set => SetProperty(ref _isAITagsOpen, value);
-        }
-
-        private string _aiTagsStatus = string.Empty;
-        public string AITagsStatus
-        {
-            get => _aiTagsStatus;
-            set => SetProperty(ref _aiTagsStatus, value);
-        }
-
-        private bool _isStarterTemplatesOpen;
-        public bool IsStarterTemplatesOpen
-        {
-            get => _isStarterTemplatesOpen;
-            set => SetProperty(ref _isStarterTemplatesOpen, value);
-        }
-
-        private ObservableCollection<StarterTemplateCatalogEntry> _starterTemplates = new();
-        public ObservableCollection<StarterTemplateCatalogEntry> StarterTemplates
-        {
-            get => _starterTemplates;
-            set => SetProperty(ref _starterTemplates, value);
-        }
-
-        private StarterTemplateCatalogEntry? _selectedStarterTemplate;
-        public StarterTemplateCatalogEntry? SelectedStarterTemplate
-        {
-            get => _selectedStarterTemplate;
-            set
-            {
-                if (!SetProperty(ref _selectedStarterTemplate, value))
-                    return;
-
-                LoadSelectedStarterTemplatePreview();
-                CommandManager.InvalidateRequerySuggested();
-            }
-        }
-
-        private string _selectedStarterTemplateRtf = string.Empty;
-        public string SelectedStarterTemplateRtf
-        {
-            get => _selectedStarterTemplateRtf;
-            set => SetProperty(ref _selectedStarterTemplateRtf, value);
-        }
-
-        private string _starterTemplatesStatus = string.Empty;
-        public string StarterTemplatesStatus
-        {
-            get => _starterTemplatesStatus;
-            set => SetProperty(ref _starterTemplatesStatus, value);
-        }
-
         private TemplateEditorPageSizeOption? _selectedPageSize;
         public TemplateEditorPageSizeOption? SelectedPageSize
         {
@@ -319,11 +243,8 @@ namespace Win11DesktopApp.ViewModels
             NavigationService? navigationService = null,
             TemplateViewModelFactory? templateViewModelFactory = null,
             CompanyService? companyService = null,
-            GeminiApiService? geminiApiService = null,
             TagCatalogService? tagCatalogService = null,
-            StarterTemplateCatalogService? starterTemplateCatalogService = null,
-            AppSettingsService? appSettingsService = null,
-            AiWindowFactory? aiWindowFactory = null)
+            AppSettingsService? appSettingsService = null)
         {
             _firmName = firmName;
             _template = template;
@@ -331,11 +252,8 @@ namespace Win11DesktopApp.ViewModels
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
-            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
-            _starterTemplateCatalogService = starterTemplateCatalogService ?? throw new InvalidOperationException("StarterTemplateCatalogService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
-            _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
 
             try
             {
@@ -343,9 +261,11 @@ namespace Win11DesktopApp.ViewModels
                 OriginalTemplatePath = fullPath;
                 TemplateFolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 RtfFilePath = Path.Combine(TemplateFolderPath, "content.rtf");
-                NativeDocumentPath = Path.Combine(TemplateFolderPath, "content.xamlpackage");
+                NativeDocumentPath = OriginalTemplatePath;
                 LayoutSettingsPath = Path.Combine(TemplateFolderPath, "editor-layout.json");
-                if (File.Exists(RtfFilePath))
+                if (File.Exists(OriginalTemplatePath))
+                    LastSavedAt = File.GetLastWriteTime(OriginalTemplatePath);
+                else if (File.Exists(RtfFilePath))
                     LastSavedAt = File.GetLastWriteTime(RtfFilePath);
             }
             catch
@@ -379,12 +299,6 @@ namespace Win11DesktopApp.ViewModels
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             OpenInWordCommand = new AsyncRelayCommand(_ => OpenInWordAsync(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
             RefreshFromWordCommand = new RelayCommand(_ => RefreshFromWord(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
-            AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
-            CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
-            OpenStarterTemplatesCommand = new RelayCommand(o => OpenStarterTemplates());
-            CloseStarterTemplatesCommand = new RelayCommand(o => IsStarterTemplatesOpen = false);
-            ApplySelectedStarterTemplateCommand = new RelayCommand(o => ApplySelectedStarterTemplate(), o => SelectedStarterTemplate != null);
-            SelectStarterTemplateCommand = new RelayCommand(o => SelectStarterTemplate(o));
             StatusMessage = Res("EditorLoading");
         }
 
@@ -396,10 +310,7 @@ namespace Win11DesktopApp.ViewModels
             NavigationService? navigationService = null,
             TemplateViewModelFactory? templateViewModelFactory = null,
             CompanyService? companyService = null,
-            GeminiApiService? geminiApiService = null,
-            StarterTemplateCatalogService? starterTemplateCatalogService = null,
-            AppSettingsService? appSettingsService = null,
-            AiWindowFactory? aiWindowFactory = null)
+            AppSettingsService? appSettingsService = null)
         {
             _firmName = firmName;
             _template = template;
@@ -407,11 +318,8 @@ namespace Win11DesktopApp.ViewModels
             _navigationService = navigationService ?? throw new InvalidOperationException("NavigationService is not initialized.");
             _templateViewModelFactory = templateViewModelFactory ?? throw new InvalidOperationException("TemplateViewModelFactory is not initialized.");
             _companyService = companyService ?? throw new InvalidOperationException("CompanyService is not initialized.");
-            _geminiApiService = geminiApiService ?? throw new InvalidOperationException("GeminiApiService is not initialized.");
             _tagCatalogService = tagCatalogService ?? throw new InvalidOperationException("TagCatalogService is not initialized.");
-            _starterTemplateCatalogService = starterTemplateCatalogService ?? throw new InvalidOperationException("StarterTemplateCatalogService is not initialized.");
             _appSettingsService = appSettingsService ?? throw new InvalidOperationException("AppSettingsService is not initialized.");
-            _aiWindowFactory = aiWindowFactory ?? throw new InvalidOperationException("AiWindowFactory is not initialized.");
 
             try
             {
@@ -419,9 +327,11 @@ namespace Win11DesktopApp.ViewModels
                 OriginalTemplatePath = fullPath;
                 TemplateFolderPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
                 RtfFilePath = Path.Combine(TemplateFolderPath, "content.rtf");
-                NativeDocumentPath = Path.Combine(TemplateFolderPath, "content.xamlpackage");
+                NativeDocumentPath = OriginalTemplatePath;
                 LayoutSettingsPath = Path.Combine(TemplateFolderPath, "editor-layout.json");
-                if (File.Exists(RtfFilePath))
+                if (File.Exists(OriginalTemplatePath))
+                    LastSavedAt = File.GetLastWriteTime(OriginalTemplatePath);
+                else if (File.Exists(RtfFilePath))
                     LastSavedAt = File.GetLastWriteTime(RtfFilePath);
             }
             catch
@@ -455,12 +365,6 @@ namespace Win11DesktopApp.ViewModels
             CopyTagCommand = new RelayCommand(o => CopyTag(o));
             OpenInWordCommand = new AsyncRelayCommand(_ => OpenInWordAsync(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
             RefreshFromWordCommand = new RelayCommand(_ => RefreshFromWord(), _ => !IsSaving && !IsEditorLoading && !_templateUnavailable);
-            AIInsertTagsCommand = new RelayCommand(o => RunAIInsertTags(), o => !IsAITagsRunning);
-            CloseAITagsCommand = new RelayCommand(o => IsAITagsOpen = false);
-            OpenStarterTemplatesCommand = new RelayCommand(o => OpenStarterTemplates());
-            CloseStarterTemplatesCommand = new RelayCommand(o => IsStarterTemplatesOpen = false);
-            ApplySelectedStarterTemplateCommand = new RelayCommand(o => ApplySelectedStarterTemplate(), o => SelectedStarterTemplate != null);
-            SelectStarterTemplateCommand = new RelayCommand(o => SelectStarterTemplate(o));
             StatusMessage = Res("EditorLoading");
         }
 
@@ -537,78 +441,6 @@ namespace Win11DesktopApp.ViewModels
             };
 
             SafeFileService.WriteJsonAtomic(LayoutSettingsPath, settings);
-        }
-
-        private void OpenStarterTemplates()
-        {
-            LoadStarterTemplatesIfNeeded();
-            IsStarterTemplatesOpen = true;
-        }
-
-        private void LoadStarterTemplatesIfNeeded()
-        {
-            if (StarterTemplates.Count > 0)
-                return;
-
-            var templates = _starterTemplateCatalogService?.GetContractTemplates() ?? Array.Empty<StarterTemplateCatalogEntry>();
-            StarterTemplates = new ObservableCollection<StarterTemplateCatalogEntry>(templates);
-
-            if (StarterTemplates.Count == 0)
-            {
-                StarterTemplatesStatus = Res("EditorSamplesEmpty");
-                SelectedStarterTemplate = null;
-                SelectedStarterTemplateRtf = string.Empty;
-                return;
-            }
-
-            StarterTemplatesStatus = Res("EditorSamplesHint");
-            SelectedStarterTemplate = StarterTemplates[0];
-        }
-
-        private void SelectStarterTemplate(object? parameter)
-        {
-            if (parameter is StarterTemplateCatalogEntry entry)
-                SelectedStarterTemplate = entry;
-        }
-
-        private void LoadSelectedStarterTemplatePreview()
-        {
-            if (SelectedStarterTemplate == null)
-            {
-                SelectedStarterTemplateRtf = string.Empty;
-                return;
-            }
-
-            var rtf = _starterTemplateCatalogService?.LoadTemplateRtf(SelectedStarterTemplate);
-            if (string.IsNullOrWhiteSpace(rtf))
-            {
-                SelectedStarterTemplateRtf = string.Empty;
-                StarterTemplatesStatus = Res("EditorSamplesLoadError");
-                return;
-            }
-
-            SelectedStarterTemplateRtf = rtf;
-            StarterTemplatesStatus = Res("EditorSamplesHint");
-        }
-
-        private void ApplySelectedStarterTemplate()
-        {
-            if (!PolicyService.EnsureWriteAllowed("застосувати стартовий шаблон"))
-                return;
-
-            if (SelectedStarterTemplate == null)
-                return;
-
-            var rtf = _starterTemplateCatalogService?.LoadTemplateRtf(SelectedStarterTemplate);
-            if (string.IsNullOrWhiteSpace(rtf))
-            {
-                StarterTemplatesStatus = Res("EditorSamplesLoadError");
-                return;
-            }
-
-            RequestApplyStarterTemplate?.Invoke(rtf);
-            IsStarterTemplatesOpen = false;
-            StatusMessage = ResF("EditorStarterApplied", SelectedStarterTemplate.Title);
         }
 
         private void NavigateBack()
@@ -696,25 +528,20 @@ namespace Win11DesktopApp.ViewModels
                 }
 
                 Directory.CreateDirectory(TemplateFolderPath);
-                var xamlPackageContent = RequestGetXamlPackageContent?.Invoke();
-                var rtfContent = RequestGetRtfContent?.Invoke();
-                if ((xamlPackageContent == null || xamlPackageContent.Length == 0)
-                    && string.IsNullOrEmpty(rtfContent))
+                var docxBytes = RequestGetDocxBytes == null ? null : await RequestGetDocxBytes();
+                if (docxBytes == null || docxBytes.Length == 0)
                 {
                     StatusMessage = Res("EditorErrEmpty");
                     return;
                 }
 
-                if (xamlPackageContent != null && xamlPackageContent.Length > 0)
-                    SafeFileService.WriteBytesAtomic(NativeDocumentPath, xamlPackageContent);
-
-                if (!string.IsNullOrEmpty(rtfContent))
+                if (string.IsNullOrWhiteSpace(OriginalTemplatePath))
                 {
-                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                    var ansiEncoding = Encoding.GetEncoding(1252);
-                    SafeFileService.WriteTextAtomic(RtfFilePath, rtfContent, ansiEncoding);
+                    StatusMessage = Res("EditorErrPath");
+                    return;
                 }
 
+                SafeFileService.WriteBytesAtomic(OriginalTemplatePath, docxBytes);
                 SavePersistedPageLayout();
 
                 // Soft mode: editor content is now the source of truth until user refreshes from Word again.
@@ -781,24 +608,7 @@ namespace Win11DesktopApp.ViewModels
                 if (IsDirty)
                     await SaveAsync();
 
-                Directory.CreateDirectory(TemplateFolderPath);
-
-                // Export editor → DOCX only when generation is not locked to a polished Word file.
-                // If LayoutSource=word and editor was not saved, open the existing polished DOCX as-is.
-                if (!IsWordLayoutMode)
-                {
-                    if (!File.Exists(RtfFilePath))
-                    {
-                        StatusMessage = Res("MsgTemplateNotFound");
-                        return;
-                    }
-
-                    await Task.Run(() => _documentGenerationService.GenerateDocxFromRtf(
-                        RtfFilePath,
-                        OriginalTemplatePath,
-                        new Dictionary<string, string>()));
-                }
-                else if (!File.Exists(OriginalTemplatePath))
+                if (!File.Exists(OriginalTemplatePath))
                 {
                     StatusMessage = Res("EditorWordDocxMissing");
                     ToastService.Instance.Warning(StatusMessage);
@@ -846,7 +656,7 @@ namespace Win11DesktopApp.ViewModels
                     return;
                 }
 
-                if (!DocumentGenerationService.IsExpandedNativeDocx(OriginalTemplatePath))
+                if (!DocumentGenerationService.CanOpenAsTemplateDocx(OriginalTemplatePath))
                 {
                     StatusMessage = Res("EditorWordSaveInWordFirst");
                     ToastService.Instance.Warning(StatusMessage);
@@ -856,6 +666,7 @@ namespace Win11DesktopApp.ViewModels
                 _templateService.SetTemplateLayoutSource(TemplateFolderPath, TemplateLayoutSource.Word);
                 IsWordLayoutMode = true;
                 IsDirty = false;
+                RequestReloadDocument?.Invoke();
                 StatusMessage = Res("EditorWordLayoutActive");
                 ToastService.Instance.Success(Res("EditorWordRefreshOk"));
             }
@@ -910,152 +721,6 @@ namespace Win11DesktopApp.ViewModels
             StatusMessage = IsWordLayoutMode
                 ? Res("EditorWordWillClearOnSave")
                 : Res("EditorUnsaved");
-        }
-
-        private async void RunAIInsertTags()
-        {
-            if (!PolicyService.EnsureWriteAllowed("змінити шаблон через AI"))
-                return;
-
-            var geminiService = _geminiApiService;
-            if (geminiService == null || !geminiService.IsConfigured)
-            {
-                AITagsStatus = Res("AIChatNoModel");
-                IsAITagsOpen = true;
-                return;
-            }
-
-            var plainText = RequestGetPlainText?.Invoke();
-            if (string.IsNullOrWhiteSpace(plainText))
-            {
-                AITagsStatus = "Документ порожній. Спочатку напишіть текст шаблону.";
-                IsAITagsOpen = true;
-                return;
-            }
-
-            IsAITagsRunning = true;
-            AITagsStatus = Res("AIChatThinking");
-            IsAITagsOpen = true;
-
-            try
-            {
-                var allTags = _tagCatalogService?.GetAllTagDefinitions() ?? new List<TagEntry>();
-                var tagListSb = new StringBuilder();
-                foreach (var t in allTags)
-                    tagListSb.AppendLine($"  {t.Tag} — {t.Description}");
-
-                var prompt = new StringBuilder();
-                prompt.AppendLine("You are a smart document analyzer for Czech/Slovak employment contract templates.");
-                prompt.AppendLine("Read the ENTIRE document carefully and find ALL places where template tags should be inserted.");
-                prompt.AppendLine();
-                prompt.AppendLine("The document has blank placeholders (em-dash '—', en-dash '–', underscores '___', or just empty space after a label).");
-                prompt.AppendLine("Some positions may already have ${...} tags — leave those unchanged.");
-                prompt.AppendLine();
-                prompt.AppendLine("Available template tags (use ONLY these exact tag names):");
-                prompt.Append(tagListSb);
-                prompt.AppendLine();
-                prompt.AppendLine("Return ONLY a valid JSON array. Each element:");
-                prompt.AppendLine("  \"context_before\" — 2-6 words of text immediately BEFORE the placeholder (the label, e.g. 'zaměstnanec:' or 'č. dokladu:')");
-                prompt.AppendLine("  \"replace_what\"   — the EXACT placeholder characters (e.g. '—' or '–' or '___'), copy exactly as in the document");
-                prompt.AppendLine("  \"tag\"            — tag name from the list above");
-                prompt.AppendLine();
-                prompt.AppendLine("Example for a contract like:");
-                prompt.AppendLine("  zaměstnanec:   —   , č. dokladu:  —  ,");
-                prompt.AppendLine("  narozen/á:  —  ,    místo narození:  —  ,");
-                prompt.AppendLine("  Druh práce (funkce):  —  .");
-                prompt.AppendLine("Return:");
-                prompt.AppendLine("[");
-                prompt.AppendLine("  {\"context_before\": \"zaměstnanec:\",        \"replace_what\": \"—\", \"tag\": \"EMPLOYEE_FullName\"},");
-                prompt.AppendLine("  {\"context_before\": \"č. dokladu:\",         \"replace_what\": \"—\", \"tag\": \"EMPLOYEE_PassportNumber\"},");
-                prompt.AppendLine("  {\"context_before\": \"narozen/á:\",          \"replace_what\": \"—\", \"tag\": \"EMPLOYEE_BirthDate\"},");
-                prompt.AppendLine("  {\"context_before\": \"místo narození:\",      \"replace_what\": \"—\", \"tag\": \"EMPLOYEE_PassportCity\"},");
-                prompt.AppendLine("  {\"context_before\": \"Druh práce (funkce):\",\"replace_what\": \"—\", \"tag\": \"EMPLOYEE_Position\"}");
-                prompt.AppendLine("]");
-                prompt.AppendLine();
-                prompt.AppendLine("Critical rules:");
-                prompt.AppendLine("- 'context_before' must be text that actually appears in the document, immediately before the placeholder");
-                prompt.AppendLine("- 'replace_what' must be the EXACT placeholder character(s) as they appear in the document — copy them exactly");
-                prompt.AppendLine("- Analyze the WHOLE document, not just the beginning");
-                prompt.AppendLine("- Do NOT replace structural/legal text, article titles, or real content");
-                prompt.AppendLine("- Skip any position that already has ${...}");
-                prompt.AppendLine("- Cover salary, dates, addresses, positions, contract type — everything that needs data");
-                prompt.AppendLine("- If no placeholders found, return []");
-                prompt.AppendLine();
-                prompt.AppendLine("IMPORTANT — Czech employment contract field mapping (use EXACTLY these tags for these labels):");
-                prompt.AppendLine("  'Zaměstnavatel:'                        → AGENCY_Name  (legal employer = the employment agency)");
-                prompt.AppendLine("  'se sídlem:', 'sídlem:'                 → AGENCY_FullAddress  (agency address)");
-                prompt.AppendLine("  'IČO:', 'IČ:'                           → AGENCY_ICO");
-                prompt.AppendLine("  'zaměstnanec:', 'Zaměstnanec:'          → EMPLOYEE_FullName");
-                prompt.AppendLine("  'č. dokladu:', 'číslo dokladu:'         → EMPLOYEE_PassportNumber");
-                prompt.AppendLine("  'typ cestovního dokladu:'               → EMPLOYEE_PrimaryDocumentType");
-                prompt.AppendLine("  'číslo a typ cestovního dokladu:'       → EMPLOYEE_PrimaryDocumentType + EMPLOYEE_PassportNumber");
-                prompt.AppendLine("  'narozen/á:', 'datum narození:'         → EMPLOYEE_BirthDate");
-                prompt.AppendLine("  'místo narození:'                       → EMPLOYEE_PassportCity");
-                prompt.AppendLine("  'státní občanství:'                     → EMPLOYEE_Citizenship");
-                prompt.AppendLine("  'země vydání:', 'stát vydání:'          → EMPLOYEE_IssuingCountry");
-                prompt.AppendLine("  'typ pobytového dokladu:'               → EMPLOYEE_ResidenceDocumentType");
-                prompt.AppendLine("  'bydliště v ČR:', 'adresa v ČR:'        → EMPLOYEE_LocalAddress_Full  (employee's Czech Republic address)");
-                prompt.AppendLine("  'trvalé bydliště:', 'adresa v zemi původu:' → EMPLOYEE_AbroadAddress_Full  (employee's home country address)");
-                prompt.AppendLine("  'Druh práce', 'druh práce (funkce):'    → EMPLOYEE_Position");
-                prompt.AppendLine("  'Místo výkonu práce:'                   → EMPLOYEE_WorkAddress");
-                prompt.AppendLine("  'uživatel:', 'Uživatel:'                → COMPANY_Name  (the user company where employee actually works)");
-                prompt.AppendLine("  'Den nástupu do práce:', 'od:'          → EMPLOYEE_StartDate");
-                prompt.AppendLine("  'základní mzda', 'měsíční mzda'         → EMPLOYEE_SalaryBrutto");
-                prompt.AppendLine("  'hodinová mzda', 'hodinový výdělek'     → EMPLOYEE_HourlySalary");
-                prompt.AppendLine("  'V [city] dne', 'dne' (signature line)  → EMPLOYEE_ContractSignDate  (signing date, NOT start date)");
-                prompt.AppendLine("  'zastoupený/á:'                         → leave as-is (real person's name, do not replace)");
-                prompt.AppendLine();
-                prompt.AppendLine("Document text (analyze completely):");
-                prompt.AppendLine(plainText);
-
-                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
-                var response = await geminiService.ChatAsync(prompt.ToString(), null, cts.Token);
-
-                var replacements = new List<(string ContextBefore, string ReplaceWhat, string Tag)>();
-                var jsonMatch = Regex.Match(response, @"\[[\s\S]*?\]", RegexOptions.Singleline);
-                if (jsonMatch.Success)
-                {
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(jsonMatch.Value);
-                        foreach (var elem in doc.RootElement.EnumerateArray())
-                        {
-                            var contextBefore = elem.TryGetProperty("context_before", out var cb) ? (cb.GetString() ?? string.Empty) : string.Empty;
-                            var replaceWhat = elem.TryGetProperty("replace_what", out var rw) ? (rw.GetString() ?? string.Empty) : string.Empty;
-                            var tag = elem.TryGetProperty("tag", out var tg) ? (tg.GetString()?.Trim() ?? string.Empty) : string.Empty;
-
-                            if (!string.IsNullOrEmpty(replaceWhat) && !string.IsNullOrEmpty(tag)
-                                && allTags.Any(t => t.Tag == tag))
-                                replacements.Add((contextBefore, replaceWhat, $"${{{tag}}}"));
-                        }
-                    }
-                    catch (Exception ex) { LoggingService.LogWarning("TemplateEditorViewModel.RunAIInsertTags", $"AI JSON parse error: {ex.Message}"); }
-                }
-
-                if (replacements.Count == 0)
-                {
-                    AITagsStatus = "AI не знайшов місць для тегів. Переконайтесь що в документі є порожні заглушки (—, ___, пробіли після лейблів).";
-                }
-                else
-                {
-                    RequestReplaceTagsInDocument?.Invoke(replacements);
-
-                    var sb = new StringBuilder();
-                    sb.AppendLine($"✅ Вставлено {replacements.Count} тегів:");
-                    foreach (var (ctx, what, tag) in replacements)
-                        sb.AppendLine($"  • після \"{ctx}\" → {tag}");
-                    AITagsStatus = sb.ToString();
-                }
-            }
-            catch (Exception ex)
-            {
-                AITagsStatus = $"Помилка: {ex.Message}";
-                LoggingService.LogError("TemplateEditorViewModel.RunAIInsertTags", ex);
-            }
-            finally
-            {
-                IsAITagsRunning = false;
-            }
         }
 
         private void CopyTag(object? parameter)

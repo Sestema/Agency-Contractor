@@ -45,6 +45,16 @@ namespace Win11DesktopApp.Models
         /// "editor" = generate from content.rtf; "word" = generate from template.docx (native OOXML).
         /// </summary>
         public string LayoutSource { get; set; } = TemplateLayoutSource.Editor;
+        /// <summary>
+        /// "docx" once the template is edited in the DOCX editor: template.docx is then the only source of truth.
+        /// Empty for legacy templates whose editor content lives in content.xamlpackage/content.rtf.
+        /// </summary>
+        public string EditorFormat { get; set; } = string.Empty;
+    }
+
+    public static class TemplateEditorFormat
+    {
+        public const string Docx = "docx";
     }
 
     public class TemplateEditorLayoutSettings

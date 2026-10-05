@@ -853,13 +853,17 @@
     <!-- ProblemsView -->
     <sys:String x:Key="ProbStatExpired">Прострочено / Критично</sys:String>
     <sys:String x:Key="ProbStatWarning">Скоро закінчуються</sys:String>
-    <sys:String x:Key="ProbStatTotal">Всього проблем</sys:String>
+    <sys:String x:Key="ProbPeopleCount">Працівників: {0}</sys:String>
+    <sys:String x:Key="ProbSubtitle">Проблем: {0} · Працівників: {1} · Фірм: {2} · Оновлено о {3}</sys:String>
+    <sys:String x:Key="ProbViewOneColumn">Одна картка в рядку</sys:String>
+    <sys:String x:Key="ProbViewTwoColumns">Дві картки в рядку</sys:String>
+    <sys:String x:Key="ProbNoIgnored">Немає ігнорованих проблем</sys:String>
+    <sys:String x:Key="ProbNoIgnoredDesc">Тут з'являться документи, які ви приховали кнопкою «Ігнорувати».</sys:String>
     <sys:String x:Key="ProbAllOk">Всі документи в порядку!</sys:String>
     <sys:String x:Key="ProbAllOkDesc">Немає прострочених або документів що скоро закінчуються.</sys:String>
     <sys:String x:Key="ProbTitle">Проблеми — всі фірми</sys:String>
     <sys:String x:Key="ProbExportPdf">Експорт PDF</sys:String>
     <sys:String x:Key="ProbIgnored">Ігноровано</sys:String>
-    <sys:String x:Key="ProbIgnoredTitle">Ігноровані проблеми</sys:String>
     <sys:String x:Key="ProbUntil">до </sys:String>
     <sys:String x:Key="ProbRestoreTooltip">Повернути проблему</sys:String>
     <sys:String x:Key="ProbRestore">Відновити</sys:String>
@@ -886,6 +890,9 @@
     <sys:String x:Key="ProbPdfExportError">Помилка експорту: {0}</sys:String>
     <sys:String x:Key="ProbPdfError">Помилка</sys:String>
     <sys:String x:Key="ProbDaysExpired">прострочено {0} дн.</sys:String>
+    <sys:String x:Key="ProbExpiredMonths">прострочено {0} міс.</sys:String>
+    <sys:String x:Key="ProbExpiredYears">прострочено {0} р.</sys:String>
+    <sys:String x:Key="ProbExpiredYearsMonths">прострочено {0} р. {1} міс.</sys:String>
     <sys:String x:Key="ProbDaysToday">закінчується сьогодні</sys:String>
     <sys:String x:Key="ProbDaysLeft">через {0} дн.</sys:String>
     <sys:String x:Key="ProbAllFirms">Усі фірми</sys:String>
@@ -1043,10 +1050,11 @@
     <sys:String x:Key="EditorInsert">Вст.</sys:String>
     <sys:String x:Key="EditorCopyTag">Копіювати тег</sys:String>
     <sys:String x:Key="EditorOpenInWord">Відкрити в Word</sys:String>
-    <sys:String x:Key="EditorOpenInWordTooltip">Відкрити template.docx у Microsoft Word для верстки</sys:String>
+    <sys:String x:Key="EditorOpenInWordTooltip">Відкрити template.docx у Microsoft Word</sys:String>
     <sys:String x:Key="EditorRefreshFromWord">Оновити з Word</sys:String>
-    <sys:String x:Key="EditorRefreshFromWordTooltip">Після збереження в Word — використовувати цей DOCX для генерації</sys:String>
-    <sys:String x:Key="EditorWordLayoutActive">Генерація з макетом Word. Редактор можна змінювати; після Зберегти знову відкрийте Word і натисніть «Оновити з Word».</sys:String>
+    <sys:String x:Key="EditorRefreshFromWordTooltip">Перезавантажити в редактор файл, збережений у Word</sys:String>
+    <sys:String x:Key="EditorWordLayoutActive">Відкрито макет з Word. Після Зберегти template.docx оновиться з редактора.</sys:String>
+    <sys:String x:Key="EditorDocxLoadFailed">Не вдалося відкрити документ у редакторі.</sys:String>
     <sys:String x:Key="EditorWordOpenedHint">Відкрито в Word. Після змін збережіть файл у Word (Ctrl+S).</sys:String>
     <sys:String x:Key="EditorWordOpenedEditorHint">Відкрито в Word. Збережіть у Word (Ctrl+S), потім натисніть «Оновити з Word».</sys:String>
     <sys:String x:Key="EditorWordSaveInWordFirst">Спочатку збережіть документ у Word (Ctrl+S), щоб розгорнути вміст, потім натисніть «Оновити з Word».</sys:String>
@@ -1175,7 +1183,6 @@
     <sys:String x:Key="ReportExportSheetEmployees">Список працівників</sys:String>
     <sys:String x:Key="ReportExportSheetArchive">Журнал архіву</sys:String>
     <sys:String x:Key="ReportTotal">ВСЬОГО</sys:String>
-    <sys:String x:Key="ReportArchiveChart">Динаміка архіву по місяцях</sys:String>
     <sys:String x:Key="ReportArchiveLog">Журнал архіву</sys:String>
     <sys:String x:Key="ReportAgencyStats">Статистика по агенціях</sys:String>
     <sys:String x:Key="ReportColAgency">Агенція</sys:String>
@@ -1239,8 +1246,6 @@
     <sys:String x:Key="ReportCollapseList">Згорнути</sys:String>
     <sys:String x:Key="ReportHideFilters">Сховати</sys:String>
     <sys:String x:Key="ReportShowFilters">Фільтри</sys:String>
-    <sys:String x:Key="ReportChartArchived">Архівовано</sys:String>
-    <sys:String x:Key="ReportChartRestored">Відновлено</sys:String>
     <sys:String x:Key="ReportStatusFmt">{0} фірм, {1} працювало, {2} нових, {3} закінчили</sys:String>
     <sys:String x:Key="ReportSheetSummary">Зведення</sys:String>
     <sys:String x:Key="ReportSheetAgencies">Агенції</sys:String>

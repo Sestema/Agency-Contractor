@@ -42,7 +42,7 @@ namespace Win11DesktopApp.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is int days)
-                return ViewModels.ProblemsViewModel.DaysRemainingText(days);
+                return ViewModels.ProblemsViewModel.DaysRemainingText(days, exact: parameter as string == "exact");
             return string.Empty;
         }
 

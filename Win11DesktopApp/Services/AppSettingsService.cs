@@ -176,6 +176,7 @@ namespace Win11DesktopApp.Services
             public string EmployeeSortField { get; set; } = "Name";
             public bool EmployeeSortAscending { get; set; } = true;
             public string EmployeeViewMode { get; set; } = "List";
+            public string ProblemsViewMode { get; set; } = "One";
             public double EmployeeZoomLevel { get; set; } = 1.0;
             public int EmployeeTileSizeStep { get; set; } = 4;
             public Dictionary<string, double> EmployeeTableColumnWidths { get; set; } = new(StringComparer.OrdinalIgnoreCase);

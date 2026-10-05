@@ -19,7 +19,6 @@ namespace Win11DesktopApp.Tests
         private readonly NavigationService _navigationService;
         private readonly CompanyService _companyService;
         private readonly GeminiApiService _geminiApiService;
-        private readonly StarterTemplateCatalogService _starterTemplateCatalogService;
         private readonly TemplateViewModelFactory _templateViewModelFactory;
         private readonly CurrentProfileService _currentProfileService;
         private readonly AiWindowFactory _aiWindowFactory;
@@ -41,7 +40,6 @@ namespace Win11DesktopApp.Tests
             _currentProfileService = new CurrentProfileService();
             _companyService = new CompanyService(_tagCatalogService, _appSettingsService, new PersistenceService(_appSettingsService, folderService), folderService);
             _geminiApiService = new GeminiApiService();
-            _starterTemplateCatalogService = new StarterTemplateCatalogService();
             _aiWindowFactory = new AiWindowFactory(
                 _geminiApiService,
                 new EmployeeService(_appSettingsService, _tagCatalogService, folderService, currentProfileService: _currentProfileService));
@@ -53,7 +51,6 @@ namespace Win11DesktopApp.Tests
                 _geminiApiService,
                 _tagCatalogService,
                 _appSettingsService,
-                _starterTemplateCatalogService,
                 _aiWindowFactory);
         }
 
@@ -74,14 +71,12 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory);
+                _appSettingsService);
 
             Assert.False(string.IsNullOrEmpty(vm.RtfFilePath));
             Assert.EndsWith("content.rtf", vm.RtfFilePath);
-            Assert.EndsWith("content.xamlpackage", vm.NativeDocumentPath);
+            Assert.EndsWith("test.docx", vm.NativeDocumentPath);
+            Assert.Equal(vm.OriginalTemplatePath, vm.NativeDocumentPath);
         }
 
         [Fact]
@@ -101,10 +96,7 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory);
+                _appSettingsService);
 
             Assert.NotNull(vm.TagGroups);
         }
@@ -126,10 +118,7 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory);
+                _appSettingsService);
 
             vm.TagSearchQuery = "EMPLOYEE";
 
@@ -150,10 +139,7 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory);
+                _appSettingsService);
 
             Assert.NotNull(vm.TagGroups);
         }
@@ -183,10 +169,7 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory);
+                _appSettingsService);
 
             Assert.Equal("letter", vm.SelectedPageSize?.Key);
             Assert.Equal("landscape", vm.SelectedPageOrientation?.Key);
@@ -209,12 +192,9 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory)
+                _appSettingsService)
             {
-                RequestGetRtfContent = () => "{\\rtf1\\ansi test}"
+                RequestGetDocxBytes = () => Task.FromResult<byte[]?>(new byte[] { 1, 2, 3 })
             };
             vm.NotifyEditorLoaded();
 
@@ -248,13 +228,9 @@ namespace Win11DesktopApp.Tests
                 _navigationService,
                 _templateViewModelFactory,
                 _companyService,
-                _geminiApiService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory)
+                _appSettingsService)
             {
-                RequestGetRtfContent = () => "{\\rtf1\\ansi test}",
-                RequestGetXamlPackageContent = () => expectedBytes
+                RequestGetDocxBytes = () => Task.FromResult<byte[]?>(expectedBytes)
             };
             vm.NotifyEditorLoaded();
 

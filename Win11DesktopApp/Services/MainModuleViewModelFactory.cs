@@ -128,7 +128,8 @@ public sealed class MainModuleViewModelFactory
             _companyService,
             _employeeDetailsViewModelFactory,
             _activityLogService,
-            _documentLocalizationService);
+            _documentLocalizationService,
+            _appSettingsService);
     }
 
     public ArchiveViewModel CreateArchive(string? employeeToOpenFolder = null)

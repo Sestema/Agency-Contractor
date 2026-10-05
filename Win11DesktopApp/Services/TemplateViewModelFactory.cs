@@ -12,7 +12,6 @@ namespace Win11DesktopApp.Services
         private readonly GeminiApiService _geminiApiService;
         private readonly TagCatalogService _tagCatalogService;
         private readonly AppSettingsService _appSettingsService;
-        private readonly StarterTemplateCatalogService _starterTemplateCatalogService;
         private readonly AiWindowFactory _aiWindowFactory;
 
     public TemplateViewModelFactory(
@@ -23,7 +22,6 @@ namespace Win11DesktopApp.Services
         GeminiApiService geminiApiService,
         TagCatalogService tagCatalogService,
         AppSettingsService appSettingsService,
-        StarterTemplateCatalogService starterTemplateCatalogService,
         AiWindowFactory aiWindowFactory)
         {
             _templateService = templateService;
@@ -33,7 +31,6 @@ namespace Win11DesktopApp.Services
             _geminiApiService = geminiApiService;
             _tagCatalogService = tagCatalogService;
             _appSettingsService = appSettingsService;
-            _starterTemplateCatalogService = starterTemplateCatalogService;
             _aiWindowFactory = aiWindowFactory;
         }
 
@@ -64,11 +61,8 @@ namespace Win11DesktopApp.Services
                 _navigationService,
                 this,
                 _companyService,
-                _geminiApiService,
                 _tagCatalogService,
-                _starterTemplateCatalogService,
-                _appSettingsService,
-                _aiWindowFactory);
+                _appSettingsService);
         }
 
         public XlsxEditorViewModel CreateXlsxEditor(string firmName, TemplateEntry template)

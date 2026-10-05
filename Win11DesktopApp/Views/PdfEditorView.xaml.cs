@@ -8,6 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Win11DesktopApp.Helpers;
 using Win11DesktopApp.Models;
 using Win11DesktopApp.ViewModels;
 
@@ -27,8 +28,6 @@ namespace Win11DesktopApp.Views
         private double _dragStartLeft;
         private double _dragStartTop;
         private bool _isApplyingSavedLayout;
-
-        private const double AlignSnapThreshold = 4.0;
 
         public PdfEditorView()
         {
@@ -335,35 +334,9 @@ namespace Win11DesktopApp.Views
                 formatted.Baseline);
         }
 
-        // Returns the font's glyph-cell metrics in pixels (ascent and full cell height = ascent+descent),
-        // matching the metrics PdfSharp uses when it draws the generated text. This lets the editor box
-        // hug the font tightly and sit exactly where the generated text will land.
+        // Same glyph cell the generator uses, so the tag baseline on screen is the PDF baseline.
         private static (double ascentPx, double cellHeightPx) GetFontCellMetrics(string fontFamily, double emPx)
-        {
-            try
-            {
-                var typeface = new Typeface(
-                    new FontFamily(fontFamily),
-                    FontStyles.Normal,
-                    FontWeights.Normal,
-                    FontStretches.Normal);
-
-                if (typeface.TryGetGlyphTypeface(out var glyphTypeface))
-                {
-                    var ascent = glyphTypeface.Baseline * emPx;
-                    var cell = glyphTypeface.Height * emPx;
-                    if (ascent > 0 && cell > 0)
-                        return (ascent, cell);
-                }
-            }
-            catch
-            {
-                // Fall through to approximate metrics below.
-            }
-
-            // Typical Latin font fallback (ascent ~0.9 em, cell ~1.15 em).
-            return (emPx * 0.9, emPx * 1.15);
-        }
+            => ITextFormHelper.MeasureEditorGlyphCell(fontFamily, emPx);
 
         private void RenderTagOverlays()
         {
@@ -387,9 +360,7 @@ namespace Win11DesktopApp.Views
             DrawGridLines(vm, canvasW, canvasH);
 
             var accentBrush = new SolidColorBrush(Color.FromArgb(255, 21, 101, 192));
-            var bgBrush = new SolidColorBrush(Color.FromArgb(200, 227, 242, 253));
             var selectedBorderBrush = new SolidColorBrush(Color.FromArgb(255, 255, 152, 0));
-            var selectedBg = new SolidColorBrush(Color.FromArgb(220, 255, 243, 224));
 
             var pixelsPerDip = GetOverlayPixelsPerDip();
             var pageScaleY = canvasH / vm.PdfPageHeight;
@@ -454,7 +425,7 @@ namespace Win11DesktopApp.Views
                 {
                     Width = contentWidth,
                     Height = contentHeight,
-                    Background = isSelected ? selectedBg : bgBrush,
+                    Background = Brushes.Transparent,
                     BorderBrush = isSelected ? selectedBorderBrush : accentBrush,
                     BorderThickness = new Thickness(isSelected ? 2 : 1),
                     CornerRadius = new CornerRadius(2),
@@ -495,9 +466,23 @@ namespace Win11DesktopApp.Views
                 Canvas.SetLeft(deleteBtn, -deleteSize - 3);
                 Canvas.SetTop(deleteBtn, Math.Max(0, (contentHeight - deleteSize) / 2));
 
+                var baseline = new Line
+                {
+                    X1 = 0,
+                    X2 = contentWidth,
+                    Y1 = 0,
+                    Y2 = 0,
+                    Stroke = isSelected ? selectedBorderBrush : accentBrush,
+                    StrokeThickness = 1,
+                    IsHitTestVisible = false
+                };
+
                 host.Children.Add(chrome);
                 host.Children.Add(textBlock);
+                host.Children.Add(baseline);
                 host.Children.Add(deleteBtn);
+                Canvas.SetLeft(baseline, 0);
+                Canvas.SetTop(baseline, ascentPx);
 
                 host.MouseLeftButtonDown += TagBorder_MouseLeftButtonDown;
                 host.MouseMove += TagBorder_MouseMove;
@@ -661,24 +646,8 @@ namespace Win11DesktopApp.Views
             newLeft = Math.Clamp(newLeft, 0, PdfCanvas.Width - 10);
             newTop = Math.Clamp(newTop, 0, PdfCanvas.Height - 10);
 
-            // Alignment guides: snap to other tags' Y positions
             var canvasW = PdfCanvas.Width;
             var canvasH = PdfCanvas.Height;
-            double? alignY = null;
-
-            foreach (var other in vm.CurrentPagePlacements)
-            {
-                if (other == _dragPlacement) continue;
-                double otherY = other.Y * canvasH;
-                if (Math.Abs(newTop - otherY) < AlignSnapThreshold)
-                {
-                    newTop = otherY;
-                    alignY = otherY;
-                    break;
-                }
-            }
-
-            ShowAlignmentGuide(alignY, canvasW);
 
             Canvas.SetLeft(_dragElement, newLeft);
             Canvas.SetTop(_dragElement, newTop);
@@ -692,29 +661,6 @@ namespace Win11DesktopApp.Views
             }
 
             e.Handled = true;
-        }
-
-        private Line? _alignGuide;
-
-        private void ShowAlignmentGuide(double? y, double canvasW)
-        {
-            if (_alignGuide != null)
-            {
-                PdfCanvas.Children.Remove(_alignGuide);
-                _alignGuide = null;
-            }
-            if (y == null) return;
-
-            _alignGuide = new Line
-            {
-                X1 = 0, X2 = canvasW,
-                Y1 = y.Value, Y2 = y.Value,
-                Stroke = new SolidColorBrush(Color.FromArgb(180, 255, 152, 0)),
-                StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection { 4, 3 },
-                IsHitTestVisible = false
-            };
-            PdfCanvas.Children.Add(_alignGuide);
         }
 
         private void TagBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -735,17 +681,9 @@ namespace Win11DesktopApp.Views
                 double newXPercent = finalLeft / canvasW;
                 double newYPercent = finalTop / canvasH;
 
-                if (vm.SnapToGrid)
-                {
-                    newYPercent = vm.SnapYPercent(newYPercent);
-                    newXPercent = vm.SnapXPercent(newXPercent);
-                }
-
                 vm.UpdatePlacementPosition(_dragPlacement, newXPercent, newYPercent);
                 vm.UpdateCoordinateText(_dragPlacement);
             }
-
-            ShowAlignmentGuide(null, 0);
 
             _isDragging = false;
             _dragPlacement = null;

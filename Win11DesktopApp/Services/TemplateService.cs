@@ -244,8 +244,6 @@ namespace Win11DesktopApp.Services
             var destDocxPath = Path.Combine(templateFolder, destFileName);
             SafeFileService.CopyFile(sourceFilePath, destDocxPath);
 
-            SaveImportedDocxEditorContent(sourceFilePath, templateFolder);
-
             var now = DateTime.Now;
             var metadata = new TemplateMetadata
             {
@@ -255,9 +253,7 @@ namespace Win11DesktopApp.Services
                 CreatedAt = now,
                 UpdatedAt = now,
                 TagsUsed = new List<string>(),
-                LayoutSource = DocumentGenerationService.IsExpandedNativeDocx(destDocxPath)
-                    ? TemplateLayoutSource.Word
-                    : TemplateLayoutSource.Editor
+                LayoutSource = TemplateLayoutSource.Word
             };
 
             SafeFileService.WriteJsonAtomic(Path.Combine(templateFolder, "metadata.json"), metadata);
@@ -990,25 +986,20 @@ namespace Win11DesktopApp.Services
 
         /// <summary>
         /// Single resolve for DOCX generation (employee profile + batch).
-        /// Word layout uses native template.docx only when expanded (no AltChunk).
-        /// Editor layout prefers content.rtf, then falls back to template.docx.
+        /// Prefers an expanded native template.docx. Legacy RTF and AltChunk shells
+        /// are still reported here; <see cref="DocumentGenerationService.GeneratePreparedDocx"/>
+        /// turns them into native pages before tag replacement.
         /// </summary>
         public TemplateDocxGenerationSource ResolveDocxGenerationSource(string templateFolder, string templateDocxPath)
         {
-            var layout = GetTemplateLayoutSource(templateFolder);
             var rtfPath = string.IsNullOrWhiteSpace(templateFolder)
                 ? string.Empty
                 : Path.Combine(templateFolder, "content.rtf");
             var hasRtf = !string.IsNullOrEmpty(rtfPath) && File.Exists(rtfPath);
             var hasDocx = !string.IsNullOrWhiteSpace(templateDocxPath) && File.Exists(templateDocxPath);
 
-            if (string.Equals(layout, TemplateLayoutSource.Word, StringComparison.OrdinalIgnoreCase))
-            {
-                if (hasDocx && DocumentGenerationService.IsExpandedNativeDocx(templateDocxPath))
-                    return new TemplateDocxGenerationSource(TemplateDocxSourceKind.NativeDocx, templateDocxPath, null);
-
-                return new TemplateDocxGenerationSource(TemplateDocxSourceKind.None, templateDocxPath ?? string.Empty, "EditorWordDocxNotReady");
-            }
+            if (hasDocx && DocumentGenerationService.CanOpenAsTemplateDocx(templateDocxPath))
+                return new TemplateDocxGenerationSource(TemplateDocxSourceKind.NativeDocx, templateDocxPath, null);
 
             if (hasRtf)
                 return new TemplateDocxGenerationSource(TemplateDocxSourceKind.Rtf, rtfPath, null);

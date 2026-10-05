@@ -83,6 +83,78 @@ namespace Win11DesktopApp.Services
             return outputPath;
         }
 
+        /// <summary>
+        /// Builds the employee document from the same native pages the editor shows.
+        /// An AltChunk shell or legacy RTF is expanded first, so Word wraps text to the page.
+        /// </summary>
+        public string GeneratePreparedDocx(string templateFolder, string templateDocxPath, string outputPath, Dictionary<string, string> tagValues)
+        {
+            var (nativePath, deleteAfter) = MaterializeNativeTemplate(templateFolder, templateDocxPath);
+            try
+            {
+                return GenerateDocx(nativePath, outputPath, tagValues);
+            }
+            finally
+            {
+                if (deleteAfter)
+                {
+                    try { File.Delete(nativePath); } catch { /* The output copy is already written. */ }
+                }
+            }
+        }
+
+        private (string Path, bool DeleteAfter) MaterializeNativeTemplate(string templateFolder, string templateDocxPath)
+        {
+            if (CanOpenAsTemplateDocx(templateDocxPath))
+                return (templateDocxPath, false);
+
+            if (!string.IsNullOrWhiteSpace(templateDocxPath) && File.Exists(templateDocxPath))
+            {
+                var expanded = RtfToNativeDocxService.TryExpandAltChunkDocx(templateDocxPath);
+                if (expanded is { Length: > 0 })
+                {
+                    LoggingService.LogInfo("DocumentGenerationService.GeneratePreparedDocx", $"Expanded embedded RTF from \"{templateDocxPath}\" into {expanded.Length} bytes.");
+                    return (WriteTempDocx(expanded), true);
+                }
+            }
+
+            var xamlPath = string.IsNullOrWhiteSpace(templateFolder) ? string.Empty : Path.Combine(templateFolder, "content.xamlpackage");
+            var rtfPath = string.IsNullOrWhiteSpace(templateFolder) ? string.Empty : Path.Combine(templateFolder, "content.rtf");
+            if (File.Exists(xamlPath) || File.Exists(rtfPath))
+            {
+                var converted = RtfToNativeDocxService.ConvertLegacyEditorFiles(xamlPath, rtfPath, PageSetupForLegacyTemplate(templateFolder));
+                LoggingService.LogInfo("DocumentGenerationService.GeneratePreparedDocx", $"Converted legacy template \"{templateFolder}\" into {converted.Length} bytes.");
+                return (WriteTempDocx(converted), true);
+            }
+
+            if (!string.IsNullOrWhiteSpace(templateDocxPath) && File.Exists(templateDocxPath))
+                return (templateDocxPath, false);
+
+            throw new FileNotFoundException(Res("MsgTemplateMissing"), templateDocxPath);
+        }
+
+        private static string WriteTempDocx(byte[] bytes)
+        {
+            var path = Path.Combine(Path.GetTempPath(), "agency-template-" + Guid.NewGuid().ToString("N") + ".docx");
+            File.WriteAllBytes(path, bytes);
+            return path;
+        }
+
+        private DocxPageSetup PageSetupForLegacyTemplate(string templateFolder)
+        {
+            var setup = TryLoadEditorPageSetup(Path.Combine(templateFolder, "content.rtf"));
+            if (setup == null)
+                return DocxPageSetup.A4Portrait;
+
+            return new DocxPageSetup(
+                setup.PaperWidthTwips,
+                setup.PaperHeightTwips,
+                setup.MarginLeftTwips,
+                setup.MarginTopTwips,
+                setup.MarginRightTwips,
+                setup.MarginBottomTwips);
+        }
+
         private void ReplaceTags(OpenXmlElement root, Dictionary<string, string> tagValues)
         {
             foreach (var paragraph in root.Descendants<Paragraph>())
@@ -512,8 +584,8 @@ namespace Win11DesktopApp.Services
         }
 
         /// <summary>
-        /// Generates a PDF document by overlaying tag values at positions defined in a .tags.json file.
-        /// The original PDF is preserved; text is drawn on top at the specified coordinates.
+        /// Generates a PDF from tag positions in a .tags.json file.
+        /// Overlay placements are written into the same file as movable Adobe text blocks on the tag baseline.
         /// </summary>
         public string GeneratePdf(string templatePath, string outputPath, Dictionary<string, string> tagValues)
         {
@@ -554,6 +626,9 @@ namespace Win11DesktopApp.Services
                 SafeFileService.CopyFile(templatePath, outputPath);
                 return outputPath;
             }
+
+            if (ITextFormHelper.TryWriteOverlayPlacements(templatePath, outputPath, tagMap.Placements, tagValues))
+                return outputPath;
 
             // Open source PDF
             using var sourceDoc = PdfReader.Open(templatePath, PdfDocumentOpenMode.Import);
@@ -689,6 +764,30 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public static bool IsExpandedNativeDocx(string path)
         {
+            return InspectDocx(path, body =>
+                !body.Descendants<AltChunk>().Any()
+                && (body.Elements<Paragraph>().Any() || body.Descendants<Table>().Any()));
+        }
+
+        /// <summary>
+        /// True for any DOCX the editor should open as-is, including text boxes,
+        /// content controls and drawings. Pure AltChunk shells are excluded.
+        /// </summary>
+        public static bool CanOpenAsTemplateDocx(string path)
+        {
+            return InspectDocx(path, body =>
+            {
+                if (!body.Descendants<AltChunk>().Any())
+                    return true;
+
+                return body.Descendants<Paragraph>().Any(paragraph => paragraph.InnerText.Length > 0)
+                    || body.Descendants<Table>().Any()
+                    || body.Descendants<SdtElement>().Any();
+            });
+        }
+
+        private static bool InspectDocx(string path, Func<Body, bool> inspect)
+        {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 return false;
 
@@ -696,17 +795,11 @@ namespace Win11DesktopApp.Services
             {
                 using var doc = WordprocessingDocument.Open(path, false);
                 var body = doc.MainDocumentPart?.Document?.Body;
-                if (body == null)
-                    return false;
-
-                if (body.Descendants<AltChunk>().Any())
-                    return false;
-
-                return body.Elements<Paragraph>().Any() || body.Descendants<Table>().Any();
+                return body != null && inspect(body);
             }
             catch (Exception ex)
             {
-                LoggingService.LogWarning("DocumentGenerationService.IsExpandedNativeDocx", ex.Message);
+                LoggingService.LogWarning("DocumentGenerationService.InspectDocx", ex.Message);
                 return false;
             }
         }
