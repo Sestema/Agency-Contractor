@@ -1,5 +1,5 @@
-import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { DocxEditor, LocaleProvider, useChromeTranslate, useEditorCommand } from '@docx-editor.dev/react';
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { DocxEditor, LocaleProvider, useChromeTranslate, useEditorSnapshot } from '@docx-editor.dev/react';
 import type { Editor } from '@docx-editor.dev/core';
 import {
   base64ToBytes,
@@ -14,6 +14,7 @@ import {
 } from './bridge';
 import { createSystemFontResolver } from './fonts';
 import { catalogFor, regionalLocaleFor } from './i18n';
+import { alignSelectedTable, type TableJustification } from './centerTable';
 import { replaceTagPlaceholders, refreshTagHighlights, readPlainText } from './documentOps';
 
 type DocumentSource = Uint8Array | 'blank';
@@ -29,6 +30,7 @@ export function App() {
   const [init, setInit] = useState<InitMessage | null>(isHosted() ? null : DEV_INIT);
   const [doc, setDoc] = useState<LoadedDocument | null>(isHosted() ? null : { key: 0, source: 'blank' });
   const editorRef = useRef<Editor | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const tagsRef = useRef<string[]>(init?.tags ?? []);
   const highlightTimer = useRef<number | undefined>(undefined);
   const incomingChunks = useRef<string[] | null>(null);
@@ -72,6 +74,7 @@ export function App() {
           break;
         case 'loadStart':
           editorRef.current = null;
+          setEditor(null);
           beginDocumentLoad(message.count);
           break;
         case 'loadChunk':
@@ -139,8 +142,9 @@ export function App() {
           mode="edit"
           locale={regionalLocaleFor(init.locale)}
           {...(fonts ? { fonts } : {})}
-          onReady={(editor) => {
-            editorRef.current = editor;
+          onReady={(instance) => {
+            editorRef.current = instance;
+            setEditor(instance);
             postToHost({ type: 'loaded' });
             scheduleHighlights();
           }}
@@ -150,14 +154,14 @@ export function App() {
             scheduleHighlights();
           }}
         >
-          <EditorChrome />
+          <EditorChrome editor={editor} />
         </DocxEditor.Root>
       </LocaleProvider>
     </LoadErrorBoundary>
   );
 }
 
-function EditorChrome() {
+function EditorChrome({ editor }: { editor: Editor | null }) {
   const t = useChromeTranslate();
   return (
     <div className="docx-editor editor-shell">
@@ -170,7 +174,7 @@ function EditorChrome() {
         <DocxEditor.Toolbar.EditingMode hidden />
         <DocxEditor.Toolbar.Reviewers hidden />
         <DocxEditor.Toolbar.Save hidden />
-        <TableAlignActions />
+        <TableAlignActions editor={editor} />
       </DocxEditor.Toolbar>
       <DocxEditor.HorizontalRuler unit="cm" />
       <div className="editor-workspace">
@@ -192,54 +196,78 @@ function EditorChrome() {
   );
 }
 
-const ALIGN_TABLE_LEFT = { type: 'setTableProperties', justification: 'left' } as const;
-const ALIGN_TABLE_CENTER = { type: 'setTableProperties', justification: 'center' } as const;
-const ALIGN_TABLE_RIGHT = { type: 'setTableProperties', justification: 'right' } as const;
+function readSelectedTableJustification(): TableJustification | null {
+  const anchor = document.getSelection()?.anchorNode ?? null;
+  const element = anchor instanceof Element ? anchor : anchor?.parentElement ?? null;
+  const align = element?.closest('table')?.getAttribute('align');
+  if (align === 'left' || align === 'center' || align === 'right') return align;
+  return null;
+}
 
-function TableAlignActions() {
+function TableAlignActions({ editor }: { editor: Editor | null }) {
   const t = useChromeTranslate();
-  const left = useEditorCommand(ALIGN_TABLE_LEFT);
-  const center = useEditorCommand(ALIGN_TABLE_CENTER);
-  const right = useEditorCommand(ALIGN_TABLE_RIGHT);
-  if (!left.isEnabled && !center.isEnabled && !right.isEnabled) return null;
+  const revision = useEditorSnapshot(editor);
+  const busy = useRef(false);
+  const table = revision >= 0 ? editor?.getSelectedTable() ?? null : null;
+  const blockId = table?.blockId ?? null;
+  const [active, setActive] = useState<TableJustification | null>(null);
+  useLayoutEffect(() => {
+    const read = () => setActive(blockId ? readSelectedTableJustification() : null);
+    read();
+    const frame = requestAnimationFrame(read);
+    return () => cancelAnimationFrame(frame);
+  }, [revision, blockId]);
+
+  if (!table || !editor) return null;
+
+  const align = (justification: TableJustification) => {
+    if (busy.current) return;
+    busy.current = true;
+    void alignSelectedTable(editor, justification)
+      .then((aligned) => {
+        if (aligned) postToHost({ type: 'changed' });
+      })
+      .finally(() => {
+        busy.current = false;
+      });
+  };
 
   return (
     <>
       <DocxEditor.Toolbar.Action
         label={t('tableAdvanced.alignTableLeft')}
         icon={<AlignIcon mode="left" />}
-        active={left.isActive}
-        disabled={!left.isEnabled}
-        disabledReason={left.disabledReason ?? undefined}
-        onSelect={() => { left.execute(); }}
+        active={active === 'left'}
+        onSelect={() => { align('left'); }}
       />
       <DocxEditor.Toolbar.Action
         label={t('tableAdvanced.alignTableCenter')}
         icon={<AlignIcon mode="center" />}
-        active={center.isActive}
-        disabled={!center.isEnabled}
-        disabledReason={center.disabledReason ?? undefined}
-        onSelect={() => { center.execute(); }}
+        active={active === 'center'}
+        onSelect={() => { align('center'); }}
       />
       <DocxEditor.Toolbar.Action
         label={t('tableAdvanced.alignTableRight')}
         icon={<AlignIcon mode="right" />}
-        active={right.isActive}
-        disabled={!right.isEnabled}
-        disabledReason={right.disabledReason ?? undefined}
-        onSelect={() => { right.execute(); }}
+        active={active === 'right'}
+        onSelect={() => { align('right'); }}
       />
     </>
   );
 }
 
 function AlignIcon({ mode }: { mode: 'left' | 'center' | 'right' }) {
-  const x = mode === 'left' ? 1 : mode === 'right' ? 7 : 4;
+  const widths = [16, 10, 13];
+  const xFor = (width: number) => {
+    if (mode === 'left') return 1;
+    if (mode === 'right') return 17 - width;
+    return (18 - width) / 2;
+  };
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      <rect x={x} y="3" width="10" height="3" rx="0.5" fill="currentColor" />
-      <rect x={x} y="8" width="10" height="3" rx="0.5" fill="currentColor" />
-      <rect x={x} y="13" width="10" height="2" rx="0.5" fill="currentColor" />
+      {widths.map((width, index) => (
+        <rect key={width} x={xFor(width)} y={2 + index * 5} width={width} height="2.2" rx="0.4" fill="currentColor" />
+      ))}
     </svg>
   );
 }

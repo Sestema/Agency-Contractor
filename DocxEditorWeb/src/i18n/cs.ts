@@ -351,7 +351,7 @@ export const cs: Translations = {
     tableProperties: 'Vlastnosti tabulky...',
     tableAlignment: 'Zarovnání tabulky',
     alignTableLeft: 'Tabulka vlevo',
-    alignTableCenter: 'Tabulka na střed',
+    alignTableCenter: 'Na střed, stejné sloupce',
     alignTableRight: 'Tabulka vpravo',
   },
   imageTransform: {

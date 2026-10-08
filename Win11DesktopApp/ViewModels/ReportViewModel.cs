@@ -589,6 +589,8 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _employeeGroups, value);
         }
         private List<EmployeeReportRow> _allEmployees = new();
+        private List<ReportMovementSource> _periodMovementAdded = new();
+        private List<ReportMovementSource> _periodMovementEnded = new();
 
         private string _employeeSearchText = string.Empty;
         public string EmployeeSearchText
@@ -1369,6 +1371,35 @@ namespace Win11DesktopApp.ViewModels
             }
 
             var effectiveFirmsSet = effectiveFirms.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var periodMovement = CountReportPeriodMovement(
+                effectiveFirms.SelectMany(firmName => GetEmployeesCached(firmName).Select(employee =>
+                    new ReportMovementSource(
+                        employee.UniqueId,
+                        employee.FullName,
+                        firmName,
+                        employee.StartDate,
+                        employee.EndDate,
+                        employee.EmployeeFolder))),
+                archivedEmployees
+                    .Where(archived => !string.IsNullOrWhiteSpace(archived.FirmName) && effectiveFirmsSet.Contains(archived.FirmName))
+                    .Select(archived => new ReportMovementSource(
+                        archived.UniqueId,
+                        archived.FullName,
+                        archived.FirmName,
+                        archived.StartDate,
+                        archived.EndDate,
+                        archived.EmployeeFolder)),
+                dateFrom,
+                dateTo,
+                firmHistory
+                    .Where(history => !string.IsNullOrWhiteSpace(history.FirmName) && effectiveFirmsSet.Contains(history.FirmName))
+                    .Select(history => new ReportMovementSource(
+                        history.UniqueId,
+                        history.FullName,
+                        history.FirmName,
+                        history.StartDate,
+                        history.EndDate,
+                        history.EmployeeFolder)));
             var scopedArchiveLog = visibleArchiveLog
                 .Where(log => string.IsNullOrWhiteSpace(log.FirmName) || effectiveFirmsSet.Contains(log.FirmName))
                 .ToList();
@@ -1399,12 +1430,6 @@ namespace Win11DesktopApp.ViewModels
                     int firmActive = filtered.Count(x =>
                         string.IsNullOrEmpty(x.Summary.Status) || x.Summary.Status == "Active");
 
-                    int firmNew = filtered.Count(x =>
-                    {
-                        var sd = DateParsingHelper.TryParseDate(x.Summary.StartDate);
-                        return sd != null && sd.Value.Date >= dateFrom.Date && sd.Value.Date <= dateTo.Date;
-                    });
-
                     var firmRowsIndex = allEmployees.Count;
 
                     var company = companies.FirstOrDefault(c => string.Equals(c.Name, firmName, StringComparison.OrdinalIgnoreCase));
@@ -1428,21 +1453,9 @@ namespace Win11DesktopApp.ViewModels
                     int firmPassportOnly = passportOnlyActive + passportOnlyEnded;
 
                     int firmTotal = filtered.Count + firmArchivedCount;
-
-                    int firmEnded = 0;
-                    foreach (var (_, endDate) in filtered)
-                    {
-                        var endDt = DateParsingHelper.TryParseDate(endDate);
-                        if (endDt != null && endDt.Value.Date >= dateFrom.Date && endDt.Value.Date <= dateTo.Date)
-                            firmEnded++;
-                    }
-
-                    foreach (var archived in archivedForFirm)
-                    {
-                        var endDt = DateParsingHelper.TryParseDate(archived.EndDate);
-                        if (endDt != null && endDt.Value.Date >= dateFrom.Date && endDt.Value.Date <= dateTo.Date)
-                            firmEnded++;
-                    }
+                    int firmEnded = periodMovement.EndedByFirm.TryGetValue(firmName, out var endedForFirm)
+                        ? endedForFirm
+                        : 0;
 
                     firmDetails.Add(new FirmReportRow
                     {
@@ -1455,8 +1468,6 @@ namespace Win11DesktopApp.ViewModels
 
                     totalEmp += firmTotal;
                     activeEmp += firmActive;
-                    newInPeriod += firmNew;
-                    endedInPeriod += firmEnded;
 
                     if (company?.Agency != null && !string.IsNullOrWhiteSpace(company.Agency.Name))
                     {
@@ -1498,6 +1509,9 @@ namespace Win11DesktopApp.ViewModels
                 .OrderByDescending(l => l.Timestamp)
                 .ToList();
 
+            newInPeriod = periodMovement.NewCount;
+            endedInPeriod = periodMovement.EndedCount;
+
             return new ReportComputationResult(
                 firmDetails,
                 agencyDetails,
@@ -1510,7 +1524,9 @@ namespace Win11DesktopApp.ViewModels
                 endedInPeriod,
                 archivedPeriod,
                 restoredPeriod,
-                totalActions);
+                totalActions,
+                periodMovement.Added,
+                periodMovement.Ended);
         }
 
         private void ApplyReportResult(ReportComputationResult result, DateTime dateFrom, DateTime dateTo)
@@ -1520,6 +1536,8 @@ namespace Win11DesktopApp.ViewModels
             ArchiveHistory = new ObservableCollection<ArchiveLogEntry>(result.ArchiveHistory);
 
             _allEmployees = result.AllEmployees;
+            _periodMovementAdded = result.MovementAdded;
+            _periodMovementEnded = result.MovementEnded;
             _dateFilteredCache = null;
             EmployeeGroups = new ObservableCollection<FirmEmployeeGroup>();
 
@@ -1601,54 +1619,34 @@ namespace Win11DesktopApp.ViewModels
 
         private void BuildMovementLists()
         {
-            var dateFrom = DateFrom.Date;
-            var dateTo = DateTo.Date;
-            var added = new List<MonthlyMovementItem>();
-            var ended = new List<MonthlyMovementItem>();
+            MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(
+                BuildMovementItems(_periodMovementAdded, useEndDate: false, GetString("DashMovementStatusAdded"), "#4CAF50"));
+            MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(
+                BuildMovementItems(_periodMovementEnded, useEndDate: true, GetString("DashMovementStatusArchived"), "#E53935"));
+        }
 
-            foreach (var employee in _allEmployees)
-            {
-                var startDt = DateParsingHelper.TryParseDate(employee.StartDate);
-                if (!employee.IsArchived
-                    && startDt != null
-                    && startDt.Value.Date >= dateFrom
-                    && startDt.Value.Date <= dateTo)
+        private static List<MonthlyMovementItem> BuildMovementItems(
+            IEnumerable<ReportMovementSource> people,
+            bool useEndDate,
+            string statusText,
+            string statusColor)
+        {
+            return people
+                .Select(person =>
                 {
-                    added.Add(CreateMovementItem(
-                        employee.FullName,
-                        employee.FirmName,
-                        employee.StartDate,
-                        employee.EmployeeFolder,
-                        GetString("DashMovementStatusAdded"),
-                        "#4CAF50"));
-                }
-
-                var endDt = DateParsingHelper.TryParseDate(employee.EndDate);
-                if (endDt != null
-                    && endDt.Value.Date >= dateFrom
-                    && endDt.Value.Date <= dateTo)
-                {
-                    ended.Add(CreateMovementItem(
-                        employee.FullName,
-                        employee.FirmName,
-                        employee.EndDate,
-                        employee.EmployeeFolder,
-                        GetString("DashMovementStatusArchived"),
-                        "#E53935"));
-                }
-            }
-
-            added = added
-                .OrderBy(x => x.DateText, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                    var dateText = useEndDate ? person.EndDate : person.StartDate;
+                    return CreateMovementItem(
+                        person.FullName,
+                        person.FirmName,
+                        dateText,
+                        person.EmployeeFolder,
+                        statusText,
+                        statusColor,
+                        person.UniqueId);
+                })
+                .OrderBy(item => DateParsingHelper.TryParseDate(item.DateText) ?? DateTime.MaxValue)
+                .ThenBy(item => item.FullName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            ended = ended
-                .OrderBy(x => x.DateText, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            MonthlyAddedEmployees = new ObservableCollection<MonthlyMovementItem>(added);
-            MonthlyArchivedEmployees = new ObservableCollection<MonthlyMovementItem>(ended);
         }
 
         private static MonthlyMovementItem CreateMovementItem(
@@ -1657,13 +1655,16 @@ namespace Win11DesktopApp.ViewModels
             string dateText,
             string employeeFolder,
             string statusText,
-            string statusColor)
+            string statusColor,
+            string uniqueId = "")
         {
+            var parsed = DateParsingHelper.TryParseDate(dateText);
             return new MonthlyMovementItem
             {
                 FullName = fullName,
                 FirmName = firmName,
-                DateText = dateText,
+                DateText = parsed?.ToString("dd.MM.yyyy") ?? (dateText ?? string.Empty),
+                UniqueId = uniqueId ?? string.Empty,
                 EmployeeFolder = employeeFolder,
                 StatusText = statusText,
                 StatusColor = statusColor
@@ -3077,6 +3078,112 @@ namespace Win11DesktopApp.ViewModels
             int EndedInPeriod,
             int ArchivedInPeriod,
             int RestoredInPeriod,
-            int TotalArchiveActions);
+            int TotalArchiveActions,
+            List<ReportMovementSource> MovementAdded,
+            List<ReportMovementSource> MovementEnded);
+
+        internal readonly record struct ReportMovementSource(
+            string UniqueId,
+            string FullName,
+            string FirmName,
+            string StartDate,
+            string EndDate,
+            string EmployeeFolder);
+
+        internal sealed class ReportPeriodMovement
+        {
+            public int NewCount { get; init; }
+            public int EndedCount { get; init; }
+            public Dictionary<string, int> EndedByFirm { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+            public List<ReportMovementSource> Added { get; init; } = new();
+            public List<ReportMovementSource> Ended { get; init; } = new();
+        }
+
+        internal static bool IsReportMovementDateInRange(string? dateText, DateTime dateFrom, DateTime dateTo)
+        {
+            var date = DateParsingHelper.TryParseDate(dateText ?? string.Empty);
+            if (date == null)
+                return false;
+
+            var value = date.Value.Date;
+            return value >= dateFrom.Date && value <= dateTo.Date;
+        }
+
+        internal static bool TryAddReportMovementIdentity(
+            HashSet<string> ids,
+            HashSet<string> fallbacks,
+            string? uniqueId,
+            string? firmName,
+            string? fullName,
+            string? startDate)
+        {
+            var startKey = NormalizeReportMovementStartKey(startDate);
+            if (!string.IsNullOrWhiteSpace(uniqueId))
+                return ids.Add($"{uniqueId}|{startKey}");
+
+            return fallbacks.Add($"{firmName}|{fullName}|{startKey}");
+        }
+
+        internal static string NormalizeReportMovementStartKey(string? startDate)
+        {
+            var parsed = DateParsingHelper.TryParseDate(startDate ?? string.Empty);
+            return parsed?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                ?? (startDate ?? string.Empty).Trim();
+        }
+
+        internal static ReportPeriodMovement CountReportPeriodMovement(
+            IEnumerable<ReportMovementSource> activeEmployees,
+            IEnumerable<ReportMovementSource> archivedEmployees,
+            DateTime dateFrom,
+            DateTime dateTo,
+            IEnumerable<ReportMovementSource>? historicalStarts = null)
+        {
+            var addedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var addedFallbacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var added = new List<ReportMovementSource>();
+            var ended = new List<ReportMovementSource>();
+            var endedByFirm = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            void ConsiderStart(ReportMovementSource person)
+            {
+                if (!IsReportMovementDateInRange(person.StartDate, dateFrom, dateTo))
+                    return;
+
+                if (!TryAddReportMovementIdentity(addedIds, addedFallbacks, person.UniqueId, person.FirmName, person.FullName, person.StartDate))
+                    return;
+
+                added.Add(person);
+            }
+
+            foreach (var person in activeEmployees)
+                ConsiderStart(person);
+
+            foreach (var person in archivedEmployees)
+            {
+                ConsiderStart(person);
+
+                if (!IsReportMovementDateInRange(person.EndDate, dateFrom, dateTo))
+                    continue;
+
+                ended.Add(person);
+                var firm = person.FirmName ?? string.Empty;
+                endedByFirm[firm] = endedByFirm.TryGetValue(firm, out var count) ? count + 1 : 1;
+            }
+
+            if (historicalStarts != null)
+            {
+                foreach (var person in historicalStarts)
+                    ConsiderStart(person);
+            }
+
+            return new ReportPeriodMovement
+            {
+                NewCount = added.Count,
+                EndedCount = ended.Count,
+                EndedByFirm = endedByFirm,
+                Added = added,
+                Ended = ended
+            };
+        }
     }
 }

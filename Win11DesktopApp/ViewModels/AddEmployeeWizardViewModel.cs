@@ -850,7 +850,7 @@ namespace Win11DesktopApp.ViewModels
             if (ShowPassportPage2Upload) CropTargets.Add(GetSecondaryCropLabel());
             if (ShowVisaUpload) CropTargets.Add(Res("CropVisa"));
             if (ShowVisaPage2Upload) CropTargets.Add(Res("CropVisaPage2"));
-            CropTargets.Add(Res("CropInsurance"));
+            if (ShowInsuranceUpload) CropTargets.Add(Res("CropInsurance"));
             if (ShowWorkPermitUpload) CropTargets.Add(Res("CropPermit"));
             CropTargets.Add(Res("CropPhoto"));
 

@@ -351,7 +351,7 @@ export const uk: Translations = {
     tableProperties: 'Властивості таблиці...',
     tableAlignment: 'Вирівнювання таблиці',
     alignTableLeft: 'Таблиця ліворуч',
-    alignTableCenter: 'Таблиця по центру',
+    alignTableCenter: 'По центру, стовпці порівну',
     alignTableRight: 'Таблиця праворуч',
   },
   imageTransform: {

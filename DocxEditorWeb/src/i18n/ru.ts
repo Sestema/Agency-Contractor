@@ -351,7 +351,7 @@ export const ru: Translations = {
     tableProperties: 'Свойства таблицы...',
     tableAlignment: 'Выравнивание таблицы',
     alignTableLeft: 'Таблица слева',
-    alignTableCenter: 'Таблица по центру',
+    alignTableCenter: 'По центру, равные столбцы',
     alignTableRight: 'Таблица справа',
   },
   imageTransform: {
