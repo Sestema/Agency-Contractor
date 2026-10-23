@@ -990,6 +990,16 @@
     <sys:String x:Key="WizNumber">Номер</sys:String>
     <sys:String x:Key="WizCity">Город</sys:String>
     <sys:String x:Key="WizZip">Индекс</sys:String>
+    <sys:String x:Key="MapWindowTitle">Адрес на карте</sys:String>
+    <sys:String x:Key="MapWindowHint">Найдите адрес или поставьте точку на карте. Украинский запишется латиницей, чешский и польский останутся как есть.</sys:String>
+    <sys:String x:Key="MapSearch">Найти</sys:String>
+    <sys:String x:Key="MapResults">Найденные места</sys:String>
+    <sys:String x:Key="MapApply">Вписать адрес</sys:String>
+    <sys:String x:Key="MapNotFound">Адрес не найден.</sys:String>
+    <sys:String x:Key="MapOffline">Карте нужен интернет. Поиску адреса тоже.</sys:String>
+    <sys:String x:Key="MapThumbHint">Нажмите, чтобы выбрать адрес на карте</sys:String>
+    <sys:String x:Key="MapLayerStreets">Карта</sys:String>
+    <sys:String x:Key="MapLayerSatellite">Спутник</sys:String>
     <sys:String x:Key="WizPosNumber">Номер позиции</sys:String>
     <sys:String x:Key="WizSalaryMonth">Месячная зарплата (брутто)</sys:String>
     <sys:String x:Key="WizSalaryHour">Почасовая зарплата</sys:String>
@@ -1341,6 +1351,10 @@
     <sys:String x:Key="ImgEditorDenoise">Шумоподавление</sys:String>
     <sys:String x:Key="ImgEditorSaturation">Насыщенность</sys:String>
     <sys:String x:Key="ImgEditorWarmth">Теплота</sys:String>
+    <sys:String x:Key="ImgEditorSectionTone">Свет и цвет</sys:String>
+    <sys:String x:Key="ImgEditorSectionDetail">Чёткость и угол</sys:String>
+    <sys:String x:Key="ImgEditorCompare">До / после</sys:String>
+    <sys:String x:Key="ImgEditorDoubleResetHint">Двойной клик по ползунку сбрасывает значение</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI не загружен</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1357,6 +1371,11 @@
     <sys:String x:Key="EuDocTypeLabel">Тип документа ЕС:</sys:String>
     <sys:String x:Key="EuDocTypePassport">Паспорт ЕС</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID-карта</sys:String>
+    <sys:String x:Key="DocKindLabel">Документ</sys:String>
+    <sys:String x:Key="DocKindPassport">Паспорт</sys:String>
+    <sys:String x:Key="DocRequired">Обязательно</sys:String>
+    <sys:String x:Key="DocOptional">По необходимости</sys:String>
+    <sys:String x:Key="DocUploaded">Загружено</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Разрешение на работу</sys:String>
     <sys:String x:Key="ChkDocOptionsTitle">Дополнительные документы:</sys:String>
     <sys:String x:Key="ChkPassportPage2">Паспорт (стр. 2)</sys:String>

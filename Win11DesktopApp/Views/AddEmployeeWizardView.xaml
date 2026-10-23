@@ -20,30 +20,27 @@
             </Grid.RowDefinitions>
 
             <!-- ===== HEADER ===== -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Border Style="{StaticResource PageHeaderIconBadge}"
-                            Background="{DynamicResource BrandPrimaryGradientBrush}">
-                        <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
-                    </Border>
-                    <TextBlock Text="{DynamicResource HeaderAddEmployee}"
-                               FontSize="{DynamicResource FS22}"
-                               Style="{StaticResource PageHeaderTitleText}"
-                               VerticalAlignment="Center"
-                               Margin="14,0,0,0"/>
-                </StackPanel>
-
-                <!-- Step indicator (dynamic) -->
-                <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="10" Padding="14,10"
-                        BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <ProgressBar Minimum="1"
-                                     Maximum="{Binding TotalSteps, Mode=OneWay}"
-                                     Value="{Binding CurrentStepDisplay, Mode=OneWay}"
-                                     Height="8"
-                                     Margin="0,0,0,8"/>
-                        <TextBlock FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center">
+            <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource PageHeaderIconBadge}"
+                                Background="{DynamicResource BrandPrimaryGradientBrush}">
+                            <TextBlock Text="&#xE77B;" Style="{StaticResource PageHeaderIconText}"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource HeaderAddEmployee}"
+                                   FontSize="{DynamicResource FS20}"
+                                   Style="{StaticResource PageHeaderTitleText}"
+                                   VerticalAlignment="Center"
+                                   Margin="14,0,0,0"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="10" Padding="10,3"
+                            Background="{DynamicResource AccentLightBrush}">
+                        <TextBlock FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AccentDarkBrush}">
                             <TextBlock.Text>
                                 <MultiBinding StringFormat="{}{0} / {1}">
                                     <Binding Path="CurrentStepDisplay" Mode="OneWay"/>
@@ -51,8 +48,13 @@
                                 </MultiBinding>
                             </TextBlock.Text>
                         </TextBlock>
-                    </StackPanel>
-                </Border>
+                    </Border>
+                </Grid>
+
+                <ProgressBar Minimum="1"
+                             Maximum="{Binding TotalSteps, Mode=OneWay}"
+                             Value="{Binding CurrentStepDisplay, Mode=OneWay}"
+                             Height="4"/>
             </StackPanel>
 
             <!-- ===== CONTENT ===== -->

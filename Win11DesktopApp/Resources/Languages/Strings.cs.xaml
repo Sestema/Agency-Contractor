@@ -990,6 +990,16 @@
     <sys:String x:Key="WizNumber">Číslo</sys:String>
     <sys:String x:Key="WizCity">Město</sys:String>
     <sys:String x:Key="WizZip">PSČ</sys:String>
+    <sys:String x:Key="MapWindowTitle">Adresa na mapě</sys:String>
+    <sys:String x:Key="MapWindowHint">Najděte adresu nebo položte bod na mapu. Ukrajinská adresa se zapíše latinkou, česká a polská zůstanou beze změny.</sys:String>
+    <sys:String x:Key="MapSearch">Najít</sys:String>
+    <sys:String x:Key="MapResults">Nalezená místa</sys:String>
+    <sys:String x:Key="MapApply">Vyplnit adresu</sys:String>
+    <sys:String x:Key="MapNotFound">Adresa nebyla nalezena.</sys:String>
+    <sys:String x:Key="MapOffline">Mapa potřebuje internet. Vyhledání adresy také.</sys:String>
+    <sys:String x:Key="MapThumbHint">Klepnutím vyberete adresu na mapě</sys:String>
+    <sys:String x:Key="MapLayerStreets">Mapa</sys:String>
+    <sys:String x:Key="MapLayerSatellite">Satelit</sys:String>
     <sys:String x:Key="WizPosNumber">Číslo pozice</sys:String>
     <sys:String x:Key="WizSalaryMonth">Měsíční mzda (hrubá)</sys:String>
     <sys:String x:Key="WizSalaryHour">Hodinová mzda</sys:String>
@@ -1341,6 +1351,10 @@
     <sys:String x:Key="ImgEditorDenoise">Potlačení šumu</sys:String>
     <sys:String x:Key="ImgEditorSaturation">Sytost</sys:String>
     <sys:String x:Key="ImgEditorWarmth">Teplota barev</sys:String>
+    <sys:String x:Key="ImgEditorSectionTone">Světlo a barvy</sys:String>
+    <sys:String x:Key="ImgEditorSectionDetail">Ostrost a úhel</sys:String>
+    <sys:String x:Key="ImgEditorCompare">Před / po</sys:String>
+    <sys:String x:Key="ImgEditorDoubleResetHint">Dvojklik na posuvník vrátí výchozí hodnotu</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI není načten</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1357,6 +1371,11 @@
     <sys:String x:Key="EuDocTypeLabel">Typ dokladu EU:</sys:String>
     <sys:String x:Key="EuDocTypePassport">Pas EU</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID karta</sys:String>
+    <sys:String x:Key="DocKindLabel">Doklad</sys:String>
+    <sys:String x:Key="DocKindPassport">Pas</sys:String>
+    <sys:String x:Key="DocRequired">Povinné</sys:String>
+    <sys:String x:Key="DocOptional">Podle potřeby</sys:String>
+    <sys:String x:Key="DocUploaded">Nahráno</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Pracovní povolení</sys:String>
     <sys:String x:Key="ChkDocOptionsTitle">Další dokumenty:</sys:String>
     <sys:String x:Key="ChkPassportPage2">Pas (strana 2)</sys:String>

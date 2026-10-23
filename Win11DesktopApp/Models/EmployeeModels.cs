@@ -40,12 +40,28 @@ namespace Win11DesktopApp.EmployeeModels
         public string Note { get; set; } = string.Empty;
     }
 
-    public class EmployeeAddress
+    public class EmployeeAddress : INotifyPropertyChanged
     {
-        public string Street { get; set; } = string.Empty;
-        public string Number { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string Zip { get; set; } = string.Empty;
+        private string _street = string.Empty;
+        private string _number = string.Empty;
+        private string _city = string.Empty;
+        private string _zip = string.Empty;
+
+        public string Street { get => _street; set => Set(ref _street, value); }
+        public string Number { get => _number; set => Set(ref _number, value); }
+        public string City { get => _city; set => Set(ref _city, value); }
+        public string Zip { get => _zip; set => Set(ref _zip, value); }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void Set(ref string field, string value, [CallerMemberName] string? name = null)
+        {
+            value ??= string.Empty;
+            if (field == value)
+                return;
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
     }
 
     public class EmployeeFiles

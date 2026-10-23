@@ -2,6 +2,37 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <UserControl.Resources>
+        <Style x:Key="AddressMapThumb" TargetType="Button">
+            <Setter Property="Width" Value="92"/>
+            <Setter Property="Height" Value="58"/>
+            <Setter Property="Margin" Value="12,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card" CornerRadius="10" BorderThickness="1"
+                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                Background="#E7F2EA">
+                            <Grid>
+                                <Canvas IsHitTestVisible="False">
+                                    <Line X1="6" Y1="16" X2="86" Y2="26" Stroke="#B7D7C4" StrokeThickness="3"/>
+                                    <Line X1="10" Y1="38" X2="80" Y2="46" Stroke="#C5D7E8" StrokeThickness="2"/>
+                                </Canvas>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=5}"
             Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
@@ -36,22 +67,50 @@
 
                 <Border Grid.Column="0" Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
-                                <TextBlock Text="&#xE707;"
-                                           FontFamily="Segoe MDL2 Assets"
-                                           FontSize="{DynamicResource FS13}"
-                                           Foreground="{DynamicResource AccentDarkBrush}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource LabelAddressLocal}"
-                                           FontSize="{DynamicResource FS14}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
+                                    <TextBlock Text="&#xE707;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource AccentDarkBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{DynamicResource LabelAddressLocal}"
+                                               FontSize="{DynamicResource FS14}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource AddressMapThumb}"
+                                    Command="{Binding PickLocalAddressCommand}"
+                                    ToolTipService.InitialShowDelay="200">
+                                <Button.ToolTip>
+                                    <StackPanel MaxWidth="280">
+                                        <TextBlock TextWrapping="Wrap">
+                                            <Run Text="{Binding Data.AddressLocal.Street, Mode=OneWay}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Data.AddressLocal.Number, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock TextWrapping="Wrap">
+                                            <Run Text="{Binding Data.AddressLocal.City, Mode=OneWay}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Data.AddressLocal.Zip, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{DynamicResource MapThumbHint}" Opacity="0.7" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Button.ToolTip>
+                                <TextBlock Text="&#xE81D;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                           Foreground="#1F6B4A" HorizontalAlignment="Center"/>
+                            </Button>
+                        </Grid>
                         <TextBlock Text="{DynamicResource WizStreet}" Style="{StaticResource WizLabel}"/>
                         <TextBox Text="{Binding Data.AddressLocal.Street, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                         <TextBlock Text="{DynamicResource WizNumber}" Style="{StaticResource WizLabel}"/>
@@ -65,22 +124,50 @@
 
                 <Border Grid.Column="2" Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource InfoLightBrush}">
-                                <TextBlock Text="&#xE909;"
-                                           FontFamily="Segoe MDL2 Assets"
-                                           FontSize="{DynamicResource FS13}"
-                                           Foreground="{DynamicResource InfoBrush}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource LabelAddressAbroad}"
-                                           FontSize="{DynamicResource FS14}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource InfoLightBrush}">
+                                    <TextBlock Text="&#xE909;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="{DynamicResource FS13}"
+                                               Foreground="{DynamicResource InfoBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{DynamicResource LabelAddressAbroad}"
+                                               FontSize="{DynamicResource FS14}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource AddressMapThumb}"
+                                    Command="{Binding PickAbroadAddressCommand}"
+                                    ToolTipService.InitialShowDelay="200">
+                                <Button.ToolTip>
+                                    <StackPanel MaxWidth="280">
+                                        <TextBlock TextWrapping="Wrap">
+                                            <Run Text="{Binding Data.AddressAbroad.Street, Mode=OneWay}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Data.AddressAbroad.Number, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock TextWrapping="Wrap">
+                                            <Run Text="{Binding Data.AddressAbroad.City, Mode=OneWay}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding Data.AddressAbroad.Zip, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{DynamicResource MapThumbHint}" Opacity="0.7" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Button.ToolTip>
+                                <TextBlock Text="&#xE81D;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                           Foreground="#1F6B4A" HorizontalAlignment="Center"/>
+                            </Button>
+                        </Grid>
                         <TextBlock Text="{DynamicResource WizStreet}" Style="{StaticResource WizLabel}"/>
                         <TextBox Text="{Binding Data.AddressAbroad.Street, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
                         <TextBlock Text="{DynamicResource WizNumber}" Style="{StaticResource WizLabel}"/>

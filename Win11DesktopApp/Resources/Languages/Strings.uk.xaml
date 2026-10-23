@@ -992,6 +992,16 @@
     <sys:String x:Key="WizNumber">Номер</sys:String>
     <sys:String x:Key="WizCity">Місто</sys:String>
     <sys:String x:Key="WizZip">Індекс</sys:String>
+    <sys:String x:Key="MapWindowTitle">Адреса на карті</sys:String>
+    <sys:String x:Key="MapWindowHint">Знайдіть адресу або поставте точку на карті. Українська запишеться латиницею, чеська й польська лишаться як є.</sys:String>
+    <sys:String x:Key="MapSearch">Знайти</sys:String>
+    <sys:String x:Key="MapResults">Знайдені місця</sys:String>
+    <sys:String x:Key="MapApply">Вписати адресу</sys:String>
+    <sys:String x:Key="MapNotFound">Адресу не знайдено.</sys:String>
+    <sys:String x:Key="MapOffline">Карта потребує інтернет. Пошук адреси теж.</sys:String>
+    <sys:String x:Key="MapThumbHint">Натисніть, щоб обрати адресу на карті</sys:String>
+    <sys:String x:Key="MapLayerStreets">Карта</sys:String>
+    <sys:String x:Key="MapLayerSatellite">Супутник</sys:String>
     <sys:String x:Key="WizPosNumber">Номер позиції</sys:String>
     <sys:String x:Key="WizSalaryMonth">Місячна зарплата (брутто)</sys:String>
     <sys:String x:Key="WizSalaryHour">Годинна зарплата</sys:String>
@@ -1343,6 +1353,10 @@
     <sys:String x:Key="ImgEditorDenoise">Шумоподавлення</sys:String>
     <sys:String x:Key="ImgEditorSaturation">Насиченість</sys:String>
     <sys:String x:Key="ImgEditorWarmth">Тепло</sys:String>
+    <sys:String x:Key="ImgEditorSectionTone">Світло й колір</sys:String>
+    <sys:String x:Key="ImgEditorSectionDetail">Чіткість і кут</sys:String>
+    <sys:String x:Key="ImgEditorCompare">До / після</sys:String>
+    <sys:String x:Key="ImgEditorDoubleResetHint">Подвійний клік по повзунку скидає значення</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI не завантажений</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1359,6 +1373,11 @@
     <sys:String x:Key="EuDocTypeLabel">Тип документа ЄС:</sys:String>
     <sys:String x:Key="EuDocTypePassport">Паспорт ЄС</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID-карта</sys:String>
+    <sys:String x:Key="DocKindLabel">Документ</sys:String>
+    <sys:String x:Key="DocKindPassport">Паспорт</sys:String>
+    <sys:String x:Key="DocRequired">Обов'язково</sys:String>
+    <sys:String x:Key="DocOptional">За потреби</sys:String>
+    <sys:String x:Key="DocUploaded">Завантажено</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Дозвіл на роботу</sys:String>
     <sys:String x:Key="ChkDocOptionsTitle">Додаткові документи:</sys:String>
     <sys:String x:Key="ChkPassportPage2">Паспорт (стор. 2)</sys:String>

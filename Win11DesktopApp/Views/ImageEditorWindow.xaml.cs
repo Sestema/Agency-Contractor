@@ -25,9 +25,21 @@ namespace Win11DesktopApp.Views
         private Mat _currentMat;
 
         private bool _isDragging;
+        private bool _isPanning;
+        private bool _isCropMode;
         private Point _dragStart;
+        private Point _panMouseStart;
+        private double _panStartX;
+        private double _panStartY;
         private bool _hasCropSelection;
         private bool _isLoaded;
+        private double _zoom = 1.0;
+        private double _panX;
+        private double _panY;
+        private int _lastPixW;
+        private int _lastPixH;
+        private BitmapImage? _latestEditedBitmap;
+        private BitmapImage? _originalPreviewBitmap;
 
         private readonly DispatcherTimer _debounceTimer = new() { Interval = TimeSpan.FromMilliseconds(120) };
         private const int PreviewMaxDim = 900;
@@ -61,6 +73,8 @@ namespace Win11DesktopApp.Views
                 _originalMat = LoadWithRetry(imagePath);
                 _currentMat = _originalMat.Clone();
                 BuildPreviewMat();
+                BuildOriginalPreviewBitmap();
+                UpdateImageMeta();
             }
             catch (Exception ex)
             {
@@ -116,6 +130,49 @@ namespace Win11DesktopApp.Views
             {
                 _previewMat = _currentMat.Clone();
             }
+            UpdateImageMeta();
+        }
+
+        private void BuildOriginalPreviewBitmap()
+        {
+            try
+            {
+                int maxDim = Math.Max(_originalMat.Cols, _originalMat.Rows);
+                using var preview = new Mat();
+                if (maxDim > PreviewMaxDim)
+                {
+                    double s = (double)PreviewMaxDim / maxDim;
+                    Cv2.Resize(_originalMat, preview, new OpenCvSharp.Size(0, 0), s, s, InterpolationFlags.Area);
+                }
+                else
+                {
+                    _originalMat.CopyTo(preview);
+                }
+
+                Cv2.ImEncode(".bmp", preview, out byte[] buf);
+                using var ms = new MemoryStream(buf);
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.StreamSource = ms;
+                bi.EndInit();
+                bi.Freeze();
+                _originalPreviewBitmap = bi;
+            }
+            catch
+            {
+                _originalPreviewBitmap = null;
+            }
+        }
+
+        private void UpdateImageMeta()
+        {
+            if (ImageMetaText == null || _currentMat == null || _currentMat.Empty())
+                return;
+            var name = Path.GetFileName(_originalPath);
+            ImageMetaText.Text = string.IsNullOrWhiteSpace(name)
+                ? $"{_currentMat.Cols} × {_currentMat.Rows} px"
+                : $"{name}  •  {_currentMat.Cols} × {_currentMat.Rows} px";
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -182,23 +239,67 @@ namespace Win11DesktopApp.Views
 
                 if (token.IsCancellationRequested || bitmap == null) return;
 
+                _latestEditedBitmap = bitmap;
+                _lastPixW = pixW;
+                _lastPixH = pixH;
                 PreviewImage.Source = bitmap;
-
-                double canvasW = ImageCanvas.ActualWidth > 0 ? ImageCanvas.ActualWidth : 600;
-                double canvasH = ImageCanvas.ActualHeight > 0 ? ImageCanvas.ActualHeight : 400;
-                double scaleX = canvasW / pixW;
-                double scaleY = canvasH / pixH;
-                double scale = Math.Min(scaleX, scaleY);
-                double imgW = pixW * scale;
-                double imgH = pixH * scale;
-                Canvas.SetLeft(PreviewImage, (canvasW - imgW) / 2);
-                Canvas.SetTop(PreviewImage, (canvasH - imgH) / 2);
-                PreviewImage.Width = imgW;
-                PreviewImage.Height = imgH;
+                PositionPreviewImage();
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { LoggingService.LogWarning("ImageEditor.RefreshPreview", ex.Message); }
             finally { _isRendering = false; }
+        }
+
+        private void PositionPreviewImage()
+        {
+            int pixW = _lastPixW > 0 ? _lastPixW : (PreviewImage.Source as BitmapSource)?.PixelWidth ?? 0;
+            int pixH = _lastPixH > 0 ? _lastPixH : (PreviewImage.Source as BitmapSource)?.PixelHeight ?? 0;
+            if (pixW <= 0 || pixH <= 0)
+                return;
+
+            double canvasW = ImageCanvas.ActualWidth > 0 ? ImageCanvas.ActualWidth : 600;
+            double canvasH = ImageCanvas.ActualHeight > 0 ? ImageCanvas.ActualHeight : 400;
+            double scale = Math.Min(canvasW / pixW, canvasH / pixH) * _zoom;
+            double imgW = pixW * scale;
+            double imgH = pixH * scale;
+
+            double maxPanX = Math.Max(0, (imgW - canvasW) / 2);
+            double maxPanY = Math.Max(0, (imgH - canvasH) / 2);
+            _panX = Math.Clamp(_panX, -maxPanX, maxPanX);
+            _panY = Math.Clamp(_panY, -maxPanY, maxPanY);
+
+            Canvas.SetLeft(PreviewImage, (canvasW - imgW) / 2 + _panX);
+            Canvas.SetTop(PreviewImage, (canvasH - imgH) / 2 + _panY);
+            PreviewImage.Width = imgW;
+            PreviewImage.Height = imgH;
+            UpdateCanvasCursor();
+        }
+
+        private void UpdateCanvasCursor()
+        {
+            if (ImageCanvas == null)
+                return;
+            if (_isCropMode)
+                ImageCanvas.Cursor = Cursors.Cross;
+            else if (_zoom > 1.01)
+                ImageCanvas.Cursor = Cursors.SizeAll;
+            else
+                ImageCanvas.Cursor = Cursors.Arrow;
+        }
+
+        private void SetCropMode(bool enabled)
+        {
+            _isCropMode = enabled;
+            if (!enabled)
+                ClearCropSelection();
+
+            if (BtnCrop != null)
+            {
+                BtnCrop.Background = (Brush)FindResource(enabled ? "AccentBrush" : "WindowBackgroundBrush");
+                BtnCrop.BorderBrush = (Brush)FindResource(enabled ? "AccentBrush" : "CardBorderBrush");
+                BtnCrop.Foreground = enabled ? Brushes.White : (Brush)FindResource("ForegroundBrush");
+            }
+            UpdateCanvasCursor();
         }
 
         private readonly struct SliderValues
@@ -341,9 +442,80 @@ namespace Win11DesktopApp.Views
             ScheduleRefresh();
         }
 
+        private void Slider_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Slider slider)
+                return;
+            if (double.TryParse(slider.Tag?.ToString(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var def))
+            {
+                slider.Value = def;
+                e.Handled = true;
+            }
+        }
+
+        private void Canvas_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            double factor = e.Delta > 0 ? 1.18 : 1.0 / 1.18;
+            SetZoom(_zoom * factor);
+            e.Handled = true;
+        }
+
+        private void ZoomIn_Click(object sender, RoutedEventArgs e) => SetZoom(_zoom * 1.25);
+
+        private void ZoomOut_Click(object sender, RoutedEventArgs e) => SetZoom(_zoom / 1.25);
+
+        private void ZoomReset_Click(object sender, RoutedEventArgs e) => SetZoom(1.0);
+
+        private void SetZoom(double target)
+        {
+            _zoom = Math.Clamp(target, 1.0, 4.0);
+            if (Math.Abs(_zoom - 1.0) < 0.03)
+            {
+                _zoom = 1.0;
+                _panX = 0;
+                _panY = 0;
+            }
+            ZoomResetBtn.Content = $"{Math.Round(_zoom * 100)}%";
+            ClearCropSelection();
+            PositionPreviewImage();
+        }
+
+        private void BtnCompare_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_originalPreviewBitmap == null)
+                return;
+            PreviewImage.Source = _originalPreviewBitmap;
+            PositionPreviewImage();
+        }
+
+        private void BtnCompare_MouseUp(object sender, MouseButtonEventArgs e) => RestoreEditedPreview();
+
+        private void BtnCompare_MouseLeave(object sender, MouseEventArgs e) => RestoreEditedPreview();
+
+        private void RestoreEditedPreview()
+        {
+            if (_latestEditedBitmap == null || ReferenceEquals(PreviewImage.Source, _latestEditedBitmap))
+                return;
+            PreviewImage.Source = _latestEditedBitmap;
+            PositionPreviewImage();
+        }
+
         // --- Crop selection ---
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (!_isCropMode)
+            {
+                if (_zoom <= 1.01)
+                    return;
+                _isPanning = true;
+                _panMouseStart = e.GetPosition(ImageCanvas);
+                _panStartX = _panX;
+                _panStartY = _panY;
+                ImageCanvas.CaptureMouse();
+                return;
+            }
+
             if (!TryGetDisplayedImageBounds(out var imageBounds))
                 return;
 
@@ -364,15 +536,24 @@ namespace Win11DesktopApp.Views
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
+            if (_isPanning)
+            {
+                var pos = e.GetPosition(ImageCanvas);
+                _panX = _panStartX + (pos.X - _panMouseStart.X);
+                _panY = _panStartY + (pos.Y - _panMouseStart.Y);
+                PositionPreviewImage();
+                return;
+            }
+
             if (!_isDragging) return;
             if (!TryGetDisplayedImageBounds(out var imageBounds))
                 return;
 
-            var pos = ClampPointToRect(e.GetPosition(ImageCanvas), imageBounds);
-            double x = Math.Min(pos.X, _dragStart.X);
-            double y = Math.Min(pos.Y, _dragStart.Y);
-            double w = Math.Abs(pos.X - _dragStart.X);
-            double h = Math.Abs(pos.Y - _dragStart.Y);
+            var mousePos = ClampPointToRect(e.GetPosition(ImageCanvas), imageBounds);
+            double x = Math.Min(mousePos.X, _dragStart.X);
+            double y = Math.Min(mousePos.Y, _dragStart.Y);
+            double w = Math.Abs(mousePos.X - _dragStart.X);
+            double h = Math.Abs(mousePos.Y - _dragStart.Y);
 
             Canvas.SetLeft(CropRect, x);
             Canvas.SetTop(CropRect, y);
@@ -382,6 +563,13 @@ namespace Win11DesktopApp.Views
 
         private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            if (_isPanning)
+            {
+                _isPanning = false;
+                ImageCanvas.ReleaseMouseCapture();
+                return;
+            }
+
             _isDragging = false;
             ImageCanvas.ReleaseMouseCapture();
             _hasCropSelection = CropRect.Width > 5 && CropRect.Height > 5;
@@ -391,10 +579,18 @@ namespace Win11DesktopApp.Views
 
         private void BtnCrop_Click(object sender, RoutedEventArgs e)
         {
-            if (!_hasCropSelection)
+            if (!_isCropMode)
             {
+                SetCropMode(true);
                 StatusText.Text = Application.Current.TryFindResource("ImgEditorDrawCrop") as string
                     ?? "Намалюйте область для обрізки на фото.";
+                return;
+            }
+
+            if (!_hasCropSelection)
+            {
+                SetCropMode(false);
+                StatusText.Text = string.Empty;
                 return;
             }
 
@@ -446,7 +642,8 @@ namespace Win11DesktopApp.Views
             ResetSlidersQuiet();
             BuildPreviewMat();
 
-            ClearCropSelection();
+            SetCropMode(false);
+            SetZoom(1.0);
             RefreshPreviewAsync();
             StatusText.Text = Application.Current.TryFindResource("ImgEditorCropped") as string ?? "Обрізано!";
         }
@@ -584,7 +781,8 @@ namespace Win11DesktopApp.Views
                 _currentMat = _originalMat.Clone();
                 ResetSlidersQuiet();
                 BuildPreviewMat();
-                ClearCropSelection();
+                SetCropMode(false);
+                SetZoom(1.0);
                 RefreshPreviewAsync();
                 StatusText.Text = Application.Current.TryFindResource("ImgEditorResetDone") as string ?? "Відновлено оригінал.";
             }

@@ -2,77 +2,134 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:Win11DesktopApp.Views">
+    <UserControl.Resources>
+        <Geometry x:Key="GeomPassport2Step">M5 2C4.45 2 4 2.45 4 3V17C4 17.55 4.45 18 5 18H15C15.55 18 16 17.55 16 17V3C16 2.45 15.55 2 15 2H5ZM6.5 5H13.5V6.3H6.5V5ZM6.5 8H13.5V9.3H6.5V8ZM6.5 11H11.5V12.3H6.5V11ZM6.5 14H13.5V15.2H6.5V14Z</Geometry>
+        <Geometry x:Key="GeomIdCard2Step">M2 4.5C2 3.67 2.67 3 3.5 3H16.5C17.33 3 18 3.67 18 4.5V15.5C18 16.33 17.33 17 16.5 17H3.5C2.67 17 2 16.33 2 15.5V4.5ZM3.7 5V15H16.3V5H3.7ZM6.8 6.8A1.6 1.6 0 1 1 6.8 10A1.6 1.6 0 1 1 6.8 6.8ZM4.7 12.8C5 11.7 5.8 11.1 6.8 11.1C7.8 11.1 8.6 11.7 8.9 12.8H4.7ZM10.4 7.3H15V8.5H10.4V7.3ZM10.4 10H15V11.2H10.4V10ZM10.4 12.6H13.5V13.8H10.4V12.6Z</Geometry>
+        <Geometry x:Key="GeomSparklePage2">M10 2L11.7 6.8L16.5 8.5L11.7 10.2L10 15L8.3 10.2L3.5 8.5L8.3 6.8L10 2ZM15.5 12.2L16.3 14.5L18.6 15.3L16.3 16.1L15.5 18.4L14.7 16.1L12.4 15.3L14.7 14.5L15.5 12.2Z</Geometry>
+
+        <Style x:Key="Page2FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="1,0,0,4"/>
+        </Style>
+
+        <Style x:Key="Page2FieldInput" TargetType="TextBox" BasedOn="{StaticResource WizInput}">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+    </UserControl.Resources>
+
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=8}"
-            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="20,16"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="260"/>
+                <ColumnDefinition Width="1.15*" MinWidth="320"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*" MinWidth="200"/>
+                <ColumnDefinition Width="*" MinWidth="240"/>
             </Grid.ColumnDefinitions>
-            <ScrollViewer Grid.Column="0" Style="{StaticResource ThinScroll}" Margin="0,0,12,0"
+
+            <ScrollViewer Grid.Column="0" Style="{StaticResource ThinScroll}" Margin="0,0,10,0"
                           VerticalScrollBarVisibility="Hidden"
                           PreviewMouseWheel="InnerScrollViewer_PreviewMouseWheel">
                 <StackPanel>
-                    <StackPanel Margin="0,0,0,18">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource AccentBrush}">
-                                <TextBlock Text="&#xE8A7;" Style="{StaticResource PageHeaderIconText}"/>
+                    <!-- Header + AI Scan -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0" Margin="0,0,10,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource PageHeaderIconBadge}" Width="36" Height="36" CornerRadius="10"
+                                    Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                                <Path Width="16" Height="16" Stretch="Uniform" Fill="White"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path.Style>
+                                        <Style TargetType="Path">
+                                            <Setter Property="Data" Value="{StaticResource GeomPassport2Step}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsEuIdCard}" Value="True">
+                                                    <Setter Property="Data" Value="{StaticResource GeomIdCard2Step}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Path.Style>
+                                </Path>
                             </Border>
-                            <StackPanel VerticalAlignment="Center">
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding SecondaryDocumentStepTitle}"
-                                           FontSize="{DynamicResource FS18}"
+                                           FontSize="{DynamicResource FS16}"
                                            FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ForegroundBrush}"/>
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding SecondaryDocumentStepHint}"
                                            FontSize="{DynamicResource FS11}"
                                            Foreground="{DynamicResource MutedForegroundBrush}"
-                                           Margin="0,3,0,0"/>
+                                           Margin="0,2,0,0"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
+                        </Grid>
+
+                        <Button Grid.Column="1"
+                                Command="{Binding AIScanDocumentCommand}"
+                                Style="{StaticResource FilledActionButton}"
+                                Height="34" Padding="14,0" VerticalAlignment="Center"
+                                Visibility="{Binding IsAIScanning, Converter={StaticResource InverseBoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource GeomSparklePage2}" Width="13" Height="13" Stretch="Uniform"
+                                      Fill="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="{DynamicResource AIScanBtn}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Thin AI status banner -->
+                    <Border CornerRadius="8" Padding="10,6" Margin="0,0,0,10"
+                            Background="{DynamicResource AccentLightBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            Visibility="{Binding AIScanStatus, Converter={StaticResource StringToVis}}">
+                        <TextBlock Text="{Binding AIScanStatus}"
+                                   FontSize="11.5" FontWeight="Medium"
+                                   Foreground="{DynamicResource AccentDarkBrush}"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+
+                    <!-- Row 0: WorkPermitName (full width) -->
+                    <TextBlock Text="{DynamicResource WizWorkPermitName}" Style="{StaticResource Page2FieldLabel}"/>
+                    <TextBox Text="{Binding Data.WorkPermitName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Page2FieldInput}"/>
+
+                    <!-- Row 1: VisaNumber | VisaExpiry -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding SecondaryStepVisaNumberLabel}" Style="{StaticResource Page2FieldLabel}" TextWrapping="Wrap"/>
+                            <TextBox Text="{Binding Data.VisaNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Page2FieldInput}"/>
                         </StackPanel>
 
-                        <Border Style="{StaticResource DialogPreviewSurface}" Padding="12,10" Margin="0,10,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <Button Grid.Column="0"
-                                        Command="{Binding AIScanDocumentCommand}"
-                                        Style="{StaticResource FilledActionButton}"
-                                        Padding="12,6"
-                                        Margin="0,0,10,0"
-                                        Visibility="{Binding IsAIScanning, Converter={StaticResource InverseBoolToVis}}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="White"/>
-                                        <TextBlock Text="{DynamicResource AIScanBtn}" FontSize="{DynamicResource FS12}" Foreground="White"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding AIScanStatus}"
-                                           FontSize="{DynamicResource FS12}"
-                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Visibility="{Binding AIScanStatus, Converter={StaticResource StringToVis}}"/>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                    <TextBlock Text="{DynamicResource WizWorkPermitName}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.WorkPermitName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizVisaNum}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.VisaNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizVisaExpiry}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="{Binding SecondaryStepVisaExpiryLabel}" Style="{StaticResource Page2FieldLabel}" TextWrapping="Wrap"/>
+                            <TextBox Text="{Binding Data.VisaExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Page2FieldInput}"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
+
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch"
                           Background="Transparent" Cursor="SizeWE"
                           Margin="0"/>
-            <views:DocumentPreviewPanel Grid.Column="2" Margin="12,0,0,0"/>
+            <views:DocumentPreviewPanel Grid.Column="2" Margin="10,0,0,0"/>
         </Grid>
     </Border>
 </UserControl>

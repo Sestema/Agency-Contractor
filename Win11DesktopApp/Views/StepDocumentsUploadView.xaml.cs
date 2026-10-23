@@ -54,6 +54,41 @@ namespace Win11DesktopApp.Views
         private void InsuranceDrop(object s, DragEventArgs e) => OnDocDrop(s, e, "insurance");
         private void WorkPermitDrop(object s, DragEventArgs e) => OnDocDrop(s, e, "work_permit");
 
+        private void RowClick(object sender, MouseButtonEventArgs e, System.Action<AddEmployeeWizardViewModel> enable)
+        {
+            if (e.OriginalSource is DependencyObject source && InsideToggleOrButton(source))
+                return;
+            if (DataContext is AddEmployeeWizardViewModel vm)
+                enable(vm);
+        }
+
+        private static bool InsideToggleOrButton(DependencyObject? node)
+        {
+            while (node != null)
+            {
+                if (node is System.Windows.Controls.Primitives.ButtonBase)
+                    return true;
+                node = System.Windows.Media.VisualTreeHelper.GetParent(node);
+            }
+
+            return false;
+        }
+
+        private void PassportPage2Row_MouseLeftButtonUp(object s, MouseButtonEventArgs e)
+            => RowClick(s, e, vm => { if (!vm.HasPassportPage2) vm.HasPassportPage2 = true; });
+
+        private void VisaRow_MouseLeftButtonUp(object s, MouseButtonEventArgs e)
+            => RowClick(s, e, vm => { if (!vm.HasVisa) vm.HasVisa = true; });
+
+        private void VisaPage2Row_MouseLeftButtonUp(object s, MouseButtonEventArgs e)
+            => RowClick(s, e, vm => { if (!vm.HasVisaPage2) vm.HasVisaPage2 = true; });
+
+        private void InsuranceRow_MouseLeftButtonUp(object s, MouseButtonEventArgs e)
+            => RowClick(s, e, vm => { if (!vm.HasInsurance) vm.HasInsurance = true; });
+
+        private void WorkPermitRow_MouseLeftButtonUp(object s, MouseButtonEventArgs e)
+            => RowClick(s, e, vm => { if (!vm.HasWorkPermit) vm.HasWorkPermit = true; });
+
         private void InnerScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (sender is ScrollViewer sv)

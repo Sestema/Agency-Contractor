@@ -990,6 +990,16 @@
     <sys:String x:Key="WizNumber">Number</sys:String>
     <sys:String x:Key="WizCity">City</sys:String>
     <sys:String x:Key="WizZip">Zip code</sys:String>
+    <sys:String x:Key="MapWindowTitle">Address on the map</sys:String>
+    <sys:String x:Key="MapWindowHint">Search for an address or drop a pin. Ukrainian is written in Latin. Czech and Polish stay as they are.</sys:String>
+    <sys:String x:Key="MapSearch">Search</sys:String>
+    <sys:String x:Key="MapResults">Places found</sys:String>
+    <sys:String x:Key="MapApply">Use this address</sys:String>
+    <sys:String x:Key="MapNotFound">Address was not found.</sys:String>
+    <sys:String x:Key="MapOffline">The map needs internet. Address search does too.</sys:String>
+    <sys:String x:Key="MapThumbHint">Click to pick the address on the map</sys:String>
+    <sys:String x:Key="MapLayerStreets">Map</sys:String>
+    <sys:String x:Key="MapLayerSatellite">Satellite</sys:String>
     <sys:String x:Key="WizPosNumber">Position number</sys:String>
     <sys:String x:Key="WizSalaryMonth">Monthly salary (gross)</sys:String>
     <sys:String x:Key="WizSalaryHour">Hourly salary</sys:String>
@@ -1341,6 +1351,10 @@
     <sys:String x:Key="ImgEditorDenoise">Denoise</sys:String>
     <sys:String x:Key="ImgEditorSaturation">Saturation</sys:String>
     <sys:String x:Key="ImgEditorWarmth">Warmth</sys:String>
+    <sys:String x:Key="ImgEditorSectionTone">Light &amp; color</sys:String>
+    <sys:String x:Key="ImgEditorSectionDetail">Clarity &amp; angle</sys:String>
+    <sys:String x:Key="ImgEditorCompare">Before / after</sys:String>
+    <sys:String x:Key="ImgEditorDoubleResetHint">Double-click a slider to reset it</sys:String>
 
     <sys:String x:Key="AIStatusNotLoaded">AI not loaded</sys:String>
     <sys:String x:Key="AIScanBtn">AI Scan</sys:String>
@@ -1357,6 +1371,11 @@
     <sys:String x:Key="EuDocTypeLabel">EU Document Type:</sys:String>
     <sys:String x:Key="EuDocTypePassport">EU Passport</sys:String>
     <sys:String x:Key="EuDocTypeIdCard">ID Card</sys:String>
+    <sys:String x:Key="DocKindLabel">Document</sys:String>
+    <sys:String x:Key="DocKindPassport">Passport</sys:String>
+    <sys:String x:Key="DocRequired">Required</sys:String>
+    <sys:String x:Key="DocOptional">Optional</sys:String>
+    <sys:String x:Key="DocUploaded">Uploaded</sys:String>
     <sys:String x:Key="BtnUploadWorkPermit">Work Permit</sys:String>
     <sys:String x:Key="ChkDocOptionsTitle">Additional documents:</sys:String>
     <sys:String x:Key="ChkPassportPage2">Passport (page 2)</sys:String>

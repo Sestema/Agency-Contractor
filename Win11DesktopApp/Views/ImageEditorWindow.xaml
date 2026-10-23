@@ -1,300 +1,476 @@
 <Window x:Class="Win11DesktopApp.Views.ImageEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{DynamicResource ImgEditorTitle}" Width="1080" Height="720"
+        Title="{DynamicResource ImgEditorTitle}" Width="1100" Height="730"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackgroundBrush}"
-        ResizeMode="CanResize" MinWidth="820" MinHeight="560">
+        ResizeMode="CanResize" MinWidth="860" MinHeight="580">
+    <Window.Resources>
+        <Geometry x:Key="GeomDocBadge">M4 3C4 2.17 4.67 1.5 5.5 1.5H14.5C15.33 1.5 16 2.17 16 3V17C16 17.83 15.33 18.5 14.5 18.5H5.5C4.67 18.5 4 17.83 4 17V3ZM6 3.5V16.5H14V3.5H6ZM7.5 6.5H12.5V8H7.5V6.5ZM7.5 9.8H12.5V11.3H7.5V9.8ZM7.5 13H10.8V14.5H7.5V13Z</Geometry>
+        <Geometry x:Key="GeomCrop">M5 2V5H2V6.6H5V13.4C5 14.28 5.72 15 6.6 15H13.4V18H15V15H18V13.4H6.6V2H5ZM8.6 5V6.6H13.4V11.4H15V6.6C15 5.72 14.28 5 13.4 5H8.6Z</Geometry>
+        <Geometry x:Key="GeomRotL">M10 3.2V1L6.2 4.4L10 7.8V5C13.1 5 15.6 7.5 15.6 10.6C15.6 13.7 13.1 16.2 10 16.2C6.9 16.2 4.4 13.7 4.4 10.6H2.6C2.6 14.7 5.9 18 10 18C14.1 18 17.4 14.7 17.4 10.6C17.4 6.5 14.1 3.2 10 3.2Z</Geometry>
+        <Geometry x:Key="GeomRotR">M10 3.2V1L13.8 4.4L10 7.8V5C6.9 5 4.4 7.5 4.4 10.6C4.4 13.7 6.9 16.2 10 16.2C13.1 16.2 15.6 13.7 15.6 10.6H17.4C17.4 14.7 14.1 18 10 18C5.9 18 2.6 14.7 2.6 10.6C2.6 6.5 5.9 3.2 10 3.2Z</Geometry>
+        <Geometry x:Key="GeomFlipH">M9.2 2H10.8V18H9.2V2ZM2.5 10L7.5 5.2V14.8L2.5 10ZM17.5 10L12.5 14.8V5.2L17.5 10Z</Geometry>
+        <Geometry x:Key="GeomFlipV">M2 9.2H18V10.8H2V9.2ZM10 2.5L14.8 7.5H5.2L10 2.5ZM10 17.5L5.2 12.5H14.8L10 17.5Z</Geometry>
+        <Geometry x:Key="GeomSparkle">M10 2L11.7 6.8L16.5 8.5L11.7 10.2L10 15L8.3 10.2L3.5 8.5L8.3 6.8L10 2ZM15.5 12.2L16.3 14.5L18.6 15.3L16.3 16.1L15.5 18.4L14.7 16.1L12.4 15.3L14.7 14.5L15.5 12.2Z</Geometry>
+        <Geometry x:Key="GeomPerspective">M4.2 3.5L15.8 5.2L17.5 15.8L2.5 16.5L4.2 3.5ZM5.6 5.3L4.3 14.8L15.6 14.3L14.3 6.6L5.6 5.3Z</Geometry>
+        <Geometry x:Key="GeomReset">M10 3.2A6.8 6.8 0 0 1 16.4 7.7H14.6A5.2 5.2 0 0 0 5.3 7.8L7.4 7.8V9.3H3.2V5.1H4.7V6.6A6.8 6.8 0 0 1 10 3.2ZM16.8 10.7V14.9H15.3V13.4A6.8 6.8 0 0 1 3.6 12.3H5.4A5.2 5.2 0 0 0 14.7 12.2H12.6V10.7H16.8Z</Geometry>
+        <Geometry x:Key="GeomCompare">M10 2.5C5.86 2.5 2.5 5.86 2.5 10C2.5 14.14 5.86 17.5 10 17.5C14.14 17.5 17.5 14.14 17.5 10C17.5 5.86 14.14 2.5 10 2.5ZM10 4.2V15.8C6.8 15.8 4.2 13.2 4.2 10C4.2 6.8 6.8 4.2 10 4.2Z</Geometry>
 
-    <Grid Margin="16">
+        <Style x:Key="EditorToolBtn" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="11,0"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.86"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="EditorIconToolBtn" TargetType="Button" BasedOn="{StaticResource EditorToolBtn}">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+
+        <Style x:Key="EditorZoomChipBtn" TargetType="Button">
+            <Setter Property="MinWidth" Value="26"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="EditorValueBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="7,1"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="EditorSectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <Style x:Key="EditorSlider" TargetType="Slider">
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Margin" Value="0,2,0,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <Border Height="5" CornerRadius="2.5"
+                                    Background="{DynamicResource WindowBackgroundBrush}"
+                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                    VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="5" CornerRadius="2.5" Background="{DynamicResource AccentBrush}"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="5" Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="Knob" Width="16" Height="16" CornerRadius="8"
+                                                        Background="White" BorderBrush="{DynamicResource AccentBrush}"
+                                                        BorderThickness="2.5"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Knob" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18,14">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="268"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Style="{StaticResource PageHeaderIconBadge}">
-                    <TextBlock Text="&#xE8B9;" Style="{StaticResource PageHeaderIconText}"/>
-                </Border>
-                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource ImgEditorTitle}" FontSize="{DynamicResource FS22}" Style="{StaticResource PageHeaderTitleText}"/>
-                    <TextBlock Text="{DynamicResource ImgEditorAdjust}"
-                               FontSize="{DynamicResource FS11}"
-                               Foreground="{DynamicResource MutedForegroundBrush}"
-                               Margin="0,2,0,0"/>
-                </StackPanel>
-            </StackPanel>
-        </Grid>
-
-        <!-- TOOLBAR -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2"
-                Style="{StaticResource ToolbarSurfaceBorder}"
-                Padding="12,10" Margin="0,0,0,12">
-            <WrapPanel VerticalAlignment="Center">
-                <!-- Crop -->
-                <Button x:Name="BtnCrop" Click="BtnCrop_Click" ToolTip="{DynamicResource ImgEditorCrop}"
-                        Padding="10,6" Margin="0,0,6,4" Cursor="Hand"
-                        Style="{StaticResource HeaderGhostButton}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE7A8;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="{DynamicResource ImgEditorCrop}" FontSize="{DynamicResource FS12}"
-                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Border Width="1" Height="28" Background="{DynamicResource CardBorderBrush}" Margin="4,2,10,6"/>
-
-                <!-- Rotate Left -->
-                <Button x:Name="BtnRotL" Click="BtnRotateLeft_Click" ToolTip="{DynamicResource ImgEditorRotateL}"
-                        Width="36" Height="36" Margin="0,0,4,4" Cursor="Hand"
-                        Style="{StaticResource ToolbarIconButton}">
-                    <TextBlock Text="&#xE80C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
-                </Button>
-                <!-- Rotate Right -->
-                <Button x:Name="BtnRotR" Click="BtnRotateRight_Click" ToolTip="{DynamicResource ImgEditorRotateR}"
-                        Width="36" Height="36" Margin="0,0,4,4" Cursor="Hand"
-                        Style="{StaticResource ToolbarIconButton}">
-                    <TextBlock Text="&#xE80D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
-                </Button>
-                <Button x:Name="BtnFlipH" Click="BtnFlipHorizontal_Click" ToolTip="{DynamicResource ImgEditorFlipH}"
-                        Width="36" Height="36" Margin="0,0,4,4" Cursor="Hand"
-                        Style="{StaticResource ToolbarIconButton}">
-                    <TextBlock Text="&#xE7A7;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
-                </Button>
-                <Button x:Name="BtnFlipV" Click="BtnFlipVertical_Click" ToolTip="{DynamicResource ImgEditorFlipV}"
-                        Width="36" Height="36" Margin="0,0,10,4" Cursor="Hand"
-                        Style="{StaticResource ToolbarIconButton}">
-                    <TextBlock Text="&#xE7A6;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                               Foreground="{DynamicResource ForegroundBrush}"/>
-                </Button>
-
-                <Border Width="1" Height="28" Background="{DynamicResource CardBorderBrush}" Margin="0,2,10,6"/>
-
-                <!-- Auto-Enhance -->
-                <Button x:Name="BtnAutoEnhance" Click="BtnAutoEnhance_Click" ToolTip="{DynamicResource ImgEditorAutoEnhance}"
-                        Padding="10,6" Margin="0,0,6,4" Cursor="Hand"
-                        Background="{DynamicResource SuccessLightBrush}"
-                        Foreground="{DynamicResource SuccessBrush}"
-                        Style="{StaticResource DialogAccentSoftButton}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE771;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="{DynamicResource ImgEditorAutoEnhance}" FontSize="{DynamicResource FS12}"
-                                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- Perspective Correction -->
-                <Button x:Name="BtnPerspective" Click="BtnPerspective_Click" ToolTip="{DynamicResource ImgEditorPerspective}"
-                        Padding="10,6" Margin="0,0,6,4" Cursor="Hand"
-                        Style="{StaticResource HeaderGhostButton}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE809;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="{DynamicResource ImgEditorPerspective}" FontSize="{DynamicResource FS12}"
-                                   Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Border Width="1" Height="28" Background="{DynamicResource CardBorderBrush}" Margin="4,2,10,6"/>
-
-                <!-- Reset -->
-                <Button x:Name="BtnReset" Click="BtnReset_Click" ToolTip="{DynamicResource ImgEditorReset}"
-                        Padding="10,6" Cursor="Hand"
-                        Margin="0,0,0,4"
-                        Background="{DynamicResource ErrorLightBrush}"
-                        Foreground="{DynamicResource ErrorBrush}"
-                        Style="{StaticResource HeaderGhostButton}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS14}"
-                                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="{DynamicResource ImgEditorReset}" FontSize="{DynamicResource FS12}"
-                                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </WrapPanel>
-        </Border>
-
-        <!-- IMAGE CANVAS -->
-        <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource DialogSectionCard}" Padding="14" Margin="0,0,10,0">
+        <!-- UNIFIED TOP BAR -->
+        <Border Grid.Row="0" Grid.ColumnSpan="2"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="14,10" Margin="0,0,0,12">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource AccentLightBrush}">
-                        <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                   Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Width="36" Height="36" CornerRadius="10"
+                            Background="{DynamicResource AccentBrush}" Margin="0,0,10,0">
+                        <Path Data="{StaticResource GeomDocBadge}" Width="16" Height="16" Stretch="Uniform" Fill="White"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{DynamicResource ImgEditorTitle}" FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                        <TextBlock Text="{DynamicResource ImgEditorAdjust}" FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
+                        <TextBlock Text="{DynamicResource ImgEditorTitle}" FontSize="{DynamicResource FS16}"
+                                   FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                        <TextBlock x:Name="ImageMetaText" FontSize="11"
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="260"/>
                     </StackPanel>
                 </StackPanel>
 
-                <Border Grid.Row="1" Style="{StaticResource DialogPreviewSurface}" Background="{DynamicResource WindowBackgroundBrush}" ClipToBounds="True">
-                    <Canvas x:Name="ImageCanvas" Background="Transparent"
-                            MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                            MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
-                            MouseMove="Canvas_MouseMove">
-                        <Image x:Name="PreviewImage" Stretch="Uniform"
-                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                        <Rectangle x:Name="CropRect" Stroke="#2196F3" StrokeThickness="2"
-                                   StrokeDashArray="4,3" Fill="#202196F3" Visibility="Collapsed"/>
-                    </Canvas>
-                </Border>
+                <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <Button x:Name="BtnCrop" Click="BtnCrop_Click" ToolTip="{DynamicResource ImgEditorCrop}"
+                            Style="{StaticResource EditorToolBtn}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource GeomCrop}" Width="13" Height="13" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource ImgEditorCrop}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Height="22" Background="{DynamicResource CardBorderBrush}" Margin="3,0,8,0"/>
+
+                    <Button x:Name="BtnRotL" Click="BtnRotateLeft_Click" ToolTip="{DynamicResource ImgEditorRotateL}"
+                            Style="{StaticResource EditorIconToolBtn}">
+                        <Path Data="{StaticResource GeomRotL}" Width="15" Height="15" Stretch="Uniform"
+                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+                    <Button x:Name="BtnRotR" Click="BtnRotateRight_Click" ToolTip="{DynamicResource ImgEditorRotateR}"
+                            Style="{StaticResource EditorIconToolBtn}">
+                        <Path Data="{StaticResource GeomRotR}" Width="15" Height="15" Stretch="Uniform"
+                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+                    <Button x:Name="BtnFlipH" Click="BtnFlipHorizontal_Click" ToolTip="{DynamicResource ImgEditorFlipH}"
+                            Style="{StaticResource EditorIconToolBtn}">
+                        <Path Data="{StaticResource GeomFlipH}" Width="15" Height="15" Stretch="Uniform"
+                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+                    <Button x:Name="BtnFlipV" Click="BtnFlipVertical_Click" ToolTip="{DynamicResource ImgEditorFlipV}"
+                            Style="{StaticResource EditorIconToolBtn}">
+                        <Path Data="{StaticResource GeomFlipV}" Width="15" Height="15" Stretch="Uniform"
+                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+
+                    <Border Width="1" Height="22" Background="{DynamicResource CardBorderBrush}" Margin="3,0,8,0"/>
+
+                    <Button x:Name="BtnAutoEnhance" Click="BtnAutoEnhance_Click" ToolTip="{DynamicResource ImgEditorAutoEnhance}"
+                            Style="{StaticResource EditorToolBtn}"
+                            Background="{DynamicResource AccentLightBrush}"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            Foreground="{DynamicResource AccentDarkBrush}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource GeomSparkle}" Width="13" Height="13" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource ImgEditorAutoEnhance}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="BtnPerspective" Click="BtnPerspective_Click" ToolTip="{DynamicResource ImgEditorPerspective}"
+                            Style="{StaticResource EditorToolBtn}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource GeomPerspective}" Width="13" Height="13" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource ImgEditorPerspective}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="BtnCompare" ToolTip="{DynamicResource ImgEditorCompare}"
+                            PreviewMouseLeftButtonDown="BtnCompare_MouseDown"
+                            PreviewMouseLeftButtonUp="BtnCompare_MouseUp"
+                            MouseLeave="BtnCompare_MouseLeave"
+                            Style="{StaticResource EditorToolBtn}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource GeomCompare}" Width="13" Height="13" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource ImgEditorCompare}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Height="22" Background="{DynamicResource CardBorderBrush}" Margin="3,0,8,0"/>
+
+                    <Button x:Name="BtnReset" Click="BtnReset_Click" ToolTip="{DynamicResource ImgEditorReset}"
+                            Style="{StaticResource EditorToolBtn}" Margin="0"
+                            Background="{DynamicResource ErrorLightBrush}"
+                            BorderBrush="{DynamicResource ErrorBrush}"
+                            Foreground="{DynamicResource ErrorBrush}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource GeomReset}" Width="13" Height="13" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource ImgEditorReset}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
             </Grid>
         </Border>
 
-        <!-- SLIDERS PANEL -->
-        <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource DialogSectionCard}" Padding="0">
+        <!-- IMAGE STAGE -->
+        <Border Grid.Row="1" Grid.Column="0"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="10" Margin="0,0,12,0">
+            <Border CornerRadius="9" Background="{DynamicResource WindowBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                    ClipToBounds="True">
+                <Grid>
+                    <Canvas x:Name="ImageCanvas" Background="Transparent" Cursor="Arrow"
+                            MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                            MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                            MouseMove="Canvas_MouseMove"
+                            PreviewMouseWheel="Canvas_PreviewMouseWheel">
+                        <Image x:Name="PreviewImage" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <Rectangle x:Name="CropRect" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"
+                                   RadiusX="4" RadiusY="4" Fill="#246D4AFF" Visibility="Collapsed"/>
+                    </Canvas>
+
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10"
+                            CornerRadius="8" Padding="3"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="−" Style="{StaticResource EditorZoomChipBtn}" Click="ZoomOut_Click"/>
+                            <Button x:Name="ZoomResetBtn" Content="100%" Style="{StaticResource EditorZoomChipBtn}"
+                                    MinWidth="46" Click="ZoomReset_Click"/>
+                            <Button Content="+" Style="{StaticResource EditorZoomChipBtn}" Click="ZoomIn_Click"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- ADJUSTMENTS PANEL -->
+        <Border Grid.Row="1" Grid.Column="1"
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                CornerRadius="12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}"
-                        BorderThickness="0,0,0,1" Padding="14,12">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Style="{StaticResource SectionHeaderIconBadge}" Background="{DynamicResource InfoLightBrush}">
-                            <TextBlock Text="&#xE9CE;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}"
-                                       Foreground="{DynamicResource InfoBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource ImgEditorAdjust}" FontSize="{DynamicResource FS15}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                            <TextBlock Text="{DynamicResource ImgEditorTitle}" FontSize="{DynamicResource FS11}"
-                                       Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
-                        </StackPanel>
+                <Border Grid.Row="0" BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="0,0,0,1" Padding="14,10">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource ImgEditorAdjust}" FontSize="{DynamicResource FS14}"
+                                   FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
+                        <TextBlock Text="{DynamicResource ImgEditorDoubleResetHint}" FontSize="10.5"
+                                   Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="14,12,10,12">
+                <ScrollViewer Grid.Row="1" Style="{StaticResource ThinScroll}" Padding="14,10,12,10">
                     <StackPanel>
-                        <!-- Brightness -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorBrightness}"/>
-                            <Run Text=": "/><Run x:Name="BrightnessValueText" Text="0"/>
-                        </TextBlock>
-                        <Slider x:Name="BrightnessSlider" Minimum="-80" Maximum="80" Value="0"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
+                        <TextBlock Text="{DynamicResource ImgEditorSectionTone}" Style="{StaticResource EditorSectionTitle}"/>
 
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
+                        <!-- Brightness -->
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="BrightnessValueText" Text="0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorBrightness}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="BrightnessSlider" Style="{StaticResource EditorSlider}" Minimum="-80" Maximum="80" Value="0"
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
                         <!-- Contrast -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorContrast}"/>
-                            <Run Text=": "/><Run x:Name="ContrastValueText" Text="0"/>
-                        </TextBlock>
-                        <Slider x:Name="ContrastSlider" Minimum="-80" Maximum="80" Value="0"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
-
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="ContrastValueText" Text="0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorContrast}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="ContrastSlider" Style="{StaticResource EditorSlider}" Minimum="-80" Maximum="80" Value="0"
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
                         <!-- Saturation -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorSaturation}"/>
-                            <Run Text=": "/><Run x:Name="SaturationValueText" Text="0"/>
-                        </TextBlock>
-                        <Slider x:Name="SaturationSlider" Minimum="-80" Maximum="80" Value="0"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
-
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="SaturationValueText" Text="0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorSaturation}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="SaturationSlider" Style="{StaticResource EditorSlider}" Minimum="-80" Maximum="80" Value="0"
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
                         <!-- Warmth -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorWarmth}"/>
-                            <Run Text=": "/><Run x:Name="WarmthValueText" Text="0"/>
-                        </TextBlock>
-                        <Slider x:Name="WarmthSlider" Minimum="-80" Maximum="80" Value="0"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
-
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
-
-                        <!-- Deskew -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorDeskew}"/>
-                            <Run Text=": "/><Run x:Name="DeskewValueText" Text="0°"/>
-                        </TextBlock>
-                        <Slider x:Name="DeskewSlider" Minimum="-15" Maximum="15" Value="0"
-                                TickFrequency="0.5" IsSnapToTickEnabled="True"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
-
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="WarmthValueText" Text="0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorWarmth}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="WarmthSlider" Style="{StaticResource EditorSlider}" Minimum="-80" Maximum="80" Value="0"
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
                         <!-- Gamma -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorGamma}"/>
-                            <Run Text=": "/><Run x:Name="GammaValueText" Text="1.0"/>
-                        </TextBlock>
-                        <Slider x:Name="GammaSlider" Minimum="0.3" Maximum="2.5" Value="1.0"
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="GammaValueText" Text="1.0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorGamma}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="GammaSlider" Style="{StaticResource EditorSlider}" Minimum="0.3" Maximum="2.5" Value="1.0"
                                 TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
+                                Tag="1.0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
+                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,2,0,10"/>
+
+                        <TextBlock Text="{DynamicResource ImgEditorSectionDetail}" Style="{StaticResource EditorSectionTitle}"/>
+
+                        <!-- Deskew -->
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="DeskewValueText" Text="0°" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorDeskew}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="DeskewSlider" Style="{StaticResource EditorSlider}" Minimum="-15" Maximum="15" Value="0"
+                                TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
                         <!-- Denoise -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorDenoise}"/>
-                            <Run Text=": "/><Run x:Name="DenoiseValueText" Text="0"/>
-                        </TextBlock>
-                        <Slider x:Name="DenoiseSlider" Minimum="0" Maximum="30" Value="0"
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="DenoiseValueText" Text="0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorDenoise}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="DenoiseSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="30" Value="0"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,12"/>
-
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Opacity="0.7" Margin="0,0,0,12"/>
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"/>
 
                         <!-- Sharpen -->
-                        <TextBlock FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4">
-                            <Run Text="{DynamicResource ImgEditorSharpen}"/>
-                            <Run Text=": "/><Run x:Name="SharpenValueText" Text="0"/>
-                        </TextBlock>
-                        <Slider x:Name="SharpenSlider" Minimum="0" Maximum="80" Value="0"
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource EditorValueBadge}">
+                                <TextBlock x:Name="SharpenValueText" Text="0" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}" HorizontalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{DynamicResource ImgEditorSharpen}" FontSize="12" FontWeight="Medium"
+                                       Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Slider x:Name="SharpenSlider" Style="{StaticResource EditorSlider}" Minimum="0" Maximum="80" Value="0"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
-                                ValueChanged="Slider_ValueChanged" Margin="0,0,0,4"/>
+                                Tag="0" MouseDoubleClick="Slider_MouseDoubleClick" ValueChanged="Slider_ValueChanged"
+                                Margin="0,3,0,2"/>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
         </Border>
 
-        <!-- FOOTER BUTTONS -->
-        <Border Grid.Row="3" Grid.ColumnSpan="2" Background="{DynamicResource WindowBackgroundBrush}"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0"
-                Padding="0,12,0,0" Margin="0,12,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <!-- FOOTER -->
+        <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="2,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-                <TextBlock x:Name="StatusText" Grid.Column="0" FontSize="{DynamicResource FS12}"
-                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+            <TextBlock x:Name="StatusText" Grid.Column="0" FontSize="{DynamicResource FS12}"
+                       FontWeight="Medium" Foreground="{DynamicResource AccentDarkBrush}" VerticalAlignment="Center"/>
 
-                <Button Grid.Column="1" Click="BtnCancel_Click" Padding="20,10" Margin="0,0,8,0" Cursor="Hand"
-                        Style="{StaticResource HeaderGhostButton}"
-                        Content="{DynamicResource BtnCancel}"/>
+            <Button Grid.Column="1" Click="BtnCancel_Click" Padding="20,9" Margin="0,0,8,0" Cursor="Hand"
+                    Style="{StaticResource HeaderGhostButton}"
+                    Content="{DynamicResource BtnCancel}"/>
 
-                <Button Grid.Column="2" Click="BtnSave_Click" Padding="20,10" Cursor="Hand"
-                        Style="{StaticResource FilledActionButton}" FontWeight="SemiBold"
-                        Content="{DynamicResource ImgEditorSave}"/>
-            </Grid>
-        </Border>
+            <Button Grid.Column="2" Click="BtnSave_Click" Padding="22,9" Cursor="Hand"
+                    Style="{StaticResource FilledActionButton}" FontWeight="SemiBold"
+                    Content="{DynamicResource ImgEditorSave}"/>
+        </Grid>
     </Grid>
 </Window>

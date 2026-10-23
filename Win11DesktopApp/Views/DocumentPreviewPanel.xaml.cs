@@ -1,114 +1,138 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace Win11DesktopApp.Views
 {
     public partial class DocumentPreviewPanel : UserControl
     {
         private Point _panStart;
-        private TranslateTransform? _panTranslate;
+        private double _panStartX;
+        private double _panStartY;
+        private bool _isPanning;
+        private double _zoom = 1.0;
 
         public DocumentPreviewPanel()
         {
             InitializeComponent();
         }
 
-        private static TransformGroup EnsureMutableTransform(Image image)
-        {
-            var tg = image.RenderTransform as TransformGroup;
-            if (tg != null && tg.IsFrozen)
-            {
-                tg = tg.Clone();
-                image.RenderTransform = tg;
-            }
-            return tg!;
-        }
-
         private void DocImage_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (sender is not Image image) return;
-            var tg = EnsureMutableTransform(image);
-            if (tg == null || tg.Children.Count < 2) return;
-
-            var scale = (ScaleTransform)tg.Children[0];
-            var translate = (TranslateTransform)tg.Children[1];
-
-            double zoom = e.Delta > 0 ? 1.15 : 1 / 1.15;
-            double newScaleX = scale.ScaleX * zoom;
-            double newScaleY = scale.ScaleY * zoom;
-
-            newScaleX = Math.Clamp(newScaleX, 0.5, 10.0);
-            newScaleY = Math.Clamp(newScaleY, 0.5, 10.0);
-
-            var mousePos = e.GetPosition(image);
-
-            double offsetX = mousePos.X * (1 - zoom);
-            double offsetY = mousePos.Y * (1 - zoom);
-
-            scale.ScaleX = newScaleX;
-            scale.ScaleY = newScaleY;
-
-            translate.X = translate.X * zoom + offsetX;
-            translate.Y = translate.Y * zoom + offsetY;
-
+            double factor = e.Delta > 0 ? 1.18 : 1.0 / 1.18;
+            var pivot = e.GetPosition(DocImage);
+            ApplyZoom(_zoom * factor, pivot);
             e.Handled = true;
         }
 
-        private void DocImage_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void ZoomIn_Click(object sender, RoutedEventArgs e)
+            => ApplyZoom(_zoom * 1.25, new Point(DocImage.ActualWidth / 2, DocImage.ActualHeight / 2));
+
+        private void ZoomOut_Click(object sender, RoutedEventArgs e)
+            => ApplyZoom(_zoom / 1.25, new Point(DocImage.ActualWidth / 2, DocImage.ActualHeight / 2));
+
+        private void ZoomReset_Click(object sender, RoutedEventArgs e) => ResetZoom();
+
+        private void ResetZoom()
         {
-            if (sender is not Image image) return;
-            var tg = EnsureMutableTransform(image);
-            if (tg == null || tg.Children.Count < 2) return;
+            _zoom = 1.0;
+            ZoomScale.ScaleX = 1.0;
+            ZoomScale.ScaleY = 1.0;
+            ZoomTranslate.X = 0;
+            ZoomTranslate.Y = 0;
+            ZoomResetBtn.Content = "100%";
+            StageGrid.Cursor = Cursors.Arrow;
+        }
 
-            _panTranslate = (TranslateTransform)tg.Children[1];
-            _panStart = e.GetPosition(image.Parent as FrameworkElement);
-            _panStart = new Point(
-                _panStart.X - _panTranslate.X,
-                _panStart.Y - _panTranslate.Y);
+        private void ApplyZoom(double targetZoom, Point pivot)
+        {
+            double next = Math.Clamp(targetZoom, 1.0, 5.0);
+            if (Math.Abs(next - 1.0) < 0.03)
+            {
+                ResetZoom();
+                return;
+            }
 
-            image.CaptureMouse();
-            image.Cursor = Cursors.Hand;
+            double ratio = next / _zoom;
+            _zoom = next;
+            ZoomScale.ScaleX = _zoom;
+            ZoomScale.ScaleY = _zoom;
+            ZoomTranslate.X = ZoomTranslate.X * ratio + pivot.X * (1 - ratio);
+            ZoomTranslate.Y = ZoomTranslate.Y * ratio + pivot.Y * (1 - ratio);
+            ClampPan();
+            ZoomResetBtn.Content = $"{Math.Round(_zoom * 100)}%";
+            StageGrid.Cursor = Cursors.SizeAll;
+        }
+
+        private void ClampPan()
+        {
+            double w = DocImage.ActualWidth > 0 ? DocImage.ActualWidth : StageGrid.ActualWidth;
+            double h = DocImage.ActualHeight > 0 ? DocImage.ActualHeight : StageGrid.ActualHeight;
+            if (w <= 0 || h <= 0)
+                return;
+
+            double minX = w * (1.0 - _zoom);
+            double minY = h * (1.0 - _zoom);
+            ZoomTranslate.X = Math.Clamp(ZoomTranslate.X, minX, 0);
+            ZoomTranslate.Y = Math.Clamp(ZoomTranslate.Y, minY, 0);
+        }
+
+        private void Stage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is DependencyObject src && InsideButton(src))
+                return;
+
+            if (e.ClickCount == 2)
+            {
+                ResetZoom();
+                e.Handled = true;
+                return;
+            }
+
+            if (_zoom <= 1.01)
+                return;
+
+            _isPanning = true;
+            _panStart = e.GetPosition(StageGrid);
+            _panStartX = ZoomTranslate.X;
+            _panStartY = ZoomTranslate.Y;
+            StageGrid.CaptureMouse();
             e.Handled = true;
         }
 
-        private void DocImage_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void Stage_MouseMove(object sender, MouseEventArgs e)
         {
-            if (sender is not Image image) return;
-            image.ReleaseMouseCapture();
-            image.Cursor = Cursors.Arrow;
-            _panTranslate = null;
+            if (!_isPanning)
+                return;
+
+            var pos = e.GetPosition(StageGrid);
+            ZoomTranslate.X = _panStartX + (pos.X - _panStart.X);
+            ZoomTranslate.Y = _panStartY + (pos.Y - _panStart.Y);
+            ClampPan();
             e.Handled = true;
         }
 
-        private void DocImage_MouseMove(object sender, MouseEventArgs e)
+        private void Stage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (_panTranslate == null) return;
-            if (sender is not Image image) return;
-            if (e.RightButton != MouseButtonState.Pressed) return;
+            if (!_isPanning)
+                return;
 
-            var pos = e.GetPosition(image.Parent as FrameworkElement);
-            _panTranslate.X = pos.X - _panStart.X;
-            _panTranslate.Y = pos.Y - _panStart.Y;
+            _isPanning = false;
+            StageGrid.ReleaseMouseCapture();
             e.Handled = true;
         }
 
-        private void DocImage_ResetZoom(object sender, MouseButtonEventArgs e)
+        private static bool InsideButton(DependencyObject? node)
         {
-            if (e.ClickCount != 2) return;
-            if (sender is not Image image) return;
-            var tg = EnsureMutableTransform(image);
-            if (tg == null || tg.Children.Count < 2) return;
+            while (node != null)
+            {
+                if (node is System.Windows.Controls.Primitives.ButtonBase)
+                    return true;
+                node = System.Windows.Media.VisualTreeHelper.GetParent(node);
+            }
 
-            var scale = (ScaleTransform)tg.Children[0];
-            var translate = (TranslateTransform)tg.Children[1];
-
-            scale.ScaleX = 1;
-            scale.ScaleY = 1;
-            translate.X = 0;
-            translate.Y = 0;
-            e.Handled = true;
+            return false;
         }
     }
 }

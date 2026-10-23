@@ -280,14 +280,27 @@ namespace Win11DesktopApp.ViewModels
         public bool IsPassportOnlyType => EmployeeType == "passport_only";
 
         private string _euDocumentType = "passport";
+        private bool _visaWasOnBeforeIdCard = true;
+
         public string EuDocumentType
         {
             get => _euDocumentType;
             set
             {
+                var wasIdCard = _euDocumentType == "id_card";
                 if (SetProperty(ref _euDocumentType, value))
                 {
                     Data.EuDocumentType = value;
+                    if (value == "id_card")
+                    {
+                        _visaWasOnBeforeIdCard = _hasVisa;
+                        if (_hasVisa)
+                            HasVisa = false;
+                    }
+                    else if (wasIdCard && _visaWasOnBeforeIdCard)
+                    {
+                        HasVisa = true;
+                    }
                     OnPropertyChanged(nameof(IsEuIdCard));
                     OnPropertyChanged(nameof(IsEuPassport));
                     OnPropertyChanged(nameof(ShowPassportPage2Upload));
@@ -582,6 +595,30 @@ namespace Win11DesktopApp.ViewModels
                 SelectedCarouselIndex = _selectedCarouselIndex + 1;
         }
 
+        private void PickAddress(EmployeeModels.EmployeeAddress target)
+        {
+            var seed = string.Join(", ", new[]
+            {
+                string.Join(" ", new[] { target.Street, target.Number }.Where(part => !string.IsNullOrWhiteSpace(part))),
+                target.City,
+                target.Zip
+            }.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+            var window = new AddressMapWindow(seed);
+            var owner = Application.Current?.Windows.OfType<Window>().FirstOrDefault(item => item.IsActive)
+                ?? Application.Current?.MainWindow;
+            if (owner != null && owner.IsLoaded && owner != window)
+                window.Owner = owner;
+
+            if (window.ShowDialog() == true && window.SelectedAddress is { } picked)
+            {
+                target.Street = picked.Street;
+                target.Number = picked.Number;
+                target.City = picked.City;
+                target.Zip = picked.Zip;
+            }
+        }
+
         private void OpenCurrentPreviewFile()
         {
             var path = GetCurrentDocumentOpenPath();
@@ -739,6 +776,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand SetEuDocTypeCommand { get; }
         public ICommand AIScanDocumentCommand { get; }
         public ICommand OpenCurrentPreviewFileCommand { get; }
+        public ICommand PickLocalAddressCommand { get; }
+        public ICommand PickAbroadAddressCommand { get; }
 
         private bool _isAIScanning;
         public bool IsAIScanning
@@ -796,6 +835,8 @@ namespace Win11DesktopApp.ViewModels
             AIScanDocumentCommand = new AsyncRelayCommand(_ => AIScanCurrentStepAsync(),
                 _ => !_isAIScanning && _geminiApiService.IsConfigured);
             OpenCurrentPreviewFileCommand = new RelayCommand(_ => OpenCurrentPreviewFile());
+            PickLocalAddressCommand = new RelayCommand(_ => PickAddress(Data.AddressLocal));
+            PickAbroadAddressCommand = new RelayCommand(_ => PickAddress(Data.AddressAbroad));
             CarouselPrevCommand = new RelayCommand(o => CarouselPrev(), o => _selectedCarouselIndex > 0);
             CarouselNextCommand = new RelayCommand(o => CarouselNext(), o => _selectedCarouselIndex < CarouselItems.Count - 1);
             SelectCarouselTabCommand = new RelayCommand(o =>
