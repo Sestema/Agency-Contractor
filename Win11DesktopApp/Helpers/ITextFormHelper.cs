@@ -274,6 +274,7 @@ namespace Win11DesktopApp.Helpers
                     return;
                 }
 
+                ApplyCzechCapableTextFont(form, fieldKey);
                 if (form.SetField(fieldKey, value))
                     return;
 
@@ -391,6 +392,20 @@ namespace Win11DesktopApp.Helpers
             }
 
             form.SetField(fieldKey, trimmed);
+        }
+
+        private static void ApplyCzechCapableTextFont(AcroFields form, string fieldKey)
+        {
+            try
+            {
+                form.SetFieldProperty(fieldKey, "textfont", GetOverlayFont(), null);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning(
+                    "ITextFormHelper.ApplyCzechCapableTextFont",
+                    $"Field '{fieldKey}' kept its template font: {ex.Message}");
+            }
         }
 
         private static bool TrySetSanitizedValue(AcroFields form, string fieldKey, string value)

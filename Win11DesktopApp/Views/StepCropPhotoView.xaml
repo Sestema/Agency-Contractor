@@ -1,13 +1,100 @@
 <UserControl x:Class="Win11DesktopApp.Views.StepCropPhotoView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Win11DesktopApp.Views">
+    <UserControl.Resources>
+        <local:CropTargetIconConverter x:Key="CropIcon"/>
+        <local:CropAspectEqualsConverter x:Key="AspectEqual"/>
+
+        <Style x:Key="CropDocItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Card" Background="{DynamicResource ContentBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="10" Padding="8,5" Cursor="Hand">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource PurpleBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource PurpleLightBrush}"/>
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource PurpleBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CropAspectButton" TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="{DynamicResource FS12}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Card" Background="{DynamicResource ContentBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource PurpleLightBrush}"/>
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource PurpleBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource PurpleBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Card" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CropRotateButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card" Background="{DynamicResource ContentBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                                CornerRadius="17">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource PurpleLightBrush}"/>
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource PurpleBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=1}"
             Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="24"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="248"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -35,54 +122,73 @@
                 </Canvas>
             </Border>
 
-            <!-- Right panel: controls -->
-            <ScrollViewer Grid.Column="1"
+            <ScrollViewer x:Name="CropSideScroll"
+                          Grid.Column="1"
                           Grid.RowSpan="2"
-                          Margin="16,0,0,0"
-                          VerticalAlignment="Top"
-                          VerticalScrollBarVisibility="Auto"
+                          Margin="14,0,0,0"
+                          VerticalAlignment="Stretch"
+                          VerticalScrollBarVisibility="Hidden"
                           HorizontalScrollBarVisibility="Disabled"
-                          Style="{StaticResource ThinScroll}">
-                <StackPanel>
-                        <!-- Document selector -->
+                          CanContentScroll="False"
+                          PreviewMouseWheel="OnCropSidePreviewMouseWheel">
+            <StackPanel>
                         <TextBlock Text="{DynamicResource WizDocLabel}" FontSize="{DynamicResource FS12}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,4"/>
-                        <ComboBox ItemsSource="{Binding CropTargets}" SelectedItem="{Binding SelectedCropTarget}" 
-                                  Style="{StaticResource WizCombo}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource ForegroundBrush}" Margin="2,0,0,6"/>
+                        <ListBox ItemsSource="{Binding CropTargets}"
+                                 SelectedItem="{Binding SelectedCropTarget}"
+                                 ItemContainerStyle="{StaticResource CropDocItem}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Padding="0"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 Margin="0,0,0,4">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="24" Height="24" CornerRadius="7"
+                                                Background="{DynamicResource CardBackgroundBrush}">
+                                            <TextBlock Text="{Binding Converter={StaticResource CropIcon}}"
+                                                       FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                                       Foreground="{DynamicResource PurpleBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                        <!-- Aspect ratio -->
-                        <CheckBox Content="{DynamicResource WizKeepAspect}" IsChecked="{Binding KeepAspectRatio}" 
-                                  Margin="0,0,0,4" FontSize="{DynamicResource FS12}" Foreground="{DynamicResource ForegroundBrush}"/>
-                        <ComboBox x:Name="AspectCombo" SelectedValuePath="Tag" SelectedValue="{Binding CropAspectRatio}" 
-                                  Style="{StaticResource WizCombo}" Margin="0,0,0,8">
-                            <ComboBoxItem Content="1:1" Tag="1"/>
-                            <ComboBoxItem Content="4:3" Tag="1.3333"/>
-                            <ComboBoxItem Content="3:4" Tag="0.75"/>
-                        </ComboBox>
+                        <CheckBox Content="{DynamicResource WizKeepAspect}" IsChecked="{Binding KeepAspectRatio}"
+                                  Margin="2,2,0,6" FontSize="{DynamicResource FS12}"
+                                  Foreground="{DynamicResource ForegroundBrush}"/>
+                        <UniformGrid Columns="3" Margin="0,0,0,8" IsEnabled="{Binding KeepAspectRatio}">
+                            <RadioButton Content="1:1" Style="{StaticResource CropAspectButton}" Margin="0,0,4,0"
+                                         IsChecked="{Binding CropAspectRatio, Converter={StaticResource AspectEqual}, ConverterParameter=1}"/>
+                            <RadioButton Content="4:3" Style="{StaticResource CropAspectButton}" Margin="2,0"
+                                         IsChecked="{Binding CropAspectRatio, Converter={StaticResource AspectEqual}, ConverterParameter=1.3333}"/>
+                            <RadioButton Content="3:4" Style="{StaticResource CropAspectButton}" Margin="4,0,0,0"
+                                         IsChecked="{Binding CropAspectRatio, Converter={StaticResource AspectEqual}, ConverterParameter=0.75}"/>
+                        </UniformGrid>
 
-                        <!-- Rotate buttons -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                             <Button Command="{Binding RotateLeftCommand}"
                                     Cursor="Hand"
                                     ToolTip="{DynamicResource WizRotateLeft}"
-                                    Style="{StaticResource HeaderGhostButton}"
-                                    Width="44"
-                                    Height="38"
-                                    Padding="0">
+                                    Style="{StaticResource CropRotateButton}">
                                 <TextBlock Text="&#xE80C;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                           Foreground="{DynamicResource ForegroundBrush}" 
+                                           Foreground="{DynamicResource ForegroundBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding RotateRightCommand}"
                                     Cursor="Hand"
-                                    Margin="6,0,0,0"
+                                    Margin="10,0,0,0"
                                     ToolTip="{DynamicResource WizRotateRight}"
-                                    Style="{StaticResource HeaderGhostButton}"
-                                    Width="44"
-                                    Height="38"
-                                    Padding="0">
+                                    Style="{StaticResource CropRotateButton}">
                                 <TextBlock Text="&#xE80D;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS16}"
-                                           Foreground="{DynamicResource ForegroundBrush}" 
+                                           Foreground="{DynamicResource ForegroundBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                         </StackPanel>
@@ -90,7 +196,7 @@
                         <!-- Enhance button (not for Фото mode) -->
                         <Button Command="{Binding EnhanceDocumentCommand}"
                                 Cursor="Hand"
-                                Margin="0,0,0,10"
+                                Margin="0,0,0,6"
                                 Visibility="{Binding IsCropPhotoMode, Converter={StaticResource InverseBoolToVis}}"
                                 Style="{StaticResource FilledActionButton}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -101,13 +207,13 @@
                         </Button>
 
                         <!-- Hint for Фото mode -->
-                        <TextBlock Text="{DynamicResource WizCropInstruction}" TextWrapping="Wrap" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,6"
+                        <TextBlock Text="{DynamicResource WizCropInstruction}" TextWrapping="Wrap" FontSize="{DynamicResource FS11}" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,4"
                                    Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
 
                         <!-- Apply crop button (only in Фото mode) -->
                         <Button Command="{Binding ApplyCropCommand}"
                                 Cursor="Hand"
-                                Margin="0,0,0,8"
+                                Margin="0,0,0,6"
                                 Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource FilledActionButton}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -120,16 +226,16 @@
 
                         <!-- Preview label + photo (only in Фото mode) -->
                         <TextBlock Text="{DynamicResource WizPreviewLabel}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource ForegroundBrush}" Opacity="0.7" Margin="0,0,0,4"
                                    Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}"/>
 
-                        <Border CornerRadius="10" Width="180" Height="210" Background="{DynamicResource ContentBackgroundBrush}"
+                        <Border CornerRadius="14" Width="156" Height="168" Background="{DynamicResource ContentBackgroundBrush}"
                                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                ClipToBounds="True"
+                                ClipToBounds="True" HorizontalAlignment="Center"
                                 Visibility="{Binding IsCropPhotoMode, Converter={StaticResource BoolToVis}}">
                             <Image Source="{Binding CroppedPhotoPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"/>
                         </Border>
-                </StackPanel>
+            </StackPanel>
             </ScrollViewer>
         </Grid>
     </Border>

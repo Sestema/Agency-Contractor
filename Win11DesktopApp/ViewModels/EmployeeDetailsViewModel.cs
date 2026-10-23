@@ -4447,7 +4447,9 @@ namespace Win11DesktopApp.ViewModels
                 var context = $@"Employee data to validate:
 - Full Name: {d.FirstName} {d.LastName}
 - Birth Date: {d.BirthDate}
-- Employee Type: {d.EmployeeType} (visa = needs visa, eu_citizen = EU citizen, work_permit = needs work permit)
+- Employee Type: {d.EmployeeType}, EU document: {d.EuDocumentType} (visa = needs visa, eu_citizen = EU citizen, work_permit = needs work permit)
+- Gender: {d.Gender}
+- Personal number: {d.RodneCislo}
 - Passport Number: {d.PassportNumber}, Authority: {d.PassportAuthority}, City: {d.PassportCity}, Country: {d.PassportCountry}, Citizenship: {d.Citizenship}, Issuing Country: {d.IssuingCountry}, Expiry: {d.PassportExpiry}
 - Visa Number: {d.VisaNumber}, Authority: {d.VisaAuthority}, Type: {d.VisaType}, Start/Valid From: {d.VisaStartDate}, Expiry: {d.VisaExpiry}
 - Insurance: {d.InsuranceCompanyShort}, Number: {d.InsuranceNumber}, Expiry: {d.InsuranceExpiry}
@@ -4472,6 +4474,7 @@ Check:
    - For 'visa' type: visa document MUST be present.
    - For 'work_permit' type: work permit document MUST be present.
    - For 'eu_citizen' type: neither visa nor work permit is required.
+   - If WorkPermitName is 'Polska obcanka' or 'Rumunska obcanka', that text is the name of the EU citizen identity card, not a work permit. Do not ask for a work permit file, number, or expiry. A Polish Dowód osobisty uses PESEL (11 digits) as the personal number, and the birth city, birth country, and issuing authority are on the back of the card.
    - IMPORTANT: If EmployeeType='visa' and WorkPermitName='Dočasná ochrana' — this means the D-visa (D/DO/667 etc.) was issued BASED ON temporary protection (Dočasná ochrana). This is NOT a separate work permit! The 'Dočasná ochrana' is the legal basis for the visa, not an additional document. In this case:
      * Work Permit FILE is NOT required — do NOT flag 'Has Work Permit file: False' as an error
      * Work Permit Number/Expiry being empty is NORMAL — do NOT flag it
@@ -4613,26 +4616,29 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             Dictionary<string, string> insuranceData,
             Dictionary<string, string> permitData)
         {
+            bool PreferBack(string fieldKey)
+            {
+                if (!IsEuIdCardEmployee || !TryGetNonEmpty(visaData, fieldKey, out var backValue))
+                    return false;
+
+                if (fieldKey == "RodneCislo"
+                    && TryGetNonEmpty(passportData, fieldKey, out _)
+                    && !System.Text.RegularExpressions.Regex.IsMatch(
+                        System.Text.RegularExpressions.Regex.Replace(backValue, @"\s+", string.Empty),
+                        @"^\d{11}$"))
+                    return false;
+
+                return fieldKey is "PassportAuthority" or "PassportCity" or "PassportCountry" or "RodneCislo" or "WorkPermitName";
+            }
+
             Dictionary<string, string> GetPassportFieldSource(string fieldKey)
             {
-                if (!IsEuIdCardEmployee)
-                    return passportData;
-
-                return (fieldKey == "PassportAuthority" || fieldKey == "PassportCity" || fieldKey == "PassportCountry")
-                       && TryGetNonEmpty(visaData, fieldKey, out _)
-                    ? visaData
-                    : passportData;
+                return PreferBack(fieldKey) ? visaData : passportData;
             }
 
             string GetPassportFieldSourceKey(string fieldKey)
             {
-                if (!IsEuIdCardEmployee)
-                    return "passport";
-
-                return (fieldKey == "PassportAuthority" || fieldKey == "PassportCity" || fieldKey == "PassportCountry")
-                       && TryGetNonEmpty(visaData, fieldKey, out _)
-                    ? SecondaryDocumentSourceDocumentKey
-                    : "passport";
+                return PreferBack(fieldKey) ? SecondaryDocumentSourceDocumentKey : "passport";
             }
 
             CompareAIField(items, GetPassportFieldSource("PassportNumber"), "PassportNumber", Data.PassportNumber, Res("HistFieldPassportNum") ?? "Passport Number", GetPassportFieldSourceKey("PassportNumber"));
@@ -4643,6 +4649,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             CompareAIField(items, passportData, "Citizenship", Data.Citizenship, Res("HistFieldCitizenship") ?? "Citizenship", "passport");
             CompareAIField(items, passportData, "IssuingCountry", Data.IssuingCountry, Res("HistFieldIssuingCountry") ?? "Issuing Country", "passport");
             CompareAIField(items, GetPassportFieldSource("RodneCislo"), "RodneCislo", Data.HasRodneCisloData ? Data.RodneCislo : string.Empty, Res("HistFieldRodneCislo") ?? "Personal identification number", GetPassportFieldSourceKey("RodneCislo"));
+            CompareAIField(items, GetPassportFieldSource("WorkPermitName"), "WorkPermitName", Data.WorkPermitName, Res("HistFieldWorkPermitName") ?? "Document name", GetPassportFieldSourceKey("WorkPermitName"));
+            CompareAIGender(items, passportData);
 
             CompareAIField(items, visaData, "VisaNumber", Data.VisaNumber, Res("HistFieldVisaNum") ?? "Visa Number", SecondaryDocumentSourceDocumentKey);
             if (ShowVisaDocumentCard)
@@ -5076,6 +5084,24 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             return string.Equals(current, suggested, StringComparison.OrdinalIgnoreCase);
         }
 
+        private void CompareAIGender(List<AIFieldCheckItem> items, Dictionary<string, string> passportData)
+        {
+            if (!TryGetNonEmpty(passportData, "Sex", out var sex))
+                return;
+
+            var gender = AIScanPrompts.NormalizeScanGender(sex);
+            if (string.IsNullOrEmpty(gender))
+                return;
+
+            var genderData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Gender"] = gender
+            };
+            if (passportData.TryGetValue(AIScanPrompts.ConfidencePrefix + "Sex", out var confidence))
+                genderData[AIScanPrompts.ConfidencePrefix + "Gender"] = confidence;
+            CompareAIField(items, genderData, "Gender", Data.Gender, Res("WizGender") ?? "Gender", "passport");
+        }
+
         private static bool TryGetNonEmpty(Dictionary<string, string> source, string key, out string value)
         {
             if (source.TryGetValue(key, out var raw) && !string.IsNullOrWhiteSpace(raw))
@@ -5307,6 +5333,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 case "WorkPermitExpiry": Data.WorkPermitExpiry = item.SuggestedValue; break;
                 case "WorkPermitIssueDate": Data.WorkPermitIssueDate = item.SuggestedValue; break;
                 case "WorkPermitAuthority": Data.WorkPermitAuthority = item.SuggestedValue; break;
+                case "WorkPermitName": Data.WorkPermitName = item.SuggestedValue; break;
+                case "Gender": Data.Gender = item.SuggestedValue; break;
                 default: return;
             }
 
@@ -5324,6 +5352,8 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
             item.Severity = "ok";
             item.Message = Res("AIValidationAppliedMessage") ?? "Applied";
             OnPropertyChanged(nameof(Data));
+            OnPropertyChanged(nameof(IsGenderMale));
+            OnPropertyChanged(nameof(IsGenderFemale));
             InvalidateDetailCaches();
             RaiseDataChanged();
             RaiseAIValidationCollectionsChanged();

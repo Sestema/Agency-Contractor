@@ -12,7 +12,7 @@ import {
   type RequestMessage,
   type TagReplacement,
 } from './bridge';
-import { createSystemFontResolver } from './fonts';
+import { acceptFontChunk, createSystemFontResolver, noteFontManifest } from './fonts';
 import { catalogFor, regionalLocaleFor } from './i18n';
 import { alignSelectedTable, type TableJustification } from './centerTable';
 import { replaceTagPlaceholders, refreshTagHighlights, readPlainText } from './documentOps';
@@ -70,7 +70,11 @@ export function App() {
       switch (message.type) {
         case 'init':
           tagsRef.current = message.tags;
+          noteFontManifest(message.fonts);
           setInit(message);
+          break;
+        case 'fontChunk':
+          acceptFontChunk(message.id, message.index, message.data);
           break;
         case 'loadStart':
           editorRef.current = null;

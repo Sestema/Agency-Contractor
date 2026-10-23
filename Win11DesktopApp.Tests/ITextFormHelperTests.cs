@@ -25,7 +25,6 @@ namespace Win11DesktopApp.Tests
         {
             var templatePath = Path.Combine(_root, "form.pdf");
             CreateSampleForm(templatePath);
-            var originalAppearance = ReadDefaultAppearance(templatePath, "Textové pole");
 
             var bindings = ITextFormHelper.ReadFieldBindings(templatePath);
             var nameField = Assert.Single(bindings, field => field.FieldType == "text");
@@ -57,7 +56,7 @@ namespace Win11DesktopApp.Tests
                         TemplateText = "ano"
                     }
                 },
-                new Dictionary<string, string> { ["FullName"] = "Jan Novák" });
+                new Dictionary<string, string> { ["FullName"] = "Plzeň" });
 
             Assert.True(result.Success);
             Assert.Empty(result.FailedFields);
@@ -65,8 +64,9 @@ namespace Win11DesktopApp.Tests
             var reader = new PdfReader(outputPath);
             try
             {
-                Assert.Equal("Jan Novák", reader.AcroFields.GetField(nameField.FieldName));
-                Assert.Equal(originalAppearance, ReadDefaultAppearance(reader, nameField.FieldName));
+                Assert.Equal("Plzeň", reader.AcroFields.GetField(nameField.FieldName));
+                Assert.Contains("Arial", ReadDefaultAppearance(reader, nameField.FieldName), StringComparison.OrdinalIgnoreCase);
+                Assert.Contains((byte)0xF2, ReadNormalAppearance(reader, nameField.FieldName));
                 var checkValue = reader.AcroFields.GetField(checkField.FieldName);
                 Assert.False(string.IsNullOrWhiteSpace(checkValue));
                 Assert.NotEqual("Off", checkValue);
@@ -279,6 +279,16 @@ namespace Win11DesktopApp.Tests
         {
             var item = reader.AcroFields.GetFieldItem(fieldName);
             return item.GetMerged(0).GetAsString(PdfName.Da)?.ToUnicodeString() ?? string.Empty;
+        }
+
+        private static byte[] ReadNormalAppearance(PdfReader reader, string fieldName)
+        {
+            var widget = reader.AcroFields.GetFieldItem(fieldName).GetWidget(0);
+            var normal = widget.GetAsDict(PdfName.Ap)?.GetDirectObject(PdfName.N);
+            if (normal is not PrStream stream)
+                return Array.Empty<byte>();
+
+            return PdfReader.GetStreamBytes(stream);
         }
 
         public void Dispose()

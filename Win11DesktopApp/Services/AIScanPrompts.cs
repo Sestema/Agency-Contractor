@@ -155,7 +155,7 @@ Also extract if clearly visible:
 Return ONLY valid JSON, no other text:
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""Sex"":"""",""WorkPermitName"":"""",""WorkPermitNumber"":"""",""WorkPermitType"":"""",""WorkPermitIssueDate"":"""",""WorkPermitExpiry"":"""",""WorkPermitAuthority"":"""",""Citizenship"":"""",""IssuingCountry"":""""}",
 
-                "id_card" => @"Read this EU national ID card (Carte de Identitate, Personalausweis, Občanský průkaz, etc.). CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
+                "id_card" => @"Read this EU national ID card (Carte de Identitate, Personalausweis, Občanský průkaz, Dowód osobisty, etc.). CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Polish names and places keep Polish letters (ą ć ę ł ń ó ś ź ż). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 STEP 1: Find the card holder's personal data:
 - Last name (Nume/Name/Příjmení): the surname field
@@ -191,7 +191,20 @@ STEP 7: Find issuing authority / document issuer (PassportAuthority). Look for l
 STEP 8: Find RodneCislo / personal identification number:
 - Romanian identity card: use the field labeled ""CNP"" (13 digits, example 1870826055109). Do NOT use SERIA/NR, card number, or the large top card number.
 - Czech residence card: use the number in ""POZNÁMKY"" if it has the birth-number format YYMMDD/XXXX (example 710508/1280).
+- Polish citizen Dowód osobisty: PESEL is on the BACK, not on this front side. Leave RodneCislo empty here.
 - If unsure, leave RodneCislo empty.
+
+POLISH CITIZEN ID CARD FRONT (Dowód osobisty, header Rzeczpospolita Polska / Republic of Poland). Use these labels and ignore the Romanian and Czech examples for fields they do not show:
+- LastName = NAZWISKO / SURNAME. Keep Polish letters, example BARTKÓW.
+- FirstName = IMIONA / GIVEN NAMES. Keep every given name, example MARCIN GRZEGORZ.
+- BirthDate = DATA URODZENIA / DATE OF BIRTH in DD.MM.YYYY.
+- Sex = PŁEĆ / SEX. Return M or F. The letter K means female, so return F.
+- PassportNumber = SERIA I NUMER DOKUMENTU / DOCUMENT NUMBER without spaces, example DGY388826. Never use the CAN number.
+- Citizenship = OBYWATELSTWO / NATIONALITY. POLSKIE means Poland.
+- IssuingCountry = Poland when the header says Rzeczpospolita Polska or Republic of Poland.
+- PassportExpiry = TERMIN WAŻNOŚCI / EXPIRY DATE in DD.MM.YYYY.
+- WorkPermitName = exactly Polska obcanka. If this is instead a Czech residence card with DRUH POBYTU or DRUH POVOLENÍ, return that Czech status and do not return Polska obcanka.
+- Leave PassportCity, PassportCountry, PassportAuthority and RodneCislo empty on this front side. PESEL, place of birth and the issuing authority are printed on the back.
 
 Return ONLY this JSON (PassportExpiry = card expiry date):
 {""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
@@ -212,7 +225,7 @@ If this is NOT that document type, still extract the fields that are clearly vis
 Return ONLY valid JSON, no other text:
 {""WorkPermitName"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""VisaAuthority"":"""",""PassportCity"":"""",""PassportCountry"":""""}",
 
-                "id_card_back" => @"Read ONLY the BACK / SECOND SIDE of this EU national ID card. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
+                "id_card_back" => @"Read ONLY the BACK / SECOND SIDE of this EU national ID card. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Polish names and places keep Polish letters (ą ć ę ł ń ó ś ź ż). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 This prompt is ONLY for the second side of a 2-sided EU ID card. Give priority to data printed on THIS side, even if similar data may exist on the front side.
 
@@ -227,8 +240,19 @@ Extract these fields:
 
 If a field is not clearly visible on THIS side, leave it empty. NEVER invent values.
 
+POLISH CITIZEN ID CARD BACK (Dowód osobisty). Use these labels:
+- RodneCislo = NUMER PESEL / PERSONAL NUMBER, exactly 11 digits, example 81081509314. Do not use the document series, the CAN number, or the barcode.
+- PassportCity = MIEJSCE URODZENIA / PLACE OF BIRTH, city only, example Bielsko-Biała.
+- PassportCountry = Poland. This card does not print a separate birth-country line.
+- PassportAuthority = ORGAN WYDAJĄCY / ISSUING AUTHORITY, example BURMISTRZ M. I G. TWARDOGÓRA.
+- VisaNumber = SERIA I NUMER DOKUMENTU without spaces when it is printed on this side.
+- VisaStartDate = DATA WYDANIA / DATE OF ISSUE in DD.MM.YYYY.
+- VisaExpiry stays empty when this side has no expiry date. The expiry is usually on the front.
+- WorkPermitName = exactly Polska obcanka. If Czech labels such as DRUH POBYTU NA ÚZEMÍ are visible, return that Czech status instead.
+- Do not return NAZWISKO RODOWE / FAMILY NAME or IMIONA RODZICÓW / PARENTS' GIVEN NAMES.
+
 Return ONLY valid JSON, no other text:
-{""WorkPermitName"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":""""}",
+{""WorkPermitName"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""RodneCislo"":""""}",
 
                 "visa2" => @"Read this second-side visa / residence ID card / residence permit photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
@@ -348,6 +372,17 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
             return double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out confidence);
         }
 
+        public static string NormalizeScanGender(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToUpperInvariant();
+            return normalized switch
+            {
+                "F" or "FEMALE" or "Ž" or "Z" or "K" or "KOBIETA" => "female",
+                "M" or "MALE" => "male",
+                _ => string.Empty
+            };
+        }
+
         public static bool IsLowConfidenceField(IReadOnlyDictionary<string, string> parsed, string fieldKey, double threshold = 0.60)
         {
             return TryGetFieldConfidence(parsed, fieldKey, out var confidence) && confidence < threshold;
@@ -389,6 +424,9 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
                 return false;
 
             if (Regex.IsMatch(compact, @"^\d{13}$"))
+                return false;
+
+            if (Regex.IsMatch(compact, @"^\d{11}$"))
                 return false;
 
             return true;
@@ -654,7 +692,7 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
                 "CZE" or "CZ" or "CZECH" or "CZECHIA" or "CZECHREPUBLIC" or "CESKAREPUBLIKA" => "Czech Republic",
                 "ROU" or "RO" or "ROMANIA" or "ROMANIAN" or "ROMANA" or "ROUMANIE" => "Romania",
                 "SVK" or "SK" or "SLOVAKIA" or "SLOVAKREPUBLIC" => "Slovakia",
-                "POL" or "PL" or "POLAND" or "POLSKA" => "Poland",
+                "POL" or "PL" or "POLAND" or "POLSKA" or "POLSKIE" or "POLSKI" or "POLISH" or "RZECZPOSPOLITAPOLSKA" => "Poland",
                 "DEU" or "DE" or "GERMANY" or "DEUTSCHLAND" => "Germany",
                 "HUN" or "HU" or "HUNGARY" => "Hungary",
                 "MDA" or "MD" or "MOLDOVA" => "Moldova",

@@ -259,9 +259,19 @@ namespace Win11DesktopApp.ViewModels
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportCountry", data.PassportCountry, GetString("DetFieldBirthCountry") ?? "Країна народження");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "Citizenship", data.Citizenship, GetString("DetFieldCitizenship") ?? "Громадянство");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "IssuingCountry", data.IssuingCountry, GetString("DetFieldIssuingCountry") ?? "Країна видачі");
+                    if (IsEuIdCardEmployee(data))
+                        AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "WorkPermitName", data.WorkPermitName, GetString("HistFieldWorkPermitName") ?? "Назва документа");
+                    AddBatchGenderCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, data);
                     break;
                 case "visa":
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "RodneCislo", data.HasRodneCisloData ? data.RodneCislo : string.Empty, GetString("DetFieldRodneCislo") ?? "Ідентифікаційний код");
+                    if (IsEuIdCardEmployee(data))
+                    {
+                        AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportAuthority", data.PassportAuthority, GetString("EmpAIFieldPassportAuthority") ?? "Ким виданий паспорт");
+                        AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportCity", data.PassportCity, GetString("DetFieldBirthCity") ?? "Місто народження");
+                        AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "PassportCountry", data.PassportCountry, GetString("DetFieldBirthCountry") ?? "Країна народження");
+                        AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "WorkPermitName", data.WorkPermitName, GetString("HistFieldWorkPermitName") ?? "Назва документа");
+                    }
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaNumber", data.VisaNumber, GetString("EmpAIFieldVisaNumber") ?? "Номер візи/карти");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaStartDate", data.VisaStartDate, GetString("HistFieldVisaStartDate") ?? "Початок візи");
                     AddBatchCompare(employee.FullName, employee.EmployeeFolder, docName, filePath, extracted, "VisaExpiry", data.VisaExpiry, GetString("EmpAIFieldVisaEnd") ?? "Кінець візи");
@@ -407,13 +417,51 @@ namespace Win11DesktopApp.ViewModels
 
         private static string GetBatchVisaDocKey(EmployeeModels.EmployeeData data)
         {
-            if (string.Equals(data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase))
+            if (IsEuIdCardEmployee(data))
                 return "id_card_back";
 
             return string.Equals(data.VisaDocType, "id_card", StringComparison.OrdinalIgnoreCase)
                 ? "visa2"
                 : "visa";
+        }
+
+        private static bool IsEuIdCardEmployee(EmployeeModels.EmployeeData data)
+        {
+            return string.Equals(data.EmployeeType, "eu_citizen", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(data.EuDocumentType, "id_card", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void AddBatchGenderCompare(
+            string employeeName,
+            string employeeFolder,
+            string docName,
+            string documentPath,
+            Dictionary<string, string> extracted,
+            EmployeeModels.EmployeeData data)
+        {
+            if (!TryGetBatchValue(extracted, "Sex", out var sex))
+                return;
+
+            var gender = AIScanPrompts.NormalizeScanGender(sex);
+            if (string.IsNullOrEmpty(gender))
+                return;
+
+            var overlay = new Dictionary<string, string>(extracted, StringComparer.OrdinalIgnoreCase)
+            {
+                ["Gender"] = gender
+            };
+            if (extracted.TryGetValue(AIScanPrompts.ConfidencePrefix + "Sex", out var confidence))
+                overlay[AIScanPrompts.ConfidencePrefix + "Gender"] = confidence;
+
+            AddBatchCompare(
+                employeeName,
+                employeeFolder,
+                docName,
+                documentPath,
+                overlay,
+                "Gender",
+                data.Gender,
+                GetString("WizGender") ?? "Стать");
         }
 
         private static string ResolveBatchDocumentPath(string employeeFolder, string? storedPath)
@@ -713,6 +761,8 @@ namespace Win11DesktopApp.ViewModels
                 case "WorkPermitIssueDate": data.WorkPermitIssueDate = value; return true;
                 case "WorkPermitExpiry": data.WorkPermitExpiry = value; return true;
                 case "WorkPermitAuthority": data.WorkPermitAuthority = value; return true;
+                case "WorkPermitName": data.WorkPermitName = value; return true;
+                case "Gender": data.Gender = value; return true;
                 default: return false;
             }
         }

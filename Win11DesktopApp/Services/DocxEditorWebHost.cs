@@ -55,10 +55,6 @@ namespace Win11DesktopApp.Services
                 "app-editor.local",
                 editorFolder,
                 CoreWebView2HostResourceAccessKind.Allow);
-            core.SetVirtualHostNameToFolderMapping(
-                "app-fonts.local",
-                Environment.GetFolderPath(Environment.SpecialFolder.Fonts),
-                CoreWebView2HostResourceAccessKind.Allow);
             core.WebMessageReceived += OnWebMessageReceived;
 
             try
@@ -77,13 +73,32 @@ namespace Win11DesktopApp.Services
 
         public void SendInit(string locale, IReadOnlyList<string> tags)
         {
+            var fonts = WindowsEditorFontCatalog.Load();
             Post(new
             {
                 type = "init",
                 locale,
                 tags,
-                fonts = WindowsEditorFontCatalog.Build("https://app-fonts.local")
+                fonts = fonts.Select(font => new
+                {
+                    id = font.Id,
+                    family = font.Family,
+                    weight = font.Weight,
+                    style = font.Style,
+                    chunks = ChunkCount(font.Base64)
+                })
             });
+
+            foreach (var font in fonts)
+            {
+                var count = ChunkCount(font.Base64);
+                for (var index = 0; index < count; index++)
+                {
+                    var start = index * MessageChunkChars;
+                    var length = Math.Min(MessageChunkChars, font.Base64.Length - start);
+                    Post(new { type = "fontChunk", id = font.Id, index, data = font.Base64.Substring(start, length) });
+                }
+            }
         }
 
         public void LoadDocument(byte[]? docxBytes)
@@ -96,14 +111,13 @@ namespace Win11DesktopApp.Services
             }
 
             var payload = Convert.ToBase64String(docxBytes);
-            const int chunkChars = 200_000;
-            var count = Math.Max(1, (payload.Length + chunkChars - 1) / chunkChars);
+            var count = ChunkCount(payload);
             LoggingService.LogInfo("DocxEditorWebHost.LoadDocument", $"Sending {docxBytes.Length} bytes in {count} message(s).");
             Post(new { type = "loadStart", count });
             for (var index = 0; index < count; index++)
             {
-                var start = index * chunkChars;
-                var length = Math.Min(chunkChars, payload.Length - start);
+                var start = index * MessageChunkChars;
+                var length = Math.Min(MessageChunkChars, payload.Length - start);
                 Post(new { type = "loadChunk", index, data = payload.Substring(start, length) });
             }
         }
@@ -180,6 +194,11 @@ namespace Win11DesktopApp.Services
 
             return await tcs.Task;
         }
+
+        private const int MessageChunkChars = 200_000;
+
+        private static int ChunkCount(string payload) =>
+            Math.Max(1, (payload.Length + MessageChunkChars - 1) / MessageChunkChars);
 
         private void Post(object message)
         {
@@ -303,21 +322,23 @@ namespace Win11DesktopApp.Services
             ("courbi.ttf", "Courier New", 700, "italic")
         };
 
-        public static object[] Build(string hostOrigin)
+        public readonly record struct FontPayload(string Id, string Family, int Weight, string Style, string Base64);
+
+        public static FontPayload[] Load()
         {
             var fontsDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-            var result = new List<object>();
+            var result = new List<FontPayload>();
             foreach (var face in Faces)
             {
-                if (!File.Exists(Path.Combine(fontsDir, face.FileName)))
+                var path = Path.Combine(fontsDir, face.FileName);
+                if (!File.Exists(path))
                     continue;
-                result.Add(new
-                {
-                    family = face.Family,
-                    weight = face.Weight,
-                    style = face.Style,
-                    url = $"{hostOrigin}/{face.FileName}"
-                });
+                result.Add(new FontPayload(
+                    $"{face.Family}|{face.Weight}|{face.Style}",
+                    face.Family,
+                    face.Weight,
+                    face.Style,
+                    Convert.ToBase64String(File.ReadAllBytes(path))));
             }
             return result.ToArray();
         }

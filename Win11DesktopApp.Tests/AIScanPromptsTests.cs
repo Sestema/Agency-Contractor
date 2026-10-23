@@ -97,5 +97,33 @@ namespace Win11DesktopApp.Tests
             Assert.Equal("Czech Republic", cleaned["IssuingCountry"]);
             Assert.Equal("Romania", cleaned["Citizenship"]);
         }
+
+        [Fact]
+        public void ValidateAndCleanParsedFields_ShouldKeepPolishPeselAndNationality()
+        {
+            var parsed = new Dictionary<string, string>
+            {
+                ["RodneCislo"] = "81081509314",
+                ["Citizenship"] = "POLSKIE",
+                ["IssuingCountry"] = "Rzeczpospolita Polska",
+                ["PassportCity"] = "Bielsko-Biała",
+                ["PassportAuthority"] = "BURMISTRZ M. I G. TWARDOGÓRA"
+            };
+
+            var cleaned = AIScanPrompts.ValidateAndCleanParsedFields("id_card_back", parsed);
+
+            Assert.Equal("81081509314", cleaned["RodneCislo"]);
+            Assert.Equal("Poland", cleaned["Citizenship"]);
+            Assert.Equal("Poland", cleaned["IssuingCountry"]);
+            Assert.Equal("Bielsko-Biała", cleaned["PassportCity"]);
+            Assert.Equal("BURMISTRZ M. I G. TWARDOGÓRA", cleaned["PassportAuthority"]);
+        }
+
+        [Fact]
+        public void NormalizeScanGender_ShouldTreatPolishFemaleMarkAsFemale()
+        {
+            Assert.Equal("female", AIScanPrompts.NormalizeScanGender("K"));
+            Assert.Equal("male", AIScanPrompts.NormalizeScanGender("M"));
+        }
     }
 }

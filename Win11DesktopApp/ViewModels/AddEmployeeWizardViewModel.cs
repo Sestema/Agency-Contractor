@@ -694,6 +694,7 @@ namespace Win11DesktopApp.ViewModels
             get
             {
                 if (_selectedCropTarget == Res("CropVisa")) return VisaPreviewPath;
+                if (IsEuIdCard && _selectedCropTarget == GetSecondaryCropLabel()) return PassportPage2PreviewPath;
                 if (_selectedCropTarget == Res("CropVisaPage2")) return VisaPage2PreviewPath;
                 if (_selectedCropTarget == Res("CropInsurance")) return InsurancePreviewPath;
                 if (_selectedCropTarget == GetSecondaryCropLabel()) return PassportPage2PreviewPath;
@@ -1150,6 +1151,7 @@ namespace Win11DesktopApp.ViewModels
         {
             string currentPath;
             if (_selectedCropTarget == Res("CropVisa")) currentPath = VisaPreviewPath;
+            else if (IsEuIdCard && _selectedCropTarget == GetSecondaryCropLabel()) currentPath = PassportPage2PreviewPath;
             else if (_selectedCropTarget == Res("CropVisaPage2")) currentPath = VisaPage2PreviewPath;
             else if (_selectedCropTarget == Res("CropInsurance")) currentPath = InsurancePreviewPath;
             else if (_selectedCropTarget == GetSecondaryCropLabel()) currentPath = PassportPage2PreviewPath;
@@ -1653,6 +1655,11 @@ namespace Win11DesktopApp.ViewModels
                 s.IndexOf("strpeni", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "Strpění";
 
+            if (s.IndexOf("dowód osobisty", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("dowod osobisty", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("polska obcanka", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "Polska obcanka";
+
             return s;
         }
 
@@ -1667,6 +1674,44 @@ namespace Win11DesktopApp.ViewModels
                 || value.Contains("ROU", StringComparison.OrdinalIgnoreCase)
                 || value.Contains("ROMANIAN", StringComparison.OrdinalIgnoreCase)
                 || value.Contains("ROMANA", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LooksPolishDocumentValue(string? raw)
+        {
+            var value = (raw ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrEmpty(value))
+                return false;
+
+            var compact = Regex.Replace(value, @"[^A-Z0-9]+", string.Empty);
+            return compact is "POL" or "PL"
+                || compact.Contains("POLAND", StringComparison.Ordinal)
+                || compact.Contains("POLSKA", StringComparison.Ordinal)
+                || compact.Contains("POLSKIE", StringComparison.Ordinal)
+                || compact.Contains("POLSKI", StringComparison.Ordinal)
+                || compact.Contains("POLISH", StringComparison.Ordinal)
+                || compact.Contains("RZECZPOSPOLITA", StringComparison.Ordinal);
+        }
+
+        private static bool ShouldAutofillPolishIdCardName(Dictionary<string, string> data)
+        {
+            if (data.TryGetValue("IssuingCountry", out var issuingCountry) && LooksCzechDocumentValue(issuingCountry))
+                return false;
+
+            return (data.TryGetValue("IssuingCountry", out issuingCountry) && LooksPolishDocumentValue(issuingCountry))
+                || (data.TryGetValue("Citizenship", out var citizenship) && LooksPolishDocumentValue(citizenship));
+        }
+
+        private static bool LooksCzechDocumentValue(string? raw)
+        {
+            var value = (raw ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrEmpty(value))
+                return false;
+
+            return value.Contains("CZECH", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("CESKA", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("ČESK", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "CZE", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "CZ", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool ShouldAutofillRomanianIdCardName(Dictionary<string, string> data, int? sourceStepIndex)
@@ -1753,6 +1798,9 @@ namespace Win11DesktopApp.ViewModels
                         if (ShouldAutofillRomanianIdCardName(data, sourceStepIndex))
                             Data.WorkPermitName = "Rumunska obcanka";
 
+                        if (string.IsNullOrWhiteSpace(Data.WorkPermitName) && ShouldAutofillPolishIdCardName(data))
+                            Data.WorkPermitName = "Polska obcanka";
+
                         if (IsSingleSideIdCardWithInsuranceScenario)
                             Data.VisaExpiry = string.Empty;
                     }
@@ -1810,6 +1858,10 @@ namespace Win11DesktopApp.ViewModels
                     Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
                     Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
                     Set("PassportAuthority", v => Data.PassportAuthority = v);
+                    Set("RodneCislo", v => { Data.RodneCislo = v; Data.HasRodneCisloData = true; OnPropertyChanged(nameof(RodneCislo)); });
+
+                    if (string.IsNullOrWhiteSpace(Data.WorkPermitName) && ShouldAutofillPolishIdCardName(data))
+                        Data.WorkPermitName = "Polska obcanka";
 
                     if (sourceStepIndex == 4 || sourceStepIndex == 8)
                     {
@@ -1898,7 +1950,7 @@ namespace Win11DesktopApp.ViewModels
             var normalized = (value ?? string.Empty).Trim().ToUpperInvariant();
             return normalized switch
             {
-                "F" or "FEMALE" or "Ž" or "Z" => "female",
+                "F" or "FEMALE" or "Ž" or "Z" or "K" => "female",
                 "M" or "MALE" => "male",
                 _ => string.Empty
             };

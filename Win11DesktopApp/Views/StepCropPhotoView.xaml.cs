@@ -1,12 +1,57 @@
 using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Win11DesktopApp.ViewModels;
 
 namespace Win11DesktopApp.Views
 {
+    public class CropTargetIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var label = value?.ToString() ?? string.Empty;
+            if (Is(label, "CropPhoto")) return "\uE722";
+            if (Is(label, "CropVisa") || Is(label, "CropVisaPage2")) return "\uE709";
+            if (Is(label, "CropInsurance")) return "\uE95E";
+            if (Is(label, "CropPermit")) return "\uE8D7";
+            return "\uE8A5";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+
+        private static bool Is(string label, string resourceKey)
+        {
+            var text = Application.Current?.TryFindResource(resourceKey) as string;
+            return !string.IsNullOrEmpty(text)
+                && string.Equals(label, text, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    public class CropAspectEqualsConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is not double current)
+                return false;
+            if (!double.TryParse(parameter?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var expected))
+                return false;
+            return Math.Abs(current - expected) < 0.02;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is true
+                && double.TryParse(parameter?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var expected))
+                return expected;
+            return Binding.DoNothing;
+        }
+    }
+
     public partial class StepCropPhotoView : UserControl
     {
         private Point _startPoint;
@@ -24,6 +69,15 @@ namespace Win11DesktopApp.Views
             CropCanvas.MouseLeftButtonDown += OnMouseDown;
             CropCanvas.MouseMove += OnMouseMove;
             CropCanvas.MouseLeftButtonUp += OnMouseUp;
+        }
+
+        private void OnCropSidePreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is not ScrollViewer viewer || viewer.ScrollableHeight <= 0)
+                return;
+
+            viewer.ScrollToVerticalOffset(viewer.VerticalOffset - e.Delta);
+            e.Handled = true;
         }
 
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

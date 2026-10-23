@@ -1,8 +1,9 @@
 export interface HostFontFace {
+  id: string;
   family: string;
   weight: number;
   style: 'normal' | 'italic';
-  url: string;
+  chunks: number;
 }
 
 export interface InitMessage {
@@ -28,6 +29,13 @@ export interface InsertTextMessage {
   text: string;
 }
 
+export interface FontChunkMessage {
+  type: 'fontChunk';
+  id: string;
+  index: number;
+  data: string;
+}
+
 export interface TagReplacement {
   contextBefore: string;
   replaceWhat: string;
@@ -41,7 +49,7 @@ export interface RequestMessage {
   items?: TagReplacement[];
 }
 
-export type HostMessage = InitMessage | LoadStartMessage | LoadChunkMessage | InsertTextMessage | RequestMessage;
+export type HostMessage = InitMessage | LoadStartMessage | LoadChunkMessage | InsertTextMessage | FontChunkMessage | RequestMessage;
 
 export type EditorMessage =
   | { type: 'ready' }
