@@ -517,9 +517,10 @@ namespace Win11DesktopApp.Services
         {
             foreach (var firmName in GetKnownCompanyNames(company))
             {
-                if (prevNotes.TryGetValue(BuildEmployeeFirmKey(employeeId, employeeFolder, firmName), out note)
-                    && !string.IsNullOrEmpty(note))
+                if (prevNotes.TryGetValue(BuildEmployeeFirmKey(employeeId, employeeFolder, firmName), out var found)
+                    && !string.IsNullOrEmpty(found))
                 {
+                    note = found;
                     return true;
                 }
             }

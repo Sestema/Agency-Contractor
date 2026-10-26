@@ -604,7 +604,10 @@ namespace Win11DesktopApp.ViewModels
                 target.Zip
             }.Where(part => !string.IsNullOrWhiteSpace(part)));
 
-            var window = new AddressMapWindow(seed);
+            var kind = ReferenceEquals(target, Data.AddressAbroad)
+                ? AddressHistoryKind.Abroad
+                : AddressHistoryKind.Local;
+            var window = new AddressMapWindow(seed, kind);
             var owner = Application.Current?.Windows.OfType<Window>().FirstOrDefault(item => item.IsActive)
                 ?? Application.Current?.MainWindow;
             if (owner != null && owner.IsLoaded && owner != window)

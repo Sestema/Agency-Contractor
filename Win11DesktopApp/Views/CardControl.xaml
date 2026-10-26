@@ -20,10 +20,11 @@
                             Background="{DynamicResource CardBackgroundBrush}" 
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="15"
+                            CornerRadius="18"
                             Width="{DynamicResource UiMenuCardW}" Height="{DynamicResource UiMenuCardH}"
                             RenderTransformOrigin="0.5,0.5"
-                            SnapsToDevicePixels="True">
+                            SnapsToDevicePixels="True"
+                            UseLayoutRounding="True">
                         <!-- No DropShadowEffect here: this control is instantiated once per
                              dashboard tile (a dozen+ on screen at once), and the shadow used to
                              also animate on every hover/press - a major source of lag on
@@ -36,32 +37,75 @@
                             </TransformGroup>
                         </Border.RenderTransform>
                         <Grid>
-                            <Grid Margin="16">
+                            <!-- Soft hover tint without OpacityMask (zero intermediate GPU surface) -->
+                            <Border x:Name="HoverTint"
+                                    CornerRadius="17"
+                                    Margin="1"
+                                    Opacity="0"
+                                    IsHitTestVisible="False"
+                                    Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+
+                            <!-- Hover accent border matching the module gradient -->
+                            <Border x:Name="HoverAccentRing"
+                                    CornerRadius="18"
+                                    BorderThickness="1.5"
+                                    BorderBrush="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Opacity="0"
+                                    IsHitTestVisible="False"
+                                    SnapsToDevicePixels="True"/>
+
+                            <Grid Margin="14,16,14,14">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- Gradient icon circle: true circle, white silhouette, no shadow. -->
-                                <Border x:Name="IconCircle" Grid.Row="0"
-                                        Width="{DynamicResource UiMenuCardIcon}" Height="{DynamicResource UiMenuCardIcon}"
-                                        CornerRadius="36"
-                                        HorizontalAlignment="Center" Margin="0,4,0,0"
-                                        RenderTransformOrigin="0.5,0.5"
-                                        Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                    <Border.RenderTransform>
+                                <!-- Squircle icon container with soft ambient plate + top gloss -->
+                                <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
                                         <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
-                                    </Border.RenderTransform>
-                                    <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                          Fill="White"
-                                          Stretch="Uniform"
-                                          Width="{DynamicResource UiMenuCardIconInner}" Height="{DynamicResource UiMenuCardIconInner}"
-                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
+                                    </Grid.RenderTransform>
+
+                                    <Border x:Name="IconHalo"
+                                            Width="76" Height="76"
+                                            CornerRadius="24"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Opacity="0.12"
+                                            IsHitTestVisible="False"/>
+
+                                    <Border x:Name="IconCircle"
+                                            Width="{DynamicResource UiMenuCardIcon}" Height="{DynamicResource UiMenuCardIcon}"
+                                            CornerRadius="20"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                        <Grid>
+                                            <!-- Subtle top light sheen -->
+                                            <Border CornerRadius="20" IsHitTestVisible="False">
+                                                <Border.Background>
+                                                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                                        <GradientStop Color="#36FFFFFF" Offset="0"/>
+                                                        <GradientStop Color="#08FFFFFF" Offset="0.48"/>
+                                                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Border.Background>
+                                            </Border>
+                                            <Border CornerRadius="20"
+                                                    BorderThickness="1"
+                                                    BorderBrush="#38FFFFFF"
+                                                    IsHitTestVisible="False"/>
+                                            <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  Fill="White"
+                                                  Stretch="Uniform"
+                                                  Width="{DynamicResource UiMenuCardIconInner}" Height="{DynamicResource UiMenuCardIconInner}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
 
                                 <!-- Title -->
-                                <TextBlock x:Name="TitleText" Grid.Row="2"
+                                <TextBlock x:Name="TitleText" Grid.Row="1"
                                            Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                            Foreground="{DynamicResource ForegroundBrush}"
                                            FontSize="{DynamicResource FS13}"
@@ -70,14 +114,30 @@
                                            VerticalAlignment="Bottom"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
-                                           Margin="0,8,0,2"/>
+                                           Margin="2,10,2,0"/>
                             </Grid>
+
+                            <!-- Badge inside top-right corner of the card -->
+                            <Border CornerRadius="11"
+                                    Background="{DynamicResource ErrorBrush}"
+                                    BorderBrush="{DynamicResource CardBackgroundBrush}"
+                                    BorderThickness="2"
+                                    MinWidth="24" Height="22"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,10,10,0"
+                                    Padding="6,0"
+                                    IsHitTestVisible="False"
+                                    Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
+                                <TextBlock Text="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                           Foreground="White" FontSize="{DynamicResource FS11}" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
 
                             <!-- Static inner highlight rim: visible only in Glass themes
                                  where GlassInnerHighlightBrush is defined. In other themes
                                  the DynamicResource does not resolve, so nothing is drawn. -->
                             <Border x:Name="GlassHighlight"
-                                    CornerRadius="15"
+                                    CornerRadius="18"
                                     BorderThickness="1,1,1,0"
                                     BorderBrush="{DynamicResource GlassInnerHighlightBrush}"
                                     Margin="1"
@@ -108,11 +168,23 @@
                                     <!-- Icon breathes -->
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleX"
-                                                     To="1.04" Duration="0:0:0.20"
+                                                     To="1.05" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleY"
-                                                     To="1.04" Duration="0:0:0.20"
+                                                     To="1.05" Duration="0:0:0.20"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="IconHalo"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.22" Duration="0:0:0.20"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="HoverTint"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.05" Duration="0:0:0.20"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="HoverAccentRing"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.55" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                 </Storyboard>
                             </BeginStoryboard>
@@ -141,6 +213,18 @@
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleY"
                                                      To="1" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="IconHalo"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0.13" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="HoverTint"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0" Duration="0:0:0.3"
+                                                     EasingFunction="{StaticResource SmoothEase}"/>
+                                    <DoubleAnimation Storyboard.TargetName="HoverAccentRing"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0" Duration="0:0:0.3"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                 </Storyboard>
                             </BeginStoryboard>
@@ -190,18 +274,5 @@
                 </ControlTemplate>
             </Button.Template>
         </Button>
-
-        <!-- Badge -->
-        <Border CornerRadius="12" Background="{DynamicResource ErrorBrush}" MinWidth="{DynamicResource UiBadgeH}" Height="{DynamicResource UiBadgeH}" 
-                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-6,0"
-                Padding="6,0" IsHitTestVisible="False"
-                Visibility="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource IntToVis}}">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#FB7185" Opacity="0.4"/>
-            </Border.Effect>
-            <TextBlock Text="{Binding BadgeCount, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                       Foreground="White" FontSize="{DynamicResource FS11}" FontWeight="Bold"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
     </Grid>
 </UserControl>

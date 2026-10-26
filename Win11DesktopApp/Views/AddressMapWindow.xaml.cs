@@ -137,6 +137,7 @@ namespace Win11DesktopApp.Views
             """;
 
         private readonly List<MappedAddress> _results = new();
+        private readonly AddressHistoryKind _historyKind;
         private bool _mapReady;
         private bool _suppressSelection;
         private double? _pendingLat;
@@ -145,10 +146,12 @@ namespace Win11DesktopApp.Views
 
         public MappedAddress? SelectedAddress { get; private set; }
 
-        public AddressMapWindow(string seedQuery)
+        public AddressMapWindow(string seedQuery, AddressHistoryKind historyKind)
         {
+            _historyKind = historyKind;
             InitializeComponent();
             SearchBox.Text = seedQuery ?? string.Empty;
+            ShowHistory(AddressHistoryStore.Load(_historyKind));
             Loaded += async (_, _) => await StartAsync();
         }
 
@@ -242,6 +245,7 @@ namespace Win11DesktopApp.Views
         {
             if (_suppressSelection || ResultsList.SelectedItem is not MappedAddress address)
                 return;
+            ClearOtherSelection(HistoryList);
             ApplySelection(address);
             await MoveMarkerAsync(address.Latitude, address.Longitude);
         }
@@ -250,6 +254,39 @@ namespace Win11DesktopApp.Views
         {
             if (ResultsList.SelectedItem is MappedAddress)
                 Apply_Click(sender, e);
+        }
+
+        private void ShowHistory(IReadOnlyList<MappedAddress> history)
+        {
+            _suppressSelection = true;
+            HistoryList.ItemsSource = history;
+            HistoryEmpty.Visibility = history.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            _suppressSelection = false;
+        }
+
+        private async void HistoryList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (_suppressSelection || HistoryList.SelectedItem is not MappedAddress address)
+                return;
+            ClearOtherSelection(ResultsList);
+            ApplySelection(address);
+            if (address.Latitude != 0 || address.Longitude != 0)
+                await MoveMarkerAsync(address.Latitude, address.Longitude);
+        }
+
+        private void HistoryList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (HistoryList.SelectedItem is MappedAddress)
+                Apply_Click(sender, e);
+        }
+
+        private void ClearOtherSelection(System.Windows.Controls.ListBox list)
+        {
+            if (list.SelectedItem == null)
+                return;
+            _suppressSelection = true;
+            list.SelectedItem = null;
+            _suppressSelection = false;
         }
 
         private async void MapView_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -329,6 +366,7 @@ namespace Win11DesktopApp.Views
         {
             if (SelectedAddress == null)
                 return;
+            AddressHistoryStore.Remember(_historyKind, SelectedAddress);
             DialogResult = true;
         }
 

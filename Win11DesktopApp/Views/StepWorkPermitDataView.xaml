@@ -1,152 +1,105 @@
 <UserControl x:Class="Win11DesktopApp.Views.StepWorkPermitDataView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:Win11DesktopApp.Views">
+    <UserControl.Resources>
+        <Geometry x:Key="GeomWorkPermitStep">M7 2.5C7 1.67 7.67 1 8.5 1H11.5C12.33 1 13 1.67 13 2.5V4H16.5C17.33 4 18 4.67 18 5.5V16.5C18 17.33 17.33 18 16.5 18H3.5C2.67 18 2 17.33 2 16.5V5.5C2 4.67 2.67 4 3.5 4H7V2.5ZM8.5 2.5V4H11.5V2.5H8.5ZM3.7 8.5V16.3H16.3V8.5H12V10.2H8V8.5H3.7Z</Geometry>
+        <Geometry x:Key="GeomSparklePermit">M10 2L11.7 6.8L16.5 8.5L11.7 10.2L10 15L8.3 10.2L3.5 8.5L8.3 6.8L10 2ZM15.5 12.2L16.3 14.5L18.6 15.3L16.3 16.1L15.5 18.4L14.7 16.1L12.4 15.3L14.7 14.5L15.5 12.2Z</Geometry>
+
+        <Style x:Key="PermitFieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="1,0,0,4"/>
+        </Style>
+
+        <Style x:Key="PermitFieldInput" TargetType="TextBox" BasedOn="{StaticResource WizInput}">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </UserControl.Resources>
+
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=7}"
-            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="20,16"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="260"/>
+                <ColumnDefinition Width="1.15*" MinWidth="320"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*" MinWidth="200"/>
+                <ColumnDefinition Width="*" MinWidth="240"/>
             </Grid.ColumnDefinitions>
-            <ScrollViewer Grid.Column="0" Style="{StaticResource ThinScroll}" Margin="0,0,12,0"
+
+            <ScrollViewer Grid.Column="0" Style="{StaticResource ThinScroll}" Margin="0,0,10,0"
                           VerticalScrollBarVisibility="Hidden"
                           PreviewMouseWheel="InnerScrollViewer_PreviewMouseWheel">
                 <StackPanel>
-                    <StackPanel Margin="0,0,0,18">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource ErrorBrush}">
-                                <TextBlock Text="&#xE8A7;" Style="{StaticResource PageHeaderIconText}"/>
+                    <!-- Header + AI Scan -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Style="{StaticResource PageHeaderIconBadge}" Width="36" Height="36" CornerRadius="10"
+                                    Background="{DynamicResource AccentBrush}">
+                                <Path Data="{StaticResource GeomWorkPermitStep}" Width="16" Height="16" Stretch="Uniform" Fill="White"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource StepWorkPermitData}"
-                                           FontSize="{DynamicResource FS18}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ForegroundBrush}"/>
-                                <TextBlock Text="{DynamicResource AIScanBtn}"
-                                           FontSize="{DynamicResource FS11}"
-                                           Foreground="{DynamicResource MutedForegroundBrush}"
-                                           Margin="0,3,0,0"/>
-                            </StackPanel>
+                            <TextBlock Text="{DynamicResource StepWorkPermitData}"
+                                       FontSize="{DynamicResource FS16}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}"
+                                       VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <Border Style="{StaticResource DialogPreviewSurface}" Padding="12,10" Margin="0,10,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                        <Button Grid.Column="1"
+                                Command="{Binding AIScanDocumentCommand}"
+                                Style="{StaticResource FilledActionButton}"
+                                Height="34" Padding="14,0"
+                                Visibility="{Binding IsAIScanning, Converter={StaticResource InverseBoolToVis}}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource GeomSparklePermit}" Width="13" Height="13" Stretch="Uniform"
+                                      Fill="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="{DynamicResource AIScanBtn}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
-                                <Button Grid.Column="0"
-                                        Command="{Binding AIScanDocumentCommand}"
-                                        Style="{StaticResource FilledActionButton}"
-                                        Padding="12,6"
-                                        Margin="0,0,10,0"
-                                        Visibility="{Binding IsAIScanning, Converter={StaticResource InverseBoolToVis}}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS13}" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="White"/>
-                                        <TextBlock Text="{DynamicResource AIScanBtn}" FontSize="{DynamicResource FS12}" Foreground="White"/>
-                                    </StackPanel>
-                                </Button>
+                    <!-- Thin AI status banner -->
+                    <Border CornerRadius="8" Padding="10,6" Margin="0,0,0,10"
+                            Background="{DynamicResource AccentLightBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                            Visibility="{Binding AIScanStatus, Converter={StaticResource StringToVis}}">
+                        <TextBlock Text="{Binding AIScanStatus}"
+                                   FontSize="11.5" FontWeight="Medium"
+                                   Foreground="{DynamicResource AccentDarkBrush}"
+                                   TextWrapping="Wrap"/>
+                    </Border>
 
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding AIScanStatus}"
-                                           FontSize="{DynamicResource FS12}"
-                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Visibility="{Binding AIScanStatus, Converter={StaticResource StringToVis}}"/>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                    <TextBlock Text="{DynamicResource WizWorkPermitNumber}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.WorkPermitNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizWorkPermitType}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.WorkPermitType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizWorkPermitIssueDate}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.WorkPermitIssueDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizWorkPermitExpiry}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.WorkPermitExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                    <TextBlock Text="{DynamicResource WizWorkPermitAuthority}" Style="{StaticResource WizLabel}"/>
-                    <TextBox Text="{Binding Data.WorkPermitAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
+                    <!-- Single-column fields -->
+                    <TextBlock Text="{DynamicResource WizWorkPermitNumber}" Style="{StaticResource PermitFieldLabel}"/>
+                    <TextBox Text="{Binding Data.WorkPermitNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PermitFieldInput}"/>
+
+                    <TextBlock Text="{DynamicResource WizWorkPermitType}" Style="{StaticResource PermitFieldLabel}"/>
+                    <TextBox Text="{Binding Data.WorkPermitType, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PermitFieldInput}"/>
+
+                    <TextBlock Text="{DynamicResource WizWorkPermitIssueDate}" Style="{StaticResource PermitFieldLabel}"/>
+                    <TextBox Text="{Binding Data.WorkPermitIssueDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PermitFieldInput}"/>
+
+                    <TextBlock Text="{DynamicResource WizWorkPermitExpiry}" Style="{StaticResource PermitFieldLabel}"/>
+                    <TextBox Text="{Binding Data.WorkPermitExpiry, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PermitFieldInput}"/>
+
+                    <TextBlock Text="{DynamicResource WizWorkPermitAuthority}" Style="{StaticResource PermitFieldLabel}"/>
+                    <TextBox Text="{Binding Data.WorkPermitAuthority, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PermitFieldInput}" Margin="0"/>
                 </StackPanel>
             </ScrollViewer>
+
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch"
-                          Background="Transparent" Cursor="SizeWE"
-                          Margin="0"/>
-            <Border Grid.Column="2" CornerRadius="10" Background="{DynamicResource ContentBackgroundBrush}" Margin="12,0,0,0"
-                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                    ClipToBounds="True">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <ItemsControl Grid.Row="0" Panel.ZIndex="1" ItemsSource="{Binding CarouselItems}" Margin="4,6,4,2"
-                                  Visibility="{Binding HasCarouselItems, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding Label}" Style="{StaticResource CarouselTabBtn}"
-                                        Command="{Binding DataContext.SelectCarouselTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                        CommandParameter="{Binding}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Border Grid.Row="1" ClipToBounds="True">
-                        <Grid>
-                            <!-- Single image preview (non-PDF) -->
-                            <Image Source="{Binding CarouselPreviewPath, Converter={StaticResource ImagePathConverter}}" Stretch="Uniform" 
-                                   RenderOptions.BitmapScalingMode="HighQuality"
-                                   Visibility="{Binding WorkPermitDoc.IsPdf, Converter={StaticResource InverseBoolToVis}}"
-                                   MouseWheel="DocImage_MouseWheel"
-                                   MouseRightButtonDown="DocImage_MouseRightButtonDown"
-                                   MouseRightButtonUp="DocImage_MouseRightButtonUp"
-                                   MouseMove="DocImage_MouseMove"
-                                   MouseLeftButtonDown="DocImage_ResetZoom">
-                                <Image.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                        <TranslateTransform X="0" Y="0"/>
-                                    </TransformGroup>
-                                </Image.RenderTransform>
-                            </Image>
-                            <!-- Multi-page PDF preview -->
-                            <ScrollViewer Style="{StaticResource ThinScroll}"
-                                          Visibility="{Binding WorkPermitDoc.IsPdf, Converter={StaticResource BoolToVis}}">
-                                <ItemsControl ItemsSource="{Binding WorkPermitPagePreviews}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Margin="4" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="4"
-                                                    ClipToBounds="True">
-                                                <Image Source="{Binding Converter={StaticResource ImagePathConverter}}" Stretch="Uniform"
-                                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                                       MouseWheel="DocImage_MouseWheel"
-                                                       MouseRightButtonDown="DocImage_MouseRightButtonDown"
-                                                       MouseRightButtonUp="DocImage_MouseRightButtonUp"
-                                                       MouseMove="DocImage_MouseMove"
-                                                       MouseLeftButtonDown="DocImage_ResetZoom">
-                                                    <Image.RenderTransform>
-                                                        <TransformGroup>
-                                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                                            <TranslateTransform X="0" Y="0"/>
-                                                        </TransformGroup>
-                                                    </Image.RenderTransform>
-                                                </Image>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </Border>
+                          Background="Transparent" Cursor="SizeWE" Margin="0"/>
+
+            <views:DocumentPreviewPanel Grid.Column="2" Margin="10,0,0,0"/>
         </Grid>
     </Border>
 </UserControl>

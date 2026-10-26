@@ -83,6 +83,8 @@ namespace Win11DesktopApp.ViewModels
         public ICommand OpenAddCompanyDialogCommand { get; }
         public ICommand CloseAddCompanyDialogCommand { get; }
         public ICommand EditCompanyCommand { get; }
+        public ICommand OpenCompanyProblemsCommand { get; }
+        public ICommand OpenCompanyEmployeesCommand { get; }
         public ICommand MoveCompanyUpCommand { get; }
         public ICommand MoveCompanyDownCommand { get; }
         public ICommand ButtonCommand { get; }
@@ -120,7 +122,7 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _greetingText, value);
         }
 
-        private string _greetingGlyph = "\uE706";
+        private string _greetingGlyph = "IconGreetingSun";
         public string GreetingGlyph
         {
             get => _greetingGlyph;
@@ -721,6 +723,18 @@ namespace Win11DesktopApp.ViewModels
                 IsDrawerOpen = false;
             }, o => true);
 
+            OpenCompanyProblemsCommand = new RelayCommand(_ =>
+            {
+                if (PolicyService.IsFeatureVisible("problems"))
+                    _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateProblems());
+            });
+
+            OpenCompanyEmployeesCommand = new RelayCommand(_ =>
+            {
+                if (SelectedCompany != null && PolicyService.IsFeatureVisible("employees"))
+                    _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(SelectedCompany));
+            });
+
             MoveCompanyUpCommand = new RelayCommand(o =>
             {
                 if (!PolicyService.EnsureWriteAllowed("Змінити порядок фірм"))
@@ -950,43 +964,43 @@ namespace Win11DesktopApp.ViewModels
             var allCards = new List<MenuCardItem>
             {
                 new() { Id = "dashboard", TitleKey = "DashboardTitle", IconKey = "IconDashboard",
-                    GradientStart = "#00C9FF", GradientEnd = "#92FE9D",
+                    GradientStart = "#0EA5E9", GradientEnd = "#10B981",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<DashboardViewModel>()) },
                 new() { Id = "employees", TitleKey = "BtnEmployees", IconKey = "IconPeople",
-                    GradientStart = "#667EEA", GradientEnd = "#764BA2",
+                    GradientStart = "#6366F1", GradientEnd = "#8B5CF6",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(SelectedCompany))) },
                 new() { Id = "templates", TitleKey = "BtnTemplates", IconKey = "IconTemplates",
-                    GradientStart = "#11998E", GradientEnd = "#38EF7D",
+                    GradientStart = "#10B981", GradientEnd = "#059669",
                     Command = new RelayCommand(_ => { if (SelectedCompany != null) _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateTemplates(SelectedCompany)); }, _ => SelectedCompany != null) },
                 new() { Id = "problems", TitleKey = "BtnProblems", IconKey = "IconProblems",
-                    GradientStart = "#FF512F", GradientEnd = "#F09819",
+                    GradientStart = "#F97316", GradientEnd = "#EA580C",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateProblems())), BadgeCount = _problemsCount },
                 new() { Id = "report", TitleKey = "BtnReport", IconKey = "IconReport",
-                    GradientStart = "#4FACFE", GradientEnd = "#00F2FE",
+                    GradientStart = "#0EA5E9", GradientEnd = "#2563EB",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<ReportViewModel>()) },
                 new() { Id = "finances", TitleKey = "BtnFinances", IconKey = "IconFinances",
-                    GradientStart = "#A18CD1", GradientEnd = "#FBC2EB",
+                    GradientStart = "#8B5CF6", GradientEnd = "#D946EF",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<FinanceTablesViewModel>()) },
                 new() { Id = "invoices", TitleKey = "BtnInvoices", IconKey = "IconInvoices",
-                    GradientStart = "#26A69A", GradientEnd = "#66BB6A",
+                    GradientStart = "#14B8A6", GradientEnd = "#0D9488",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoices())) },
                 new() { Id = "archive", TitleKey = "BtnArchive", IconKey = "IconArchive",
-                    GradientStart = "#89F7FE", GradientEnd = "#66A6FF",
+                    GradientStart = "#3B82F6", GradientEnd = "#6366F1",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateArchive())) },
                 new() { Id = "recentlydeleted", TitleKey = "BtnRecentlyDeleted", IconKey = "IconRecentlyDeleted",
-                    GradientStart = "#FF9A9E", GradientEnd = "#FAD0C4",
+                    GradientStart = "#F43F5E", GradientEnd = "#E11D48",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateRecentlyDeleted())) },
                 new() { Id = "activitylog", TitleKey = "BtnActivityLog", IconKey = "IconActivityLog",
-                    GradientStart = "#FFD54F", GradientEnd = "#FF8A65",
+                    GradientStart = "#F59E0B", GradientEnd = "#EA580C",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<ActivityLogViewModel>()) },
                 new() { Id = "candidates", TitleKey = "BtnCandidates", IconKey = "IconCandidates",
-                    GradientStart = "#FF9800", GradientEnd = "#F57C00",
+                    GradientStart = "#FB923C", GradientEnd = "#EA580C",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<CandidatesViewModel>()) },
                 new() { Id = "news", TitleKey = "BtnNews", IconKey = "IconNews",
-                    GradientStart = "#36D1DC", GradientEnd = "#5B86E5",
+                    GradientStart = "#06B6D4", GradientEnd = "#3B82F6",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<NewsViewModel>()) },
                 new() { Id = "aichat", TitleKey = "BtnAIAssistant", IconKey = "IconAIAssistant",
-                    GradientStart = "#7C4DFF", GradientEnd = "#448AFF",
+                    GradientStart = "#7C3AED", GradientEnd = "#4F46E5",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateAiChat())) },
             };
 
@@ -1202,12 +1216,11 @@ namespace Win11DesktopApp.ViewModels
 
         private static string GetGreetingGlyph(DateTime now)
         {
-            // Segoe MDL2 Assets: sunny by day, moon in the evening/night.
             if (now.Hour < 6 || now.Hour >= 21)
-                return "\uE708"; // Quiet hours / moon
+                return "IconGreetingMoon";
             if (now.Hour < 18)
-                return "\uE706"; // Brightness / sun
-            return "\uE708";
+                return "IconGreetingSun";
+            return "IconGreetingMoon";
         }
 
         private CultureInfo GetAppCulture()

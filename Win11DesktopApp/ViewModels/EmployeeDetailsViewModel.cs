@@ -5618,7 +5618,7 @@ Format: one line per check. Be concise. At the end, give a summary score like 'S
                 Description = histDesc
             });
 
-            _activityLogService.Log("CustomDocAdded", "Document", _firmName, FullName,
+            _activityLogService.Log("CustomDocAdded", "Document", _firmName ?? string.Empty, FullName,
                 histDesc, employeeFolder: _employeeFolder);
 
             CloseCustomDocDialog();

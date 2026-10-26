@@ -27,6 +27,13 @@ namespace Win11DesktopApp.Services
     public sealed class EmployeeIndexDbService
     {
         private const int CurrentSchemaVersion = 1;
+        private const string SelectColumns =
+            "unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status, " +
+            "start_date, end_date, contract_type, position_title, position_number, phone, email, " +
+            "passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry, " +
+            "work_permit_name, work_permit_expiry, bank_account_number, bank_name, " +
+            "is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at, " +
+            EmployeeIndexExtras.ColumnList;
         private const int MaxDuplicateMatches = 8;
         private static readonly TimeSpan IndexLockStaleAfter = TimeSpan.FromMinutes(3);
         private static readonly JsonSerializerOptions LockJsonOptions = new() { WriteIndented = false };
@@ -84,6 +91,7 @@ namespace Win11DesktopApp.Services
 
                 using var connection = OpenConnection();
                 CreateSchema(connection);
+                EmployeeIndexExtras.EnsureSqlite(connection);
                 _isInitialized = true;
             }
         }
@@ -205,17 +213,28 @@ WHERE ifnull(employee_folder, '') <> ''
 
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = @"
-SELECT unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
-       start_date, end_date, contract_type, position_title, position_number, phone, email,
-       passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
-       work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-       is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+            command.CommandText = $@"
+SELECT {SelectColumns}
 FROM employee_index
 WHERE lower(firm_name) = lower(@firmName)
   AND is_archived = 0
 ORDER BY full_name, start_date;";
             command.Parameters.AddWithValue("@firmName", firmName);
+            return ReadRows(command);
+        }
+
+        public List<EmployeeIndexRow> GetAllEmployeeRows()
+        {
+            if (UsePostgresStorage)
+                return _postgresStorage!.GetAllEmployeeRows();
+
+            EnsureInitialized();
+            if (!IsAvailable)
+                return new List<EmployeeIndexRow>();
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"SELECT {SelectColumns} FROM employee_index;";
             return ReadRows(command);
         }
 
@@ -230,12 +249,8 @@ ORDER BY full_name, start_date;";
 
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = @"
-SELECT unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
-       start_date, end_date, contract_type, position_title, position_number, phone, email,
-       passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
-       work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-       is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+            command.CommandText = $@"
+SELECT {SelectColumns}
 FROM employee_index
 WHERE is_archived = 1
 ORDER BY full_name, start_date;";
@@ -263,12 +278,8 @@ ORDER BY full_name, start_date;";
 
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = @"
-SELECT unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
-       start_date, end_date, contract_type, position_title, position_number, phone, email,
-       passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
-       work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-       is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+            command.CommandText = $@"
+SELECT {SelectColumns}
 FROM employee_index
 WHERE (
         lower(trim(ifnull(first_name, ''))) = @firstName
@@ -396,12 +407,8 @@ WHERE (
 
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = @"
-SELECT unique_id, full_name, first_name, last_name, firm_name, employee_folder, employee_type, status,
-       start_date, end_date, contract_type, position_title, position_number, phone, email,
-       passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
-       work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-       is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+            command.CommandText = $@"
+SELECT {SelectColumns}
 FROM employee_index
 WHERE lower(employee_folder) = lower(@portableFolder)
    OR lower(employee_folder) = lower(@absoluteFolder)
@@ -869,13 +876,23 @@ INSERT INTO employee_index (
     start_date, end_date, contract_type, position_title, position_number, phone, email,
     passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
     work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-    is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+    is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at,
+    extras_version, source_json_utc, birth_date, has_rodne_cislo, rodne_cislo, gender, citizenship,
+    passport_city, passport_country, passport_authority, visa_authority, visa_start_date, work_address_tag,
+    highest_education_code, address_local_street, address_local_number, address_local_city, address_local_zip,
+    address_abroad_street, address_abroad_number, address_abroad_city, address_abroad_zip,
+    ignored_documents_json, custom_documents_json, firm_history_json
 ) VALUES (
     @uniqueId, @fullName, @firstName, @lastName, @firmName, @employeeFolder, @employeeType, @status,
     @startDate, @endDate, @contractType, @positionTitle, @positionNumber, @phone, @email,
     @passportNumber, @visaNumber, @insuranceNumber, @passportExpiry, @visaExpiry, @insuranceExpiry,
     @workPermitName, @workPermitExpiry, @bankAccountNumber, @bankName,
-    @isArchived, @archivedFromFirm, @photoPath, @hasPhoto, @hasPassport, @hasVisa, @hasInsurance, @updatedAt
+    @isArchived, @archivedFromFirm, @photoPath, @hasPhoto, @hasPassport, @hasVisa, @hasInsurance, @updatedAt,
+    @extrasVersion, @sourceJsonUtc, @birthDate, @hasRodneCislo, @rodneCislo, @gender, @citizenship,
+    @passportCity, @passportCountry, @passportAuthority, @visaAuthority, @visaStartDate, @workAddressTag,
+    @highestEducationCode, @addressLocalStreet, @addressLocalNumber, @addressLocalCity, @addressLocalZip,
+    @addressAbroadStreet, @addressAbroadNumber, @addressAbroadCity, @addressAbroadZip,
+    @ignoredDocumentsJson, @customDocumentsJson, @firmHistoryJson
 )
 ON CONFLICT(unique_id) DO UPDATE SET
     full_name = excluded.full_name,
@@ -909,7 +926,32 @@ ON CONFLICT(unique_id) DO UPDATE SET
     has_passport = excluded.has_passport,
     has_visa = excluded.has_visa,
     has_insurance = excluded.has_insurance,
-    updated_at = excluded.updated_at;";
+    updated_at = excluded.updated_at,
+    extras_version = excluded.extras_version,
+    source_json_utc = excluded.source_json_utc,
+    birth_date = excluded.birth_date,
+    has_rodne_cislo = excluded.has_rodne_cislo,
+    rodne_cislo = excluded.rodne_cislo,
+    gender = excluded.gender,
+    citizenship = excluded.citizenship,
+    passport_city = excluded.passport_city,
+    passport_country = excluded.passport_country,
+    passport_authority = excluded.passport_authority,
+    visa_authority = excluded.visa_authority,
+    visa_start_date = excluded.visa_start_date,
+    work_address_tag = excluded.work_address_tag,
+    highest_education_code = excluded.highest_education_code,
+    address_local_street = excluded.address_local_street,
+    address_local_number = excluded.address_local_number,
+    address_local_city = excluded.address_local_city,
+    address_local_zip = excluded.address_local_zip,
+    address_abroad_street = excluded.address_abroad_street,
+    address_abroad_number = excluded.address_abroad_number,
+    address_abroad_city = excluded.address_abroad_city,
+    address_abroad_zip = excluded.address_abroad_zip,
+    ignored_documents_json = excluded.ignored_documents_json,
+    custom_documents_json = excluded.custom_documents_json,
+    firm_history_json = excluded.firm_history_json;";
 
             command.Parameters.AddWithValue("@uniqueId", row.UniqueId ?? string.Empty);
             command.Parameters.AddWithValue("@fullName", row.FullName ?? string.Empty);
@@ -944,6 +986,7 @@ ON CONFLICT(unique_id) DO UPDATE SET
             command.Parameters.AddWithValue("@hasVisa", row.HasVisa ? 1 : 0);
             command.Parameters.AddWithValue("@hasInsurance", row.HasInsurance ? 1 : 0);
             command.Parameters.AddWithValue("@updatedAt", row.UpdatedAt ?? string.Empty);
+            EmployeeIndexExtras.AddSqliteParameters(command, row);
             command.ExecuteNonQuery();
         }
 
@@ -989,6 +1032,7 @@ ON CONFLICT(unique_id) DO UPDATE SET
                     HasInsurance = !reader.IsDBNull(31) && reader.GetInt32(31) != 0,
                     UpdatedAt = reader.IsDBNull(32) ? string.Empty : reader.GetString(32)
                 });
+                EmployeeIndexExtras.ReadInto(reader, rows[^1]);
             }
 
             return rows;

@@ -24,14 +24,14 @@
             <Setter Property="Margin" Value="14,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Background" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="Opacity" Value="0.55"/>
+            <Setter Property="Opacity" Value="0.65"/>
         </Style>
 
         <Style x:Key="MainHeaderEditCircleBtn" TargetType="Button">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -42,13 +42,17 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="16"
+                                CornerRadius="11"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -56,46 +60,49 @@
             </Setter>
         </Style>
 
-        <Style x:Key="MainHeaderPill" TargetType="Border">
-            <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+        <Style x:Key="MainHeaderStatActionBtn" TargetType="Button">
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Padding" Value="10,0,14,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="13"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MainHeaderUnifiedChip" TargetType="Border">
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="CornerRadius" Value="13"/>
+            <Setter Property="Padding" Value="10,0,14,0"/>
+            <Setter Property="Background" Value="{DynamicResource PageBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
-        </Style>
-
-        <Style x:Key="MainHeaderStatPill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
-            <Setter Property="Padding" Value="10,7"/>
-            <Setter Property="CornerRadius" Value="14"/>
-        </Style>
-
-        <Style x:Key="MainHeaderWeatherPill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#F0FAFF" Offset="0"/>
-                        <GradientStop Color="#F5FFF9" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="MainHeaderGreetingPill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#F0FFF4" Offset="0"/>
-                        <GradientStop Color="#FAFFF5" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="MainHeaderTimePill" TargetType="Border" BasedOn="{StaticResource MainHeaderPill}">
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="MinWidth" Value="72"/>
         </Style>
 
         <Style x:Key="ToolbarWorkspacePillButton" TargetType="Button">
@@ -644,231 +651,241 @@
                           HorizontalScrollBarVisibility="Disabled"
                           Style="{StaticResource ThinScroll}">
                 <StackPanel HorizontalAlignment="Center" MaxWidth="1080">
-                    <!-- Compact header: one big card containing all widgets (mockup) -->
-                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                    <!-- Compact header: aligned with the 5-card grid width (960px) -->
+                    <Border Width="960"
+                            HorizontalAlignment="Center"
+                            Background="{DynamicResource CardBackgroundBrush}"
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="20"
-                            Margin="0,0,0,10"
+                            CornerRadius="18"
+                            Margin="0,0,0,8"
                             Padding="0"
                             SnapsToDevicePixels="True"
                             UseLayoutRounding="True"
                             TextOptions.TextFormattingMode="Ideal"
                             TextOptions.TextRenderingMode="ClearType"
                             TextOptions.TextHintingMode="Animated">
-                        <Grid Margin="16,12,16,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                        <Grid Margin="16,11,16,11">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                                <!-- Firm identity -->
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Grid Width="{DynamicResource UiAvatarMd}"
-                                          Height="{DynamicResource UiAvatarMd}"
-                                          Margin="0,0,10,0"
-                                          VerticalAlignment="Center">
-                                        <Border CornerRadius="11"
-                                                Background="{Binding SelectedCompanyDisplayName, Converter={StaticResource NameToColor}}">
+                            <!-- Firm identity -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Grid Width="40"
+                                      Height="40"
+                                      Margin="0,0,12,0"
+                                      VerticalAlignment="Center">
+                                    <Border CornerRadius="12"
+                                            Background="{Binding SelectedCompanyDisplayName, Converter={StaticResource NameToColor}}">
+                                        <Grid>
+                                            <Border CornerRadius="12" BorderThickness="1" BorderBrush="#32FFFFFF" IsHitTestVisible="False"/>
                                             <TextBlock Text="{Binding SelectedCompanyDisplayName, Converter={StaticResource FirstCharConverter}}"
-                                                       FontSize="{DynamicResource FS14}"
-                                                       FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource FS15}"
+                                                       FontWeight="Bold"
                                                        HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"
                                                        Foreground="White"/>
-                                        </Border>
-                                        <Ellipse Width="9" Height="9"
-                                                 Fill="{DynamicResource SuccessBrush}"
-                                                 Stroke="{DynamicResource CardBackgroundBrush}"
-                                                 StrokeThickness="1.5"
-                                                 HorizontalAlignment="Right"
-                                                 VerticalAlignment="Bottom"
-                                                 Margin="0,0,-1,-1"
-                                                 Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}"/>
-                                    </Grid>
-                                    <StackPanel VerticalAlignment="Center" MaxWidth="300">
-                                        <TextBlock Text="{Binding SelectedCompanyDisplayName}"
+                                        </Grid>
+                                    </Border>
+                                    <Ellipse Width="10" Height="10"
+                                             Fill="{DynamicResource SuccessBrush}"
+                                             Stroke="{DynamicResource CardBackgroundBrush}"
+                                             StrokeThickness="2"
+                                             HorizontalAlignment="Right"
+                                             VerticalAlignment="Bottom"
+                                             Margin="0,0,-1,-1"
+                                             Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                                <StackPanel VerticalAlignment="Center" MaxWidth="255">
+                                    <TextBlock Text="{Binding SelectedCompanyDisplayName}"
+                                               FontSize="{DynamicResource FS14}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ForegroundBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SelectedCompanyAgencyText}"
+                                               Margin="0,2,0,0"
+                                               FontSize="{DynamicResource FS11}"
+                                               Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border Grid.Column="1" Style="{StaticResource MainHeaderVertDivider}"
+                                    Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}"/>
+
+                            <!-- Problems stat: clickable unified chip with vector icon -->
+                            <Button Grid.Column="2"
+                                    Command="{Binding OpenCompanyProblemsCommand}"
+                                    Style="{StaticResource MainHeaderStatActionBtn}"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="9"
+                                            Background="#1AF97316"
+                                            Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Path Data="{StaticResource IconProblems}"
+                                              Width="15" Height="15"
+                                              Stretch="Uniform"
+                                              Fill="{DynamicResource WarningChipForegroundBrush}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource MainStatProblems}"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                        <TextBlock Text="{Binding SelectedCompanyProblemsCount}"
                                                    FontSize="{DynamicResource FS14}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ForegroundBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding SelectedCompanyAgencyText}"
-                                                   Margin="0,2,0,0"
-                                                   FontSize="{DynamicResource FS11}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource WarningChipForegroundBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Employees stat: clickable unified chip with vector icon -->
+                            <Button Grid.Column="3"
+                                    Command="{Binding OpenCompanyEmployeesCommand}"
+                                    Style="{StaticResource MainHeaderStatActionBtn}"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="9"
+                                            Background="#1A3B82F6"
+                                            Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Path Data="{StaticResource IconPeople}"
+                                              Width="15" Height="15"
+                                              Stretch="Uniform"
+                                              Fill="{DynamicResource InfoChipForegroundBrush}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource MainStatEmployees}"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                        <TextBlock Text="{Binding SelectedCompanyEmployeesCount}"
+                                                   FontSize="{DynamicResource FS14}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Edit company button -->
+                            <Button Grid.Column="4"
+                                    Command="{Binding EditCompanyCommand}"
+                                    Style="{StaticResource MainHeaderEditCircleBtn}"
+                                    VerticalAlignment="Center"
+                                    Margin="8,0,0,0"
+                                    ToolTip="{DynamicResource MainTooltipEdit}"
+                                    Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
+                                <Path Data="{StaticResource IconEdit}"
+                                      Width="14" Height="14"
+                                      Stretch="Uniform"
+                                      Fill="{DynamicResource SecondaryForegroundBrush}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                            </Button>
+
+                            <!-- Weather: unified chip with soft blue squircle icon -->
+                            <Border Grid.Column="6"
+                                    Style="{StaticResource MainHeaderUnifiedChip}"
+                                    Margin="0,0,8,0"
+                                    ToolTip="{Binding WeatherCity}"
+                                    Visibility="{Binding HasWeather, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="9"
+                                            Background="{DynamicResource WeatherCardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource WeatherCardBorderBrush}"
+                                            BorderThickness="1"
+                                            Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Path Data="{Binding WeatherIconKey, Converter={StaticResource IconKeyToGeometry}}"
+                                              Width="16" Height="16"
+                                              Stretch="Uniform"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Stroke="{DynamicResource WeatherCardIconBrush}"
+                                              StrokeThickness="1.5"
+                                              Fill="Transparent"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding WeatherTempText}"
+                                                   FontSize="{DynamicResource FS14}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                        <TextBlock Text="{Binding WeatherDescription}"
+                                                   Margin="0,1,0,0"
+                                                   FontSize="{DynamicResource FS10}"
                                                    Foreground="{DynamicResource SecondaryForegroundBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </StackPanel>
+                            </Border>
 
-                                <Border Grid.Column="1" Style="{StaticResource MainHeaderVertDivider}"
-                                        Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}"/>
-
-                                <!-- Problems stat: label above number -->
-                                <Border Grid.Column="2"
-                                        Background="{DynamicResource CardBackgroundBrush}"
-                                        BorderBrush="#FFEAD5"
-                                        BorderThickness="1"
-                                        CornerRadius="14"
-                                        Padding="12,6"
-                                        VerticalAlignment="Center"
-                                        Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="&#xE7BA;"
-                                                   FontFamily="Segoe MDL2 Assets"
-                                                   FontSize="{DynamicResource FS14}"
-                                                   Foreground="{DynamicResource WarningChipForegroundBrush}"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0"/>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{DynamicResource MainStatProblems}"
-                                                       FontSize="{DynamicResource FS10}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                            <TextBlock Text="{Binding SelectedCompanyProblemsCount}"
-                                                       FontSize="{DynamicResource FS14}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource WarningChipForegroundBrush}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Employees stat: label above number -->
-                                <Border Grid.Column="3"
-                                        Background="{DynamicResource CardBackgroundBrush}"
-                                        BorderBrush="#DBEAFE"
-                                        BorderThickness="1"
-                                        CornerRadius="14"
-                                        Padding="12,6"
-                                        Margin="10,0,0,0"
-                                        VerticalAlignment="Center"
-                                        Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="&#xE716;"
-                                                   FontFamily="Segoe MDL2 Assets"
-                                                   FontSize="{DynamicResource FS14}"
-                                                   Foreground="{DynamicResource InfoChipForegroundBrush}"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0"/>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{DynamicResource MainStatEmployees}"
-                                                       FontSize="{DynamicResource FS10}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                            <TextBlock Text="{Binding SelectedCompanyEmployeesCount}"
-                                                       FontSize="{DynamicResource FS14}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource InfoChipForegroundBrush}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Edit -->
-                                <Button Grid.Column="4"
-                                        Command="{Binding EditCompanyCommand}"
-                                        Style="{StaticResource MainHeaderEditCircleBtn}"
-                                        VerticalAlignment="Center"
-                                        Margin="12,0,0,0"
-                                        ToolTip="{DynamicResource MainTooltipEdit}"
-                                        Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="&#xE70F;"
-                                               FontFamily="Segoe MDL2 Assets"
-                                               FontSize="{DynamicResource FS12}"
-                                               Foreground="{DynamicResource ForegroundBrush}"/>
-                                </Button>
-
-                                <!-- Weather: theme-aware tinted card -->
-                                <Border Grid.Column="6"
-                                        Background="{DynamicResource WeatherCardBackgroundBrush}"
-                                        BorderBrush="{DynamicResource WeatherCardBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="14"
-                                        Padding="12,7"
-                                        Margin="0,0,10,0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="{Binding WeatherCity}"
-                                        Visibility="{Binding HasWeather, Converter={StaticResource BoolToVis}}">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Path Data="{Binding WeatherIconKey, Converter={StaticResource IconKeyToGeometry}}"
-                                              Width="20" Height="20"
+                            <!-- Greeting: unified chip with vector sun/moon -->
+                            <Border Grid.Column="7"
+                                    Style="{StaticResource MainHeaderUnifiedChip}"
+                                    Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="9"
+                                            Background="{DynamicResource GreetingCardIconBackgroundBrush}"
+                                            Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Path Data="{Binding GreetingGlyph, Converter={StaticResource IconKeyToGeometry}}"
+                                              Width="15" Height="15"
                                               Stretch="Uniform"
-                                              VerticalAlignment="Center"
-                                              Margin="0,0,10,0"
-                                              Stroke="{DynamicResource WeatherCardIconBrush}"
-                                              StrokeThickness="1.5"
-                                              Fill="Transparent"/>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding WeatherTempText}"
-                                                       FontSize="{DynamicResource FS16}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                                            <TextBlock Text="{Binding WeatherDescription}"
-                                                       Margin="0,1,0,0"
-                                                       FontSize="{DynamicResource FS10}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
+                                              Fill="{DynamicResource GreetingCardIconForegroundBrush}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center" MaxWidth="185">
+                                        <TextBlock Text="{Binding GreetingText}"
+                                                   FontSize="{DynamicResource FS12}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding CurrentDateText}"
+                                                   Margin="0,1,0,0"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                </Border>
+                                </StackPanel>
+                            </Border>
 
-                                <!-- Greeting: theme-aware tinted card -->
-                                <Border Grid.Column="7"
-                                        Background="{DynamicResource GreetingCardBackgroundBrush}"
-                                        BorderBrush="{DynamicResource GreetingCardBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="14"
-                                        Padding="12,7"
-                                        Margin="0,0,10,0"
-                                        VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Width="28" Height="28" CornerRadius="9"
-                                                Background="{DynamicResource GreetingCardIconBackgroundBrush}"
-                                                Margin="0,0,10,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding GreetingGlyph}"
-                                                       FontFamily="Segoe MDL2 Assets"
-                                                       FontSize="{DynamicResource FS13}"
-                                                       Foreground="{DynamicResource GreetingCardIconForegroundBrush}"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center" MaxWidth="200">
-                                            <TextBlock Text="{Binding GreetingText}"
-                                                       FontSize="{DynamicResource FS12}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource ForegroundBrush}"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding CurrentDateText}"
-                                                       Margin="0,1,0,0"
-                                                       FontSize="{DynamicResource FS10}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Clock + UTC badge -->
-                                <StackPanel Grid.Column="8" VerticalAlignment="Center">
+                            <!-- Clock + UTC badge inside unified chip -->
+                            <Border Grid.Column="8"
+                                    Style="{StaticResource MainHeaderUnifiedChip}"
+                                    Padding="12,0,12,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding CurrentTimeText}"
-                                               HorizontalAlignment="Center"
-                                               FontSize="{DynamicResource FS18}"
-                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FS16}"
+                                               FontWeight="Bold"
                                                Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <Border Background="{DynamicResource ContentBackgroundBrush}"
+                                    <Border Background="{DynamicResource CardBackgroundBrush}"
                                             BorderBrush="{DynamicResource CardBorderBrush}"
                                             BorderThickness="1"
-                                            CornerRadius="8"
-                                            Padding="7,1"
-                                            Margin="0,3,0,0"
-                                            HorizontalAlignment="Center">
+                                            CornerRadius="7"
+                                            Padding="6,2"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center">
                                         <TextBlock Text="{Binding CurrentTimeZoneText}"
                                                    FontSize="{DynamicResource FS9}"
+                                                   FontWeight="SemiBold"
                                                    Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                     </Border>
                                 </StackPanel>
+                            </Border>
                         </Grid>
                     </Border>
 

@@ -2167,10 +2167,9 @@ namespace Win11DesktopApp.ViewModels
                     resolvedFolder = financeService?.ResolveEmployeeFolder(resolvedFolder) ?? resolvedFolder;
                 }
 
-                var jsonPath = !string.IsNullOrEmpty(resolvedFolder) ? Path.Combine(resolvedFolder, "employee.json") : string.Empty;
-                if (!string.IsNullOrEmpty(jsonPath) && File.Exists(jsonPath))
+                if (!string.IsNullOrEmpty(resolvedFolder))
                 {
-                    var data = SafeFileService.ReadJson<EmployeeData>(jsonPath);
+                    var data = _employeeService.LoadReportEmployeeData(resolvedFolder);
                     if (data != null)
                         return BuildArchivedRowFromData(fullName, firmName, resolvedFolder, startDate, endDate, data, typeDisplayMap);
                 }
@@ -2257,8 +2256,8 @@ namespace Win11DesktopApp.ViewModels
                 EmployeeTypeCode = employee.EmployeeType ?? "visa",
                 EmployeeType = !string.IsNullOrEmpty(employee.WorkPermitName)
                     ? employee.WorkPermitName
-                    : GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
-                DocumentType = GetDocTypeDisplay(employee.EmployeeType, typeDisplayMap),
+                    : GetDocTypeDisplay(employee.EmployeeType ?? string.Empty, typeDisplayMap),
+                DocumentType = GetDocTypeDisplay(employee.EmployeeType ?? string.Empty, typeDisplayMap),
                 PassportNumber = employee.PassportNumber,
                 VisaNumber = employee.VisaNumber,
                 VisaAuthority = string.Empty,
@@ -2278,12 +2277,9 @@ namespace Win11DesktopApp.ViewModels
 
             try
             {
-                var jsonPath = !string.IsNullOrWhiteSpace(employee.EmployeeFolder)
-                    ? Path.Combine(employee.EmployeeFolder, "employee.json")
-                    : string.Empty;
-                if (!string.IsNullOrWhiteSpace(jsonPath) && File.Exists(jsonPath))
+                if (!string.IsNullOrWhiteSpace(employee.EmployeeFolder))
                 {
-                    var data = SafeFileService.ReadJson<EmployeeData>(jsonPath);
+                    var data = _employeeService.LoadReportEmployeeData(employee.EmployeeFolder);
                     if (data != null)
                     {
                         row.EmployeeTypeCode = data.EmployeeType ?? employee.EmployeeType ?? "visa";

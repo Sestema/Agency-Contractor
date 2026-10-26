@@ -929,9 +929,10 @@ namespace Win11DesktopApp.ViewModels
         {
             foreach (var firmName in GetKnownCompanyNames(company))
             {
-                if (prevNotes.TryGetValue(BuildEmployeeFirmKey(employeeId, employeeFolder, firmName), out note)
-                    && !string.IsNullOrEmpty(note))
+                if (prevNotes.TryGetValue(BuildEmployeeFirmKey(employeeId, employeeFolder, firmName), out var found)
+                    && !string.IsNullOrEmpty(found))
                 {
+                    note = found;
                     return true;
                 }
             }
@@ -1650,7 +1651,7 @@ namespace Win11DesktopApp.ViewModels
                 if (!ArchivedWorkedInMonth(arc, _selectedYear, _selectedMonth))
                     continue;
 
-                var firmName = ResolveCanonicalFirmName(arc.FirmName, companiesCreate);
+                var firmName = ResolveCanonicalFirmName(arc.FirmName, companiesCreate ?? new List<EmployerCompany>());
                 if (string.IsNullOrEmpty(firmName)) continue;
                 if (!allowedFirmNames.Contains(arc.FirmName)) continue;
 

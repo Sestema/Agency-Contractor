@@ -282,6 +282,31 @@ namespace Win11DesktopApp.EmployeeModels
         public bool HasVisa { get; set; }
         public bool HasInsurance { get; set; }
         public string UpdatedAt { get; set; } = string.Empty;
+        public int ExtrasVersion { get; set; }
+        public string SourceJsonUtc { get; set; } = string.Empty;
+        public string BirthDate { get; set; } = string.Empty;
+        public bool HasRodneCislo { get; set; }
+        public string RodneCislo { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public string Citizenship { get; set; } = string.Empty;
+        public string PassportCity { get; set; } = string.Empty;
+        public string PassportCountry { get; set; } = string.Empty;
+        public string PassportAuthority { get; set; } = string.Empty;
+        public string VisaAuthority { get; set; } = string.Empty;
+        public string VisaStartDate { get; set; } = string.Empty;
+        public string WorkAddressTag { get; set; } = string.Empty;
+        public string HighestEducationCode { get; set; } = string.Empty;
+        public string AddressLocalStreet { get; set; } = string.Empty;
+        public string AddressLocalNumber { get; set; } = string.Empty;
+        public string AddressLocalCity { get; set; } = string.Empty;
+        public string AddressLocalZip { get; set; } = string.Empty;
+        public string AddressAbroadStreet { get; set; } = string.Empty;
+        public string AddressAbroadNumber { get; set; } = string.Empty;
+        public string AddressAbroadCity { get; set; } = string.Empty;
+        public string AddressAbroadZip { get; set; } = string.Empty;
+        public string IgnoredDocumentsJson { get; set; } = string.Empty;
+        public string CustomDocumentsJson { get; set; } = string.Empty;
+        public string FirmHistoryJson { get; set; } = string.Empty;
     }
 
     public class EmployeeReportRow

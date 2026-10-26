@@ -62,8 +62,9 @@ namespace Win11DesktopApp.Services
 
             using (var doc = WordprocessingDocument.Open(outputPath, true))
             {
-                if (doc.MainDocumentPart?.Document.Body != null)
-                    ReplaceTags(doc.MainDocumentPart.Document.Body, tagValues);
+                var body = doc.MainDocumentPart?.Document?.Body;
+                if (body != null)
+                    ReplaceTags(body, tagValues);
 
                 foreach (var headerPart in doc.MainDocumentPart?.HeaderParts ?? Enumerable.Empty<HeaderPart>())
                 {

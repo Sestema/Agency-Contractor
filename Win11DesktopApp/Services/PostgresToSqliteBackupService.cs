@@ -197,7 +197,12 @@ ALTER TABLE app.custom_salary_fields ADD COLUMN IF NOT EXISTS qr_message_text TE
                     "start_date", "end_date", "contract_type", "position_title", "position_number", "phone", "email",
                     "passport_number", "visa_number", "insurance_number", "passport_expiry", "visa_expiry", "insurance_expiry",
                     "work_permit_name", "work_permit_expiry", "bank_account_number", "bank_name",
-                    "is_archived", "archived_from_firm", "photo_path", "has_photo", "has_passport", "has_visa", "has_insurance", "updated_at"
+                    "is_archived", "archived_from_firm", "photo_path", "has_photo", "has_passport", "has_visa", "has_insurance", "updated_at",
+                    "extras_version", "source_json_utc", "birth_date", "has_rodne_cislo", "rodne_cislo", "gender", "citizenship",
+                    "passport_city", "passport_country", "passport_authority", "visa_authority", "visa_start_date", "work_address_tag",
+                    "highest_education_code", "address_local_street", "address_local_number", "address_local_city", "address_local_zip",
+                    "address_abroad_street", "address_abroad_number", "address_abroad_city", "address_abroad_zip",
+                    "ignored_documents_json", "custom_documents_json", "firm_history_json"
                 },
                 cancellationToken).ConfigureAwait(false);
             transaction.Commit();
@@ -418,6 +423,7 @@ INSERT INTO _meta(version)
 SELECT 1
 WHERE NOT EXISTS (SELECT 1 FROM _meta);";
             command.ExecuteNonQuery();
+            EmployeeIndexExtras.EnsureSqlite(connection);
         }
 
         private void EnsureAppStatisticsSqliteSchema()

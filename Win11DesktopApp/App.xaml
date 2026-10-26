@@ -87,10 +87,10 @@
             <system:Double x:Key="UiButtonMinH">36</system:Double>
             <system:Double x:Key="UiSearchW">420</system:Double>
             <system:Double x:Key="UiTopBarH">60</system:Double>
-            <system:Double x:Key="UiMenuCardW">160</system:Double>
-            <system:Double x:Key="UiMenuCardH">182</system:Double>
-            <system:Double x:Key="UiMenuCardIcon">72</system:Double>
-            <system:Double x:Key="UiMenuCardIconInner">32</system:Double>
+            <system:Double x:Key="UiMenuCardW">176</system:Double>
+            <system:Double x:Key="UiMenuCardH">158</system:Double>
+            <system:Double x:Key="UiMenuCardIcon">64</system:Double>
+            <system:Double x:Key="UiMenuCardIconInner">30</system:Double>
             <system:Double x:Key="UiBadgeH">24</system:Double>
             <system:Double x:Key="UiCardGap">10</system:Double>
             <system:Double x:Key="UiEmployeeTileW">470</system:Double>

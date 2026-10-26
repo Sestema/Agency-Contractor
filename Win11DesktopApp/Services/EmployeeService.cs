@@ -63,6 +63,9 @@ namespace Win11DesktopApp.Services
         private const long SlowEmployeeIndexLoadMs = 500;
         private readonly object _employeeListCacheLock = new();
         private readonly Dictionary<string, EmployeeListCacheEntry> _employeeListCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object _indexRowCacheLock = new();
+        private Dictionary<string, EmployeeIndexRow>? _indexRowsByFolder;
+        private DateTime _indexRowsCachedAtUtc;
         private readonly Dictionary<string, object> _employeeListLoadLocks = new(StringComparer.OrdinalIgnoreCase);
         private int _sessionEmployeeIndexIntegrityRan;
         private readonly object _firmsLightIndexCheckedLock = new();
@@ -791,19 +794,143 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public EmployeeExpiryDocuments? LoadEmployeeExpiryDocuments(string employeeFolder)
         {
-            if (string.IsNullOrWhiteSpace(employeeFolder)) return null;
+            var data = ReadEmployeeDataUsingIndex(employeeFolder, null);
+            if (data == null)
+                return null;
+
+            return new EmployeeExpiryDocuments
+            {
+                IgnoredDocuments = data.IgnoredDocuments ?? new Dictionary<string, string>(),
+                CustomDocuments = data.CustomDocuments ?? new List<CustomSignedDocument>()
+            };
+        }
+
+        public EmployeeData? LoadReportEmployeeData(string employeeFolder)
+        {
+            return ReadEmployeeDataUsingIndex(employeeFolder, null);
+        }
+
+        private EmployeeData? ReadEmployeeDataUsingIndex(string employeeFolder, string? firmNameHint)
+        {
+            if (string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
 
             var jsonPath = Path.Combine(employeeFolder, "employee.json");
-            if (!File.Exists(jsonPath)) return null;
+            var fileExists = File.Exists(jsonPath);
+            DateTime? jsonWriteUtc = null;
+            if (fileExists)
+            {
+                try
+                {
+                    jsonWriteUtc = File.GetLastWriteTimeUtc(jsonPath);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("EmployeeService.ReadEmployeeDataUsingIndex", ex.Message);
+                }
+            }
+
+            var row = FindCachedIndexRow(employeeFolder);
+            if (row != null && EmployeeIndexExtras.IsFresh(row, fileExists ? jsonWriteUtc : null))
+                return EmployeeIndexExtras.ToEmployeeData(row);
+
+            if (!fileExists)
+                return null;
 
             try
             {
-                return ReadJson<EmployeeExpiryDocuments>(jsonPath);
+                var data = ReadJson<EmployeeData>(jsonPath);
+                if (data == null)
+                    return null;
+
+                if (!string.IsNullOrWhiteSpace(data.UniqueId))
+                {
+                    var firmName = firmNameHint;
+                    if (string.IsNullOrWhiteSpace(firmName))
+                    {
+                        firmName = data.IsArchived && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm)
+                            ? data.ArchivedFromFirm
+                            : row?.FirmName;
+                    }
+
+                    UpsertEmployeeIndex(employeeFolder, data, firmName);
+                }
+
+                return data;
             }
             catch (Exception ex)
             {
-                LoggingService.LogError("EmployeeService.LoadEmployeeExpiryDocuments", ex);
+                LoggingService.LogError("EmployeeService.ReadEmployeeDataUsingIndex", ex);
                 return null;
+            }
+        }
+
+        private EmployeeIndexRow? FindCachedIndexRow(string employeeFolder)
+        {
+            if (_employeeIndexDbService == null || string.IsNullOrWhiteSpace(employeeFolder))
+                return null;
+
+            try
+            {
+                Dictionary<string, EmployeeIndexRow> map;
+                lock (_indexRowCacheLock)
+                {
+                    if (_indexRowsByFolder == null || DateTime.UtcNow - _indexRowsCachedAtUtc > TimeSpan.FromSeconds(30))
+                    {
+                        var loaded = new Dictionary<string, EmployeeIndexRow>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var indexed in _employeeIndexDbService.GetAllEmployeeRows())
+                        {
+                            if (string.IsNullOrWhiteSpace(indexed.EmployeeFolder))
+                                continue;
+                            loaded[NormalizeEmployeeFolderKey(indexed.EmployeeFolder)] = indexed;
+                        }
+
+                        _indexRowsByFolder = loaded;
+                        _indexRowsCachedAtUtc = DateTime.UtcNow;
+                    }
+
+                    map = _indexRowsByFolder;
+                }
+
+                map.TryGetValue(NormalizeEmployeeFolderKey(employeeFolder), out var row);
+                return row;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.FindCachedIndexRow", ex.Message);
+                return null;
+            }
+        }
+
+        private void InvalidateIndexRowCache()
+        {
+            lock (_indexRowCacheLock)
+                _indexRowsByFolder = null;
+        }
+
+        private void RememberIndexRow(EmployeeIndexRow row)
+        {
+            if (string.IsNullOrWhiteSpace(row.EmployeeFolder))
+                return;
+
+            lock (_indexRowCacheLock)
+            {
+                if (_indexRowsByFolder == null)
+                    return;
+
+                _indexRowsByFolder[NormalizeEmployeeFolderKey(row.EmployeeFolder)] = row;
+            }
+        }
+
+        private static string NormalizeEmployeeFolderKey(string path)
+        {
+            try
+            {
+                return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            }
+            catch
+            {
+                return path.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             }
         }
 
@@ -1478,8 +1605,8 @@ namespace Win11DesktopApp.Services
             summary.FirmName = firmName ?? string.Empty;
             summary.StartDate = startDate ?? string.Empty;
             summary.EndDate = endDate ?? string.Empty;
-            summary.ParsedStartDate = DateParsingHelper.TryParseDate(startDate);
-            summary.ParsedEndDate = DateParsingHelper.TryParseDate(endDate);
+            summary.ParsedStartDate = DateParsingHelper.TryParseDate(startDate ?? string.Empty);
+            summary.ParsedEndDate = DateParsingHelper.TryParseDate(endDate ?? string.Empty);
             summary.EmployeeFolder = employeeFolder;
             summary.PhotoPath = hasPhoto ? photoPath : string.Empty;
             summary.HasPhoto = hasPhoto;
@@ -1494,9 +1621,9 @@ namespace Win11DesktopApp.Services
             summary.PassportExpiry = data.PassportExpiry ?? string.Empty;
             summary.VisaExpiry = data.VisaExpiry ?? string.Empty;
             summary.InsuranceExpiry = data.InsuranceExpiry ?? string.Empty;
-            summary.PassportSeverity = DateParsingHelper.GetSeverity(data.PassportExpiry);
-            summary.VisaSeverity = DateParsingHelper.GetSeverity(data.VisaExpiry);
-            summary.InsuranceSeverity = DateParsingHelper.GetSeverity(data.InsuranceExpiry);
+            summary.PassportSeverity = DateParsingHelper.GetSeverity(data.PassportExpiry ?? string.Empty);
+            summary.VisaSeverity = DateParsingHelper.GetSeverity(data.VisaExpiry ?? string.Empty);
+            summary.InsuranceSeverity = DateParsingHelper.GetSeverity(data.InsuranceExpiry ?? string.Empty);
             summary.WorkPermitSeverity = DateParsingHelper.GetSeverity(data.WorkPermitExpiry);
             summary.Status = StatusHelper.Normalize(data.Status);
             summary.Phone = data.Phone ?? string.Empty;
@@ -1692,6 +1819,8 @@ namespace Win11DesktopApp.Services
                     }
                 }
 
+                RefreshStaleEmployeeIndexExtras(companyList);
+
                 LoggingService.LogInfo(
                     "EmployeeService.SessionIndexIntegrity",
                     $"Completed in {stopwatch.ElapsedMilliseconds} ms. Firms={firmsChecked}, repaired={firmsRepaired}.");
@@ -1725,6 +1854,86 @@ namespace Win11DesktopApp.Services
 
             lock (_firmsLightIndexCheckedLock)
                 return _firmsLightIndexCheckedThisSession.Add(firmName);
+        }
+
+        private void RefreshStaleEmployeeIndexExtras(IReadOnlyList<string> companyNames)
+        {
+            if (_employeeIndexDbService == null)
+                return;
+
+            Dictionary<string, EmployeeIndexRow> rowsByFolder;
+            try
+            {
+                rowsByFolder = new Dictionary<string, EmployeeIndexRow>(StringComparer.OrdinalIgnoreCase);
+                foreach (var row in _employeeIndexDbService.GetAllEmployeeRows())
+                {
+                    if (string.IsNullOrWhiteSpace(row.EmployeeFolder))
+                        continue;
+                    rowsByFolder[NormalizeEmployeeFolderKey(row.EmployeeFolder)] = row;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("EmployeeService.RefreshStaleEmployeeIndexExtras", ex.Message);
+                return;
+            }
+
+            var refreshed = 0;
+            foreach (var firmName in companyNames)
+                refreshed += RefreshStaleExtrasInFolder(_folderService.GetEmployeesFolder(firmName), firmName, rowsByFolder);
+
+            refreshed += RefreshStaleExtrasInFolder(_folderService.GetArchiveFolder(), null, rowsByFolder);
+            if (refreshed > 0)
+            {
+                LoggingService.LogInfo(
+                    "EmployeeService.RefreshStaleEmployeeIndexExtras",
+                    $"Updated index extras for {refreshed} employee profile(s).");
+            }
+        }
+
+        private int RefreshStaleExtrasInFolder(string? parentFolder, string? firmName, Dictionary<string, EmployeeIndexRow> rowsByFolder)
+        {
+            if (string.IsNullOrWhiteSpace(parentFolder) || !Directory.Exists(parentFolder))
+                return 0;
+
+            var refreshed = 0;
+            foreach (var employeeFolder in Directory.GetDirectories(parentFolder))
+            {
+                var jsonPath = Path.Combine(employeeFolder, "employee.json");
+                if (!File.Exists(jsonPath))
+                    continue;
+
+                try
+                {
+                    if (!rowsByFolder.TryGetValue(NormalizeEmployeeFolderKey(employeeFolder), out var row))
+                        continue;
+
+                    var jsonWriteUtc = File.GetLastWriteTimeUtc(jsonPath);
+                    if (EmployeeIndexExtras.IsFresh(row, jsonWriteUtc))
+                        continue;
+
+                    var data = ReadJson<EmployeeData>(jsonPath);
+                    if (data == null || string.IsNullOrWhiteSpace(data.UniqueId))
+                        continue;
+
+                    var indexFirm = firmName;
+                    if (string.IsNullOrWhiteSpace(indexFirm))
+                    {
+                        indexFirm = data.IsArchived && !string.IsNullOrWhiteSpace(data.ArchivedFromFirm)
+                            ? data.ArchivedFromFirm
+                            : row.FirmName;
+                    }
+
+                    UpsertEmployeeIndex(employeeFolder, data, indexFirm);
+                    refreshed++;
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogWarning("EmployeeService.RefreshStaleEmployeeIndexExtras", $"{employeeFolder}: {ex.Message}");
+                }
+            }
+
+            return refreshed;
         }
 
         private static bool IsEmployeeIndexRowOlderThanJson(EmployeeIndexRow row, string jsonPath, out string reason)
@@ -2114,7 +2323,7 @@ namespace Win11DesktopApp.Services
         {
             var photoPath = ResolvePhotoPath(employeeFolder, data);
             var hasPhoto = !string.IsNullOrWhiteSpace(photoPath) && File.Exists(photoPath);
-            return new EmployeeIndexRow
+            var row = new EmployeeIndexRow
             {
                 UniqueId = data.UniqueId ?? string.Empty,
                 FullName = $"{data.FirstName} {data.LastName}".Trim(),
@@ -2150,6 +2359,8 @@ namespace Win11DesktopApp.Services
                 HasInsurance = !string.IsNullOrEmpty(data.Files.Insurance),
                 UpdatedAt = DateTime.UtcNow.ToString("O")
             };
+            EmployeeIndexExtras.Apply(row, data, employeeFolder ?? string.Empty);
+            return row;
         }
 
         private void UpsertEmployeeIndex(string employeeFolder, EmployeeData data, string? firmNameOverride = null)
@@ -2178,12 +2389,15 @@ namespace Win11DesktopApp.Services
             if (_employeeIndexDbService == null)
                 return;
 
-            _employeeIndexDbService.UpsertEmployeeIndex(BuildEmployeeIndexRow(data, firmName ?? string.Empty, employeeFolder));
+            var row = BuildEmployeeIndexRow(data, firmName ?? string.Empty, employeeFolder);
+            _employeeIndexDbService.UpsertEmployeeIndex(row);
+            RememberIndexRow(row);
         }
 
         private void DeleteEmployeeIndex(string? uniqueId)
         {
             InvalidateEmployeeListCache();
+            InvalidateIndexRowCache();
             if (_employeeIndexDbService == null || string.IsNullOrWhiteSpace(uniqueId))
                 return;
 
@@ -2565,15 +2779,16 @@ namespace Win11DesktopApp.Services
 
                 foreach (var folder in Directory.GetDirectories(employeesFolder))
                 {
-                    var jsonPath = Path.Combine(folder, "employee.json");
-                    if (!File.Exists(jsonPath)) continue;
                     try
                     {
-                        var data = ReadJson<EmployeeData>(jsonPath);
+                        var data = ReadEmployeeDataUsingIndex(folder, company.Name);
                         if (data == null || data.FirmHistory == null || data.FirmHistory.Count == 0) continue;
 
                         var fullName = $"{data.FirstName} {data.LastName}";
-                        var photo = ResolvePhotoPath(folder, data);
+                        var row = FindCachedIndexRow(folder);
+                        var photo = row != null && EmployeeIndexExtras.IsFresh(row, null)
+                            ? row.PhotoPath
+                            : ResolvePhotoPath(folder, data);
                         var hasPhoto = !string.IsNullOrEmpty(photo);
                         var deduplicated = data.FirmHistory
                             .Where(fh => !string.Equals(fh.FirmName, company.Name, StringComparison.OrdinalIgnoreCase)
@@ -2623,15 +2838,16 @@ namespace Win11DesktopApp.Services
 
             foreach (var folder in Directory.GetDirectories(archiveFolder))
             {
-                var jsonPath = Path.Combine(folder, "employee.json");
-                if (!File.Exists(jsonPath)) continue;
                 try
                 {
-                    var data = ReadJson<EmployeeData>(jsonPath);
+                    var data = ReadEmployeeDataUsingIndex(folder, null);
                     if (data == null || data.FirmHistory == null || data.FirmHistory.Count == 0) continue;
 
                     var fullName = $"{data.FirstName} {data.LastName}";
-                    var photo = ResolvePhotoPath(folder, data);
+                    var row = FindCachedIndexRow(folder);
+                    var photo = row != null && row.ExtrasVersion >= EmployeeIndexExtras.CurrentVersion
+                        ? row.PhotoPath
+                        : ResolvePhotoPath(folder, data);
                     var hasPhoto = !string.IsNullOrEmpty(photo);
                     var deduplicated = data.FirmHistory
                         .Where(fh => !string.IsNullOrWhiteSpace(fh.FirmName))

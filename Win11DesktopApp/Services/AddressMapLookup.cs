@@ -149,7 +149,7 @@ namespace Win11DesktopApp.Services
         private static HttpClient CreateClient()
         {
             var client = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("AgencyContractor/0.2.12 (desktop address picker)");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("AgencyContractor/0.2.13 (desktop address picker)");
             client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
             return client;
         }

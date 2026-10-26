@@ -48,13 +48,35 @@
             <Border Margin="0,0,10,0" CornerRadius="12" BorderThickness="1"
                     BorderBrush="{DynamicResource CardBorderBrush}"
                     Background="{DynamicResource CardBackgroundBrush}">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="{DynamicResource MapResults}"
-                               Margin="12,10,12,6" FontWeight="SemiBold"/>
-                    <ListBox x:Name="ResultsList" BorderThickness="0" Background="Transparent"
-                             DisplayMemberPath="Label" MouseDoubleClick="ResultsList_MouseDoubleClick"
-                             SelectionChanged="ResultsList_SelectionChanged"/>
-                </DockPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{DynamicResource MapResults}"
+                                   Margin="12,10,12,6" FontWeight="SemiBold"/>
+                        <ListBox x:Name="ResultsList" BorderThickness="0" Background="Transparent"
+                                 DisplayMemberPath="Label" MouseDoubleClick="ResultsList_MouseDoubleClick"
+                                 SelectionChanged="ResultsList_SelectionChanged"/>
+                    </DockPanel>
+                    <Border Grid.Row="1" Height="1" Margin="12,4"
+                            Background="{DynamicResource CardBorderBrush}"/>
+                    <DockPanel Grid.Row="2">
+                        <TextBlock DockPanel.Dock="Top" Text="{DynamicResource MapRecent}"
+                                   Margin="12,6,12,6" FontWeight="SemiBold"/>
+                        <Grid>
+                            <ListBox x:Name="HistoryList" BorderThickness="0" Background="Transparent"
+                                     DisplayMemberPath="Label" MouseDoubleClick="HistoryList_MouseDoubleClick"
+                                     SelectionChanged="HistoryList_SelectionChanged"/>
+                            <TextBlock x:Name="HistoryEmpty" Text="{DynamicResource MapRecentEmpty}"
+                                       Margin="12" TextWrapping="Wrap" TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedForegroundBrush}"/>
+                        </Grid>
+                    </DockPanel>
+                </Grid>
             </Border>
             <Border Grid.Column="1" CornerRadius="12" BorderThickness="1"
                     BorderBrush="{DynamicResource CardBorderBrush}" ClipToBounds="True">

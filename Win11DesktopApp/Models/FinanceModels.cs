@@ -119,7 +119,7 @@ namespace Win11DesktopApp.Models
                 var trimmed = (FullName ?? string.Empty).Trim();
                 var spaceIndex = trimmed.IndexOf(' ');
                 if (spaceIndex <= 0 || spaceIndex >= trimmed.Length - 1)
-                    return FullName;
+                    return FullName ?? string.Empty;
 
                 var firstPart = trimmed[..spaceIndex];
                 var secondPart = trimmed[(spaceIndex + 1)..].Trim();

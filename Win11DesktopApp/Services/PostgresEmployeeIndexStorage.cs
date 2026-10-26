@@ -17,7 +17,8 @@ unique_id, full_name, first_name, last_name, firm_name, employee_folder, employe
 start_date, end_date, contract_type, position_title, position_number, phone, email,
 passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
 work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at";
+is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at, " +
+            EmployeeIndexExtras.ColumnList;
 
         private readonly AppSettingsService _settingsService;
         private readonly FolderService _folderService;
@@ -86,6 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_pg_ei_archived ON app.employee_index(is_archived)
 CREATE INDEX IF NOT EXISTS idx_pg_ei_folder ON app.employee_index(employee_folder);
 CREATE INDEX IF NOT EXISTS idx_pg_ei_full_name ON app.employee_index(full_name);";
                 command.ExecuteNonQuery();
+                EmployeeIndexExtras.EnsurePostgres(connection);
                 _isInitialized = true;
             }
         }
@@ -159,13 +161,23 @@ INSERT INTO app.employee_index (
     start_date, end_date, contract_type, position_title, position_number, phone, email,
     passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
     work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-    is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+    is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at,
+    extras_version, source_json_utc, birth_date, has_rodne_cislo, rodne_cislo, gender, citizenship,
+    passport_city, passport_country, passport_authority, visa_authority, visa_start_date, work_address_tag,
+    highest_education_code, address_local_street, address_local_number, address_local_city, address_local_zip,
+    address_abroad_street, address_abroad_number, address_abroad_city, address_abroad_zip,
+    ignored_documents_json, custom_documents_json, firm_history_json
 ) VALUES (
     @uniqueId, @fullName, @firstName, @lastName, @firmName, @employeeFolder, @employeeType, @status,
     @startDate, @endDate, @contractType, @positionTitle, @positionNumber, @phone, @email,
     @passportNumber, @visaNumber, @insuranceNumber, @passportExpiry, @visaExpiry, @insuranceExpiry,
     @workPermitName, @workPermitExpiry, @bankAccountNumber, @bankName,
-    @isArchived, @archivedFromFirm, @photoPath, @hasPhoto, @hasPassport, @hasVisa, @hasInsurance, @updatedAt
+    @isArchived, @archivedFromFirm, @photoPath, @hasPhoto, @hasPassport, @hasVisa, @hasInsurance, @updatedAt,
+    @extrasVersion, @sourceJsonUtc, @birthDate, @hasRodneCislo, @rodneCislo, @gender, @citizenship,
+    @passportCity, @passportCountry, @passportAuthority, @visaAuthority, @visaStartDate, @workAddressTag,
+    @highestEducationCode, @addressLocalStreet, @addressLocalNumber, @addressLocalCity, @addressLocalZip,
+    @addressAbroadStreet, @addressAbroadNumber, @addressAbroadCity, @addressAbroadZip,
+    @ignoredDocumentsJson, @customDocumentsJson, @firmHistoryJson
 )
 ON CONFLICT (unique_id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
@@ -199,7 +211,32 @@ ON CONFLICT (unique_id) DO UPDATE SET
     has_passport = EXCLUDED.has_passport,
     has_visa = EXCLUDED.has_visa,
     has_insurance = EXCLUDED.has_insurance,
-    updated_at = EXCLUDED.updated_at;";
+    updated_at = EXCLUDED.updated_at,
+    extras_version = EXCLUDED.extras_version,
+    source_json_utc = EXCLUDED.source_json_utc,
+    birth_date = EXCLUDED.birth_date,
+    has_rodne_cislo = EXCLUDED.has_rodne_cislo,
+    rodne_cislo = EXCLUDED.rodne_cislo,
+    gender = EXCLUDED.gender,
+    citizenship = EXCLUDED.citizenship,
+    passport_city = EXCLUDED.passport_city,
+    passport_country = EXCLUDED.passport_country,
+    passport_authority = EXCLUDED.passport_authority,
+    visa_authority = EXCLUDED.visa_authority,
+    visa_start_date = EXCLUDED.visa_start_date,
+    work_address_tag = EXCLUDED.work_address_tag,
+    highest_education_code = EXCLUDED.highest_education_code,
+    address_local_street = EXCLUDED.address_local_street,
+    address_local_number = EXCLUDED.address_local_number,
+    address_local_city = EXCLUDED.address_local_city,
+    address_local_zip = EXCLUDED.address_local_zip,
+    address_abroad_street = EXCLUDED.address_abroad_street,
+    address_abroad_number = EXCLUDED.address_abroad_number,
+    address_abroad_city = EXCLUDED.address_abroad_city,
+    address_abroad_zip = EXCLUDED.address_abroad_zip,
+    ignored_documents_json = EXCLUDED.ignored_documents_json,
+    custom_documents_json = EXCLUDED.custom_documents_json,
+    firm_history_json = EXCLUDED.firm_history_json;";
             AddRowParameters(command, row);
             command.ExecuteNonQuery();
         }
@@ -232,6 +269,15 @@ WHERE lower(firm_name) = lower(@firmName)
   AND is_archived = 0
 ORDER BY full_name, start_date;";
             command.Parameters.AddWithValue("firmName", firmName);
+            return ReadRows(command);
+        }
+
+        public List<EmployeeIndexRow> GetAllEmployeeRows()
+        {
+            EnsureInitialized();
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"SELECT {SelectColumns} FROM app.employee_index;";
             return ReadRows(command);
         }
 
@@ -441,13 +487,23 @@ INSERT INTO app.employee_index (
     start_date, end_date, contract_type, position_title, position_number, phone, email,
     passport_number, visa_number, insurance_number, passport_expiry, visa_expiry, insurance_expiry,
     work_permit_name, work_permit_expiry, bank_account_number, bank_name,
-    is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at
+    is_archived, archived_from_firm, photo_path, has_photo, has_passport, has_visa, has_insurance, updated_at,
+    extras_version, source_json_utc, birth_date, has_rodne_cislo, rodne_cislo, gender, citizenship,
+    passport_city, passport_country, passport_authority, visa_authority, visa_start_date, work_address_tag,
+    highest_education_code, address_local_street, address_local_number, address_local_city, address_local_zip,
+    address_abroad_street, address_abroad_number, address_abroad_city, address_abroad_zip,
+    ignored_documents_json, custom_documents_json, firm_history_json
 ) VALUES (
     @uniqueId, @fullName, @firstName, @lastName, @firmName, @employeeFolder, @employeeType, @status,
     @startDate, @endDate, @contractType, @positionTitle, @positionNumber, @phone, @email,
     @passportNumber, @visaNumber, @insuranceNumber, @passportExpiry, @visaExpiry, @insuranceExpiry,
     @workPermitName, @workPermitExpiry, @bankAccountNumber, @bankName,
-    @isArchived, @archivedFromFirm, @photoPath, @hasPhoto, @hasPassport, @hasVisa, @hasInsurance, @updatedAt
+    @isArchived, @archivedFromFirm, @photoPath, @hasPhoto, @hasPassport, @hasVisa, @hasInsurance, @updatedAt,
+    @extrasVersion, @sourceJsonUtc, @birthDate, @hasRodneCislo, @rodneCislo, @gender, @citizenship,
+    @passportCity, @passportCountry, @passportAuthority, @visaAuthority, @visaStartDate, @workAddressTag,
+    @highestEducationCode, @addressLocalStreet, @addressLocalNumber, @addressLocalCity, @addressLocalZip,
+    @addressAbroadStreet, @addressAbroadNumber, @addressAbroadCity, @addressAbroadZip,
+    @ignoredDocumentsJson, @customDocumentsJson, @firmHistoryJson
 )
 ON CONFLICT (unique_id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
@@ -481,7 +537,32 @@ ON CONFLICT (unique_id) DO UPDATE SET
     has_passport = EXCLUDED.has_passport,
     has_visa = EXCLUDED.has_visa,
     has_insurance = EXCLUDED.has_insurance,
-    updated_at = EXCLUDED.updated_at;";
+    updated_at = EXCLUDED.updated_at,
+    extras_version = EXCLUDED.extras_version,
+    source_json_utc = EXCLUDED.source_json_utc,
+    birth_date = EXCLUDED.birth_date,
+    has_rodne_cislo = EXCLUDED.has_rodne_cislo,
+    rodne_cislo = EXCLUDED.rodne_cislo,
+    gender = EXCLUDED.gender,
+    citizenship = EXCLUDED.citizenship,
+    passport_city = EXCLUDED.passport_city,
+    passport_country = EXCLUDED.passport_country,
+    passport_authority = EXCLUDED.passport_authority,
+    visa_authority = EXCLUDED.visa_authority,
+    visa_start_date = EXCLUDED.visa_start_date,
+    work_address_tag = EXCLUDED.work_address_tag,
+    highest_education_code = EXCLUDED.highest_education_code,
+    address_local_street = EXCLUDED.address_local_street,
+    address_local_number = EXCLUDED.address_local_number,
+    address_local_city = EXCLUDED.address_local_city,
+    address_local_zip = EXCLUDED.address_local_zip,
+    address_abroad_street = EXCLUDED.address_abroad_street,
+    address_abroad_number = EXCLUDED.address_abroad_number,
+    address_abroad_city = EXCLUDED.address_abroad_city,
+    address_abroad_zip = EXCLUDED.address_abroad_zip,
+    ignored_documents_json = EXCLUDED.ignored_documents_json,
+    custom_documents_json = EXCLUDED.custom_documents_json,
+    firm_history_json = EXCLUDED.firm_history_json;";
         }
 
         private void AddRowParameters(NpgsqlCommand command, EmployeeIndexRow row)
@@ -519,6 +600,7 @@ ON CONFLICT (unique_id) DO UPDATE SET
             command.Parameters.AddWithValue("hasVisa", row.HasVisa ? 1 : 0);
             command.Parameters.AddWithValue("hasInsurance", row.HasInsurance ? 1 : 0);
             command.Parameters.AddWithValue("updatedAt", row.UpdatedAt ?? string.Empty);
+            EmployeeIndexExtras.AddPostgresParameters(command, row);
         }
 
         private List<EmployeeIndexRow> ReadRows(NpgsqlCommand command)
@@ -563,6 +645,7 @@ ON CONFLICT (unique_id) DO UPDATE SET
                     HasInsurance = !reader.IsDBNull(31) && reader.GetInt32(31) != 0,
                     UpdatedAt = reader.IsDBNull(32) ? string.Empty : reader.GetString(32)
                 });
+                EmployeeIndexExtras.ReadInto(reader, rows[^1]);
             }
 
             return rows;

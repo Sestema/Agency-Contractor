@@ -2,122 +2,174 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
+        <Geometry x:Key="GeomCheckStep">M7.8 14.2L3.5 9.9L5 8.4L7.8 11.2L15 4L16.5 5.5L7.8 14.2Z</Geometry>
+        <Geometry x:Key="GeomCalendar">M6 2V4H4.5C3.67 4 3 4.67 3 5.5V16.5C3 17.33 3.67 18 4.5 18H15.5C16.33 18 17 17.33 17 16.5V5.5C17 4.67 16.33 4 15.5 4H14V2H12.4V4H7.6V2H6ZM4.6 8.2H15.4V16.4H4.6V8.2ZM6.5 10.2V12H8.5V10.2H6.5ZM10.5 10.2V12H12.5V10.2H10.5ZM6.5 13.4V15.2H8.5V13.4H6.5Z</Geometry>
+        <Geometry x:Key="GeomPhone">M6.2 3.2C6.6 3.2 7 3.45 7.2 3.85L8.3 6.3C8.45 6.65 8.4 7.08 8.12 7.36L6.75 8.73C7.55 10.35 8.85 11.65 10.47 12.45L11.84 11.08C12.12 10.8 12.55 10.75 12.9 10.9L15.35 12C15.75 12.2 16 12.6 16 13.05V15.3C16 16.13 15.33 16.8 14.5 16.8C8.15 16.8 3.2 11.85 3.2 5.5C3.2 4.67 3.87 4 4.7 4H6.2Z</Geometry>
+        <Geometry x:Key="GeomBank">M10 2.2L17.5 6V7.8H2.5V6L10 2.2ZM4.5 9.2H6.5V14.5H4.5V9.2ZM9 9.2H11V14.5H9V9.2ZM13.5 9.2H15.5V14.5H13.5V9.2ZM2.5 15.8H17.5V17.6H2.5V15.8Z</Geometry>
+
+        <Style x:Key="AddFieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+            <Setter Property="Margin" Value="1,0,0,4"/>
+        </Style>
+
+        <Style x:Key="AddFieldInput" TargetType="TextBox" BasedOn="{StaticResource WizInput}">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
         <Style x:Key="WizardCalendarButton" TargetType="Button" BasedOn="{StaticResource HeaderGhostButton}">
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="36"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
         </Style>
     </UserControl.Resources>
+
     <Border Style="{StaticResource StepFade}" Visibility="{Binding StepIndex, Converter={StaticResource StepVis}, ConverterParameter=6}"
-            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="22"
+            Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="20,16"
             BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Style="{StaticResource ThinScroll}">
             <StackPanel>
-            <StackPanel Margin="0,0,0,18">
-                <StackPanel Orientation="Horizontal">
-                    <Border Style="{StaticResource PageHeaderIconBadge}" Background="{DynamicResource SuccessBrush}">
-                        <TextBlock Text="&#xE73E;" Style="{StaticResource PageHeaderIconText}"/>
+                <!-- Header -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <Border Style="{StaticResource PageHeaderIconBadge}" Width="36" Height="36" CornerRadius="10"
+                            Background="{DynamicResource AccentBrush}">
+                        <Path Data="{StaticResource GeomCheckStep}" Width="16" Height="16" Stretch="Uniform" Fill="White"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{DynamicResource StepAdditional}"
-                                   FontSize="{DynamicResource FS18}"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                        <TextBlock Text="{DynamicResource BtnSaveEmployee}"
-                                   FontSize="{DynamicResource FS11}"
-                                   Foreground="{DynamicResource MutedForegroundBrush}"
-                                   Margin="0,3,0,0"/>
-                    </StackPanel>
+                    <TextBlock Text="{DynamicResource StepAdditional}"
+                               FontSize="{DynamicResource FS16}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
-            </StackPanel>
 
-            <Border Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
-                <Grid MaxWidth="640" HorizontalAlignment="Left">
+                <!-- Two-column cards -->
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="{DynamicResource WizPhone}" Style="{StaticResource WizLabel}"/>
-                        <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                        <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,6,0,12"/>
-                        <TextBlock Text="{DynamicResource EmployeeBankSection}" Style="{StaticResource WizLabel}"/>
-                        <CheckBox Content="{DynamicResource EmployeeBankToggle}"
-                                  IsChecked="{Binding HasBankAccountData}"
-                                  Margin="0,0,0,10"/>
-                        <StackPanel Visibility="{Binding ShowBankAccountSection, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{DynamicResource EmployeeBankAccountNumber}" Style="{StaticResource WizLabel}"/>
-                            <TextBox Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                            <TextBlock Text="{DynamicResource EmployeeBankName}" Style="{StaticResource WizLabel}"/>
-                            <TextBox Text="{Binding BankName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                        </StackPanel>
-                        <TextBlock Text="{DynamicResource WizStartDate}" Style="{StaticResource WizLabel}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="StartDateTextBox" Grid.Column="0" Text="{Binding Data.StartDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                            <Grid Grid.Column="1" Width="36" Margin="6,0,0,8">
-                                <DatePicker x:Name="StartDatePicker"
-                                            Width="1" Height="1"
-                                            Opacity="0"
-                                            Focusable="False"
-                                            IsHitTestVisible="False"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Top"
-                                            SelectedDateChanged="StartDatePicker_Changed"
-                                            Background="Transparent"
-                                            BorderThickness="0"/>
-                                <Button Click="OpenStartDatePicker_Click"
-                                        Style="{StaticResource WizardCalendarButton}">
-                                    <TextBlock Text="&#xE787;"
-                                               FontFamily="Segoe MDL2 Assets"
-                                               FontSize="{DynamicResource FS14}"
-                                               Foreground="{DynamicResource AccentBrush}"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Center"/>
-                                </Button>
-                            </Grid>
-                        </Grid>
-                        <StackPanel Visibility="{Binding IsPassportOnlyType, Converter={StaticResource InverseBoolToVis}}">
-                            <Border Height="1" Background="{DynamicResource CardBorderBrush}" Margin="0,6,0,12"/>
-                            <TextBlock Text="{DynamicResource WizSignDate}" Style="{StaticResource WizLabel}"/>
+
+                    <!-- Left card: Contact & Employment Dates -->
+                    <Border Grid.Column="0" Style="{StaticResource DialogPreviewSurface}" Padding="16,14">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Width="28" Height="28" CornerRadius="8" Margin="0,0,9,0"
+                                        Background="{DynamicResource AccentLightBrush}">
+                                    <Path Data="{StaticResource GeomPhone}" Width="13" Height="13" Stretch="Uniform"
+                                          Fill="{DynamicResource AccentDarkBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{DynamicResource WizPhone}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{DynamicResource WizPhone}" Style="{StaticResource AddFieldLabel}"/>
+                            <TextBox Text="{Binding Data.Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource AddFieldInput}"/>
+
+                            <TextBlock Text="{DynamicResource WizStartDate}" Style="{StaticResource AddFieldLabel}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox x:Name="SignDateTextBox" Grid.Column="0" Text="{Binding Data.ContractSignDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource WizInput}"/>
-                                <Grid Grid.Column="1" Width="36" Margin="6,0,0,8">
-                                    <DatePicker x:Name="SignDatePicker"
+                                <TextBox x:Name="StartDateTextBox" Grid.Column="0"
+                                         Text="{Binding Data.StartDate, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource AddFieldInput}"/>
+                                <Grid Grid.Column="1" Width="34" Margin="6,0,0,10">
+                                    <DatePicker x:Name="StartDatePicker"
                                                 Width="1" Height="1"
                                                 Opacity="0"
                                                 Focusable="False"
                                                 IsHitTestVisible="False"
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Top"
-                                                SelectedDateChanged="SignDatePicker_Changed"
+                                                SelectedDateChanged="StartDatePicker_Changed"
                                                 Background="Transparent"
                                                 BorderThickness="0"/>
-                                    <Button Click="OpenSignDatePicker_Click"
+                                    <Button Click="OpenStartDatePicker_Click"
                                             Style="{StaticResource WizardCalendarButton}">
-                                        <TextBlock Text="&#xE787;"
-                                                   FontFamily="Segoe MDL2 Assets"
-                                                   FontSize="{DynamicResource FS14}"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Center"/>
+                                        <Path Data="{StaticResource GeomCalendar}" Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{DynamicResource AccentBrush}"
+                                              VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                     </Button>
                                 </Grid>
                             </Grid>
+
+                            <StackPanel Visibility="{Binding IsPassportOnlyType, Converter={StaticResource InverseBoolToVis}}">
+                                <TextBlock Text="{DynamicResource WizSignDate}" Style="{StaticResource AddFieldLabel}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SignDateTextBox" Grid.Column="0"
+                                             Text="{Binding Data.ContractSignDate, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource AddFieldInput}" Margin="0"/>
+                                    <Grid Grid.Column="1" Width="34" Margin="6,0,0,0">
+                                        <DatePicker x:Name="SignDatePicker"
+                                                    Width="1" Height="1"
+                                                    Opacity="0"
+                                                    Focusable="False"
+                                                    IsHitTestVisible="False"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Top"
+                                                    SelectedDateChanged="SignDatePicker_Changed"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"/>
+                                        <Button Click="OpenSignDatePicker_Click"
+                                                Style="{StaticResource WizardCalendarButton}">
+                                            <Path Data="{StaticResource GeomCalendar}" Width="14" Height="14" Stretch="Uniform"
+                                                  Fill="{DynamicResource AccentBrush}"
+                                                  VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
+                    </Border>
+
+                    <!-- Right card: Bank Account -->
+                    <Border Grid.Column="2" Style="{StaticResource DialogPreviewSurface}" Padding="16,14" VerticalAlignment="Top">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Width="28" Height="28" CornerRadius="8" Margin="0,0,9,0"
+                                        Background="{DynamicResource InfoLightBrush}">
+                                    <Path Data="{StaticResource GeomBank}" Width="13" Height="13" Stretch="Uniform"
+                                          Fill="{DynamicResource InfoBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{DynamicResource EmployeeBankSection}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ForegroundBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <CheckBox Content="{DynamicResource EmployeeBankToggle}"
+                                      IsChecked="{Binding HasBankAccountData}"
+                                      Margin="0,0,0,12"/>
+
+                            <StackPanel Visibility="{Binding ShowBankAccountSection, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{DynamicResource EmployeeBankAccountNumber}" Style="{StaticResource AddFieldLabel}"/>
+                                <TextBox Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource AddFieldInput}"/>
+
+                                <TextBlock Text="{DynamicResource EmployeeBankName}" Style="{StaticResource AddFieldLabel}"/>
+                                <TextBox Text="{Binding BankName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource AddFieldInput}" Margin="0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </Grid>
-            </Border>
-        </StackPanel>
+            </StackPanel>
         </ScrollViewer>
     </Border>
 </UserControl>
