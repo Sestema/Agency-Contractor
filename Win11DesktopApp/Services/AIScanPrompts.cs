@@ -182,9 +182,10 @@ STEP 5: Find nationality/country:
 - Citizenship = nationality of the holder
 - IssuingCountry = country that issued the ID card
 
-STEP 6: Find residence status / permit name if clearly visible:
-- Look for fields like 'DRUH POVOLENÍ', 'DRUH POBYTU', 'Karta trvalého pobytu'
-- Return the exact Czech status if clearly visible, for example 'Trvalý pobyt' or 'Přechodný pobyt'
+STEP 6: Find residence status / permit name only on a foreigner's residence card:
+- Use this only when the card prints 'DRUH POVOLENÍ', 'DRUH POBYTU' or 'Karta trvalého pobytu'
+- Return the exact Czech status, for example 'Trvalý pobyt' or 'Přechodný pobyt'
+- The heading 'TRVALÝ POBYT / PERMANENT STAY' above a home address is not this field
 
 STEP 7: Find issuing authority / document issuer (PassportAuthority). Look for labels like 'Authority', 'Issued by', 'Orgán vydávající doklad', 'Vydal', 'Eliberată de', 'Орган видачі', or a dedicated issuer code. If the card shows only a code, return the code exactly. Do NOT use document number as authority.
 
@@ -193,6 +194,46 @@ STEP 8: Find RodneCislo / personal identification number:
 - Czech residence card: use the number in ""POZNÁMKY"" if it has the birth-number format YYMMDD/XXXX (example 710508/1280).
 - Polish citizen Dowód osobisty: PESEL is on the BACK, not on this front side. Leave RodneCislo empty here.
 - If unsure, leave RodneCislo empty.
+
+CZECH CITIZEN ID CARD FRONT (header OBČANSKÝ PRŮKAZ / IDENTITY CARD and ČESKÁ REPUBLIKA). This is not a residence permit:
+- CardKind = ceska_obcanka
+- LastName = PŘÍJMENÍ / SURNAME. Keep Czech diacritics from the printed line, example KAFKOVÁ. Do not take the name from the MRZ, because the MRZ strips diacritics.
+- FirstName = JMÉNO / GIVEN NAMES, example ANDREA.
+- BirthDate = DATUM NAROZENÍ / DATE OF BIRTH in DD.MM.YYYY.
+- Sex = POHLAVÍ / SEX. Return M or F.
+- PassportNumber = ČÍSLO DOKLADU / DOCUMENT NO. only, example 218096814. Never use the separate 6-digit CAN printed without that label, example 460631. The MRZ starts with IDCZE and then this same number; do not append its check digit.
+- PassportCity = the city in MÍSTO NAROZENÍ. A following line that starts with okr. is the district, so ignore it. Example: MLADÁ BOLESLAV, ignore okr. MLADÁ BOLESLAV.
+- PassportCountry = Czech Republic when that birth place is in Czechia.
+- Citizenship = STÁTNÍ OBČANSTVÍ / NATIONALITY. ČESKÁ REPUBLIKA means Czech Republic.
+- IssuingCountry = Czech Republic.
+- PassportExpiry = PLATNOST DO / DATE OF EXPIRY in DD.MM.YYYY. DATUM VYDÁNÍ / DATE OF ISSUE is not PassportExpiry.
+- WorkPermitName = exactly Ceska obcanka.
+- Leave RodneCislo and PassportAuthority empty. They are printed on the back.
+
+CZECH RESIDENCE CARD (a foreigner's card with DRUH POBYTU, DRUH POVOLENÍ, or the header Karta trvalého pobytu, often issued by MV ČR). This is a different card from Občanský průkaz:
+- CardKind = czech_residence. Never use ceska_obcanka for this card.
+- Read DRUH POVOLENÍ or DRUH POBYTU exactly. PŘECHODNÝ POBYT, including PŘECHODNÝ POBYT - RP, means WorkPermitName is exactly Přechodný pobyt. TRVALÝ POBYT, or the header Karta trvalého pobytu, means exactly Trvalý pobyt.
+- The header Pobytová karta is only the card title. It is not Trvalý pobyt. A Pobytová karta with PŘECHODNÝ POBYT stays Přechodný pobyt.
+- A holder whose nationality is UKR or any country other than ČESKÁ REPUBLIKA is not a Czech citizen. Do not return Ceska obcanka.
+- MRZ that starts with IRCZE is this residence card. MRZ that starts with IDCZE is Občanský průkaz.
+- PassportNumber = the 9-digit card number printed on this front, example 001237510. It is also printed large at the top and on the left. Never use the separate 6-digit CAN, example 550044.
+- RodneCislo = the birth number in POZNÁMKY when it looks like YYMMDD/XXX or YYMMDD/XXXX. Read every digit from POZNÁMKY, example 710508/1280.
+- Citizenship stays the holder's own nationality. UKR means Ukraine. Do not replace it with Czech Republic unless the card prints Czech nationality.
+
+SLOVAK CITIZEN ID CARD FRONT (header OBČIANSKY PREUKAZ / ID-CARD and SLOVENSKÁ REPUBLIKA). This is not a residence permit:
+- CardKind = slovenska_obcanka
+- LastName = PRIEZVISKO / SURNAME. Keep Slovak letters from the printed line, example Horváth. Do not take the name from the MRZ.
+- FirstName = MENO / GIVEN NAMES, example Ladislav.
+- BirthDate = DÁTUM NARODENIA / DATE OF BIRTH in DD.MM.YYYY.
+- Sex = POHLAVIE / SEX. Return M or F.
+- RodneCislo = RODNÉ ČÍSLO / PERSONAL NO. on this front side, example 881102/8963.
+- PassportNumber = ČÍSLO / NO. only, example MR613331. The MRZ starts with IDSVK and then this number; do not append its check digit.
+- PassportAuthority = VYDAL / ISSUED BY, example Trebišov.
+- Citizenship = ŠTÁTNE OBČIANSTVO / NATIONALITY. SVK means Slovakia.
+- IssuingCountry = Slovakia.
+- PassportExpiry = DÁTUM PLATNOSTI / DATE OF EXPIRY in DD.MM.YYYY. DÁTUM VYDANIA / DATE OF ISSUE is not PassportExpiry.
+- WorkPermitName = exactly Slovenska obcanka.
+- Leave PassportCity empty. Place of birth is on the back.
 
 POLISH CITIZEN ID CARD FRONT (Dowód osobisty, header Rzeczpospolita Polska / Republic of Poland). Use these labels and ignore the Romanian and Czech examples for fields they do not show:
 - LastName = NAZWISKO / SURNAME. Keep Polish letters, example BARTKÓW.
@@ -207,12 +248,14 @@ POLISH CITIZEN ID CARD FRONT (Dowód osobisty, header Rzeczpospolita Polska / Re
 - Leave PassportCity, PassportCountry, PassportAuthority and RodneCislo empty on this front side. PESEL, place of birth and the issuing authority are printed on the back.
 
 Return ONLY this JSON (PassportExpiry = card expiry date):
-{""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
+{""CardKind"":"""",""FirstName"":"""",""LastName"":"""",""BirthDate"":"""",""RodneCislo"":"""",""Sex"":"""",""PassportNumber"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""Citizenship"":"""",""IssuingCountry"":"""",""PassportExpiry"":"""",""WorkPermitName"":""""}",
 
                 "passport2" => @"Read this passport second page or EU residence permit photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 If this is the SECOND SIDE of a Czech residence ID card, extract these fields:
 - WorkPermitName: look for the field 'DRUH POBYTU NA ÚZEMÍ' or 'DRUH POVOLENÍ'. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. Return the EXACT Czech text from the document if clearly visible.
+- If this is instead the back of Občanský průkaz, where TRVALÝ POBYT sits above a home address together with RODNÉ ČÍSLO and VYDAL and there is no DRUH POBYTU line, set WorkPermitName to exactly Ceska obcanka.
+- If this is the back of a Slovak Občiansky preukaz, where TRVALÝ POBYT / ADDRESS sits above the home address and MIESTO NARODENIA is printed, set WorkPermitName to exactly Slovenska obcanka.
 - VisaNumber: document/card number shown on the card.
 - VisaStartDate: issue / valid-from date in DD.MM.YYYY format if clearly visible (look for 'PLATNOST OD', 'DATUM VYDÁNÍ')
 - VisaExpiry: expiry date in DD.MM.YYYY format (look for 'PLATNOST DO').
@@ -230,7 +273,7 @@ Return ONLY valid JSON, no other text:
 This prompt is ONLY for the second side of a 2-sided EU ID card. Give priority to data printed on THIS side, even if similar data may exist on the front side.
 
 Extract these fields:
-- WorkPermitName: look for fields like 'DRUH POBYTU NA ÚZEMÍ', 'DRUH POVOLENÍ', residence status or card status. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. Return the exact Czech text if clearly visible.
+- WorkPermitName: only from 'DRUH POBYTU NA ÚZEMÍ' or 'DRUH POVOLENÍ'. Common values: 'Přechodný pobyt', 'Trvalý pobyt', 'Osvědčení o registraci občana EU'. The heading 'TRVALÝ POBYT / PERMANENT STAY' above a home address is not this field.
 - VisaNumber: document/card number if clearly visible on this side.
 - VisaStartDate: issue / valid-from date in DD.MM.YYYY format if clearly visible.
 - VisaExpiry: expiry / validity-until date in DD.MM.YYYY format if clearly visible on this side.
@@ -239,6 +282,37 @@ Extract these fields:
 - PassportCountry: birth country from the same birth-place line. If the country is shown as a code like 'UKR', normalize it to a Latin country name like 'Ukraine'.
 
 If a field is not clearly visible on THIS side, leave it empty. NEVER invent values.
+
+CZECH CITIZEN ID CARD BACK (the reverse of Občanský průkaz). The heading TRVALÝ POBYT / PERMANENT STAY introduces the holder's permanent address. RODNÉ ČÍSLO and VYDAL are on this side, and there is no DRUH POBYTU line:
+- CardKind = ceska_obcanka
+- WorkPermitName = exactly Ceska obcanka. Do not return Trvalý pobyt.
+- RodneCislo = RODNÉ ČÍSLO / PERSONAL NO. in YYMMDD/XXX or YYMMDD/XXXX, example 955408/1009. Do not use the MRZ.
+- PassportAuthority = VYDAL / AUTHORITY, example Magistrát města MLADÁ BOLESLAV. Keep diacritics.
+- AddressCity = the municipality on the first address line, the text before the comma, example Dolní Bousov.
+- AddressStreet = the place after the comma, without the house number, example Horní Bousov.
+- AddressNumber = the house number after č.p. or č. p., example 11.
+- Ignore a line that starts with okr. It is the district, not the town.
+- Leave PassportCity and PassportCountry empty. Place of birth is on the front.
+- PassportNumber and VisaNumber = the 9 digits after IDCZE in the MRZ, without the check digit. IDCZE2180968141 means 218096814. Do not use a 6-digit CAN. Do not take the name from the MRZ.
+
+SLOVAK CITIZEN ID CARD BACK (the reverse of Občiansky preukaz). The heading TRVALÝ POBYT / ADDRESS introduces the home address. MIESTO NARODENIA is on this side. There is no DRUH POBYTU line:
+- CardKind = slovenska_obcanka
+- WorkPermitName = exactly Slovenska obcanka. Do not return Trvalý pobyt.
+- PassportCity = MIESTO NARODENIA / PLACE OF BIRTH, the town only. A single trailing letter is not part of the town: Košice V means Košice.
+- PassportCountry = Slovakia.
+- AddressCity = the municipality above the street, example Čierna.
+- AddressStreet = the street name without the house number, example Čopská ulica.
+- AddressNumber = the house number, example 51/35.
+- PassportNumber and VisaNumber = the number after IDSVK in the MRZ, without the check digit. IDSVKMR613331<4 means MR613331.
+- Do not return RODNÉ PRIEZVISKO / SURNAME AT BIRTH as LastName. Do not take the name from the MRZ.
+
+CZECH RESIDENCE CARD BACK (the reverse of Karta trvalého pobytu or Karta přechodného pobytu). The MRZ starts with IRCZE, not IDCZE. The authority is MV ČR, for example MV ČR PLZEŇ. This is not Občanský průkaz, even though a home address is printed here:
+- CardKind = czech_residence. Never return ceska_obcanka.
+- Leave WorkPermitName empty when this side does not print DRUH POVOLENÍ or DRUH POBYTU. MV ČR and an MRZ that starts with IRCZE mean a residence card, not which status it is. Do not guess Trvalý pobyt. If this side does print the status, PŘECHODNÝ POBYT means exactly Přechodný pobyt and TRVALÝ POBYT means exactly Trvalý pobyt.
+- PassportAuthority = the issuing office on DATUM VYDÁNÍ - MÍSTO VYDÁNÍ, example MV ČR PLZEŇ.
+- PassportCity = MÍSTO NAROZENÍ, the town only. DIBROVA UKR means Dibrova.
+- PassportCountry = the country code on that birth line. UKR means Ukraine.
+- Leave AddressStreet, AddressNumber and AddressCity empty.
 
 POLISH CITIZEN ID CARD BACK (Dowód osobisty). Use these labels:
 - RodneCislo = NUMER PESEL / PERSONAL NUMBER, exactly 11 digits, example 81081509314. Do not use the document series, the CAN number, or the barcode.
@@ -252,12 +326,12 @@ POLISH CITIZEN ID CARD BACK (Dowód osobisty). Use these labels:
 - Do not return NAZWISKO RODOWE / FAMILY NAME or IMIONA RODZICÓW / PARENTS' GIVEN NAMES.
 
 Return ONLY valid JSON, no other text:
-{""WorkPermitName"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""RodneCislo"":""""}",
+{""CardKind"":"""",""WorkPermitName"":"""",""PassportNumber"":"""",""VisaNumber"":"""",""VisaStartDate"":"""",""VisaExpiry"":"""",""PassportAuthority"":"""",""PassportCity"":"""",""PassportCountry"":"""",""RodneCislo"":"""",""AddressStreet"":"""",""AddressNumber"":"""",""AddressCity"":""""}",
 
                 "visa2" => @"Read this second-side visa / residence ID card / residence permit photo. CRITICAL: Latin letters only, NEVER Cyrillic. Czech labels and authorities keep diacritics (á č ď é ě í ň ó ř š ť ú ů ý ž). Keep ČR, číslo, Přechodný, pojištěnce as printed. Never strip hooks: MV ČR OAMP must stay MV ČR OAMP, not MV CR OAMP.
 
 If this is the BACK SIDE of a residence or ID-style document, extract these fields when visible:
-- WorkPermitName: residence status / permit label if clearly visible, such as 'Přechodný pobyt', 'Trvalý pobyt', 'Dočasná ochrana', 'Strpění'. Return the exact Czech status when visible.
+- WorkPermitName: residence status / permit label if clearly visible, such as 'Přechodný pobyt', 'Trvalý pobyt', 'Dočasná ochrana', 'Strpění'. Return the exact Czech status when visible. If the page is the back of Občanský průkaz, where TRVALÝ POBYT sits above a home address together with RODNÉ ČÍSLO and VYDAL and there is no DRUH POBYTU line, return exactly Ceska obcanka instead. If the page is the back of a Slovak Občiansky preukaz, return exactly Slovenska obcanka instead.
 - VisaNumber: document/card/permit number shown on the card or back side.
 - VisaStartDate: issue / valid-from date in DD.MM.YYYY format if clearly visible.
 - VisaExpiry: expiry / validity-until date in DD.MM.YYYY format.
@@ -528,11 +602,74 @@ Use confidence 0.0-1.0. If a value is unclear, leave it empty or use confidence 
             if (string.IsNullOrWhiteSpace(normalizedValue))
                 return false;
 
+            if ((IsCzechCitizenIdDocument(parsed) || IsCzechResidenceCardDocument(parsed))
+                && Regex.IsMatch(normalizedValue, @"^\d{9}$"))
+                return false;
+
             if (parsed.TryGetValue("VisaNumber", out var visaNumber)
                 && string.Equals(normalizedValue, NormalizeDocumentNumber(visaNumber), StringComparison.OrdinalIgnoreCase))
                 return true;
 
             return Regex.IsMatch(normalizedValue, @"^\d{9}$");
+        }
+
+        private static bool IsCzechCitizenIdDocument(IReadOnlyDictionary<string, string> parsed)
+        {
+            if (parsed.TryGetValue("CardKind", out var kind)
+                && string.Equals(kind.Trim(), "ceska_obcanka", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (parsed.TryGetValue("WorkPermitName", out var name)
+                && name.Contains("ceska obcanka", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return LooksCzechValue(parsed, "Citizenship") && LooksCzechValue(parsed, "IssuingCountry");
+        }
+
+        private static bool IsCzechResidenceCardDocument(IReadOnlyDictionary<string, string> parsed)
+        {
+            if (parsed.TryGetValue("CardKind", out var kind)
+                && string.Equals(kind.Trim(), "czech_residence", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var documentKind = GetDocumentKind(parsed);
+            if (documentKind.Contains("visa", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var residenceName = parsed.TryGetValue("WorkPermitName", out var name)
+                && (name.Contains("trval", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("prechodn", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("přechodn", StringComparison.OrdinalIgnoreCase));
+            var interiorAuthority = (parsed.TryGetValue("PassportAuthority", out var authority) && LooksLikeCzechInteriorAuthority(authority))
+                || (parsed.TryGetValue("VisaAuthority", out var visaAuthority) && LooksLikeCzechInteriorAuthority(visaAuthority));
+            if (residenceName && interiorAuthority)
+                return true;
+
+            var idCardKind = documentKind.Contains("id_card", StringComparison.OrdinalIgnoreCase)
+                || documentKind.Contains("residence", StringComparison.OrdinalIgnoreCase);
+            return idCardKind && (residenceName || interiorAuthority);
+        }
+
+        private static bool LooksLikeCzechInteriorAuthority(string? raw)
+        {
+            var value = raw ?? string.Empty;
+            return value.Contains("MV ČR", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("MV CR", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("OAMP", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("MINISTERSTVO VNITRA", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LooksCzechValue(IReadOnlyDictionary<string, string> parsed, string key)
+        {
+            if (!parsed.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+                return false;
+
+            var value = raw.Trim();
+            return value.Contains("CZECH", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("CESKA", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("ČESK", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "CZE", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "CZ", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void NormalizeDateFields(Dictionary<string, string> parsed)

@@ -120,6 +120,53 @@ namespace Win11DesktopApp.Tests
         }
 
         [Fact]
+        public void ValidateAndCleanParsedFields_ShouldKeepNineDigitCzechCitizenIdNumber()
+        {
+            var parsed = new Dictionary<string, string>
+            {
+                ["CardKind"] = "ceska_obcanka",
+                ["WorkPermitName"] = "Ceska obcanka",
+                ["PassportNumber"] = "218096814"
+            };
+
+            var cleaned = AIScanPrompts.ValidateAndCleanParsedFields("id_card", parsed);
+
+            Assert.Equal("218096814", cleaned["PassportNumber"]);
+        }
+
+        [Fact]
+        public void ValidateAndCleanParsedFields_ShouldKeepNineDigitCzechResidenceCardNumber()
+        {
+            var parsed = new Dictionary<string, string>
+            {
+                ["CardKind"] = "czech_residence",
+                ["WorkPermitName"] = "Trvalý pobyt",
+                ["PassportNumber"] = "001237510",
+                ["VisaNumber"] = "001237510",
+                ["Citizenship"] = "Ukraine",
+                ["IssuingCountry"] = "Czech Republic",
+                ["PassportAuthority"] = "MV ČR PLZEŇ"
+            };
+
+            var cleaned = AIScanPrompts.ValidateAndCleanParsedFields("id_card", parsed);
+
+            Assert.Equal("001237510", cleaned["PassportNumber"]);
+        }
+
+        [Fact]
+        public void ValidateAndCleanParsedFields_ShouldRemoveNineDigitNumberFromPassportScan()
+        {
+            var parsed = new Dictionary<string, string>
+            {
+                ["PassportNumber"] = "218096814"
+            };
+
+            var cleaned = AIScanPrompts.ValidateAndCleanParsedFields("passport", parsed);
+
+            Assert.False(cleaned.ContainsKey("PassportNumber"));
+        }
+
+        [Fact]
         public void NormalizeScanGender_ShouldTreatPolishFemaleMarkAsFemale()
         {
             Assert.Equal("female", AIScanPrompts.NormalizeScanGender("K"));

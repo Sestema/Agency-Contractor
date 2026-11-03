@@ -1688,6 +1688,18 @@ namespace Win11DesktopApp.ViewModels
                 s.IndexOf("prechodn", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "Přechodný pobyt";
 
+            if (s.IndexOf("ceska obcanka", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("česká občanka", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("občanský průkaz", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("obcansky prukaz", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "Ceska obcanka";
+
+            if (s.IndexOf("slovenska obcanka", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("slovenská občanka", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("občiansky preukaz", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                s.IndexOf("obciansky preukaz", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "Slovenska obcanka";
+
             if (s.IndexOf("trval", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "Trvalý pobyt";
 
@@ -1738,7 +1750,8 @@ namespace Win11DesktopApp.ViewModels
 
         private static bool ShouldAutofillPolishIdCardName(Dictionary<string, string> data)
         {
-            if (data.TryGetValue("IssuingCountry", out var issuingCountry) && LooksCzechDocumentValue(issuingCountry))
+            if (data.TryGetValue("IssuingCountry", out var issuingCountry)
+                && (LooksCzechDocumentValue(issuingCountry) || LooksSlovakDocumentValue(issuingCountry)))
                 return false;
 
             return (data.TryGetValue("IssuingCountry", out issuingCountry) && LooksPolishDocumentValue(issuingCountry))
@@ -1756,6 +1769,341 @@ namespace Win11DesktopApp.ViewModels
                 || value.Contains("ČESK", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "CZE", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "CZ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LooksSlovakDocumentValue(string? raw)
+        {
+            var value = (raw ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrEmpty(value))
+                return false;
+
+            var compact = Regex.Replace(value, @"[^A-Z0-9]+", string.Empty);
+            return compact is "SVK" or "SK"
+                || compact.Contains("SLOVAK", StringComparison.Ordinal)
+                || compact.Contains("SLOVENSK", StringComparison.Ordinal);
+        }
+
+        private static bool IsSlovakObcankaKind(IReadOnlyDictionary<string, string> data)
+        {
+            return data.TryGetValue("CardKind", out var kind)
+                && string.Equals(kind.Trim(), "slovenska_obcanka", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool ShouldAutofillSlovakCitizenIdName(IReadOnlyDictionary<string, string> data)
+        {
+            if (IsCzechResidenceKind(data) || IsCeskaObcankaKind(data))
+                return false;
+            if (IsSlovakObcankaKind(data))
+                return true;
+
+            var slovakCitizen = data.TryGetValue("Citizenship", out var citizenship) && LooksSlovakDocumentValue(citizenship);
+            var slovakIssuer = data.TryGetValue("IssuingCountry", out var issuingCountry) && LooksSlovakDocumentValue(issuingCountry);
+            return slovakCitizen && slovakIssuer;
+        }
+
+        private static bool IsCeskaObcankaKind(IReadOnlyDictionary<string, string> data)
+        {
+            return data.TryGetValue("CardKind", out var kind)
+                && string.Equals(kind.Trim(), "ceska_obcanka", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsCzechResidenceKind(IReadOnlyDictionary<string, string> data)
+        {
+            if (data.TryGetValue("CardKind", out var kind)
+                && string.Equals(kind.Trim(), "czech_residence", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return (data.TryGetValue("PassportAuthority", out var authority) && LooksLikeCzechInteriorAuthority(authority))
+                || (data.TryGetValue("VisaAuthority", out var visaAuthority) && LooksLikeCzechInteriorAuthority(visaAuthority));
+        }
+
+        private static bool LooksLikeCzechInteriorAuthority(string? raw)
+        {
+            var value = raw ?? string.Empty;
+            return value.Contains("MV ČR", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("MV CR", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("OAMP", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("MINISTERSTVO VNITRA", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool LooksLikeMunicipalAuthority(string? raw)
+        {
+            var value = raw ?? string.Empty;
+            return value.Contains("magistr", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("obecní", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("obecni", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("městsk", StringComparison.OrdinalIgnoreCase)
+                || value.Contains("mestsk", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool ShouldAutofillCzechCitizenIdName(IReadOnlyDictionary<string, string> data)
+        {
+            if (IsCzechResidenceKind(data) || IsSlovakObcankaKind(data) || HasHardCzechResidenceMarker(data))
+                return false;
+            if (data.TryGetValue("Citizenship", out var slovakCitizenship) && LooksSlovakDocumentValue(slovakCitizenship)
+                && data.TryGetValue("IssuingCountry", out var slovakIssuer) && LooksSlovakDocumentValue(slovakIssuer))
+                return false;
+            if (IsCeskaObcankaKind(data))
+                return true;
+
+            var czechCitizen = data.TryGetValue("Citizenship", out var citizenship) && LooksCzechDocumentValue(citizenship);
+            var czechIssuer = data.TryGetValue("IssuingCountry", out var issuingCountry) && LooksCzechDocumentValue(issuingCountry);
+            if (czechCitizen && czechIssuer)
+                return true;
+
+            return data.TryGetValue("PassportAuthority", out var authority)
+                && LooksLikeMunicipalAuthority(authority)
+                && !LooksLikeCzechInteriorAuthority(authority);
+        }
+
+        private void ApplyCzechCitizenCardName(IReadOnlyDictionary<string, string> data)
+        {
+            if (!ShouldAutofillCzechCitizenIdName(data))
+                return;
+
+            Data.WorkPermitName = "Ceska obcanka";
+        }
+
+        private bool ShouldUseCzechResidenceName(IReadOnlyDictionary<string, string> data)
+        {
+            if (IsSlovakObcankaKind(data))
+                return false;
+            if (HolderIsCzechCitizen(data) && !HasHardCzechResidenceMarker(data))
+                return false;
+            if (HasHardCzechResidenceMarker(data))
+                return true;
+
+            return HolderIsForeigner(data) && CzechIssuedDocument(data);
+        }
+
+        private static bool HasHardCzechResidenceMarker(IReadOnlyDictionary<string, string> data)
+        {
+            if (IsCzechResidenceKind(data))
+                return true;
+            if (ParsedTextContains(data, "IRCZE"))
+                return true;
+
+            var permitText = data.TryGetValue("WorkPermitName", out var name) ? name : string.Empty;
+            return permitText.Contains("druh pobytu", StringComparison.OrdinalIgnoreCase)
+                || permitText.Contains("druh povolen", StringComparison.OrdinalIgnoreCase)
+                || permitText.Contains("karta trval", StringComparison.OrdinalIgnoreCase)
+                || permitText.Contains("karta prechod", StringComparison.OrdinalIgnoreCase)
+                || permitText.Contains("karta přechod", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool HolderIsCzechCitizen(IReadOnlyDictionary<string, string> data)
+        {
+            if (ParsedTextContains(data, "IRCZE") || IsCzechResidenceKind(data))
+                return false;
+            if (data.TryGetValue("Citizenship", out var citizenship) && LooksCzechDocumentValue(citizenship))
+                return true;
+            return LooksCzechDocumentValue(Data.Citizenship);
+        }
+
+        private static bool HolderIsForeigner(IReadOnlyDictionary<string, string> data)
+        {
+            if (!data.TryGetValue("Citizenship", out var citizenship) || string.IsNullOrWhiteSpace(citizenship))
+                return false;
+            return !LooksCzechDocumentValue(citizenship)
+                && !LooksSlovakDocumentValue(citizenship)
+                && !LooksPolishDocumentValue(citizenship)
+                && !LooksRomanianDocumentValue(citizenship);
+        }
+
+        private bool CzechIssuedDocument(IReadOnlyDictionary<string, string> data)
+        {
+            if (IsCzechResidenceKind(data) || ParsedTextContains(data, "IRCZE"))
+                return true;
+            if (data.TryGetValue("IssuingCountry", out var issuingCountry) && LooksCzechDocumentValue(issuingCountry))
+                return true;
+            return LooksCzechDocumentValue(Data.IssuingCountry);
+        }
+
+        private static bool ParsedTextContains(IReadOnlyDictionary<string, string> data, string token)
+        {
+            foreach (var pair in data)
+            {
+                if (pair.Key.StartsWith("__", StringComparison.Ordinal))
+                    continue;
+                if ((pair.Value ?? string.Empty).Contains(token, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private void ApplyCzechResidenceCardName(IReadOnlyDictionary<string, string> data, string? statusFromFront = null)
+        {
+            var frontStatus = CzechResidenceStatus(statusFromFront);
+            if (frontStatus != null)
+            {
+                Data.WorkPermitName = frontStatus;
+                return;
+            }
+
+            if (!ShouldUseCzechResidenceName(data))
+                return;
+
+            var parsedStatus = CzechResidenceStatus(data.TryGetValue("WorkPermitName", out var parsedName) ? parsedName : string.Empty);
+            if (parsedStatus != null)
+                Data.WorkPermitName = parsedStatus;
+        }
+
+        private static string? CzechResidenceStatus(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return null;
+            if (text.Contains("prechod", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("přechod", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("osvědčen", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("osvedcen", StringComparison.OrdinalIgnoreCase))
+                return "Přechodný pobyt";
+            if (text.Contains("trval", StringComparison.OrdinalIgnoreCase))
+                return "Trvalý pobyt";
+            return null;
+        }
+
+        private void ApplyCzechCitizenCardNumber()
+        {
+            if (!string.Equals(Data.WorkPermitName, "Ceska obcanka", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var number = CzechCitizenDocumentNumber(Data.PassportNumber);
+            if (string.IsNullOrEmpty(number))
+                number = CzechCitizenDocumentNumber(Data.VisaNumber);
+            if (string.IsNullOrEmpty(number))
+            {
+                if (Data.PassportNumber.Length == 6 && Data.PassportNumber.All(char.IsDigit))
+                    Data.PassportNumber = string.Empty;
+                return;
+            }
+
+            Data.PassportNumber = number;
+            Data.VisaNumber = number;
+        }
+
+        private void ApplySlovakCitizenCardName(IReadOnlyDictionary<string, string> data)
+        {
+            if (!ShouldAutofillSlovakCitizenIdName(data))
+                return;
+
+            Data.WorkPermitName = "Slovenska obcanka";
+        }
+
+        private void ApplySlovakCitizenCardNumber()
+        {
+            if (!string.Equals(Data.WorkPermitName, "Slovenska obcanka", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var number = SlovakCitizenDocumentNumber(Data.PassportNumber);
+            if (string.IsNullOrEmpty(number))
+                number = SlovakCitizenDocumentNumber(Data.VisaNumber);
+            if (string.IsNullOrEmpty(number))
+                return;
+
+            Data.PassportNumber = number;
+            Data.VisaNumber = number;
+        }
+
+        private void ApplyCzechResidenceCardNumber(IReadOnlyDictionary<string, string> data)
+        {
+            if (string.Equals(Data.WorkPermitName, "Ceska obcanka", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Data.WorkPermitName, "Slovenska obcanka", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Data.WorkPermitName, "Polska obcanka", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Data.WorkPermitName, "Rumunska obcanka", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var residenceName = (data.TryGetValue("WorkPermitName", out var parsedName) ? parsedName : Data.WorkPermitName) ?? string.Empty;
+            var namedResidence = residenceName.Contains("trval", StringComparison.OrdinalIgnoreCase)
+                || residenceName.Contains("prechodn", StringComparison.OrdinalIgnoreCase)
+                || residenceName.Contains("přechodn", StringComparison.OrdinalIgnoreCase);
+            if (!IsCzechResidenceKind(data) && !namedResidence)
+                return;
+
+            var number = CzechResidenceDocumentNumber(Data.PassportNumber);
+            if (string.IsNullOrEmpty(number))
+                number = CzechResidenceDocumentNumber(Data.VisaNumber);
+            if (string.IsNullOrEmpty(number) && data.TryGetValue("PassportNumber", out var parsedPassport))
+                number = CzechResidenceDocumentNumber(parsedPassport);
+            if (string.IsNullOrEmpty(number) && data.TryGetValue("VisaNumber", out var parsedVisa))
+                number = CzechResidenceDocumentNumber(parsedVisa);
+            if (string.IsNullOrEmpty(number))
+            {
+                if (Data.PassportNumber.Length == 6 && Data.PassportNumber.All(char.IsDigit))
+                    Data.PassportNumber = string.Empty;
+                return;
+            }
+
+            Data.PassportNumber = number;
+            Data.VisaNumber = number;
+        }
+
+        private static string CzechResidenceDocumentNumber(string raw)
+        {
+            var compact = Regex.Replace((raw ?? string.Empty).Trim().ToUpperInvariant(), @"[^A-Z0-9]+", string.Empty);
+            if (compact.Length == 9 && compact.All(char.IsDigit))
+                return compact;
+            if (compact.Length == 10 && compact.All(char.IsDigit))
+                return compact[..9];
+            return string.Empty;
+        }
+
+        private static string SlovakCitizenDocumentNumber(string raw)
+        {
+            var compact = Regex.Replace((raw ?? string.Empty).Trim().ToUpperInvariant(), @"[^A-Z0-9]+", string.Empty);
+            var marker = compact.IndexOf("IDSVK", StringComparison.Ordinal);
+            var tail = marker >= 0 ? compact[(marker + 5)..] : compact;
+            var match = Regex.Match(tail, @"^[A-Z]{2}\d{6}");
+            return match.Success ? match.Value : string.Empty;
+        }
+
+        private string NormalizeBirthCity(string raw, bool slovakCard)
+        {
+            var city = NormalizeCity(raw);
+            if (!slovakCard && !string.Equals(Data.WorkPermitName, "Slovenska obcanka", StringComparison.OrdinalIgnoreCase))
+                return city;
+
+            var trimmed = Regex.Replace(city, @"\s+\p{L}$", string.Empty).Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? city : trimmed;
+        }
+
+        private static string CzechCitizenDocumentNumber(string raw)
+        {
+            var compact = Regex.Replace((raw ?? string.Empty).Trim().ToUpperInvariant(), @"[^A-Z0-9]+", string.Empty);
+            var marker = compact.IndexOf("IDCZE", StringComparison.Ordinal);
+            if (marker >= 0 && compact.Length >= marker + 14)
+            {
+                var fromMrz = compact.Substring(marker + 5, 9);
+                if (fromMrz.All(char.IsDigit))
+                    return fromMrz;
+            }
+
+            if (compact.Length == 9 && compact.All(char.IsDigit))
+                return compact;
+
+            if (compact.Length == 10 && compact.All(char.IsDigit))
+                return compact[..9];
+
+            return string.Empty;
+        }
+
+        private void ApplyCitizenHomeAddress(IReadOnlyDictionary<string, string> data)
+        {
+            if (!string.Equals(Data.WorkPermitName, "Ceska obcanka", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(Data.WorkPermitName, "Slovenska obcanka", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var address = Data.AddressLocal;
+            if (!string.IsNullOrWhiteSpace(address.Street)
+                || !string.IsNullOrWhiteSpace(address.Number)
+                || !string.IsNullOrWhiteSpace(address.City))
+                return;
+
+            if (data.TryGetValue("AddressStreet", out var street) && !string.IsNullOrWhiteSpace(street))
+                address.Street = street.Trim();
+            if (data.TryGetValue("AddressNumber", out var number) && !string.IsNullOrWhiteSpace(number))
+                address.Number = number.Trim();
+            if (data.TryGetValue("AddressCity", out var city) && !string.IsNullOrWhiteSpace(city))
+                address.City = city.Trim();
         }
 
         private bool ShouldAutofillRomanianIdCardName(Dictionary<string, string> data, int? sourceStepIndex)
@@ -1822,6 +2170,11 @@ namespace Win11DesktopApp.ViewModels
                         Set("VisaStartDate", v => Data.VisaStartDate = v);
                         Set("PassportExpiry", v => Data.VisaExpiry = v);
                         Set("VisaExpiry", v => Data.VisaExpiry = v);
+                        Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
+                        ApplyCzechCitizenCardName(data);
+                        ApplySlovakCitizenCardName(data);
+                        ApplyCzechResidenceCardName(data);
+                        ApplyCzechResidenceCardNumber(data);
                     }
                     else
                     {
@@ -1832,7 +2185,7 @@ namespace Win11DesktopApp.ViewModels
                         Set("Sex", v => Data.Gender = NormalizeGender(v));
                         Set("PassportNumber", v => Data.PassportNumber = v.ToUpper());
                         Set("PassportAuthority", v => Data.PassportAuthority = v);
-                        Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
+                        Set("PassportCity", v => Data.PassportCity = NormalizeBirthCity(v, ShouldAutofillSlovakCitizenIdName(data)));
                         Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
                         Set("Citizenship", v => Data.Citizenship = ToTitleCase(v));
                         Set("IssuingCountry", v => Data.IssuingCountry = ToTitleCase(v));
@@ -1844,6 +2197,13 @@ namespace Win11DesktopApp.ViewModels
 
                         if (string.IsNullOrWhiteSpace(Data.WorkPermitName) && ShouldAutofillPolishIdCardName(data))
                             Data.WorkPermitName = "Polska obcanka";
+
+                        ApplyCzechCitizenCardName(data);
+                        ApplySlovakCitizenCardName(data);
+                        ApplyCzechResidenceCardName(data);
+                        ApplyCzechCitizenCardNumber();
+                        ApplySlovakCitizenCardNumber();
+                        ApplyCzechResidenceCardNumber(data);
 
                         if (IsSingleSideIdCardWithInsuranceScenario)
                             Data.VisaExpiry = string.Empty;
@@ -1898,8 +2258,13 @@ namespace Win11DesktopApp.ViewModels
                     break;
 
                 case "id_card_back":
+                    var residenceNameFromFront = Data.WorkPermitName;
+                    var keepCeskaObcanka = string.Equals(Data.WorkPermitName, "Ceska obcanka", StringComparison.OrdinalIgnoreCase)
+                        && !IsCzechResidenceKind(data);
+                    var keepSlovenskaObcanka = string.Equals(Data.WorkPermitName, "Slovenska obcanka", StringComparison.OrdinalIgnoreCase)
+                        && !IsCzechResidenceKind(data);
                     Set("WorkPermitName", v => Data.WorkPermitName = NormalizeWorkPermitName(v));
-                    Set("PassportCity", v => Data.PassportCity = NormalizeCity(v));
+                    Set("PassportCity", v => Data.PassportCity = NormalizeBirthCity(v, keepSlovenskaObcanka || ShouldAutofillSlovakCitizenIdName(data)));
                     Set("PassportCountry", v => Data.PassportCountry = ToTitleCase(v));
                     Set("PassportAuthority", v => Data.PassportAuthority = v);
                     Set("RodneCislo", v => { Data.RodneCislo = v; Data.HasRodneCisloData = true; OnPropertyChanged(nameof(RodneCislo)); });
@@ -1907,12 +2272,28 @@ namespace Win11DesktopApp.ViewModels
                     if (string.IsNullOrWhiteSpace(Data.WorkPermitName) && ShouldAutofillPolishIdCardName(data))
                         Data.WorkPermitName = "Polska obcanka";
 
+                    if (keepSlovenskaObcanka || ShouldAutofillSlovakCitizenIdName(data))
+                        Data.WorkPermitName = "Slovenska obcanka";
+                    else if (keepCeskaObcanka || ShouldAutofillCzechCitizenIdName(data))
+                        Data.WorkPermitName = "Ceska obcanka";
+                    ApplyCzechResidenceCardName(data, residenceNameFromFront);
+                    ApplyCitizenHomeAddress(data);
+
                     if (sourceStepIndex == 4 || sourceStepIndex == 8)
                     {
                         Set("VisaNumber", v => Data.VisaNumber = v);
+                        Set("PassportNumber", v =>
+                        {
+                            if (string.IsNullOrWhiteSpace(Data.PassportNumber))
+                                Data.PassportNumber = v.ToUpper();
+                        });
                         Set("VisaStartDate", v => Data.VisaStartDate = v);
                         Set("VisaExpiry", v => Data.VisaExpiry = v);
                     }
+
+                    ApplyCzechCitizenCardNumber();
+                    ApplySlovakCitizenCardNumber();
+                    ApplyCzechResidenceCardNumber(data);
                     break;
 
                 case "visa2":
