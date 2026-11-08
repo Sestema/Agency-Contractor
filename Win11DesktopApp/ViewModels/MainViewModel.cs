@@ -41,9 +41,6 @@ namespace Win11DesktopApp.ViewModels
         public string Id { get; set; } = "";
         public string TitleKey { get; set; } = "";
         public string Title => Res(TitleKey);
-        public string IconKey { get; set; } = "";
-        public string GradientStart { get; set; } = "#667EEA";
-        public string GradientEnd { get; set; } = "#764BA2";
         public ICommand? Command { get; set; }
 
         private int _badgeCount;
@@ -164,11 +161,25 @@ namespace Win11DesktopApp.ViewModels
             set => SetProperty(ref _weatherCity, value);
         }
 
-        private string _currentDateText = string.Empty;
-        public string CurrentDateText
+        private string _currentDayText = string.Empty;
+        public string CurrentDayText
         {
-            get => _currentDateText;
-            set => SetProperty(ref _currentDateText, value);
+            get => _currentDayText;
+            set => SetProperty(ref _currentDayText, value);
+        }
+
+        private string _currentMonthText = string.Empty;
+        public string CurrentMonthText
+        {
+            get => _currentMonthText;
+            set => SetProperty(ref _currentMonthText, value);
+        }
+
+        private string _currentWeekdayText = string.Empty;
+        public string CurrentWeekdayText
+        {
+            get => _currentWeekdayText;
+            set => SetProperty(ref _currentWeekdayText, value);
         }
 
         private string _currentTimeText = string.Empty;
@@ -212,6 +223,16 @@ namespace Win11DesktopApp.ViewModels
             get => _selectedCompanyProblemsCount;
             set => SetProperty(ref _selectedCompanyProblemsCount, value);
         }
+
+        // The firm the current count belongs to. Until it matches SelectedCompany the count
+        // is still being calculated, so the UI must not claim that there are no problems.
+        private EmployerCompany? _problemsCountedForCompany;
+
+        /// <summary>"Loading", "Clear" or "Problems" for the selected company.</summary>
+        public string SelectedCompanyProblemsState =>
+            SelectedCompany == null || !ReferenceEquals(_problemsCountedForCompany, SelectedCompany)
+                ? "Loading"
+                : SelectedCompanyProblemsCount > 0 ? "Problems" : "Clear";
 
         public string SelectedCompanyDisplayName => SelectedCompany?.Name ?? Res("MainNoCompanySelected");
         public string SelectedCompanyIcoText => string.IsNullOrWhiteSpace(SelectedCompany?.ICO)
@@ -963,44 +984,31 @@ namespace Win11DesktopApp.ViewModels
         {
             var allCards = new List<MenuCardItem>
             {
-                new() { Id = "dashboard", TitleKey = "DashboardTitle", IconKey = "IconDashboard",
-                    GradientStart = "#0EA5E9", GradientEnd = "#10B981",
+                new() { Id = "dashboard", TitleKey = "DashboardTitle",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<DashboardViewModel>()) },
-                new() { Id = "employees", TitleKey = "BtnEmployees", IconKey = "IconPeople",
-                    GradientStart = "#6366F1", GradientEnd = "#8B5CF6",
+                new() { Id = "employees", TitleKey = "BtnEmployees",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateEmployees(SelectedCompany))) },
-                new() { Id = "templates", TitleKey = "BtnTemplates", IconKey = "IconTemplates",
-                    GradientStart = "#10B981", GradientEnd = "#059669",
+                new() { Id = "templates", TitleKey = "BtnTemplates",
                     Command = new RelayCommand(_ => { if (SelectedCompany != null) _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateTemplates(SelectedCompany)); }, _ => SelectedCompany != null) },
-                new() { Id = "problems", TitleKey = "BtnProblems", IconKey = "IconProblems",
-                    GradientStart = "#F97316", GradientEnd = "#EA580C",
+                new() { Id = "problems", TitleKey = "BtnProblems",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateProblems())), BadgeCount = _problemsCount },
-                new() { Id = "report", TitleKey = "BtnReport", IconKey = "IconReport",
-                    GradientStart = "#0EA5E9", GradientEnd = "#2563EB",
+                new() { Id = "report", TitleKey = "BtnReport",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<ReportViewModel>()) },
-                new() { Id = "finances", TitleKey = "BtnFinances", IconKey = "IconFinances",
-                    GradientStart = "#8B5CF6", GradientEnd = "#D946EF",
+                new() { Id = "finances", TitleKey = "BtnFinances",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<FinanceTablesViewModel>()) },
-                new() { Id = "invoices", TitleKey = "BtnInvoices", IconKey = "IconInvoices",
-                    GradientStart = "#14B8A6", GradientEnd = "#0D9488",
+                new() { Id = "invoices", TitleKey = "BtnInvoices",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_invoiceViewModelFactory.CreateInvoices())) },
-                new() { Id = "archive", TitleKey = "BtnArchive", IconKey = "IconArchive",
-                    GradientStart = "#3B82F6", GradientEnd = "#6366F1",
+                new() { Id = "archive", TitleKey = "BtnArchive",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateArchive())) },
-                new() { Id = "recentlydeleted", TitleKey = "BtnRecentlyDeleted", IconKey = "IconRecentlyDeleted",
-                    GradientStart = "#F43F5E", GradientEnd = "#E11D48",
+                new() { Id = "recentlydeleted", TitleKey = "BtnRecentlyDeleted",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateRecentlyDeleted())) },
-                new() { Id = "activitylog", TitleKey = "BtnActivityLog", IconKey = "IconActivityLog",
-                    GradientStart = "#F59E0B", GradientEnd = "#EA580C",
+                new() { Id = "activitylog", TitleKey = "BtnActivityLog",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<ActivityLogViewModel>()) },
-                new() { Id = "candidates", TitleKey = "BtnCandidates", IconKey = "IconCandidates",
-                    GradientStart = "#FB923C", GradientEnd = "#EA580C",
+                new() { Id = "candidates", TitleKey = "BtnCandidates",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<CandidatesViewModel>()) },
-                new() { Id = "news", TitleKey = "BtnNews", IconKey = "IconNews",
-                    GradientStart = "#06B6D4", GradientEnd = "#3B82F6",
+                new() { Id = "news", TitleKey = "BtnNews",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo<NewsViewModel>()) },
-                new() { Id = "aichat", TitleKey = "BtnAIAssistant", IconKey = "IconAIAssistant",
-                    GradientStart = "#7C3AED", GradientEnd = "#4F46E5",
+                new() { Id = "aichat", TitleKey = "BtnAIAssistant",
                     Command = new RelayCommand(_ => _navigationService.NavigateTo(_mainModuleViewModelFactory.CreateAiChat())) },
             };
 
@@ -1105,7 +1113,11 @@ namespace Win11DesktopApp.ViewModels
             GreetingText = GetGreeting(now);
             GreetingGlyph = GetGreetingGlyph(now);
             CurrentTimeText = now.ToString("HH:mm", CultureInfo.InvariantCulture);
-            CurrentDateText = now.ToString("dddd, dd.MM.yyyy", GetAppCulture());
+            var culture = GetAppCulture();
+            CurrentDayText = now.ToString("dd", CultureInfo.InvariantCulture);
+            // Genitive form reads correctly after a day number ("08 листопада", not "08 листопад").
+            CurrentMonthText = culture.DateTimeFormat.MonthGenitiveNames[now.Month - 1];
+            CurrentWeekdayText = now.ToString("dddd", culture);
             var utcOffset = TimeZoneInfo.Local.GetUtcOffset(now);
             var offsetSign = utcOffset >= TimeSpan.Zero ? "+" : "-";
             var offsetHours = Math.Abs(utcOffset.Hours);
@@ -1130,6 +1142,7 @@ namespace Win11DesktopApp.ViewModels
                 OnPropertyChanged(nameof(SelectedCompanyDisplayName));
                 OnPropertyChanged(nameof(SelectedCompanyIcoText));
                 OnPropertyChanged(nameof(SelectedCompanyAgencyText));
+                OnPropertyChanged(nameof(SelectedCompanyProblemsState));
 
                 _overviewStatsCts?.Cancel();
                 var company = SelectedCompany;
@@ -1165,6 +1178,8 @@ namespace Win11DesktopApp.ViewModels
                             SelectedCompanyEmployeesCount = employeesCount;
                             SelectedCompanyTemplatesCount = templatesCount;
                             SelectedCompanyProblemsCount = problemsCount;
+                            _problemsCountedForCompany = company;
+                            OnPropertyChanged(nameof(SelectedCompanyProblemsState));
                             OnPropertyChanged(nameof(SelectedCompanySummaryText));
                         }));
                     }

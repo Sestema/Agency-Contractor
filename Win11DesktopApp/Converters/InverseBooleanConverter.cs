@@ -162,6 +162,62 @@ namespace Win11DesktopApp.Converters
             => Binding.DoNothing;
     }
 
+    /// <summary>
+    /// Corner radius of a document button: dark themes define EmployeeDocPillCornerRadius
+    /// to get a full pill, other themes keep the zoomed radius from the parameter.
+    /// </summary>
+    public class DocPillCornerRadiusConverter : IValueConverter
+    {
+        private static readonly ZoomCornerRadiusConverter ZoomRadius = new();
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return Application.Current?.TryFindResource("EmployeeDocPillCornerRadius") is CornerRadius pill
+                ? pill
+                : ZoomRadius.Convert(value, targetType, parameter, culture);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
+
+    /// <summary>
+    /// Zoomed size for the four-button document row. The parameter is "regular;dark":
+    /// dark themes have no visible plate behind the icon, so they can use tighter values.
+    /// </summary>
+    public class DocRowDoubleConverter : IValueConverter
+    {
+        private static readonly ZoomDoubleConverter Zoom = new();
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => Zoom.Convert(value, targetType, DocRowParameter.Select(parameter), culture);
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
+
+    /// <inheritdoc cref="DocRowDoubleConverter"/>
+    public class DocRowThicknessConverter : IValueConverter
+    {
+        private static readonly ZoomThicknessConverter Zoom = new();
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => Zoom.Convert(value, targetType, DocRowParameter.Select(parameter), culture);
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
+
+    internal static class DocRowParameter
+    {
+        public static string Select(object parameter)
+        {
+            var parts = (parameter as string ?? string.Empty).Split(';');
+            bool isDark = Application.Current?.TryFindResource("EmployeeDocPillCornerRadius") is CornerRadius;
+            return parts.Length == 2 && isDark ? parts[1] : parts[0];
+        }
+    }
+
     public class ZoomRectConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

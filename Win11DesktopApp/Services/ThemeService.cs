@@ -62,7 +62,9 @@ namespace Win11DesktopApp.Services
             ApplyBackdrop(Application.Current.MainWindow, themeName);
 
             // Re-apply accent override (theme just reset AccentBrush to theme default).
-            ApplyAccent(_appSettingsService.Settings.AccentColor);
+            ApplyAccent(_appSettingsService.Settings.AccentColor, themeName);
+
+            MenuTilePalette.Apply(themeName);
 
             if (_appSettingsService.Settings.ThemeName != themeName)
             {
@@ -77,7 +79,7 @@ namespace Win11DesktopApp.Services
         /// </summary>
         public void SetAccentColor(string hex)
         {
-            ApplyAccent(hex);
+            ApplyAccent(hex, _appSettingsService.Settings.ThemeName);
 
             if (_appSettingsService.Settings.AccentColor != (hex ?? string.Empty))
             {
@@ -86,7 +88,7 @@ namespace Win11DesktopApp.Services
             }
         }
 
-        public static void ApplyAccent(string? hex)
+        public static void ApplyAccent(string? hex, string? themeName)
         {
             if (string.IsNullOrWhiteSpace(hex))
             {
@@ -100,8 +102,11 @@ namespace Win11DesktopApp.Services
 
             if (!TryParseColor(hex, out var baseColor)) return;
 
-            var dark = Darken(baseColor, 0.22);
-            var light = Lighten(baseColor, 0.85); // very pale tint for AccentLightBrush
+            // AccentDarkBrush is the readable accent for text and AccentLightBrush a subtle tint,
+            // so on dark themes both have to go the opposite way from light themes.
+            bool isDark = Array.Exists(DarkThemes, t => t.Equals(themeName, StringComparison.OrdinalIgnoreCase));
+            var dark = isDark ? Lighten(baseColor, 0.45) : Darken(baseColor, 0.22);
+            var light = isDark ? Darken(baseColor, 0.68) : Lighten(baseColor, 0.85);
 
             var res2 = Application.Current.Resources;
             res2["AccentBrush"] = new SolidColorBrush(baseColor) { Opacity = 1.0 };
@@ -156,7 +161,8 @@ namespace Win11DesktopApp.Services
             bool isSolidCharacterTheme =
                 string.Equals(themeName, "Custom", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(themeName, "VantaDark", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(themeName, "AgencyTeal", StringComparison.OrdinalIgnoreCase);
+                || string.Equals(themeName, "AgencyTeal", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(themeName, "DarkWord", StringComparison.OrdinalIgnoreCase);
 
             if (isGlass)
             {

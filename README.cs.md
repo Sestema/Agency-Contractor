@@ -4,7 +4,7 @@
 
 **Systém pro správu zaměstnanců, dokumentů, mezd a evidence pro personální agentury**
 
-**Poslední stabilní verze:** `0.2.14`  
+**Poslední stabilní verze:** `0.2.15`  
 **PostgreSQL multi-PC:** dostupné ve stabilním kanálu  
 **Stáhnout:** [GitHub Releases](https://github.com/Sestema/Agency-Contractor/releases/latest)
 
@@ -193,7 +193,7 @@ Aplikace podporuje automatické aktualizace přes GitHub Releases a Velopack:
 ## Systémové požadavky
 
 - **OS:** Windows 10 / 11 (x64)
-- **Runtime:** .NET 8.0 Desktop Runtime (součástí Setup.exe)
+- **Runtime:** .NET 10 Desktop Runtime (součástí Setup.exe)
 - **Místo na disku:** ~200 MB
 - **Operační paměť:** 4 GB (doporučeno 8 GB)
 - **Pro multi-PC:** PostgreSQL a sdílená kořenová složka dokumentů
@@ -217,7 +217,7 @@ Aplikace podporuje automatické aktualizace přes GitHub Releases a Velopack:
 
 ## Technologie
 
-- **WPF** (.NET 8.0) — rozhraní
+- **WPF** (.NET 10) — rozhraní
 - **MVVM** — architektura
 - **SQLite** — lokální režim pro jeden počítač
 - **PostgreSQL** — multi-PC režim

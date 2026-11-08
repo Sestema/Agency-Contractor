@@ -158,19 +158,25 @@ export function App() {
             scheduleHighlights();
           }}
         >
-          <EditorChrome editor={editor} />
+          <EditorChrome editor={editor} locale={init.locale} />
         </DocxEditor.Root>
       </LocaleProvider>
     </LoadErrorBoundary>
   );
 }
 
-function EditorChrome({ editor }: { editor: Editor | null }) {
+function EditorChrome({ editor, locale }: { editor: Editor | null; locale: string }) {
   const t = useChromeTranslate();
   return (
     <div className="docx-editor editor-shell">
       <DocxEditor.Menu t={t} reportIssue={false}>
-        <DocxEditor.Menu.File hidden />
+        <DocxEditor.Menu.File>
+          <DocxEditor.Menu.Open hidden />
+          <DocxEditor.Menu.Save hidden />
+          <DocxEditor.Menu.ExportMarkdown hidden />
+          <DocxEditor.Menu.ExportPdf hidden />
+          <DocxEditor.Menu.Print hidden />
+        </DocxEditor.Menu.File>
         <DocxEditor.Menu.Review hidden />
       </DocxEditor.Menu>
       <DocxEditor.Toolbar t={t}>
@@ -195,8 +201,55 @@ function EditorChrome({ editor }: { editor: Editor | null }) {
         </DocxEditor.Viewport>
         <DocxEditor.Loading overlay />
         <DocxEditor.PageNumber />
+        <CommentPanel editor={editor} locale={locale} />
       </div>
     </div>
+  );
+}
+
+const commentLabels: Record<string, { title: string; remove: string }> = {
+  uk: { title: 'Коментарі', remove: 'Видалити' },
+  cs: { title: 'Komentáře', remove: 'Smazat' },
+  ru: { title: 'Комментарии', remove: 'Удалить' },
+  en: { title: 'Comments', remove: 'Delete' },
+};
+
+function CommentPanel({ editor, locale }: { editor: Editor | null; locale: string }) {
+  const revision = useEditorSnapshot(editor);
+  const labels = commentLabels[locale] ?? commentLabels.en;
+  const comments = editor && revision >= 0
+    ? editor.getReviewItems().filter((item) => item.kind === 'comment' && !item.parentId && !item.parentRevisionId)
+    : [];
+
+  if (comments.length === 0) return null;
+
+  const remove = (key: string) => {
+    if (!editor) return;
+    const result = editor.deleteReviewItem(key);
+    if (result.ok && result.changed) postToHost({ type: 'changed' });
+  };
+
+  return (
+    <aside className="comment-panel">
+      <div className="comment-panel__title">{labels.title}</div>
+      <ul className="comment-panel__list">
+        {comments.map((comment) => (
+          <li key={comment.key}>
+            <button
+              type="button"
+              className="comment-panel__card"
+              onClick={() => editor?.setActiveReviewItem(comment.key)}
+            >
+              <span className="comment-panel__author">{comment.author}</span>
+              <span className="comment-panel__text">{comment.text}</span>
+            </button>
+            <button type="button" className="comment-panel__delete" onClick={() => remove(comment.key)}>
+              {labels.remove}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </aside>
   );
 }
 

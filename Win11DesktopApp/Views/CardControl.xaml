@@ -4,7 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:conv="clr-namespace:Win11DesktopApp.Converters"
-             mc:Ignorable="d" 
+             xmlns:views="clr-namespace:Win11DesktopApp.Views"
+             mc:Ignorable="d"
              d:DesignHeight="180" d:DesignWidth="170">
     <UserControl.Resources>
         <conv:IntToVisibilityConverter x:Key="IntToVis"/>
@@ -60,48 +61,16 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- Squircle icon container with soft ambient plate + top gloss -->
-                                <Grid Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                <!-- Layered vector icon, without a plate -->
+                                <Grid Grid.Row="0"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"
                                       RenderTransformOrigin="0.5,0.5">
                                     <Grid.RenderTransform>
                                         <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
                                     </Grid.RenderTransform>
-
-                                    <Border x:Name="IconHalo"
-                                            Width="76" Height="76"
-                                            CornerRadius="24"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            Opacity="0.12"
-                                            IsHitTestVisible="False"/>
-
-                                    <Border x:Name="IconCircle"
-                                            Width="{DynamicResource UiMenuCardIcon}" Height="{DynamicResource UiMenuCardIcon}"
-                                            CornerRadius="20"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Background="{Binding IconGradient, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                        <Grid>
-                                            <!-- Subtle top light sheen -->
-                                            <Border CornerRadius="20" IsHitTestVisible="False">
-                                                <Border.Background>
-                                                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                                                        <GradientStop Color="#36FFFFFF" Offset="0"/>
-                                                        <GradientStop Color="#08FFFFFF" Offset="0.48"/>
-                                                        <GradientStop Color="#00FFFFFF" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Border.Background>
-                                            </Border>
-                                            <Border CornerRadius="20"
-                                                    BorderThickness="1"
-                                                    BorderBrush="#38FFFFFF"
-                                                    IsHitTestVisible="False"/>
-                                            <Path Data="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                  Fill="White"
-                                                  Stretch="Uniform"
-                                                  Width="{DynamicResource UiMenuCardIconInner}" Height="{DynamicResource UiMenuCardIconInner}"
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </Border>
+                                    <views:LayeredTileIcon TileId="{Binding TileId, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                           Width="{DynamicResource UiMenuCardIcon}"
+                                                           Height="{DynamicResource UiMenuCardIcon}"/>
                                 </Grid>
 
                                 <!-- Title -->
@@ -174,10 +143,6 @@
                                                      Storyboard.TargetProperty="ScaleY"
                                                      To="1.05" Duration="0:0:0.20"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="IconHalo"
-                                                     Storyboard.TargetProperty="Opacity"
-                                                     To="0.22" Duration="0:0:0.20"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="HoverTint"
                                                      Storyboard.TargetProperty="Opacity"
                                                      To="0.05" Duration="0:0:0.20"
@@ -213,10 +178,6 @@
                                     <DoubleAnimation Storyboard.TargetName="IconScale"
                                                      Storyboard.TargetProperty="ScaleY"
                                                      To="1" Duration="0:0:0.3"
-                                                     EasingFunction="{StaticResource SmoothEase}"/>
-                                    <DoubleAnimation Storyboard.TargetName="IconHalo"
-                                                     Storyboard.TargetProperty="Opacity"
-                                                     To="0.13" Duration="0:0:0.3"
                                                      EasingFunction="{StaticResource SmoothEase}"/>
                                     <DoubleAnimation Storyboard.TargetName="HoverTint"
                                                      Storyboard.TargetProperty="Opacity"

@@ -62,6 +62,9 @@ namespace Win11DesktopApp.Services
 
             using (var doc = WordprocessingDocument.Open(outputPath, true))
             {
+                if (RemoveWordComments(doc))
+                    LoggingService.LogInfo("DocumentGenerationService.GenerateDocx", "Removed Word comments from the generated file.");
+
                 var body = doc.MainDocumentPart?.Document?.Body;
                 if (body != null)
                     ReplaceTags(body, tagValues);
@@ -757,6 +760,90 @@ namespace Win11DesktopApp.Services
 
             var normalized = value.Trim().ToLowerInvariant();
             return normalized is "1" or "true" or "yes" or "ano" or "так" or "on" or "checked";
+        }
+
+        /// <summary>
+        /// Returns the same bytes when the file has no Word comments. Otherwise returns a copy
+        /// without comment balloons or their anchors. Paragraph text, tags and formatting stay.
+        /// </summary>
+        public static byte[] WithoutWordComments(byte[] docxBytes)
+        {
+            if (docxBytes == null || docxBytes.Length == 0)
+                return docxBytes ?? Array.Empty<byte>();
+
+            var stream = new MemoryStream();
+            stream.Write(docxBytes, 0, docxBytes.Length);
+            stream.Position = 0;
+            var removed = false;
+            using (var document = WordprocessingDocument.Open(stream, true))
+            {
+                removed = RemoveWordComments(document);
+                if (removed)
+                    document.Save();
+            }
+
+            return removed ? stream.ToArray() : docxBytes;
+        }
+
+        /// <summary>
+        /// Drops Word comment parts and the anchors that point at them. The commented text stays.
+        /// </summary>
+        private static bool RemoveWordComments(WordprocessingDocument document)
+        {
+            var main = document.MainDocumentPart;
+            if (main == null)
+                return false;
+
+            var removed = RemoveCommentMarkers(main.Document);
+            foreach (var header in main.HeaderParts)
+                removed |= RemoveCommentMarkers(header.Header);
+            foreach (var footer in main.FooterParts)
+                removed |= RemoveCommentMarkers(footer.Footer);
+            if (main.FootnotesPart != null)
+                removed |= RemoveCommentMarkers(main.FootnotesPart.Footnotes);
+            if (main.EndnotesPart != null)
+                removed |= RemoveCommentMarkers(main.EndnotesPart.Endnotes);
+
+            removed |= DeleteCommentPart(main, main.WordprocessingCommentsExPart);
+            removed |= DeleteCommentPart(main, main.WordprocessingCommentsIdsPart);
+            removed |= DeleteCommentPart(main, main.WordCommentsExtensiblePart);
+            removed |= DeleteCommentPart(main, main.WordprocessingCommentsPart);
+            return removed;
+        }
+
+        private static bool RemoveCommentMarkers(OpenXmlElement? root)
+        {
+            if (root == null)
+                return false;
+
+            var markers = root.Descendants()
+                .Where(element => element is CommentRangeStart or CommentRangeEnd or CommentReference)
+                .ToList();
+            if (markers.Count == 0)
+                return false;
+
+            foreach (var marker in markers)
+                marker.Remove();
+            return true;
+        }
+
+        private static bool DeleteCommentPart(OpenXmlPartContainer owner, OpenXmlPart? part)
+        {
+            if (part == null)
+                return false;
+
+            if (owner.Parts.Any(pair => ReferenceEquals(pair.OpenXmlPart, part)))
+            {
+                owner.DeletePart(part);
+                return true;
+            }
+
+            var parent = part.GetParentParts().FirstOrDefault();
+            if (parent == null)
+                return false;
+
+            parent.DeletePart(part);
+            return true;
         }
 
         /// <summary>

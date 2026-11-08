@@ -81,26 +81,27 @@
         <GradientStop Color="#172033" Offset="1"/>
     </LinearGradientBrush>
     <SolidColorBrush x:Key="EmployeeTileStatusOutlineBrush" Color="#111827"/>
-    <RadialGradientBrush x:Key="EmployeeTileDecorBlueBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.55" RadiusY="0.55">
-        <GradientStop Color="#263C60" Offset="0"/>
-        <GradientStop Color="#00263C60" Offset="1"/>
-    </RadialGradientBrush>
-    <RadialGradientBrush x:Key="EmployeeTileDecorGreenBrush" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.58" RadiusY="0.58">
-        <GradientStop Color="#203A2B" Offset="0"/>
-        <GradientStop Color="#00203A2B" Offset="1"/>
-    </RadialGradientBrush>
-    <SolidColorBrush x:Key="EmployeeDocErrorBackgroundBrush" Color="#231719"/>
-    <SolidColorBrush x:Key="EmployeeDocErrorCardBorderBrush" Color="#563037"/>
-    <SolidColorBrush x:Key="EmployeeDocErrorTileBrush" Color="#341D22"/>
-    <SolidColorBrush x:Key="EmployeeDocErrorForegroundBrush" Color="#F29BA0"/>
-    <SolidColorBrush x:Key="EmployeeDocWarningBackgroundBrush" Color="#211D13"/>
-    <SolidColorBrush x:Key="EmployeeDocWarningCardBorderBrush" Color="#51431E"/>
-    <SolidColorBrush x:Key="EmployeeDocWarningTileBrush" Color="#302716"/>
-    <SolidColorBrush x:Key="EmployeeDocWarningForegroundBrush" Color="#E8C568"/>
-    <SolidColorBrush x:Key="EmployeeDocSuccessBackgroundBrush" Color="#13251A"/>
-    <SolidColorBrush x:Key="EmployeeDocSuccessCardBorderBrush" Color="#2F5D36"/>
-    <SolidColorBrush x:Key="EmployeeDocSuccessTileBrush" Color="#1B2E1F"/>
-    <SolidColorBrush x:Key="EmployeeDocSuccessForegroundBrush" Color="#74D88A"/>
+    <SolidColorBrush x:Key="EmployeeTileDecorBlueBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeTileDecorGreenBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocIconSheenBrush" Color="Transparent"/>
+    <Thickness x:Key="EmployeeDocPillBorderThickness">1.5</Thickness>
+    <CornerRadius x:Key="EmployeeDocPillCornerRadius">6</CornerRadius>
+    <GridLength x:Key="EmployeeDocRowPassportWidth">1.02*</GridLength>
+    <GridLength x:Key="EmployeeDocRowVisaWidth">0.72*</GridLength>
+    <GridLength x:Key="EmployeeDocRowInsuranceWidth">1.24*</GridLength>
+    <GridLength x:Key="EmployeeDocRowPermitWidth">1.02*</GridLength>
+    <SolidColorBrush x:Key="EmployeeDocErrorBackgroundBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorCardBorderBrush" Color="#FF8A80"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorTileBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocErrorForegroundBrush" Color="#FF8A80"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningBackgroundBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningCardBorderBrush" Color="#F2CC60"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningTileBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocWarningForegroundBrush" Color="#F2CC60"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessBackgroundBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessCardBorderBrush" Color="#4ADE80"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessTileBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="EmployeeDocSuccessForegroundBrush" Color="#4ADE80"/>
 
     <SolidColorBrush x:Key="FinGridHeaderBackgroundBrush" Color="#1F2A44"/>
     <SolidColorBrush x:Key="FinGridHeaderForegroundBrush" Color="#E4ECF7"/>
@@ -120,6 +121,9 @@
     <SolidColorBrush x:Key="FinAdvanceForegroundBrush" Color="#F2CC60"/>
     <SolidColorBrush x:Key="FinNetBackgroundBrush" Color="#27204A"/>
     <SolidColorBrush x:Key="FinNetForegroundBrush" Color="#C4B5FD"/>
+    <SolidColorBrush x:Key="FinActionSuccessBrush" Color="#3FB950"/>
+    <SolidColorBrush x:Key="FinActionWarningBrush" Color="#D29922"/>
+    <SolidColorBrush x:Key="FinActionPurpleBrush" Color="#BC8CFF"/>
     <SolidColorBrush x:Key="FinPaidBackgroundBrush" Color="#2EA043"/>
     <SolidColorBrush x:Key="FinPaidForegroundBrush" Color="#06130A"/>
     <SolidColorBrush x:Key="FinUnpaidBackgroundBrush" Color="#202A42"/>

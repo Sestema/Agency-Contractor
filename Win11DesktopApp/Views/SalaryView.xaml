@@ -188,7 +188,7 @@
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Manage Columns -->
                     <Button Command="{Binding ManageColumnsCommand}" Style="{StaticResource FilledActionButton}"
-                            Background="{DynamicResource PurpleBrush}" Margin="0,0,6,0">
+                            Background="{DynamicResource FinActionPurpleBrush}" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE762;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                        Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -199,7 +199,7 @@
 
                     <Button Command="{Binding SaveCommand}" Style="{StaticResource FilledActionButton}"
                             PreviewMouseLeftButtonDown="CommitGridEdits_BeforeAction"
-                            Background="{DynamicResource SuccessBrush}" Margin="0,0,6,0">
+                            Background="{DynamicResource FinActionSuccessBrush}" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                        Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -209,7 +209,7 @@
                     </Button>
 
                     <Button Command="{Binding ExportExcelCommand}" Style="{StaticResource FilledActionButton}"
-                            Background="{DynamicResource SuccessBrush}" Margin="0,0,6,0">
+                            Background="{DynamicResource FinActionSuccessBrush}" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                        Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -219,7 +219,7 @@
                     </Button>
 
                     <Button Command="{Binding PrintQrCommand}" Style="{StaticResource FilledActionButton}"
-                            Background="{DynamicResource PurpleBrush}" Margin="0,0,6,0"
+                            Background="{DynamicResource FinActionPurpleBrush}" Margin="0,0,6,0"
                             Visibility="{Binding HasQrTransferColumn, Converter={StaticResource BoolToVis}}"
                             ToolTip="{DynamicResource FinQrPrintDesc}">
                         <StackPanel Orientation="Horizontal">
@@ -231,7 +231,7 @@
                     </Button>
 
                     <Button Command="{Binding AddAdvanceCommand}" Style="{StaticResource FilledActionButton}"
-                            Background="{DynamicResource WarningBrush}" Margin="0,0,6,0">
+                            Background="{DynamicResource FinActionWarningBrush}" Margin="0,0,6,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
                                        Foreground="White" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -246,10 +246,10 @@
                                 <Border x:Name="Bd" CornerRadius="8" Padding="12,7">
                                     <Border.Style>
                                         <Style TargetType="Border">
-                                            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                                            <Setter Property="Background" Value="{DynamicResource FinActionSuccessBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding AllPaid}" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                                                    <Setter Property="Background" Value="{DynamicResource FinActionSuccessBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -305,7 +305,7 @@
                                 <TextBlock Text="{DynamicResource FinStatHours}" FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                             </StackPanel>
                             <TextBlock Text="{Binding TotalHours, StringFormat={}{0:N1}}" FontSize="{DynamicResource FS20}" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
+                                       Foreground="{DynamicResource AccentDarkBrush}" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -645,7 +645,7 @@
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
                                                                     <Setter Property="TextDecorations" Value="Underline"/>
-                                                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource AccentDarkBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding IsFinished}" Value="True">
                                                                     <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
@@ -1286,7 +1286,7 @@
 
                             <!-- Celková Výplata (Grand Total) = Net + Expenses -->
                             <Border CornerRadius="8" Padding="10,8" Margin="0,4,0,0"
-                                    Background="{DynamicResource WarningBrush}">
+                                    Background="{DynamicResource FinActionWarningBrush}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1307,9 +1307,9 @@
                                     Cursor="Hand" HorizontalAlignment="Left" Padding="4,2" Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS11}"
-                                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource AccentDarkBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource FinStatsConfig}" FontSize="{DynamicResource FS10}"
-                                               Foreground="{DynamicResource AccentBrush}"/>
+                                               Foreground="{DynamicResource AccentDarkBrush}"/>
                                 </StackPanel>
                             </Button>
 
@@ -1461,7 +1461,7 @@
 
                     <!-- Grand Total -->
                     <Border Grid.Column="3" CornerRadius="6" Padding="14,5"
-                            Background="{DynamicResource WarningBrush}">
+                            Background="{DynamicResource FinActionWarningBrush}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{DynamicResource FinStatGrandTotal}" FontSize="{DynamicResource FS11}" Foreground="White"
                                        FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -1641,7 +1641,7 @@
                         <Button Command="{Binding ConfirmAdvanceCommand}" Cursor="Hand">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="{DynamicResource WarningBrush}" CornerRadius="8" Padding="18,9">
+                                    <Border x:Name="Bd" Background="{DynamicResource FinActionWarningBrush}" CornerRadius="8" Padding="18,9">
                                         <TextBlock Text="{DynamicResource FinBtnConfirmAdvance}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                    Foreground="White"/>
                                     </Border>

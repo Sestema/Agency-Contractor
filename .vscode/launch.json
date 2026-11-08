@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/Win11DesktopApp/bin/Debug/net8.0-windows/Win11DesktopApp.dll",
+            "program": "${workspaceFolder}/Win11DesktopApp/bin/Debug/net10.0-windows/Win11DesktopApp.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Win11DesktopApp",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console

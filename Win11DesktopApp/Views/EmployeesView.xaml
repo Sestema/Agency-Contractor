@@ -24,6 +24,9 @@
         <local:ZoomThicknessConverter x:Key="ZoomThickness"/>
         <local:ZoomRectConverter x:Key="ZoomRect"/>
         <local:ZoomCornerRadiusConverter x:Key="ZoomCornerRadius"/>
+        <local:DocPillCornerRadiusConverter x:Key="DocPillCornerRadius"/>
+        <local:DocRowDoubleConverter x:Key="DocRowDouble"/>
+        <local:DocRowThicknessConverter x:Key="DocRowThickness"/>
         <local:DocumentSeverityBrushConverter x:Key="DocSeverityBrush"/>
         <local:ViewModeToPillOffsetConverter x:Key="ViewModePillOffset"/>
 
@@ -2477,7 +2480,7 @@
                                                         CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=20}">
                                                         <Border.Style>
                                                         <Style TargetType="Border">
-                                                            <Setter Property="Padding" Value="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='5,8,5,4'}"/>
+                                                            <Setter Property="Padding" Value="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='5,8,5,4;5,6,5,6'}"/>
                                                                 <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding EmployeeType}" Value="work_permit">
                                                                     <Setter Property="Padding" Value="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='5,6,5,6'}"/>
@@ -2511,8 +2514,8 @@
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
                                                             Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='7,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=40}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=15}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=15}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Border.Style>
@@ -2537,12 +2540,7 @@
                                                                     Background="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}" BorderThickness="0">
                                                                 <Grid>
                                                                     <Border CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                     </Border>
                                                                     <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
                                                                              Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -2572,8 +2570,8 @@
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
                                                             Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='7,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=40}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=15}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=15}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Border.Style>
@@ -2598,12 +2596,7 @@
                                                                     Background="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}" BorderThickness="0">
                                                                 <Grid>
                                                                     <Border CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                     </Border>
                                                                     <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
                                                                              Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -2633,8 +2626,8 @@
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
                                                             Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='7,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=40}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=15}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=15}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Border.Style>
@@ -2659,12 +2652,7 @@
                                                                     Background="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}" BorderThickness="0">
                                                                 <Grid>
                                                                     <Border CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                     </Border>
                                                                     <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
                                                                              Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -2700,21 +2688,21 @@
                                                                 </Style>
                                                     </Grid.Style>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="1.02*"/>
+                                                        <ColumnDefinition Width="{DynamicResource EmployeeDocRowPassportWidth}"/>
                                                         <ColumnDefinition Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=4}"/>
-                                                        <ColumnDefinition Width="0.8*"/>
+                                                        <ColumnDefinition Width="{DynamicResource EmployeeDocRowVisaWidth}"/>
                                                         <ColumnDefinition Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=4}"/>
-                                                        <ColumnDefinition Width="1.28*"/>
+                                                        <ColumnDefinition Width="{DynamicResource EmployeeDocRowInsuranceWidth}"/>
                                                         <ColumnDefinition Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=4}"/>
-                                                        <ColumnDefinition Width="0.9*"/>
+                                                        <ColumnDefinition Width="{DynamicResource EmployeeDocRowPermitWidth}"/>
                                                     </Grid.ColumnDefinitions>
 
                                                     <Border Grid.Column="0" ToolTip="{Binding PassportExpiry}" Tag="passport" Cursor="Hand"
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
-                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='5,2'}"
+                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='5,2;4,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=38}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=14}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=14}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Grid>
@@ -2723,9 +2711,9 @@
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
                                                             <Border Grid.Column="0"
-                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='3,0,0,0'}"
-                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
-                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
+                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='3,0,0,0;6,0,0,0'}"
+                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
+                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
                                                                     CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}"
                                                                     Background="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -2749,10 +2737,10 @@
 
                                                     <Border Grid.Column="2" ToolTip="{Binding VisaExpiry}" Tag="visa" Cursor="Hand"
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
-                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='5,2'}"
+                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='5,2;4,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=38}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=14}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=14}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Grid>
@@ -2761,9 +2749,9 @@
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
                                                             <Border Grid.Column="0"
-                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='3,0,0,0'}"
-                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
-                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
+                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='3,0,0,0;6,0,0,0'}"
+                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
+                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
                                                                     CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}"
                                                                     Background="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -2787,10 +2775,10 @@
 
                                                     <Border Grid.Column="4" ToolTip="{Binding InsuranceExpiry}" Tag="insurance" Cursor="Hand"
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
-                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='5,2'}"
+                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='5,2;4,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=38}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=14}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=14}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Grid>
@@ -2799,9 +2787,9 @@
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
                                                             <Border Grid.Column="0"
-                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='3,0,0,0'}"
-                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
-                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
+                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='3,0,0,0;6,0,0,0'}"
+                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
+                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
                                                                     CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}"
                                                                     Background="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -2825,10 +2813,10 @@
 
                                                     <Border Grid.Column="6" ToolTip="{Binding WorkPermitExpiry}" Tag="permit" Cursor="Hand"
                                                             MouseLeftButtonUp="EmployeeDocumentButton_MouseLeftButtonUp"
-                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='5,2'}"
+                                                            Padding="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='5,2;4,2'}"
                                                             MinHeight="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=38}"
-                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=14}"
-                                                            BorderThickness="1"
+                                                            CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocPillCornerRadius}, ConverterParameter=14}"
+                                                            BorderThickness="{DynamicResource EmployeeDocPillBorderThickness}"
                                                             Background="{Binding WorkPermitSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Background}"
                                                             BorderBrush="{Binding WorkPermitSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=CardBorder}">
                                                         <Grid>
@@ -2837,9 +2825,9 @@
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
                                                             <Border Grid.Column="0"
-                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomThickness}, ConverterParameter='3,0,0,0'}"
-                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
-                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=32}"
+                                                                    Margin="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowThickness}, ConverterParameter='3,0,0,0;6,0,0,0'}"
+                                                                    Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
+                                                                    Height="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource DocRowDouble}, ConverterParameter='32;18'}"
                                                                     CornerRadius="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomCornerRadius}, ConverterParameter=10}"
                                                                     Background="{Binding WorkPermitSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Viewbox Width="{Binding DataContext.ZoomLevel, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ZoomDouble}, ConverterParameter=18}"
@@ -3135,12 +3123,7 @@
                                                                     Background="{Binding PassportSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Grid>
                                                                     <Border CornerRadius="12">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                                     </Border>
                                                                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                         <Path Data="{StaticResource IconDocPassport}" Stretch="Uniform"
@@ -3188,12 +3171,7 @@
                                                                     Background="{Binding VisaSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Grid>
                                                                     <Border CornerRadius="12">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                                     </Border>
                                                                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                         <Path Data="{StaticResource IconDocVisa}" Stretch="Uniform"
@@ -3241,12 +3219,7 @@
                                                                     Background="{Binding InsuranceSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Grid>
                                                                     <Border CornerRadius="12">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                                     </Border>
                                                                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                         <Path Data="{StaticResource IconDocInsurance}" Stretch="Uniform"
@@ -3295,12 +3268,7 @@
                                                                     Background="{Binding WorkPermitSeverity, Converter={StaticResource DocSeverityBrush}, ConverterParameter=Tile}">
                                                                 <Grid>
                                                                     <Border CornerRadius="12">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="#BFFFFFFF" Offset="0"/>
-                                                                                <GradientStop Color="#33FFFFFF" Offset="0.68"/>
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                        <Border.Background><DynamicResource ResourceKey="EmployeeDocIconSheenBrush"/></Border.Background>
                                                                     </Border>
                                                                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                         <Path Data="{StaticResource IconDocWorkPermit}" Stretch="Uniform"

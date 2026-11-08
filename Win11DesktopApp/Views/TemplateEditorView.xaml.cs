@@ -159,6 +159,26 @@ namespace Win11DesktopApp.Views
 
         private byte[]? ResolveDocumentBytes()
         {
+            var bytes = ReadTemplateBytes();
+            if (bytes == null || bytes.Length == 0)
+                return bytes;
+
+            try
+            {
+                var stripped = DocumentGenerationService.WithoutWordComments(bytes);
+                if (!ReferenceEquals(stripped, bytes))
+                    LoggingService.LogInfo("TemplateEditorView.ResolveDocumentBytes", "Opened the template without Word comments.");
+                return stripped;
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogWarning("TemplateEditorView.ResolveDocumentBytes", ex.Message);
+                return bytes;
+            }
+        }
+
+        private byte[]? ReadTemplateBytes()
+        {
             if (_vm == null)
                 return null;
 

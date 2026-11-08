@@ -1515,14 +1515,44 @@ namespace Win11DesktopApp.ViewModels
         public string CurrentLanguage
         {
             get => _currentLanguage;
-            set => SetProperty(ref _currentLanguage, value);
+            set
+            {
+                if (SetProperty(ref _currentLanguage, value))
+                    UpdateSelectedLanguageOptions();
+            }
+        }
+
+        public ObservableCollection<LanguageOptionItem> LanguageOptions { get; } = new(LanguageOptionItem.CreateLanguages());
+        public ObservableCollection<LanguageOptionItem> DocumentLanguageOptions { get; } = new(LanguageOptionItem.CreateDocumentLanguages());
+
+        private void UpdateSelectedLanguageOptions()
+        {
+            foreach (var option in LanguageOptions)
+                option.IsSelected = string.Equals(option.Code, _currentLanguage, StringComparison.OrdinalIgnoreCase);
+            foreach (var option in DocumentLanguageOptions)
+                option.IsSelected = string.Equals(option.Code, _currentDocLanguage, StringComparison.OrdinalIgnoreCase);
         }
 
         private string _currentTheme = "Light";
         public string CurrentTheme
         {
             get => _currentTheme;
-            set => SetProperty(ref _currentTheme, value);
+            set
+            {
+                if (SetProperty(ref _currentTheme, value))
+                    UpdateSelectedThemeOption();
+            }
+        }
+
+        public ObservableCollection<ThemePreviewItem> ThemeOptions { get; } = new(ThemePreviewItem.CreateAll());
+
+        public ThemePreviewItem? SelectedThemeOption => ThemeOptions.FirstOrDefault(option => option.IsSelected);
+
+        private void UpdateSelectedThemeOption()
+        {
+            foreach (var option in ThemeOptions)
+                option.IsSelected = string.Equals(option.Key, _currentTheme, StringComparison.OrdinalIgnoreCase);
+            OnPropertyChanged(nameof(SelectedThemeOption));
         }
 
         public ObservableCollection<AccentPresetItem> AccentPresets { get; } = new();
@@ -1559,7 +1589,12 @@ namespace Win11DesktopApp.ViewModels
             {
                 item.IsSelected = string.Equals(item.Hex ?? string.Empty, current, StringComparison.OrdinalIgnoreCase);
             }
+
+            OnPropertyChanged(nameof(SelectedAccentName));
         }
+
+        public string SelectedAccentName =>
+            AccentPresets.FirstOrDefault(item => item.IsSelected)?.LocalizedName ?? string.Empty;
 
         public class AccentPresetItem : ViewModelBase
         {
@@ -1591,6 +1626,10 @@ namespace Win11DesktopApp.ViewModels
             public string Name { get; }
             public string Hex { get; }
             public System.Windows.Media.Brush Brush { get; }
+            public string LocalizedName =>
+                Application.Current?.TryFindResource("Accent" + Name) as string ?? Name;
+
+            public void RefreshLocalization() => OnPropertyChanged(nameof(LocalizedName));
 
             private bool _isSelected;
             public bool IsSelected
@@ -1606,21 +1645,44 @@ namespace Win11DesktopApp.ViewModels
         public string CurrentInterfaceSize
         {
             get => _currentInterfaceSize;
-            set => SetProperty(ref _currentInterfaceSize, value);
+            set
+            {
+                if (SetProperty(ref _currentInterfaceSize, value))
+                    UpdateSelectedSizeOptions();
+            }
+        }
+
+        public ObservableCollection<SizeOptionItem> InterfaceSizeOptions { get; } = new(SizeOptionItem.CreateAll());
+        public ObservableCollection<SizeOptionItem> TextSizeOptions { get; } = new(SizeOptionItem.CreateAll());
+
+        private void UpdateSelectedSizeOptions()
+        {
+            foreach (var option in InterfaceSizeOptions)
+                option.IsSelected = string.Equals(option.Key, _currentInterfaceSize, StringComparison.OrdinalIgnoreCase);
+            foreach (var option in TextSizeOptions)
+                option.IsSelected = string.Equals(option.Key, _currentTextSize, StringComparison.OrdinalIgnoreCase);
         }
 
         private string _currentTextSize = "Medium";
         public string CurrentTextSize
         {
             get => _currentTextSize;
-            set => SetProperty(ref _currentTextSize, value);
+            set
+            {
+                if (SetProperty(ref _currentTextSize, value))
+                    UpdateSelectedSizeOptions();
+            }
         }
 
         private string _currentDocLanguage = "";
         public string CurrentDocLanguage
         {
             get => _currentDocLanguage;
-            set => SetProperty(ref _currentDocLanguage, value);
+            set
+            {
+                if (SetProperty(ref _currentDocLanguage, value))
+                    UpdateSelectedLanguageOptions();
+            }
         }
 
         public SettingsViewModel(
@@ -1692,6 +1754,7 @@ namespace Win11DesktopApp.ViewModels
             _currentTheme = DetectCurrentTheme();
             _currentInterfaceSize = _appSettingsService.Settings.InterfaceSize ?? "Medium";
             _currentTextSize = _appSettingsService.Settings.TextSize ?? "Medium";
+            UpdateSelectedSizeOptions();
             _currentDocLanguage = _appSettingsService.Settings.DocumentLanguage ?? "";
             _isEditingGeminiApiKey = string.IsNullOrWhiteSpace(_appSettingsService.Settings.GeminiApiKey);
             _telegramEnabled = _appSettingsService.Settings.Telegram.Enabled;
@@ -1701,6 +1764,8 @@ namespace Win11DesktopApp.ViewModels
             InitializeBusinessUserEditorOptions();
             RefreshBusinessUserLoginOptions();
             RefreshUserRolePreview();
+            UpdateSelectedThemeOption();
+            UpdateSelectedLanguageOptions();
             InitializeAccentPresets();
             RefreshTelegramState();
             EnsureValidSettingsSection();
@@ -2169,6 +2234,15 @@ namespace Win11DesktopApp.ViewModels
             RefreshBusinessUserLoginOptions();
             RefreshTelegramState();
             RefreshUserRolePreview();
+            foreach (var item in AccentPresets)
+                item.RefreshLocalization();
+            foreach (var option in ThemeOptions)
+                option.RefreshLocalization();
+            foreach (var option in DocumentLanguageOptions)
+                option.RefreshLocalization();
+            foreach (var option in InterfaceSizeOptions.Concat(TextSizeOptions))
+                option.RefreshLocalization();
+            OnPropertyChanged(nameof(SelectedAccentName));
             OnPropertyChanged(nameof(WebPanelStatus));
             OnPropertyChanged(nameof(DatabaseStorageModeDisplay));
             OnPropertyChanged(nameof(ActiveDatabaseRuntimeDisplay));

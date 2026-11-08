@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Win11DesktopApp.Helpers;
 
 namespace Win11DesktopApp.Views
 {
@@ -9,6 +10,7 @@ namespace Win11DesktopApp.Views
     {
         public CardControl()
         {
+            MenuTilePalette.EnsureApplied();
             InitializeComponent();
         }
 
@@ -21,13 +23,23 @@ namespace Win11DesktopApp.Views
             set { SetValue(TitleProperty, value); }
         }
 
-        public static readonly DependencyProperty IconProperty =
-            DependencyProperty.Register("Icon", typeof(Geometry), typeof(CardControl), new PropertyMetadata(null));
+        /// <summary>Tile id; selects the icon and the theme-dependent hover colour.</summary>
+        public static readonly DependencyProperty TileIdProperty =
+            DependencyProperty.Register("TileId", typeof(string), typeof(CardControl),
+                new PropertyMetadata(string.Empty, OnTileIdChanged));
 
-        public Geometry Icon
+        public string TileId
         {
-            get { return (Geometry)GetValue(IconProperty); }
-            set { SetValue(IconProperty, value); }
+            get { return (string)GetValue(TileIdProperty); }
+            set { SetValue(TileIdProperty, value); }
+        }
+
+        private static void OnTileIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is not CardControl card || e.NewValue is not string id || id.Length == 0)
+                return;
+
+            card.SetResourceReference(IconGradientProperty, MenuTilePalette.GradientKey(id));
         }
 
         public static readonly DependencyProperty CommandProperty =

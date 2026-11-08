@@ -342,12 +342,12 @@
                                 Style="{StaticResource ToolbarWorkspacePillButton}"
                                 ToolTip="{DynamicResource WorkspaceSwitcherTitle}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xED25;"
-                                           FontFamily="Segoe MDL2 Assets"
-                                           FontSize="{DynamicResource FS13}"
-                                           Foreground="{DynamicResource ForegroundBrush}"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,8,0"/>
+                                <Path Data="{StaticResource IconFolder}"
+                                      Width="14" Height="14"
+                                      Stretch="Uniform"
+                                      Fill="{DynamicResource ForegroundBrush}"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0"/>
                                 <TextBlock Text="{Binding CurrentWorkspaceName}"
                                            FontSize="{DynamicResource FS12}"
                                            FontWeight="SemiBold"
@@ -365,35 +365,38 @@
                                AllowsTransparency="True"
                                PopupAnimation="Fade"
                                VerticalOffset="8">
-                            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="16"
+                            <Border Background="{DynamicResource ContentBackgroundBrush}" CornerRadius="18"
                                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                                    MinWidth="340" MaxWidth="400" MaxHeight="460" Padding="12">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.18" Direction="270"/>
-                                </Border.Effect>
+                                    MinWidth="360" MaxWidth="440" MaxHeight="460" Padding="12"
+                                    Effect="{DynamicResource DialogShadow}">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,2,10">
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,2,2">
                                         <Border Width="28" Height="28" CornerRadius="8" Margin="0,0,8,0"
                                                 Background="{DynamicResource SuccessLightBrush}">
-                                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource FS12}"
-                                                       Foreground="{DynamicResource SuccessBrush}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Path Data="{StaticResource IconFolder}"
+                                                  Width="14" Height="14"
+                                                  Stretch="Uniform"
+                                                  Fill="{DynamicResource SuccessBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
                                         </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{DynamicResource WorkspaceSwitcherTitle}"
-                                                       FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource ForegroundBrush}"/>
-                                            <TextBlock Text="{DynamicResource WorkspaceListHint}"
-                                                       FontSize="{DynamicResource FS11}"
-                                                       Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                       TextWrapping="Wrap" MaxWidth="300"/>
-                                        </StackPanel>
+                                        <TextBlock Text="{DynamicResource WorkspaceSwitcherTitle}"
+                                                   FontSize="{DynamicResource FS14}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"
+                                                   VerticalAlignment="Center"/>
                                     </StackPanel>
-                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="280">
+                                    <TextBlock Grid.Row="1"
+                                               Text="{DynamicResource WorkspaceListHint}"
+                                               Margin="2,4,2,10"
+                                               FontSize="{DynamicResource FS11}"
+                                               Foreground="{DynamicResource TertiaryForegroundBrush}"
+                                               TextWrapping="Wrap"/>
+                                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="280" Style="{StaticResource ThinScroll}">
                                         <ItemsControl ItemsSource="{Binding Workspaces}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -406,43 +409,60 @@
                                                             Padding="0" Margin="0">
                                                         <Button.Template>
                                                             <ControlTemplate TargetType="Button">
-                                                                <Border x:Name="Card" Padding="12,10" Margin="0,0,0,8"
+                                                                <Border x:Name="Card" Padding="10,9" Margin="0,0,0,8"
                                                                         Background="{DynamicResource CardBackgroundBrush}"
                                                                         BorderBrush="{DynamicResource CardBorderBrush}"
                                                                         BorderThickness="1"
                                                                         CornerRadius="12">
                                                                     <Grid>
                                                                         <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="Auto"/>
                                                                             <ColumnDefinition Width="*"/>
                                                                             <ColumnDefinition Width="Auto"/>
                                                                         </Grid.ColumnDefinitions>
-                                                                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="10" Margin="0,0,10,0"
+                                                                                VerticalAlignment="Center"
+                                                                                Background="{Binding DisplayName, Converter={StaticResource NameToColor}}">
+                                                                            <TextBlock Text="{Binding DisplayName, Converter={StaticResource FirstCharConverter}}"
+                                                                                       FontSize="{DynamicResource FS13}"
+                                                                                       FontWeight="Bold"
+                                                                                       Foreground="White"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
                                                                             <TextBlock Text="{Binding DisplayName}" FontSize="{DynamicResource FS13}" FontWeight="SemiBold"
                                                                                        Foreground="{DynamicResource ForegroundBrush}" TextTrimming="CharacterEllipsis"/>
-                                                                            <TextBlock Text="{Binding FolderPath}" FontSize="{DynamicResource FS11}"
+                                                                            <TextBlock Text="{Binding ShortFolderPath}" FontSize="{DynamicResource FS11}"
                                                                                        Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                                                                       TextTrimming="CharacterEllipsis"
+                                                                                       ToolTip="{Binding FolderPath}"
+                                                                                       Margin="0,2,0,0"/>
                                                                             <TextBlock Text="{Binding StatusText}" FontSize="{DynamicResource FS11}" FontWeight="SemiBold"
                                                                                        Foreground="{DynamicResource WarningBrush}" Margin="0,4,0,0"
                                                                                        Visibility="{Binding HasWarningStatus, Converter={StaticResource BoolToVis}}"/>
                                                                         </StackPanel>
-                                                                        <TextBlock Grid.Column="1"
-                                                                                   Text="&#xE73E;"
-                                                                                   FontFamily="Segoe MDL2 Assets"
-                                                                                   FontSize="{DynamicResource FS16}"
-                                                                                   FontWeight="Bold"
-                                                                                   Foreground="{DynamicResource SuccessBrush}"
-                                                                                   VerticalAlignment="Center"
-                                                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}"/>
+                                                                        <Border Grid.Column="2" Width="22" Height="22" CornerRadius="11"
+                                                                                Background="{DynamicResource SuccessLightBrush}"
+                                                                                VerticalAlignment="Center"
+                                                                                Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}">
+                                                                            <Path Data="{StaticResource IconCheck}"
+                                                                                  Width="12" Height="12"
+                                                                                  Stretch="Uniform"
+                                                                                  Fill="{DynamicResource SuccessBrush}"
+                                                                                  HorizontalAlignment="Center"
+                                                                                  VerticalAlignment="Center"/>
+                                                                        </Border>
                                                                     </Grid>
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                        <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
-                                                                    </DataTrigger>
                                                                     <Trigger Property="IsMouseOver" Value="True">
                                                                         <Setter TargetName="Card" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
                                                                     </Trigger>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                                                                        <Setter TargetName="Card" Property="Background" Value="{DynamicResource SuccessLightBrush}"/>
+                                                                    </DataTrigger>
                                                                 </ControlTemplate.Triggers>
                                                             </ControlTemplate>
                                                         </Button.Template>
@@ -651,14 +671,18 @@
                           HorizontalScrollBarVisibility="Disabled"
                           Style="{StaticResource ThinScroll}">
                 <StackPanel HorizontalAlignment="Center" MaxWidth="1080">
-                    <!-- Compact header: aligned with the 5-card grid width (960px) -->
+                    <!-- Compact header: 960px at full size, scaled down so the clock stays visible. -->
+                    <Viewbox MaxWidth="960"
+                             HorizontalAlignment="Center"
+                             Stretch="Uniform"
+                             StretchDirection="DownOnly"
+                             Margin="0,0,0,8">
                     <Border Width="960"
                             HorizontalAlignment="Center"
                             Background="{DynamicResource CardBackgroundBrush}"
                             BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="18"
-                            Margin="0,0,0,8"
                             Padding="0"
                             SnapsToDevicePixels="True"
                             UseLayoutRounding="True"
@@ -705,7 +729,8 @@
                                              Margin="0,0,-1,-1"
                                              Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
-                                <StackPanel VerticalAlignment="Center" MaxWidth="255">
+                                <StackPanel VerticalAlignment="Center" MaxWidth="200"
+                                            ToolTip="{Binding SelectedCompanyDisplayName}">
                                     <TextBlock Text="{Binding SelectedCompanyDisplayName}"
                                                FontSize="{DynamicResource FS14}"
                                                FontWeight="SemiBold"
@@ -729,24 +754,66 @@
                                     VerticalAlignment="Center"
                                     Visibility="{Binding HasSelectedCompany, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Three states: still counting (neutral), no problems (green), has problems (orange) -->
                                     <Border Width="30" Height="30" CornerRadius="9"
-                                            Background="#1AF97316"
                                             Margin="0,0,9,0" VerticalAlignment="Center">
-                                        <Path Data="{StaticResource IconProblems}"
-                                              Width="15" Height="15"
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedCompanyProblemsState}" Value="Problems">
+                                                        <Setter Property="Background" Value="#1AF97316"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SelectedCompanyProblemsState}" Value="Clear">
+                                                        <Setter Property="Background" Value="{DynamicResource SuccessChipBackgroundBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Path Width="15" Height="15"
                                               Stretch="Uniform"
-                                              Fill="{DynamicResource WarningChipForegroundBrush}"
                                               HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                                              VerticalAlignment="Center">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Data" Value="{StaticResource IconProblems}"/>
+                                                    <Setter Property="Fill" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedCompanyProblemsState}" Value="Problems">
+                                                            <Setter Property="Fill" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding SelectedCompanyProblemsState}" Value="Clear">
+                                                            <Setter Property="Data" Value="{StaticResource IconCheck}"/>
+                                                            <Setter Property="Fill" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{DynamicResource MainStatProblems}"
                                                    FontSize="{DynamicResource FS10}"
                                                    Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                        <TextBlock Text="{Binding SelectedCompanyProblemsCount}"
-                                                   FontSize="{DynamicResource FS14}"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource WarningChipForegroundBrush}"/>
+                                        <TextBlock FontSize="{DynamicResource FS14}"
+                                                   FontWeight="Bold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="…"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedCompanyProblemsState}" Value="Problems">
+                                                            <Setter Property="Text" Value="{Binding SelectedCompanyProblemsCount}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource WarningChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding SelectedCompanyProblemsState}" Value="Clear">
+                                                            <Setter Property="Text" Value="{DynamicResource MainStatAllGood}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessChipForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
                                 </StackPanel>
                             </Button>
@@ -797,97 +864,61 @@
                                       VerticalAlignment="Center"/>
                             </Button>
 
-                            <!-- Weather: unified chip with soft blue squircle icon -->
-                            <Border Grid.Column="6"
+                            <!-- Weather: same rhythm as the stat chips -->
+                            <Border Grid.Column="7"
                                     Style="{StaticResource MainHeaderUnifiedChip}"
                                     Margin="0,0,8,0"
                                     ToolTip="{Binding WeatherCity}"
                                     Visibility="{Binding HasWeather, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Border Width="30" Height="30" CornerRadius="9"
-                                            Background="{DynamicResource WeatherCardBackgroundBrush}"
-                                            BorderBrush="{DynamicResource WeatherCardBorderBrush}"
-                                            BorderThickness="1"
-                                            Margin="0,0,9,0" VerticalAlignment="Center">
-                                        <Path Data="{Binding WeatherIconKey, Converter={StaticResource IconKeyToGeometry}}"
-                                              Width="16" Height="16"
-                                              Stretch="Uniform"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stroke="{DynamicResource WeatherCardIconBrush}"
-                                              StrokeThickness="1.5"
-                                              Fill="Transparent"/>
-                                    </Border>
+                                    <views:LayeredTileIcon TileId="{Binding WeatherIconKey}"
+                                                           Width="30" Height="30"
+                                                           Margin="0,0,8,0"
+                                                           VerticalAlignment="Center"/>
                                     <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding WeatherDescription}"
+                                                   FontSize="{DynamicResource FS10}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
                                         <TextBlock Text="{Binding WeatherTempText}"
                                                    FontSize="{DynamicResource FS14}"
                                                    FontWeight="Bold"
                                                    Foreground="{DynamicResource ForegroundBrush}"/>
-                                        <TextBlock Text="{Binding WeatherDescription}"
-                                                   Margin="0,1,0,0"
-                                                   FontSize="{DynamicResource FS10}"
-                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
 
-                            <!-- Greeting: unified chip with vector sun/moon -->
-                            <Border Grid.Column="7"
-                                    Style="{StaticResource MainHeaderUnifiedChip}"
-                                    Margin="0,0,8,0">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Border Width="30" Height="30" CornerRadius="9"
-                                            Background="{DynamicResource GreetingCardIconBackgroundBrush}"
-                                            Margin="0,0,9,0" VerticalAlignment="Center">
-                                        <Path Data="{Binding GreetingGlyph, Converter={StaticResource IconKeyToGeometry}}"
-                                              Width="15" Height="15"
-                                              Stretch="Uniform"
-                                              Fill="{DynamicResource GreetingCardIconForegroundBrush}"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel VerticalAlignment="Center" MaxWidth="185">
-                                        <TextBlock Text="{Binding GreetingText}"
-                                                   FontSize="{DynamicResource FS12}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ForegroundBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding CurrentDateText}"
-                                                   Margin="0,1,0,0"
-                                                   FontSize="{DynamicResource FS10}"
-                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Clock + UTC badge inside unified chip -->
+                            <!-- Date and time: large day number, month and weekday, then the time -->
                             <Border Grid.Column="8"
                                     Style="{StaticResource MainHeaderUnifiedChip}"
-                                    Padding="12,0,12,0">
+                                    Padding="13,0,14,0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CurrentDayText}"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FS26}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource InfoChipForegroundBrush}"/>
+                                    <StackPanel VerticalAlignment="Center" Margin="9,0,0,0">
+                                        <TextBlock Text="{Binding CurrentMonthText}"
+                                                   FontSize="{DynamicResource FS11}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ForegroundBrush}"/>
+                                        <TextBlock Text="{Binding CurrentWeekdayText}"
+                                                   FontSize="{DynamicResource FS11}"
+                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    </StackPanel>
+                                    <Border Width="1" Height="26" Margin="11,0"
+                                            VerticalAlignment="Center"
+                                            Background="{DynamicResource CardBorderBrush}"/>
                                     <TextBlock Text="{Binding CurrentTimeText}"
                                                VerticalAlignment="Center"
                                                FontSize="{DynamicResource FS16}"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource ForegroundBrush}"/>
-                                    <Border Background="{DynamicResource CardBackgroundBrush}"
-                                            BorderBrush="{DynamicResource CardBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="7"
-                                            Padding="6,2"
-                                            Margin="8,0,0,0"
-                                            VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding CurrentTimeZoneText}"
-                                                   FontSize="{DynamicResource FS9}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
-                                    </Border>
                                 </StackPanel>
                             </Border>
                         </Grid>
                     </Border>
+                    </Viewbox>
 
                     <!-- Cards Grid (drag to reorder) -->
                     <ItemsControl x:Name="CardsGrid" ItemsSource="{Binding MenuCards}"
@@ -908,17 +939,10 @@
                                         PreviewMouseLeftButtonUp="Card_PreviewMouseLeftButtonUp"
                                         GiveFeedback="Card_GiveFeedback">
                                     <views:CardControl Title="{Binding TitleKey, Converter={StaticResource ResKey}}" 
-                                                       Icon="{Binding IconKey, Converter={StaticResource IconKeyToGeometry}}"
-                                                       Command="{Binding Command}" 
+                                                       TileId="{Binding Id}"
+                                                       Command="{Binding Command}"
                                                        BadgeCount="{Binding BadgeCount}"
-                                                       Margin="10">
-                                        <views:CardControl.IconGradient>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                <GradientStop Color="{Binding GradientStart}" Offset="0"/>
-                                                <GradientStop Color="{Binding GradientEnd}" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </views:CardControl.IconGradient>
-                                    </views:CardControl>
+                                                       Margin="10"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

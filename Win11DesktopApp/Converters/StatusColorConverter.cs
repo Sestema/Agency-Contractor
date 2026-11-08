@@ -94,7 +94,7 @@ namespace Win11DesktopApp.Converters
             if (status == StatusHelper.Active)
             {
                 return FindThemeBrush(
-                    isBg ? "AccentLightBrush" : "AccentBrush",
+                    isBg ? "AccentLightBrush" : "AccentDarkBrush",
                     isBg ? Color.FromRgb(0xE8, 0xF5, 0xE9) : Color.FromRgb(0x2E, 0x7D, 0x32));
             }
 

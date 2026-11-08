@@ -30,6 +30,75 @@ body {
   min-width: 0;
 }
 
+.editor-workspace > .comment-panel {
+  flex: 0 0 260px;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  max-width: 320px;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  overflow: auto;
+}
+
+.comment-panel__title {
+  padding: 12px 14px 8px;
+  font-size: 13px;
+  font-weight: 650;
+  color: #1f2937;
+}
+
+.comment-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 10px 12px;
+}
+
+.comment-panel__list li {
+  margin-bottom: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.comment-panel__card {
+  display: block;
+  width: 100%;
+  padding: 8px 10px 4px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.comment-panel__author {
+  display: block;
+  font-size: 12px;
+  font-weight: 650;
+  color: #374151;
+}
+
+.comment-panel__text {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+
+.comment-panel__delete {
+  margin: 0 8px 8px;
+  padding: 4px 8px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .host-waiting {
   height: 100%;
   background: #f3f4f6;

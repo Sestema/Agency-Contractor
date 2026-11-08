@@ -21,6 +21,26 @@ namespace Win11DesktopApp.Services
         public bool CanRemove => !IsActive;
         public bool CanReplace => true;
         public bool HasWarningStatus => !IsActive && !IsAvailable;
+
+        public string ShortFolderPath => CompactFolderPath(FolderPath);
+
+        public static string CompactFolderPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            var trimmed = path.Trim().TrimEnd('\\', '/');
+            if (trimmed.Length <= 46)
+                return path.Trim();
+
+            var root = Path.GetPathRoot(trimmed) ?? string.Empty;
+            var rest = root.Length >= trimmed.Length ? string.Empty : trimmed.Substring(root.Length);
+            var parts = rest.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length <= 2)
+                return trimmed;
+
+            return root + parts[0] + "\\…\\" + parts[^1];
+        }
     }
 
     public sealed class WorkspaceSwitchResult

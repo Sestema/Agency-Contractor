@@ -89,6 +89,15 @@
         <GradientStop Color="#F0F5E8" Offset="0"/>
         <GradientStop Color="#00F0F5E8" Offset="1"/>
     </RadialGradientBrush>
+    <LinearGradientBrush x:Key="EmployeeDocIconSheenBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#BFFFFFFF" Offset="0"/>
+        <GradientStop Color="#33FFFFFF" Offset="0.68"/>
+    </LinearGradientBrush>
+    <Thickness x:Key="EmployeeDocPillBorderThickness">1</Thickness>
+    <GridLength x:Key="EmployeeDocRowPassportWidth">1.02*</GridLength>
+    <GridLength x:Key="EmployeeDocRowVisaWidth">0.8*</GridLength>
+    <GridLength x:Key="EmployeeDocRowInsuranceWidth">1.28*</GridLength>
+    <GridLength x:Key="EmployeeDocRowPermitWidth">0.9*</GridLength>
     <SolidColorBrush x:Key="EmployeeDocErrorBackgroundBrush" Color="#FFF8F5"/>
     <SolidColorBrush x:Key="EmployeeDocErrorCardBorderBrush" Color="#E9CFC8"/>
     <SolidColorBrush x:Key="EmployeeDocErrorTileBrush" Color="#F9E8E4"/>
@@ -120,6 +129,9 @@
     <SolidColorBrush x:Key="FinAdvanceForegroundBrush" Color="#B06A2E"/>
     <SolidColorBrush x:Key="FinNetBackgroundBrush" Color="#EFF7F5"/>
     <SolidColorBrush x:Key="FinNetForegroundBrush" Color="#3C7A6D"/>
+    <SolidColorBrush x:Key="FinActionSuccessBrush" Color="#6B8F3C"/>
+    <SolidColorBrush x:Key="FinActionWarningBrush" Color="#D97706"/>
+    <SolidColorBrush x:Key="FinActionPurpleBrush" Color="#8B6B9E"/>
     <SolidColorBrush x:Key="FinPaidBackgroundBrush" Color="#6B8F3C"/>
     <SolidColorBrush x:Key="FinPaidForegroundBrush" Color="#FFFDF5"/>
     <SolidColorBrush x:Key="FinUnpaidBackgroundBrush" Color="#FFF0CE"/>
